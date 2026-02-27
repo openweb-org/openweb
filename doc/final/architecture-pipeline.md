@@ -1,6 +1,6 @@
 # Architecture: Pipeline Phases & Execution Runtime
 
-*Part of the [web-skill design](web-skill-design.md). See also: [Security Taxonomy](security-taxonomy.md), [Skill Package Format](skill-package-format.md), [Self-Evolution](self-evolution.md).*
+*Part of the [web-skill design](web-skill-design.md). See also: [Compiler Output & Runtime](compiler-output-and-runtime.md), [Security Taxonomy](security-taxonomy.md), [Skill Package Format](skill-package-format.md), [Self-Evolution](self-evolution.md).*
 
 ---
 
@@ -201,13 +201,13 @@ Write endpoints skip probing and default to `browser_fetch`.
 
 ### Tool Synthesis
 
-Each semantically meaningful endpoint becomes a self-contained tool definition:
+Each semantically meaningful endpoint becomes a self-contained tool definition. The format uses JSON Schema (Draft 2020-12) for `parameters` and `returns` — the universal format all LLM providers converge on. See [compiler-output-and-runtime.md](compiler-output-and-runtime.md) for the full format rationale.
 
 ```json
 {
   "name": "search_flights",
   "description": "Search for flights between two airports on a given date",
-  "input_schema": {
+  "parameters": {
     "type": "object",
     "properties": {
       "origin": { "type": "string", "description": "Origin airport IATA code" },
@@ -216,45 +216,52 @@ Each semantically meaningful endpoint becomes a self-contained tool definition:
     },
     "required": ["origin", "destination", "departure_date"]
   },
-  "output_schema": { "..." },
+  "returns": { "..." },
   "execution": {
     "mode": "browser_fetch",
     "human_handoff": false,
-    "api": {
+    "request": {
       "method": "GET",
-      "url_template": "https://example.com/api/search?origin={origin}&dest={destination}&date={departure_date}",
-      "headers": { "Accept": "application/json" },
-      "csrf_extractor": "document.querySelector('meta[name=csrf]').content"
+      "url": "https://example.com/api/search?origin={origin}&dest={destination}&date={departure_date}",
+      "headers": { "Accept": "application/json" }
     },
-    "ui_fallback": {
-      "steps": [
-        "Navigate to https://example.com/flights",
-        "Type {origin} in 'From' field",
-        "Type {destination} in 'To' field",
-        "Select {departure_date} from date picker",
-        "Click 'Search'"
-      ]
-    }
-  },
-  "verify": "response.status === 200 && Array.isArray(response.body?.flights)"
+    "session": {
+      "csrf": "document.querySelector('meta[name=csrf]').content"
+    },
+    "verify": "Array.isArray(response.flights)",
+    "ui_fallback": [
+      "Navigate to https://example.com/flights",
+      "Type {origin} in 'From' field",
+      "Type {destination} in 'To' field",
+      "Select {departure_date} from date picker",
+      "Click 'Search'"
+    ]
+  }
 }
 ```
 
 Key design decisions:
 - Every tool is **self-contained** — schema, execution config, verifier, and fallback in one JSON file.
+- **Agent-facing fields** (`name`, `description`, `parameters`, `returns`) use JSON Schema, trivially convertible to any LLM provider format (OpenAI, Anthropic, MCP, Gemini — see [compiler-output-and-runtime.md](compiler-output-and-runtime.md) §2.3).
+- **Execution-facing fields** (`execution`) are read by the CLI executor, not by the agent.
 - Every tool has **both** an API execution path and a UI fallback path.
 - CSRF extractors: inline expressions for simple cases; external `.js` files for complex extraction.
 - Verifiers: inline expressions, not separate modules.
 - Tool naming: `{verb}_{object}` (e.g., `search_flights`, `get_details`, `add_to_cart`).
 
-### Multi-Target Emission (MCP + Skills)
+### Compiler Output (No Framework-Specific Emission)
 
-Phase 4 emits two layers from one canonical source (`tools/*.json`):
+Phase 4 produces **only** the canonical skill package:
 
-1. **Execution layer (required):** MCP tool registration metadata for runtime execution.
-2. **Orchestration layer (optional):** Agent-specific skill wrappers (for example, Claude `SKILL.md`, AGENTS.md-style instructions, or equivalent), all pointing to the same MCP tools.
+```
+<site>/
+├── manifest.json
+├── tools/*.json        ← canonical tool definitions (JSON Schema core)
+├── extractors/         ← complex session/CSRF scripts (optional)
+└── tests/              ← regression tests
+```
 
-This keeps one runtime truth while still making the system easy to use across agent ecosystems.
+All framework-specific formats (SKILL.md, OpenAPI, MCP tool registration, OpenAI/Anthropic/Gemini schemas) are generated **on demand** by the CLI, not by the compiler. This keeps the compiler simple and decoupled from the rapidly-changing agent ecosystem.
 
 ### No Workflow YAML DSL for MVP
 
@@ -279,25 +286,25 @@ Compute version hash from: JS bundle hashes + API endpoint set hash + response s
 
 ### Execution Engine
 
-The runtime executes tool calls using the classified execution mode, with automatic fallback:
+The CLI executor handles tool calls using the classified execution mode, with automatic fallback:
 
 ```
-Tool call received
+web-skill <site> exec <tool> '{args}'
   ├─ mode = direct_http?
-  │    └─ Send HTTP request → success? return result
+  │    └─ Send HTTP request → success? return JSON to stdout
   │                         → fail? escalate to session_http
   ├─ mode = session_http?
   │    └─ Send HTTP request with session cookies (+ CSRF if needed)
-  │       → success? return result
+  │       → success? return JSON to stdout
   │       → fail? escalate to browser_fetch
   ├─ mode = browser_fetch?
   │    └─ Execute via Playwright page.evaluate(fetch(...))
-  │       → success? return result
+  │       → success? return JSON to stdout
   │       → fail? check human_handoff flag
   └─ human_handoff = true?
        └─ Open headed browser, execute auto steps,
           pause for human at marked steps
-          → success? return result
+          → success? return JSON to stdout
           → fail? trigger self-heal
 ```
 
@@ -315,27 +322,16 @@ For `browser_fetch` execution, a JavaScript bridge injected via `page.evaluate()
 
 For signed/encrypted payloads: call the site's own signing functions via `page.evaluate()` rather than reverse-engineering them.
 
-### Serving Interface: Agent-Agnostic
+### Serving Interface: CLI-first, Agent-Agnostic
 
-| Protocol | Consumer | Priority |
+| Interface | Consumer | Priority |
 |---|---|---|
-| MCP server (stdio) | Claude Code | MVP |
-| HTTP API | Any HTTP client, any agent | MVP+1 |
-| OpenAPI spec export | Agents that consume OpenAPI | Future |
+| CLI (`web-skill <site> exec`) | Any coding agent (Claude Code, Codex, Cursor, Copilot) | MVP |
+| CLI (`web-skill <site> <tool>`) | Any coding agent (spec navigation) | MVP |
+| OpenAPI export | Human developers, API gateways | MVP+1 |
+| MCP adapter (`web-skill mcp-serve`) | Agents without shell access | Optional |
 
-**MCP tools:**
-
-Always-available meta-tools:
-- `web_skill_list()` — list installed skill packages
-- `web_skill_status(site)` — check skill health
-- `web_skill_heal(site)` — trigger self-healing
-
-Per-site tools dynamically registered when skill loaded:
-- `google_flights__search_flights(origin, dest, date)`
-- `google_flights__get_details(offer_id)`
-- etc.
-
-No double-dispatch. Agents call tools directly.
+See [compiler-output-and-runtime.md](compiler-output-and-runtime.md) for the complete CLI command reference and design rationale.
 
 ### Self-Healing
 

@@ -47,30 +47,36 @@ Runtime    = Execution engine (browser session + fallback cascade)
 
 A compiler is stateless per-invocation. It evolves its optimization database (knowledge base), not its core passes. This metaphor constrains the architecture correctly.
 
-### 2.2 Relationship to Agent Skills, MCP, and WebMCP
+### 2.2 Relationship to Agent Skills, MCP, CLI, and WebMCP
 
-These are different layers, not competing choices:
+The AI agent tooling ecosystem is stratifying into layers:
 
-| Layer | What it is | Role in this project |
-|---|---|---|
-| **Agent Skills** | Reusable instruction/workflow packaging | UX and orchestration layer for each agent ecosystem |
-| **MCP** | Tool transport protocol between agents and tool servers | Runtime interoperability backbone |
-| **WebMCP** | Website-native tool exposure by site owners | Preferred when available; still early adoption |
+```
+Layer 3: Skills (SKILL.md)     — Procedural knowledge, when-to-use triggers
+Layer 2: CLI / Tool interfaces — Token-efficient command invocation
+Layer 1: MCP / Function calls  — Structured tool schemas (typed I/O)
+Layer 0: Raw HTTP / Browser    — Execution substrate
+```
 
-As of late 2025:
-- Anthropic introduced Skills on **2025-10-16** and published an open Agent Skills standard on **2025-12-18**.
-- MCP remained actively versioned (spec update **2025-11-25**) and is broadly integrated by major agent clients.
+As of early 2026:
+- The **Agent Skills standard** (agentskills.io) is supported by **30+ agent products** (Claude Code, Cursor, Copilot, Codex, Gemini CLI, etc.).
+- **MCP** remains actively versioned (spec update **2025-11-25**) and broadly integrated.
+- Microsoft's Playwright team **explicitly recommends CLI+Skills over MCP** for coding agents, citing token efficiency (see Section 2.4).
+- **WebMCP** (Google "Built-in AI" initiative) remains in early proposal / Origin Trial.
 
 Therefore the architecture is:
-- **MCP-first for execution interoperability**
-- **Skills-on-top for ease of use and agent-specific ergonomics**
+- **CLI-first for agent interaction** — progressive spec navigation + execution via a single thin CLI
+- **SKILL.md generated on install** — for agent discovery and ecosystem compatibility
+- **MCP as optional adapter** — for agents without shell access
 - **WebMCP if a website natively provides tools**
 
 | Situation | Strategy |
 |---|---|
 | Website implements WebMCP | Use native website tools first |
 | Website has public API docs | Use official API directly |
-| Website has no public API | **web-skill mines traffic, serves tools via MCP, wraps usage via Skills** |
+| Website has no public API | **web-skill mines traffic, produces tool definitions, serves via CLI (+ optional MCP adapter)** |
+
+See [compiler-output-and-runtime.md](compiler-output-and-runtime.md) for the full design rationale.
 
 ### 2.3 Goals and Non-Goals
 
@@ -176,14 +182,20 @@ The internal escalation ladder handles all probing granularity. See [security-ta
 
 Try cheap execution modes first, escalate on failure. You don't need to know *which* security layer blocked you — you need to know *what execution mode works*. See [security-taxonomy.md](security-taxonomy.md) for details.
 
-### D2.1: MCP-first Runtime, Skills-on-Top Distribution
+### D2.1: CLI-first Runtime, MCP-optional Adapter
 
-The canonical runtime contract is MCP tool invocation. Skills are generated wrappers and usage guides for agent ecosystems.
+The primary agent interface is a CLI that provides progressive spec navigation and tool execution. MCP is an optional adapter for agents without shell access.
+
+**Why not MCP-first:** Microsoft's Playwright team (1.3M weekly MCP downloads) explicitly warns that MCP bloats agent context with tool schemas (~4-5K tokens for all tools loaded upfront). Their own recommendation is CLI+Skills. All target agents (Claude Code, Codex, Cursor, Copilot) have shell access. CLI progressive disclosure uses ~400 tokens to discover and use one tool from a 23-tool site vs ~3000-5000 for MCP schema loading.
 
 Implications:
-- One canonical tool schema and executor path
-- Many optional UX wrappers (`SKILL.md`, `AGENTS.md`, or equivalent)
+- One canonical tool definition format (JSON Schema parameters + returns + execution recipe)
+- CLI for progressive spec navigation (`web-skill <site>`, `web-skill <site> <tool>`) and execution (`web-skill <site> exec <tool> '{...}'`)
+- SKILL.md generated on install to agent workspace (not by compiler)
+- MCP adapter wraps the same executor for non-shell agents
 - No forked runtime logic per agent vendor
+
+See [compiler-output-and-runtime.md](compiler-output-and-runtime.md) for the full design.
 
 ### D2.2: Compiler-First, Runtime-Thin
 
@@ -194,9 +206,9 @@ The compiler is the product. The runtime is the delivery mechanism.
 - With compiled tools, the runtime serves typed, compact API calls that are 10x more efficient than DOM-based browser automation.
 - The compiler creates the value; the runtime delivers it. Ship the compiler first.
 
-**Practical implication:** MVP-1 builds the compiler pipeline for one easy site and ships a minimal MCP server in the same phase. The server exists only to serve compiled tools (load tool definitions, execute HTTP/fetch, verify response). It is NOT a generic browser-control layer — that already exists.
+**Practical implication:** MVP-1 builds the compiler pipeline for one easy site and ships a minimal CLI to serve compiled tools (navigate tool specs, execute requests, verify responses). The CLI is NOT a generic browser-control layer — that already exists.
 
-**Relationship to `@playwright/mcp`:** For `browser_fetch` mode and UI fallback execution, we can delegate to Playwright directly rather than building our own browser-control abstraction. Our MCP server manages tool execution; Playwright manages browser interaction.
+**Relationship to `@playwright/mcp`:** For `browser_fetch` mode and UI fallback execution, we delegate to Playwright directly rather than building our own browser-control abstraction. Our CLI executor manages tool execution; Playwright manages browser interaction.
 
 ### D3: Dual Execution Path (API + UI Fallback)
 
@@ -278,17 +290,17 @@ An agent can call `search(query)` and receive accurate, structured data — with
 
 - 10+ sites across verticals
 - Knowledge base proves compounding value
-- HTTP API runtime (not just MCP)
+- MCP adapter for non-shell agents (optional)
 
 ### 90-Day Execution Plan
 
 | Phase | Weeks | Focus | Exit Criteria |
 |---|---|---|---|
-| **A: Compiler MVP** | 1–3 | Record + cluster + emit tools for 1 easy site. Ship thin MCP runtime to serve compiled tools. Benchmark harness. | 3–5 read-only tools. Agent completes 20 tasks via API tools. Baseline metrics: success rate, latency, step count vs browser-only. |
+| **A: Compiler MVP** | 1–3 | Record + cluster + emit tools for 1 easy site. Ship thin CLI (spec navigator + executor). Benchmark harness. | 3–5 read-only tools. Agent completes 20 tasks via CLI. Baseline metrics: success rate, latency, step count vs browser-only. |
 | **B: Second Site + Write Ops** | 4–7 | Second site (moderate difficulty: CSRF/cookies). Write operations. Escalation ladder probing. Begin knowledge base. | 2 sites compiled, each ≥3 tools. Compiled tools beat browser-only on ≥2 of 3 metrics. |
-| **C: Hardening + Third Site** | 8–12 | Third+ sites. Self-healing. Regression suite. Change gating. Second agent integration path. | 5–10-site batch. No critical regressions. Knowledge base shows measurable pattern reuse. |
+| **C: Hardening + Third Site** | 8–12 | Third+ sites. Self-healing. Regression suite. Change gating. OpenAPI export. Optional MCP adapter. | 5–10-site batch. No critical regressions. Knowledge base shows measurable pattern reuse. |
 
-**Why compiler-first (with runtime-thin):** A generic browser-control MCP server is `@playwright/mcp` (1.3M weekly downloads). We don't build what already exists. Our unique value—the compiler—ships first. The MCP serving layer for compiled tools is thin and ships alongside it.
+**Why compiler-first (with runtime-thin):** A generic browser-control MCP server is `@playwright/mcp` (1.3M weekly downloads). We don't build what already exists. Our unique value—the compiler—ships first. The CLI serving layer for compiled tools is thin and ships alongside it.
 
 ---
 
@@ -300,8 +312,9 @@ An agent can call `search(query)` and receive accurate, structured data — with
 | Navigation agent | browser-use or equivalent | Proven LLM-driven browser automation framework |
 | Traffic capture | CDP Network domain | Direct access to request/response + initiator stacks |
 | Clustering bootstrap | mitmproxy2swagger (evaluate) | Existing HAR→OpenAPI conversion; adapt rather than rewrite |
-| MCP server | Node.js (stdio transport) | Native Playwright integration, Claude Code support |
-| Skill wrappers | Agent Skills format + generator templates | Publish the same capability in agent-native ergonomics |
+| CLI (spec navigator + executor) | Node.js | Native Playwright integration, single-language stack |
+| MCP adapter (optional) | Node.js (stdio transport) | Thin wrapper over CLI executor for non-shell agents |
+| SKILL.md generation | Template-based generator | Emits Agent Skills standard format on `web-skill install` |
 | Schema inference | Custom + `json-schema-generator` | Need control over merging multiple samples |
 | LLM for analysis | Claude (via API) | Semantic labeling, tool descriptions, parameter classification |
 | Test runner | Node.js custom harness | Replay inputs, assert schema conformance |
@@ -343,8 +356,9 @@ An agent can call `search(query)` and receive accurate, structured data — with
 | Document | Contents |
 |---|---|
 | **[architecture-pipeline.md](architecture-pipeline.md)** | Phase 1 (Explore & Record), Phase 2 (Analyze & Extract), Phase 3 (Probe), Phase 4 (Generate & Test), Execution Runtime, Self-Healing |
+| **[compiler-output-and-runtime.md](compiler-output-and-runtime.md)** | First-principles derivation of compiler output format, canonical tool definition (JSON Schema), CLI design (progressive navigation + executor), export formats, SKILL.md generation |
 | **[security-taxonomy.md](security-taxonomy.md)** | 6-layer website security model (reference), Escalation Ladder probing, execution mode derivation, common real-world configurations |
-| **[skill-package-format.md](skill-package-format.md)** | Minimal per-website skill directory layout, manifest.json, generated SKILL.md, MCP server runtime |
+| **[skill-package-format.md](skill-package-format.md)** | Per-website skill package directory layout, manifest.json, tool definition format, test format |
 | **[self-evolution.md](self-evolution.md)** | Hard problems & mitigations, knowledge base structure, evolution loop, knowledge integrity, compounding effect |
 
 ---
