@@ -140,7 +140,7 @@ The project cleanly separates into two independent systems:
                     ▼
 ┌──────────────────────────────────────────────────┐
 │          Per-Site Skill Package                    │
-│  manifest.json + tools/*.json + tests/*.json      │
+│  manifest.json + openapi.yaml + tests/*.json      │
 └───────────────────┬──────────────────────────────┘
                     │ consumed by
                     ▼
@@ -189,9 +189,10 @@ The primary agent interface is a CLI that provides progressive spec navigation a
 **Why not MCP-first:** Microsoft's Playwright team (1.3M weekly MCP downloads) explicitly warns that MCP bloats agent context with tool schemas (~4-5K tokens for all tools loaded upfront). Their own recommendation is CLI+Skills. All target agents (Claude Code, Codex, Cursor, Copilot) have shell access. CLI progressive disclosure uses ~400 tokens to discover and use one tool from a 23-tool site vs ~3000-5000 for MCP schema loading.
 
 Implications:
-- One canonical tool definition format (JSON Schema parameters + returns + execution recipe)
+- Canonical compiler output is **OpenAPI 3.1 + `x-web-skill` vendor extensions** — standard format, zero custom tooling
 - CLI for progressive spec navigation (`web-skill <site>`, `web-skill <site> <tool>`) and execution (`web-skill <site> exec <tool> '{...}'`)
 - SKILL.md generated on install to agent workspace (not by compiler)
+- LLM tool schemas (OpenAI, Anthropic, MCP, Gemini) mechanically extracted from OpenAPI
 - MCP adapter wraps the same executor for non-shell agents
 - No forked runtime logic per agent vendor
 
@@ -243,7 +244,7 @@ The compiler maintains a growing knowledge base (patterns, heuristics, extractor
 | Default data capture | Request/response + causality only. Screenshots/a11y on-demand. |
 | Sensitive data | Never store plaintext passwords, payment info, OTP codes. |
 | Log sanitization | Auto-redact tokens, cookies, PII in logs and history files. |
-| Retention | Raw recordings deleted after skill generation. Only tool definitions + tests retained. |
+| Retention | Raw recordings deleted after skill generation. Only OpenAPI spec + tests retained. |
 | Write operation gate | High-risk writes (payment, account changes) require explicit user confirmation. |
 | Site allowlist | Optional site-level allowlist/denylist for enterprise deployments. |
 
@@ -356,9 +357,9 @@ An agent can call `search(query)` and receive accurate, structured data — with
 | Document | Contents |
 |---|---|
 | **[architecture-pipeline.md](architecture-pipeline.md)** | Phase 1 (Explore & Record), Phase 2 (Analyze & Extract), Phase 3 (Probe), Phase 4 (Generate & Test), Execution Runtime, Self-Healing |
-| **[compiler-output-and-runtime.md](compiler-output-and-runtime.md)** | First-principles derivation of compiler output format, canonical tool definition (JSON Schema), CLI design (progressive navigation + executor), export formats, SKILL.md generation |
+| **[compiler-output-and-runtime.md](compiler-output-and-runtime.md)** | First-principles derivation of compiler output format, OpenAPI 3.1 + x-web-skill extensions as canonical format, CLI design (progressive navigation + executor), derived formats, SKILL.md generation |
 | **[security-taxonomy.md](security-taxonomy.md)** | 6-layer website security model (reference), Escalation Ladder probing, execution mode derivation, common real-world configurations |
-| **[skill-package-format.md](skill-package-format.md)** | Per-website skill package directory layout, manifest.json, tool definition format, test format |
+| **[skill-package-format.md](skill-package-format.md)** | Per-website skill package directory layout, manifest.json, OpenAPI spec format, test format |
 | **[self-evolution.md](self-evolution.md)** | Hard problems & mitigations, knowledge base structure, evolution loop, knowledge integrity, compounding effect |
 
 ---

@@ -201,53 +201,62 @@ Write endpoints skip probing and default to `browser_fetch`.
 
 ### Tool Synthesis
 
-Each semantically meaningful endpoint becomes a self-contained tool definition. The format uses JSON Schema (Draft 2020-12) for `parameters` and `returns` — the universal format all LLM providers converge on. See [compiler-output-and-runtime.md](compiler-output-and-runtime.md) for the full format rationale.
+Each semantically meaningful endpoint becomes an OpenAPI operation. The format uses OpenAPI 3.1 with `x-web-skill` vendor extensions for runtime metadata. See [compiler-output-and-runtime.md](compiler-output-and-runtime.md) for the full format rationale.
 
-```json
-{
-  "name": "search_flights",
-  "description": "Search for flights between two airports on a given date",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "origin": { "type": "string", "description": "Origin airport IATA code" },
-      "destination": { "type": "string", "description": "Destination airport IATA code" },
-      "departure_date": { "type": "string", "format": "date" }
-    },
-    "required": ["origin", "destination", "departure_date"]
-  },
-  "returns": { "..." },
-  "execution": {
-    "mode": "browser_fetch",
-    "human_handoff": false,
-    "request": {
-      "method": "GET",
-      "url": "https://example.com/api/search?origin={origin}&dest={destination}&date={departure_date}",
-      "headers": { "Accept": "application/json" }
-    },
-    "session": {
-      "csrf": "document.querySelector('meta[name=csrf]').content"
-    },
-    "verify": "Array.isArray(response.flights)",
-    "ui_fallback": [
-      "Navigate to https://example.com/flights",
-      "Type {origin} in 'From' field",
-      "Type {destination} in 'To' field",
-      "Select {departure_date} from date picker",
-      "Click 'Search'"
-    ]
-  }
-}
+Example operation in the generated `openapi.yaml`:
+
+```yaml
+/api/search:
+  get:
+    operationId: search_flights
+    summary: Search for flights between two airports on a given date
+    x-web-skill:
+      mode: browser_fetch
+      human_handoff: false
+      session:
+        csrf: "document.querySelector('meta[name=csrf]').content"
+    parameters:
+      - name: origin
+        in: query
+        required: true
+        schema: { type: string }
+        description: "Origin airport IATA code"
+      - name: destination
+        in: query
+        required: true
+        schema: { type: string }
+        description: "Destination airport IATA code"
+      - name: departure_date
+        in: query
+        required: true
+        schema: { type: string, format: date }
+    responses:
+      "200":
+        description: Flight search results
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                flights:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      offer_id: { type: string }
+                      airline:  { type: string }
+                      price:    { type: number }
+                      stops:    { type: integer }
 ```
 
 Key design decisions:
-- Every tool is **self-contained** — schema, execution config, verifier, and fallback in one JSON file.
-- **Agent-facing fields** (`name`, `description`, `parameters`, `returns`) use JSON Schema, trivially convertible to any LLM provider format (OpenAI, Anthropic, MCP, Gemini — see [compiler-output-and-runtime.md](compiler-output-and-runtime.md) §2.3).
-- **Execution-facing fields** (`execution`) are read by the CLI executor, not by the agent.
-- Every tool has **both** an API execution path and a UI fallback path.
-- CSRF extractors: inline expressions for simple cases; external `.js` files for complex extraction.
-- Verifiers: inline expressions, not separate modules.
-- Tool naming: `{verb}_{object}` (e.g., `search_flights`, `get_details`, `add_to_cart`).
+- **Standard format**: OpenAPI 3.1 — no custom tool definition format to learn. Existing tooling (Swagger UI, Postman) works out of the box.
+- **One spec per site**: All operations in a single `openapi.yaml`. CLI extracts per-operation views for progressive disclosure.
+- **Runtime metadata via extensions**: `x-web-skill.mode`, `x-web-skill.session`, `x-web-skill.human_handoff` — genuinely new information that OpenAPI doesn't describe, with zero duplication.
+- **Zero parameter duplication**: Parameters described once in OpenAPI's native format (path, query, requestBody), used for both agent discovery and request construction.
+- UI automation procedures (browser-use-style step-by-step instructions) are **not** part of the OpenAPI spec. They live in separate markdown files as agent instructions — a fundamentally different artifact (non-deterministic agent procedure vs. deterministic API call).
+- CSRF extractors: inline expressions in `x-web-skill.session` for simple cases; external `.js` files in `extractors/` for complex extraction.
+- Operation naming: `{verb}_{object}` via `operationId` (e.g., `search_flights`, `get_details`, `add_to_cart`).
 
 ### Compiler Output (No Framework-Specific Emission)
 
@@ -256,12 +265,12 @@ Phase 4 produces **only** the canonical skill package:
 ```
 <site>/
 ├── manifest.json
-├── tools/*.json        ← canonical tool definitions (JSON Schema core)
-├── extractors/         ← complex session/CSRF scripts (optional)
-└── tests/              ← regression tests
+├── openapi.yaml       ← OpenAPI 3.1 + x-web-skill extensions (canonical output)
+├── extractors/        ← complex session/CSRF scripts (optional)
+└── tests/             ← regression tests
 ```
 
-All framework-specific formats (SKILL.md, OpenAPI, MCP tool registration, OpenAI/Anthropic/Gemini schemas) are generated **on demand** by the CLI, not by the compiler. This keeps the compiler simple and decoupled from the rapidly-changing agent ecosystem.
+All agent-specific formats (SKILL.md, MCP tool registration, OpenAI/Anthropic/Gemini schemas) are generated **on demand** by the CLI from the OpenAPI spec, not by the compiler. This keeps the compiler simple and decoupled from the rapidly-changing agent ecosystem.
 
 ### No Workflow YAML DSL for MVP
 
@@ -286,10 +295,12 @@ Compute version hash from: JS bundle hashes + API endpoint set hash + response s
 
 ### Execution Engine
 
-The CLI executor handles tool calls using the classified execution mode, with automatic fallback:
+The CLI executor handles tool calls by reading the OpenAPI operation, constructing the HTTP request, and managing session/browser context based on `x-web-skill.mode`:
 
 ```
 web-skill <site> exec <tool> '{args}'
+  ├─ Read OpenAPI operation for <tool>
+  ├─ Construct HTTP request from OpenAPI path/method/params/requestBody
   ├─ mode = direct_http?
   │    └─ Send HTTP request → success? return JSON to stdout
   │                         → fail? escalate to session_http
@@ -316,7 +327,7 @@ For `session_http` execution:
 
 For `browser_fetch` execution, a JavaScript bridge injected via `page.evaluate()`:
 1. Reads current CSRF token / session state from DOM/cookies/localStorage
-2. Constructs the request from tool template + current state + user inputs
+2. Constructs the request from OpenAPI operation spec + current state + user inputs
 3. Executes via `fetch()` within the page context (same origin, same cookies, same TLS)
 4. Returns parsed JSON response
 
@@ -337,11 +348,11 @@ See [compiler-output-and-runtime.md](compiler-output-and-runtime.md) for the com
 
 When a tool starts failing:
 
-1. **Detect:** Verifier returns failure. Compare current fingerprint against stored.
-2. **Minimal fallback:** Execute via UI fallback to complete the immediate task.
+1. **Detect:** Response schema validation fails. Compare current fingerprint against stored.
+2. **Minimal fallback:** Escalate execution mode to complete the immediate task.
 3. **Re-record:** Run Phase 1 for the failing flow only.
 4. **Diff:** Compare new vs stored: endpoint changed? fields renamed? new required params?
-5. **Patch:** Auto-update the tool definition.
+5. **Patch:** Auto-update the OpenAPI spec operations.
 6. **Test:** Run the tool's test suite.
 7. **Publish policy:**
    - Read-only tool changes: auto-publish if tests pass.
