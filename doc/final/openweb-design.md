@@ -1,4 +1,4 @@
-# web-skill: Website-to-API Compiler — Aligned Design
+# openweb: Website-to-API Compiler — Aligned Design
 
 > **Status**: Aligned Draft v1.1 (Claude initial + Codex turn 1)
 > **Date**: 2026-02-27
@@ -40,7 +40,7 @@ That paper relied on manually curated official API documentation. **No one has d
 
 ```
 Source     = Network traffic + UI behavior recording during browsing
-Compiler   = web-skill pipeline (this project)
+Compiler   = openweb pipeline (this project)
 Target     = Per-website skill package (typed tool definitions)
 Runtime    = Execution engine (browser session + fallback cascade)
 ```
@@ -74,7 +74,7 @@ Therefore the architecture is:
 |---|---|
 | Website implements WebMCP | Use native website tools first |
 | Website has public API docs | Use official API directly |
-| Website has no public API | **web-skill mines traffic, produces tool definitions, serves via CLI (+ optional MCP adapter)** |
+| Website has no public API | **openweb mines traffic, produces tool definitions, serves via CLI (+ optional MCP adapter)** |
 
 See [compiler-output-and-runtime.md](compiler-output-and-runtime.md) for the full design rationale.
 
@@ -189,8 +189,8 @@ The primary agent interface is a CLI that provides progressive spec navigation a
 **Why not MCP-first:** Microsoft's Playwright team (1.3M weekly MCP downloads) explicitly warns that MCP bloats agent context with tool schemas (~4-5K tokens for all tools loaded upfront). Their own recommendation is CLI+Skills. All target agents (Claude Code, Codex, Cursor, Copilot) have shell access. CLI progressive disclosure uses ~400 tokens to discover and use one tool from a 23-tool site vs ~3000-5000 for MCP schema loading.
 
 Implications:
-- Canonical compiler output is **OpenAPI 3.1 + `x-web-skill` vendor extensions** — standard format, zero custom tooling
-- CLI for progressive spec navigation (`web-skill <site>`, `web-skill <site> <tool>`) and execution (`web-skill <site> exec <tool> '{...}'`)
+- Canonical compiler output is **OpenAPI 3.1 + `x-openweb` vendor extensions** — standard format, zero custom tooling
+- CLI for progressive spec navigation (`openweb <site>`, `openweb <site> <tool>`) and execution (`openweb <site> exec <tool> '{...}'`)
 - SKILL.md generated on install to agent workspace (not by compiler)
 - LLM tool schemas (OpenAI, Anthropic, MCP, Gemini) mechanically extracted from OpenAPI
 - MCP adapter wraps the same executor for non-shell agents
@@ -315,7 +315,7 @@ An agent can call `search(query)` and receive accurate, structured data — with
 | Clustering bootstrap | mitmproxy2swagger (evaluate) | Existing HAR→OpenAPI conversion; adapt rather than rewrite |
 | CLI (spec navigator + executor) | Node.js | Native Playwright integration, single-language stack |
 | MCP adapter (optional) | Node.js (stdio transport) | Thin wrapper over CLI executor for non-shell agents |
-| SKILL.md generation | Template-based generator | Emits Agent Skills standard format on `web-skill install` |
+| SKILL.md generation | Template-based generator | Emits Agent Skills standard format on `openweb install` |
 | Schema inference | Custom + `json-schema-generator` | Need control over merging multiple samples |
 | LLM for analysis | Claude (via API) | Semantic labeling, tool descriptions, parameter classification |
 | Test runner | Node.js custom harness | Replay inputs, assert schema conformance |
@@ -357,7 +357,7 @@ An agent can call `search(query)` and receive accurate, structured data — with
 | Document | Contents |
 |---|---|
 | **[architecture-pipeline.md](architecture-pipeline.md)** | Phase 1 (Explore & Record), Phase 2 (Analyze & Extract), Phase 3 (Probe), Phase 4 (Generate & Test), Execution Runtime, Self-Healing |
-| **[compiler-output-and-runtime.md](compiler-output-and-runtime.md)** | First-principles derivation of compiler output format, OpenAPI 3.1 + x-web-skill extensions as canonical format, CLI design (progressive navigation + executor), derived formats, SKILL.md generation |
+| **[compiler-output-and-runtime.md](compiler-output-and-runtime.md)** | First-principles derivation of compiler output format, OpenAPI 3.1 + x-openweb extensions as canonical format, CLI design (progressive navigation + executor), derived formats, SKILL.md generation |
 | **[security-taxonomy.md](security-taxonomy.md)** | 6-layer website security model (reference), Escalation Ladder probing, execution mode derivation, common real-world configurations |
 | **[skill-package-format.md](skill-package-format.md)** | Per-website skill package directory layout, manifest.json, OpenAPI spec format, test format |
 | **[self-evolution.md](self-evolution.md)** | Hard problems & mitigations, knowledge base structure, evolution loop, knowledge integrity, compounding effect |

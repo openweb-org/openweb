@@ -1,6 +1,6 @@
 # Hard Problems & Self-Evolution
 
-*Part of the [web-skill design](web-skill-design.md). See also: [Architecture Pipeline](architecture-pipeline.md), [Security Taxonomy](security-taxonomy.md).*
+*Part of the [openweb design](openweb-design.md). See also: [Architecture Pipeline](architecture-pipeline.md), [Security Taxonomy](security-taxonomy.md).*
 
 ---
 
@@ -61,7 +61,7 @@ These are not engineering gaps but fundamental properties of websites that make 
 - Operate on user's own device, in user's own browser session. Functionally equivalent to clicking buttons — just faster and structured.
 - Don't circumvent access controls, break authentication, or access data the user couldn't access manually.
 - Require explicit user confirmation for write operations.
-- Prioritize sites with official APIs or WebMCP support. web-skill is the bridge for sites that haven't adopted standards.
+- Prioritize sites with official APIs or WebMCP support. openweb is the bridge for sites that haven't adopted standards.
 - Enterprise deployments: focus on internal tools and authorized integrations.
 
 ---
@@ -74,7 +74,7 @@ The meta-skill is not a static compiler. It's a compiler that **learns** as it p
 
 | Layer | What | Changes | Analogy |
 |---|---|---|---|
-| **Procedural** (compiler pipeline) | The algorithm: how to build a web skill | Rarely. Only for systemic gaps. | Compiler's core passes |
+| **Procedural** (compiler pipeline) | The algorithm: how to build an openweb skill | Rarely. Only for systemic gaps. | Compiler's core passes |
 | **Declarative** (knowledge/) | Patterns, heuristics, extractors | Frequently. Grows with each site. | Compiler's optimization rules |
 
 Most evolution happens in the declarative layer. The procedural layer only changes when you discover something like "we need entirely new handling for protobuf responses" — a structural gap, not just a new pattern.

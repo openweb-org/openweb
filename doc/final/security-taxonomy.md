@@ -1,6 +1,6 @@
 # Security Taxonomy & Probing Protocol
 
-*Part of the [web-skill design](web-skill-design.md). Referenced by [architecture-pipeline.md](architecture-pipeline.md) Phase 3.*
+*Part of the [openweb design](openweb-design.md). Referenced by [architecture-pipeline.md](architecture-pipeline.md) Phase 3.*
 
 ---
 
@@ -71,7 +71,7 @@ The runtime uses three execution modes plus a boolean flag:
 
 ## Probe Result Caching & TTL
 
-- Probe results are stored in the operation's `x-web-skill.mode` field in `openapi.yaml`.
+- Probe results are stored in the operation's `x-openweb.mode` field in `openapi.yaml`.
 - Results become stale when the site fingerprint changes or when runtime fallbacks consistently escalate beyond the classified mode.
 - **Re-probing triggers:** Fingerprint drift detected, or tool fails at classified mode 3+ times with success at a higher mode.
 - Re-probing is incremental: only re-test the specific endpoint, not the whole site.

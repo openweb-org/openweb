@@ -26,11 +26,11 @@ Strip away all framework jargon. The compiler watches browser traffic and produc
 3. **What it gives back** (response structure)
 4. **What execution prerequisites exist** (cookies, CSRF, browser context, human intervention)
 
-Items 1-3 are an **API specification**. Item 4 is **execution metadata** — web-skill-specific information about how to make requests succeed.
+Items 1-3 are an **API specification**. Item 4 is **execution metadata** — openweb-specific information about how to make requests succeed.
 
 ### 1.2 What Does the Agent Need?
 
-An AI agent consuming web-skill tools needs exactly three capabilities:
+An AI agent consuming openweb tools needs exactly three capabilities:
 
 | Capability | When | Token budget |
 |---|---|---|
@@ -70,9 +70,9 @@ What OpenAPI does NOT describe:
 - Session management (CSRF extraction, cookie handling)
 - Human handoff flag
 
-These are web-skill-specific annotations. OpenAPI has a standard mechanism for this: **vendor extensions** (`x-web-skill-*`).
+These are openweb-specific annotations. OpenAPI has a standard mechanism for this: **vendor extensions** (`x-openweb-*`).
 
-**Resolution: OpenAPI 3.1 + `x-web-skill` extensions is the canonical compiler output.** No custom intermediate format. The CLI provides progressive disclosure to keep agent context minimal.
+**Resolution: OpenAPI 3.1 + `x-openweb` extensions is the canonical compiler output.** No custom intermediate format. The CLI provides progressive disclosure to keep agent context minimal.
 
 **Why v1.0 was wrong about OpenAPI:**
 
@@ -90,7 +90,7 @@ These are web-skill-specific annotations. OpenAPI has a standard mechanism for t
 
 ### 2.1 Canonical Format: OpenAPI 3.1 + Runtime Extensions
 
-The compiler's canonical output per site is a standard OpenAPI 3.1 spec with `x-web-skill` vendor extensions for runtime metadata.
+The compiler's canonical output per site is a standard OpenAPI 3.1 spec with `x-openweb` vendor extensions for runtime metadata.
 
 ```yaml
 openapi: "3.1.0"
@@ -98,7 +98,7 @@ info:
   title: Google Flights
   description: Auto-extracted API for Google Flights
   version: "1.0.0"
-  x-web-skill:
+  x-openweb:
     spec_version: "0.1.0"
     generated_at: "2026-03-02T12:00:00Z"
     requires_auth: true
@@ -115,7 +115,7 @@ paths:
     post:
       operationId: search_flights
       summary: Search for flights between two airports on a given date
-      x-web-skill:
+      x-openweb:
         mode: session_http
         human_handoff: false
         session:
@@ -163,7 +163,7 @@ paths:
     get:
       operationId: get_details
       summary: Get fare details for a specific flight offer
-      x-web-skill:
+      x-openweb:
         mode: session_http
         human_handoff: false
       parameters:
@@ -198,15 +198,15 @@ paths:
 | `ui_fallback` | Eliminated (v1.1) | Separate artifact (see section 4.4) |
 | `parameters` vs `body_template` duplication | Eliminated | Parameters described once, in standard OpenAPI locations |
 
-**What `x-web-skill` adds (non-duplicative, genuinely new information):**
+**What `x-openweb` adds (non-duplicative, genuinely new information):**
 
 | Extension | Purpose | Example |
 |---|---|---|
-| `x-web-skill.mode` | Execution strategy | `session_http` |
-| `x-web-skill.human_handoff` | Requires human intervention | `false` |
-| `x-web-skill.session.csrf` | CSRF token extraction | `document.querySelector(...)` |
-| `x-web-skill.spec_version` | web-skill format version | `"0.1.0"` |
-| `x-web-skill.fingerprint` | Change detection hashes | `{ js_bundle_hash, ... }` |
+| `x-openweb.mode` | Execution strategy | `session_http` |
+| `x-openweb.human_handoff` | Requires human intervention | `false` |
+| `x-openweb.session.csrf` | CSRF token extraction | `document.querySelector(...)` |
+| `x-openweb.spec_version` | openweb format version | `"0.1.0"` |
+| `x-openweb.fingerprint` | Change detection hashes | `{ js_bundle_hash, ... }` |
 
 These annotations carry information that OpenAPI does not describe, with zero overlap.
 
@@ -252,7 +252,7 @@ Four items. Each earns its place:
 - `tools/` directory (one JSON per tool) replaced by `openapi.yaml` (one standard spec per site)
 - `manifest.json` now only contains what OpenAPI cannot: inter-operation dependency graph and site-level metadata
 
-**File splitting:** The default is one `openapi.yaml` per site — shared `servers`, `info.x-web-skill` (fingerprint etc.), and `components/schemas` avoid repetition across operations. For sites with many operations (100+), the spec can be split into multiple files using OpenAPI's standard `$ref` mechanism:
+**File splitting:** The default is one `openapi.yaml` per site — shared `servers`, `info.x-openweb` (fingerprint etc.), and `components/schemas` avoid repetition across operations. For sites with many operations (100+), the spec can be split into multiple files using OpenAPI's standard `$ref` mechanism:
 
 ```yaml
 # openapi.yaml (main file)
@@ -293,18 +293,18 @@ The agent never reads raw OpenAPI. The CLI extracts and presents information pro
 
 ```bash
 # What sites are available?
-$ web-skill sites
+$ openweb sites
 google-flights    3 tools    session_http
 amazon            23 tools   browser_fetch
 
 # What can this site do? (operationIds + summaries only)
-$ web-skill google-flights
+$ openweb google-flights
 search_flights        Search flights between two airports
 get_details           Get fare details for a flight offer
 price_graph           Monthly price calendar for a route
 
 # How do I use this tool? (parameters + response summary)
-$ web-skill google-flights search_flights
+$ openweb google-flights search_flights
 POST /travel/flights/api/search
   origin:      string  IATA airport code (e.g., SFO)  [required]
   dest:        string  IATA airport code (e.g., JFK)  [required]
@@ -314,11 +314,11 @@ Returns: { flights: [{ offer_id, airline, price, stops }] }
 Mode: session_http
 
 # Full OpenAPI operation (for debugging)
-$ web-skill google-flights search_flights --full
+$ openweb google-flights search_flights --full
 [prints the full OpenAPI path operation YAML]
 
 # Just one parameter (for tools with many params)
-$ web-skill amazon search --param price_range
+$ openweb amazon search --param price_range
 price_range: object
   min: number (USD, default: 0)
   max: number (USD, default: unlimited)
@@ -345,14 +345,14 @@ The compact view is more token-efficient than either raw JSON or raw YAML of the
 **Role 2: Executor**
 
 ```bash
-$ web-skill google-flights exec search_flights '{"origin":"SFO","dest":"JFK","date":"2026-04-01"}'
+$ openweb google-flights exec search_flights '{"origin":"SFO","dest":"JFK","date":"2026-04-01"}'
 {"flights":[{"offer_id":"f1","airline":"United","price":342,"stops":0}, ...]}
 ```
 
 The executor:
 1. Reads the OpenAPI operation for `search_flights`
 2. Constructs the HTTP request from OpenAPI path/method/requestBody definitions + agent-provided parameters
-3. Based on `x-web-skill.mode`, applies session management (cookies, CSRF) or browser context
+3. Based on `x-openweb.mode`, applies session management (cookies, CSRF) or browser context
 4. Makes the request
 5. Validates response against the OpenAPI response schema
 6. Returns JSON to stdout
@@ -365,10 +365,10 @@ For MVP, a CLI is simpler and sufficient. Every coding agent (Claude Code, Codex
 
 ### 2.5 SKILL.md Generation (For Agent Skills Ecosystem)
 
-SKILL.md is NOT part of the compiler output. It is generated when the user *installs* a web-skill package into an agent's workspace:
+SKILL.md is NOT part of the compiler output. It is generated when the user *installs* a openweb package into an agent's workspace:
 
 ```bash
-$ web-skill install google-flights
+$ openweb install google-flights
 # Creates: .claude/skills/google-flights/SKILL.md
 ```
 
@@ -380,7 +380,7 @@ name: google-flights
 description: >
   Search flights, check prices, and get fare details on Google Flights.
   Use when the user needs flight information, price comparisons, or booking details.
-allowed-tools: Bash(web-skill:*)
+allowed-tools: Bash(openweb:*)
 ---
 ```
 
@@ -393,11 +393,11 @@ allowed-tools: Bash(web-skill:*)
 - `price_graph` — Monthly price calendar for a route
 
 ## Usage
-web-skill google-flights exec search_flights '{"origin":"SFO","dest":"JFK","date":"2026-04-01"}'
+openweb google-flights exec search_flights '{"origin":"SFO","dest":"JFK","date":"2026-04-01"}'
 
 ## Discovery
-Run `web-skill google-flights` to see all tools with parameters.
-Run `web-skill google-flights <tool>` to see detailed parameter info.
+Run `openweb google-flights` to see all tools with parameters.
+Run `openweb google-flights <tool>` to see detailed parameter info.
 ```
 
 ---
@@ -421,7 +421,7 @@ Run `web-skill google-flights <tool>` to see detailed parameter info.
 │                  SKILL PACKAGE (data artifact)                    │
 │                                                                   │
 │  manifest.json              ← dependency graph, site metadata    │
-│  openapi.yaml               ← OpenAPI 3.1 + x-web-skill         │
+│  openapi.yaml               ← OpenAPI 3.1 + x-openweb         │
 │  extractors/                   extensions (canonical output)     │
 │  tests/                                                          │
 └──────────────────────────┬───────────────────────────────────────┘
@@ -459,7 +459,7 @@ Layer 0: Raw HTTP / Browser    — Execution substrate
 
 Microsoft's Playwright team explicitly moved from MCP-only to CLI+Skills because of token efficiency. The Agent Skills standard now has 30+ agent integrations.
 
-**web-skill's position:**
+**openweb's position:**
 - The **compiler** operates at Layer 0 (observes HTTP/browser) and produces output in standard OpenAPI format.
 - The **CLI** bridges OpenAPI -> Layer 2 (progressive navigation + execution).
 - The **install** command bridges OpenAPI -> Layer 3 (generates SKILL.md for agent ecosystems).
@@ -471,7 +471,7 @@ Microsoft's Playwright team explicitly moved from MCP-only to CLI+Skills because
 |---|---|---|
 | Canonical format | OpenAPI 3.1 (standard) | No custom format to learn, existing tooling works |
 | OpenAPI verbosity | CLI compact view (runtime transform) | Agent never sees raw OpenAPI nesting; compact view is ~120 tokens vs ~300 raw JSON |
-| Runtime metadata | `x-web-skill` vendor extensions | Standard OpenAPI extension mechanism |
+| Runtime metadata | `x-openweb` vendor extensions | Standard OpenAPI extension mechanism |
 | Agent interface | CLI with 4 commands | `sites`, `<site>`, `<site> <tool>`, `exec <tool>` |
 | Schema language | JSON Schema (via OpenAPI 3.1) | Universal across all LLM providers |
 | LLM tool schemas | Mechanical extraction from OpenAPI | ~10 lines each, no business logic |
@@ -491,7 +491,7 @@ From the browser's traffic perspective, GraphQL is a POST to `/graphql` with a J
   post:
     operationId: search_products
     summary: Search products in catalog
-    x-web-skill:
+    x-openweb:
       mode: session_http
       type: graphql        # tells CLI to extract variables as agent params
     requestBody:
@@ -511,10 +511,10 @@ From the browser's traffic perspective, GraphQL is a POST to `/graphql` with a J
                 required: [q]
 ```
 
-The `x-web-skill.type: graphql` annotation tells the CLI that agent-facing parameters are inside `variables`, not the full request body. The CLI presents it cleanly:
+The `x-openweb.type: graphql` annotation tells the CLI that agent-facing parameters are inside `variables`, not the full request body. The CLI presents it cleanly:
 
 ```
-$ web-skill example search_products
+$ openweb example search_products
 POST /graphql (GraphQL)
   q:      string  Search query  [required]
   limit:  int     default 10
@@ -550,10 +550,10 @@ These two concepts do not belong in the same artifact.
 
 | Document | Impact |
 |---|---|
-| **web-skill-design.md** | D2.1 updated: canonical output is now OpenAPI + extensions. CLI-first runtime unchanged. |
+| **openweb-design.md** | D2.1 updated: canonical output is now OpenAPI + extensions. CLI-first runtime unchanged. |
 | **skill-package-format.md** | Package structure updated: `tools/` -> `openapi.yaml`. Tool definition format -> OpenAPI operations. |
 | **architecture-pipeline.md** | Phase 4 output format updated to OpenAPI. Runtime reads OpenAPI operations. |
-| **security-taxonomy.md** | No change. Execution modes map to `x-web-skill.mode`. |
+| **security-taxonomy.md** | No change. Execution modes map to `x-openweb.mode`. |
 | **self-evolution.md** | No change. Knowledge base operates on operations regardless of format. |
 
 ---
@@ -562,8 +562,8 @@ These two concepts do not belong in the same artifact.
 
 1. **CLI executor implementation**: Should the executor be a long-running daemon (better performance, keeps browser sessions warm) or a per-invocation process (simpler, stateless)? The daemon approach is probably needed for `session_http` and `browser_fetch` modes.
 
-2. **CLI binary distribution**: Node.js for consistency with Playwright, or a compiled binary (Rust/Go) for faster startup? For MVP, Node.js with `npx web-skill` is pragmatic.
+2. **CLI binary distribution**: Node.js for consistency with Playwright, or a compiled binary (Rust/Go) for faster startup? For MVP, Node.js with `npx openweb` is pragmatic.
 
 3. **OpenAPI spec format**: YAML (more readable, standard for OpenAPI) or JSON (easier to parse programmatically)? Lean toward YAML for readability with JSON as alternative output.
 
-4. **GraphQL parameter extraction**: Use `x-web-skill.type: graphql` annotation, or auto-detect from `const` query field + variables pattern? Auto-detection is simpler if reliable.
+4. **GraphQL parameter extraction**: Use `x-openweb.type: graphql` annotation, or auto-detect from `const` query field + variables pattern? Auto-detection is simpler if reliable.

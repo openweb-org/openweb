@@ -1,6 +1,6 @@
 # Architecture: Pipeline Phases & Execution Runtime
 
-*Part of the [web-skill design](web-skill-design.md). See also: [Compiler Output & Runtime](compiler-output-and-runtime.md), [Security Taxonomy](security-taxonomy.md), [Skill Package Format](skill-package-format.md), [Self-Evolution](self-evolution.md).*
+*Part of the [openweb design](openweb-design.md). See also: [Compiler Output & Runtime](compiler-output-and-runtime.md), [Security Taxonomy](security-taxonomy.md), [Skill Package Format](skill-package-format.md), [Self-Evolution](self-evolution.md).*
 
 ---
 
@@ -201,7 +201,7 @@ Write endpoints skip probing and default to `browser_fetch`.
 
 ### Tool Synthesis
 
-Each semantically meaningful endpoint becomes an OpenAPI operation. The format uses OpenAPI 3.1 with `x-web-skill` vendor extensions for runtime metadata. See [compiler-output-and-runtime.md](compiler-output-and-runtime.md) for the full format rationale.
+Each semantically meaningful endpoint becomes an OpenAPI operation. The format uses OpenAPI 3.1 with `x-openweb` vendor extensions for runtime metadata. See [compiler-output-and-runtime.md](compiler-output-and-runtime.md) for the full format rationale.
 
 Example operation in the generated `openapi.yaml`:
 
@@ -210,7 +210,7 @@ Example operation in the generated `openapi.yaml`:
   get:
     operationId: search_flights
     summary: Search for flights between two airports on a given date
-    x-web-skill:
+    x-openweb:
       mode: browser_fetch
       human_handoff: false
       session:
@@ -252,10 +252,10 @@ Example operation in the generated `openapi.yaml`:
 Key design decisions:
 - **Standard format**: OpenAPI 3.1 — no custom tool definition format to learn. Existing tooling (Swagger UI, Postman) works out of the box.
 - **One spec per site**: All operations in a single `openapi.yaml`. CLI extracts per-operation views for progressive disclosure.
-- **Runtime metadata via extensions**: `x-web-skill.mode`, `x-web-skill.session`, `x-web-skill.human_handoff` — genuinely new information that OpenAPI doesn't describe, with zero duplication.
+- **Runtime metadata via extensions**: `x-openweb.mode`, `x-openweb.session`, `x-openweb.human_handoff` — genuinely new information that OpenAPI doesn't describe, with zero duplication.
 - **Zero parameter duplication**: Parameters described once in OpenAPI's native format (path, query, requestBody), used for both agent discovery and request construction.
 - UI automation procedures (browser-use-style step-by-step instructions) are **not** part of the OpenAPI spec. They live in separate markdown files as agent instructions — a fundamentally different artifact (non-deterministic agent procedure vs. deterministic API call).
-- CSRF extractors: inline expressions in `x-web-skill.session` for simple cases; external `.js` files in `extractors/` for complex extraction.
+- CSRF extractors: inline expressions in `x-openweb.session` for simple cases; external `.js` files in `extractors/` for complex extraction.
 - Operation naming: `{verb}_{object}` via `operationId` (e.g., `search_flights`, `get_details`, `add_to_cart`).
 
 ### Compiler Output (No Framework-Specific Emission)
@@ -265,7 +265,7 @@ Phase 4 produces **only** the canonical skill package:
 ```
 <site>/
 ├── manifest.json
-├── openapi.yaml       ← OpenAPI 3.1 + x-web-skill extensions (canonical output)
+├── openapi.yaml       ← OpenAPI 3.1 + x-openweb extensions (canonical output)
 ├── extractors/        ← complex session/CSRF scripts (optional)
 └── tests/             ← regression tests
 ```
@@ -295,10 +295,10 @@ Compute version hash from: JS bundle hashes + API endpoint set hash + response s
 
 ### Execution Engine
 
-The CLI executor handles tool calls by reading the OpenAPI operation, constructing the HTTP request, and managing session/browser context based on `x-web-skill.mode`:
+The CLI executor handles tool calls by reading the OpenAPI operation, constructing the HTTP request, and managing session/browser context based on `x-openweb.mode`:
 
 ```
-web-skill <site> exec <tool> '{args}'
+openweb <site> exec <tool> '{args}'
   ├─ Read OpenAPI operation for <tool>
   ├─ Construct HTTP request from OpenAPI path/method/params/requestBody
   ├─ mode = direct_http?
@@ -337,10 +337,10 @@ For signed/encrypted payloads: call the site's own signing functions via `page.e
 
 | Interface | Consumer | Priority |
 |---|---|---|
-| CLI (`web-skill <site> exec`) | Any coding agent (Claude Code, Codex, Cursor, Copilot) | MVP |
-| CLI (`web-skill <site> <tool>`) | Any coding agent (spec navigation) | MVP |
+| CLI (`openweb <site> exec`) | Any coding agent (Claude Code, Codex, Cursor, Copilot) | MVP |
+| CLI (`openweb <site> <tool>`) | Any coding agent (spec navigation) | MVP |
 | OpenAPI export | Human developers, API gateways | MVP+1 |
-| MCP adapter (`web-skill mcp-serve`) | Agents without shell access | Optional |
+| MCP adapter (`openweb mcp-serve`) | Agents without shell access | Optional |
 
 See [compiler-output-and-runtime.md](compiler-output-and-runtime.md) for the complete CLI command reference and design rationale.
 
