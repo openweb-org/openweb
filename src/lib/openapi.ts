@@ -34,7 +34,7 @@ export interface OpenApiOperation {
       readonly content?: Record<string, { readonly schema?: JsonSchema }>
     }
   >
-  readonly ['x-openweb']?: Record<string, unknown>
+  readonly "x-openweb"?: Record<string, unknown>
 }
 
 export interface OpenApiSpec {

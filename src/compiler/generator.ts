@@ -6,11 +6,13 @@ import { createHash } from 'node:crypto'
 import { stringify } from 'yaml'
 
 import type { AnalyzedOperation } from './types.js'
+import type { JsonSchema } from '../lib/openapi.js'
 
 interface GeneratePackageInput {
   readonly site: string
   readonly sourceUrl: string
   readonly operations: AnalyzedOperation[]
+  readonly outputBaseDir?: string
 }
 
 function nowIso(): string {
@@ -35,28 +37,79 @@ function hash16(value: string): string {
 }
 
 function choosePrimaryServerHost(operations: AnalyzedOperation[]): string {
-  // TODO(mvp-2): generalize host selection for arbitrary sites.
-  if (operations.some((operation) => operation.host === 'api.open-meteo.com')) {
-    return 'api.open-meteo.com'
+  const counts = new Map<string, number>()
+  for (const operation of operations) {
+    counts.set(operation.host, (counts.get(operation.host) ?? 0) + 1)
   }
-  return operations[0]?.host ?? 'api.open-meteo.com'
+
+  let winnerHost = operations[0]?.host ?? 'api.example.com'
+  let winnerCount = -1
+
+  for (const [host, count] of counts.entries()) {
+    if (count > winnerCount) {
+      winnerHost = host
+      winnerCount = count
+    }
+  }
+
+  return winnerHost
+}
+
+function hasRequiredParameter(operation: AnalyzedOperation, name: string): boolean {
+  return operation.parameters.some((parameter) => parameter.name === name && parameter.required)
+}
+
+function isObjectSchema(schema: JsonSchema | undefined): schema is JsonSchema & { properties: Record<string, JsonSchema> } {
+  return Boolean(schema?.type === 'object' && schema.properties)
+}
+
+function responseContainsResultsLatLon(schema: JsonSchema): boolean {
+  if (!isObjectSchema(schema)) {
+    return false
+  }
+
+  const results = schema.properties.results
+  if (!results || results.type !== 'array' || !results.items) {
+    return false
+  }
+  if (!isObjectSchema(results.items)) {
+    return false
+  }
+
+  return Boolean(results.items.properties.latitude && results.items.properties.longitude)
 }
 
 function buildDependencies(operations: AnalyzedOperation[]): Record<string, string> {
-  // TODO(mvp-2): infer inter-tool dependencies generically from dataflow.
-  const ids = new Set(operations.map((operation) => operation.operationId))
-  if (!ids.has('search_location') || !ids.has('get_forecast')) {
+  const providers = operations.filter((operation) => responseContainsResultsLatLon(operation.responseSchema))
+  if (providers.length !== 1) {
+    return {}
+  }
+  const provider = providers[0]
+  if (!provider) {
+    return {}
+  }
+
+  const consumers = operations.filter(
+    (operation) =>
+      operation.operationId !== provider.operationId &&
+      hasRequiredParameter(operation, 'latitude') &&
+      hasRequiredParameter(operation, 'longitude'),
+  )
+
+  const firstConsumer = consumers[0]
+  if (!firstConsumer) {
     return {}
   }
 
   return {
-    'search_location.results[].latitude': 'get_forecast.latitude',
-    'search_location.results[].longitude': 'get_forecast.longitude',
+    [`${provider.operationId}.results[].latitude`]: `${firstConsumer.operationId}.latitude`,
+    [`${provider.operationId}.results[].longitude`]: `${firstConsumer.operationId}.longitude`,
   }
 }
 
 export async function generatePackage(input: GeneratePackageInput): Promise<string> {
-  const outputRoot = path.join(os.homedir(), '.openweb', 'sites', input.site)
+  const outputBaseDir = input.outputBaseDir ?? path.join(os.homedir(), '.openweb', 'sites')
+  const outputRoot = path.join(outputBaseDir, input.site)
   const testsDir = path.join(outputRoot, 'tests')
   await mkdir(testsDir, { recursive: true })
 

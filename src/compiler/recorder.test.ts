@@ -1,0 +1,84 @@
+import os from 'node:os'
+import path from 'node:path'
+import { access, mkdtemp, rm, writeFile } from 'node:fs/promises'
+
+import { describe, expect, it } from 'vitest'
+
+import { cleanupRecordingDir, loadRecordedSamples } from './recorder.js'
+
+describe('recorder helpers', () => {
+  it('loads valid samples from HAR and cleans temp directory', async () => {
+    const recordingDir = await mkdtemp(path.join(os.tmpdir(), 'openweb-recorder-test-'))
+
+    try {
+      const har = {
+        log: {
+          entries: [
+            {
+              request: {
+                method: 'GET',
+                url: 'https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41',
+              },
+              response: {
+                status: 200,
+                headers: [{ name: 'content-type', value: 'application/json' }],
+                content: {
+                  mimeType: 'application/json',
+                  text: JSON.stringify({ latitude: 52.52, longitude: 13.41 }),
+                },
+              },
+            },
+          ],
+        },
+      }
+
+      await writeFile(path.join(recordingDir, 'traffic.har'), `${JSON.stringify(har, null, 2)}\n`, 'utf8')
+
+      const samples = await loadRecordedSamples(recordingDir)
+      expect(samples).toHaveLength(1)
+      expect(samples[0].host).toBe('api.open-meteo.com')
+      expect(samples[0].query.latitude).toEqual(['52.52'])
+    } finally {
+      await cleanupRecordingDir(recordingDir)
+    }
+
+    await expect(access(recordingDir)).rejects.toBeDefined()
+  })
+
+  it('throws when HAR has no usable JSON API entries', async () => {
+    const recordingDir = await mkdtemp(path.join(os.tmpdir(), 'openweb-recorder-test-'))
+
+    try {
+      const har = {
+        log: {
+          entries: [
+            {
+              request: {
+                method: 'GET',
+                url: 'https://api.open-meteo.com/v1/forecast?latitude=52.52',
+              },
+              response: {
+                status: 200,
+                headers: [{ name: 'content-type', value: 'text/plain' }],
+                content: {
+                  mimeType: 'text/plain',
+                  text: 'not-json',
+                },
+              },
+            },
+          ],
+        },
+      }
+
+      await writeFile(path.join(recordingDir, 'traffic.har'), `${JSON.stringify(har, null, 2)}\n`, 'utf8')
+
+      await expect(loadRecordedSamples(recordingDir)).rejects.toMatchObject({
+        payload: {
+          code: 'EXECUTION_FAILED',
+        },
+      })
+    } finally {
+      await rm(recordingDir, { recursive: true, force: true })
+    }
+  })
+})
