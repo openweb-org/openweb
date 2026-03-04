@@ -12,9 +12,12 @@ These are not engineering gaps but fundamental properties of websites that make 
 
 **Problem:** Cookies, CSRF tokens, device fingerprints, step-up verification (SMS/email/2FA), payment confirmation. Many requests can't be naively replayed.
 
-**Mitigation:**
-- Execute within the browser session (same cookies, same fingerprint).
-- Extract CSRF/nonce tokens just-in-time from the page before each request.
+**Mitigation (progressive):**
+- **MVP-1**: No auth (public site: Open-Meteo).
+- **MVP-2 capture**: Real Chrome profile — user's existing login session inherited during `openweb compile`.
+- **MVP-2 runtime**: `openweb login <site>` — visible browser handoff → cookies + Bearer tokens captured on close → plaintext cookie jar at `~/.openweb/sessions/<site>/cookies.json`.
+- **MVP-3**: Encrypted auth store (AES-256-GCM, machine-ID keyed key derivation, subdomain fallback). JWT `exp` parsing for proactive refresh.
+- **Post-MVP**: Auto-refresh — OAuth refresh_token flow (no browser) + browser-based CSRF refresh + CAPTCHA detection (switch to visible mode).
 - For step-up auth (CAPTCHA, 2FA), raise `human_handoff` with instructions and pause until the user completes the challenge.
 - Never store or transmit credentials; the user's browser session is the authentication boundary.
 
@@ -34,13 +37,14 @@ These are not engineering gaps but fundamental properties of websites that make 
 - The dependency graph explicitly models these chains.
 - The agent sequences tool calls using the graph.
 - Verification happens at each step, not just the final one.
+- **Rollback is the agent's responsibility.** Each tool call is atomic. The runtime does not manage multi-step transactions. The agent uses the dependency graph to plan sequences and handles failures at each step. This is an explicit design principle.
 
 ### 4. GraphQL / WebSocket / SSE
 
 **Problem:** GraphQL uses a single endpoint with varying operations. WebSocket/SSE provide real-time data that doesn't follow request/response patterns.
 
 **Mitigation:**
-- GraphQL: cluster by `operationName` instead of URL. Variables become parameters.
+- GraphQL (first-class from MVP-2): detect by path + `operationName`/`query` in body. Cluster by `POST + operationName`. Variables become parameters. `query` string → fixed template. operationId: `{query|mutation}_{OperationName}`. See [architecture-pipeline.md](architecture-pipeline.md) Phase 2 Step A for details.
 - WebSocket messages: capture and classify (subscribe/unsubscribe/data-push).
 - Defer real-time subscriptions to post-MVP; focus on request/response patterns first.
 

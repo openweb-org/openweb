@@ -13,6 +13,13 @@ What should the compiler produce, and how should agents consume it?
 
 v1.0 of this document proposed a custom JSON tool definition format with an `execution` block containing `body_template`, `verify`, and `ui_fallback`. Iterative review revealed that this intermediate layer duplicates information that standard API specification formats already describe. This v2.0 re-derives the answer with that lesson learned.
 
+**Key resolutions from reference analysis and design review:**
+- C-HAR format dropped in favor of standard HAR + UI action sidecar (see architecture-pipeline.md Phase 1)
+- `x-openweb` extensions expanded: `risk_tier`, `stable_id`, `signature_id`, `tool_version`, `page_url`, `verified`, `signals`
+- Structured error contract defined (stderr JSON)
+- CLI daemon resolved: hybrid per-invocation + background browser daemon
+- Extractor script interface formalized
+
 ---
 
 ## 1. First-Principles Analysis
@@ -118,7 +125,14 @@ paths:
       x-openweb:
         mode: session_http
         human_handoff: false
+        risk_tier: safe
+        stable_id: "a1b2c3d4e5f6g7h8"
+        signature_id: "i9j0k1l2m3n4o5p6"
+        tool_version: 1
+        verified: true
+        signals: ["status-match"]
         session:
+          page_url: "https://www.google.com/travel/flights"
           csrf: "document.querySelector('meta[name=csrf]').content"
       requestBody:
         required: true
@@ -204,7 +218,15 @@ paths:
 |---|---|---|
 | `x-openweb.mode` | Execution strategy | `session_http` |
 | `x-openweb.human_handoff` | Requires human intervention | `false` |
+| `x-openweb.risk_tier` | Risk classification for confirmation/rate-limiting | `medium` |
+| `x-openweb.stable_id` | Endpoint identity (survives param changes) | `"a1b2c3d4e5f6g7h8"` |
+| `x-openweb.signature_id` | Endpoint signature (changes on breaking changes) | `"i9j0k1l2m3n4o5p6"` |
+| `x-openweb.tool_version` | Human-readable version counter | `1` |
+| `x-openweb.verified` | Was this endpoint actually probed? | `true` |
+| `x-openweb.signals` | Evidence for mode classification | `["status-match", "auth-required"]` |
 | `x-openweb.session.csrf` | CSRF token extraction | `document.querySelector(...)` |
+| `x-openweb.session.page_url` | Browser context URL for `browser_fetch` | `"https://..."` |
+| `x-openweb.type` | GraphQL vs REST annotation | `"graphql"` |
 | `x-openweb.spec_version` | openweb format version | `"0.1.0"` |
 | `x-openweb.fingerprint` | Change detection hashes | `{ js_bundle_hash, ... }` |
 
@@ -408,7 +430,7 @@ Run `openweb google-flights <tool>` to see detailed parameter info.
 ┌──────────────────────────────────────────────────────────────────┐
 │                    COMPILER (build-time)                          │
 │                                                                   │
-│  Phase 1: Record (C-HAR)                                         │
+│  Phase 1: Record (HAR + UI action log)                                │
 │  Phase 2: Analyze (cluster, classify params, infer schema)       │
 │  Phase 3: Probe  (find cheapest execution mode)                  │
 │  Phase 4: Generate (OpenAPI spec + tests)                        │
@@ -471,8 +493,11 @@ Microsoft's Playwright team explicitly moved from MCP-only to CLI+Skills because
 |---|---|---|
 | Canonical format | OpenAPI 3.1 (standard) | No custom format to learn, existing tooling works |
 | OpenAPI verbosity | CLI compact view (runtime transform) | Agent never sees raw OpenAPI nesting; compact view is ~120 tokens vs ~300 raw JSON |
-| Runtime metadata | `x-openweb` vendor extensions | Standard OpenAPI extension mechanism |
+| Runtime metadata | `x-openweb` vendor extensions | Standard OpenAPI extension mechanism; 13 extension fields, each non-duplicative |
 | Agent interface | CLI with 4 commands | `sites`, `<site>`, `<site> <tool>`, `exec <tool>` |
+| Error contract | JSON on stderr + exit code | Agent can parse errors programmatically; 7 error codes cover all failure modes |
+| Endpoint identity | 3-level: stable_id, signature_id, tool_version | Granular drift detection, backward-compatible updates |
+| Risk classification | 5-tier rule-based | Drives confirmation, rate limiting, publish policy |
 | Schema language | JSON Schema (via OpenAPI 3.1) | Universal across all LLM providers |
 | LLM tool schemas | Mechanical extraction from OpenAPI | ~10 lines each, no business logic |
 | SKILL.md | Generated on install from OpenAPI | Separation of concerns |
@@ -489,7 +514,7 @@ From the browser's traffic perspective, GraphQL is a POST to `/graphql` with a J
 ```yaml
 /graphql:
   post:
-    operationId: search_products
+    operationId: query_search_products
     summary: Search products in catalog
     x-openweb:
       mode: session_http
@@ -510,6 +535,13 @@ From the browser's traffic perspective, GraphQL is a POST to `/graphql` with a J
                   limit: { type: integer, default: 10 }
                 required: [q]
 ```
+
+**GraphQL handling in the compiler pipeline:**
+1. **Detection**: request to `/graphql` (or similar) with `operationName` or `query` in body.
+2. **Clustering key**: `POST + operationName` (not URL path, which is always `/graphql`).
+3. **Parameter extraction**: GraphQL `variables` → tool parameters. `query` string → fixed template.
+4. **operationId**: `{query|mutation}_{OperationName}` in snake_case.
+5. **Type inference**: if operation text starts with `mutation` → write operation.
 
 The `x-openweb.type: graphql` annotation tells the CLI that agent-facing parameters are inside `variables`, not the full request body. The CLI presents it cleanly:
 
@@ -558,12 +590,16 @@ These two concepts do not belong in the same artifact.
 
 ---
 
-## 6. Open Questions
+## 6. Resolved Design Questions
 
-1. **CLI executor implementation**: Should the executor be a long-running daemon (better performance, keeps browser sessions warm) or a per-invocation process (simpler, stateless)? The daemon approach is probably needed for `session_http` and `browser_fetch` modes.
+1. **CLI executor implementation**: **Hybrid approach.** The CLI itself is per-invocation (simple, stateless, scriptable). A background daemon manages browser sessions only. `direct_http` calls bypass the daemon entirely. The daemon auto-starts on first `exec` that needs browser context and auto-exits after 5 minutes idle. See architecture-pipeline.md for details.
 
-2. **CLI binary distribution**: Node.js for consistency with Playwright, or a compiled binary (Rust/Go) for faster startup? For MVP, Node.js with `npx openweb` is pragmatic.
+2. **CLI binary distribution**: Node.js for consistency with Playwright. For MVP, `npx openweb` is pragmatic. Compiled binary (Rust/Go) is a post-MVP optimization.
 
-3. **OpenAPI spec format**: YAML (more readable, standard for OpenAPI) or JSON (easier to parse programmatically)? Lean toward YAML for readability with JSON as alternative output.
+3. **OpenAPI spec format**: YAML (more readable, standard for OpenAPI). JSON as alternative output via `openweb export`.
 
-4. **GraphQL parameter extraction**: Use `x-openweb.type: graphql` annotation, or auto-detect from `const` query field + variables pattern? Auto-detection is simpler if reliable.
+4. **GraphQL parameter extraction**: Use `x-openweb.type: graphql` annotation. Auto-detection from `const` query field + variables pattern as a secondary signal. The explicit annotation is more reliable.
+
+5. **Extractor script interface**: Inline expressions evaluated in `page.evaluate()` (browser context). File references (`{ "$ref_extractor": "extractors/csrf.js" }`) run in Node.js with the Playwright `page` object. Module contract: `export default async function(page) { return tokenValue; }`.
+
+6. **Structured error contract**: Defined — JSON on stderr with error code, message, action hint, and retriable flag. See architecture-pipeline.md Execution Runtime section.

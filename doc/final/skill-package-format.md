@@ -70,8 +70,19 @@ The OpenAPI spec is the single source of truth. If any derived format disagrees 
 
 Design principles:
 - No derived fields (tool_count, capability lists). Derive from `openapi.yaml` at load time.
-- `spec_version` field supports future format migration.
+- `spec_version` field supports future format migration. Rule: "The CLI must handle any `spec_version` ≤ current. If it encounters a newer version, it prints a warning to upgrade the CLI." Formal migration tooling can wait until there's a second version.
 - `dependencies` encodes the inter-tool data flow graph — sufficient for LLM agents to plan multi-step sequences.
+
+**Dependency notation grammar:**
+
+```
+dependency_key   := operation_id "." json_path
+json_path        := segment ("." segment)*
+segment          := field_name | field_name "[]"
+field_name       := [a-zA-Z_][a-zA-Z0-9_]*
+```
+
+Intentionally limited. `[]` means "any element of the array." No filter expressions, no wildcards beyond `[]`. If a dependency can't be expressed in this grammar, it's too complex for the agent to follow automatically and should be described in natural language in the operation's `summary` instead.
 
 ### OpenAPI Spec (Canonical Format)
 
@@ -87,7 +98,14 @@ Example operation:
     x-openweb:
       mode: session_http
       human_handoff: false
+      risk_tier: safe
+      stable_id: "a1b2c3d4e5f6g7h8"
+      signature_id: "i9j0k1l2m3n4o5p6"
+      tool_version: 1
+      verified: true
+      signals: ["status-match"]
       session:
+        page_url: "https://www.google.com/travel/flights"
         csrf: "document.querySelector('meta[name=csrf]').content"
     requestBody:
       required: true
@@ -137,6 +155,96 @@ Key points:
 - **Response validation**: the OpenAPI response schema validates responses — no separate verifier needed.
 - **Deterministic execution only**: OpenAPI operations are atomic API calls. UI automation procedures (browser-use-style step-by-step instructions) are a separate artifact.
 - **Session config**: CSRF extractors inline in `x-openweb.session` for simple cases. For complex multi-step extraction, reference a file in `extractors/`.
+- **Endpoint identity**: Three-level tracking via `stable_id` (survives param changes), `signature_id` (changes on breaking changes), `tool_version` (human-readable).
+- **Risk classification**: `risk_tier` (safe/low/medium/high/critical) drives confirmation prompts, rate limiting, and self-healing publish policy.
+- **Multi-step transactions**: Each tool call is atomic. The runtime does not manage multi-step transactions. The agent uses the dependency graph to plan sequences and handles failures at each step.
+
+### `x-openweb` Extension Schema
+
+Operation-level `x-openweb` schema (publish as `schemas/x-openweb.schema.json`):
+
+```jsonc
+{
+  "type": "object",
+  "properties": {
+    "mode": { "enum": ["direct_http", "session_http", "browser_fetch"] },
+    "human_handoff": { "type": "boolean", "default": false },
+    "risk_tier": { "enum": ["safe", "low", "medium", "high", "critical"], "default": "safe" },
+    "stable_id": { "type": "string", "description": "sha256(method+host+path)[:16]" },
+    "signature_id": { "type": "string", "description": "sha256(method+host+path+params)[:16]" },
+    "tool_version": { "type": "integer", "default": 1 },
+    "verified": { "type": "boolean", "description": "Was this endpoint actually probed?" },
+    "signals": { "type": "array", "items": { "type": "string" }, "description": "Evidence for mode classification" },
+    "type": { "enum": ["rest", "graphql"], "default": "rest" },
+    "session": {
+      "type": "object",
+      "properties": {
+        "page_url": { "type": "string", "format": "uri", "description": "URL to navigate to before browser_fetch" },
+        "csrf": {
+          "oneOf": [
+            { "type": "string", "description": "Inline JS expression for page.evaluate()" },
+            { "type": "object",
+              "properties": { "$ref_extractor": { "type": "string" } },
+              "required": ["$ref_extractor"],
+              "description": "Reference to extractor script file" }
+          ]
+        }
+      }
+    }
+  },
+  "required": ["mode"]
+}
+```
+
+### Extractor Script Interface
+
+Extractor scripts in `extractors/` follow this contract:
+
+- **Inline** (simple): `x-openweb.session.csrf` is a string → evaluated as JS expression in `page.evaluate()` context (browser).
+- **File reference** (complex): `x-openweb.session.csrf` is `{ "$ref_extractor": "extractors/csrf.js" }` → runs in Node.js with the Playwright `page` object.
+
+**Module contract:**
+
+```js
+// extractors/csrf.js
+export default async function(page) {
+  // Complex multi-step extraction
+  const meta = await page.$('meta[name="csrf-token"]');
+  return meta ? await meta.getAttribute('content') : null;
+}
+```
+
+The runtime decides context: inline expressions run in `page.evaluate()` (browser), file extractors run in Node.js with the `page` object (can use Playwright APIs).
+
+### Test Format
+
+Each tool has a test file in `tests/`:
+
+```jsonc
+{
+  "operation_id": "search_flights",
+  "cases": [
+    {
+      "name": "basic_search",
+      "input": {
+        "origin": "SFO",
+        "dest": "JFK",
+        "date": "2026-04-01"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true,
+        "response_contains": {
+          "flights": { "type": "array", "min_length": 1 }
+        }
+      },
+      "recorded_at": "2026-03-03T12:00:00Z"
+    }
+  ]
+}
+```
+
+Key design choice: assert **schema conformance**, not exact values. Use `response_contains` for structural spot-checks (array is non-empty, required fields present). This handles dynamic values (timestamps, IDs) naturally.
 
 **Deriving LLM tool schemas** (mechanical, ~10 lines each):
 

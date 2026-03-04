@@ -215,9 +215,9 @@ The compiler is the product. The runtime is the delivery mechanism.
 
 Every tool has both an API execution path and a UI fallback path. No automatic API extraction can guarantee 100% coverage.
 
-### D4: Causal Recording (C-HAR)
+### D4: Standard HAR + UI Action Sidecar
 
-Standard HAR captures *what*. C-HAR captures *why* — mapping UI events to the network requests they trigger. Without causality, can't distinguish user-triggered API calls from background noise.
+Standard HAR captures *what*. A separate UI action log captures user interactions with timestamps. Causality (which UI action triggered which request) is inferred post-hoc in Phase 2 using temporal proximity and field-name matching — not embedded in the recording format. This replaces the originally proposed C-HAR (Causal HAR) format, which no reference implementation in the industry uses. See [architecture-pipeline.md](architecture-pipeline.md) Phase 1 for details.
 
 ### D5: LLM-in-the-Loop for Semantic Annotation
 
@@ -241,11 +241,12 @@ The compiler maintains a growing knowledge base (patterns, heuristics, extractor
 
 | Policy | Rule |
 |---|---|
-| Default data capture | Request/response + causality only. Screenshots/a11y on-demand. |
+| Default data capture | Request/response + UI events only. Screenshots/a11y on-demand. |
 | Sensitive data | Never store plaintext passwords, payment info, OTP codes. |
 | Log sanitization | Auto-redact tokens, cookies, PII in logs and history files. |
 | Retention | Raw recordings deleted after skill generation. Only OpenAPI spec + tests retained. |
-| Write operation gate | High-risk writes (payment, account changes) require explicit user confirmation. |
+| Write operation gate | `risk_tier` drives confirmation: `high`/`critical` always confirm, `medium` confirms once per session, `safe`/`low` no confirmation. |
+| SSRF protection | Every outbound request validated: hostname, DNS resolution, private IP rejection, metadata endpoint blocking. Applied on all executor fetch() calls including redirects. |
 | Site allowlist | Optional site-level allowlist/denylist for enterprise deployments. |
 
 ---
@@ -254,22 +255,22 @@ The compiler maintains a growing knowledge base (patterns, heuristics, extractor
 
 ### MVP-1: Read-Only Skill for One Simple Site
 
-**Target site:** NOT Google Flights (protobuf, TLS fingerprint — too hard for first site). Choose the simplest possible:
-- A site with REST endpoints returning JSON
-- No anti-bot, no auth required for read operations
-- Candidates: weather service, public data portal, basic SaaS tool, or a simple e-commerce site with vanilla REST API
+**Target site: Open-Meteo** (open-meteo.com) — free weather API, clean REST, JSON responses, no auth, no rate limits for reasonable use. Well-documented (can validate compiler output against official docs). Has a real web UI with interactable elements (location search, date pickers, forecast type selectors) that trigger clean REST API calls. Difficulty level 1.
 
 **Scope:**
-- Recording: Playwright + CDP for 3-5 read flows
-- Clustering: URL-based endpoint grouping
-- Schema: Auto-inferred JSON Schema for responses
+- Recording: Playwright `record_har` + UI action sidecar for 3-5 read flows
+- Clustering: URL-based endpoint grouping with regex normalization
+- Schema: quicktype-core for structural inference + LLM for semantic annotation
 - Tools: 3-5 read-only tools
-- Execution: Start with `direct_http`, escalate as needed
+- Execution: `direct_http` only (no auth, no session needed)
+- SSRF: Mandatory target URL validation on every fetch
 - Testing: 5 recorded queries as regression tests
+- Filtering: Domain blocklist + content-type filter to remove noise
 
 **Not in scope:**
 - Write operations, self-healing, workflows, multi-site
 - GraphQL, WebSocket, protobuf
+- Session management, auth
 
 **Success criteria:**
 An agent can call `search(query)` and receive accurate, structured data — without any browser click/type operations. Quantified comparison: step count, latency, and success rate vs. browser-only agent on the same tasks (at least 20 task replays).
@@ -279,12 +280,19 @@ An agent can call `search(query)` and receive accurate, structured data — with
 - Second site with CSRF / cookie auth (escalation to `session_http` / `browser_fetch`)
 - Read + limited write operations (add to cart, apply filter)
 - Human-in-the-loop for payment
+- Real Chrome profile for capture (user's existing session)
+- `openweb login <site>` for runtime: visible browser handoff → cookie capture → plaintext cookie jar
+- Risk classification (deterministic rule-based)
+- Endpoint identity tracking (stable_id, signature_id, tool_version)
+- GraphQL support
 - Basic fingerprint-based change detection
 
-### MVP-3: Google Flights + Self-Healing
+### MVP-3: Google Flights + Self-Healing + Auth Hardening
 
 - Hard site: protobuf, TLS fingerprint, complex session
 - Self-healing pipeline (detect breakage → re-record → diff → patch)
+- Encrypted auth store (AES-256-GCM, machine-ID keyed, subdomain fallback)
+- JWT `exp` parsing for proactive refresh
 - Knowledge base accumulation from 3+ sites
 
 ### MVP-4: Scale & Generalize
@@ -297,7 +305,7 @@ An agent can call `search(query)` and receive accurate, structured data — with
 
 | Phase | Weeks | Focus | Exit Criteria |
 |---|---|---|---|
-| **A: Compiler MVP** | 1–3 | Record + cluster + emit tools for 1 easy site. Ship thin CLI (spec navigator + executor). Benchmark harness. | 3–5 read-only tools. Agent completes 20 tasks via CLI. Baseline metrics: success rate, latency, step count vs browser-only. |
+| **A: Compiler MVP** | 1–3 | Record (HAR + UI action sidecar) + cluster (regex normalization + quicktype) + emit tools for Open-Meteo. Ship thin CLI (spec navigator + executor). Benchmark harness. | 3–5 read-only tools. Agent completes 20 tasks via CLI. Baseline metrics: success rate, latency, step count vs browser-only. |
 | **B: Second Site + Write Ops** | 4–7 | Second site (moderate difficulty: CSRF/cookies). Write operations. Escalation ladder probing. Begin knowledge base. | 2 sites compiled, each ≥3 tools. Compiled tools beat browser-only on ≥2 of 3 metrics. |
 | **C: Hardening + Third Site** | 8–12 | Third+ sites. Self-healing. Regression suite. Change gating. OpenAPI export. Optional MCP adapter. | 5–10-site batch. No critical regressions. Knowledge base shows measurable pattern reuse. |
 
@@ -310,17 +318,25 @@ An agent can call `search(query)` and receive accurate, structured data — with
 | Component | Technology | Rationale |
 |---|---|---|
 | Browser automation | Playwright (Node.js) | Best CDP integration, cross-browser |
-| Navigation agent | browser-use or equivalent | Proven LLM-driven browser automation framework |
-| Traffic capture | CDP Network domain | Direct access to request/response + initiator stacks |
-| Clustering bootstrap | mitmproxy2swagger (evaluate) | Existing HAR→OpenAPI conversion; adapt rather than rewrite |
+| Navigation agent | Custom Node.js (Playwright + LLM, ~200-300 lines) | Minimal agent that reads a11y tree, exercises UI. Avoids Python dependency (browser-use). Replaceable with more capable agent later. |
+| Default browser mode | Real Chrome profile (`channel: "chrome"`) | Sidesteps bot detection for authenticated sites. Clean Chromium for public sites. |
+| Traffic capture | Playwright `record_har` + CDP | Standard HAR output, zero custom recording code |
+| Traffic filtering | Domain blocklist + content-type + path noise | 40+ blocked domains, reduces Phase 2 noise by 60-80% |
+| Clustering | Node.js reimplementation (~300-500 lines) | Straightforward URL parsing and grouping. mitmproxy2swagger used as benchmark, not dependency. |
 | CLI (spec navigator + executor) | Node.js | Native Playwright integration, single-language stack |
+| CLI executor architecture | Hybrid: per-invocation CLI + background browser daemon | Stateless CLI for simplicity; daemon for warm browser sessions. Auto-start/auto-exit. |
 | MCP adapter (optional) | Node.js (stdio transport) | Thin wrapper over CLI executor for non-shell agents |
 | SKILL.md generation | Template-based generator | Emits Agent Skills standard format on `openweb install` |
-| Schema inference | Custom + `json-schema-generator` | Need control over merging multiple samples |
-| LLM for analysis | Claude (via API) | Semantic labeling, tool descriptions, parameter classification |
+| Schema inference | `quicktype-core` (TypeScript library) | Multi-sample aggregation, union types, array item inference. LLM only for semantic annotation layer. |
+| URL normalization | Regex-based (5 patterns: UUID, numeric, hex, base64, date) | Sufficient — no reference project uses LLM for clustering |
+| Dependency graph | Structural field-name matching | Exact match (0.9) + suffix match (0.6), filter generics, O(n²) |
+| LLM for analysis | Claude (via API) | Semantic labeling, tool descriptions, parameter classification. ~$0.50-$2.00 per 10-endpoint site with Haiku. |
 | Test runner | Node.js custom harness | Replay inputs, assert schema conformance |
+| SSRF protection | Mandatory on every fetch() | Hostname validation, DNS resolution, private IP rejection, metadata endpoint blocking |
 | Skill storage | File system | Simple, versionable, portable |
 | State storage (MVP) | File system | Session cookies, probe results, knowledge base |
+| Auth storage (MVP-2) | Plaintext cookie jar (`~/.openweb/sessions/`) | Upgrade to encrypted store in MVP-3 |
+| Auth storage (MVP-3) | AES-256-GCM encrypted, machine-ID keyed | `0o600` permissions, subdomain fallback |
 | Concurrency (MVP) | Singleton browser, serial execution | Simplest correct approach |
 | Deployment (MVP) | Local only | User's own machine, user's own session |
 
@@ -340,15 +356,15 @@ An agent can call `search(query)` and receive accurate, structured data — with
 
 ---
 
-## 9. Open Questions for User Decision
+## 9. Resolved Questions
 
-1. **Site curriculum priority:** Which vertical to start with — travel, e-commerce, or information/SaaS? This affects which patterns the knowledge base learns first.
+1. **Site curriculum priority:** Start with weather/information vertical (Open-Meteo for MVP-1). Second site: moderate-difficulty e-commerce or SaaS with CSRF/cookies. This builds the knowledge base progressively.
 
-2. **API-key-skill scope:** Should we build a separate skill for auto-registering API keys on services that offer them? Interesting but tangential and ethically murky.
+2. **API-key-skill scope:** Deferred. Tangential to core value and ethically murky. Focus on traffic-based extraction.
 
-3. **Browser-use dependency:** Depend on browser-use for Phase 1 navigation, or build a minimal custom Playwright wrapper? browser-use is mature (79k stars) but adds a Python dependency; the rest of the stack is Node.js.
+3. **Browser-use dependency:** **Resolved: custom Node.js navigation agent.** For Phase 1, the navigation agent doesn't need browser-use's full sophistication — it needs to read the a11y tree, identify interactable elements, and exercise them. This is ~200-300 lines of Playwright + LLM code. Keeps the stack uniform (no Python dependency). Upgrade to a more capable agent later if needed. browser-use can be used as a subprocess if the custom agent proves insufficient.
 
-4. **mitmproxy2swagger integration:** Use as the clustering engine for Phase 2, or write our own? Handles basic HAR→OpenAPI but lacks causality-aware filtering.
+4. **mitmproxy2swagger integration:** **Resolved: don't integrate directly.** Reimplement clustering logic in Node.js (~300-500 lines) — straightforward URL parsing and grouping. Evaluate mitmproxy2swagger's output on test data as a benchmark. Our additions (causal filtering, parameter classification, semantic annotation, dependency graph) are the majority of Phase 2 anyway.
 
 ---
 

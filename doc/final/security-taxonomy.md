@@ -66,6 +66,36 @@ The runtime uses three execution modes plus a boolean flag:
 - **Ambiguity (`unknown` state):** A 403 could mean "security layer blocked you" or "endpoint doesn't exist" or "rate-limited." When ambiguous, mark as `unknown` and escalate to the next mode. Better safe than slow.
 - **Knowledge base acceleration:** If heuristics say "Cloudflare sites need `browser_fetch` in 94% of cases," start probing at step 4 instead of step 1. This is an optimization — always confirm empirically.
 - **Probe budget:** Each endpoint gets a hard cap on probe attempts. Don't burn the session.
+- **SSRF protection:** Every outbound request during probing (and later during execution) passes through mandatory SSRF validation: hostname validation → DNS resolution → private IP rejection → metadata endpoint blocking (`169.254.169.254`). Applied on all `fetch()` calls including redirect targets. This is non-negotiable — the executor takes user-provided parameters and constructs HTTP requests.
+
+---
+
+## Risk Classification
+
+Every endpoint receives a deterministic risk tier during Phase 3, stored in `x-openweb.risk_tier`:
+
+| Condition | Tier |
+|---|---|
+| Auth-related path (`/login`, `/oauth`, `/token`, `/session`) | critical |
+| Payment/billing paths (`payment`, `checkout`, `billing`, `refund`) | critical |
+| Destructive paths (`delete`, `destroy`, `revoke`, `terminate`) | high |
+| HTTP DELETE | high |
+| POST/PUT/PATCH with PII fields | high |
+| POST/PUT/PATCH (no PII) | medium |
+| GET with PII in response | low |
+| Everything else (GET, read-only) | safe |
+
+**PII detection heuristic:** field name contains `email`, `phone`, `ssn`, `password`, `credit_card`, `address`, `name` (when not a product/category name).
+
+Risk tier drives runtime behavior:
+
+| Tier | Confirmation | Rate limit | Self-heal publish |
+|---|---|---|---|
+| safe | None | 120/min | Auto if tests pass |
+| low | None | 60/min | Auto if tests pass |
+| medium | Once per session | 30/min | Human approval |
+| high | Every invocation | 10/min | Human approval |
+| critical | Every invocation with details | 5/min | Human approval |
 
 ---
 
