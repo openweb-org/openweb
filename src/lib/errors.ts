@@ -1,0 +1,41 @@
+export type OpenWebErrorCode =
+  | 'EXECUTION_FAILED'
+  | 'TOOL_NOT_FOUND'
+  | 'INVALID_PARAMS'
+
+export interface OpenWebErrorPayload {
+  readonly error: 'execution_failed'
+  readonly code: OpenWebErrorCode
+  readonly message: string
+  readonly action: string
+  readonly retriable: boolean
+}
+
+export class OpenWebError extends Error {
+  public readonly payload: OpenWebErrorPayload
+
+  constructor(payload: OpenWebErrorPayload) {
+    super(payload.message)
+    this.name = 'OpenWebError'
+    this.payload = payload
+  }
+}
+
+export function writeErrorToStderr(payload: OpenWebErrorPayload): void {
+  process.stderr.write(`${JSON.stringify(payload)}\n`)
+}
+
+export function toOpenWebError(error: unknown): OpenWebError {
+  if (error instanceof OpenWebError) {
+    return error
+  }
+
+  const message = error instanceof Error ? error.message : String(error)
+  return new OpenWebError({
+    error: 'execution_failed',
+    code: 'EXECUTION_FAILED',
+    message,
+    action: 'Retry the command or inspect the site/tool definition.',
+    retriable: true,
+  })
+}

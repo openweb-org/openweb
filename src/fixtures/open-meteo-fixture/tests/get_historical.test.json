@@ -1,0 +1,18 @@
+{
+  "operation_id": "get_historical",
+  "cases": [
+    {
+      "input": {
+        "latitude": 52.52,
+        "longitude": 13.41,
+        "start_date": "2024-01-01",
+        "end_date": "2024-01-03",
+        "daily": ["temperature_2m_mean"]
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "operation_id": "get_forecast",
+  "cases": [
+    {
+      "input": {
+        "latitude": 52.52,
+        "longitude": 13.41,
+        "hourly": ["temperature_2m"],
+        "timezone": "Europe/Berlin"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
