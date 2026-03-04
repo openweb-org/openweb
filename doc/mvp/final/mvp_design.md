@@ -31,7 +31,7 @@ Primary validation set: 20 weather tasks on Open-Meteo.
 | Topic | Final Decision | Why |
 |---|---|---|
 | Target site | Open-Meteo | Lowest complexity, real UI, real APIs, no auth |
-| Recording mode | Manual interactive recording | Fastest path to prove compiler pipeline |
+| Recording mode | Scripted Playwright (primary) + manual interactive (fallback) | Scripted: reproducible, headless, no human needed. Enables autonomous dev/verify. |
 | Execution mode in MVP-1 | `direct_http` only | Site is public read-only; avoids premature runtime complexity |
 | Phase 3 probing | Collapse to direct replay verification only | Keep empirical check without full escalation ladder |
 | Output format | OpenAPI 3.1 + `x-openweb` | Standard + minimal runtime metadata |
@@ -133,6 +133,8 @@ src/
     openapi.ts                  # OpenAPI spec read/write utilities
     errors.ts                   # Structured error types + stderr writer
     filtering.ts                # Domain blocklist data
+scripts/
+  record_open_meteo.ts          # Scripted Playwright recorder for Open-Meteo (test infra)
 ```
 
 ~15 files. Each file has one job. No file should exceed ~300 lines.
@@ -308,18 +310,37 @@ The `action` field gives agents a concrete next step. Always present.
 
 ## 6. Compiler Pipeline (MVP-1)
 
-## 6.1 Phase 1: Record (Interactive)
+## 6.1 Phase 1: Record
 
-Command:
+Three recording modes, same output format:
+
+**Mode A: Scripted recording** (`openweb compile <url> --script <file>`)
+A deterministic Playwright script that programmatically navigates the site, interacts with UI elements, and generates parameter variance. No LLM, no GUI needed — runs headless. This is the primary mode for MVP-1 development and CI, since it enables fully autonomous implement/verify without human intervention.
 
 ```bash
-openweb compile https://open-meteo.com --interactive
+openweb compile https://open-meteo.com --script scripts/record_open_meteo.ts
 ```
 
-Flow:
-1. Launch headed browser with HAR capture.
-2. User performs 3-6 flows with 2-3 input variations each.
-3. Close browser to end recording.
+**Mode B: Interactive recording** (`openweb compile <url> --interactive`)
+Launch a headed browser for a human to browse manually. For end-user workflows or sites where scripted selectors aren't yet written.
+
+**Mode C: Agent-driven exploration** (MVP-1.5, not in scope)
+LLM reads a11y tree, drives browser autonomously. Deferred.
+
+All three modes produce identical output:
+
+```
+recording/
+├── traffic.har
+├── ui_actions.jsonl
+└── metadata.json
+```
+
+The scripted recorder for Open-Meteo (`scripts/record_open_meteo.ts`) exercises:
+- 3+ cities (Berlin, Tokyo, New York) × forecast, historical, air quality
+- Different weather variables per request
+- Geocoding search with varied queries
+- Target: ~18 flows generating 2-3 samples per endpoint group
 
 Capture-time filtering:
 - Domain blocklist for analytics/ads/telemetry.
@@ -523,6 +544,7 @@ With browser-only: 8-20 browser interactions per task.
 - Scaffold CLI project.
 - Hand-write Open-Meteo OpenAPI fixture.
 - Implement navigator + direct executor + error contract + SSRF.
+- Write `scripts/record_open_meteo.ts` (scripted Playwright recorder for Open-Meteo).
 - Exit: agent can call fixture tools end-to-end.
 
 ### Week 2: Compiler
