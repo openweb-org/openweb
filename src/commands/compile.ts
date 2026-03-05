@@ -20,6 +20,19 @@ interface CompileArgs {
   readonly interactive?: boolean
 }
 
+interface CompileSiteOptions {
+  readonly outputBaseDir?: string
+  readonly verifyReplay?: boolean
+  readonly emitSummary?: boolean
+}
+
+export interface CompileSiteResult {
+  readonly site: string
+  readonly outputRoot: string
+  readonly operationCount: number
+  readonly verifiedCount: number
+}
+
 function siteSlugFromUrl(urlString: string): string {
   const hostname = new URL(urlString).hostname.replace(/^www\./, '')
   const [label] = hostname.split('.')
@@ -65,6 +78,16 @@ async function verifyOperation(operation: Omit<AnalyzedOperation, 'verified'>): 
 }
 
 export async function compileCommand(args: CompileArgs): Promise<void> {
+  await compileSite(args, {
+    emitSummary: true,
+    verifyReplay: true,
+  })
+}
+
+export async function compileSite(
+  args: CompileArgs,
+  options: CompileSiteOptions = {},
+): Promise<CompileSiteResult> {
   if (args.interactive) {
     throw new OpenWebError({
       error: 'execution_failed',
@@ -79,6 +102,7 @@ export async function compileCommand(args: CompileArgs): Promise<void> {
 
   const recordingDir = await runScriptedRecording(scriptPath)
   let filteredSamples: RecordedRequestSample[] = []
+  const site = siteSlugFromUrl(args.url)
   try {
     const recordedSamples = await loadRecordedSamples(recordingDir)
     filteredSamples = filterSamples(recordedSamples)
@@ -120,7 +144,7 @@ export async function compileCommand(args: CompileArgs): Promise<void> {
       exampleInput: buildExampleInput(annotatedParams),
     }
 
-    const verified = await verifyOperation(operationBase)
+    const verified = options.verifyReplay === false ? false : await verifyOperation(operationBase)
 
     analyzedOperations.push({
       ...operationBase,
@@ -139,13 +163,23 @@ export async function compileCommand(args: CompileArgs): Promise<void> {
   }
 
   const outputRoot = await generatePackage({
-    site: siteSlugFromUrl(args.url),
+    site,
     sourceUrl: args.url,
     operations: analyzedOperations,
+    outputBaseDir: options.outputBaseDir,
   })
 
   const verifiedCount = analyzedOperations.filter((operation) => operation.verified).length
-  process.stdout.write(
-    `Compiled ${analyzedOperations.length} tool(s), verified ${verifiedCount}/${analyzedOperations.length}. Output: ${outputRoot}\n`,
-  )
+  if (options.emitSummary) {
+    process.stdout.write(
+      `Compiled ${analyzedOperations.length} tool(s), verified ${verifiedCount}/${analyzedOperations.length}. Output: ${outputRoot}\n`,
+    )
+  }
+
+  return {
+    site,
+    outputRoot,
+    operationCount: analyzedOperations.length,
+    verifiedCount,
+  }
 }

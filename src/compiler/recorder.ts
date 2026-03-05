@@ -23,6 +23,7 @@ interface HarEntry {
     readonly content?: {
       readonly mimeType?: string
       readonly text?: string
+      readonly encoding?: string
     }
   }
 }
@@ -102,11 +103,15 @@ export async function loadRecordedSamples(recordingDir: string): Promise<Recorde
     }
 
     const parsedUrl = new URL(rawUrl)
-    const responseText = entry.response?.content?.text
+    const encodedText = entry.response?.content?.text
 
-    if (!responseText) {
+    if (!encodedText) {
       continue
     }
+
+    const encoding = entry.response?.content?.encoding?.toLowerCase()
+    const responseText =
+      encoding === 'base64' ? Buffer.from(encodedText, 'base64').toString('utf8') : encodedText
 
     let responseJson: unknown
     try {

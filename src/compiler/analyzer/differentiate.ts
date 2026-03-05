@@ -19,6 +19,10 @@ function maybeNumber(value: string): number | string {
 function inferPrimitiveSchema(values: Array<number | string>): JsonSchema {
   const allNumbers = values.every((value) => typeof value === 'number')
   if (allNumbers) {
+    const allIntegers = values.every((value) => typeof value === 'number' && Number.isInteger(value))
+    if (allIntegers) {
+      return { type: 'integer' }
+    }
     return { type: 'number' }
   }
   return { type: 'string' }

@@ -1,6 +1,8 @@
 import path from 'node:path'
 import { mkdir, writeFile } from 'node:fs/promises'
 
+import { chromium } from 'playwright'
+
 interface Flow {
   readonly action: string
   readonly url: string
@@ -32,49 +34,6 @@ function buildUrl(base: string, endpointPath: string, params: Record<string, str
     appendParam(url, name, value)
   }
   return url.toString()
-}
-
-function requestHeaders(url: string): Array<{ name: string; value: string }> {
-  const parsed = new URL(url)
-  return [
-    { name: 'accept', value: 'application/json' },
-    { name: 'host', value: parsed.host },
-  ]
-}
-
-async function executeFlow(flow: Flow): Promise<unknown> {
-  const started = Date.now()
-  const response = await fetch(flow.url, {
-    headers: { accept: 'application/json' },
-  })
-  const body = await response.text()
-  const elapsed = Date.now() - started
-
-  const parsedUrl = new URL(flow.url)
-
-  return {
-    startedDateTime: new Date(started).toISOString(),
-    time: elapsed,
-    request: {
-      method: 'GET',
-      url: flow.url,
-      headers: requestHeaders(flow.url),
-      queryString: Array.from(parsedUrl.searchParams.entries()).map(([name, value]) => ({ name, value })),
-    },
-    response: {
-      status: response.status,
-      headers: [
-        {
-          name: 'content-type',
-          value: response.headers.get('content-type') ?? '',
-        },
-      ],
-      content: {
-        mimeType: response.headers.get('content-type') ?? '',
-        text: body,
-      },
-    },
-  }
 }
 
 async function main(): Promise<void> {
@@ -115,10 +74,19 @@ async function main(): Promise<void> {
       }),
     },
     {
-      action: 'forecast_tokyo',
+      action: 'forecast_tokyo_daily_only',
       url: buildUrl('https://api.open-meteo.com', '/v1/forecast', {
         latitude: 35.68,
         longitude: 139.69,
+        daily: ['temperature_2m_min'],
+        timezone: 'Asia/Tokyo',
+      }),
+    },
+    {
+      action: 'forecast_new_york_hourly_only',
+      url: buildUrl('https://api.open-meteo.com', '/v1/forecast', {
+        latitude: 40.71,
+        longitude: -74.01,
         hourly: ['temperature_2m', 'wind_speed_10m'],
       }),
     },
@@ -151,54 +119,60 @@ async function main(): Promise<void> {
       }),
     },
     {
-      action: 'air_quality_tokyo',
+      action: 'air_quality_tokyo_no_optional',
       url: buildUrl('https://air-quality-api.open-meteo.com', '/v1/air-quality', {
         latitude: 35.68,
         longitude: 139.69,
-        hourly: ['pm10'],
       }),
     },
   ]
 
-  const entries: unknown[] = []
-  const actionLines: string[] = []
+  const uiActions: string[] = []
+  const harPath = path.join(outDir, 'traffic.har')
+
+  const browser = await chromium.launch({ headless: true })
+  const context = await browser.newContext({
+    recordHar: {
+      path: harPath,
+      mode: 'full',
+      content: 'embed',
+    },
+  })
+  const page = await context.newPage()
+
+  await page.goto('https://open-meteo.com', { waitUntil: 'domcontentloaded' })
 
   for (const flow of flows) {
     const timestamp = Date.now()
-    const entry = await executeFlow(flow)
-    entries.push(entry)
+    const response = await page.goto(flow.url, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    })
 
-    actionLines.push(
+    uiActions.push(
       JSON.stringify({
         timestamp_ms: timestamp,
         action: flow.action,
         selector: null,
         value: null,
         url: flow.url,
+        status: response?.status() ?? null,
       }),
     )
   }
 
-  const har = {
-    log: {
-      version: '1.2',
-      creator: {
-        name: 'openweb-scripted-recorder',
-        version: '0.1.0',
-      },
-      entries,
-    },
-  }
+  await context.close()
+  await browser.close()
 
   const metadata = {
     recorded_at: new Date().toISOString(),
-    mode: 'scripted',
+    mode: 'scripted_playwright',
     source: 'scripts/record_open_meteo.ts',
     flow_count: flows.length,
+    har_path: harPath,
   }
 
-  await writeFile(path.join(outDir, 'traffic.har'), `${JSON.stringify(har, null, 2)}\n`, 'utf8')
-  await writeFile(path.join(outDir, 'ui_actions.jsonl'), `${actionLines.join('\n')}\n`, 'utf8')
+  await writeFile(path.join(outDir, 'ui_actions.jsonl'), `${uiActions.join('\n')}\n`, 'utf8')
   await writeFile(path.join(outDir, 'metadata.json'), `${JSON.stringify(metadata, null, 2)}\n`, 'utf8')
 
   process.stdout.write(`${JSON.stringify({ recording_dir: outDir })}\n`)

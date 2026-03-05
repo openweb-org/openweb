@@ -60,4 +60,44 @@ describe('differentiateParameters', () => {
       items: { type: 'string' },
     })
   })
+
+  it('infers integer type when all numeric values are integers', () => {
+    const endpoint = {
+      method: 'GET',
+      host: 'geocoding-api.open-meteo.com',
+      path: '/v1/search',
+      samples: [
+        {
+          method: 'GET',
+          host: 'geocoding-api.open-meteo.com',
+          path: '/v1/search',
+          url: 'https://geocoding-api.open-meteo.com/v1/search?name=Berlin&count=1',
+          query: {
+            name: ['Berlin'],
+            count: ['1'],
+          },
+          status: 200,
+          contentType: 'application/json',
+          responseJson: {},
+        },
+        {
+          method: 'GET',
+          host: 'geocoding-api.open-meteo.com',
+          path: '/v1/search',
+          url: 'https://geocoding-api.open-meteo.com/v1/search?name=Tokyo&count=5',
+          query: {
+            name: ['Tokyo'],
+            count: ['5'],
+          },
+          status: 200,
+          contentType: 'application/json',
+          responseJson: {},
+        },
+      ],
+    }
+
+    const params = differentiateParameters(endpoint)
+    const count = params.find((item) => item.name === 'count')
+    expect(count?.schema).toEqual({ type: 'integer' })
+  })
 })

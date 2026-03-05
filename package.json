@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "ajv": "^8.17.1",
+    "playwright": "^1.52.0",
     "yargs": "^18.0.0",
     "yaml": "^2.8.1"
   },
