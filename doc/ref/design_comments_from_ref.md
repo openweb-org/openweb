@@ -4,7 +4,7 @@
 > **Date**: 2026-03-03
 > **Purpose**: Concrete design changes for openweb, grounded in what reference projects prove works (or doesn't).
 >
-> **⚠ LICENSE WARNING**: This document references apitap (BSL 1.1) for internal analysis only. When incorporating these recommendations into `doc/final/` design specs, describe capabilities generically without naming apitap. Use phrases like "reference implementations show that..." or "prior art demonstrates...". Do NOT carry over apitap-specific naming conventions, config key structures, or directory layouts.
+> **⚠ LICENSE WARNING**: This document references apitap (BSL 1.1) for internal analysis only. When incorporating these recommendations into `doc/todo/v2/` design specs, describe capabilities generically without naming apitap. Use phrases like "reference implementations show that..." or "prior art demonstrates...". Do NOT carry over apitap-specific naming conventions, config key structures, or directory layouts.
 
 Each recommendation cites the reference project(s) that inform it and maps to a specific openweb pipeline phase or component.
 

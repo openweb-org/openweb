@@ -2,7 +2,7 @@
 
 > **Reviewer**: Claude (Opus 4)
 > **Date**: 2026-03-03
-> **Scope**: All 6 documents in `doc/final/`
+> **Scope**: All 6 documents in `doc/todo/v2/`
 > **Verdict**: Strategic framing is strong — compiler metaphor, escalation ladder, OpenAPI-as-canonical-format are well-reasoned. Main gap pattern: **high-level architecture is solid, but data contracts between pipeline phases and runtime components are underspecified.**
 
 ---

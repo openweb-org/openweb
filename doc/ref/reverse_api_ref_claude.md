@@ -5,7 +5,7 @@
 > **Scope**: 6 projects in `.reference/reverse-api/`
 > **Purpose**: Understand prior art for openweb's pipeline design — what works, what doesn't, what to steal (ideas only).
 >
-> **⚠ LICENSE WARNING**: apitap is BSL 1.1. Do NOT copy code, naming conventions, config key structures, error messages, or directory layouts. Do NOT reference apitap by name in any `doc/final/` or public-facing documents. This reference doc is internal analysis only. When writing design specs, describe capabilities generically (e.g., "replayability tiers", "encrypted auth store") without attribution to apitap.
+> **⚠ LICENSE WARNING**: apitap is BSL 1.1. Do NOT copy code, naming conventions, config key structures, error messages, or directory layouts. Do NOT reference apitap by name in any `doc/todo/v2/` or public-facing documents. This reference doc is internal analysis only. When writing design specs, describe capabilities generically (e.g., "replayability tiers", "encrypted auth store") without attribution to apitap.
 
 ---
 
