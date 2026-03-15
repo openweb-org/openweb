@@ -4,6 +4,7 @@ import process from 'node:process'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
+import { captureStartCommand, captureStopCommand } from './commands/capture.js'
 import { compileCommand } from './commands/compile.js'
 import { execCommand } from './commands/exec.js'
 import { showCommand } from './commands/show.js'
@@ -24,7 +25,7 @@ async function withErrorHandling(fn: () => Promise<void>): Promise<void> {
 const argv = hideBin(process.argv)
 const firstArg = argv[0] ?? ''
 
-const passthroughTopLevel = new Set(['sites', 'compile', '--help', '-h', '--version', '-v'])
+const passthroughTopLevel = new Set(['sites', 'compile', 'capture', '--help', '-h', '--version', '-v'])
 
 if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
   const [site, second, third, fourth] = argv
@@ -80,6 +81,38 @@ await yargs(argv)
         })
       })
     },
+  )
+  .command(
+    'capture',
+    'Capture browser traffic and state via CDP',
+    (cmd) =>
+      cmd
+        .command(
+          'start',
+          'Start capturing (runs until Ctrl+C)',
+          (sub) =>
+            sub
+              .option('cdp-endpoint', {
+                type: 'string',
+                demandOption: true,
+                describe: 'Chrome DevTools Protocol endpoint (e.g. http://localhost:9222)',
+              })
+              .option('output', { type: 'string', describe: 'Output directory (default: ./capture)' }),
+          async (args) => {
+            await withErrorHandling(async () => {
+              await captureStartCommand({
+                cdpEndpoint: String(args['cdp-endpoint']),
+                output: args.output ? String(args.output) : undefined,
+              })
+            })
+          },
+        )
+        .command('stop', 'Stop an active capture session', {}, async () => {
+          await withErrorHandling(async () => {
+            await captureStopCommand()
+          })
+        })
+        .demandCommand(1),
   )
   .demandCommand(1)
   .help()
