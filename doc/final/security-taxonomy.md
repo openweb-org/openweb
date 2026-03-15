@@ -1,6 +1,6 @@
 # Security Taxonomy & Probing Protocol
 
-> **Status**: DRAFT
+> **Status**: COMPLETE
 > **Referenced by**: [compiler-pipeline.md](compiler-pipeline.md) Phase 3, [runtime-executor.md](runtime-executor.md)
 > **Mostly unchanged from v1** — updated references and added L1/L2/L3 mapping.
 

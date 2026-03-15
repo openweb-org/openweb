@@ -1,6 +1,6 @@
 # Compiler Pipeline v2
 
-> **Status**: DRAFT
+> **Status**: COMPLETE
 > **Evolved from**: v1 (`archive/v1/architecture-pipeline.md`)
 > **Addresses**: All 12 design gaps (capture + detection + emission)
 

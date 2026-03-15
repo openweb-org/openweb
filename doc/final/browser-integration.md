@@ -1,6 +1,6 @@
 # Browser Integration & Capture Architecture
 
-> **Status**: DRAFT
+> **Status**: COMPLETE
 > **Addresses**: Gaps 002, 003, 006, 011
 > **Principle**: OpenWeb does not own the browser.
 

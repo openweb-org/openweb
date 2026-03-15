@@ -1,6 +1,6 @@
 # Hard Problems & Self-Evolution
 
-> **Status**: DRAFT
+> **Status**: COMPLETE
 > **Referenced by**: [compiler-pipeline.md](compiler-pipeline.md), [security-taxonomy.md](security-taxonomy.md)
 > **Mostly unchanged from v1** — added L2/L3 pattern growth mechanism.
 

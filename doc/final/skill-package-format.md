@@ -1,6 +1,6 @@
 # Skill Package Format v2
 
-> **Status**: DRAFT
+> **Status**: COMPLETE
 > **Evolved from**: v1 (`archive/v1/`)
 > **Consumed by**: Runtime executor, CLI, self-healing
 

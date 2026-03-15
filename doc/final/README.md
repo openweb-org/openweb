@@ -1,6 +1,6 @@
 # OpenWeb v2: Website-to-API Compiler — Three-Layer Architecture
 
-> **Status**: DRAFT — Iterating via ralph-loop
+> **Status**: COMPLETE — All documents finalized
 > **Supersedes**: v1 (archived in `archive/v1/`)
 > **Date**: 2026-03-15
 
@@ -69,16 +69,16 @@ Capture format: JSONL for frame-level recording. See [browser-integration.md](br
 
 | Document | Status | Description |
 |---|---|---|
-| [browser-integration.md](browser-integration.md) | DRAFT | **NEW**: Playwright CLI integration & capture architecture |
+| [browser-integration.md](browser-integration.md) | COMPLETE | **NEW**: Playwright CLI integration & capture architecture |
 | [layer2-interaction-primitives.md](layer2-interaction-primitives.md) | COMPLETE | **NEW**: Pattern DSL for auth/CSRF/signing/pagination |
-| [layer3-code-adapters.md](layer3-code-adapters.md) | DRAFT | **NEW**: Code escape hatch spec |
-| [pattern-library.md](pattern-library.md) | DRAFT | **NEW**: Catalog of all known patterns |
-| [compiler-pipeline.md](compiler-pipeline.md) | DRAFT | Pipeline (evolved from v1, adds multi-source capture + pattern matching) |
-| [runtime-executor.md](runtime-executor.md) | DRAFT | Runtime (evolved from v1, adds L2/L3 execution) |
-| [skill-package-format.md](skill-package-format.md) | DRAFT | Package format (evolved from v1, adds L2/L3 artifacts) |
-| [gap-coverage-matrix.md](gap-coverage-matrix.md) | DRAFT | **NEW**: How each gap maps to a layer/primitive |
-| [security-taxonomy.md](security-taxonomy.md) | DRAFT | Probing protocol (updated for v2 three-layer alignment) |
-| [self-evolution.md](self-evolution.md) | DRAFT | Knowledge base (updated for v2 pattern growth) |
+| [layer3-code-adapters.md](layer3-code-adapters.md) | COMPLETE | **NEW**: Code escape hatch spec |
+| [pattern-library.md](pattern-library.md) | COMPLETE | **NEW**: Catalog of all known patterns |
+| [compiler-pipeline.md](compiler-pipeline.md) | COMPLETE | Pipeline (evolved from v1, adds multi-source capture + pattern matching) |
+| [runtime-executor.md](runtime-executor.md) | COMPLETE | Runtime (evolved from v1, adds L2/L3 execution) |
+| [skill-package-format.md](skill-package-format.md) | COMPLETE | Package format (evolved from v1, adds L2/L3 artifacts) |
+| [gap-coverage-matrix.md](gap-coverage-matrix.md) | COMPLETE | **NEW**: How each gap maps to a layer/primitive |
+| [security-taxonomy.md](security-taxonomy.md) | COMPLETE | Probing protocol (updated for v2 three-layer alignment) |
+| [self-evolution.md](self-evolution.md) | COMPLETE | Knowledge base (updated for v2 pattern growth) |
 
 ## Reference Materials
 
@@ -95,15 +95,15 @@ Must address all 12 design gaps identified from OpenTabs plugin analysis:
 
 | # | Gap | Target Layer | Primitive(s) | Status |
 |---|---|---|---|---|
-| 001 | Pure SSR / no client API | L2 | `extraction.ssr_*`, `extraction.html_dom` | TODO |
-| 002 | Browser state extraction | L2 | `auth.localStorage_jwt`, `auth.sessionStorage_msal`, `auth.page_global` | TODO |
-| 003 | WebSocket protocols | L2/L3 | `auth.websocket_intercept` or L3 adapter | TODO |
-| 004 | Dynamic request signing | L2 | `signing.sapisidhash`, `signing.aws_sigv4`; L3 for obfuscated | TODO |
-| 005 | CSRF token rotation | L2 | `csrf.cookie_to_header`, `csrf.meta_tag`, `csrf.page_global` | TODO |
-| 006 | DOM parsing / SSR cache | L2 | `extraction.ssr_next_data`, `extraction.apollo_cache` | TODO |
-| 007 | No HTTP API | L3 | Code adapter (WhatsApp, Telegram) | TODO |
-| 008 | Multi-step auth exchange | L2 | `auth.oauth_refresh`, `auth.token_exchange` | TODO |
-| 009 | Persisted query hashes | L2/L3 | `graphql.persisted_query_discovery` | TODO |
-| 010 | Google gapi proxy | L2 | `auth.gapi_proxy` | TODO |
-| 011 | Page navigation / DOM | L3 | Code adapter (navigate, BroadcastChannel) | TODO |
-| 012 | Cross-origin bearer | L2 | `auth.cross_origin_bearer`, multi-domain config | TODO |
+| 001 | Pure SSR / no client API | L2 | `html_selector`, `ssr_next_data`, `script_json`, `page_global_data` | COMPLETE |
+| 002 | Browser state extraction | L2 | `localStorage_jwt`, `sessionStorage_msal`, `page_global`, `webpack_module_walk` | COMPLETE |
+| 003 | WebSocket protocols | L2/L3 | `websocket_intercept` + AsyncAPI 3.x; L3 for WhatsApp/Telegram | COMPLETE |
+| 004 | Dynamic request signing | L2/L3 | `sapisidhash`, `aws_sigv4`, `gapi_proxy`; L3 for obfuscated | COMPLETE |
+| 005 | CSRF token rotation | L2 | `cookie_to_header`, `meta_tag`, `page_global`, `form_field`, `api_response` | COMPLETE |
+| 006 | DOM parsing / SSR cache | L2 | `ssr_next_data`, `apollo_cache`, `script_json`, `page_global_data` | COMPLETE |
+| 007 | No HTTP API | L3 | Code adapter (WhatsApp, Telegram) | COMPLETE |
+| 008 | Multi-step auth exchange | L2 | `lazy_fetch`, `exchange_chain` | COMPLETE |
+| 009 | Persisted query hashes | L2/L3 | L3 for webpack hash extraction (Instacart, X) | COMPLETE |
+| 010 | Google gapi proxy | L2 | `gapi_proxy` signing primitive | COMPLETE |
+| 011 | Page navigation / DOM | L3 | Code adapter (UI automation) | COMPLETE |
+| 012 | Cross-origin bearer | L2 | `sessionStorage_token`, multi-server config | COMPLETE |
