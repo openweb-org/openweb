@@ -1,6 +1,6 @@
 # Layer 2: Interaction Primitives — Pattern DSL
 
-> **Status**: DRAFT
+> **Status**: COMPLETE
 > **Addresses**: Gaps 001–006, 008–010, 012
 > **Principle**: Structure is the default, code is the exception.
 
