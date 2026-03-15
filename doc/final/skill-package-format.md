@@ -173,7 +173,10 @@ x-openweb:
 
 ## asyncapi.yaml (Optional)
 
-Present only for sites with WebSocket or SSE APIs. Standard AsyncAPI 3.x.
+Present only for sites with WebSocket or SSE APIs. Standard AsyncAPI 3.x
+with **no `x-openweb` extensions** — WebSocket auth uses the same token
+extracted by `openapi.yaml`'s L2 auth primitives. The runtime fills WS
+auth frame fields from the shared auth context.
 
 ```yaml
 asyncapi: 3.0.0

@@ -467,6 +467,13 @@ WebSocket APIs with structured message schemas are described via AsyncAPI 3.x.
 This covers sites where WebSocket messages follow predictable patterns:
 Discord (gateway opcodes), ClickUp (real-time updates), Slack (RTM events).
 
+**Design decision: No `x-openweb` in AsyncAPI.** WebSocket auth tokens come from
+the same source as HTTP auth (extracted once via L2 primitives in `openapi.yaml`).
+The runtime injects the token into WS auth frames implicitly — the AsyncAPI message
+schema defines where the token field is, the runtime fills it from the shared auth
+context. This keeps AsyncAPI as pure standard format with no vendor extensions.
+If WS-specific auth complexity emerges later, we can add `x-openweb` then.
+
 ```yaml
 # asyncapi.yaml (Discord gateway)
 asyncapi: 3.0.0
