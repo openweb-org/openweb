@@ -1,6 +1,26 @@
 # Security Taxonomy & Probing Protocol
 
-*Part of the [openweb design](openweb-design.md). Referenced by [architecture-pipeline.md](architecture-pipeline.md) Phase 3.*
+> **Status**: DRAFT
+> **Referenced by**: [compiler-pipeline.md](compiler-pipeline.md) Phase 3, [runtime-executor.md](runtime-executor.md)
+> **Mostly unchanged from v1** — updated references and added L1/L2/L3 mapping.
+
+---
+
+## Three-Layer Security Mapping
+
+The v2 three-layer architecture aligns with security concerns:
+
+| Layer | Security handled by | Examples |
+|---|---|---|
+| **L1** (OpenAPI) | Standard HTTP auth (API key, Bearer, cookies) | Public APIs, OAuth token endpoints |
+| **L2** (Primitives) | Browser state extraction + injection: auth tokens from storage, CSRF handling, known signing algorithms | localStorage JWT, cookie-to-header CSRF, SAPISIDHASH |
+| **L3** (Adapters) | Obfuscated signing, internal protocols, custom security | OnlyFans signing, WhatsApp protocol, TikTok X-Bogus |
+
+**Security escalation**: L1 has the smallest attack surface (pure HTTP). L2 requires
+browser context for extraction but makes requests via HTTP when possible. L3 runs
+arbitrary JS in page context — highest capability but highest trust requirement.
+
+See [layer3-code-adapters.md](layer3-code-adapters.md) for L3 security model.
 
 ---
 
@@ -201,4 +221,16 @@ How the server distinguishes automated clients from real browsers.
 | Banking / Financial | `browser_fetch` + `human_handoff` for sensitive operations |
 | Internal enterprise tools | `session_http` (cookie session), fallback `browser_fetch` |
 
-This table is what the meta-skill's `knowledge/heuristics.json` evolves toward: a probabilistic mapping from observable site signals to expected execution mode.
+This table is what the self-evolution system's heuristics evolve toward: a probabilistic
+mapping from observable site signals to expected execution mode.
+See [self-evolution.md](self-evolution.md).
+
+---
+
+## Cross-References
+
+- **Probing implementation** → [compiler-pipeline.md](compiler-pipeline.md): Phase 3 probing + pattern matching
+- **Risk tier enforcement** → [runtime-executor.md](runtime-executor.md): Rate limiting, confirmation prompts
+- **L2 primitive security** → [layer2-interaction-primitives.md](layer2-interaction-primitives.md): Auth/CSRF/signing
+- **L3 adapter security** → [layer3-code-adapters.md](layer3-code-adapters.md): Trust model, execution boundary
+- **SSRF protection** → [runtime-executor.md](runtime-executor.md): URL validation
