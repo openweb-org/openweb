@@ -70,7 +70,7 @@ Capture format: JSONL for frame-level recording. See [browser-integration.md](br
 | Document | Status | Description |
 |---|---|---|
 | [openweb-design.md](openweb-design.md) | TODO | Main design doc (evolved from v1) |
-| [browser-integration.md](browser-integration.md) | TODO | **NEW**: Playwright CLI integration & capture architecture |
+| [browser-integration.md](browser-integration.md) | DRAFT | **NEW**: Playwright CLI integration & capture architecture |
 | [layer2-interaction-primitives.md](layer2-interaction-primitives.md) | DRAFT | **NEW**: Pattern DSL for auth/CSRF/signing/pagination |
 | [layer3-code-adapters.md](layer3-code-adapters.md) | TODO | **NEW**: Code escape hatch spec |
 | [pattern-library.md](pattern-library.md) | DRAFT | **NEW**: Catalog of all known patterns |
