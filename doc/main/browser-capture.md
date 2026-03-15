@@ -1,6 +1,6 @@
 # Browser Capture
 
-> **Last updated**: 2026-03-15 (commit `860fc97`)
+> **Last updated**: 2026-03-15 (commit `d5ce87a`)
 
 ## Overview
 
@@ -48,8 +48,11 @@ capture/
 HTTP traffic is filtered **during** capture (not post-hoc):
 
 - **Blocked domains** (~30): google-analytics.com, sentry.io, facebook.net, mixpanel.com, etc.
-- **Allowed content types**: application/json, application/vnd.api+json, application/graphql+json, etc.
+- **Rejected MIME types**: text/html, text/css, image/*, font/*, video/*, application/javascript
+- **Captured MIME types**: application/json, `*+json` variants, text/event-stream (SSE), application/x-www-form-urlencoded
+- **Unknown MIME types**: captured (conservative — keep rather than drop)
 - **Excluded paths**: static assets (`.js`, `.css`, `.png`, `.svg`, `.woff2`, etc.)
+- **Bundle is idempotent**: reruns clean the output dir first (no stale artifacts)
 
 -> See: `src/capture/har-capture.ts` — full filter list
 

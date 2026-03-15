@@ -1,6 +1,6 @@
 # OpenWeb — Dev Guide
 
-> **Last updated**: 2026-03-15 (commit `860fc97`)
+> **Last updated**: 2026-03-15 (commit `d5ce87a`)
 
 ## Tech Stack
 
@@ -50,7 +50,7 @@ src/
 
 ```bash
 pnpm build          # tsup → dist/
-pnpm test           # vitest (34/34 pass)
+pnpm test           # vitest (38/38 pass)
 pnpm lint           # biome check
 ```
 

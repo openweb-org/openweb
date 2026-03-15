@@ -1,3 +1,26 @@
+## 2026-03-15: M0 Hardening — Codex Code Review Fixes
+
+**What changed:**
+- Fixed stale bundle on rerun (rm output dir before write)
+- Fixed in-flight data loss on stop (drain pending HAR responses + snapshots before writing bundle)
+- Fixed navigation snapshot ordering (sequence numbers at event time, sorted before write)
+- Made CDP connect cancellable via AbortSignal (Ctrl+C no longer hangs during retry)
+- Broadened HAR filter: added SSE, wildcard `+json`, switched from allow-list to reject-list
+- Fixed request leak on `requestfailed` events
+- Fixed TS strict definite-assignment errors with `deferred()` helper
+
+**Why:**
+- Codex code review identified 3 high + 5 medium reliability/correctness issues
+- Fixes ensure capture output is deterministic across stop timing, reruns, and rapid navigations
+
+**Key files:** `src/capture/session.ts`, `src/capture/har-capture.ts`, `src/capture/connection.ts`, `src/capture/bundle.ts`
+**Verification:** 38/38 tests pass, lint clean, build clean
+**Commit:** `d5ce87a`
+**Next:** M1 — Formalize meta-spec (TypeScript types + JSON Schema for x-openweb)
+**Blockers:** None
+
+---
+
 ## 2026-03-15: M0 — Browser Capture via CDP
 
 **What changed:**
