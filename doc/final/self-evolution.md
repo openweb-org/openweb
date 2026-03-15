@@ -1,6 +1,8 @@
 # Hard Problems & Self-Evolution
 
-*Part of the [openweb design](openweb-design.md). See also: [Architecture Pipeline](architecture-pipeline.md), [Security Taxonomy](security-taxonomy.md).*
+> **Status**: DRAFT
+> **Referenced by**: [compiler-pipeline.md](compiler-pipeline.md), [security-taxonomy.md](security-taxonomy.md)
+> **Mostly unchanged from v1** — added L2/L3 pattern growth mechanism.
 
 ---
 
@@ -26,8 +28,9 @@ These are not engineering gaps but fundamental properties of websites that make 
 **Problem:** Some sites HMAC-sign or encrypt request payloads with runtime-generated keys bound to the session or device. Observing one request doesn't mean you can construct another.
 
 **Mitigation:**
-- Call the site's own signing functions via `page.evaluate()` rather than reverse-engineering them. The signing code is JavaScript running in the same page context.
-- When signing logic is obfuscated beyond practical extraction, fall back to UI automation for that specific operation.
+- **L2 signing primitives** handle known algorithms: `sapisidhash`, `aws_sigv4`. See [layer2-interaction-primitives.md](layer2-interaction-primitives.md).
+- **L3 code adapters** call the site's own signing functions via `page.evaluate()` for obfuscated signers (OnlyFans, TikTok). See [layer3-code-adapters.md](layer3-code-adapters.md).
+- When signing logic is obfuscated beyond practical extraction, fall back to `browser_fetch` mode.
 
 ### 3. Multi-Request State Machines
 
@@ -44,9 +47,9 @@ These are not engineering gaps but fundamental properties of websites that make 
 **Problem:** GraphQL uses a single endpoint with varying operations. WebSocket/SSE provide real-time data that doesn't follow request/response patterns.
 
 **Mitigation:**
-- GraphQL (first-class from MVP-2): detect by path + `operationName`/`query` in body. Cluster by `POST + operationName`. Variables become parameters. `query` string → fixed template. operationId: `{query|mutation}_{OperationName}`. See [architecture-pipeline.md](architecture-pipeline.md) Phase 2 Step A for details.
-- WebSocket messages: capture and classify (subscribe/unsubscribe/data-push).
-- Defer real-time subscriptions to post-MVP; focus on request/response patterns first.
+- GraphQL (first-class from MVP-2): detect by path + `operationName`/`query` in body. Cluster by `POST + operationName`. Variables become parameters. `query` string → fixed template. operationId: `{query|mutation}_{OperationName}`. See [compiler-pipeline.md](compiler-pipeline.md) Phase 2 Step A.
+- WebSocket: captured via CDP events → JSONL. Structured APIs described via AsyncAPI 3.x. See [browser-integration.md](browser-integration.md).
+- SSE: captured as HTTP responses + event JSONL sidecar.
 
 ### 5. Legal & Compliance
 
@@ -157,6 +160,42 @@ For each new site build:
 
 ### Knowledge Integrity (The Hard Part)
 
+### v2: L2 Pattern Library Growth
+
+In v2, the knowledge base is structured around L2 primitives rather than
+free-text notes. Growth happens via two mechanisms:
+
+**1. New L2 primitive types** — When 3+ sites exhibit the same L3 pattern,
+it can be promoted to a parameterized L2 primitive:
+
+```
+L3 observation: 3 sites extract tokens from Okta localStorage
+  → Generalize: localStorage_jwt with key_pattern: "okta-token-storage"
+  → New L2 type: (or parameterize existing localStorage_jwt)
+  → Regression test: verify all 3 sites still work
+```
+
+**2. L3 → L2 promotion** — As obfuscated patterns become understood:
+
+```
+Site 1: OnlyFans signing → L3 (obfuscated webpack module)
+Site 2: minimax-agent HMAC → L3 (obfuscated Axios interceptor)
+Pattern: Both extract a signing function from webpack → call it per-request
+  → If parameterizable: promote to L2 "webpack_signing" primitive
+  → If each site's module is unique: keep as L3 with shared adapter skeleton
+```
+
+**L2 primitive addition criteria:**
+- Pattern appears in ≥3 independent sites
+- Can be expressed with ≤10 config parameters
+- Runtime handler is ≤100 lines of code
+- Existing L2 types don't already cover the pattern
+
+See [layer2-interaction-primitives.md](layer2-interaction-primitives.md) for the
+current 27-type catalog.
+
+### Knowledge Integrity (The Hard Part)
+
 Self-modifying systems are dangerous. These safeguards prevent the knowledge base from degrading:
 
 **Generalization test:** Before promoting a pattern from a single-site observation to a reusable rule, require it to match ≥2 independent sites. One-site patterns are site-specific metadata, not knowledge.
@@ -196,6 +235,16 @@ This flywheel is the project's moat. Measuring its health requires tracking:
 - **Cross-domain transfer:** Do e-commerce patterns help with travel sites?
 
 These are empirical questions answered only by building sites.
+
+---
+
+## Cross-References
+
+- **L2 pattern catalog** → [layer2-interaction-primitives.md](layer2-interaction-primitives.md): Current 27 primitive types
+- **L3 adapters** → [layer3-code-adapters.md](layer3-code-adapters.md): Code escape hatch for non-parameterizable patterns
+- **Compiler pipeline** → [compiler-pipeline.md](compiler-pipeline.md): Where pattern matching occurs
+- **Security probing** → [security-taxonomy.md](security-taxonomy.md): Escalation ladder + heuristics
+- **Pattern library** → [pattern-library.md](pattern-library.md): 103 plugins classified by layer
 
 ### Site Curriculum (Learning Gradient)
 
