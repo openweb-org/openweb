@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, CDPSession, Page } from 'playwright'
+import type { BrowserContext, CDPSession, Page } from 'playwright'
 
 import type { CaptureMetadata, DomExtraction, StateSnapshot } from './types.js'
 import { writeCaptureBundle } from './bundle.js'
@@ -21,21 +21,23 @@ export interface CaptureSession {
   stop(): void
 }
 
+/** Deferred promise — avoids TS2454 definite-assignment issues */
+function deferred<T = void>(): { promise: Promise<T>; resolve: (v: T) => void; reject: (e: Error) => void } {
+  let resolve!: (v: T) => void
+  let reject!: (e: Error) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
 export function createCaptureSession(opts: CaptureSessionOptions): CaptureSession {
   const log = opts.onLog ?? (() => {})
+  const abortController = new AbortController()
 
-  // Two-phase signaling: stopSignal triggers shutdown, completionResolve marks "all done"
-  let signalStop: () => void
-  const stopSignal = new Promise<void>((resolve) => {
-    signalStop = resolve
-  })
-
-  let completionResolve: () => void
-  let completionReject: (err: Error) => void
-  const done = new Promise<void>((resolve, reject) => {
-    completionResolve = resolve
-    completionReject = reject
-  })
+  const stopDfd = deferred()
+  const completionDfd = deferred()
 
   let stopped = false
   let cdp: CDPSession | undefined
@@ -45,18 +47,28 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
   const stateSnapshots: StateSnapshot[] = []
   const domExtractions: DomExtraction[] = []
   let navigationCount = 0
+  let snapshotSeq = 0
   const startTime = new Date().toISOString()
 
-  async function takeSnapshots(page: Page, context: BrowserContext, trigger: StateSnapshot['trigger']): Promise<void> {
+  // Track in-flight async snapshot work so we can drain on stop
+  const pendingSnapshots = new Set<Promise<void>>()
+
+  async function takeSnapshots(
+    page: Page,
+    context: BrowserContext,
+    trigger: StateSnapshot['trigger'],
+    seq: number,
+  ): Promise<void> {
     if (stopped) return
     try {
       const [state, dom] = await Promise.all([
         captureStateSnapshot(page, context, trigger),
         captureDomAndGlobals(page, trigger),
       ])
-      if (stopped) return // re-check after await (H1 fix)
-      stateSnapshots.push(state)
-      domExtractions.push(dom)
+      if (stopped) return
+      // Insert at sequence position to maintain navigation order (H3 fix)
+      stateSnapshots.push({ ...state, _seq: seq } as StateSnapshot & { _seq: number })
+      domExtractions.push({ ...dom, _seq: seq } as DomExtraction & { _seq: number })
       log(`  snapshot #${String(stateSnapshots.length)} (${trigger}) @ ${page.url()}`)
     } catch (err) {
       if (!stopped) {
@@ -69,15 +81,19 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
     page.on('framenavigated', (frame) => {
       if (stopped || frame !== page.mainFrame()) return
       navigationCount++
-      // Fire-and-forget with .catch to prevent unhandled rejections (H2 fix)
-      void (async () => {
+      // Assign sequence number at event time, not completion time (H3 fix)
+      const seq = snapshotSeq++
+      const task = (async () => {
         try {
           await page.waitForLoadState('domcontentloaded', { timeout: 10_000 })
         } catch {
           // timeout — take snapshot anyway
         }
-        await takeSnapshots(page, context, 'navigation')
+        await takeSnapshots(page, context, 'navigation', seq)
       })().catch(() => {})
+      // Track for drain on stop (H2 fix)
+      pendingSnapshots.add(task)
+      void task.then(() => pendingSnapshots.delete(task))
     })
   }
 
@@ -86,9 +102,42 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
     wsCapture?.detach()
   }
 
+  /** Wait for all in-flight HAR responses and snapshots to settle */
+  async function drainPending(timeoutMs = 3000): Promise<void> {
+    const deadline = Date.now() + timeoutMs
+    // Drain snapshot promises
+    if (pendingSnapshots.size > 0) {
+      await Promise.race([
+        Promise.allSettled([...pendingSnapshots]),
+        new Promise((r) => setTimeout(r, timeoutMs)),
+      ])
+    }
+    // Wait for in-flight HAR response handlers
+    const remaining = Math.max(0, deadline - Date.now())
+    const hasPending = () => harCaptures.some((hc) => hc.pendingCount() > 0)
+    if (hasPending() && remaining > 0) {
+      await new Promise<void>((resolve) => {
+        const interval = setInterval(() => {
+          if (!hasPending() || Date.now() >= deadline) {
+            clearInterval(interval)
+            resolve()
+          }
+        }, 50)
+      })
+    }
+  }
+
   async function writeBundle(): Promise<void> {
     const endTime = new Date().toISOString()
-    // Merge entries from all HAR captures (main page + new tabs)
+
+    // Sort snapshots/extractions by sequence number (H3 fix)
+    type Sequenced<T> = T & { _seq?: number }
+    const sortBySeq = <T>(arr: T[]): T[] =>
+      [...arr].sort((a, b) => ((a as Sequenced<T>)._seq ?? 0) - ((b as Sequenced<T>)._seq ?? 0))
+
+    const sortedSnapshots = sortBySeq(stateSnapshots)
+    const sortedExtractions = sortBySeq(domExtractions)
+
     const allEntries = harCaptures.flatMap((hc) => hc.entries)
     const harLog = buildHarLog(allEntries)
     const wsFrames = wsCapture?.frames ?? []
@@ -99,18 +148,24 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
     }
 
     const metadata: CaptureMetadata = {
-      siteUrl: stateSnapshots[0]?.url ?? 'unknown',
+      siteUrl: sortedSnapshots[0]?.url ?? 'unknown',
       startTime,
       endTime,
       pageCount: navigationCount + 1,
       requestCount: harLog.entries.length,
       wsConnectionCount: wsConnectionIds.size,
-      snapshotCount: stateSnapshots.length,
+      snapshotCount: sortedSnapshots.length,
       captureVersion: '0.1.0',
     }
 
     log(`\nwriting capture bundle to ${opts.outputDir} ...`)
-    await writeCaptureBundle(opts.outputDir, { harLog, wsFrames, stateSnapshots, domExtractions, metadata })
+    await writeCaptureBundle(opts.outputDir, {
+      harLog,
+      wsFrames,
+      stateSnapshots: sortedSnapshots,
+      domExtractions: sortedExtractions,
+      metadata,
+    })
     log(
       `done — ${String(metadata.requestCount)} requests, ${String(metadata.wsConnectionCount)} ws connections, ${String(metadata.snapshotCount)} snapshots`,
     )
@@ -122,14 +177,13 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
     } catch {
       /* already detached */
     }
-    // Don't close the browser — we don't own it (design principle)
   }
 
   // Main capture loop
   void (async () => {
     try {
       log(`connecting to ${opts.cdpEndpoint} ...`)
-      const browser = await connectWithRetry(opts.cdpEndpoint)
+      const browser = await connectWithRetry(opts.cdpEndpoint, 3, abortController.signal)
       const context = browser.contexts()[0]
       if (!context) throw new Error('No browser context found. Open a page in Chrome first.')
 
@@ -145,7 +199,7 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
       wsCapture = await attachWsCapture(cdp)
       attachPageListeners(page, context)
 
-      // Listen for new pages (tabs) — track HAR captures for cleanup (C1/C2 fix)
+      // Listen for new pages (tabs)
       context.on('page', (newPage) => {
         if (stopped) return
         log(`  new page detected: ${newPage.url()}`)
@@ -155,42 +209,48 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
       })
 
       // Initial snapshots
-      await takeSnapshots(page, context, 'initial')
+      const initialSeq = snapshotSeq++
+      await takeSnapshots(page, context, 'initial', initialSeq)
       log('capture active — press Ctrl+C to stop')
 
       // Wait for stop signal
-      await stopSignal
+      await stopDfd.promise
 
-      // Detach all listeners
+      // Detach listeners first to prevent new work
       detachAll()
+
+      // Drain in-flight async work before writing bundle (H2 fix)
+      await drainPending()
 
       // Write bundle
       await writeBundle()
       await cleanup()
-      completionResolve?.()
+      completionDfd.resolve()
     } catch (err) {
       await cleanup()
       if (stopped) {
         try {
+          await drainPending(1000)
           await writeBundle()
         } catch {
           /* best effort */
         }
-        completionResolve?.()
+        completionDfd.resolve()
       } else {
         const error = err instanceof Error ? err : new Error(String(err))
         log(`error: ${error.message}`)
-        completionReject?.(error)
+        completionDfd.reject(error)
       }
     }
   })()
 
   return {
-    done,
+    done: completionDfd.promise,
     stop() {
       if (stopped) return
       stopped = true
-      signalStop?.()
+      abortController.abort()
+      stopDfd.resolve()
     },
   }
 }

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -126,5 +126,42 @@ describe('writeCaptureBundle', () => {
       await readFile(path.join(outputDir, 'state_snapshots', '001_initial.json'), 'utf8'),
     )
     expect(snapshot.localStorage.key).toBe('value')
+  })
+
+  it('cleans stale artifacts from previous runs', async () => {
+    // First run with 3 snapshots
+    const data1 = makeCaptureData({
+      stateSnapshots: [
+        { timestamp: 't1', trigger: 'initial', url: 'https://example.com', localStorage: {}, sessionStorage: {}, cookies: [] },
+        { timestamp: 't2', trigger: 'navigation', url: 'https://example.com/a', localStorage: {}, sessionStorage: {}, cookies: [] },
+        { timestamp: 't3', trigger: 'navigation', url: 'https://example.com/b', localStorage: {}, sessionStorage: {}, cookies: [] },
+      ],
+      wsFrames: [
+        { connectionId: 'ws1', timestamp: 't1', type: 'open', url: 'wss://example.com/ws' },
+      ],
+    })
+    await writeCaptureBundle(outputDir, data1)
+
+    const beforeSnapshots = await readdir(path.join(outputDir, 'state_snapshots'))
+    expect(beforeSnapshots).toHaveLength(3)
+    const beforeFiles = await readdir(outputDir)
+    expect(beforeFiles).toContain('websocket_frames.jsonl')
+
+    // Second run with only 1 snapshot and no WS
+    const data2 = makeCaptureData({
+      stateSnapshots: [
+        { timestamp: 't4', trigger: 'initial', url: 'https://other.com', localStorage: {}, sessionStorage: {}, cookies: [] },
+      ],
+    })
+    await writeCaptureBundle(outputDir, data2)
+
+    // Stale snapshots from first run should be gone
+    const afterSnapshots = await readdir(path.join(outputDir, 'state_snapshots'))
+    expect(afterSnapshots).toHaveLength(1)
+    expect(afterSnapshots).toContain('001_initial.json')
+
+    // Stale websocket_frames.jsonl should be gone
+    const afterFiles = await readdir(outputDir)
+    expect(afterFiles).not.toContain('websocket_frames.jsonl')
   })
 })

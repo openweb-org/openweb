@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import type { CaptureMetadata, DomExtraction, HarLog, StateSnapshot, WsFrame } from './types.js'
@@ -12,6 +12,9 @@ export interface CaptureData {
 }
 
 export async function writeCaptureBundle(outputDir: string, data: CaptureData): Promise<void> {
+  // Clean previous bundle to avoid stale artifacts from shorter reruns
+  await rm(outputDir, { recursive: true, force: true })
+
   await mkdir(outputDir, { recursive: true })
   await mkdir(path.join(outputDir, 'state_snapshots'), { recursive: true })
   await mkdir(path.join(outputDir, 'dom_extractions'), { recursive: true })

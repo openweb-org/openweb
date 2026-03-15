@@ -23,6 +23,7 @@ describe('HAR capture filtering', () => {
     const url = new URL('https://api.example.com/page')
     expect(shouldCaptureRequest(url, 'text/html')).toBe(false)
     expect(shouldCaptureRequest(url, 'image/png')).toBe(false)
+    expect(shouldCaptureRequest(url, 'text/css')).toBe(false)
   })
 
   it('captures JSON API responses', () => {
@@ -33,8 +34,26 @@ describe('HAR capture filtering', () => {
     expect(shouldCaptureRequest(url, 'application/graphql+json')).toBe(true)
   })
 
+  it('captures SSE (text/event-stream)', () => {
+    const url = new URL('https://api.example.com/events')
+    expect(shouldCaptureRequest(url, 'text/event-stream')).toBe(true)
+  })
+
+  it('captures wildcard +json variants', () => {
+    const url = new URL('https://api.example.com/data')
+    expect(shouldCaptureRequest(url, 'application/hal+json')).toBe(true)
+    expect(shouldCaptureRequest(url, 'application/ld+json')).toBe(true)
+    expect(shouldCaptureRequest(url, 'application/problem+json')).toBe(true)
+  })
+
   it('captures requests with no content-type (unknown responses)', () => {
     const url = new URL('https://api.example.com/data')
     expect(shouldCaptureRequest(url, null)).toBe(true)
+  })
+
+  it('captures unknown MIME types (conservative — keep rather than drop)', () => {
+    const url = new URL('https://api.example.com/data')
+    expect(shouldCaptureRequest(url, 'application/octet-stream')).toBe(true)
+    expect(shouldCaptureRequest(url, 'application/protobuf')).toBe(true)
   })
 })
