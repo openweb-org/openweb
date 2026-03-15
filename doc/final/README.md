@@ -9,7 +9,7 @@
 v1 designed a HAR-based compiler with a custom navigation agent and three execution
 modes (direct_http, session_http, browser_fetch). Two major insights led to v2:
 
-1. **12 design gaps** found by analyzing 100+ OpenTabs plugins (see `docs/todo/design_gap/`).
+1. **12 design gaps** found by analyzing 100+ OpenTabs plugins (see `doc/todo/design_gap/`).
    HAR-only capture is fundamentally insufficient for modern SPAs.
 2. **The user's agent IS the browser-use agent.** No separate navigation agent needed.
    Claude Code (or any agent) connects to the browser via Playwright CLI, browses
@@ -83,8 +83,8 @@ Capture format: JSONL for frame-level recording. See [browser-integration.md](br
 ## Reference Materials
 
 - `doc/final/archive/v1/` — Previous design (still valid for L1 + runtime + CLI)
-- `docs/todo/design_gap/001-012_*.md` — 12 design gaps from OpenTabs analysis
-- `docs/todo/design_gap/discussion/001-003_*.md` — Architectural comparison & philosophy
+- `doc/todo/design_gap/001-012_*.md` — 12 design gaps from OpenTabs analysis
+- `doc/todo/design_gap/discussion/001-003_*.md` — Architectural comparison & philosophy
 - `.reference/reverse-api/opentabs/` — OpenTabs source (100+ plugins)
 - `.reference/reverse-api/apitap/` — ApiTap source
 - `.reference/browser-infra/playwright-cli/` — Playwright CLI (browser control layer)

@@ -52,8 +52,8 @@ Round 3 (polish):
 
 ## Reference Materials
 
-- `docs/todo/design_gap/001-012_*.md` — 12 design gaps from OpenTabs analysis
-- `docs/todo/design_gap/discussion/001-005_*.md` — architectural discussions + decisions
+- `doc/todo/design_gap/001-012_*.md` — 12 design gaps from OpenTabs analysis
+- `doc/todo/design_gap/discussion/001-005_*.md` — architectural discussions + decisions
 - `doc/final/archive/v1/` — previous design (reference for L1 + runtime + CLI)
 - `.reference/reverse-api/opentabs/plugins/` — OpenTabs plugins (coverage benchmark)
 
