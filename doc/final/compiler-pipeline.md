@@ -18,7 +18,7 @@ Phase 1: Capture ─────── multi-source recording (HTTP + WS + state
 Phase 2: Analyze ─────── clustering, parameter differentiation, schema induction
         │
         ▼
-Phase 3: Pattern Match ── detect L2 primitives, probe execution modes, classify L3
+Phase 3: Classify ────── detect L2 primitives, probe mode, assign risk tier
         │
         ▼
 Phase 4: Emit ────────── OpenAPI 3.1 + x-openweb L2 + L3 adapter stubs
@@ -30,7 +30,7 @@ Phase 4: Emit ────────── OpenAPI 3.1 + x-openweb L2 + L3 ada
 |---|---|---|
 | Navigation | Built-in agent (~200 LOC) | User's agent drives via Playwright CLI |
 | Capture | HAR only | HAR + JSONL (WebSocket) + state snapshots + DOM |
-| Phase 3 | Probe execution modes only | Probe + pattern match against L2 library |
+| Phase 3 | Probe execution modes only | Detect primitives → derive min mode → probe to verify |
 | Emission | OpenAPI + `x-openweb.session` | OpenAPI + full L2 primitives + L3 stubs |
 | WebSocket | Not supported | AsyncAPI 3.x + JSONL capture |
 
@@ -256,36 +256,32 @@ schemas, and dependency graph.
 
 ---
 
-## Phase 3: Probe & Pattern Match
+## Phase 3: Classify
 
-**Goal**: Determine execution mode per endpoint AND detect L2 interaction primitives.
-This is the **key v2 innovation** — v1 only probed execution modes.
+**Goal**: For each endpoint, determine its L2 primitives, execution mode, and risk tier.
+This is a single classification step — primitive detection and mode probing inform each
+other and share the same inputs.
 
-### Step A: Execution Mode Probing (from v1)
+**Input**: Capture bundle + Phase 2 correlations.
+**Output**: Per-endpoint `{ primitives, mode, risk_tier, confidence }`.
 
-Try cheapest mode first, escalate on failure:
-`direct_http` → `session_http` → `browser_fetch`
+### Step 1: Detect L2 Primitives
 
-For read endpoints only (GET). Write endpoints default to `browser_fetch`.
-≤6 requests per endpoint. Stop at first success.
-
-### Step B: L2 Pattern Detection (NEW)
-
-Using the capture bundle + Phase 2 correlations, detect which L2 primitives apply.
+From capture correlations, detect which L2 primitives apply.
 
 **Auth Pattern Detection:**
 
-| Detection Logic | Emitted Primitive |
-|---|---|
-| Token found in `localStorage[key].path` → `Authorization` header | `localStorage_jwt` |
-| Token found in `sessionStorage[key]` → `Authorization` header | `sessionStorage_token` |
-| sessionStorage keys matching `msal.token.keys.*` | `sessionStorage_msal` |
-| Token found in `window.global.path` → header/query | `page_global` |
-| `webpackChunk*` globals detected + token not in storage/cookies | `webpack_module_walk` (flag for manual config) |
-| `wss://` frames contain auth token before HTTP calls | `websocket_intercept` |
-| Auth endpoint called (e.g., `/api/auth/session`) before data calls | `lazy_fetch` |
-| Multiple auth endpoints with token passing between them | `exchange_chain` (flag for manual config) |
-| Only HttpOnly cookies, no extracted tokens | `cookie_session` |
+| Detection Logic | Emitted Primitive | Min Mode |
+|---|---|---|
+| Token found in `localStorage[key].path` → `Authorization` header | `localStorage_jwt` | `session_http` |
+| Token found in `sessionStorage[key]` → `Authorization` header | `sessionStorage_token` | `session_http` |
+| sessionStorage keys matching `msal.token.keys.*` | `sessionStorage_msal` | `session_http` |
+| Token found in `window.global.path` → header/query | `page_global` | `session_http` |
+| `webpackChunk*` globals detected + token not in storage/cookies | `webpack_module_walk` (flag for manual config) | `browser_fetch` |
+| `wss://` frames contain auth token before HTTP calls | `websocket_intercept` | `browser_fetch` |
+| Auth endpoint called (e.g., `/api/auth/session`) before data calls | `lazy_fetch` | `session_http` |
+| Multiple auth endpoints with token passing between them | `exchange_chain` (flag for manual config) | `session_http` |
+| Only HttpOnly cookies, no extracted tokens | `cookie_session` | `session_http` |
 
 **CSRF Pattern Detection:**
 
@@ -299,12 +295,12 @@ Using the capture bundle + Phase 2 correlations, detect which L2 primitives appl
 
 **Signing Pattern Detection:**
 
-| Detection Logic | Emitted Primitive |
-|---|---|
-| `Authorization` matches `SAPISIDHASH \d+_[0-9a-f]{40}` | `sapisidhash` |
-| `gapi.client` available on window | `gapi_proxy` |
-| AWS-style Authorization header with `AWS4-HMAC-SHA256` | `aws_sigv4` |
-| Header value changes every request + crypto functions in page JS | Flag as L3 |
+| Detection Logic | Emitted Primitive | Min Mode |
+|---|---|---|
+| `Authorization` matches `SAPISIDHASH \d+_[0-9a-f]{40}` | `sapisidhash` | `session_http` |
+| `gapi.client` available on window | `gapi_proxy` | `browser_fetch` |
+| AWS-style Authorization header with `AWS4-HMAC-SHA256` | `aws_sigv4` | `session_http` |
+| Header value changes every request + crypto functions in page JS | Flag as L3 | `browser_fetch` |
 
 **Extraction Pattern Detection:**
 
@@ -325,7 +321,34 @@ Using the capture bundle + Phase 2 correlations, detect which L2 primitives appl
 | Response field appears as query param in next request to same endpoint | `cursor` |
 | Sequential `offset`/`page` param values across requests | `offset_limit` or `page_number` |
 
-### Step C: Confidence & Manual Flagging
+### Step 2: Probe Execution Mode
+
+Detected primitives determine the **minimum mode** (see Min Mode column above).
+Probe from that minimum upward to find the actual working mode:
+
+```
+min_mode (from primitives)
+  │
+  ▼
+Probe min_mode → works? → done
+  │ fails
+  ▼
+Probe next mode up → works? → done
+  │ fails
+  ▼
+browser_fetch (ceiling)
+```
+
+- For read endpoints (GET): probe empirically. ≤6 requests per endpoint.
+- For write endpoints: skip probing, default to `max(min_mode, browser_fetch)`.
+- No primitives detected (pure L1): start probe from `direct_http`.
+
+The probe catches security layers that primitive detection can't see
+(Cloudflare bot detection, TLS fingerprinting, behavioral analysis).
+
+**Final mode** = `max(primitive_min_mode, probe_result)`.
+
+### Step 3: Confidence & Manual Flagging
 
 Each detected pattern gets a confidence score:
 
@@ -358,7 +381,7 @@ Each detected pattern gets a confidence score:
 | `gapi_proxy` | Can detect `gapi.client` but api_key source path varies |
 | `form_field` CSRF | Can detect hidden inputs but can't determine which form/URL to fetch |
 
-### Step D: Risk Classification
+### Step 4: Risk Classification
 
 Deterministic rule-based, **unchanged from v1**:
 
@@ -372,7 +395,7 @@ Deterministic rule-based, **unchanged from v1**:
 | GET with PII in response | low |
 | Everything else | safe |
 
-**Output**: Per-endpoint: execution mode + L2 primitive config + risk tier + confidence.
+**Output**: Per-endpoint: `{ primitives, mode, risk_tier, confidence }`.
 
 ---
 

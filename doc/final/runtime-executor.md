@@ -71,7 +71,7 @@ Three modes, determined by `x-openweb.mode` on the server or operation:
 | `page_global` (csrf) | `session_http` | `page.evaluate()` |
 | `form_field` | `session_http` | Fetch + DOM parse |
 | `api_response` | `session_http` | HTTP call with cookies |
-| `sapisidhash` | `browser_fetch` | `crypto.subtle` + live SAPISID cookie |
+| `sapisidhash` | `session_http` | Known algorithm (SHA-1), extract SAPISID cookie + compute in Node.js |
 | `gapi_proxy` | `browser_fetch` | Must call `gapi.client.request()` in page |
 | `aws_sigv4` | `session_http` | Pure computation (no browser) |
 | L3 adapter | `browser_fetch` | Always runs in page context |
