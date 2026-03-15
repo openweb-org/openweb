@@ -77,7 +77,7 @@ Capture format: JSONL for frame-level recording. See [browser-integration.md](br
 | [compiler-pipeline.md](compiler-pipeline.md) | DRAFT | Pipeline (evolved from v1, adds multi-source capture + pattern matching) |
 | [runtime-executor.md](runtime-executor.md) | DRAFT | Runtime (evolved from v1, adds L2/L3 execution) |
 | [skill-package-format.md](skill-package-format.md) | DRAFT | Package format (evolved from v1, adds L2/L3 artifacts) |
-| [gap-coverage-matrix.md](gap-coverage-matrix.md) | TODO | **NEW**: How each gap maps to a layer/primitive |
+| [gap-coverage-matrix.md](gap-coverage-matrix.md) | DRAFT | **NEW**: How each gap maps to a layer/primitive |
 | [security-taxonomy.md](security-taxonomy.md) | TODO | Probing protocol (mostly unchanged from v1) |
 | [self-evolution.md](self-evolution.md) | TODO | Knowledge base (mostly unchanged from v1) |
 
