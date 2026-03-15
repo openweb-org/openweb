@@ -1,6 +1,6 @@
 # OpenWeb — Architecture Overview
 
-> **Last updated**: 2026-03-15 (commit `25e9f9d`)
+> **Last updated**: 2026-03-15 (commit `860fc97`)
 
 ## Mission
 
@@ -32,9 +32,12 @@ Only 7 sites need L3 code adapters.
 |---|---|---|
 | **Meta-spec** | x-openweb schema (L2 types + L3 interface + package format) | Designed, not yet formalized as types |
 | **Runtime** | Reads skill packages, executes L2/L3 primitives, makes requests | L1 `direct_http` implemented |
-| **Compiler** | Captures website behavior, detects patterns, emits skill packages | Phases 2-4 partial (L1 only) |
+| **Compiler** | Captures website behavior, detects patterns, emits skill packages | M0 capture done; phases 2-4 partial (L1 only) |
+| **Capture** | CDP-based browser recording (HAR + WS + state + DOM) | **Implemented** (M0) |
 | **Skill packages** | Per-site instance specs (openapi.yaml + x-openweb + adapters) | 1 fixture (Open-Meteo) |
 | **Agent skill** | CLI wrapper for Claude/Codex | Not started |
+
+-> See: [doc/main/browser-capture.md](browser-capture.md) — capture module details
 
 -> See: [doc/note.md](../note.md) — artifacts + roadmap
 

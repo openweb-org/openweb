@@ -1,3 +1,36 @@
+## 2026-03-15: M0 — Browser Capture via CDP
+
+**What changed:**
+- Installed Playwright chromium browsers (all 34 tests now pass, was 24/25)
+- Implemented capture module (`src/capture/`) with 4 data sources:
+  - HTTP traffic (HAR 1.2) with analytics/tracking domain filtering (~30 blocked domains)
+  - WebSocket frames (JSONL) via CDP `Network.webSocket*` events
+  - Browser state snapshots (localStorage, sessionStorage, cookies) on init + navigation
+  - DOM & globals extraction (meta tags, hidden inputs, 20+ framework globals detection)
+- Added `openweb capture start/stop --cdp-endpoint <url>` CLI command
+- Capture outputs bundle directory: `traffic.har`, `websocket_frames.jsonl`, `state_snapshots/`, `dom_extractions/`, `metadata.json`
+- Code reviewed: fixed critical issues (new-tab HAR entries lost, navigation snapshot race condition), all lint errors resolved
+
+**Why:**
+- M0 is the foundation for the compiler pipeline — all subsequent phases (clustering, pattern detection, spec emission) consume the capture bundle
+- CDP connection model allows OpenWeb to passively observe alongside the agent's Playwright CLI session without owning the browser
+
+**Key files:**
+- `src/capture/*.ts` — 8 modules (types, connection, har-capture, ws-capture, state-capture, dom-capture, bundle, session)
+- `src/commands/capture.ts` — CLI command handler
+- `src/cli.ts` — capture command registration
+- `src/capture/*.test.ts` — 9 unit tests (HAR filtering + bundle writing)
+
+**Verification:** Tested against real Chrome (--remote-debugging-port=9222) capturing JSONPlaceholder — 3 API requests, 4 state snapshots, 4 DOM extractions captured correctly. Build + lint + 34/34 tests pass.
+
+**Commit:** `860fc97`
+
+**Next:** M1 — Formalize meta-spec (TypeScript types + JSON Schema for x-openweb)
+
+**Blockers:** None
+
+---
+
 ## 2026-03-15: v2 Three-Layer Architecture — Full Design Sprint
 
 **What changed:**
