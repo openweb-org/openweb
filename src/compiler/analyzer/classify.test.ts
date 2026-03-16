@@ -234,6 +234,23 @@ describe('classify', () => {
     expect(result.signing?.type).toBe('sapisidhash')
   })
 
+  // CR-20: Partial cookie presence should NOT be detected as cookie_session
+  it('returns direct_http when only some HAR entries have Cookie header', () => {
+    const data: CaptureData = {
+      harEntries: [
+        makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+        makeHarEntry({ headers: [{ name: 'Accept', value: 'application/json' }] }),
+        makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+      ],
+      stateSnapshots: [makeSnapshot([{ name: 'sessionid', value: 'abc' }])],
+    }
+
+    const result = classify(data)
+    // Not all entries have Cookie → should NOT be cookie_session
+    expect(result.mode).toBe('direct_http')
+    expect(result.auth).toBeUndefined()
+  })
+
   it('detects exchange_chain when token endpoint response matches Bearer Authorization', () => {
     const data: CaptureData = {
       harEntries: [

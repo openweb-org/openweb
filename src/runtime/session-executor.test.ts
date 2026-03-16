@@ -355,6 +355,180 @@ describe('executeSessionHttp', () => {
     expect(calledInit.body).toBeUndefined()
   })
 
+  // CR-15: Redirect tests
+  it('follows 301 redirect to the final URL', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('', {
+        status: 301,
+        headers: { location: 'https://www.instagram.com/api/v1/feed/new-timeline/' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    const result = await executeSessionHttp(
+      browser,
+      spec,
+      '/feed/timeline/',
+      'get',
+      spec.paths!['/feed/timeline/']!.get!,
+      {},
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    expect(result.status).toBe(200)
+    expect(result.body).toEqual({ ok: true })
+
+    const calls = (fetchMock as ReturnType<typeof vi.fn>).mock.calls
+    expect(calls).toHaveLength(2)
+    expect(String(calls[1]![0])).toBe('https://www.instagram.com/api/v1/feed/new-timeline/')
+  })
+
+  it('switches method to GET on 303 redirect', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('', {
+        status: 303,
+        headers: { location: 'https://www.instagram.com/api/v1/result/' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    await executeSessionHttp(
+      browser,
+      spec,
+      '/media/{media_id}/like/',
+      'post',
+      spec.paths!['/media/{media_id}/like/']!.post!,
+      { media_id: '99999' },
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    const calls = (fetchMock as ReturnType<typeof vi.fn>).mock.calls
+    expect(calls).toHaveLength(2)
+    expect((calls[0]![1] as RequestInit).method).toBe('POST')
+    expect((calls[1]![1] as RequestInit).method).toBe('GET')
+  })
+
+  it('strips sensitive headers on cross-origin redirect', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    // Capture headers snapshots at each call to verify mutation
+    const capturedHeaders: Record<string, string>[] = []
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      capturedHeaders.push({ ...(init.headers as Record<string, string>) })
+      if (capturedHeaders.length === 1) {
+        return new Response('', {
+          status: 301,
+          headers: { location: 'https://other-domain.com/callback' },
+        })
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    }) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    await executeSessionHttp(
+      browser,
+      spec,
+      '/feed/timeline/',
+      'get',
+      spec.paths!['/feed/timeline/']!.get!,
+      {},
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    expect(capturedHeaders).toHaveLength(2)
+
+    // First call should have Cookie (same-origin)
+    expect(capturedHeaders[0]!.Cookie).toBeDefined()
+
+    // Second call (cross-origin) should NOT have Cookie or Authorization
+    expect(capturedHeaders[1]!.Cookie).toBeUndefined()
+    expect(capturedHeaders[1]!.Authorization).toBeUndefined()
+  })
+
+  it('throws "Too many redirects" when Location header is missing', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('', { status: 301 })) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    await expect(
+      executeSessionHttp(
+        browser,
+        spec,
+        '/feed/timeline/',
+        'get',
+        spec.paths!['/feed/timeline/']!.get!,
+        {},
+        { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+      ),
+    ).rejects.toMatchObject({
+      payload: { message: expect.stringContaining('Too many redirects') },
+    })
+
+    // Fetch should only be called once (no infinite loop)
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
+  })
+
+  it('throws "Too many redirects" after exceeding MAX_REDIRECTS', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    let callCount = 0
+    const fetchMock = vi.fn(async () => {
+      callCount++
+      return new Response('', {
+        status: 301,
+        headers: { location: `https://www.instagram.com/api/v1/redirect/${callCount}/` },
+      })
+    }) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    await expect(
+      executeSessionHttp(
+        browser,
+        spec,
+        '/feed/timeline/',
+        'get',
+        spec.paths!['/feed/timeline/']!.get!,
+        {},
+        { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+      ),
+    ).rejects.toMatchObject({
+      payload: { message: expect.stringContaining('Too many redirects') },
+    })
+
+    // MAX_REDIRECTS is 5, so loop runs 6 times (0..5 inclusive)
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(6)
+  })
+
   it('drops body on 303 redirect', async () => {
     const browser = mockBrowser([
       { name: 'sessionid', value: 'sess_abc' },
@@ -400,5 +574,227 @@ describe('executeSessionHttp', () => {
     const secondInit = calls[1]![1] as RequestInit
     expect(secondInit.method).toBe('GET')
     expect(secondInit.body).toBeUndefined()
+  })
+
+  // CR-16: SSRF failure test
+  it('does not call fetch when ssrfValidator rejects', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    const fetchMock = vi.fn() as unknown as typeof fetch
+    const ssrfValidator = vi.fn(async () => {
+      throw new Error('SSRF blocked: private IP')
+    })
+
+    const spec = instagramSpec()
+    await expect(
+      executeSessionHttp(
+        browser,
+        spec,
+        '/feed/timeline/',
+        'get',
+        spec.paths!['/feed/timeline/']!.get!,
+        {},
+        { fetchImpl: fetchMock, ssrfValidator },
+      ),
+    ).rejects.toThrow('SSRF blocked: private IP')
+
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(0)
+  })
+
+  // CR-17: $ref resolution tests
+  it('resolves valid $ref parameters correctly', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+    ])
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const spec: OpenApiSpec = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0' },
+      servers: [
+        {
+          url: 'https://www.instagram.com/api/v1',
+          'x-openweb': {
+            mode: 'session_http',
+            auth: { type: 'cookie_session' },
+          },
+        } as unknown as { url: string },
+      ],
+      paths: {
+        '/feed/timeline/': {
+          get: {
+            operationId: 'getTimeline',
+            parameters: [
+              { $ref: '#/components/parameters/AppID' } as unknown as OpenApiParameter,
+            ],
+            responses: { '200': { content: { 'application/json': { schema: { type: 'object' } } } } },
+          },
+        },
+      },
+      components: {
+        parameters: {
+          AppID: { name: 'X-IG-App-ID', in: 'header', required: true, schema: { type: 'string', default: '936619743392459' } },
+        },
+      },
+    } as unknown as OpenApiSpec
+
+    await executeSessionHttp(
+      browser,
+      spec,
+      '/feed/timeline/',
+      'get',
+      spec.paths!['/feed/timeline/']!.get!,
+      {},
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    const calledInit = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![1] as RequestInit
+    const headers = calledInit.headers as Record<string, string>
+    expect(headers['X-IG-App-ID']).toBe('936619743392459')
+  })
+
+  it('drops parameter when $ref target is missing', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+    ])
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const spec: OpenApiSpec = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0' },
+      servers: [
+        {
+          url: 'https://www.instagram.com/api/v1',
+          'x-openweb': {
+            mode: 'session_http',
+            auth: { type: 'cookie_session' },
+          },
+        } as unknown as { url: string },
+      ],
+      paths: {
+        '/feed/timeline/': {
+          get: {
+            operationId: 'getTimeline',
+            parameters: [
+              { $ref: '#/components/parameters/NonExistent' } as unknown as OpenApiParameter,
+            ],
+            responses: { '200': { content: { 'application/json': { schema: { type: 'object' } } } } },
+          },
+        },
+      },
+      // No components defined — $ref target missing
+    } as unknown as OpenApiSpec
+
+    // Should not throw — missing $ref is silently dropped
+    const result = await executeSessionHttp(
+      browser,
+      spec,
+      '/feed/timeline/',
+      'get',
+      spec.paths!['/feed/timeline/']!.get!,
+      {},
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    expect(result.status).toBe(200)
+    // Verify fetch was called (parameter was dropped, not crashed)
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
+  })
+
+  it('drops parameter when $ref path contains __proto__', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+    ])
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const spec: OpenApiSpec = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0' },
+      servers: [
+        {
+          url: 'https://www.instagram.com/api/v1',
+          'x-openweb': {
+            mode: 'session_http',
+            auth: { type: 'cookie_session' },
+          },
+        } as unknown as { url: string },
+      ],
+      paths: {
+        '/feed/timeline/': {
+          get: {
+            operationId: 'getTimeline',
+            parameters: [
+              { $ref: '#/__proto__/polluted' } as unknown as OpenApiParameter,
+            ],
+            responses: { '200': { content: { 'application/json': { schema: { type: 'object' } } } } },
+          },
+        },
+      },
+    } as unknown as OpenApiSpec
+
+    // Should not throw — __proto__ ref is silently dropped
+    const result = await executeSessionHttp(
+      browser,
+      spec,
+      '/feed/timeline/',
+      'get',
+      spec.paths!['/feed/timeline/']!.get!,
+      {},
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    expect(result.status).toBe(200)
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
+  })
+
+  // CR-18: Non-JSON response test
+  it('throws OpenWebError when response is not valid JSON', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    const fetchMock = vi.fn(async () =>
+      new Response('<html><body>Not Found</body></html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      }),
+    ) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    await expect(
+      executeSessionHttp(
+        browser,
+        spec,
+        '/feed/timeline/',
+        'get',
+        spec.paths!['/feed/timeline/']!.get!,
+        {},
+        { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+      ),
+    ).rejects.toMatchObject({
+      payload: { message: expect.stringContaining('not valid JSON') },
+    })
   })
 })
