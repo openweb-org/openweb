@@ -13,6 +13,7 @@ import { resolveLocalStorageJwt } from './primitives/localstorage-jwt.js'
 import { resolveMetaTag } from './primitives/meta-tag.js'
 import { resolvePageGlobal } from './primitives/page-global.js'
 import { resolveSapisidhash } from './primitives/sapisidhash.js'
+import { resolveWebpackModuleWalk } from './primitives/webpack-module-walk.js'
 import type { BrowserHandle, ResolvedInjections } from './primitives/types.js'
 
 /** Auth resolution result — extends ResolvedInjections with optional query params */
@@ -207,6 +208,13 @@ export async function resolveAuth(
         steps: auth.steps,
         inject: auth.inject,
       }, serverUrl, { fetchImpl: deps?.fetchImpl, ssrfValidator: deps?.ssrfValidator })
+    case 'webpack_module_walk':
+      return resolveWebpackModuleWalk(handle, {
+        chunk_global: auth.chunk_global,
+        module_test: auth.module_test,
+        call: auth.call,
+        inject: auth.inject,
+      })
     default:
       throw new OpenWebError({
         error: 'execution_failed',

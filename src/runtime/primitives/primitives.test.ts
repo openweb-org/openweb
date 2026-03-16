@@ -9,6 +9,7 @@ import { resolveMetaTag } from './meta-tag.js'
 import { resolvePageGlobal } from './page-global.js'
 import { resolveSapisidhash, computeSapisidhash } from './sapisidhash.js'
 import { resolveScriptJson } from './script-json.js'
+import { resolveWebpackModuleWalk } from './webpack-module-walk.js'
 import type { BrowserHandle } from './types.js'
 
 function mockHandle(cookies: Array<{ name: string; value: string }>): BrowserHandle {
@@ -580,6 +581,102 @@ describe('resolveApiResponse', () => {
         extract: 'token',
         inject: { header: 'X-CSRF' },
       }, 'https://example.com', { fetchImpl: fetchMock }),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
+    })
+  })
+})
+
+describe('resolveWebpackModuleWalk', () => {
+  it('extracts token from webpack module cache and injects as header', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => 'mfa.long_discord_token_value_here_1234567890'),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    const result = await resolveWebpackModuleWalk(handle, {
+      chunk_global: 'webpackChunkdiscord_app',
+      module_test: 'getToken',
+      call: 'getToken',
+      inject: { header: 'Authorization' },
+    })
+
+    expect(result.headers).toEqual({ Authorization: 'mfa.long_discord_token_value_here_1234567890' })
+  })
+
+  it('applies prefix when configured', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => 'token_value_longer_than_20_chars'),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    const result = await resolveWebpackModuleWalk(handle, {
+      chunk_global: 'webpackChunktest_app',
+      module_test: 'getAuth',
+      call: 'getAuth',
+      inject: { header: 'Authorization', prefix: 'Bearer ' },
+    })
+
+    expect(result.headers).toEqual({ Authorization: 'Bearer token_value_longer_than_20_chars' })
+  })
+
+  it('injects as query param when configured', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => 'api_key_from_webpack_modules'),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    const result = await resolveWebpackModuleWalk(handle, {
+      chunk_global: 'webpackChunktest_app',
+      module_test: 'getApiKey',
+      call: 'getApiKey',
+      inject: { query: 'key' },
+    })
+
+    expect(result.queryParams).toEqual({ key: 'api_key_from_webpack_modules' })
+  })
+
+  it('throws when no token found', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => null),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    await expect(
+      resolveWebpackModuleWalk(handle, {
+        chunk_global: 'webpackChunkdiscord_app',
+        module_test: 'getToken',
+        call: 'getToken',
+        inject: { header: 'Authorization' },
+      }),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
+    })
+  })
+
+  it('rejects blocked patterns in config', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => 'should_not_reach'),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    await expect(
+      resolveWebpackModuleWalk(handle, {
+        chunk_global: 'process.env',
+        module_test: 'getToken',
+        call: 'getToken',
+        inject: { header: 'Authorization' },
+      }),
     ).rejects.toMatchObject({
       payload: { code: 'AUTH_FAILED' },
     })
