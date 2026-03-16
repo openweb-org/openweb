@@ -22,8 +22,6 @@ const KNOWN_GLOBALS = [
   '__nr',
   'gon',
   'WIZ_global_data',
-  'webpackChunkdiscord_app',
-  'webpackChunk_N_E',
 ] as const
 
 export async function captureDomAndGlobals(

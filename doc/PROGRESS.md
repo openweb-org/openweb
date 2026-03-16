@@ -1,3 +1,30 @@
+## 2026-03-16: Post-M4 planning — roadmap, meta-schema review, design docs
+
+**What changed:**
+- Separated `doc/todo/roadmap.md` from `doc/todo/note.md` — M5-M8 milestones defined
+- M5: Agent Skill MVP (9 sites, pure packaging)
+- M6: Manual Scaling + Core Hardening (10→25 sites, primitive registry, freshness, extraction handlers)
+- M7: Semi-Auto Discovery (25→50 sites, compiler L2 classify, AsyncAPI, self-healing)
+- M8: Full Automation + Distribution (50→100+, self-evolution, package registry)
+- New design docs:
+  - `doc/todo/meta-schema-review/` — auth/csrf/signing 分类体系 review, mode 轴分析
+  - `doc/todo/primitive-customization/` — registry + per-site resolver 设计
+  - `doc/todo/intelligent-discovery/` — agent-driven API exploration workflow
+- Removed site-specific `webpackChunkdiscord_app` + `webpackChunk_N_E` from dom-capture KNOWN_GLOBALS (redundant with wildcard scan)
+
+**Why:**
+- M0-M4 complete — need clear roadmap for M5+ that covers all v2 design doc commitments
+- Meta-schema review identified: page_global duplication, 3-switch code smell, missing freshness dimension, extraction as wrong category
+- Primitive customization needed before scaling to 100+ sites (company-specific primitives in core don't scale)
+
+**Key files:** `doc/todo/roadmap.md`, `doc/todo/note.md`, `doc/todo/meta-schema-review/review.md`, `doc/todo/primitive-customization/design.md`, `doc/todo/intelligent-discovery/design.md`, `src/capture/dom-capture.ts`
+**Verification:** 167/167 tests pass, Discord getMe verified via CDP after KNOWN_GLOBALS cleanup
+**Commit:** (uncommitted)
+**Next:** M5 — Agent skill MVP
+**Blockers:** None
+
+---
+
 ## 2026-03-16: Documentation overhaul — doc/main + doc/dev rewrite
 
 **What changed:**
