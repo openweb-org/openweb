@@ -34,6 +34,7 @@ export async function connectWithRetry(
         message: 'CDP connection aborted.',
         action: 'Retry the capture command.',
         retriable: true,
+        failureClass: 'needs_browser',
       })
     }
     try {
@@ -56,6 +57,7 @@ export async function connectWithRetry(
           message: 'CDP connection aborted.',
           action: 'Retry the capture command.',
           retriable: true,
+          failureClass: 'needs_browser',
         })
       }
       if (attempt === maxRetries - 1) {
@@ -65,6 +67,7 @@ export async function connectWithRetry(
           message: `CDP connection failed after ${String(maxRetries)} attempts: ${message}`,
           action: 'Ensure Chrome is running with --remote-debugging-port. Example: google-chrome --remote-debugging-port=9222',
           retriable: true,
+          failureClass: 'needs_browser',
         })
       }
       try {
@@ -77,6 +80,7 @@ export async function connectWithRetry(
           message: 'CDP connection aborted.',
           action: 'Retry the capture command.',
           retriable: true,
+          failureClass: 'needs_browser',
         })
       }
     }

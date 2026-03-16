@@ -53,6 +53,7 @@ export async function captureStopCommand(): Promise<void> {
       message: 'No active capture session found.',
       action: 'Start a capture first with: openweb capture start --cdp-endpoint <url>',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -68,6 +69,7 @@ export async function captureStopCommand(): Promise<void> {
       message: `Failed to stop capture: ${message}`,
       action: 'The capture process may have already exited.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 }

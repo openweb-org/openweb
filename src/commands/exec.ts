@@ -18,6 +18,7 @@ function parseParams(paramsJson: string | undefined): Record<string, unknown> {
       message: `Invalid JSON parameters (${detail}). Expected object string, e.g. {"latitude":52.52}`,
       action: 'Run `openweb <site> <tool>` to inspect parameters.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 }

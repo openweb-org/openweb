@@ -76,6 +76,7 @@ export async function runScriptedRecording(scriptPath: string): Promise<string> 
       message: `Recording failed: ${message}`,
       action: 'Fix the record script and retry with `openweb compile <url> --script <file>`.',
       retriable: true,
+      failureClass: 'retriable',
     })
   })
 
@@ -139,6 +140,7 @@ export async function loadRecordedSamples(recordingDir: string): Promise<Recorde
       message: 'No valid API samples found in recorded HAR.',
       action: 'Ensure the script issues successful JSON API requests.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 

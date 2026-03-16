@@ -28,6 +28,7 @@ export async function resolveScriptJson(
       message: `Script element matching "${selector}" not found.`,
       action: 'Ensure the page is fully loaded.',
       retriable: true,
+      failureClass: 'retriable',
     })
   }
 
@@ -41,6 +42,7 @@ export async function resolveScriptJson(
       message: `Script content is not valid JSON for selector "${selector}".`,
       action: 'Check the selector targets a JSON script tag.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -54,6 +56,7 @@ export async function resolveScriptJson(
           message: `Path "${path}" not found in script JSON.`,
           action: 'Verify the JSON structure.',
           retriable: false,
+          failureClass: 'fatal',
         })
       }
       data = (data as Record<string, unknown>)[segment]

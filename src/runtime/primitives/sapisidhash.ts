@@ -36,6 +36,7 @@ export async function resolveSapisidhash(
       message: `Cookie "${cookieName}" not found. Ensure you are logged in to Google.`,
       action: 'Log in to the site in Chrome and retry.',
       retriable: true,
+      failureClass: 'needs_login',
     })
   }
 

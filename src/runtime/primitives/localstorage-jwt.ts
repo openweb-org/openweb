@@ -33,6 +33,7 @@ export async function resolveLocalStorageJwt(
       message: `localStorage key "${key}" not found. Ensure you are logged in.`,
       action: 'Log in to the site in Chrome and retry.',
       retriable: true,
+      failureClass: 'needs_login',
     })
   }
 
@@ -55,6 +56,7 @@ export async function resolveLocalStorageJwt(
           message: `Path "${path}" not found in localStorage key "${key}".`,
           action: 'Verify the localStorage structure or re-login.',
           retriable: true,
+          failureClass: 'needs_login',
         })
       }
       value = (value as Record<string, unknown>)[segment]
@@ -68,6 +70,7 @@ export async function resolveLocalStorageJwt(
       message: `No valid token found at "${key}${path ? '.' + path : ''}".`,
       action: 'Ensure you are logged in and the token is present.',
       retriable: true,
+      failureClass: 'needs_login',
     })
   }
 

@@ -69,6 +69,7 @@ export async function resolveWebpackModuleWalk(
       message: `webpack_module_walk: no token found via ${config.chunk_global}.${config.module_test}`,
       action: 'Ensure the site is loaded and you are logged in.',
       retriable: true,
+      failureClass: 'needs_login',
     })
   }
 
@@ -107,6 +108,7 @@ function validateConfig(config: WebpackModuleWalkConfig): void {
       message: `webpack_module_walk: invalid chunk_global "${config.chunk_global}".`,
       action: 'chunk_global must be a valid JS identifier (e.g., webpackChunkdiscord_app).',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -120,6 +122,7 @@ function validateConfig(config: WebpackModuleWalkConfig): void {
         message: `webpack_module_walk: blocked pattern "${pattern}" in config.`,
         action: 'The config may have been tampered with. Re-capture the site.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
   }

@@ -64,6 +64,7 @@ export async function resolveApiResponse(
       message: `CSRF endpoint ${config.endpoint} returned ${response.status}`,
       action: 'Ensure you are logged in.',
       retriable: true,
+      failureClass: 'needs_login',
     })
   }
 
@@ -77,6 +78,7 @@ export async function resolveApiResponse(
       message: `CSRF endpoint ${config.endpoint} returned non-JSON response.`,
       action: 'Check the endpoint.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -89,6 +91,7 @@ export async function resolveApiResponse(
       message: `Could not extract "${config.extract}" from ${config.endpoint} response.`,
       action: 'The response structure may have changed.',
       retriable: true,
+      failureClass: 'needs_login',
     })
   }
 

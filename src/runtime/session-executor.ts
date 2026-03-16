@@ -93,6 +93,7 @@ export function resolveMode(spec: OpenApiSpec, operation: OpenApiOperation): Exe
         message: `Unknown execution mode: ${m}`,
         action: 'Valid modes: direct_http, session_http, browser_fetch.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
     return m as ExecutionMode
@@ -107,6 +108,7 @@ export function resolveMode(spec: OpenApiSpec, operation: OpenApiOperation): Exe
       message: `Unknown execution mode: ${serverMode}`,
       action: 'Valid modes: direct_http, session_http, browser_fetch.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
   return serverMode as ExecutionMode
@@ -131,6 +133,7 @@ export function substitutePath(
           message: `Missing required path parameter: ${param.name}`,
           action: 'Run `openweb <site> <tool>` to inspect parameters.',
           retriable: false,
+          failureClass: 'fatal',
         })
       }
       continue
@@ -147,6 +150,7 @@ export function substitutePath(
       message: `Unresolved path variables: ${unreplaced.join(', ')}`,
       action: 'Provide values for all path parameters.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -171,6 +175,7 @@ export function buildHeaderParams(
           message: `Missing required header parameter: ${param.name}`,
           action: 'Run `openweb <site> <tool>` to inspect parameters.',
           retriable: false,
+          failureClass: 'fatal',
         })
       }
       continue
@@ -222,6 +227,7 @@ export async function resolveAuth(
         message: `Unsupported auth primitive: ${auth.type}`,
         action: 'This auth type is not yet implemented.',
         retriable: false,
+        failureClass: 'fatal',
       })
   }
 }
@@ -257,6 +263,7 @@ export async function resolveCsrf(
         message: `Unsupported CSRF primitive: ${csrf.type}`,
         action: 'This CSRF type is not yet implemented.',
         retriable: false,
+        failureClass: 'fatal',
       })
   }
 }
@@ -281,6 +288,7 @@ export async function resolveSigning(
         message: `Unsupported signing primitive: ${signing.type}`,
         action: 'This signing type is not yet implemented.',
         retriable: false,
+        failureClass: 'fatal',
       })
   }
 }
@@ -324,6 +332,7 @@ export async function executeSessionHttp(
       message: 'No server URL found in OpenAPI spec.',
       action: 'Add `servers` to the spec and retry.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -335,6 +344,7 @@ export async function executeSessionHttp(
       message: 'No browser context available. Is Chrome open with the site loaded?',
       action: 'Open Chrome with --remote-debugging-port=9222 and navigate to the site.',
       retriable: true,
+      failureClass: 'needs_browser',
     })
   }
 
@@ -346,6 +356,7 @@ export async function executeSessionHttp(
       message: 'No page available in browser context.',
       action: 'Open a tab in Chrome and navigate to the site.',
       retriable: true,
+      failureClass: 'needs_page',
     })
   }
 
@@ -490,6 +501,7 @@ export async function executeSessionHttp(
       message: 'No response received.',
       action: 'Check network connectivity.',
       retriable: true,
+      failureClass: 'retriable',
     })
   }
 
@@ -500,6 +512,7 @@ export async function executeSessionHttp(
       message: `Too many redirects (>${MAX_REDIRECTS})`,
       action: 'Retry later or inspect endpoint redirects.',
       retriable: true,
+      failureClass: 'retriable',
     })
   }
 
@@ -510,6 +523,7 @@ export async function executeSessionHttp(
       message: `HTTP ${response.status}`,
       action: 'Check parameters and ensure you are logged in.',
       retriable: response.status === 429 || response.status >= 500,
+      failureClass: response.status === 429 || response.status >= 500 ? 'retriable' : 'fatal',
     })
   }
 
@@ -525,6 +539,7 @@ export async function executeSessionHttp(
       message: `Response is not valid JSON (status ${response.status})`,
       action: 'The API returned non-JSON content. Check the endpoint.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 

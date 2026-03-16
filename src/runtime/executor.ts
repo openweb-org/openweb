@@ -76,6 +76,7 @@ export async function fetchWithValidatedRedirects(
         message: 'Redirect response missing Location header.',
         action: 'Retry or inspect upstream endpoint behavior.',
         retriable: true,
+        failureClass: 'retriable',
       })
     }
 
@@ -88,6 +89,7 @@ export async function fetchWithValidatedRedirects(
     message: `Too many redirects (>${MAX_REDIRECTS})`,
     action: 'Retry later or inspect endpoint redirects.',
     retriable: true,
+    failureClass: 'retriable',
   })
 }
 
@@ -121,6 +123,7 @@ export async function executeOperation(
           message: 'No browser context available.',
           action: 'Open Chrome with --remote-debugging-port=9222.',
           retriable: true,
+          failureClass: 'needs_browser',
         })
       }
       const serverUrl = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
@@ -132,6 +135,7 @@ export async function executeOperation(
           message: 'No page available in browser context.',
           action: 'Open a tab and navigate to the site.',
           retriable: true,
+          failureClass: 'needs_page',
         })
       }
       const mergedParams = { ...params, ...adapterRef.params }
@@ -200,6 +204,7 @@ export async function executeOperation(
         message: `HTTP ${response.status}`,
         action: `Check parameters with: openweb ${site} ${operationId}`,
         retriable: response.status === 429 || response.status >= 500,
+        failureClass: response.status === 429 || response.status >= 500 ? 'retriable' : 'fatal',
       })
     }
 
@@ -217,6 +222,7 @@ export async function executeOperation(
         message: `Response is not valid JSON (status ${response.status})`,
         action: 'The API returned non-JSON content. Check the endpoint.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
   }
@@ -264,6 +270,7 @@ export async function runSiteTests(site: string): Promise<{ passed: number; fail
       message: `No tests found for site: ${site}`,
       action: 'Generate tests or use a site fixture that contains tests/*.test.json.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 

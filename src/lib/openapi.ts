@@ -98,6 +98,7 @@ export async function resolveSiteRoot(site: string): Promise<string> {
     message: `Site not found: ${site}`,
     action: 'Run `openweb sites` to list available sites.',
     retriable: false,
+    failureClass: 'fatal',
   })
 }
 
@@ -142,6 +143,7 @@ export async function loadOpenApi(site: string): Promise<OpenApiSpec> {
       message: `Invalid OpenAPI spec for site: ${site}`,
       action: `Regenerate the spec for ${site} and retry.`,
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -177,6 +179,7 @@ export function findOperation(spec: OpenApiSpec, operationId: string): Operation
       message: `Tool not found: ${operationId}`,
       action: 'Run `openweb <site>` to list available tools.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
   return operation
@@ -199,6 +202,7 @@ export function getServerUrl(spec: OpenApiSpec, operation: OpenApiOperation): st
     message: 'No server URL found in OpenAPI spec.',
     action: 'Add `servers` to the spec and retry.',
     retriable: false,
+    failureClass: 'fatal',
   })
 }
 
@@ -222,6 +226,7 @@ export function validateParams(
       message: `Unknown parameter(s): ${unknownNames.join(', ')}`,
       action: 'Run `openweb <site> <tool>` to inspect valid parameters.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -234,6 +239,7 @@ export function validateParams(
         message: `Missing required parameter: ${param.name}`,
         action: 'Run `openweb <site> <tool>` to inspect parameters.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
     if ((value === undefined || value === null) && param.schema?.default !== undefined) {
@@ -260,6 +266,7 @@ function validateType(name: string, value: unknown, schema: JsonSchema | undefin
         message: `Parameter ${name} must be integer`,
         action: 'Run `openweb <site> <tool>` to inspect parameters.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
     return
@@ -273,6 +280,7 @@ function validateType(name: string, value: unknown, schema: JsonSchema | undefin
         message: `Parameter ${name} must be number`,
         action: 'Run `openweb <site> <tool>` to inspect parameters.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
     return
@@ -286,6 +294,7 @@ function validateType(name: string, value: unknown, schema: JsonSchema | undefin
         message: `Parameter ${name} must be string`,
         action: 'Run `openweb <site> <tool>` to inspect parameters.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
     return
@@ -299,6 +308,7 @@ function validateType(name: string, value: unknown, schema: JsonSchema | undefin
         message: `Parameter ${name} must be boolean`,
         action: 'Run `openweb <site> <tool>` to inspect parameters.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
     return
@@ -312,6 +322,7 @@ function validateType(name: string, value: unknown, schema: JsonSchema | undefin
         message: `Parameter ${name} must be array`,
         action: 'Run `openweb <site> <tool>` to inspect parameters.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
     if (!schema.items) {
@@ -342,6 +353,7 @@ export function buildQueryUrl(
       message: `Unknown parameter(s): ${unknownParameterNames.join(', ')}`,
       action: 'Run `openweb <site> <tool>` to inspect valid parameters.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -354,6 +366,7 @@ export function buildQueryUrl(
         message: `Missing required parameter: ${parameter.name}`,
         action: 'Run `openweb <site> <tool>` to inspect parameters.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
 

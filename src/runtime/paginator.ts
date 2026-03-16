@@ -83,6 +83,7 @@ export async function executePaginated(
         message: `Unsupported pagination type: ${(pagination as { type: string }).type}`,
         action: 'Only cursor and link_header pagination are currently supported.',
         retriable: false,
+        failureClass: 'fatal',
       })
   }
 }

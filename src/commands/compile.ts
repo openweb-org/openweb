@@ -95,6 +95,7 @@ export async function compileSite(
       message: 'Interactive recording is not implemented yet in MVP scaffold.',
       action: 'Use scripted mode: `openweb compile <url> --script scripts/record_open_meteo.ts`.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -117,6 +118,7 @@ export async function compileSite(
       message: 'No filtered samples after analyzer filtering stage.',
       action: 'Record richer interactions or inspect filter rules.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -159,6 +161,7 @@ export async function compileSite(
       message: 'No operations were produced from analyzed clusters.',
       action: 'Check recorded traffic and analyzer rules.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 

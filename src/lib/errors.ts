@@ -4,12 +4,20 @@ export type OpenWebErrorCode =
   | 'INVALID_PARAMS'
   | 'AUTH_FAILED'
 
+export type FailureClass =
+  | 'needs_browser'
+  | 'needs_login'
+  | 'needs_page'
+  | 'retriable'
+  | 'fatal'
+
 export interface OpenWebErrorPayload {
   readonly error: 'execution_failed' | 'auth'
   readonly code: OpenWebErrorCode
   readonly message: string
   readonly action: string
   readonly retriable: boolean
+  readonly failureClass: FailureClass
 }
 
 export class OpenWebError extends Error {
@@ -38,5 +46,6 @@ export function toOpenWebError(error: unknown): OpenWebError {
     message,
     action: 'Retry the command or inspect the site/tool definition.',
     retriable: true,
+    failureClass: 'retriable',
   })
 }

@@ -25,6 +25,7 @@ export async function resolveCookieToHeader(
       message: `CSRF cookie not found: ${config.cookie}`,
       action: 'Ensure you are logged in to the site in Chrome.',
       retriable: true,
+      failureClass: 'needs_login',
     })
   }
 

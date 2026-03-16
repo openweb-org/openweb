@@ -81,6 +81,7 @@ export async function validateSSRF(urlString: string): Promise<void> {
       message: 'HTTPS required for outbound requests.',
       action: 'Use an HTTPS endpoint in the OpenAPI servers definition.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -92,6 +93,7 @@ export async function validateSSRF(urlString: string): Promise<void> {
       message: `Blocked target address: ${parsed.hostname}`,
       action: 'Use a public internet hostname, not private/link-local/metadata addresses.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -104,6 +106,7 @@ export async function validateSSRF(urlString: string): Promise<void> {
         message: `Blocked target address: ${record.address}`,
         action: 'Use a public internet hostname, not private/link-local/metadata addresses.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
   }

@@ -23,6 +23,7 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
       message: `Invalid adapter name: "${adapterName}"`,
       action: 'Adapter names must be simple identifiers without path separators.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -63,6 +64,7 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
       message: `Adapter "${adapterName}" failed to load: ${lastError.message}`,
       action: 'Check adapter syntax. .ts files require tsx runtime (pnpm dev). Built mode needs .js files.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -75,6 +77,7 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
         : `Adapter "${adapterName}" not found in ${adapterDir}`,
       action: 'Ensure the adapter file exists and exports a default CodeAdapter object.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -102,6 +105,7 @@ export async function executeAdapter(
       message: `Adapter "${adapter.name}" failed to initialize.`,
       action: 'Ensure the site is loaded and the page is ready.',
       retriable: true,
+      failureClass: 'retriable',
     })
   }
 
@@ -113,6 +117,7 @@ export async function executeAdapter(
       message: `Adapter "${adapter.name}": not authenticated.`,
       action: 'Log in to the site and try again.',
       retriable: true,
+      failureClass: 'needs_login',
     })
   }
 

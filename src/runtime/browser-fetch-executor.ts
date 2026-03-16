@@ -48,6 +48,7 @@ export async function executeBrowserFetch(
       message: 'No server URL found in OpenAPI spec.',
       action: 'Add `servers` to the spec and retry.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 
@@ -59,6 +60,7 @@ export async function executeBrowserFetch(
       message: 'No browser context available. Is Chrome open with the site loaded?',
       action: 'Open Chrome with --remote-debugging-port=9222 and navigate to the site.',
       retriable: true,
+      failureClass: 'needs_browser',
     })
   }
 
@@ -70,6 +72,7 @@ export async function executeBrowserFetch(
       message: 'No page available in browser context.',
       action: 'Open a tab in Chrome and navigate to the site.',
       retriable: true,
+      failureClass: 'needs_page',
     })
   }
 
@@ -190,6 +193,7 @@ export async function executeBrowserFetch(
       message: `browser_fetch failed: ${message}`,
       action: 'Check network connectivity and CORS policy.',
       retriable: true,
+      failureClass: 'retriable',
     })
   }
 
@@ -200,6 +204,7 @@ export async function executeBrowserFetch(
       message: `HTTP ${String(fetchResult.status)}`,
       action: 'Check parameters and ensure you are logged in.',
       retriable: fetchResult.status === 429 || fetchResult.status >= 500,
+      failureClass: fetchResult.status === 429 || fetchResult.status >= 500 ? 'retriable' : 'fatal',
     })
   }
 
@@ -213,6 +218,7 @@ export async function executeBrowserFetch(
       message: `Response is not valid JSON (status ${String(fetchResult.status)})`,
       action: 'The API returned non-JSON content. Check the endpoint.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 

@@ -30,6 +30,7 @@ export async function resolveMetaTag(
       message: `Meta tag "${name}" not found in page. Ensure you are on the correct page.`,
       action: 'Navigate to the site in Chrome and retry.',
       retriable: true,
+      failureClass: 'needs_login',
     })
   }
 

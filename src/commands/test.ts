@@ -14,6 +14,7 @@ export async function testCommand(site: string): Promise<void> {
       message: `${result.failed} test case(s) failed.`,
       action: 'Inspect stderr details and update tool/test definitions.',
       retriable: false,
+      failureClass: 'fatal',
     })
   }
 }

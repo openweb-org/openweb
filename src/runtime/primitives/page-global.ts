@@ -76,6 +76,7 @@ function validateExpression(expression: string): void {
         message: `Blocked page_global expression: contains disallowed pattern "${pattern}".`,
         action: 'The expression may have been tampered with. Re-capture the site.',
         retriable: false,
+        failureClass: 'fatal',
       })
     }
   }
@@ -108,6 +109,7 @@ async function evaluateExpression(handle: BrowserHandle, expression: string): Pr
       message: `Page global expression "${expression}" returned no value.`,
       action: 'Ensure you are on the correct page and logged in.',
       retriable: true,
+      failureClass: 'needs_login',
     })
   }
 

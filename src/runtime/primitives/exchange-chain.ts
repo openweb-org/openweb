@@ -100,6 +100,7 @@ export async function resolveExchangeChain(
         message: `Exchange chain step failed: ${stepUrl} returned ${response.status}`,
         action: 'Ensure you are logged in. The exchange endpoint may require fresh cookies.',
         retriable: true,
+        failureClass: 'needs_login',
       })
     }
 
@@ -126,6 +127,7 @@ export async function resolveExchangeChain(
         message: `Exchange chain: could not extract "${step.extract}" from ${stepUrl} response.`,
         action: 'The response structure may have changed. Re-capture the site.',
         retriable: true,
+        failureClass: 'needs_login',
       })
     }
 
