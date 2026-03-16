@@ -10,7 +10,7 @@ import { execCommand } from './commands/exec.js'
 import { showCommand } from './commands/show.js'
 import { sitesCommand } from './commands/sites.js'
 import { testCommand } from './commands/test.js'
-import { toOpenWebError, writeErrorToStderr } from './lib/errors.js'
+import { OpenWebError, toOpenWebError, writeErrorToStderr } from './lib/errors.js'
 
 async function withErrorHandling(fn: () => Promise<void>): Promise<void> {
   try {
@@ -32,17 +32,38 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
 
   await withErrorHandling(async () => {
     if (!site) {
-      throw new Error('Missing site name')
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'INVALID_PARAMS',
+        message: 'Missing site name.',
+        action: 'Usage: openweb <site> [exec <tool> [json-params]] [--cdp-endpoint <url>]',
+        retriable: false,
+        failureClass: 'fatal',
+      })
     }
 
     if (second === 'exec') {
       if (!third) {
-        throw new Error('Usage: openweb <site> exec <tool> [json-params] [--cdp-endpoint <url>]')
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'INVALID_PARAMS',
+          message: 'Missing tool name.',
+          action: `Run \`openweb ${site}\` to list available tools.`,
+          retriable: false,
+          failureClass: 'fatal',
+        })
       }
       const cdpIdx = argv.indexOf('--cdp-endpoint')
       const cdpEndpoint = cdpIdx >= 0 ? argv[cdpIdx + 1] : undefined
       if (cdpIdx >= 0 && !cdpEndpoint) {
-        throw new Error('--cdp-endpoint requires a value (e.g. http://localhost:9222)')
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'INVALID_PARAMS',
+          message: '--cdp-endpoint requires a value.',
+          action: 'Example: --cdp-endpoint http://localhost:9222',
+          retriable: false,
+          failureClass: 'fatal',
+        })
       }
       const paramsJson = fourth && !fourth.startsWith('--') ? fourth : undefined
       await execCommand(site, third, paramsJson, { cdpEndpoint })

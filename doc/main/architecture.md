@@ -37,6 +37,10 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 
 ```
                     ┌──────────────┐
+                    │ Agent Skill  │  .claude/skills/openweb/SKILL.md
+                    └──────┬───────┘
+                           │ natural language → CLI command
+                    ┌──────────────┐
                     │  CLI / Agent │
                     └──────┬───────┘
                            │ openweb <site> exec <op> '{...}'
@@ -87,7 +91,7 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | **Capture** | CDP browser recording (HAR + WS + state + DOM) | `src/capture/` | Complete (M0) |
 | **CLI** | Progressive navigation + exec + capture + compile | `src/cli.ts`, `src/commands/` | Complete |
 | **Skill packages** | Per-site instance specs | `src/fixtures/` | 9 verified sites |
-| **Agent skill** | CLI wrapper for Claude/Codex | — | Not started (M5) |
+| **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5) |
 
 ---
 

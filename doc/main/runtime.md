@@ -216,12 +216,25 @@ interface OpenWebErrorPayload {
   message: string
   action: string
   retriable: boolean
+  failureClass: FailureClass
 }
 ```
 
-The CLI catches errors and writes structured JSON to stderr.
+### Failure Classification (M5)
 
--> See: [security.md](security.md) — error model details
+Every error carries a `failureClass` that tells the agent what to do next:
+
+| Class | Meaning | Agent action |
+|-------|---------|-------------|
+| `needs_browser` | Operation requires a browser but none connected | Launch Chrome with CDP |
+| `needs_login` | User is not authenticated on the target site | Prompt user to log in |
+| `needs_page` | No browser tab matches the target origin | Navigate to the site |
+| `retriable` | Transient failure (network, rate-limit) | Retry the request |
+| `fatal` | Unrecoverable error (bad spec, unknown op) | Stop and report |
+
+-> See: `src/lib/errors.ts`
+
+The CLI catches errors and writes structured JSON to stderr.
 
 ---
 

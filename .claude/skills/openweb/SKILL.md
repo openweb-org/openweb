@@ -11,10 +11,11 @@ OpenWeb lets you execute API operations against websites using the user's real b
 
 ```bash
 # All commands run from the openweb project root
-pnpm dev sites                                    # List available sites
-pnpm dev <site>                                   # Show operations + readiness info
-pnpm dev <site> <operation>                       # Show operation params + response shape
-pnpm dev <site> exec <op> '<json>' --cdp-endpoint http://localhost:9222  # Execute
+# Use --silent to suppress pnpm banner (important for JSON piping)
+pnpm --silent dev sites                                    # List available sites
+pnpm --silent dev <site>                                   # Show operations + readiness info
+pnpm --silent dev <site> <operation>                       # Show operation params + response shape
+pnpm --silent dev <site> exec <op> '<json>' --cdp-endpoint http://localhost:9222  # Execute
 ```
 
 ## Workflow: How to Complete a Task
@@ -24,7 +25,7 @@ Follow this sequence every time. Skipping steps leads to wrong parameters or mis
 ### Step 1: Find the right site
 
 ```bash
-pnpm dev sites
+pnpm --silent dev sites
 ```
 
 This lists all available sites. Match the user's request to a site name (e.g., "my Instagram feed" → `instagram-fixture`).
@@ -32,7 +33,7 @@ This lists all available sites. Match the user's request to a site name (e.g., "
 ### Step 2: Check site readiness
 
 ```bash
-pnpm dev <site>
+pnpm --silent dev <site>
 ```
 
 This shows critical metadata you need before executing:
@@ -59,7 +60,7 @@ Operations:
 ### Step 3: Inspect the operation
 
 ```bash
-pnpm dev <site> <operation>
+pnpm --silent dev <site> <operation>
 ```
 
 This shows parameters, their types, which are required, and the response shape:
@@ -77,7 +78,7 @@ Use this to build your JSON params object. Only include parameters you need — 
 ### Step 4: Execute
 
 ```bash
-pnpm dev <site> exec <operation> '<json-params>' --cdp-endpoint http://localhost:9222
+pnpm --silent dev <site> exec <operation> '<json-params>' --cdp-endpoint http://localhost:9222
 ```
 
 - **stdout** = JSON result (success)
@@ -142,9 +143,9 @@ Sites use different modes depending on their API structure. You don't need to ch
 User: "What's the weather in Berlin?"
 
 ```bash
-pnpm dev open-meteo-fixture                    # Check: Requires browser: no
-pnpm dev open-meteo-fixture get_forecast       # Check params: latitude, longitude required
-pnpm dev open-meteo-fixture exec get_forecast '{"latitude": 52.52, "longitude": 13.41, "hourly": ["temperature_2m"]}'
+pnpm --silent devopen-meteo-fixture                    # Check: Requires browser: no
+pnpm --silent devopen-meteo-fixture get_forecast       # Check params: latitude, longitude required
+pnpm --silent devopen-meteo-fixture exec get_forecast '{"latitude": 52.52, "longitude": 13.41, "hourly": ["temperature_2m"]}'
 ```
 
 No `--cdp-endpoint` needed since it's direct_http.
@@ -154,9 +155,9 @@ No `--cdp-endpoint` needed since it's direct_http.
 User: "Show my Instagram feed"
 
 ```bash
-pnpm dev instagram-fixture                     # Check: Requires browser: yes, Requires login: yes
-pnpm dev instagram-fixture getTimeline         # Check params
-pnpm dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222
+pnpm --silent devinstagram-fixture                     # Check: Requires browser: yes, Requires login: yes
+pnpm --silent devinstagram-fixture getTimeline         # Check params
+pnpm --silent devinstagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222
 ```
 
 ### Example 3: Path parameters
@@ -164,8 +165,8 @@ pnpm dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost
 User: "List 5 issues from facebook/react"
 
 ```bash
-pnpm dev github-fixture listIssues             # Shows: owner (path), repo (path), per_page (query)
-pnpm dev github-fixture exec listIssues '{"owner": "facebook", "repo": "react", "per_page": 5}' --cdp-endpoint http://localhost:9222
+pnpm --silent devgithub-fixture listIssues             # Shows: owner (path), repo (path), per_page (query)
+pnpm --silent devgithub-fixture exec listIssues '{"owner": "facebook", "repo": "react", "per_page": 5}' --cdp-endpoint http://localhost:9222
 ```
 
 Path parameters (like `owner` and `repo`) go in the same JSON object as query parameters.
@@ -175,8 +176,8 @@ Path parameters (like `owner` and `repo`) go in the same JSON object as query pa
 User: "Get my Discord profile"
 
 ```bash
-pnpm dev discord-fixture getMe                 # No params needed
-pnpm dev discord-fixture exec getMe '{}' --cdp-endpoint http://localhost:9222
+pnpm --silent devdiscord-fixture getMe                 # No params needed
+pnpm --silent devdiscord-fixture exec getMe '{}' --cdp-endpoint http://localhost:9222
 ```
 
 ### Example 5: Error recovery

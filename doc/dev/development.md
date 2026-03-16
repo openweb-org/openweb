@@ -211,6 +211,24 @@ Test JSON format:
 
 ---
 
+## Benchmark Suite (M5)
+
+Agent validation benchmarks live in `tests/benchmark/`. Each benchmark is a scripted task that an agent must complete end-to-end. 7 tasks cover all 4 execution modes:
+
+| # | Task | Mode |
+|---|------|------|
+| 01 | direct_http (Open-Meteo) | direct_http |
+| 02 | session_http (Instagram) | session_http |
+| 03 | session_http (GitHub) | session_http |
+| 04 | session_http (YouTube) | session_http |
+| 05 | browser_fetch (Discord) | browser_fetch |
+| 06 | L3 adapter (Telegram) | L3 adapter |
+| 07 | Auth failure handling | error recovery |
+
+Use these to validate that agent skill changes do not break the end-to-end flow.
+
+---
+
 ## Code Conventions
 
 - Max 400 lines/file — extract when larger

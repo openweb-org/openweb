@@ -233,6 +233,7 @@ pnpm dev <site>-fixture test
 - [ ] Test cases in `tests/`
 - [ ] `pnpm test` passes
 - [ ] Real browser E2E verification
+- [ ] Validated against benchmark suite (`tests/benchmark/`) if adding a new execution mode or auth pattern
 - [ ] Pitfalls documented in design docs (if applicable)
 
 ---
