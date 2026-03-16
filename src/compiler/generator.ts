@@ -218,7 +218,7 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
       title: input.site,
       version: '1.0.0',
       'x-openweb': {
-        spec_version: '0.1.0',
+        spec_version: '2.0',
         generated_at: generatedAt,
         requires_auth: requiresAuth,
       },
@@ -230,7 +230,7 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
   const manifest = {
     name: input.site,
     version: '1.0.0',
-    spec_version: '0.1.0',
+    spec_version: '2.0',
     site: new URL(input.sourceUrl).hostname,
     generated_at: generatedAt,
     requires_auth: requiresAuth,

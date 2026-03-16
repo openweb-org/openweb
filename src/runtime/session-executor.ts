@@ -10,7 +10,10 @@ import { resolveCookieToHeader } from './primitives/cookie-to-header.js'
 import type { BrowserHandle, ResolvedInjections } from './primitives/types.js'
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+const VALID_MODES = new Set<string>(['direct_http', 'session_http', 'browser_fetch'])
 const MAX_REDIRECTS = 5
+const SENSITIVE_HEADERS = ['cookie', 'authorization', 'x-csrftoken', 'x-csrf-token']
+const UNSAFE_REF_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
 
 /** Read x-openweb config from the server entry matching this operation */
 export function getServerXOpenWeb(spec: OpenApiSpec, operation: OpenApiOperation): XOpenWebServer | undefined {
@@ -29,7 +32,19 @@ export function getServerXOpenWeb(spec: OpenApiSpec, operation: OpenApiOperation
 /** Determine execution mode: operation-level overrides server-level */
 export function resolveMode(spec: OpenApiSpec, operation: OpenApiOperation): ExecutionMode {
   const opExt = operation['x-openweb'] as Record<string, unknown> | undefined
-  if (opExt?.mode) return opExt.mode as ExecutionMode
+  if (opExt?.mode) {
+    const m = opExt.mode as string
+    if (!VALID_MODES.has(m)) {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `Unknown execution mode: ${m}`,
+        action: 'Valid modes: direct_http, session_http, browser_fetch.',
+        retriable: false,
+      })
+    }
+    return m as ExecutionMode
+  }
 
   const serverExt = getServerXOpenWeb(spec, operation)
   return serverExt?.mode ?? 'direct_http'
@@ -59,6 +74,18 @@ export function substitutePath(
       continue
     }
     result = result.replace(`{${param.name}}`, encodeURIComponent(String(value)))
+  }
+
+  // Guard against unreplaced template variables (spec/params mismatch)
+  const unreplaced = result.match(/\{[^}]+\}/g)
+  if (unreplaced) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'INVALID_PARAMS',
+      message: `Unresolved path variables: ${unreplaced.join(', ')}`,
+      action: 'Provide values for all path parameters.',
+      retriable: false,
+    })
   }
 
   return result
@@ -240,14 +267,16 @@ export async function executeSessionHttp(
   }
 
   // Fetch with redirect following + SSRF validation
+  const originalOrigin = new URL(target.toString()).origin
   let currentUrl = target.toString()
+  let currentMethod = upperMethod
   let response: Response | undefined
 
   for (let attempt = 0; attempt <= MAX_REDIRECTS; attempt++) {
     await ssrfValidator(currentUrl)
 
     response = await fetchImpl(currentUrl, {
-      method: upperMethod,
+      method: currentMethod,
       headers,
       redirect: 'manual',
     })
@@ -256,7 +285,23 @@ export async function executeSessionHttp(
 
     const location = response.headers.get('location')
     if (!location) break
-    currentUrl = new URL(location, currentUrl).toString()
+
+    const nextUrl = new URL(location, currentUrl)
+    currentUrl = nextUrl.toString()
+
+    // CR-07: 303 See Other always switches to GET
+    if (response.status === 303) {
+      currentMethod = 'GET'
+    }
+
+    // CR-01: Strip sensitive headers on cross-origin redirect
+    if (nextUrl.origin !== originalOrigin) {
+      for (const name of SENSITIVE_HEADERS) {
+        for (const key of Object.keys(headers)) {
+          if (key.toLowerCase() === name) delete headers[key]
+        }
+      }
+    }
   }
 
   if (!response) {
@@ -306,6 +351,7 @@ function resolveAllParameters(spec: OpenApiSpec, operation: OpenApiOperation): O
 
     // Resolve $ref like '#/components/parameters/X-IG-App-ID'
     const parts = ref.replace('#/', '').split('/')
+    if (parts.some((part) => UNSAFE_REF_SEGMENTS.has(part))) return []
     let resolved: unknown = spec
     for (const part of parts) {
       resolved = (resolved as Record<string, unknown>)?.[part]

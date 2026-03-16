@@ -41,6 +41,9 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
       }
       const cdpIdx = argv.indexOf('--cdp-endpoint')
       const cdpEndpoint = cdpIdx >= 0 ? argv[cdpIdx + 1] : undefined
+      if (cdpIdx >= 0 && !cdpEndpoint) {
+        throw new Error('--cdp-endpoint requires a value (e.g. http://localhost:9222)')
+      }
       const paramsJson = fourth && !fourth.startsWith('--') ? fourth : undefined
       await execCommand(site, third, paramsJson, { cdpEndpoint })
       return

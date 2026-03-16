@@ -99,7 +99,17 @@ export async function executeOperation(
   let status: number
   let body: unknown
 
-  if (mode === 'session_http' || mode === 'browser_fetch') {
+  if (mode === 'browser_fetch') {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: 'browser_fetch mode is not yet implemented.',
+      action: 'Use session_http mode or contribute a browser_fetch implementation.',
+      retriable: false,
+    })
+  }
+
+  if (mode === 'session_http') {
     const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
     try {
       const result = await executeSessionHttp(
@@ -135,7 +145,18 @@ export async function executeOperation(
     }
 
     status = response.status
-    body = (await response.json()) as unknown
+    const text = await response.text()
+    try {
+      body = JSON.parse(text) as unknown
+    } catch {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `Response is not valid JSON (status ${response.status})`,
+        action: 'The API returned non-JSON content. Check the endpoint.',
+        retriable: false,
+      })
+    }
   }
 
   const schema = getResponseSchema(operationRef.operation)
