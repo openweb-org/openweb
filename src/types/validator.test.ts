@@ -132,6 +132,78 @@ describe('validateXOpenWebSpec', () => {
     expect(result.valid).toBe(true)
     expect(result.errors).toHaveLength(0)
   })
+
+  it('rejects falsy x-openweb values (false, 0, empty string)', () => {
+    const falsyValues = [false, 0, '']
+    for (const falsy of falsyValues) {
+      const spec = {
+        servers: [{ url: 'https://example.com', 'x-openweb': falsy }],
+        paths: {},
+      }
+      const result = validateXOpenWebSpec(spec)
+      expect(result.valid).toBe(false)
+    }
+  })
+
+  it('rejects auth primitive missing required fields', () => {
+    const spec = {
+      servers: [
+        {
+          url: 'https://example.com',
+          'x-openweb': {
+            mode: 'direct_http',
+            auth: { type: 'localStorage_jwt' }, // missing key + inject
+          },
+        },
+      ],
+      paths: {},
+    }
+    const result = validateXOpenWebSpec(spec)
+    expect(result.valid).toBe(false)
+  })
+
+  it('validates signing primitive (sapisidhash)', () => {
+    const spec = {
+      servers: [
+        {
+          url: 'https://example.com',
+          'x-openweb': {
+            mode: 'browser_fetch',
+            signing: {
+              type: 'sapisidhash',
+              origin: 'https://example.com',
+              inject: { header: 'Authorization' },
+            },
+          },
+        },
+      ],
+      paths: {},
+    }
+    const result = validateXOpenWebSpec(spec)
+    expect(result.valid).toBe(true)
+  })
+
+  it('validates csrf with scope at server level', () => {
+    const spec = {
+      servers: [
+        {
+          url: 'https://example.com',
+          'x-openweb': {
+            mode: 'session_http',
+            csrf: {
+              type: 'cookie_to_header',
+              cookie: 'csrftoken',
+              header: 'X-CSRFToken',
+              scope: ['POST', 'PUT', 'DELETE'],
+            },
+          },
+        },
+      ],
+      paths: {},
+    }
+    const result = validateXOpenWebSpec(spec)
+    expect(result.valid).toBe(true)
+  })
 })
 
 describe('validateManifest', () => {

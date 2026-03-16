@@ -63,7 +63,7 @@ export function validateXOpenWebSpec(spec: OpenApiLike): ValidationResult {
   for (let i = 0; i < servers.length; i++) {
     const server = servers[i]
     const ext = server?.['x-openweb']
-    if (!ext) continue
+    if (ext == null) continue
 
     if (!validateServerExt(ext)) {
       errors.push(...formatErrors(validateServerExt.errors, `servers[${i}].x-openweb`))
@@ -77,7 +77,7 @@ export function validateXOpenWebSpec(spec: OpenApiLike): ValidationResult {
       if (!op) continue
 
       const ext = op['x-openweb']
-      if (!ext) continue
+      if (ext == null) continue
 
       if (!validateOperationExt(ext)) {
         errors.push(
