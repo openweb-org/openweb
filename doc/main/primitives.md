@@ -1,0 +1,336 @@
+# L2 Primitive Resolvers
+
+> Auth, CSRF, signing, pagination, and extraction primitives — the declarative layer that handles ~50% of websites.
+> Last updated: 2026-03-16 (commit: `dd2b17e`)
+
+## Overview
+
+L2 primitives are **declarative config units** stored in the `x-openweb` extension of OpenAPI specs. The runtime reads them and resolves auth tokens, CSRF headers, request signatures, etc. — without any site-specific code.
+
+Each primitive has a `type` discriminator and type-specific config fields.
+
+-> See: `src/types/primitives.ts` — all 27 primitive type definitions
+
+---
+
+## Resolution Pipeline
+
+On every L2 request (session_http or browser_fetch), three resolvers run in sequence:
+
+```
+resolveAuth(handle, auth, serverUrl)     →  cookies + auth headers
+resolveCsrf(handle, csrf, serverUrl)     →  CSRF headers (mutations only)
+resolveSigning(handle, signing, serverUrl) →  signing headers (per-request)
+```
+
+All results are **merged into a single headers dict** passed to the HTTP request.
+
+The `BrowserHandle` provides access to the Playwright `Page` and `BrowserContext` for browser-side extraction.
+
+```typescript
+interface BrowserHandle {
+  page: Page
+  context: BrowserContext
+}
+
+interface ResolvedInjections {
+  headers: Record<string, string>
+  cookieString?: string
+}
+```
+
+-> See: `src/runtime/primitives/types.ts`
+
+---
+
+## Auth Primitives
+
+Auth primitives extract credentials from the browser and inject them into requests.
+
+| Type | What it does | Browser API | Implemented |
+|------|-------------|------------|-------------|
+| `cookie_session` | Extract all cookies for the target URL | `context.cookies()` | Yes |
+| `localStorage_jwt` | Read JWT from localStorage by key | `page.evaluate()` | Yes |
+| `sessionStorage_token` | Read token from sessionStorage | `page.evaluate()` | No |
+| `sessionStorage_msal` | Extract MSAL token from sessionStorage | `page.evaluate()` | No |
+| `page_global` | Evaluate JS expression on page (e.g., `window.ytcfg.get("ID_TOKEN")`) | `page.evaluate()` | Yes |
+| `webpack_module_walk` | Walk webpack chunk cache, find module, call function | `page.evaluate()` | Yes |
+| `websocket_intercept` | Intercept WebSocket frames for auth tokens | CDP events | No |
+| `lazy_fetch` | Call an auth endpoint, extract token from response | `fetch()` | No |
+| `exchange_chain` | Multi-step token exchange (call A → extract → call B → extract) | `fetch()` chain | Yes |
+
+### cookie_session
+
+The simplest auth. Extracts all cookies from the browser context matching the target URL.
+
+```yaml
+x-openweb:
+  mode: session_http
+  auth:
+    type: cookie_session
+```
+
+No config needed — just reads `context.cookies(serverUrl)`.
+
+-> See: `src/runtime/primitives/cookie-session.ts`
+
+### localStorage_jwt
+
+Reads a JWT stored in `localStorage`.
+
+```yaml
+auth:
+  type: localStorage_jwt
+  key: "BSKY_STORAGE"
+  path: "session.currentAccount.accessJwt"
+  inject: { header: "Authorization", prefix: "Bearer " }
+```
+
+- `key`: localStorage key
+- `path`: dot-path to extract token from JSON value
+- `inject`: where to place the token
+
+-> See: `src/runtime/primitives/localstorage-jwt.ts`
+
+### page_global
+
+Evaluates a JS expression on the page and extracts a value.
+
+```yaml
+auth:
+  type: page_global
+  expression: "window.ytcfg.data_"
+  inject: { header: "Authorization", prefix: "SAPISIDHASH " }
+  values:
+    - path: "DELEGATED_SESSION_ID"
+      inject: { header: "X-Goog-PageId" }
+```
+
+Multiple values can be extracted from a single expression.
+
+-> See: `src/runtime/primitives/page-global.ts`
+
+### webpack_module_walk
+
+Walks webpack chunk globals, finds a module matching a test, and calls a function.
+
+```yaml
+auth:
+  type: webpack_module_walk
+  chunk_global: "webpackChunkdiscord_app"
+  module_test: "getToken"
+  call: "getToken"
+  inject: { header: "Authorization" }
+```
+
+Used by Discord — the auth token lives inside a webpack module.
+
+-> See: `src/runtime/primitives/webpack-module-walk.ts`
+
+### exchange_chain
+
+Multi-step auth exchange. Each step calls an endpoint, extracts a token, and feeds it to the next step.
+
+```yaml
+auth:
+  type: exchange_chain
+  steps:
+    - url: "https://api.example.com/auth/token"
+      method: POST
+      headers: { "Content-Type": "application/json" }
+      extract: "access_token"
+    - url: "https://api.example.com/auth/session"
+      method: POST
+      extract: "session_id"
+  inject: { header: "X-Session-Id" }
+```
+
+-> See: `src/runtime/primitives/exchange-chain.ts`
+
+---
+
+## CSRF Primitives
+
+CSRF primitives extract anti-forgery tokens. Only resolved for **mutations** (POST, PUT, PATCH, DELETE).
+
+| Type | What it does | Implemented |
+|------|-------------|-------------|
+| `cookie_to_header` | Read cookie value → set as header | Yes |
+| `meta_tag` | Read `<meta>` tag content → set as header | Yes |
+| `page_global` | Evaluate JS expression → set as header | Yes |
+| `form_field` | Fetch page, find hidden input → set as header | No |
+| `api_response` | Call CSRF endpoint, extract token → set as header | Yes |
+
+### cookie_to_header
+
+Classic CSRF pattern. Reads a cookie and injects it as a header.
+
+```yaml
+csrf:
+  type: cookie_to_header
+  cookie: "csrftoken"
+  header: "X-CSRFToken"
+```
+
+-> See: `src/runtime/primitives/cookie-to-header.ts`
+
+### meta_tag
+
+Reads a `<meta>` element's `content` attribute from the DOM.
+
+```yaml
+csrf:
+  type: meta_tag
+  name: "csrf-token"
+  header: "X-CSRF-Token"
+```
+
+Used by GitHub.
+
+-> See: `src/runtime/primitives/meta-tag.ts`
+
+### api_response
+
+Calls a CSRF endpoint and extracts the token from the JSON response.
+
+```yaml
+csrf:
+  type: api_response
+  endpoint: "/api/csrf"
+  method: GET
+  extract: "token"
+  inject: { header: "X-CSRF-Token" }
+  cache: 300
+```
+
+-> See: `src/runtime/primitives/api-response.ts`
+
+---
+
+## Signing Primitives
+
+Signing primitives compute **per-request** signatures. Resolved on every request (not just mutations).
+
+| Type | What it does | Implemented |
+|------|-------------|-------------|
+| `sapisidhash` | Compute YouTube-style SAPISIDHASH from cookie + origin + timestamp | Yes |
+| `gapi_proxy` | Google API proxy signing | No |
+| `aws_sigv4` | AWS Signature V4 | No |
+
+### sapisidhash
+
+YouTube's proprietary request signing:
+
+```yaml
+signing:
+  type: sapisidhash
+  cookie: "SAPISID"
+  origin: "https://www.youtube.com"
+  inject: { header: "Authorization", prefix: "SAPISIDHASH " }
+```
+
+Computes: `SHA1(timestamp + " " + sapisidValue + " " + origin)` → `timestamp_hash`
+
+-> See: `src/runtime/primitives/sapisidhash.ts`
+
+---
+
+## Pagination Primitives
+
+Pagination is configured at the **operation** level in `x-openweb`.
+
+| Type | Mechanism | Implemented |
+|------|-----------|-------------|
+| `cursor` | Response field → request param loop | Yes |
+| `link_header` | Follow `Link: <url>; rel="next"` | Yes |
+| `offset_limit` | offset/limit incrementing | No |
+| `page_number` | page number incrementing | No |
+
+```yaml
+x-openweb:
+  pagination:
+    type: cursor
+    response_field: "cursor"
+    request_param: "cursor"
+    has_more_field: "has_more"
+```
+
+-> See: `src/runtime/paginator.ts`
+
+---
+
+## Extraction Primitives
+
+Extraction primitives read data directly from the page DOM or SSR state — no API call needed.
+
+| Type | What it does | Implemented |
+|------|-------------|-------------|
+| `script_json` | Extract JSON from `<script>` tags | Yes |
+| `ssr_next_data` | Read `__NEXT_DATA__` | No |
+| `ssr_nuxt` | Read `__NUXT__` | No |
+| `apollo_cache` | Read `__APOLLO_STATE__` | No |
+| `html_selector` | CSS selector extraction | No |
+| `page_global_data` | Read page global variable | No |
+
+### script_json
+
+Extracts structured data from `<script type="application/json">` or inline JSON.
+
+```yaml
+extraction:
+  type: script_json
+  selector: "script[data-target='react-app.embeddedData']"
+  path: "payload.tree.items"
+```
+
+Used by GitHub for SSR-embedded data.
+
+-> See: `src/runtime/primitives/script-json.ts`
+
+---
+
+## Inject Schema
+
+All primitives that inject values share the `Inject` interface:
+
+```typescript
+interface Inject {
+  header?: string       // Set as HTTP header
+  prefix?: string       // Prefix the value (e.g., "Bearer ")
+  query?: string        // Set as query parameter
+  body_field?: string   // Set in request body
+  body_merge?: boolean  // Merge into body object
+}
+```
+
+Most commonly: `{ header: "Authorization", prefix: "Bearer " }`
+
+---
+
+## File Structure
+
+```
+src/runtime/primitives/
+├── types.ts                # BrowserHandle, ResolvedInjections
+├── cookie-session.ts       # cookie_session auth
+├── cookie-to-header.ts     # cookie_to_header CSRF
+├── localstorage-jwt.ts     # localStorage_jwt auth
+├── page-global.ts          # page_global auth/CSRF
+├── sapisidhash.ts          # SAPISIDHASH signing
+├── meta-tag.ts             # meta_tag CSRF
+├── api-response.ts         # api_response CSRF
+├── exchange-chain.ts       # exchange_chain auth
+├── script-json.ts          # script_json extraction
+├── webpack-module-walk.ts  # webpack_module_walk auth
+└── primitives.test.ts      # Unit tests
+```
+
+---
+
+## Related Docs
+
+- [architecture.md](architecture.md) — System overview and 3-layer model
+- [runtime.md](runtime.md) — Execution pipeline that invokes primitives
+- [meta-spec.md](meta-spec.md) — Type definitions for all 27 primitives
+- [adapters.md](adapters.md) — L3 escape hatch when primitives aren't enough
+- `src/types/primitives.ts` — Full type definitions

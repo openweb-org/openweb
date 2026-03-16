@@ -1,3 +1,27 @@
+## 2026-03-16: Documentation overhaul — doc/main + doc/dev rewrite
+
+**What changed:**
+- Rewrote `doc/main/` from 2 files to 9 files, modeled after Android Agent doc quality
+- New navigation hub: `doc/main/README.md` (documentation map, reading order, key concepts)
+- New docs: `runtime.md` (execution pipeline), `primitives.md` (L2 resolvers), `adapters.md` (L3 framework), `meta-spec.md` (type system), `compiler.md` (pipeline), `security.md` (SSRF, errors, redirects)
+- Rewrote `doc/main/architecture.md` and `doc/main/browser-capture.md` with deeper content
+- Rewrote `doc/dev/development.md` with complete dev workflow
+- New: `doc/dev/adding-sites.md` — step-by-step guide for creating new site fixtures
+- Removed outdated `doc/dev/guide.md` and `doc/dev/m1-plan.md`
+
+**Why:**
+- M0-M4 complete — documentation hadn't kept up with implementation
+- Previous docs were sparse (2 main files, 1 dev file) for a system with 9 verified sites and 167 tests
+- Reference quality: Android Agent project's doc/main structure
+
+**Key files:** `doc/main/*.md` (9 files), `doc/dev/*.md` (2 files)
+**Verification:** All file/code references verified against current codebase
+**Commit:** (uncommitted)
+**Next:** M5 — Agent skill packaging
+**Blockers:** None
+
+---
+
 ## 2026-03-16: M4 Codex Review Round 2 — 4 fixes
 
 **What changed:**

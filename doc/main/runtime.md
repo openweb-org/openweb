@@ -1,0 +1,251 @@
+# Runtime Execution Pipeline
+
+> Mode dispatch, parameter binding, redirect handling, and the full request lifecycle.
+> Last updated: 2026-03-16 (commit: `dd2b17e`)
+
+## Overview
+
+The runtime is the core of OpenWeb. Given a site name, operation ID, and parameters, it:
+1. Loads the OpenAPI spec
+2. Finds the operation
+3. Resolves the execution mode
+4. Dispatches to the correct executor
+5. Returns a structured result
+
+-> See: `src/runtime/executor.ts`
+
+---
+
+## Execution Dispatch
+
+```
+executeOperation(site, operationId, params, deps)
+       │
+       ├── Load OpenAPI spec (openapi.yaml)
+       ├── Find operation by operationId
+       ├── Resolve mode (operation → server → direct_http)
+       │
+       ├── L3 adapter?
+       │     └── loadAdapter() → init() → isAuthenticated() → execute()
+       │
+       ├── browser_fetch?
+       │     └── executeBrowserFetch()
+       │
+       ├── session_http?
+       │     └── executeSessionHttp()
+       │
+       └── direct_http?
+             └── Direct fetch with SSRF validation
+```
+
+**Mode Resolution Hierarchy:**
+1. Operation-level: `x-openweb.mode` on the operation
+2. Server-level: `x-openweb.mode` on the server
+3. Default: `direct_http`
+
+If an operation has `x-openweb.adapter`, L3 adapter takes priority regardless of mode.
+
+---
+
+## Parameter Binding
+
+All L2 modes share the same parameter binding pipeline:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  1. Validate      required checks, unknown rejection,   │
+│                   type validation, apply defaults        │
+│                                                         │
+│  2. Path params   substitute {template} in URL path     │
+│                                                         │
+│  3. Query params  append to URL as ?key=value           │
+│                                                         │
+│  4. Header params set in request headers                │
+│                                                         │
+│  5. Body params   remaining params → JSON body          │
+│                   (POST/PUT/PATCH only)                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+Parameters are declared in the OpenAPI spec with `in: path|query|header`.
+Any params not consumed by path/query/header are treated as body params for mutations.
+
+-> See: `src/runtime/session-executor.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`
+
+---
+
+## session_http Mode
+
+The primary L2 execution mode. Uses a real HTTP client with cookies/headers extracted from the browser.
+
+```
+┌─────────────────────────────────────────────────────┐
+│  1. Connect to browser via CDP                      │
+│  2. Find page matching server origin                │
+│     (exact origin → same host → same SLD)           │
+│  3. Validate parameters                             │
+│  4. Build URL (path substitution + query params)    │
+│  5. Resolve auth → cookies + headers                │
+│  6. Resolve CSRF → headers (mutations only)         │
+│  7. Resolve signing → headers (per-request)         │
+│  8. Build request body (mutations only)             │
+│  9. Execute HTTP request                            │
+│ 10. Follow redirects (max 5, SSRF-validated)        │
+│ 11. Parse + validate response                       │
+└─────────────────────────────────────────────────────┘
+```
+
+**Page matching**: The runtime finds a browser tab matching the API's origin.
+Falls back through: exact origin match → same hostname → same second-level domain.
+
+-> See: `src/runtime/session-executor.ts`
+
+---
+
+## browser_fetch Mode
+
+Same auth/CSRF/signing pipeline as session_http, but the final fetch runs inside the browser:
+
+```typescript
+page.evaluate(({ url, method, headers, body }) => {
+  const resp = await fetch(url, { method, headers, body, credentials: 'include' });
+  return { status, headers, body };
+}, { url, method, headers, body });
+```
+
+**Key differences from session_http:**
+- Browser handles cookies automatically via `credentials: 'include'` (no Cookie header injected)
+- Native TLS fingerprint (not Node.js)
+- CORS context preserved
+- Only initial URL is SSRF-validated (browser handles redirects)
+
+**When to use:** Sites that check TLS fingerprints, require CORS preflight, or need the browser's network stack (e.g., Discord).
+
+-> See: `src/runtime/browser-fetch-executor.ts`
+
+---
+
+## direct_http Mode
+
+Simplest mode — pure HTTP client, no browser.
+
+```
+fetch(url, { method, headers, body })
+  │
+  ├── SSRF validation on URL
+  ├── Follow redirects (max 5)
+  │     ├── SSRF validation per hop
+  │     └── Strip sensitive headers on cross-origin
+  └── Parse JSON response
+```
+
+-> See: `src/runtime/executor.ts` — `fetchWithValidatedRedirects()`
+
+---
+
+## Redirect Handling
+
+All modes (except browser_fetch, which delegates to browser) follow redirects manually:
+
+| Rule | Details |
+|------|---------|
+| Max redirects | 5 (fail on >= 5) |
+| SSRF per hop | Each redirect URL validated against SSRF blocklist |
+| Cross-origin | Strip `Authorization`, `Cookie`, `X-*` headers |
+| 303 See Other | Rewrite method to GET, drop request body |
+| `opaqueredirect` | Respected — stops redirect chain, returns as-is |
+
+-> See: [security.md](security.md) — SSRF protection details
+
+---
+
+## Response Handling
+
+```
+HTTP Response
+  │
+  ├── Parse JSON body (or return raw text for non-JSON)
+  ├── Validate against response schema (if defined in OpenAPI spec)
+  │     └── AJV validation, result in responseSchemaValid field
+  └── Return ExecuteResult { status, body, responseSchemaValid, responseHeaders }
+```
+
+---
+
+## Pagination
+
+Two pagination modes are implemented:
+
+| Mode | Mechanism | Config |
+|------|-----------|--------|
+| `cursor` | Extract cursor from response → inject into next request | `response_field`, `request_param`, `has_more_field` |
+| `link_header` | Follow `Link: <url>; rel="next"` header | `rel` (default: "next") |
+
+**Safety:** Max 10 pages by default (configurable).
+
+-> See: `src/runtime/paginator.ts`
+
+---
+
+## Token Cache
+
+Auth tokens can be cached to avoid re-extracting from browser on every request.
+
+```typescript
+class TokenCache {
+  get(key): CachedAuth | undefined
+  set(key, value, ttlMs): void
+  invalidate(key): void
+}
+```
+
+**Default TTL:** 5 minutes. Lazy expiry (checked on `get()`).
+
+-> See: `src/runtime/token-cache.ts`
+
+---
+
+## Error Model
+
+All runtime errors are wrapped in `OpenWebError`:
+
+```typescript
+interface OpenWebErrorPayload {
+  error: 'execution_failed' | 'auth'
+  code: 'EXECUTION_FAILED' | 'TOOL_NOT_FOUND' | 'INVALID_PARAMS' | 'AUTH_FAILED'
+  message: string
+  action: string
+  retriable: boolean
+}
+```
+
+The CLI catches errors and writes structured JSON to stderr.
+
+-> See: [security.md](security.md) — error model details
+
+---
+
+## File Structure
+
+```
+src/runtime/
+├── executor.ts               # Main dispatcher (mode routing, response handling)
+├── session-executor.ts       # session_http mode (parameter binding, auth pipeline)
+├── browser-fetch-executor.ts # browser_fetch mode (page.evaluate)
+├── adapter-executor.ts       # L3 adapter loading + execution
+├── paginator.ts              # Pagination executor (cursor + link_header)
+├── token-cache.ts            # Auth token cache with TTL
+├── navigator.ts              # CLI navigation helper (render site/operation info)
+└── primitives/               # L2 primitive resolvers
+    └── (→ See: primitives.md)
+```
+
+---
+
+## Related Docs
+
+- [architecture.md](architecture.md) — System overview
+- [primitives.md](primitives.md) — L2 primitive resolvers
+- [adapters.md](adapters.md) — L3 adapter framework
+- [security.md](security.md) — SSRF protection, redirect safety
+- [meta-spec.md](meta-spec.md) — Type system driving execution
