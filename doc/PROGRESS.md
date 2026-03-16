@@ -1,3 +1,28 @@
+## 2026-03-15: M2 Hardening — Code Review Fixes (9 findings)
+
+**What changed:**
+- CR-01: Strip Cookie/Authorization/CSRF headers on cross-origin redirects (security)
+- CR-05: `browser_fetch` mode throws "not yet implemented" instead of silent fallthrough
+- CR-07: 303 See Other redirect switches method to GET per RFC 7231
+- CR-08: Unreplaced path template variables `{param}` throw INVALID_PARAMS
+- CR-09: Safe JSON parse in direct_http path (consistent with session_http)
+- CR-10: Validate ExecutionMode values from spec (reject typos like "sesion_http")
+- CR-12: `--cdp-endpoint` without value shows usage error
+- CR-13: Guard `$ref` traversal against `__proto__`/`constructor`/`prototype`
+- spec_version aligned from "0.1.0" to "2.0" to match design docs
+
+**Why:**
+- Parallel code review + architecture review by two Claude agents (multmux) found 20 code issues + full gap matrix
+- Fixed all findings except those better suited for M3 (request body, generator `in` field, operation-level server lookup, SSRF TOCTOU)
+
+**Key files:** `src/runtime/session-executor.ts`, `src/runtime/executor.ts`, `src/cli.ts`, `src/compiler/generator.ts`
+**Verification:** 84/84 tests pass, TypeScript strict clean on all modified files
+**Commit:** `0d92195`
+**Next:** M3 — L2 breadth (5 diverse websites)
+**Blockers:** None
+
+---
+
 ## 2026-03-15: M2 Fix — Cookie scoping + Referer + real Instagram verification
 
 **What changed:**
