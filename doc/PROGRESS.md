@@ -1,3 +1,22 @@
+## 2026-03-15: M1 Hardening — Codex Review Round 1
+
+**What changed:**
+- Fixed falsy x-openweb guard: `if (!ext)` → `if (ext == null)` so `false`/`0`/`''` are properly rejected
+- Added 4 edge case tests: falsy values, missing required auth fields, signing validation, csrf with scope
+- Deferred: operation-level `servers[]` validation + `trace` method (rare in practice)
+- Deferred: `info.x-openweb` validation (metadata, not execution primitive)
+
+**Why:**
+- Codex review probed for false negatives and found the falsy guard silently accepted invalid specs
+
+**Key files:** `src/types/validator.ts`, `src/types/validator.test.ts`
+**Verification:** 55/55 tests pass, lint clean
+**Commit:** `94fce98`
+**Next:** Codex round 2 review, then M2
+**Blockers:** None
+
+---
+
 ## 2026-03-15: M1 — Meta-spec Formalization
 
 **What changed:**
