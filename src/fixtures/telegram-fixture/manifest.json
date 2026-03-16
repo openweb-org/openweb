@@ -1,0 +1,16 @@
+{
+  "name": "telegram-fixture",
+  "display_name": "Telegram Web A",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://web.telegram.org/a/",
+  "description": "Telegram Web A — L3 adapter via teact global state",
+  "requires_auth": true,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 3,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 3
+  }
+}
