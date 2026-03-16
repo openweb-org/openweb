@@ -11,11 +11,22 @@ export interface CaptureData {
   readonly metadata: CaptureMetadata
 }
 
-export async function writeCaptureBundle(outputDir: string, data: CaptureData): Promise<void> {
-  // Clean previous bundle to avoid stale artifacts from shorter reruns
-  await rm(outputDir, { recursive: true, force: true })
+/** Known bundle artifacts — only these are cleaned on rerun */
+const BUNDLE_FILES = ['traffic.har', 'websocket_frames.jsonl', 'metadata.json'] as const
+const BUNDLE_DIRS = ['state_snapshots', 'dom_extractions'] as const
 
+export async function writeCaptureBundle(outputDir: string, data: CaptureData): Promise<void> {
   await mkdir(outputDir, { recursive: true })
+
+  // Clean only known bundle artifacts to prevent stale data, without wiping
+  // arbitrary user directories (safe against --output . or --output /home)
+  for (const file of BUNDLE_FILES) {
+    await rm(path.join(outputDir, file), { force: true })
+  }
+  for (const dir of BUNDLE_DIRS) {
+    await rm(path.join(outputDir, dir), { recursive: true, force: true })
+  }
+
   await mkdir(path.join(outputDir, 'state_snapshots'), { recursive: true })
   await mkdir(path.join(outputDir, 'dom_extractions'), { recursive: true })
 

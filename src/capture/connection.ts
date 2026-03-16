@@ -2,6 +2,25 @@ import { chromium, type Browser } from 'playwright'
 
 import { OpenWebError } from '../lib/errors.js'
 
+/** Sleep that can be aborted */
+function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error('aborted'))
+      return
+    }
+    const timer = setTimeout(resolve, ms)
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer)
+        reject(new Error('aborted'))
+      },
+      { once: true },
+    )
+  })
+}
+
 export async function connectWithRetry(
   cdpEndpoint: string,
   maxRetries = 3,
@@ -18,9 +37,19 @@ export async function connectWithRetry(
       })
     }
     try {
-      return await chromium.connectOverCDP(cdpEndpoint, { timeout: 30_000 })
+      // Race connect against abort signal
+      const browser = await (signal
+        ? Promise.race([
+            chromium.connectOverCDP(cdpEndpoint, { timeout: 30_000 }),
+            new Promise<never>((_, reject) => {
+              signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true })
+            }),
+          ])
+        : chromium.connectOverCDP(cdpEndpoint, { timeout: 30_000 }))
+      return browser
     } catch (err) {
-      if (signal?.aborted) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (message === 'aborted' || signal?.aborted) {
         throw new OpenWebError({
           error: 'execution_failed',
           code: 'EXECUTION_FAILED',
@@ -30,7 +59,6 @@ export async function connectWithRetry(
         })
       }
       if (attempt === maxRetries - 1) {
-        const message = err instanceof Error ? err.message : String(err)
         throw new OpenWebError({
           error: 'execution_failed',
           code: 'EXECUTION_FAILED',
@@ -39,7 +67,18 @@ export async function connectWithRetry(
           retriable: true,
         })
       }
-      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)))
+      try {
+        await abortableSleep(1000 * (attempt + 1), signal)
+      } catch {
+        // abort during sleep — throw abort error
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: 'CDP connection aborted.',
+          action: 'Retry the capture command.',
+          retriable: true,
+        })
+      }
     }
   }
   throw new Error('unreachable')

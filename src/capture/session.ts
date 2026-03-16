@@ -40,6 +40,7 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
   const completionDfd = deferred()
 
   let stopped = false
+  let draining = false
   let cdp: CDPSession | undefined
   const harCaptures: HarCapture[] = []
   let wsCapture: WsCapture | undefined
@@ -58,18 +59,22 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
     context: BrowserContext,
     trigger: StateSnapshot['trigger'],
     seq: number,
+    urlAtEvent: string,
   ): Promise<void> {
-    if (stopped) return
+    // During drain, allow in-flight work to complete (don't discard)
+    // Only reject new work after drain is done (detachAll already prevents new events)
+    if (stopped && !draining) return
     try {
       const [state, dom] = await Promise.all([
         captureStateSnapshot(page, context, trigger),
         captureDomAndGlobals(page, trigger),
       ])
-      if (stopped) return
-      // Insert at sequence position to maintain navigation order (H3 fix)
-      stateSnapshots.push({ ...state, _seq: seq } as StateSnapshot & { _seq: number })
-      domExtractions.push({ ...dom, _seq: seq } as DomExtraction & { _seq: number })
-      log(`  snapshot #${String(stateSnapshots.length)} (${trigger}) @ ${page.url()}`)
+      // Use URL captured at event time, not current page URL (H3 fix)
+      const stateWithSeq = { ...state, url: urlAtEvent, _seq: seq } as StateSnapshot & { _seq: number }
+      const domWithSeq = { ...dom, url: urlAtEvent, _seq: seq } as DomExtraction & { _seq: number }
+      stateSnapshots.push(stateWithSeq)
+      domExtractions.push(domWithSeq)
+      log(`  snapshot #${String(stateSnapshots.length)} (${trigger}) @ ${urlAtEvent}`)
     } catch (err) {
       if (!stopped) {
         log(`  snapshot failed: ${err instanceof Error ? err.message : String(err)}`)
@@ -81,17 +86,18 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
     page.on('framenavigated', (frame) => {
       if (stopped || frame !== page.mainFrame()) return
       navigationCount++
-      // Assign sequence number at event time, not completion time (H3 fix)
+      // Capture URL and sequence at event time, not at snapshot time (H3 fix)
       const seq = snapshotSeq++
+      const urlAtEvent = page.url()
       const task = (async () => {
         try {
           await page.waitForLoadState('domcontentloaded', { timeout: 10_000 })
         } catch {
           // timeout — take snapshot anyway
         }
-        await takeSnapshots(page, context, 'navigation', seq)
+        await takeSnapshots(page, context, 'navigation', seq, urlAtEvent)
       })().catch(() => {})
-      // Track for drain on stop (H2 fix)
+      // Track for drain on stop
       pendingSnapshots.add(task)
       void task.then(() => pendingSnapshots.delete(task))
     })
@@ -104,33 +110,38 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
 
   /** Wait for all in-flight HAR responses and snapshots to settle */
   async function drainPending(timeoutMs = 3000): Promise<void> {
-    const deadline = Date.now() + timeoutMs
-    // Drain snapshot promises
-    if (pendingSnapshots.size > 0) {
-      await Promise.race([
-        Promise.allSettled([...pendingSnapshots]),
-        new Promise((r) => setTimeout(r, timeoutMs)),
-      ])
-    }
-    // Wait for in-flight HAR response handlers
-    const remaining = Math.max(0, deadline - Date.now())
-    const hasPending = () => harCaptures.some((hc) => hc.pendingCount() > 0)
-    if (hasPending() && remaining > 0) {
-      await new Promise<void>((resolve) => {
-        const interval = setInterval(() => {
-          if (!hasPending() || Date.now() >= deadline) {
-            clearInterval(interval)
-            resolve()
-          }
-        }, 50)
-      })
+    draining = true
+    try {
+      const deadline = Date.now() + timeoutMs
+      // Drain snapshot promises
+      if (pendingSnapshots.size > 0) {
+        await Promise.race([
+          Promise.allSettled([...pendingSnapshots]),
+          new Promise((r) => setTimeout(r, timeoutMs)),
+        ])
+      }
+      // Wait for in-flight HAR response handlers
+      const remaining = Math.max(0, deadline - Date.now())
+      const hasPending = () => harCaptures.some((hc) => hc.pendingCount() > 0)
+      if (hasPending() && remaining > 0) {
+        await new Promise<void>((resolve) => {
+          const interval = setInterval(() => {
+            if (!hasPending() || Date.now() >= deadline) {
+              clearInterval(interval)
+              resolve()
+            }
+          }, 50)
+        })
+      }
+    } finally {
+      draining = false
     }
   }
 
   async function writeBundle(): Promise<void> {
     const endTime = new Date().toISOString()
 
-    // Sort snapshots/extractions by sequence number (H3 fix)
+    // Sort snapshots/extractions by sequence number
     type Sequenced<T> = T & { _seq?: number }
     const sortBySeq = <T>(arr: T[]): T[] =>
       [...arr].sort((a, b) => ((a as Sequenced<T>)._seq ?? 0) - ((b as Sequenced<T>)._seq ?? 0))
@@ -210,17 +221,18 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
 
       // Initial snapshots
       const initialSeq = snapshotSeq++
-      await takeSnapshots(page, context, 'initial', initialSeq)
+      await takeSnapshots(page, context, 'initial', initialSeq, page.url())
       log('capture active — press Ctrl+C to stop')
 
       // Wait for stop signal
       await stopDfd.promise
 
-      // Detach listeners first to prevent new work
-      detachAll()
-
-      // Drain in-flight async work before writing bundle (H2 fix)
+      // Drain in-flight work BEFORE detaching listeners (H2 fix)
+      // This allows pending response events to still fire during drain
       await drainPending()
+
+      // Now detach listeners — no new events after this point
+      detachAll()
 
       // Write bundle
       await writeBundle()
@@ -231,6 +243,7 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
       if (stopped) {
         try {
           await drainPending(1000)
+          detachAll()
           await writeBundle()
         } catch {
           /* best effort */
