@@ -1,0 +1,119 @@
+openapi: '3.1.0'
+info:
+  title: Instagram API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.instagram.com/api/v1
+    x-openweb:
+      mode: session_http
+      auth:
+        type: cookie_session
+      csrf:
+        type: cookie_to_header
+        cookie: csrftoken
+        header: X-CSRFToken
+paths:
+  /feed/timeline/:
+    get:
+      operationId: getTimeline
+      summary: Get the authenticated user's feed
+      x-openweb:
+        risk_tier: safe
+        stable_id: a1b2c3d4
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+          - schema-match
+        pagination:
+          type: cursor
+          response_field: next_max_id
+          request_param: max_id
+      parameters:
+        - name: max_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor for next page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  next_max_id:
+                    type: string
+                  more_available:
+                    type: boolean
+  /users/{user_id}/info/:
+    get:
+      operationId: getUserProfile
+      summary: Get a user's profile information
+      x-openweb:
+        risk_tier: safe
+        stable_id: e5f6a7b8
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Numeric user ID.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      pk:
+                        type: string
+                      username:
+                        type: string
+                      full_name:
+                        type: string
+  /media/{media_id}/like/:
+    post:
+      operationId: likeMedia
+      summary: Like a media post
+      x-openweb:
+        risk_tier: medium
+        stable_id: c9d0e1f2
+        tool_version: 1
+        verified: false
+        signals:
+          - status-match
+      parameters:
+        - name: media_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Media ID to like.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
