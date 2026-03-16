@@ -1,6 +1,6 @@
 # OpenWeb — Dev Guide
 
-> **Last updated**: 2026-03-15 (commit `ca1ba52`)
+> **Last updated**: 2026-03-15 (commit `4ac0e7b`)
 
 ## Tech Stack
 
@@ -38,40 +38,52 @@ src/
 ├── runtime/
 │   ├── executor.ts           # Operation execution (SSRF-safe fetch)
 │   └── navigator.ts          # CLI navigation helper
+├── types/
+│   ├── primitives.ts         # L2 primitive discriminated unions (27 types)
+│   ├── primitive-schemas.ts  # JSON Schema for L2 primitives (AJV)
+│   ├── extensions.ts         # XOpenWebServer, XOpenWebOperation types
+│   ├── manifest.ts           # Manifest type
+│   ├── adapter.ts            # CodeAdapter interface
+│   ├── schema.ts             # Composite JSON Schema (server/operation/manifest)
+│   ├── validator.ts          # AJV-based x-openweb + manifest validation
+│   ├── validator.test.ts     # Validation tests
+│   └── index.ts              # Re-exports
 ├── lib/
 │   ├── errors.ts             # Structured error contract
 │   ├── openapi.ts            # OpenAPI parsing, URL building
 │   └── ssrf.ts               # SSRF validation (IPv4/v6, DNS, metadata)
 └── fixtures/
-    └── open-meteo-fixture/   # Test fixture (hand-written L1 spec)
+    ├── open-meteo-fixture/   # L1 test fixture (no x-openweb primitives)
+    └── instagram-fixture/    # L2 test fixture (cookie_session + cookie_to_header)
 ```
 
 ## Commands
 
 ```bash
 pnpm build          # tsup → dist/
-pnpm test           # vitest (38/38 pass)
+pnpm test           # vitest (51/51 pass)
 pnpm lint           # biome check
 ```
 
 ## Current Implementation Status
 
-**Working (L1 + M0 capture)**:
+**Working (L1 + M0 capture + M1 meta-spec)**:
 - CLI: `sites` → `show` → `exec` → `test` full flow
 - CLI: `capture start/stop` — browser capture via CDP
 - Compiler phases 2-4: filter → cluster → differentiate → schema → annotate → emit
 - Runtime: `direct_http` mode with SSRF protection, redirect handling, schema validation
 - Capture: HAR + WebSocket + state snapshots + DOM extraction (4 sources)
 - Error contract: EXECUTION_FAILED, TOOL_NOT_FOUND, INVALID_PARAMS
+- Types: L2 primitive types (27 types), x-openweb extensions, manifest, CodeAdapter
+- Validation: AJV-based x-openweb spec + manifest.json validation
 
 **Not yet implemented (v2 additions)**:
-- L2 primitive handlers (auth/csrf/signing/pagination/extraction)
+- L2 primitive runtime handlers (auth/csrf/signing/pagination/extraction execution)
 - L3 code adapter execution
 - `session_http` and `browser_fetch` modes
 - Phase 3 Classify (primitive detection + mode probing)
-- x-openweb extension support in spec parsing
 
--> See: [doc/note.md](../note.md) — roadmap (M0-M5)
+-> See: [doc/todo/note.md](../todo/note.md) — roadmap (M0-M5)
 
 ## Browser Capture (M0)
 
