@@ -1,3 +1,34 @@
+## 2026-03-15: M2 — First L2 Website End-to-End (Instagram)
+
+**What changed:**
+- Implemented `session_http` execution mode with CDP browser connection
+- Added L2 primitive resolvers: `cookie_session` (extract all cookies), `cookie_to_header` (cookie value → CSRF header)
+- Extended `executeOperation()` to dispatch `session_http` vs `direct_http` by mode detection
+- Added path parameter substitution (`{user_id}`), header parameter handling (`X-IG-App-ID` with defaults), `$ref` component resolution
+- Implemented Compiler Classify step: detects `cookie_session` + `cookie_to_header` patterns from capture data (HAR entries + state snapshots)
+- Extended generator to emit server-level `x-openweb` (mode + auth + csrf) when ClassifyResult is provided
+- Added `deriveRiskTier()`: GET=safe, POST/PUT/PATCH=medium, DELETE=high
+- Code review fixes: safe JSON parsing, redirect following with SSRF validation, guard against unresolvable `$ref`, empty serverUrl error
+
+**Why:**
+- M2 proves the L2 primitive model works end-to-end on a real website (Instagram)
+- First website requiring authentication (cookie_session) and CSRF protection (cookie_to_header)
+- Validates the full pipeline: capture → classify → emit → execute
+
+**Key files:**
+- `src/runtime/primitives/` — BrowserHandle, ResolvedInjections types + cookie-session + cookie-to-header resolvers
+- `src/runtime/session-executor.ts` — session_http execution: CDP browser, L2 primitive resolution, path/header/query params
+- `src/runtime/executor.ts` — mode dispatch (direct_http vs session_http)
+- `src/compiler/analyzer/classify.ts` — Classify step (cookie_session + cookie_to_header detection)
+- `src/compiler/generator.ts` — x-openweb emission with ClassifyResult
+
+**Verification:** 84/84 tests pass (27 new), TypeScript strict clean on all new files
+**Commit:** `a8fce3b`
+**Next:** M3 — L2 breadth (5 diverse websites: Bluesky, YouTube, GitHub, Sentry, Reddit)
+**Blockers:** None
+
+---
+
 ## 2026-03-15: M1 Hardening — Codex Review Round 3
 
 **What changed:**

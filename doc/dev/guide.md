@@ -1,6 +1,6 @@
 # OpenWeb — Dev Guide
 
-> **Last updated**: 2026-03-15 (commit `1653ff1`)
+> **Last updated**: 2026-03-15 (commit `a8fce3b`)
 
 ## Tech Stack
 
@@ -33,11 +33,16 @@ src/
 │   └── types.ts              # Capture type definitions
 ├── compiler/
 │   ├── recorder.ts           # HAR/metadata parsing
-│   ├── generator.ts          # OpenAPI + manifest emission
-│   └── analyzer/             # cluster → filter → differentiate → schema → annotate
+│   ├── generator.ts          # OpenAPI + manifest emission (L1 + L2 classify)
+│   └── analyzer/             # cluster → filter → differentiate → schema → annotate → classify
 ├── runtime/
-│   ├── executor.ts           # Operation execution (SSRF-safe fetch)
-│   └── navigator.ts          # CLI navigation helper
+│   ├── executor.ts           # Operation execution (direct_http + session_http dispatch)
+│   ├── session-executor.ts   # session_http mode: CDP browser + L2 primitive resolution
+│   ├── navigator.ts          # CLI navigation helper
+│   └── primitives/           # L2 primitive resolvers
+│       ├── types.ts          # BrowserHandle, ResolvedInjections
+│       ├── cookie-session.ts # cookie_session auth (extract all cookies)
+│       └── cookie-to-header.ts # cookie_to_header CSRF (cookie → header)
 ├── types/
 │   ├── primitives.ts         # L2 primitive discriminated unions (27 types)
 │   ├── primitive-schemas.ts  # JSON Schema for L2 primitives (AJV)
@@ -61,27 +66,33 @@ src/
 
 ```bash
 pnpm build          # tsup → dist/
-pnpm test           # vitest (57/57 pass)
+pnpm test           # vitest (84/84 pass)
 pnpm lint           # biome check
 ```
 
 ## Current Implementation Status
 
-**Working (L1 + M0 capture + M1 meta-spec)**:
+**Working (L1 + M0 capture + M1 meta-spec + M2 session_http)**:
 - CLI: `sites` → `show` → `exec` → `test` full flow
 - CLI: `capture start/stop` — browser capture via CDP
 - Compiler phases 2-4: filter → cluster → differentiate → schema → annotate → emit
+- Compiler: Classify step detects cookie_session + cookie_to_header from capture data
+- Compiler: generator emits server-level x-openweb (mode + auth + csrf) with ClassifyResult
 - Runtime: `direct_http` mode with SSRF protection, redirect handling, schema validation
+- Runtime: `session_http` mode — CDP browser connection, cookie auth, CSRF token injection
+- Runtime: L2 primitive resolvers: cookie_session, cookie_to_header
 - Capture: HAR + WebSocket + state snapshots + DOM extraction (4 sources)
 - Error contract: EXECUTION_FAILED, TOOL_NOT_FOUND, INVALID_PARAMS
 - Types: L2 primitive types (27 types), x-openweb extensions, manifest, CodeAdapter
 - Validation: AJV-based x-openweb spec + manifest.json validation
 
 **Not yet implemented (v2 additions)**:
-- L2 primitive runtime handlers (auth/csrf/signing/pagination/extraction execution)
+- Additional L2 primitive handlers (localStorage_jwt, page_global, sapisidhash, meta_tag, etc.)
 - L3 code adapter execution
-- `session_http` and `browser_fetch` modes
-- Phase 3 Classify (primitive detection + mode probing)
+- `browser_fetch` mode
+- Mode escalation (direct → session → browser)
+- Pagination execution
+- Phase 3 mode probing (empirical testing)
 
 -> See: [doc/todo/note.md](../todo/note.md) — roadmap (M0-M5)
 
