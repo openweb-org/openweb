@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto'
 import { stringify } from 'yaml'
 
 import type { AnalyzedOperation } from './types.js'
+import type { ClassifyResult } from './analyzer/classify.js'
 import type { JsonSchema } from '../lib/openapi.js'
 
 interface GeneratePackageInput {
@@ -13,6 +14,7 @@ interface GeneratePackageInput {
   readonly sourceUrl: string
   readonly operations: AnalyzedOperation[]
   readonly outputBaseDir?: string
+  readonly classify?: ClassifyResult
 }
 
 function nowIso(): string {
@@ -79,6 +81,19 @@ function responseContainsResultsLatLon(schema: JsonSchema): boolean {
   return Boolean(results.items.properties.latitude && results.items.properties.longitude)
 }
 
+function deriveRiskTier(method: string): string {
+  switch (method.toLowerCase()) {
+    case 'delete':
+      return 'high'
+    case 'post':
+    case 'put':
+    case 'patch':
+      return 'medium'
+    default:
+      return 'safe'
+  }
+}
+
 function buildDependencies(operations: AnalyzedOperation[]): Record<string, string> {
   const providers = operations.filter((operation) => responseContainsResultsLatLon(operation.responseSchema))
   if (providers.length !== 1) {
@@ -116,18 +131,23 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
   const generatedAt = nowIso()
   const primaryHost = choosePrimaryServerHost(input.operations)
 
+  const mode = input.classify?.mode ?? 'direct_http'
+  const requiresAuth = mode !== 'direct_http'
+
   const paths: Record<string, Record<string, unknown>> = {}
 
   for (const operation of input.operations) {
     const stableId = hash16(`${operation.operationId}:${signatureSeed(operation)}`)
     const signatureId = hash16(signatureSeed(operation))
 
+    const riskTier = deriveRiskTier(operation.method)
+
     const operationObject: Record<string, unknown> = {
       operationId: operation.operationId,
       summary: operation.summary,
       'x-openweb': {
-        mode: 'direct_http',
-        risk_tier: 'safe',
+        mode,
+        risk_tier: riskTier,
         human_handoff: false,
         verified: operation.verified,
         stable_id: stableId,
@@ -160,7 +180,8 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
     if (!paths[operation.path]) {
       paths[operation.path] = {}
     }
-    paths[operation.path][operation.method] = operationObject
+    const pathEntry = paths[operation.path]!
+    pathEntry[operation.method] = operationObject
 
     const testShape = {
       operation_id: operation.operationId,
@@ -182,6 +203,15 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
     )
   }
 
+  // Build server entry with optional x-openweb for L2
+  const serverEntry: Record<string, unknown> = { url: `https://${primaryHost}` }
+  if (input.classify && input.classify.mode !== 'direct_http') {
+    const serverXOpenWeb: Record<string, unknown> = { mode: input.classify.mode }
+    if (input.classify.auth) serverXOpenWeb.auth = input.classify.auth
+    if (input.classify.csrf) serverXOpenWeb.csrf = input.classify.csrf
+    serverEntry['x-openweb'] = serverXOpenWeb
+  }
+
   const openapi = {
     openapi: '3.1.0',
     info: {
@@ -190,10 +220,10 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
       'x-openweb': {
         spec_version: '0.1.0',
         generated_at: generatedAt,
-        requires_auth: false,
+        requires_auth: requiresAuth,
       },
     },
-    servers: [{ url: `https://${primaryHost}` }],
+    servers: [serverEntry],
     paths,
   }
 
@@ -203,7 +233,7 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
     spec_version: '0.1.0',
     site: new URL(input.sourceUrl).hostname,
     generated_at: generatedAt,
-    requires_auth: false,
+    requires_auth: requiresAuth,
     dependencies: buildDependencies(input.operations),
   }
 

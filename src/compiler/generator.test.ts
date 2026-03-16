@@ -83,4 +83,40 @@ describe('generatePackage', () => {
       await rm(outputBaseDir, { recursive: true, force: true })
     }
   })
+
+  it('emits server-level x-openweb when classify result is provided', async () => {
+    const outputBaseDir = await mkdtemp(path.join(os.tmpdir(), 'openweb-generator-l2-test-'))
+
+    try {
+      const outputRoot = await generatePackage({
+        site: 'instagram-test',
+        sourceUrl: 'https://www.instagram.com',
+        outputBaseDir,
+        classify: {
+          mode: 'session_http',
+          auth: { type: 'cookie_session' },
+          csrf: { type: 'cookie_to_header', cookie: 'csrftoken', header: 'X-CSRFToken' },
+        },
+        operations: [
+          op({
+            operationId: 'getTimeline',
+            host: 'www.instagram.com',
+            path: '/api/v1/feed/timeline/',
+          }),
+        ],
+      })
+
+      const openapiRaw = await readFile(path.join(outputRoot, 'openapi.yaml'), 'utf8')
+      expect(openapiRaw).toContain('mode: session_http')
+      expect(openapiRaw).toContain('type: cookie_session')
+      expect(openapiRaw).toContain('cookie: csrftoken')
+      expect(openapiRaw).toContain('header: X-CSRFToken')
+
+      const manifestRaw = await readFile(path.join(outputRoot, 'manifest.json'), 'utf8')
+      const manifest = JSON.parse(manifestRaw) as { requires_auth: boolean }
+      expect(manifest.requires_auth).toBe(true)
+    } finally {
+      await rm(outputBaseDir, { recursive: true, force: true })
+    }
+  })
 })
