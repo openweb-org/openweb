@@ -13,6 +13,17 @@ const adapterCache = new Map<string, CodeAdapter>()
  * Adapters are TypeScript/JavaScript modules that export a default CodeAdapter object.
  */
 export async function loadAdapter(siteRoot: string, adapterName: string): Promise<CodeAdapter> {
+  // Validate adapter name — prevent path traversal
+  if (adapterName.includes('/') || adapterName.includes('\\') || adapterName.includes('..')) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Invalid adapter name: "${adapterName}"`,
+      action: 'Adapter names must be simple identifiers without path separators.',
+      retriable: false,
+    })
+  }
+
   const cacheKey = `${siteRoot}:${adapterName}`
   const cached = adapterCache.get(cacheKey)
   if (cached) return cached

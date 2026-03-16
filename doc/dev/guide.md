@@ -36,8 +36,10 @@ src/
 │   ├── generator.ts          # OpenAPI + manifest emission (L1 + L2 classify)
 │   └── analyzer/             # cluster → filter → differentiate → schema → annotate → classify
 ├── runtime/
-│   ├── executor.ts           # Operation execution (direct_http + session_http dispatch)
+│   ├── executor.ts           # Operation execution (direct_http + session_http + browser_fetch dispatch)
 │   ├── session-executor.ts   # session_http mode: CDP browser + L2 primitive resolution
+│   ├── browser-fetch-executor.ts # browser_fetch mode: page.evaluate(fetch(...))
+│   ├── adapter-executor.ts   # L3 adapter loading + init/auth/execute lifecycle
 │   ├── paginator.ts          # Pagination executor (cursor + link_header)
 │   ├── token-cache.ts        # Token cache with TTL for auth primitives
 │   ├── navigator.ts          # CLI navigation helper
@@ -52,6 +54,7 @@ src/
 │       ├── api-response.ts   # api_response CSRF (fetch from endpoint)
 │       ├── exchange-chain.ts # exchange_chain auth (multi-step token exchange)
 │       ├── script-json.ts    # script_json extraction (SSR JSON in <script>)
+│       ├── webpack-module-walk.ts # webpack_module_walk auth (webpack module cache)
 │       └── primitives.test.ts # L2 primitive unit tests
 ├── types/
 │   ├── primitives.ts         # L2 primitive discriminated unions (27 types)
@@ -74,13 +77,16 @@ src/
     ├── youtube-fixture/      # L2 test fixture (page_global + sapisidhash)
     ├── github-fixture/       # L2 test fixture (meta_tag CSRF + script_json extraction)
     └── reddit-fixture/       # L2 test fixture (cookie_session — www.reddit.com/.json API)
+    ├── discord-fixture/      # L2 test fixture (webpack_module_walk + browser_fetch)
+    ├── whatsapp-fixture/     # L3 test fixture (adapter — Meta require() module system)
+    └── telegram-fixture/     # L3 test fixture (adapter — teact global state via webpack)
 ```
 
 ## Commands
 
 ```bash
 pnpm build          # tsup → dist/
-pnpm test           # vitest (145/145 pass)
+pnpm test           # vitest (167/167 pass)
 pnpm lint           # biome check
 ```
 
@@ -94,7 +100,9 @@ pnpm lint           # biome check
 - Compiler: generator emits server-level x-openweb (mode + auth + csrf) with ClassifyResult
 - Runtime: `direct_http` mode with SSRF protection, redirect handling, schema validation
 - Runtime: `session_http` mode — CDP browser connection, cookie auth, CSRF token injection
-- Runtime: L2 primitive resolvers (9 handlers): cookie_session, cookie_to_header, localStorage_jwt, page_global, sapisidhash, meta_tag, api_response, exchange_chain, script_json
+- Runtime: `browser_fetch` mode — CDP browser + `page.evaluate(fetch(...))` for browser-context requests
+- Runtime: L3 adapter framework — CodeAdapter loading + init/auth/execute lifecycle
+- Runtime: L2 primitive resolvers (10 handlers): cookie_session, cookie_to_header, localStorage_jwt, page_global, sapisidhash, meta_tag, api_response, exchange_chain, script_json, webpack_module_walk
 - Runtime: Redirect following with cross-origin header stripping, method rewriting (303)
 - Runtime: Pagination executor: cursor + link_header modes with max page safety
 - Runtime: Token cache with configurable TTL and lazy expiry
@@ -104,11 +112,10 @@ pnpm lint           # biome check
 - Types: L2 primitive types (27 types), x-openweb extensions, manifest, CodeAdapter
 - Validation: AJV-based x-openweb spec + manifest.json validation
 - M3 verified sites: Instagram, Bluesky, YouTube, GitHub, Reddit (5 sites, 9 primitive types)
+- M4 verified sites: Discord (webpack_module_walk + browser_fetch), WhatsApp (L3 adapter), Telegram (L3 adapter)
 
 **Not yet implemented (v2 additions)**:
-- Additional L2 primitive handlers (sessionStorage_msal, webpack_module_walk, websocket_intercept, etc.)
-- L3 code adapter execution
-- `browser_fetch` mode
+- Additional L2 primitive handlers (sessionStorage_msal, websocket_intercept, etc.)
 - Mode escalation (direct → session → browser)
 - Phase 3 mode probing (empirical testing)
 
