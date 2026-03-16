@@ -83,7 +83,7 @@ export function validateXOpenWebSpec(spec: OpenApiLike): ValidationResult {
 
     for (const method of HTTP_METHODS) {
       const op = methods?.[method]
-      if (!op) continue
+      if (typeof op !== 'object' || op === null) continue
 
       const ext = op['x-openweb']
       if (ext == null) continue

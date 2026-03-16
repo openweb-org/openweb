@@ -145,7 +145,7 @@ export const authPrimitiveSchema = {
       required: ['type', 'steps', 'inject'],
       properties: {
         type: { const: 'exchange_chain' },
-        steps: { type: 'array', items: exchangeStepSchema },
+        steps: { type: 'array', items: exchangeStepSchema, minItems: 1 },
         refresh_before: { type: 'string' },
         inject: injectSchema,
       },
@@ -370,7 +370,7 @@ export const extractionPrimitiveSchema = {
       properties: {
         type: { const: 'html_selector' },
         page_url: { type: 'string' },
-        selectors: { type: 'object', additionalProperties: { type: 'string' } },
+        selectors: { type: 'object', additionalProperties: { type: 'string' }, minProperties: 1 },
         attribute: { type: 'string' },
         multiple: { type: 'boolean' },
       },

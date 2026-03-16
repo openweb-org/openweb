@@ -1,3 +1,24 @@
+## 2026-03-15: M1 Hardening — Codex Review Round 3
+
+**What changed:**
+- Instagram fixture: added `X-IG-App-ID` as reusable OpenAPI header parameter via `$ref`
+- Schema: added `minimum` constraints on `tool_version` (>=1) and stats counts (>=0)
+- Schema: added `minItems: 1` on `exchange_chain.steps`, `minProperties: 1` on `html_selector.selectors`
+- Validator: hardened operation-level op guard from `if (!op)` to `typeof op !== 'object'`
+
+**Why:**
+- Codex round 3 found Instagram fixture was missing documented `X-IG-App-ID` header
+- Schema accepted semantically impossible values (negative counts, empty chains)
+- Last remaining falsy guard in operation traversal
+
+**Key files:** `src/fixtures/instagram-fixture/openapi.yaml`, `src/types/schema.ts`, `src/types/primitive-schemas.ts`, `src/types/validator.ts`
+**Verification:** 57/57 tests pass, lint clean
+**Commit:** see below
+**Next:** M2 — First L2 website end-to-end (Instagram)
+**Blockers:** None
+
+---
+
 ## 2026-03-15: M1 Hardening — Codex Review Round 2
 
 **What changed:**
