@@ -1,3 +1,35 @@
+## 2026-03-15: M1 — Meta-spec Formalization
+
+**What changed:**
+- Created `src/types/` module with all 27 L2 primitive types as readonly discriminated unions
+- JSON Schema definitions (AJV) for x-openweb server/operation extensions and manifest.json
+- `validateXOpenWebSpec()` validates all x-openweb extensions in an OpenAPI spec
+- `validateManifest()` validates manifest.json against schema
+- `CodeAdapter` interface + `AdapterCapability` types for L3
+- Instagram fixture (`src/fixtures/instagram-fixture/`) as L2 validation sample (cookie_session + cookie_to_header CSRF)
+- Code reviewed: fixed csrfWithScope allOf→oneOf composition, manifest type/schema drift, file split for 400-line limit
+
+**Why:**
+- M1 formalizes the v2 design docs into executable TypeScript types + JSON Schema
+- Single source of truth: JSON Schema validates at runtime, TypeScript types enforce at compile time
+- Enables M2 (runtime execution of L2 primitives) by providing type-safe x-openweb definitions
+
+**Key files:**
+- `src/types/primitives.ts` — 27 L2 primitive discriminated unions (auth/csrf/signing/pagination/extraction)
+- `src/types/primitive-schemas.ts` — JSON Schema for all primitives
+- `src/types/extensions.ts` — XOpenWebServer, XOpenWebOperation
+- `src/types/schema.ts` — composite schemas (server/operation/manifest)
+- `src/types/validator.ts` — AJV-based validation
+- `src/types/validator.test.ts` — 13 tests
+- `src/fixtures/instagram-fixture/` — L2 fixture
+
+**Verification:** 51/51 tests pass, lint clean, tsc strict clean (0 errors in src/types/)
+**Commit:** `4ac0e7b..c3cf4ee`
+**Next:** M2 — First L2 website end-to-end (Instagram: cookie_session + cookie_to_header)
+**Blockers:** None
+
+---
+
 ## 2026-03-15: M0 Hardening — Codex Code Reviews (3 rounds)
 
 **What changed:**
