@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 
 import type { Page } from 'playwright'
@@ -10,7 +11,8 @@ const adapterCache = new Map<string, CodeAdapter>()
 
 /**
  * Load a CodeAdapter from the fixture/skill package's adapters/ directory.
- * Adapters are TypeScript/JavaScript modules that export a default CodeAdapter object.
+ * Tries .js first (production builds), then .ts (dev mode under tsx).
+ * Only suppresses file-not-found; surfaces real import errors.
  */
 export async function loadAdapter(siteRoot: string, adapterName: string): Promise<CodeAdapter> {
   // Validate adapter name — prevent path traversal
@@ -35,7 +37,9 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
   ]
 
   let adapter: CodeAdapter | undefined
+  let lastError: Error | undefined
   for (const filePath of candidates) {
+    if (!existsSync(filePath)) continue
     try {
       const fileUrl = pathToFileURL(filePath).href
       const mod = await import(fileUrl) as { default?: CodeAdapter }
@@ -43,9 +47,20 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
         adapter = mod.default
         break
       }
-    } catch {
-      continue
+    } catch (err) {
+      // Keep the real error — don't swallow import failures for files that exist
+      lastError = err instanceof Error ? err : new Error(String(err))
     }
+  }
+
+  if (!adapter && lastError) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Adapter "${adapterName}" failed to load: ${lastError.message}`,
+      action: 'Check adapter syntax. .ts files require tsx runtime (pnpm dev). Built mode needs .js files.',
+      retriable: false,
+    })
   }
 
   if (!adapter) {

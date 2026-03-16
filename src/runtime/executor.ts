@@ -15,7 +15,7 @@ import {
 } from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import { connectWithRetry } from '../capture/connection.js'
-import { resolveMode, executeSessionHttp, findPageForOrigin } from './session-executor.js'
+import { resolveMode, executeSessionHttp, findPageForOrigin, resolveAllParameters } from './session-executor.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 import { loadAdapter, executeAdapter } from './adapter-executor.js'
 import type { AdapterRef, XOpenWebOperation } from '../types/extensions.js'
@@ -134,6 +134,26 @@ export async function executeOperation(
         })
       }
       const adapterParams = { ...params, ...adapterRef.params }
+
+      // HI-02: Validate required params + apply defaults before adapter call
+      const allParams = resolveAllParameters(spec, operationRef.operation)
+      for (const param of allParams) {
+        const value = adapterParams[param.name]
+        if ((value === undefined || value === null) && param.required) {
+          throw new OpenWebError({
+            error: 'execution_failed',
+            code: 'INVALID_PARAMS',
+            message: `Missing required parameter: ${param.name}`,
+            action: 'Run `openweb <site> <tool>` to inspect parameters.',
+            retriable: false,
+          })
+        }
+        // Apply schema defaults
+        if ((value === undefined || value === null) && param.schema?.default !== undefined) {
+          adapterParams[param.name] = param.schema.default as unknown
+        }
+      }
+
       body = await executeAdapter(page, adapter, adapterRef.operation, adapterParams)
       status = 200
     } finally {
