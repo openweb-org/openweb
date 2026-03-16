@@ -1,3 +1,45 @@
+## 2026-03-16: M5 — Agent Skill Dogfood + Operational Surface
+
+**What changed:**
+- Phase 1: Added `FailureClass` type (`needs_browser|needs_login|needs_page|retriable|fatal`) to `OpenWebErrorPayload` — 82 throw sites classified across 22 source files
+- Phase 1: Extended `renderSite()` with readiness metadata: mode, requires_browser, requires_login, risk summary
+- Phase 1: Extended `renderOperation()` to show path/header params (not just query), resolved mode, risk_tier
+- Phase 2: Created 7 benchmark task definitions in `tests/benchmark/` covering all 4 execution modes
+- Phase 3: Created `.claude/skills/openweb/SKILL.md` — agent skill for Claude Code with 4-step workflow, error handling guide, site table
+- Phase 4: Dogfood — ran all 7 benchmarks against real Chrome CDP (6/7 pass)
+- Phase 4: Documented 6 pitfalls about agent ↔ runtime interface
+
+**Benchmark results (6/7 pass):**
+- B1 open-meteo (direct_http): PASS
+- B2 Instagram (session_http, cookie + CSRF): PASS
+- B3 GitHub (session_http, meta_tag + pagination): PASS
+- B4 YouTube (session_http, page_global + sapisidhash): FAIL — findPageForOrigin matched service worker instead of real page
+- B5 Discord (browser_fetch, webpack_module_walk): PASS
+- B6 Telegram (L3 adapter): PASS — after page reload (backgrounded tab lost webpack state)
+- B7 Error classification: PASS — needs_browser + fatal correctly surfaced
+
+**Pitfalls (doc/todo/v2_m5/pitfalls.md):**
+1. Service worker pages match in findPageForOrigin — misleading error
+2. Backgrounded tabs lose webpack/global state — need reload hint
+3. renderOperation didn't show path params — FIXED in this milestone
+4. Large responses (~156KB) overwhelm agent context — need --jq or truncation
+5. No pre-execution readiness check — need `openweb <site> check`
+6. page_global failure misclassified as needs_login when real issue is wrong page type
+
+**Key files:**
+- `src/lib/errors.ts` — FailureClass type + failureClass field
+- `src/runtime/navigator.ts` — readiness metadata + full param display
+- `.claude/skills/openweb/SKILL.md` — agent skill package
+- `tests/benchmark/` — 7 benchmark task definitions
+- `doc/todo/v2_m5/pitfalls.md` — 6 pitfalls for M6 scope
+
+**Verification:** 168/168 tests pass, 10 sites available, readiness metadata displayed, failureClass in all error output, 6/7 benchmarks pass
+**Commit:** `94916d8..57b7c73` (4 commits)
+**Next:** M6 — Manual Scaling + Core Hardening (pitfall fixes, 10→25 sites)
+**Blockers:** None
+
+---
+
 ## 2026-03-16: Post-M4 planning — roadmap, meta-schema review, design docs
 
 **What changed:**
