@@ -65,6 +65,13 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
     // Only reject new work after drain is done (detachAll already prevents new events)
     if (stopped && !draining) return
     try {
+      // If the page has already navigated away from the URL that triggered this
+      // snapshot, the DOM/storage belongs to a different document — skip to avoid
+      // mislabeling (H3: rapid redirect correctness)
+      if (trigger === 'navigation' && page.url() !== urlAtEvent) {
+        log(`  snapshot skipped (page already navigated away from ${urlAtEvent})`)
+        return
+      }
       const [state, dom] = await Promise.all([
         captureStateSnapshot(page, context, trigger),
         captureDomAndGlobals(page, trigger),

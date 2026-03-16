@@ -96,7 +96,7 @@ function shouldCapture(url: URL, contentType: string | null): boolean {
 
 export interface HarCapture {
   readonly entries: HarEntry[]
-  /** Number of in-flight async response handlers */
+  /** Number of in-flight requests (awaiting response) + async response handlers */
   readonly pendingCount: () => number
   detach(): void
 }
@@ -179,7 +179,7 @@ export function attachHarCapture(page: Page): HarCapture {
 
   return {
     entries,
-    pendingCount: () => inFlightResponses,
+    pendingCount: () => pendingRequests.size + inFlightResponses,
     detach() {
       page.removeListener('request', onRequest)
       page.removeListener('response', onResponse)
