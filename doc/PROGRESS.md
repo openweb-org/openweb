@@ -1,3 +1,24 @@
+## 2026-03-16: M4 Codex Review Round 1 — 4 fixes
+
+**What changed:**
+- CR-01: browser_fetch SSRF redirect bypass — `redirect:'manual'` + per-hop validation
+- HI-01: adapter loader surfaces real import errors (not "adapter not found" for syntax errors)
+- HI-02: adapter execution path validates required params + applies schema defaults
+- ME-03: in-page fetch network/CORS errors normalized to `OpenWebError`
+
+**Why:**
+- Codex review identified that browser_fetch only validated the initial URL, not redirect targets
+- `.ts` adapters fail under built runtime (`node dist/cli.js`); blanket catch hid the real error
+- Adapter operations bypassed OpenAPI parameter validation entirely
+
+**Key files:** `src/runtime/browser-fetch-executor.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/executor.ts`
+**Verification:** 167/167 tests pass, TypeScript build clean
+**Commit:** `767d18d..f62f1fd` (2 commits)
+**Next:** M5 — Agent skill packaging
+**Blockers:** None
+
+---
+
 ## 2026-03-16: M4 — L3 + browser_fetch (Discord, WhatsApp, Telegram)
 
 **What changed:**
