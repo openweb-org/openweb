@@ -1,4 +1,4 @@
-import type { Browser } from 'playwright'
+import type { Browser, BrowserContext } from 'playwright'
 
 import { OpenWebError } from '../lib/errors.js'
 import type { OpenApiOperation, OpenApiParameter, OpenApiSpec } from '../lib/openapi.js'
@@ -20,6 +20,46 @@ const VALID_MODES = new Set<string>(['direct_http', 'session_http', 'browser_fet
 const MAX_REDIRECTS = 5
 const SENSITIVE_HEADERS = ['cookie', 'authorization', 'x-csrftoken', 'x-csrf-token']
 const UNSAFE_REF_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
+
+/** Find a page whose URL matches the target server origin (for page.evaluate scoping) */
+function findPageForOrigin(context: BrowserContext, serverUrl: string): import('playwright').Page | undefined {
+  try {
+    const targetOrigin = new URL(serverUrl).origin
+    const targetHost = new URL(serverUrl).hostname
+
+    // Pass 1: exact origin match
+    for (const page of context.pages()) {
+      try {
+        if (page.url().startsWith(targetOrigin)) return page
+      } catch { /* skip */ }
+    }
+
+    // Pass 2: same hostname or base domain match (www.youtube.com ↔ youtube.com)
+    const baseDomain = targetHost.replace(/^www\./, '')
+    for (const page of context.pages()) {
+      try {
+        const pageHost = new URL(page.url()).hostname
+        if (pageHost === baseDomain || pageHost === 'www.' + baseDomain || pageHost.endsWith('.' + baseDomain)) {
+          return page
+        }
+      } catch { /* skip */ }
+    }
+
+    // Pass 3: same SLD match (bsky.social ↔ bsky.app shares "bsky" SLD prefix)
+    // This handles cases like API at bsky.social, web app at bsky.app
+    const sld = baseDomain.split('.')[0]
+    if (sld && sld.length > 3) { // Only for non-trivial SLDs (skip "api", "www", etc.)
+      for (const page of context.pages()) {
+        try {
+          const pageHost = new URL(page.url()).hostname
+          const pageSld = pageHost.replace(/^www\./, '').split('.')[0]
+          if (pageSld === sld) return page
+        } catch { /* skip */ }
+      }
+    }
+  } catch { /* invalid serverUrl */ }
+  return undefined
+}
 
 /** Read x-openweb config from the server entry matching this operation */
 export function getServerXOpenWeb(spec: OpenApiSpec, operation: OpenApiOperation): XOpenWebServer | undefined {
@@ -263,6 +303,17 @@ export async function executeSessionHttp(
   const ssrfValidator = deps.ssrfValidator ?? validateSSRF
 
   const serverExt = getServerXOpenWeb(spec, operation)
+  const serverUrl = operation.servers?.[0]?.url ?? spec.servers?.[0]?.url
+  if (!serverUrl) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: 'No server URL found in OpenAPI spec.',
+      action: 'Add `servers` to the spec and retry.',
+      retriable: false,
+    })
+  }
+
   const context = browser.contexts()[0]
   if (!context) {
     throw new OpenWebError({
@@ -274,7 +325,7 @@ export async function executeSessionHttp(
     })
   }
 
-  const page = context.pages()[0]
+  const page = findPageForOrigin(context, serverUrl) ?? context.pages()[0]
   if (!page) {
     throw new OpenWebError({
       error: 'execution_failed',
@@ -293,17 +344,6 @@ export async function executeSessionHttp(
   const headerParams = buildHeaderParams(allParams, params)
 
   // Build URL with query params only
-  const serverUrl = operation.servers?.[0]?.url ?? spec.servers?.[0]?.url
-  if (!serverUrl) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: 'No server URL found in OpenAPI spec.',
-      action: 'Add `servers` to the spec and retry.',
-      retriable: false,
-    })
-  }
-
   const baseUrl = new URL(serverUrl)
   const fullPath = baseUrl.pathname.replace(/\/$/, '') + resolvedPath
   const target = new URL(fullPath, baseUrl.origin)

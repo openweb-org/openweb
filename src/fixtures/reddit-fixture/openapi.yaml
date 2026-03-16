@@ -5,28 +5,13 @@ info:
   x-openweb:
     spec_version: '2.0'
 servers:
-  - url: https://oauth.reddit.com
+  - url: https://www.reddit.com
     x-openweb:
       mode: session_http
       auth:
-        type: exchange_chain
-        steps:
-          - call: https://www.reddit.com/svc/shreddit/token
-            headers:
-              Content-Type: application/x-www-form-urlencoded
-            extract: accessToken
-        inject:
-          header: Authorization
-          prefix: 'Bearer '
-      csrf:
-        type: api_response
-        endpoint: https://oauth.reddit.com/api/me.json
-        extract: data.modhash
-        inject:
-          header: X-Modhash
-        cache: true
+        type: cookie_session
 paths:
-  /r/{subreddit}/hot:
+  /r/{subreddit}/hot.json:
     get:
       operationId: getSubreddit
       summary: Get hot posts from a subreddit
