@@ -1,3 +1,23 @@
+## 2026-03-15: M2 Fix — Cookie scoping + Referer + real Instagram verification
+
+**What changed:**
+- Fixed `context.cookies()` to scope by server URL — without URL arg, Playwright returns cookies from ALL domains in the Chrome profile, which created a massive Cookie header that Instagram rejected with 400
+- Added `Referer: {server_origin}/` to all session_http requests — Instagram requires this header
+- Made exec command JSON params optional (default `{}`), added `--cdp-endpoint` flag
+- Verified against real Instagram API: `getTimeline` and `getUserProfile` return real data
+
+**Why:**
+- Initial 400 errors were misattributed to TLS fingerprinting. Bisecting headers proved: curl (LibreSSL), Node.js (OpenSSL), and Chrome (BoringSSL) all succeed — the issue was HTTP-level, not TLS
+- `context.cookies()` scoping is a critical pitfall for any session_http implementation using a real user Chrome profile
+
+**Key files:** `src/runtime/primitives/cookie-session.ts`, `src/runtime/primitives/cookie-to-header.ts`, `src/runtime/session-executor.ts`, `src/commands/exec.ts`, `src/cli.ts`
+**Verification:** `openweb exec instagram-fixture getTimeline` → 200, real feed JSON. `getUserProfile` → 200, real user data. 84/84 tests pass.
+**Commit:** `b6733ca`
+**Next:** M3 — L2 breadth (5 diverse websites)
+**Blockers:** None
+
+---
+
 ## 2026-03-15: M2 — First L2 Website End-to-End (Instagram)
 
 **What changed:**
