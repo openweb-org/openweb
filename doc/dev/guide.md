@@ -85,7 +85,7 @@ src/
 ## Commands
 
 ```bash
-pnpm build          # tsup → dist/
+pnpm build          # tsup → dist/ + compile adapters .ts→.js
 pnpm test           # vitest (167/167 pass)
 pnpm lint           # biome check
 ```

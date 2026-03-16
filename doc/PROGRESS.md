@@ -1,3 +1,24 @@
+## 2026-03-16: M4 Codex Review Round 2 — 4 fixes
+
+**What changed:**
+- HI-01: Replaced broken `redirect:'manual'` (opaqueredirect status 0) with `redirect:'follow'` — browser handles redirects natively, initial URL SSRF-validated
+- HI-02: Added `scripts/build-adapters.js` — compiles .ts adapters to .js via esbuild as post-build step
+- HI-03: Extracted shared `validateParams()` in openapi.ts — unknown-param rejection, required checks, type validation, defaults — used by adapter and non-adapter paths
+- ME-01: Adapter loader distinguishes "file not found" from "wrong shape" (missing default export)
+
+**Why:**
+- Round 2 found `redirect:'manual'` returns opaqueredirect in browser context (status 0, no headers) — per-hop loop was dead code
+- Built-mode adapter loading still failed because build only emitted dist/cli.js, not adapter .js files
+- Adapter param validation was still partial (no unknown rejection, no type checks)
+
+**Key files:** `src/runtime/browser-fetch-executor.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/executor.ts`, `src/lib/openapi.ts`, `scripts/build-adapters.js`
+**Verification:** 167/167 tests pass, `pnpm build` compiles 2 adapters, built-mode adapter import verified
+**Commit:** `f62f1fd..8ee80a0` (2 commits)
+**Next:** M5 — Agent skill packaging
+**Blockers:** None
+
+---
+
 ## 2026-03-16: M4 Codex Review Round 1 — 4 fixes
 
 **What changed:**
