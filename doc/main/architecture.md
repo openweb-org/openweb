@@ -1,6 +1,6 @@
 # OpenWeb — Architecture Overview
 
-> **Last updated**: 2026-03-15 (commit `d5ce87a`)
+> **Last updated**: 2026-03-15 (commit `996682d`)
 
 ## Mission
 

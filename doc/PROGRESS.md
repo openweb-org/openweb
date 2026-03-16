@@ -1,21 +1,16 @@
-## 2026-03-15: M0 Hardening — Codex Code Review Fixes
+## 2026-03-15: M0 Hardening — Codex Code Reviews (2 rounds)
 
 **What changed:**
-- Fixed stale bundle on rerun (rm output dir before write)
-- Fixed in-flight data loss on stop (drain pending HAR responses + snapshots before writing bundle)
-- Fixed navigation snapshot ordering (sequence numbers at event time, sorted before write)
-- Made CDP connect cancellable via AbortSignal (Ctrl+C no longer hangs during retry)
-- Broadened HAR filter: added SSE, wildcard `+json`, switched from allow-list to reject-list
-- Fixed request leak on `requestfailed` events
-- Fixed TS strict definite-assignment errors with `deferred()` helper
+- Round 1 (d5ce87a): stale bundle cleanup, in-flight data drain, snapshot ordering, cancellable connect, broadened HAR filter (SSE + wildcard +json), requestfailed cleanup, deferred() for TS strict
+- Round 2 (996682d): safe bundle cleanup (artifact-only rm, not rm -rf on output dir), draining flag for in-flight snapshots, drain-before-detach ordering, URL captured at event time for redirect correctness, AbortSignal races against connect + sleep
 
 **Why:**
-- Codex code review identified 3 high + 5 medium reliability/correctness issues
-- Fixes ensure capture output is deterministic across stop timing, reruns, and rapid navigations
+- Two Codex review rounds identified 4 critical/high + 6 medium reliability issues
+- Fixes ensure capture output is safe (no user data loss), deterministic (stop timing, reruns, rapid navigations), and cancellable (Ctrl+C is immediate)
 
 **Key files:** `src/capture/session.ts`, `src/capture/har-capture.ts`, `src/capture/connection.ts`, `src/capture/bundle.ts`
 **Verification:** 38/38 tests pass, lint clean, build clean
-**Commit:** `d5ce87a`
+**Commit:** `d5ce87a..996682d`
 **Next:** M1 — Formalize meta-spec (TypeScript types + JSON Schema for x-openweb)
 **Blockers:** None
 
