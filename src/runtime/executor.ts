@@ -15,8 +15,10 @@ import {
 } from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import { connectWithRetry } from '../capture/connection.js'
-import { resolveMode, executeSessionHttp } from './session-executor.js'
+import { resolveMode, executeSessionHttp, findPageForOrigin } from './session-executor.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
+import { loadAdapter, executeAdapter } from './adapter-executor.js'
+import type { AdapterRef, XOpenWebOperation } from '../types/extensions.js'
 
 const MAX_REDIRECTS = 5
 
@@ -102,7 +104,44 @@ export async function executeOperation(
   let body: unknown
   let responseHeaders: Record<string, string> = {}
 
-  if (mode === 'browser_fetch') {
+  // Check for L3 adapter — if present, adapter handles the entire operation
+  const opExt = operationRef.operation['x-openweb'] as XOpenWebOperation | undefined
+  const adapterRef = opExt?.adapter as AdapterRef | undefined
+  if (adapterRef) {
+    const siteRoot = await resolveSiteRoot(site)
+    const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
+    try {
+      const adapter = await loadAdapter(siteRoot, adapterRef.name)
+      const context = browser.contexts()[0]
+      if (!context) {
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: 'No browser context available.',
+          action: 'Open Chrome with --remote-debugging-port=9222.',
+          retriable: true,
+        })
+      }
+      const serverUrl = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
+      const page = findPageForOrigin(context, serverUrl) ?? context.pages()[0]
+      if (!page) {
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: 'No page available in browser context.',
+          action: 'Open a tab and navigate to the site.',
+          retriable: true,
+        })
+      }
+      const adapterParams = { ...params, ...adapterRef.params }
+      body = await executeAdapter(page, adapter, adapterRef.operation, adapterParams)
+      status = 200
+    } finally {
+      if (!deps.browser) {
+        browser.close().catch(() => {})
+      }
+    }
+  } else if (mode === 'browser_fetch') {
     const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
     try {
       const result = await executeBrowserFetch(
