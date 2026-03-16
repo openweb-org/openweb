@@ -525,8 +525,8 @@ describe('executeSessionHttp', () => {
       payload: { message: expect.stringContaining('Too many redirects') },
     })
 
-    // MAX_REDIRECTS is 5, so loop runs 6 times (0..5 inclusive)
-    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(6)
+    // MAX_REDIRECTS is 5, loop runs 5 times (0..4), then exits with redirect status → error
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(5)
   })
 
   it('drops body on 303 redirect', async () => {

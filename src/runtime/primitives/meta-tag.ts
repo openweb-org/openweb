@@ -17,7 +17,9 @@ export async function resolveMetaTag(
   const { name, header } = config
 
   const content = await handle.page.evaluate((metaName: string) => {
-    const meta = document.querySelector(`meta[name="${metaName}"]`)
+    // Use attribute selector with CSS.escape to prevent selector injection
+    const escaped = CSS.escape(metaName)
+    const meta = document.querySelector(`meta[name="${escaped}"]`)
     return meta?.getAttribute('content') ?? null
   }, name)
 

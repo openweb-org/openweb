@@ -397,7 +397,7 @@ export async function executeSessionHttp(
   let currentMethod = upperMethod
   let response: Response | undefined
 
-  for (let attempt = 0; attempt <= MAX_REDIRECTS; attempt++) {
+  for (let attempt = 0; attempt < MAX_REDIRECTS; attempt++) {
     await ssrfValidator(currentUrl)
 
     response = await fetchImpl(currentUrl, {

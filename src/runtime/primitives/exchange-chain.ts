@@ -79,7 +79,7 @@ export async function resolveExchangeChain(
     // Build body if specified
     let body: string | undefined
     if (step.body) {
-      body = new URLSearchParams(step.body as Record<string, string>).toString()
+      body = new URLSearchParams(step.body).toString()
     }
 
     const response = await fetchImpl(step.call, {
