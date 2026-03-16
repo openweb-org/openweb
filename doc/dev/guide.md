@@ -1,6 +1,6 @@
 # OpenWeb — Dev Guide
 
-> **Last updated**: 2026-03-15 (commit `996682d`)
+> **Last updated**: 2026-03-15 (commit `ca1ba52`)
 
 ## Tech Stack
 

@@ -1,16 +1,17 @@
-## 2026-03-15: M0 Hardening — Codex Code Reviews (2 rounds)
+## 2026-03-15: M0 Hardening — Codex Code Reviews (3 rounds)
 
 **What changed:**
 - Round 1 (d5ce87a): stale bundle cleanup, in-flight data drain, snapshot ordering, cancellable connect, broadened HAR filter (SSE + wildcard +json), requestfailed cleanup, deferred() for TS strict
-- Round 2 (996682d): safe bundle cleanup (artifact-only rm, not rm -rf on output dir), draining flag for in-flight snapshots, drain-before-detach ordering, URL captured at event time for redirect correctness, AbortSignal races against connect + sleep
+- Round 2 (996682d): safe bundle cleanup (artifact-only rm), draining flag for in-flight snapshots, drain-before-detach ordering, URL at event time, AbortSignal races connect + sleep
+- Round 3 (ca1ba52): pendingCount includes pre-response requests, skip snapshot if page navigated away (rapid redirect correctness)
 
 **Why:**
-- Two Codex review rounds identified 4 critical/high + 6 medium reliability issues
-- Fixes ensure capture output is safe (no user data loss), deterministic (stop timing, reruns, rapid navigations), and cancellable (Ctrl+C is immediate)
+- Three Codex review rounds identified and fixed all critical/high reliability issues
+- Capture output is now safe (no user data loss), deterministic (stop timing, reruns), and correct (rapid redirects skip stale snapshots)
 
 **Key files:** `src/capture/session.ts`, `src/capture/har-capture.ts`, `src/capture/connection.ts`, `src/capture/bundle.ts`
 **Verification:** 38/38 tests pass, lint clean, build clean
-**Commit:** `d5ce87a..996682d`
+**Commit:** `d5ce87a..ca1ba52`
 **Next:** M1 — Formalize meta-spec (TypeScript types + JSON Schema for x-openweb)
 **Blockers:** None
 
