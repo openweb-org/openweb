@@ -1,3 +1,42 @@
+## 2026-03-16: M3 — L2 Breadth (4 Diverse Websites)
+
+**What changed:**
+- Phase 0 (M2 debt): request body construction for POST/PUT/PATCH, pagination executor (cursor + link_header), token cache with TTL
+- Phase 1: Bluesky — `localStorage_jwt` auth primitive + cursor pagination fixture
+- Phase 2: GitHub — `meta_tag` CSRF, `script_json` extraction, `link_header` pagination fixture
+- Phase 3: YouTube — `page_global` auth, `sapisidhash` SHA-1 signing primitive + fixture
+- Phase 4: Reddit — `exchange_chain` auth, `api_response` CSRF primitives (fixture uses `cookie_session` via `.json` endpoints)
+- Phase 5: Filled all 10 M2 test checklist gaps (CR-15 redirects, CR-16 SSRF, CR-17 $ref, CR-18 non-JSON, CR-20 partial cookies)
+- Bug fixes: CSS selector injection in meta_tag (CSS.escape), redirect off-by-one, page selection by origin for page.evaluate
+- Classify detectors: added `localStorage_jwt`, `meta_tag`, `sapisidhash`, `exchange_chain` detection
+- Design doc pitfall feedback: 14 pitfalls documented across 4 design docs
+
+**Why:**
+- M3 proves the L2 primitive model generalizes across diverse auth/CSRF/signing/pagination patterns
+- 9 out of 27 primitive types now have runtime handlers — covering the most common web auth patterns
+- Page selection bug (context.pages()[0]) was a critical E2E failure that only surfaced with multiple Chrome tabs
+- Reddit's exchange_chain endpoint required undocumented params; simpler cookie_session via .json URLs works
+
+**Key files:**
+- `src/runtime/primitives/` — 9 handler files (localstorage-jwt, page-global, sapisidhash, meta-tag, api-response, exchange-chain, script-json + existing cookie-session, cookie-to-header)
+- `src/runtime/paginator.ts` — pagination executor (cursor + link_header)
+- `src/runtime/token-cache.ts` — TTL-based auth token cache
+- `src/runtime/session-executor.ts` — signing pipeline, body construction, page selection
+- `src/compiler/analyzer/classify.ts` — 6 detectors (cookie_session, cookie_to_header, localStorage_jwt, meta_tag, sapisidhash, exchange_chain)
+- `src/fixtures/{bluesky,github,youtube,reddit}-fixture/` — 4 new site fixtures
+
+**Verification:** 145/145 tests pass, TypeScript strict build clean, all 4 sites verified with real Chrome CDP:
+- GitHub: `getRepo` anthropics/claude-code ✅, `listIssues` ✅
+- Bluesky: `getProfile` bsky.app ✅, `getTimeline` ✅, `searchActors` ✅
+- YouTube: `getVideoInfo` (Never Gonna Give You Up) ✅
+- Reddit: `getSubreddit` r/programming ✅
+
+**Commit:** `1c9858b..5776d5c` (12 commits)
+**Next:** M4 — L3 + browser_fetch mode (Discord, WhatsApp/Telegram)
+**Blockers:** None
+
+---
+
 ## 2026-03-15: M2 Hardening — Final polish (NI-01, NI-02, test checklist)
 
 **What changed:**

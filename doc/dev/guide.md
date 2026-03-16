@@ -38,6 +38,8 @@ src/
 ├── runtime/
 │   ├── executor.ts           # Operation execution (direct_http + session_http dispatch)
 │   ├── session-executor.ts   # session_http mode: CDP browser + L2 primitive resolution
+│   ├── paginator.ts          # Pagination executor (cursor + link_header)
+│   ├── token-cache.ts        # Token cache with TTL for auth primitives
 │   ├── navigator.ts          # CLI navigation helper
 │   └── primitives/           # L2 primitive resolvers
 │       ├── types.ts          # BrowserHandle, ResolvedInjections
@@ -71,7 +73,7 @@ src/
     ├── bluesky-fixture/      # L2 test fixture (localStorage_jwt)
     ├── youtube-fixture/      # L2 test fixture (page_global + sapisidhash)
     ├── github-fixture/       # L2 test fixture (meta_tag CSRF + script_json extraction)
-    └── reddit-fixture/       # L2 test fixture (exchange_chain + api_response CSRF)
+    └── reddit-fixture/       # L2 test fixture (cookie_session — www.reddit.com/.json API)
 ```
 
 ## Commands
@@ -94,6 +96,9 @@ pnpm lint           # biome check
 - Runtime: `session_http` mode — CDP browser connection, cookie auth, CSRF token injection
 - Runtime: L2 primitive resolvers (9 handlers): cookie_session, cookie_to_header, localStorage_jwt, page_global, sapisidhash, meta_tag, api_response, exchange_chain, script_json
 - Runtime: Redirect following with cross-origin header stripping, method rewriting (303)
+- Runtime: Pagination executor: cursor + link_header modes with max page safety
+- Runtime: Token cache with configurable TTL and lazy expiry
+- Runtime: Request body construction for POST/PUT/PATCH (JSON serialization, 303 drop)
 - Capture: HAR + WebSocket + state snapshots + DOM extraction (4 sources)
 - Error contract: EXECUTION_FAILED, TOOL_NOT_FOUND, INVALID_PARAMS
 - Types: L2 primitive types (27 types), x-openweb extensions, manifest, CodeAdapter
@@ -105,7 +110,6 @@ pnpm lint           # biome check
 - L3 code adapter execution
 - `browser_fetch` mode
 - Mode escalation (direct → session → browser)
-- Pagination execution
 - Phase 3 mode probing (empirical testing)
 
 -> See: [doc/todo/note.md](../todo/note.md) — roadmap (M0-M5)
