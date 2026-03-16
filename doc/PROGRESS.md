@@ -1,3 +1,24 @@
+## 2026-03-16: M5 Codex review + doc sync
+
+**What changed:**
+- Codex code review: 0 critical, 3 high, 3 medium, 3 low, 1 nice-to-have (doc/todo/v2_m5/code-review-m5.md)
+- Fixed ME-3: SKILL.md `pnpm dev` → `pnpm --silent dev` (stdout contamination)
+- Fixed LO-1: CLI usage errors now `OpenWebError` with `failureClass: "fatal"`
+- Doc sync: architecture.md (agent skill layer + diagram), runtime.md (failureClass table), development.md (benchmark suite), adding-sites.md (benchmark checklist)
+- Expanded pitfalls to 10 total from background agent reports
+
+**Why:**
+- Codex review caught real agent-contract gaps: `needs_page` unreachable, requestBody hidden, adapter errors unstructured
+- 3 high findings deferred to M6 (need core runtime changes), 2 fixes applied immediately
+
+**Key files:** `.claude/skills/openweb/SKILL.md`, `src/cli.ts`, `doc/main/architecture.md`, `doc/main/runtime.md`, `doc/dev/development.md`
+**Verification:** 168/168 tests pass
+**Commit:** `5de5b13..25e6b54`
+**Next:** M6 — Manual Scaling + Core Hardening (pitfall fixes, 10→25 sites)
+**Blockers:** None
+
+---
+
 ## 2026-03-16: M5 — Agent Skill Dogfood + Operational Surface
 
 **What changed:**

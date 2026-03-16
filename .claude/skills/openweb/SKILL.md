@@ -143,9 +143,9 @@ Sites use different modes depending on their API structure. You don't need to ch
 User: "What's the weather in Berlin?"
 
 ```bash
-pnpm --silent devopen-meteo-fixture                    # Check: Requires browser: no
-pnpm --silent devopen-meteo-fixture get_forecast       # Check params: latitude, longitude required
-pnpm --silent devopen-meteo-fixture exec get_forecast '{"latitude": 52.52, "longitude": 13.41, "hourly": ["temperature_2m"]}'
+pnpm --silent dev open-meteo-fixture                    # Check: Requires browser: no
+pnpm --silent dev open-meteo-fixture get_forecast       # Check params: latitude, longitude required
+pnpm --silent dev open-meteo-fixture exec get_forecast '{"latitude": 52.52, "longitude": 13.41, "hourly": ["temperature_2m"]}'
 ```
 
 No `--cdp-endpoint` needed since it's direct_http.
@@ -155,9 +155,9 @@ No `--cdp-endpoint` needed since it's direct_http.
 User: "Show my Instagram feed"
 
 ```bash
-pnpm --silent devinstagram-fixture                     # Check: Requires browser: yes, Requires login: yes
-pnpm --silent devinstagram-fixture getTimeline         # Check params
-pnpm --silent devinstagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222
+pnpm --silent dev instagram-fixture                     # Check: Requires browser: yes, Requires login: yes
+pnpm --silent dev instagram-fixture getTimeline         # Check params
+pnpm --silent dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222
 ```
 
 ### Example 3: Path parameters
@@ -165,8 +165,8 @@ pnpm --silent devinstagram-fixture exec getTimeline '{}' --cdp-endpoint http://l
 User: "List 5 issues from facebook/react"
 
 ```bash
-pnpm --silent devgithub-fixture listIssues             # Shows: owner (path), repo (path), per_page (query)
-pnpm --silent devgithub-fixture exec listIssues '{"owner": "facebook", "repo": "react", "per_page": 5}' --cdp-endpoint http://localhost:9222
+pnpm --silent dev github-fixture listIssues             # Shows: owner (path), repo (path), per_page (query)
+pnpm --silent dev github-fixture exec listIssues '{"owner": "facebook", "repo": "react", "per_page": 5}' --cdp-endpoint http://localhost:9222
 ```
 
 Path parameters (like `owner` and `repo`) go in the same JSON object as query parameters.
@@ -176,8 +176,8 @@ Path parameters (like `owner` and `repo`) go in the same JSON object as query pa
 User: "Get my Discord profile"
 
 ```bash
-pnpm --silent devdiscord-fixture getMe                 # No params needed
-pnpm --silent devdiscord-fixture exec getMe '{}' --cdp-endpoint http://localhost:9222
+pnpm --silent dev discord-fixture getMe                 # No params needed
+pnpm --silent dev discord-fixture exec getMe '{}' --cdp-endpoint http://localhost:9222
 ```
 
 ### Example 5: Error recovery

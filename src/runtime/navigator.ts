@@ -5,7 +5,7 @@ import type { JsonSchema } from '../lib/openapi.js'
 import { findOperation, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import type { RiskTier } from '../types/extensions.js'
 import type { Manifest } from '../types/manifest.js'
-import { getServerXOpenWeb, resolveMode } from './session-executor.js'
+import { getServerXOpenWeb, resolveAllParameters, resolveMode } from './session-executor.js'
 
 function formatParamType(type: string | undefined): string {
   if (!type) {
@@ -99,8 +99,8 @@ export async function renderOperation(site: string, operationId: string, full: b
   const lines: string[] = []
   lines.push(`${method.toUpperCase()} ${opPath}`)
 
-  // Show all parameter types grouped by location
-  const allParams = operation.parameters ?? []
+  // Show all parameter types grouped by location (resolves $ref components)
+  const allParams = resolveAllParameters(spec, operation)
   const paramGroups = ['path', 'query', 'header'] as const
   for (const location of paramGroups) {
     const params = allParams.filter((p) => p.in === location)
