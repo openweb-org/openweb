@@ -45,11 +45,19 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - videoId
               properties:
                 videoId:
                   type: string
                 context:
                   type: object
+                  default:
+                    client:
+                      clientName: WEB
+                      clientVersion: '2.20260316.01.00'
+                      hl: en
+                      gl: US
       responses:
         '200':
           description: Success.
@@ -86,11 +94,19 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - videoId
               properties:
                 videoId:
                   type: string
                 context:
                   type: object
+                  default:
+                    client:
+                      clientName: WEB
+                      clientVersion: '2.20260316.01.00'
+                      hl: en
+                      gl: US
       responses:
         '200':
           description: Success.

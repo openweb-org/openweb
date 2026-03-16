@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { OpenWebError } from '../lib/errors.js'
 import {
+  createNeedsPageError,
+  findPageForOrigin,
   resolveMode,
   substitutePath,
   buildHeaderParams,
@@ -136,7 +138,12 @@ describe('getServerXOpenWeb', () => {
   })
 })
 
-function mockBrowser(cookies: Array<{ name: string; value: string }>) {
+function mockBrowser(
+  cookies: Array<{ name: string; value: string }>,
+  pages: Array<{ url: string; content?: string; evaluateResult?: unknown }> = [
+    { url: 'https://www.instagram.com', content: '<html><body>ready</body></html>' },
+  ],
+) {
   const fullCookies = cookies.map((c) => ({
     ...c,
     domain: '.instagram.com',
@@ -151,12 +158,68 @@ function mockBrowser(cookies: Array<{ name: string; value: string }>) {
     contexts: () => [
       {
         cookies: vi.fn(async () => fullCookies),
-        pages: () => [{ url: () => 'https://www.instagram.com' }],
+        pages: () => pages.map((page) => ({
+          url: () => page.url,
+          content: vi.fn(async () => page.content ?? '<html><body>ready</body></html>'),
+          evaluate: vi.fn(async () => page.evaluateResult),
+        })),
       },
     ],
     close: vi.fn(async () => {}),
   } as unknown as import('playwright').Browser
 }
+
+describe('findPageForOrigin', () => {
+  it('ignores worker-like and empty-content pages when matching the site tab', async () => {
+    const context = {
+      pages: () => [
+        {
+          url: () => 'https://www.youtube.com/sw.js',
+          content: vi.fn(async () => '<html><body>worker</body></html>'),
+        },
+        {
+          url: () => 'https://www.youtube.com',
+          content: vi.fn(async () => ''),
+        },
+        {
+          url: () => 'https://www.youtube.com/watch?v=123',
+          content: vi.fn(async () => '<html><body>video</body></html>'),
+        },
+      ],
+    } as unknown as import('playwright').BrowserContext
+
+    const page = await findPageForOrigin(context, 'https://www.youtube.com/youtubei/v1')
+
+    expect(page?.url()).toBe('https://www.youtube.com/watch?v=123')
+  })
+
+  it('returns undefined when no real page matches the target origin', async () => {
+    const context = {
+      pages: () => [
+        {
+          url: () => 'https://www.youtube.com/sw.js',
+          content: vi.fn(async () => '<html><body>worker</body></html>'),
+        },
+        {
+          url: () => 'https://example.com',
+          content: vi.fn(async () => '<html><body>other</body></html>'),
+        },
+      ],
+    } as unknown as import('playwright').BrowserContext
+
+    const page = await findPageForOrigin(context, 'https://www.youtube.com/youtubei/v1')
+
+    expect(page).toBeUndefined()
+  })
+})
+
+describe('createNeedsPageError', () => {
+  it('suggests the web app origin instead of the API origin', () => {
+    const error = createNeedsPageError('https://api.github.com')
+
+    expect(error.payload.action).toContain('https://github.com/')
+  })
+})
 
 describe('executeSessionHttp', () => {
   it('injects cookies and header params for GET request', async () => {
@@ -255,6 +318,211 @@ describe('executeSessionHttp', () => {
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED' },
     })
+  })
+
+  it('throws needs_page when a browser exists but no matching site tab is open', async () => {
+    const browser = mockBrowser(
+      [
+        { name: 'sessionid', value: 'sess_abc' },
+        { name: 'csrftoken', value: 'csrf_xyz' },
+      ],
+      [
+        { url: 'https://www.youtube.com/sw.js', content: '<html><body>worker</body></html>' },
+        { url: 'https://example.com', content: '<html><body>other</body></html>' },
+      ],
+    )
+
+    const spec = instagramSpec()
+    await expect(
+      executeSessionHttp(
+        browser,
+        spec,
+        '/feed/timeline/',
+        'get',
+        spec.paths!['/feed/timeline/']!.get!,
+        {},
+        { fetchImpl: vi.fn() as unknown as typeof fetch, ssrfValidator: async () => {} },
+      ),
+    ).rejects.toMatchObject({
+      payload: {
+        failureClass: 'needs_page',
+        action: expect.stringContaining('https://www.instagram.com/'),
+      },
+    })
+  })
+
+  it('applies query defaults before building the request URL', async () => {
+    const browser = mockBrowser([], [
+      { url: 'https://github.com/openai/openai-node', content: '<html><body>repo</body></html>' },
+    ])
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify([{ id: 1 }]), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+    const spec: OpenApiSpec = {
+      openapi: '3.1.0',
+      info: { title: 'GitHub API', version: '1.0' },
+      servers: [
+        {
+          url: 'https://api.github.com',
+          'x-openweb': {
+            mode: 'session_http',
+          },
+        } as unknown as { url: string },
+      ],
+      paths: {
+        '/repos/{owner}/{repo}/issues': {
+          get: {
+            operationId: 'listIssues',
+            parameters: [
+              { name: 'owner', in: 'path', required: true, schema: { type: 'string' } },
+              { name: 'repo', in: 'path', required: true, schema: { type: 'string' } },
+              { name: 'per_page', in: 'query', schema: { type: 'integer', default: 30 } },
+            ],
+            responses: { '200': { content: { 'application/json': { schema: { type: 'array' } } } } },
+          },
+        },
+      },
+    }
+
+    await executeSessionHttp(
+      browser,
+      spec,
+      '/repos/{owner}/{repo}/issues',
+      'get',
+      spec.paths!['/repos/{owner}/{repo}/issues']!.get!,
+      { owner: 'openai', repo: 'openai-node' },
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    expect(String((fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![0])).toContain('per_page=30')
+  })
+
+  it('maps HTTP 401 to needs_login instead of fatal', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ message: 'unauthorized' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    await expect(
+      executeSessionHttp(
+        browser,
+        spec,
+        '/feed/timeline/',
+        'get',
+        spec.paths!['/feed/timeline/']!.get!,
+        {},
+        { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+      ),
+    ).rejects.toMatchObject({
+      payload: {
+        message: 'HTTP 401',
+        failureClass: 'needs_login',
+        retriable: true,
+      },
+    })
+  })
+
+  it('allows auth-injected query params to satisfy required query validation', async () => {
+    const browser = mockBrowser([], [
+      {
+        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        content: '<html><body>youtube</body></html>',
+        evaluateResult: 'yt_api_key_123',
+      },
+    ])
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+    const spec: OpenApiSpec = {
+      openapi: '3.1.0',
+      info: { title: 'YouTube', version: '1.0' },
+      servers: [
+        {
+          url: 'https://www.youtube.com/youtubei/v1',
+          'x-openweb': {
+            mode: 'session_http',
+            auth: {
+              type: 'page_global',
+              expression: 'ytcfg.data_.INNERTUBE_API_KEY',
+              inject: { query: 'key' },
+            },
+          },
+        } as unknown as { url: string },
+      ],
+      paths: {
+        '/player': {
+          post: {
+            operationId: 'getVideoInfo',
+            parameters: [
+              { name: 'key', in: 'query', required: true, schema: { type: 'string' } },
+            ],
+            requestBody: {
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      videoId: { type: 'string' },
+                      context: {
+                        type: 'object',
+                        default: {
+                          client: {
+                            clientName: 'WEB',
+                            clientVersion: '2.20260316.01.00',
+                            hl: 'en',
+                            gl: 'US',
+                          },
+                        },
+                      },
+                    },
+                    required: ['videoId'],
+                  },
+                },
+              },
+            },
+            responses: { '200': { content: { 'application/json': { schema: { type: 'object' } } } } },
+          },
+        },
+      },
+    }
+
+    await executeSessionHttp(
+      browser,
+      spec,
+      '/player',
+      'post',
+      spec.paths!['/player']!.post!,
+      { videoId: 'dQw4w9WgXcQ' },
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    expect(String((fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![0])).toContain('key=yt_api_key_123')
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![1]?.body).toBe(
+      JSON.stringify({
+        videoId: 'dQw4w9WgXcQ',
+        context: {
+          client: {
+            clientName: 'WEB',
+            clientVersion: '2.20260316.01.00',
+            hl: 'en',
+            gl: 'US',
+          },
+        },
+      }),
+    )
   })
 
   it('sends JSON body with non-path/query/header params on POST', async () => {

@@ -17,7 +17,10 @@ function mockInstagramBrowser() {
     contexts: () => [
       {
         cookies: vi.fn(async () => cookies),
-        pages: () => [{ url: () => 'https://www.instagram.com' }],
+        pages: () => [{
+          url: () => 'https://www.instagram.com',
+          content: vi.fn(async () => '<html><body>instagram</body></html>'),
+        }],
       },
     ],
     close: vi.fn(async () => {}),
@@ -29,7 +32,7 @@ describe('executeOperation with instagram-fixture (session_http)', () => {
     const fetchMock = vi.fn(async () =>
       new Response(
         JSON.stringify({
-          items: [{ id: '1', caption: { text: 'hello' } }],
+          feed_items: [{ id: '1', caption: { text: 'hello' } }],
           next_max_id: 'cursor_123',
           more_available: true,
         }),
@@ -50,7 +53,7 @@ describe('executeOperation with instagram-fixture (session_http)', () => {
 
     expect(result.status).toBe(200)
     expect(result.responseSchemaValid).toBe(true)
-    expect((result.body as Record<string, unknown>).items).toBeInstanceOf(Array)
+    expect((result.body as Record<string, unknown>).feed_items).toBeInstanceOf(Array)
 
     // Verify the fetch was called with correct URL and headers
     const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
@@ -129,7 +132,7 @@ describe('executeOperation with instagram-fixture (session_http)', () => {
   it('schema validation passes for conforming response', async () => {
     const fetchMock = vi.fn(async () =>
       new Response(
-        JSON.stringify({ items: [{ id: '1' }], next_max_id: 'abc', more_available: true }),
+        JSON.stringify({ feed_items: [{ id: '1' }], next_max_id: 'abc', more_available: true }),
         { status: 200, headers: { 'content-type': 'application/json' } },
       ),
     ) as unknown as typeof fetch

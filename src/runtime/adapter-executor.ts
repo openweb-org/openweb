@@ -9,6 +9,10 @@ import type { CodeAdapter } from '../types/adapter.js'
 
 const adapterCache = new Map<string, CodeAdapter>()
 
+function preferTypeScriptAdapter(): boolean {
+  return process.argv[1]?.endsWith('.ts') ?? false
+}
+
 /**
  * Load a CodeAdapter from the fixture/skill package's adapters/ directory.
  * Tries .js first (production builds), then .ts (dev mode under tsx).
@@ -32,10 +36,15 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
   if (cached) return cached
 
   const adapterDir = path.join(siteRoot, 'adapters')
-  const candidates = [
-    path.join(adapterDir, `${adapterName}.js`),
-    path.join(adapterDir, `${adapterName}.ts`),
-  ]
+  const candidates = preferTypeScriptAdapter()
+    ? [
+        path.join(adapterDir, `${adapterName}.ts`),
+        path.join(adapterDir, `${adapterName}.js`),
+      ]
+    : [
+        path.join(adapterDir, `${adapterName}.js`),
+        path.join(adapterDir, `${adapterName}.ts`),
+      ]
 
   let adapter: CodeAdapter | undefined
   let lastError: Error | undefined
@@ -97,7 +106,13 @@ export async function executeAdapter(
   operation: string,
   params: Readonly<Record<string, unknown>>,
 ): Promise<unknown> {
-  const ready = await adapter.init(page)
+  let ready = await adapter.init(page)
+  if (!ready) {
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(500)
+    ready = await adapter.init(page)
+  }
+
   if (!ready) {
     throw new OpenWebError({
       error: 'execution_failed',

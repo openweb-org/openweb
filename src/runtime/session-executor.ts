@@ -1,7 +1,13 @@
-import type { Browser, BrowserContext } from 'playwright'
+import type { Browser, BrowserContext, Page } from 'playwright'
 
-import { OpenWebError } from '../lib/errors.js'
-import type { OpenApiOperation, OpenApiParameter, OpenApiSpec } from '../lib/openapi.js'
+import { OpenWebError, getHttpFailure } from '../lib/errors.js'
+import {
+  getRequestBodyParameters,
+  validateParams,
+  type OpenApiOperation,
+  type OpenApiParameter,
+  type OpenApiSpec,
+} from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../types/primitives.js'
 import type { ExecutionMode, XOpenWebServer } from '../types/extensions.js'
@@ -27,22 +33,69 @@ const MAX_REDIRECTS = 5
 const SENSITIVE_HEADERS = ['cookie', 'authorization', 'x-csrftoken', 'x-csrf-token']
 const UNSAFE_REF_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
 
+function getPageHintUrl(serverUrl: string): string {
+  try {
+    const url = new URL(serverUrl)
+    const pageUrl = new URL(url.toString())
+    if (pageUrl.hostname.startsWith('api.')) {
+      pageUrl.hostname = pageUrl.hostname.slice(4)
+      pageUrl.pathname = '/'
+      pageUrl.search = ''
+      pageUrl.hash = ''
+      return pageUrl.toString()
+    }
+
+    return `${url.origin}/`
+  } catch {
+    return serverUrl
+  }
+}
+
+async function listCandidatePages(context: BrowserContext): Promise<Page[]> {
+  const candidates: Page[] = []
+  for (const page of context.pages()) {
+    try {
+      const currentUrl = page.url()
+      if (!currentUrl) {
+        continue
+      }
+
+      const pathname = new URL(currentUrl).pathname
+      if (pathname.endsWith('.js')) {
+        continue
+      }
+
+      const content = (await page.content()).trim()
+      if (!content) {
+        continue
+      }
+
+      candidates.push(page)
+    } catch {
+      // Ignore detached pages and invalid URLs.
+    }
+  }
+
+  return candidates
+}
+
 /** Find a page whose URL matches the target server origin (for page.evaluate scoping) */
-export function findPageForOrigin(context: BrowserContext, serverUrl: string): import('playwright').Page | undefined {
+export async function findPageForOrigin(context: BrowserContext, serverUrl: string): Promise<Page | undefined> {
   try {
     const targetOrigin = new URL(serverUrl).origin
     const targetHost = new URL(serverUrl).hostname
+    const pages = await listCandidatePages(context)
 
     // Pass 1: exact origin match
-    for (const page of context.pages()) {
+    for (const page of pages) {
       try {
         if (page.url().startsWith(targetOrigin)) return page
       } catch { /* skip */ }
     }
 
     // Pass 2: same hostname or base domain match (www.youtube.com ↔ youtube.com)
-    const baseDomain = targetHost.replace(/^www\./, '')
-    for (const page of context.pages()) {
+    const baseDomain = targetHost.replace(/^(www|api)\./, '')
+    for (const page of pages) {
       try {
         const pageHost = new URL(page.url()).hostname
         if (pageHost === baseDomain || pageHost === 'www.' + baseDomain || pageHost.endsWith('.' + baseDomain)) {
@@ -55,7 +108,7 @@ export function findPageForOrigin(context: BrowserContext, serverUrl: string): i
     // This handles cases like API at bsky.social, web app at bsky.app
     const sld = baseDomain.split('.')[0]
     if (sld && sld.length > 3) { // Only for non-trivial SLDs (skip "api", "www", etc.)
-      for (const page of context.pages()) {
+      for (const page of pages) {
         try {
           const pageHost = new URL(page.url()).hostname
           const pageSld = pageHost.replace(/^www\./, '').split('.')[0]
@@ -65,6 +118,35 @@ export function findPageForOrigin(context: BrowserContext, serverUrl: string): i
     }
   } catch { /* invalid serverUrl */ }
   return undefined
+}
+
+export function createNeedsPageError(serverUrl: string): OpenWebError {
+  const pageHintUrl = getPageHintUrl(serverUrl)
+  return new OpenWebError({
+    error: 'execution_failed',
+    code: 'EXECUTION_FAILED',
+    message: `No open page matches ${pageHintUrl}`,
+    action: `Open a tab to ${pageHintUrl} and retry.`,
+    retriable: true,
+    failureClass: 'needs_page',
+  })
+}
+
+export function buildJsonRequestBody(operation: OpenApiOperation, params: Record<string, unknown>): string | undefined {
+  const bodyParams = getRequestBodyParameters(operation)
+  if (bodyParams.length === 0) {
+    return undefined
+  }
+
+  const body: Record<string, unknown> = {}
+  for (const param of bodyParams) {
+    const value = params[param.name]
+    if (value !== undefined) {
+      body[param.name] = value
+    }
+  }
+
+  return Object.keys(body).length > 0 ? JSON.stringify(body) : undefined
 }
 
 /** Read x-openweb config from the server entry matching this operation */
@@ -348,24 +430,24 @@ export async function executeSessionHttp(
     })
   }
 
-  const page = findPageForOrigin(context, serverUrl) ?? context.pages()[0]
+  const page = await findPageForOrigin(context, serverUrl)
   if (!page) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: 'No page available in browser context.',
-      action: 'Open a tab in Chrome and navigate to the site.',
-      retriable: true,
-      failureClass: 'needs_page',
-    })
+    throw createNeedsPageError(serverUrl)
   }
 
   const handle: BrowserHandle = { page, context }
+  const authResult = serverExt?.auth
+    ? await resolveAuth(handle, serverExt.auth, serverUrl, deps)
+    : undefined
 
   // Resolve all parameters into: path, query, header
   const allParams = resolveAllParameters(spec, operation)
-  const resolvedPath = substitutePath(operationPath, allParams, params)
-  const headerParams = buildHeaderParams(allParams, params)
+  const inputParams = validateParams(
+    [...allParams, ...getRequestBodyParameters(operation)],
+    { ...params, ...authResult?.queryParams },
+  )
+  const resolvedPath = substitutePath(operationPath, allParams, inputParams)
+  const headerParams = buildHeaderParams(allParams, inputParams)
 
   // Build URL with query params only
   const baseUrl = new URL(serverUrl)
@@ -373,7 +455,7 @@ export async function executeSessionHttp(
   const target = new URL(fullPath, baseUrl.origin)
   const queryParams = allParams.filter((p) => p.in === 'query')
   for (const param of queryParams) {
-    const value = params[param.name]
+    const value = inputParams[param.name]
     if (value === undefined || value === null) continue
     if (Array.isArray(value)) {
       for (const item of value) {
@@ -388,16 +470,7 @@ export async function executeSessionHttp(
   let jsonBody: string | undefined
   const upperMethod = method.toUpperCase()
   if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
-    const consumedParams = new Set(allParams.map((p) => p.name))
-    const bodyParams: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(params)) {
-      if (!consumedParams.has(key)) {
-        bodyParams[key] = value
-      }
-    }
-    if (Object.keys(bodyParams).length > 0) {
-      jsonBody = JSON.stringify(bodyParams)
-    }
+    jsonBody = buildJsonRequestBody(operation, inputParams)
   }
 
   // Merge headers — session_http always sends Referer (many sites require it)
@@ -412,8 +485,7 @@ export async function executeSessionHttp(
 
   // Resolve auth
   let cookieString: string | undefined
-  if (serverExt?.auth) {
-    const authResult = await resolveAuth(handle, serverExt.auth, serverUrl, deps)
+  if (authResult) {
     Object.assign(headers, authResult.headers)
     cookieString = authResult.cookieString
 
@@ -517,13 +589,16 @@ export async function executeSessionHttp(
   }
 
   if (!response.ok) {
+    const httpFailure = getHttpFailure(response.status)
     throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
+      error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
+      code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
       message: `HTTP ${response.status}`,
-      action: 'Check parameters and ensure you are logged in.',
-      retriable: response.status === 429 || response.status >= 500,
-      failureClass: response.status === 429 || response.status >= 500 ? 'retriable' : 'fatal',
+      action: httpFailure.failureClass === 'needs_login'
+        ? 'Log in to the site in Chrome and retry.'
+        : 'Check parameters and endpoint availability.',
+      retriable: httpFailure.retriable,
+      failureClass: httpFailure.failureClass,
     })
   }
 

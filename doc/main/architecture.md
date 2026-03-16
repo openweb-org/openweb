@@ -140,6 +140,7 @@ openweb sites                                  # list compiled sites
 openweb <site>                                 # list operations (tools)
 openweb <site> <op>                            # show params + response schema
 openweb <site> exec <op> '{...}'               # execute operation
+openweb <site> exec <op> '{...}' --max-response 8192  # truncate oversized stdout
 openweb <site> test                            # run site test cases
 openweb capture start --cdp-endpoint ...       # record browser session
 openweb compile <url>                          # generate skill package
@@ -158,8 +159,8 @@ openweb compile <url>                          # generate skill package
 | GitHub | L2 | cookie_session | meta_tag | — | script_json | session_http |
 | Reddit | L2 | cookie_session | — | — | — | session_http |
 | Discord | L2 | webpack_module_walk | — | — | — | browser_fetch |
-| WhatsApp | L3 | adapter | — | — | adapter | browser_fetch |
-| Telegram | L3 | adapter | — | — | adapter | browser_fetch |
+| WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |
+| Telegram | L3 | adapter | — | — | adapter | adapter (L3) |
 
 ---
 

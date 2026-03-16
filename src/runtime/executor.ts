@@ -4,10 +4,11 @@ import path from 'node:path'
 import type { Browser } from 'playwright'
 import Ajv from 'ajv'
 
-import { OpenWebError } from '../lib/errors.js'
+import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import {
   buildQueryUrl,
   findOperation,
+  getRequestBodyParameters,
   getResponseSchema,
   getServerUrl,
   loadOpenApi,
@@ -16,7 +17,7 @@ import {
 } from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import { connectWithRetry } from '../capture/connection.js'
-import { resolveMode, executeSessionHttp, findPageForOrigin, resolveAllParameters } from './session-executor.js'
+import { createNeedsPageError, resolveMode, executeSessionHttp, findPageForOrigin, resolveAllParameters } from './session-executor.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 import { loadAdapter, executeAdapter } from './adapter-executor.js'
 import type { AdapterRef, XOpenWebOperation } from '../types/extensions.js'
@@ -127,22 +128,18 @@ export async function executeOperation(
         })
       }
       const serverUrl = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
-      const page = findPageForOrigin(context, serverUrl) ?? context.pages()[0]
+      const page = await findPageForOrigin(context, serverUrl)
       if (!page) {
-        throw new OpenWebError({
-          error: 'execution_failed',
-          code: 'EXECUTION_FAILED',
-          message: 'No page available in browser context.',
-          action: 'Open a tab and navigate to the site.',
-          retriable: true,
-          failureClass: 'needs_page',
-        })
+        throw createNeedsPageError(serverUrl)
       }
       const mergedParams = { ...params, ...adapterRef.params }
 
       // Validate params: required checks, unknown rejection, type validation, defaults
       const allParams = resolveAllParameters(spec, operationRef.operation)
-      const adapterParams = validateParams(allParams, mergedParams)
+      const adapterParams = validateParams(
+        [...allParams, ...getRequestBodyParameters(operationRef.operation)],
+        mergedParams,
+      )
 
       body = await executeAdapter(page, adapter, adapterRef.operation, adapterParams)
       status = 200
@@ -198,13 +195,14 @@ export async function executeOperation(
     const response = await fetchWithValidatedRedirects(url, operationRef.method.toUpperCase(), deps)
 
     if (!response.ok) {
+      const httpFailure = getHttpFailure(response.status)
       throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
+        error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
+        code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
         message: `HTTP ${response.status}`,
         action: `Check parameters with: openweb ${site} ${operationId}`,
-        retriable: response.status === 429 || response.status >= 500,
-        failureClass: response.status === 429 || response.status >= 500 ? 'retriable' : 'fatal',
+        retriable: httpFailure.retriable,
+        failureClass: httpFailure.failureClass,
       })
     }
 

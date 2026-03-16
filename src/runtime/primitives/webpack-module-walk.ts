@@ -26,18 +26,22 @@ export async function resolveWebpackModuleWalk(
 ): Promise<ResolvedInjections & { queryParams?: Record<string, string> }> {
   validateConfig(config)
 
-  const token = await handle.page.evaluate(
+  const result = await handle.page.evaluate(
     (args: { chunkGlobal: string; moduleTest: string; call: string }) => {
       const wp = (window as Record<string, unknown>)[args.chunkGlobal] as
         | Array<unknown>
         | undefined
-      if (!wp || !Array.isArray(wp)) return null
+      if (!wp || !Array.isArray(wp)) {
+        return { status: 'cache_empty' as const }
+      }
 
       let found: string | null = null
+      let sawModules = false
       wp.push([
         [Symbol()],
         {},
         (r: { c?: Record<string, { exports?: Record<string, unknown> }> }) => {
+          sawModules = Object.keys(r.c ?? {}).length > 0
           for (const id of Object.keys(r.c ?? {})) {
             const exp = r.c![id]?.exports
             if (!exp) continue
@@ -57,12 +61,29 @@ export async function resolveWebpackModuleWalk(
         },
       ])
       wp.pop()
-      return found
+      if (!sawModules) {
+        return { status: 'cache_empty' as const }
+      }
+      if (!found) {
+        return { status: 'token_missing' as const }
+      }
+      return { status: 'ok' as const, token: found }
     },
     { chunkGlobal: config.chunk_global, moduleTest: config.module_test, call: config.call },
   )
 
-  if (!token) {
+  if (result.status === 'cache_empty') {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `webpack_module_walk: webpack cache is not ready for ${config.chunk_global}`,
+      action: 'Keep the tab active until the app finishes loading, then retry.',
+      retriable: true,
+      failureClass: 'retriable',
+    })
+  }
+
+  if (result.status !== 'ok') {
     throw new OpenWebError({
       error: 'auth',
       code: 'AUTH_FAILED',
@@ -72,6 +93,7 @@ export async function resolveWebpackModuleWalk(
       failureClass: 'needs_login',
     })
   }
+  const token = result.token
 
   const headers: Record<string, string> = {}
   const queryParams: Record<string, string> = {}

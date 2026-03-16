@@ -7,6 +7,8 @@ import type { Page } from 'playwright'
 function mockPage(): Page {
   return {
     evaluate: vi.fn(),
+    reload: vi.fn(async () => {}),
+    waitForTimeout: vi.fn(async () => {}),
     url: () => 'https://example.com',
   } as unknown as Page
 }
@@ -52,6 +54,42 @@ describe('executeAdapter', () => {
       payload: { code: 'EXECUTION_FAILED' },
     })
     expect(adapter.execute).not.toHaveBeenCalled()
+  })
+
+  it('reloads once and retries init before failing', async () => {
+    const page = mockPage()
+    const adapter = mockAdapter({
+      init: vi.fn()
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(false),
+    })
+
+    await expect(
+      executeAdapter(page, adapter, 'getChats', {}),
+    ).rejects.toMatchObject({
+      payload: { failureClass: 'retriable' },
+    })
+
+    expect(page.reload).toHaveBeenCalledTimes(1)
+    expect(page.waitForTimeout).toHaveBeenCalledTimes(1)
+    expect(adapter.init).toHaveBeenCalledTimes(2)
+  })
+
+  it('reloads and recovers when init succeeds on retry', async () => {
+    const page = mockPage()
+    const adapter = mockAdapter({
+      init: vi.fn()
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true),
+    })
+
+    const result = await executeAdapter(page, adapter, 'getChats', {})
+
+    expect(page.reload).toHaveBeenCalledTimes(1)
+    expect(page.waitForTimeout).toHaveBeenCalledTimes(1)
+    expect(adapter.init).toHaveBeenCalledTimes(2)
+    expect(adapter.execute).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ result: 'ok' })
   })
 
   it('throws when not authenticated', async () => {

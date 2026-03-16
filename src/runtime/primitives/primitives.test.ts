@@ -385,7 +385,29 @@ describe('resolveExchangeChain', () => {
         inject: { header: 'Authorization', prefix: 'Bearer ' },
       }, 'https://oauth.reddit.com', { fetchImpl: fetchMock }),
     ).rejects.toMatchObject({
-      payload: { code: 'AUTH_FAILED' },
+      payload: { code: 'AUTH_FAILED', failureClass: 'needs_login' },
+    })
+  })
+
+  it('treats exchange step rate limiting as retriable', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response('Too Many Requests', { status: 429 }),
+    ) as unknown as typeof fetch
+
+    await expect(
+      resolveExchangeChain(handle, {
+        steps: [{ call: 'https://www.reddit.com/svc/shreddit/token', extract: 'accessToken' }],
+        inject: { header: 'Authorization', prefix: 'Bearer ' },
+      }, 'https://oauth.reddit.com', { fetchImpl: fetchMock }),
+    ).rejects.toMatchObject({
+      payload: { code: 'EXECUTION_FAILED', failureClass: 'retriable' },
     })
   })
 
@@ -410,7 +432,7 @@ describe('resolveExchangeChain', () => {
         inject: { header: 'Authorization' },
       }, 'https://example.com', { fetchImpl: fetchMock }),
     ).rejects.toMatchObject({
-      payload: { code: 'AUTH_FAILED' },
+      payload: { code: 'EXECUTION_FAILED', failureClass: 'fatal' },
     })
   })
 
@@ -582,7 +604,30 @@ describe('resolveApiResponse', () => {
         inject: { header: 'X-CSRF' },
       }, 'https://example.com', { fetchImpl: fetchMock }),
     ).rejects.toMatchObject({
-      payload: { code: 'AUTH_FAILED' },
+      payload: { code: 'EXECUTION_FAILED', failureClass: 'fatal' },
+    })
+  })
+
+  it('treats api_response rate limiting as retriable', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response('Server Error', { status: 500 }),
+    ) as unknown as typeof fetch
+
+    await expect(
+      resolveApiResponse(handle, {
+        endpoint: 'https://example.com/csrf',
+        extract: 'token',
+        inject: { header: 'X-CSRF' },
+      }, 'https://example.com', { fetchImpl: fetchMock }),
+    ).rejects.toMatchObject({
+      payload: { code: 'EXECUTION_FAILED', failureClass: 'retriable' },
     })
   })
 })
@@ -591,7 +636,10 @@ describe('resolveWebpackModuleWalk', () => {
   it('extracts token from webpack module cache and injects as header', async () => {
     const handle: BrowserHandle = {
       page: {
-        evaluate: vi.fn(async () => 'mfa.long_discord_token_value_here_1234567890'),
+        evaluate: vi.fn(async () => ({
+          status: 'ok',
+          token: 'mfa.long_discord_token_value_here_1234567890',
+        })),
       } as unknown as BrowserHandle['page'],
       context: {} as BrowserHandle['context'],
     }
@@ -609,7 +657,10 @@ describe('resolveWebpackModuleWalk', () => {
   it('applies prefix when configured', async () => {
     const handle: BrowserHandle = {
       page: {
-        evaluate: vi.fn(async () => 'token_value_longer_than_20_chars'),
+        evaluate: vi.fn(async () => ({
+          status: 'ok',
+          token: 'token_value_longer_than_20_chars',
+        })),
       } as unknown as BrowserHandle['page'],
       context: {} as BrowserHandle['context'],
     }
@@ -627,7 +678,10 @@ describe('resolveWebpackModuleWalk', () => {
   it('injects as query param when configured', async () => {
     const handle: BrowserHandle = {
       page: {
-        evaluate: vi.fn(async () => 'api_key_from_webpack_modules'),
+        evaluate: vi.fn(async () => ({
+          status: 'ok',
+          token: 'api_key_from_webpack_modules',
+        })),
       } as unknown as BrowserHandle['page'],
       context: {} as BrowserHandle['context'],
     }
@@ -642,10 +696,10 @@ describe('resolveWebpackModuleWalk', () => {
     expect(result.queryParams).toEqual({ key: 'api_key_from_webpack_modules' })
   })
 
-  it('throws when no token found', async () => {
+  it('throws retriable when webpack cache is empty', async () => {
     const handle: BrowserHandle = {
       page: {
-        evaluate: vi.fn(async () => null),
+        evaluate: vi.fn(async () => ({ status: 'cache_empty' })),
       } as unknown as BrowserHandle['page'],
       context: {} as BrowserHandle['context'],
     }
@@ -658,7 +712,7 @@ describe('resolveWebpackModuleWalk', () => {
         inject: { header: 'Authorization' },
       }),
     ).rejects.toMatchObject({
-      payload: { code: 'AUTH_FAILED' },
+      payload: { code: 'EXECUTION_FAILED', failureClass: 'retriable' },
     })
   })
 

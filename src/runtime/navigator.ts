@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import type { JsonSchema } from '../lib/openapi.js'
+import { getRequestBodyParameters, type JsonSchema } from '../lib/openapi.js'
 import { findOperation, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import type { RiskTier } from '../types/extensions.js'
 import type { Manifest } from '../types/manifest.js'
@@ -41,6 +41,10 @@ async function loadManifest(site: string): Promise<Manifest | undefined> {
   }
 }
 
+function getModeLabel(mode: string, hasAdapter: boolean): string {
+  return hasAdapter ? 'adapter (L3)' : mode
+}
+
 export async function renderSite(site: string): Promise<string> {
   const spec = await loadOpenApi(site)
   const operations = listOperations(spec)
@@ -61,10 +65,14 @@ export async function renderSite(site: string): Promise<string> {
   const firstOp = operations[0]
   const serverExt = getServerXOpenWeb(spec, firstOp.operation)
   const siteMode = serverExt?.mode ?? 'direct_http'
+  const hasAdapter = operations.some((entry) => {
+    const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
+    return !!opExt?.adapter
+  })
   const requiresBrowser = siteMode !== 'direct_http'
   const requiresAuth = manifest?.requires_auth ?? !!serverExt?.auth
 
-  lines.push(`Mode:             ${siteMode}`)
+  lines.push(`Mode:             ${getModeLabel(siteMode, hasAdapter)}`)
   lines.push(`Requires browser: ${requiresBrowser ? 'yes' : 'no'}`)
   lines.push(`Requires login:   ${requiresAuth ? 'yes' : 'no'}`)
 
@@ -95,6 +103,8 @@ export async function renderOperation(site: string, operationId: string, full: b
   const spec = await loadOpenApi(site)
   const { method, path: opPath, operation } = findOperation(spec, operationId)
   const mode = resolveMode(spec, operation)
+  const opExt = operation['x-openweb'] as Record<string, unknown> | undefined
+  const modeLabel = getModeLabel(mode, !!opExt?.adapter)
 
   const lines: string[] = []
   lines.push(`${method.toUpperCase()} ${opPath}`)
@@ -114,15 +124,25 @@ export async function renderOperation(site: string, operationId: string, full: b
     }
   }
 
+  const bodyParams = getRequestBodyParameters(operation)
+  if (bodyParams.length > 0) {
+    lines.push('Body:')
+    for (const parameter of bodyParams) {
+      const itemType = parameter.schema?.type === 'array' ? `${parameter.schema.items?.type ?? 'unknown'}[]` : formatParamType(parameter.schema?.type)
+      const required = parameter.required ? '[required]' : ''
+      const desc = parameter.description ?? ''
+      lines.push(`  ${parameter.name.padEnd(12)} ${itemType.padEnd(9)} ${desc} ${required}`.trimEnd())
+    }
+  }
+
   const responseSchema = operation.responses?.['200']?.content?.['application/json']?.schema
   if (responseSchema) {
     lines.push(`Returns: ${summarizeSchema(responseSchema)}`)
   }
 
-  lines.push(`Mode: ${mode}`)
+  lines.push(`Mode: ${modeLabel}`)
 
   // Operation-level metadata
-  const opExt = operation['x-openweb'] as Record<string, unknown> | undefined
   if (opExt?.risk_tier) {
     lines.push(`Risk: ${opExt.risk_tier as string}`)
   }

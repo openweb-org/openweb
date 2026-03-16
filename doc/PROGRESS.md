@@ -1,3 +1,24 @@
+## 2026-03-16: M6 Phase 1 — Core hardening on the existing 9 sites
+
+**What changed:**
+- Hardened page matching across `session_http`, `browser_fetch`, and adapter paths: worker-like pages are filtered out, unrelated-tab fallback is gone, and `needs_page` now points to a concrete URL to open
+- Added request-body visibility and runtime binding: `requestBody` is modeled in OpenAPI parsing, `renderOperation()` shows body fields, body defaults are applied, and YouTube now documents `videoId` while auto-filling a minimal `context.client`
+- Fixed failure classification: HTTP `401/403` now surface as `needs_login`, primitive `429/5xx` failures are retriable, webpack-cache-empty is retriable, and adapter-backed sites now throw structured `OpenWebError`s instead of plain `Error`
+- Added adapter init auto-retry with reload, navigator adapter-mode rendering, CLI `--max-response`, and fixture/schema corrections (`feed_items`, YouTube body defaults)
+- Synced benchmark docs and the local `openweb` skill to the new agent contract
+
+**Why:**
+- M5 dogfood exposed false-positive page selection, hidden body params, and ambiguous adapter/runtime failures that prevented reliable agent recovery
+- The goal of Phase 1 is to make the existing 9 verified sites mechanically reliable before adding more patterns in Phase 2
+
+**Key files:** `src/runtime/session-executor.ts`, `src/runtime/browser-fetch-executor.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/navigator.ts`, `src/lib/openapi.ts`, `src/lib/errors.ts`, `src/commands/exec.ts`, `src/cli.ts`, `src/fixtures/instagram-fixture/openapi.yaml`, `src/fixtures/youtube-fixture/openapi.yaml`, `.claude/skills/openweb/SKILL.md`, `tests/benchmark/`
+**Verification:** `pnpm test` passed (183/183), `pnpm build` passed, real Chrome CDP smoke passed for Open-Meteo/Instagram/GitHub/YouTube/Discord/Telegram, benchmark error cases passed (`needs_browser`, `fatal`)
+**Commit:** (uncommitted)
+**Next:** M6 Phase 2 — pattern-driven expansion (Next.js SSR, DOM-only extraction, GraphQL cursor, MSAL/sessionStorage, exchange_chain E2E)
+**Blockers:** None
+
+---
+
 ## 2026-03-16: M5 Codex review + doc sync
 
 **What changed:**

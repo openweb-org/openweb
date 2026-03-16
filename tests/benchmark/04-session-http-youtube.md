@@ -18,12 +18,13 @@ Uses `page_global` auth (injects API key as query param) + `sapisidhash` signing
 
 1. `openweb youtube-fixture` — check readiness (session_http, Requires browser: yes, Requires login: yes)
 2. `openweb youtube-fixture getVideoInfo` — inspect parameters
-3. `openweb youtube-fixture exec getVideoInfo '{}' --cdp-endpoint http://localhost:9222` — execute
+3. `openweb youtube-fixture exec getVideoInfo '{"videoId":"dQw4w9WgXcQ"}' --cdp-endpoint http://localhost:9222` — execute
 
 ## Success Criteria
 
 - stdout contains valid JSON response
 - Response contains video player data (responseContext or similar YouTube API structure)
+- Agent supplies `videoId`; runtime fills the default `context.client`
 - No auth/signing errors
 
 ## Failure Criteria

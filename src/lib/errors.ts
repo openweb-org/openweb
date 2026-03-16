@@ -20,6 +20,27 @@ export interface OpenWebErrorPayload {
   readonly failureClass: FailureClass
 }
 
+export function getHttpFailure(status: number): Pick<OpenWebErrorPayload, 'failureClass' | 'retriable'> {
+  if (status === 401 || status === 403) {
+    return {
+      failureClass: 'needs_login',
+      retriable: true,
+    }
+  }
+
+  if (status === 429 || status >= 500) {
+    return {
+      failureClass: 'retriable',
+      retriable: true,
+    }
+  }
+
+  return {
+    failureClass: 'fatal',
+    retriable: false,
+  }
+}
+
 export class OpenWebError extends Error {
   public readonly payload: OpenWebErrorPayload
 

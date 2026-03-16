@@ -22,12 +22,18 @@ export interface OpenApiParameter {
   readonly schema?: JsonSchema
 }
 
+export interface OpenApiRequestBody {
+  readonly required?: boolean
+  readonly content?: Record<string, { readonly schema?: JsonSchema }>
+}
+
 export interface OpenApiOperation {
   readonly operationId: string
   readonly summary?: string
   readonly description?: string
   readonly servers?: Array<{ readonly url: string }>
   readonly parameters?: OpenApiParameter[]
+  readonly requestBody?: OpenApiRequestBody
   readonly responses?: Record<
     string,
     {
@@ -232,7 +238,10 @@ export function validateParams(
 
   for (const param of parameters) {
     const value = result[param.name]
-    if ((value === undefined || value === null) && param.required) {
+    if ((value === undefined || value === null) && param.schema?.default !== undefined) {
+      result[param.name] = param.schema.default
+    }
+    if ((result[param.name] === undefined || result[param.name] === null) && param.required) {
       throw new OpenWebError({
         error: 'execution_failed',
         code: 'INVALID_PARAMS',
@@ -241,9 +250,6 @@ export function validateParams(
         retriable: false,
         failureClass: 'fatal',
       })
-    }
-    if ((value === undefined || value === null) && param.schema?.default !== undefined) {
-      result[param.name] = param.schema.default
     }
     if (result[param.name] !== undefined && result[param.name] !== null) {
       validateType(param.name, result[param.name], param.schema)
@@ -394,4 +400,24 @@ export function getResponseSchema(operation: OpenApiOperation): JsonSchema | und
     operation.responses?.['200']?.content?.['application/json']?.schema ??
     operation.responses?.['2XX']?.content?.['application/json']?.schema
   )
+}
+
+export function getRequestBodySchema(operation: OpenApiOperation): JsonSchema | undefined {
+  return operation.requestBody?.content?.['application/json']?.schema
+}
+
+export function getRequestBodyParameters(operation: OpenApiOperation): OpenApiParameter[] {
+  const schema = getRequestBodySchema(operation)
+  if (schema?.type !== 'object') {
+    return []
+  }
+
+  const required = new Set(schema.required ?? [])
+  return Object.entries(schema.properties ?? {}).map(([name, propertySchema]) => ({
+    name,
+    in: 'body',
+    required: required.has(name),
+    description: typeof propertySchema?.description === 'string' ? propertySchema.description : undefined,
+    schema: propertySchema,
+  }))
 }

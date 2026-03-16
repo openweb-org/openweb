@@ -1,4 +1,4 @@
-import { OpenWebError } from '../../lib/errors.js'
+import { OpenWebError, getHttpFailure } from '../../lib/errors.js'
 import type { BrowserHandle, ResolvedInjections } from './types.js'
 
 export interface ApiResponseConfig {
@@ -58,13 +58,16 @@ export async function resolveApiResponse(
   })
 
   if (!response.ok) {
+    const httpFailure = getHttpFailure(response.status)
     throw new OpenWebError({
-      error: 'auth',
-      code: 'AUTH_FAILED',
+      error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
+      code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
       message: `CSRF endpoint ${config.endpoint} returned ${response.status}`,
-      action: 'Ensure you are logged in.',
-      retriable: true,
-      failureClass: 'needs_login',
+      action: httpFailure.failureClass === 'needs_login'
+        ? 'Ensure you are logged in.'
+        : 'Retry later or inspect the endpoint definition.',
+      retriable: httpFailure.retriable,
+      failureClass: httpFailure.failureClass,
     })
   }
 
@@ -86,12 +89,12 @@ export async function resolveApiResponse(
   const value = extractPath(responseData, config.extract)
   if (!value) {
     throw new OpenWebError({
-      error: 'auth',
-      code: 'AUTH_FAILED',
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
       message: `Could not extract "${config.extract}" from ${config.endpoint} response.`,
       action: 'The response structure may have changed.',
-      retriable: true,
-      failureClass: 'needs_login',
+      retriable: false,
+      failureClass: 'fatal',
     })
   }
 

@@ -30,4 +30,19 @@ describe('navigator', () => {
     expect(output).toContain('Mode: direct_http')
     expect(output).toContain('Risk: safe')
   })
+
+  it('renders request body fields for JSON operations', async () => {
+    const output = await renderOperation('youtube-fixture', 'getVideoInfo', false)
+
+    expect(output).toContain('Body:')
+    expect(output).toMatch(/videoId.*\[required\]/)
+  })
+
+  it('renders L3 adapter mode for adapter-backed sites and operations', async () => {
+    const siteOutput = await renderSite('telegram-fixture')
+    const opOutput = await renderOperation('telegram-fixture', 'getDialogs', false)
+
+    expect(siteOutput).toContain('Mode:             adapter (L3)')
+    expect(opOutput).toContain('Mode: adapter (L3)')
+  })
 })

@@ -8,6 +8,7 @@
  * Key pitfall: module IDs and export names are mangled and change per deploy.
  * The adapter finds getGlobal dynamically by testing function return shapes.
  */
+import { OpenWebError } from '../../../lib/errors.js'
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright'
 
@@ -41,6 +42,51 @@ function findGetGlobal(): (() => Record<string, unknown>) | null {
 // Serialize the function for injection into page.evaluate
 const FIND_GET_GLOBAL_SRC = findGetGlobal.toString()
 
+function needsPageError(message: string): OpenWebError {
+  return new OpenWebError({
+    error: 'execution_failed',
+    code: 'EXECUTION_FAILED',
+    message,
+    action: 'Open Telegram Web A, wait for chats to load, and retry.',
+    retriable: true,
+    failureClass: 'needs_page',
+  })
+}
+
+function fatalAdapterError(message: string): OpenWebError {
+  return new OpenWebError({
+    error: 'execution_failed',
+    code: 'EXECUTION_FAILED',
+    message,
+    action: 'Check the operation name or update the adapter.',
+    retriable: false,
+    failureClass: 'fatal',
+  })
+}
+
+function normalizeTelegramError(error: unknown): OpenWebError {
+  if (error instanceof OpenWebError) {
+    return error
+  }
+
+  const message = error instanceof Error ? error.message : String(error)
+  if (message.includes('getGlobal not found')) {
+    return needsPageError(message)
+  }
+  if (message.startsWith('Unknown operation:')) {
+    return fatalAdapterError(message)
+  }
+
+  return new OpenWebError({
+    error: 'execution_failed',
+    code: 'EXECUTION_FAILED',
+    message,
+    action: 'Retry after Telegram Web finishes bootstrapping.',
+    retriable: true,
+    failureClass: 'retriable',
+  })
+}
+
 export default {
   name: 'telegram-protocol',
   description: 'Telegram Web A global state access via teact/webpack',
@@ -56,78 +102,91 @@ export default {
   },
 
   async isAuthenticated(page: Page): Promise<boolean> {
-    return page.evaluate((fnSrc: string) => {
+    const state = await page.evaluate((fnSrc: string) => {
       const findFn = new Function(`return (${fnSrc})()`) as () => (() => Record<string, unknown>) | null
       const getGlobal = findFn()
-      return !!getGlobal?.()?.currentUserId
+      if (!getGlobal) {
+        return 'missing'
+      }
+      return getGlobal()?.currentUserId ? 'authenticated' : 'unauthenticated'
     }, FIND_GET_GLOBAL_SRC)
+
+    if (state === 'missing') {
+      throw needsPageError('getGlobal not found — Telegram state unavailable')
+    }
+
+    return state === 'authenticated'
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    switch (operation) {
-      case 'getDialogs':
-        return page.evaluate((args: { fnSrc: string; limit: number }) => {
-          const getGlobal = new Function(`return (${args.fnSrc})()`)() as (() => Record<string, unknown>) | null
-          if (!getGlobal) throw new Error('getGlobal not found — Telegram state unavailable')
-          const global = getGlobal() as {
-            chats: { byId: Record<string, { id: string; title?: string; type: string }>; listIds?: { active?: string[] } }
-            users: { byId: Record<string, { id: string; firstName?: string; lastName?: string }> }
-          }
-          const chats = global.chats?.byId ?? {}
-          const users = global.users?.byId ?? {}
-          const orderedIds = global.chats?.listIds?.active ?? Object.keys(chats)
-          return orderedIds.slice(0, args.limit).map((id) => {
-            const chat = chats[id]
-            const user = users[id]
-            return {
-              id,
-              title: chat?.title ?? ([user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'unknown'),
-              type: chat?.type ?? 'unknown',
+    try {
+      switch (operation) {
+        case 'getDialogs':
+          return page.evaluate((args: { fnSrc: string; limit: number }) => {
+            const getGlobal = new Function(`return (${args.fnSrc})()`)() as (() => Record<string, unknown>) | null
+            if (!getGlobal) throw new Error('getGlobal not found — Telegram state unavailable')
+            const global = getGlobal() as {
+              chats: { byId: Record<string, { id: string; title?: string; type: string }>; listIds?: { active?: string[] } }
+              users: { byId: Record<string, { id: string; firstName?: string; lastName?: string }> }
             }
-          })
-        }, { fnSrc: FIND_GET_GLOBAL_SRC, limit: (params.limit as number) ?? 50 })
+            const chats = global.chats?.byId ?? {}
+            const users = global.users?.byId ?? {}
+            const orderedIds = global.chats?.listIds?.active ?? Object.keys(chats)
+            return orderedIds.slice(0, args.limit).map((id) => {
+              const chat = chats[id]
+              const user = users[id]
+              return {
+                id,
+                title: chat?.title ?? ([user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'unknown'),
+                type: chat?.type ?? 'unknown',
+              }
+            })
+          }, { fnSrc: FIND_GET_GLOBAL_SRC, limit: (params.limit as number) ?? 50 })
 
-      case 'getMe':
-        return page.evaluate((fnSrc: string) => {
-          const getGlobal = new Function(`return (${fnSrc})()`)() as (() => Record<string, unknown>) | null
-          if (!getGlobal) throw new Error('getGlobal not found')
-          const global = getGlobal() as {
-            currentUserId: string
-            users: { byId: Record<string, { id: string; firstName?: string; lastName?: string; usernames?: Array<{ username: string }> }> }
-          }
-          const userId = global.currentUserId
-          const user = global.users?.byId?.[userId]
-          return {
-            id: userId,
-            firstName: user?.firstName,
-            lastName: user?.lastName,
-            username: user?.usernames?.[0]?.username,
-          }
-        }, FIND_GET_GLOBAL_SRC)
-
-      case 'getMessages':
-        return page.evaluate((args: { fnSrc: string; chatId: string; limit: number }) => {
-          const getGlobal = new Function(`return (${args.fnSrc})()`)() as (() => Record<string, unknown>) | null
-          if (!getGlobal) throw new Error('getGlobal not found')
-          const global = getGlobal() as {
-            messages: { byChatId: Record<string, { byId: Record<string, { id: number; chatId: string; date: number; content?: { text?: { text?: string } } }> }> }
-          }
-          const chatMsgs = global.messages?.byChatId?.[args.chatId]?.byId
-          if (!chatMsgs) return []
-          const msgIds = Object.keys(chatMsgs).sort((a, b) => Number(b) - Number(a)).slice(0, args.limit)
-          return msgIds.map((id) => {
-            const msg = chatMsgs[id]!
-            return {
-              id: msg.id,
-              chatId: msg.chatId,
-              date: msg.date,
-              text: msg.content?.text?.text ?? '',
+        case 'getMe':
+          return page.evaluate((fnSrc: string) => {
+            const getGlobal = new Function(`return (${fnSrc})()`)() as (() => Record<string, unknown>) | null
+            if (!getGlobal) throw new Error('getGlobal not found')
+            const global = getGlobal() as {
+              currentUserId: string
+              users: { byId: Record<string, { id: string; firstName?: string; lastName?: string; usernames?: Array<{ username: string }> }> }
             }
-          })
-        }, { fnSrc: FIND_GET_GLOBAL_SRC, chatId: params.chatId as string, limit: (params.limit as number) ?? 50 })
+            const userId = global.currentUserId
+            const user = global.users?.byId?.[userId]
+            return {
+              id: userId,
+              firstName: user?.firstName,
+              lastName: user?.lastName,
+              username: user?.usernames?.[0]?.username,
+            }
+          }, FIND_GET_GLOBAL_SRC)
 
-      default:
-        throw new Error(`Unknown operation: ${operation}`)
+        case 'getMessages':
+          return page.evaluate((args: { fnSrc: string; chatId: string; limit: number }) => {
+            const getGlobal = new Function(`return (${args.fnSrc})()`)() as (() => Record<string, unknown>) | null
+            if (!getGlobal) throw new Error('getGlobal not found')
+            const global = getGlobal() as {
+              messages: { byChatId: Record<string, { byId: Record<string, { id: number; chatId: string; date: number; content?: { text?: { text?: string } } }> }> }
+            }
+            const chatMsgs = global.messages?.byChatId?.[args.chatId]?.byId
+            if (!chatMsgs) return []
+            const msgIds = Object.keys(chatMsgs).sort((a, b) => Number(b) - Number(a)).slice(0, args.limit)
+            return msgIds.map((id) => {
+              const msg = chatMsgs[id]!
+              return {
+                id: msg.id,
+                chatId: msg.chatId,
+                date: msg.date,
+                text: msg.content?.text?.text ?? '',
+              }
+            })
+          }, { fnSrc: FIND_GET_GLOBAL_SRC, chatId: params.chatId as string, limit: (params.limit as number) ?? 50 })
+
+        default:
+          throw fatalAdapterError(`Unknown operation: ${operation}`)
+      }
+    } catch (error) {
+      throw normalizeTelegramError(error)
     }
   },
 } satisfies CodeAdapter

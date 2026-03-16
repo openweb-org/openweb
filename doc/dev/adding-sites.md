@@ -200,7 +200,7 @@ Create `tests/<operationId>.test.json`:
   "params": {},
   "expected": {
     "status": 200,
-    "bodyContains": ["items"]
+    "bodyContains": ["feed_items"]
   }
 }
 ```

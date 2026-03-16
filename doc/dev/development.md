@@ -55,7 +55,7 @@ pnpm dev instagram-fixture getTimeline
 # Execute an operation
 pnpm dev instagram-fixture exec getTimeline '{}'
 
-# Execute with CDP (for session_http / browser_fetch)
+# Execute with CDP (for session_http / browser_fetch / adapter)
 pnpm dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222
 ```
 
@@ -204,7 +204,7 @@ Test JSON format:
   "params": {},
   "expected": {
     "status": 200,
-    "bodyContains": ["items"]
+    "bodyContains": ["feed_items"]
   }
 }
 ```

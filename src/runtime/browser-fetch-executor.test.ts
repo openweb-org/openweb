@@ -3,10 +3,15 @@ import { describe, expect, it, vi } from 'vitest'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 import type { OpenApiSpec } from '../lib/openapi.js'
 
-function mockBrowser(pageUrl: string, evaluateResult: { status: number; headers: Record<string, string>; text: string }) {
+function mockBrowser(
+  pageUrl: string,
+  evaluateResult: { status: number; headers: Record<string, string>; text: string },
+  pageContent = '<html><body>ready</body></html>',
+) {
   const page = {
     url: () => pageUrl,
     evaluate: vi.fn(async () => evaluateResult),
+    content: vi.fn(async () => pageContent),
   }
   const context = {
     pages: () => [page],
@@ -61,6 +66,7 @@ describe('executeBrowserFetch', () => {
     const page = {
       url: () => 'https://example.com',
       evaluate: evaluateFn,
+      content: vi.fn(async () => '<html><body>ready</body></html>'),
     }
     const context = {
       pages: () => [page],
@@ -75,7 +81,22 @@ describe('executeBrowserFetch', () => {
       baseSpec,
       '/items',
       'post',
-      { operationId: 'createItem', responses: {} },
+      {
+        operationId: 'createItem',
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {},
+      },
       { name: 'test-item' },
     )
 
@@ -102,7 +123,12 @@ describe('executeBrowserFetch', () => {
         {},
       ),
     ).rejects.toMatchObject({
-      payload: { code: 'EXECUTION_FAILED', message: 'HTTP 401' },
+      payload: {
+        code: 'AUTH_FAILED',
+        message: 'HTTP 401',
+        failureClass: 'needs_login',
+        retriable: true,
+      },
     })
   })
 
@@ -155,6 +181,7 @@ describe('executeBrowserFetch', () => {
     const page = {
       url: () => 'https://example.com',
       evaluate: evaluateFn,
+      content: vi.fn(async () => '<html><body>ready</body></html>'),
     }
     const context = {
       pages: () => [page],
@@ -187,5 +214,85 @@ describe('executeBrowserFetch', () => {
 
     const callArgs = evaluateFn.mock.calls[0]![1] as { headers: Record<string, string> }
     expect(callArgs.headers.Cookie).toBeUndefined()
+  })
+
+  it('throws needs_page when no matching site tab is open', async () => {
+    const page = {
+      url: () => 'https://unrelated.example.net',
+      evaluate: vi.fn(),
+      content: vi.fn(async () => '<html><body>other</body></html>'),
+    }
+    const context = {
+      pages: () => [page],
+      cookies: vi.fn(async () => []),
+    }
+    const browser = {
+      contexts: () => [context],
+    } as unknown as import('playwright').Browser
+
+    await expect(
+      executeBrowserFetch(
+        browser,
+        baseSpec,
+        '/users/1',
+        'get',
+        { operationId: 'getUser', responses: {} },
+        {},
+      ),
+    ).rejects.toMatchObject({
+      payload: {
+        failureClass: 'needs_page',
+        action: expect.stringContaining('https://example.com/'),
+      },
+    })
+  })
+
+  it('applies query defaults before executing browser fetch', async () => {
+    const evaluateFn = vi.fn(async () => ({
+      status: 200,
+      headers: {},
+      text: '{"ok":true}',
+    }))
+    const page = {
+      url: () => 'https://discord.com/channels/@me',
+      evaluate: evaluateFn,
+      content: vi.fn(async () => '<html><body>discord</body></html>'),
+    }
+    const context = {
+      pages: () => [page],
+      cookies: vi.fn(async () => []),
+    }
+    const browser = {
+      contexts: () => [context],
+    } as unknown as import('playwright').Browser
+    const spec: OpenApiSpec = {
+      openapi: '3.1.0',
+      info: { title: 'Discord', version: '1.0' },
+      servers: [
+        {
+          url: 'https://discord.com/api/v9',
+          'x-openweb': { mode: 'browser_fetch' },
+        } as OpenApiSpec['servers'][0],
+      ],
+      paths: {},
+    }
+
+    await executeBrowserFetch(
+      browser,
+      spec,
+      '/users/@me/guilds',
+      'get',
+      {
+        operationId: 'getGuilds',
+        parameters: [
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 200 } },
+        ],
+        responses: {},
+      },
+      {},
+    )
+
+    const callArgs = evaluateFn.mock.calls[0]![1] as { url: string }
+    expect(callArgs.url).toContain('limit=200')
   })
 })

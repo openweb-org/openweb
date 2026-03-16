@@ -36,7 +36,7 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
         error: 'execution_failed',
         code: 'INVALID_PARAMS',
         message: 'Missing site name.',
-        action: 'Usage: openweb <site> [exec <tool> [json-params]] [--cdp-endpoint <url>]',
+        action: 'Usage: openweb <site> [exec <tool> [json-params]] [--cdp-endpoint <url>] [--max-response <bytes>]',
         retriable: false,
         failureClass: 'fatal',
       })
@@ -65,8 +65,35 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
           failureClass: 'fatal',
         })
       }
+      const maxResponseIdx = argv.indexOf('--max-response')
+      const maxResponseRaw = maxResponseIdx >= 0 ? argv[maxResponseIdx + 1] : undefined
+      if (maxResponseIdx >= 0 && !maxResponseRaw) {
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'INVALID_PARAMS',
+          message: '--max-response requires a value.',
+          action: 'Example: --max-response 8192',
+          retriable: false,
+          failureClass: 'fatal',
+        })
+      }
+      let maxResponse: number | undefined
+      if (maxResponseRaw !== undefined) {
+        const parsedMaxResponse = Number(maxResponseRaw)
+        if (!Number.isInteger(parsedMaxResponse) || parsedMaxResponse < 0) {
+          throw new OpenWebError({
+            error: 'execution_failed',
+            code: 'INVALID_PARAMS',
+            message: '--max-response must be a non-negative integer.',
+            action: 'Example: --max-response 8192',
+            retriable: false,
+            failureClass: 'fatal',
+          })
+        }
+        maxResponse = parsedMaxResponse
+      }
       const paramsJson = fourth && !fourth.startsWith('--') ? fourth : undefined
-      await execCommand(site, third, paramsJson, { cdpEndpoint })
+      await execCommand(site, third, paramsJson, { cdpEndpoint, maxResponse })
       return
     }
 

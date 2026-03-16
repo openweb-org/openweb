@@ -16,7 +16,7 @@ The adapter reads from Telegram's teact global state.
 
 ## Expected Tool Calls
 
-1. `openweb telegram-fixture` — check readiness (browser_fetch mode, Requires browser: yes, Requires login: yes)
+1. `openweb telegram-fixture` — check readiness (adapter (L3), Requires browser: yes, Requires login: yes)
 2. `openweb telegram-fixture getDialogs` — inspect operation
 3. `openweb telegram-fixture exec getDialogs '{}' --cdp-endpoint http://localhost:9222` — execute
 

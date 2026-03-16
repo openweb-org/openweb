@@ -21,8 +21,8 @@ Fetch the authenticated user's Instagram feed timeline.
 
 ## Success Criteria
 
-- stdout contains JSON with `items` array (feed posts)
-- `items` is a non-empty array
+- stdout contains JSON with `feed_items` array (feed posts)
+- `feed_items` is a non-empty array
 - `more_available` boolean present
 - Response includes `next_max_id` if more pages exist
 

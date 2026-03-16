@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Mode dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-03-16 (commit: `dd2b17e`)
+> Last updated: 2026-03-16 (commit: `uncommitted`)
 
 ## Overview
 
@@ -62,13 +62,14 @@ All L2 modes share the same parameter binding pipeline:
 │                                                         │
 │  4. Header params set in request headers                │
 │                                                         │
-│  5. Body params   remaining params → JSON body          │
+│  5. Body params   requestBody JSON fields → JSON body   │
 │                   (POST/PUT/PATCH only)                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
-Parameters are declared in the OpenAPI spec with `in: path|query|header`.
-Any params not consumed by path/query/header are treated as body params for mutations.
+Path/query/header parameters come from OpenAPI `parameters[]`.
+Body parameters come from `requestBody.content['application/json'].schema.properties`.
+Defaults apply before binding, including body defaults. Auth-injected query params (for example YouTube's `key`) are merged before validation.
 
 -> See: `src/runtime/session-executor.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`
 
@@ -82,7 +83,8 @@ The primary L2 execution mode. Uses a real HTTP client with cookies/headers extr
 ┌─────────────────────────────────────────────────────┐
 │  1. Connect to browser via CDP                      │
 │  2. Find page matching server origin                │
-│     (exact origin → same host → same SLD)           │
+│     (filters worker-like pages, no unrelated-tab    │
+│      fallback; exact origin → same host → same SLD) │
 │  3. Validate parameters                             │
 │  4. Build URL (path substitution + query params)    │
 │  5. Resolve auth → cookies + headers                │
@@ -95,8 +97,8 @@ The primary L2 execution mode. Uses a real HTTP client with cookies/headers extr
 └─────────────────────────────────────────────────────┘
 ```
 
-**Page matching**: The runtime finds a browser tab matching the API's origin.
-Falls back through: exact origin match → same hostname → same second-level domain.
+**Page matching**: The runtime finds a real browser tab matching the API's origin.
+Worker-like pages (`*.js`, empty content) are ignored. There is no fallback to an unrelated tab. If no matching page is found, the runtime raises `needs_page` with a concrete URL to open.
 
 -> See: `src/runtime/session-executor.ts`
 
@@ -228,11 +230,13 @@ Every error carries a `failureClass` that tells the agent what to do next:
 |-------|---------|-------------|
 | `needs_browser` | Operation requires a browser but none connected | Launch Chrome with CDP |
 | `needs_login` | User is not authenticated on the target site | Prompt user to log in |
-| `needs_page` | No browser tab matches the target origin | Navigate to the site |
+| `needs_page` | No browser tab matches the target origin | Open the suggested site URL |
 | `retriable` | Transient failure (network, rate-limit) | Retry the request |
 | `fatal` | Unrecoverable error (bad spec, unknown op) | Stop and report |
 
 -> See: `src/lib/errors.ts`
+
+HTTP-backed executors map statuses as follows: `401/403 -> needs_login`, `429/5xx -> retriable`, `400/404/405 -> fatal`.
 
 The CLI catches errors and writes structured JSON to stderr.
 

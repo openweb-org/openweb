@@ -16,6 +16,7 @@ pnpm --silent dev sites                                    # List available site
 pnpm --silent dev <site>                                   # Show operations + readiness info
 pnpm --silent dev <site> <operation>                       # Show operation params + response shape
 pnpm --silent dev <site> exec <op> '<json>' --cdp-endpoint http://localhost:9222  # Execute
+pnpm --silent dev <site> exec <op> '<json>' --cdp-endpoint http://localhost:9222 --max-response 8192  # Agent-safe output
 ```
 
 ## Workflow: How to Complete a Task
@@ -68,7 +69,7 @@ This shows parameters, their types, which are required, and the response shape:
 ```
 GET /feed/timeline/
   max_id       string    Pagination cursor for next page.
-Returns: { items, next_max_id, more_available }
+Returns: { feed_items, next_max_id, more_available }
 Mode: session_http
 Risk: safe
 ```
@@ -84,6 +85,7 @@ pnpm --silent dev <site> exec <operation> '<json-params>' --cdp-endpoint http://
 - **stdout** = JSON result (success)
 - **stderr** = JSON error (failure)
 - Exit code 0 = success, 1 = failure
+- If a response is too large for the current task, add `--max-response 8192` to truncate stdout and get a warning on stderr.
 
 Omit `--cdp-endpoint` for `direct_http` sites (Requires browser: no).
 
@@ -157,7 +159,7 @@ User: "Show my Instagram feed"
 ```bash
 pnpm --silent dev instagram-fixture                     # Check: Requires browser: yes, Requires login: yes
 pnpm --silent dev instagram-fixture getTimeline         # Check params
-pnpm --silent dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222
+pnpm --silent dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222 --max-response 8192
 ```
 
 ### Example 3: Path parameters
@@ -200,6 +202,6 @@ Authentication failed. Please log in to [site] in Chrome, then try again.
 - The `--cdp-endpoint` flag is required for any site where `Requires browser: yes`
 - JSON params must be a single-quoted string containing a JSON object: `'{"key": "value"}'`
 - For `direct_http` sites, omit `--cdp-endpoint` entirely — it's not needed and not used
-- Response data can be large (e.g., full feed responses) — summarize for the user rather than dumping raw JSON
+- Response data can be large (e.g., full feed responses) — prefer `--max-response 8192` unless you explicitly need the full payload
 - Operations with `Risk: medium` or higher involve mutations (likes, stars, posts) — confirm with the user before executing
 - The CDP endpoint `http://localhost:9222` is the standard port — only change if the user specifies otherwise

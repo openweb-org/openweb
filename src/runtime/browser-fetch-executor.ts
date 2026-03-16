@@ -1,10 +1,12 @@
 import type { Browser } from 'playwright'
 
-import { OpenWebError } from '../lib/errors.js'
+import { OpenWebError, getHttpFailure } from '../lib/errors.js'
+import { getRequestBodyParameters, validateParams, type OpenApiOperation, type OpenApiSpec } from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
-import type { OpenApiOperation, OpenApiSpec } from '../lib/openapi.js'
 import type { BrowserHandle } from './primitives/types.js'
 import {
+  buildJsonRequestBody,
+  createNeedsPageError,
   findPageForOrigin,
   getServerXOpenWeb,
   resolveAllParameters,
@@ -64,24 +66,24 @@ export async function executeBrowserFetch(
     })
   }
 
-  const page = findPageForOrigin(context, serverUrl) ?? context.pages()[0]
+  const page = await findPageForOrigin(context, serverUrl)
   if (!page) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: 'No page available in browser context.',
-      action: 'Open a tab in Chrome and navigate to the site.',
-      retriable: true,
-      failureClass: 'needs_page',
-    })
+    throw createNeedsPageError(serverUrl)
   }
 
   const handle: BrowserHandle = { page, context }
+  const authResult = serverExt?.auth
+    ? await resolveAuth(handle, serverExt.auth, serverUrl, deps)
+    : undefined
 
   // Resolve parameters
   const allParams = resolveAllParameters(spec, operation)
-  const resolvedPath = substitutePath(operationPath, allParams, params)
-  const headerParams = buildHeaderParams(allParams, params)
+  const inputParams = validateParams(
+    [...allParams, ...getRequestBodyParameters(operation)],
+    { ...params, ...authResult?.queryParams },
+  )
+  const resolvedPath = substitutePath(operationPath, allParams, inputParams)
+  const headerParams = buildHeaderParams(allParams, inputParams)
 
   // Build URL
   const baseUrl = new URL(serverUrl)
@@ -89,7 +91,7 @@ export async function executeBrowserFetch(
   const target = new URL(fullPath, baseUrl.origin)
   const queryParams = allParams.filter((p) => p.in === 'query')
   for (const param of queryParams) {
-    const value = params[param.name]
+    const value = inputParams[param.name]
     if (value === undefined || value === null) continue
     if (Array.isArray(value)) {
       for (const item of value) {
@@ -104,16 +106,7 @@ export async function executeBrowserFetch(
   let jsonBody: string | undefined
   const upperMethod = method.toUpperCase()
   if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
-    const consumedParams = new Set(allParams.map((p) => p.name))
-    const bodyParams: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(params)) {
-      if (!consumedParams.has(key)) {
-        bodyParams[key] = value
-      }
-    }
-    if (Object.keys(bodyParams).length > 0) {
-      jsonBody = JSON.stringify(bodyParams)
-    }
+    jsonBody = buildJsonRequestBody(operation, inputParams)
   }
 
   // Build headers — browser_fetch does NOT need Cookie header (credentials:'include' handles it)
@@ -126,8 +119,7 @@ export async function executeBrowserFetch(
   }
 
   // Resolve auth (headers + query params, but skip cookie injection)
-  if (serverExt?.auth) {
-    const authResult = await resolveAuth(handle, serverExt.auth, serverUrl, deps)
+  if (authResult) {
     Object.assign(headers, authResult.headers)
     if (authResult.queryParams) {
       for (const [key, value] of Object.entries(authResult.queryParams)) {
@@ -198,13 +190,16 @@ export async function executeBrowserFetch(
   }
 
   if (fetchResult.status >= 400) {
+    const httpFailure = getHttpFailure(fetchResult.status)
     throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
+      error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
+      code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
       message: `HTTP ${String(fetchResult.status)}`,
-      action: 'Check parameters and ensure you are logged in.',
-      retriable: fetchResult.status === 429 || fetchResult.status >= 500,
-      failureClass: fetchResult.status === 429 || fetchResult.status >= 500 ? 'retriable' : 'fatal',
+      action: httpFailure.failureClass === 'needs_login'
+        ? 'Log in to the site in Chrome and retry.'
+        : 'Check parameters and endpoint availability.',
+      retriable: httpFailure.retriable,
+      failureClass: httpFailure.failureClass,
     })
   }
 

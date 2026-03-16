@@ -57,7 +57,7 @@ paths:
               schema:
                 type: object
                 properties:
-                  items:
+                  feed_items:
                     type: array
                     items:
                       type: object

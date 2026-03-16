@@ -25,6 +25,24 @@ function parseParams(paramsJson: string | undefined): Record<string, unknown> {
 
 export interface ExecOptions {
   readonly cdpEndpoint?: string
+  readonly maxResponse?: number
+}
+
+function serializeBody(body: unknown, maxResponse: number | undefined): { text: string; truncated: boolean } {
+  const text = JSON.stringify(body)
+  if (maxResponse === undefined) {
+    return { text, truncated: false }
+  }
+
+  const encoded = Buffer.from(text, 'utf8')
+  if (encoded.byteLength <= maxResponse) {
+    return { text, truncated: false }
+  }
+
+  return {
+    text: encoded.subarray(0, maxResponse).toString('utf8'),
+    truncated: true,
+  }
 }
 
 export async function execCommand(
@@ -37,5 +55,9 @@ export async function execCommand(
   const result = await executeOperation(site, tool, params, {
     cdpEndpoint: options.cdpEndpoint,
   })
-  process.stdout.write(`${JSON.stringify(result.body)}\n`)
+  const serialized = serializeBody(result.body, options.maxResponse)
+  process.stdout.write(`${serialized.text}\n`)
+  if (serialized.truncated && options.maxResponse !== undefined) {
+    process.stderr.write(`warning: truncated at ${options.maxResponse} bytes\n`)
+  }
 }
