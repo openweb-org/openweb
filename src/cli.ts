@@ -36,10 +36,13 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
     }
 
     if (second === 'exec') {
-      if (!third || !fourth) {
-        throw new Error('Usage: openweb <site> exec <tool> <json-params>')
+      if (!third) {
+        throw new Error('Usage: openweb <site> exec <tool> [json-params] [--cdp-endpoint <url>]')
       }
-      await execCommand(site, third, fourth)
+      const cdpIdx = argv.indexOf('--cdp-endpoint')
+      const cdpEndpoint = cdpIdx >= 0 ? argv[cdpIdx + 1] : undefined
+      const paramsJson = fourth && !fourth.startsWith('--') ? fourth : undefined
+      await execCommand(site, third, paramsJson, { cdpEndpoint })
       return
     }
 

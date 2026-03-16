@@ -93,10 +93,10 @@ export function buildHeaderParams(
 }
 
 /** Resolve auth primitive to get cookies/headers to inject */
-async function resolveAuth(handle: BrowserHandle, auth: AuthPrimitive): Promise<ResolvedInjections> {
+async function resolveAuth(handle: BrowserHandle, auth: AuthPrimitive, serverUrl: string): Promise<ResolvedInjections> {
   switch (auth.type) {
     case 'cookie_session':
-      return resolveCookieSession(handle)
+      return resolveCookieSession(handle, serverUrl)
     default:
       throw new OpenWebError({
         error: 'execution_failed',
@@ -109,10 +109,10 @@ async function resolveAuth(handle: BrowserHandle, auth: AuthPrimitive): Promise<
 }
 
 /** Resolve CSRF primitive to get headers to inject */
-async function resolveCsrf(handle: BrowserHandle, csrf: CsrfPrimitive): Promise<ResolvedInjections> {
+async function resolveCsrf(handle: BrowserHandle, csrf: CsrfPrimitive, serverUrl: string): Promise<ResolvedInjections> {
   switch (csrf.type) {
     case 'cookie_to_header':
-      return resolveCookieToHeader(handle, csrf)
+      return resolveCookieToHeader(handle, csrf, serverUrl)
     default:
       throw new OpenWebError({
         error: 'execution_failed',
@@ -211,16 +211,17 @@ export async function executeSessionHttp(
     }
   }
 
-  // Merge headers
+  // Merge headers — session_http always sends Referer (many sites require it)
   const headers: Record<string, string> = {
     Accept: 'application/json',
+    Referer: baseUrl.origin + '/',
     ...headerParams,
   }
 
   // Resolve auth
   let cookieString: string | undefined
   if (serverExt?.auth) {
-    const authResult = await resolveAuth(handle, serverExt.auth)
+    const authResult = await resolveAuth(handle, serverExt.auth, serverUrl)
     Object.assign(headers, authResult.headers)
     cookieString = authResult.cookieString
   }
@@ -229,7 +230,7 @@ export async function executeSessionHttp(
   const upperMethod = method.toUpperCase()
   const csrfConfig = serverExt?.csrf
   if (csrfConfig && MUTATION_METHODS.has(upperMethod)) {
-    const csrfResult = await resolveCsrf(handle, csrfConfig)
+    const csrfResult = await resolveCsrf(handle, csrfConfig, serverUrl)
     Object.assign(headers, csrfResult.headers)
   }
 

@@ -30,14 +30,14 @@ describe('resolveCookieSession', () => {
       { name: 'csrftoken', value: 'tok456' },
     ])
 
-    const result = await resolveCookieSession(handle)
+    const result = await resolveCookieSession(handle, 'https://example.com')
     expect(result.cookieString).toBe('sessionid=abc123; csrftoken=tok456')
     expect(result.headers).toEqual({})
   })
 
   it('returns empty when no cookies present', async () => {
     const handle = mockHandle([])
-    const result = await resolveCookieSession(handle)
+    const result = await resolveCookieSession(handle, 'https://example.com')
     expect(result.cookieString).toBeUndefined()
     expect(result.headers).toEqual({})
   })
@@ -53,7 +53,7 @@ describe('resolveCookieToHeader', () => {
     const result = await resolveCookieToHeader(handle, {
       cookie: 'csrftoken',
       header: 'X-CSRFToken',
-    })
+    }, 'https://example.com')
 
     expect(result.headers).toEqual({ 'X-CSRFToken': 'tok456' })
     expect(result.cookieString).toBeUndefined()
@@ -63,7 +63,7 @@ describe('resolveCookieToHeader', () => {
     const handle = mockHandle([{ name: 'sessionid', value: 'abc123' }])
 
     await expect(
-      resolveCookieToHeader(handle, { cookie: 'csrftoken', header: 'X-CSRFToken' }),
+      resolveCookieToHeader(handle, { cookie: 'csrftoken', header: 'X-CSRFToken' }, 'https://example.com'),
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED' },
     })

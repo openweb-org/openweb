@@ -13,8 +13,9 @@ interface CookieToHeaderConfig {
 export async function resolveCookieToHeader(
   handle: BrowserHandle,
   config: CookieToHeaderConfig,
+  serverUrl: string,
 ): Promise<ResolvedInjections> {
-  const cookies = await handle.context.cookies()
+  const cookies = await handle.context.cookies(serverUrl)
   const match = cookies.find((c) => c.name === config.cookie)
 
   if (!match) {
