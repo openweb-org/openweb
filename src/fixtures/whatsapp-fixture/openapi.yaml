@@ -1,0 +1,149 @@
+openapi: '3.1.0'
+info:
+  title: WhatsApp Web
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://web.whatsapp.com
+    x-openweb:
+      mode: browser_fetch
+paths:
+  /internal/chats:
+    get:
+      operationId: getChats
+      summary: Get chat list from internal module system
+      x-openweb:
+        risk_tier: safe
+        stable_id: wa0001
+        tool_version: 1
+        verified: true
+        signals:
+          - adapter-verified
+        adapter:
+          name: whatsapp-modules
+          operation: getChats
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Max number of chats to return
+      responses:
+        '200':
+          description: Array of chat objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    isGroup:
+                      type: boolean
+                    unreadCount:
+                      type: integer
+                    timestamp:
+                      type:
+                        - integer
+                        - 'null'
+                  required:
+                    - id
+                    - name
+  /internal/messages:
+    get:
+      operationId: getMessages
+      summary: Get messages from a specific chat
+      x-openweb:
+        risk_tier: low
+        stable_id: wa0002
+        tool_version: 1
+        verified: true
+        signals:
+          - adapter-verified
+        adapter:
+          name: whatsapp-modules
+          operation: getMessages
+      parameters:
+        - name: chatId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Chat ID (e.g. 14124991582@c.us)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Max number of messages to return
+      responses:
+        '200':
+          description: Array of message objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    fromMe:
+                      type: boolean
+                    body:
+                      type: string
+                    timestamp:
+                      type:
+                        - integer
+                        - 'null'
+                    type:
+                      type: string
+                  required:
+                    - id
+                    - body
+  /internal/contacts:
+    get:
+      operationId: getContacts
+      summary: Get contact list from internal module system
+      x-openweb:
+        risk_tier: safe
+        stable_id: wa0003
+        tool_version: 1
+        verified: true
+        signals:
+          - adapter-verified
+        adapter:
+          name: whatsapp-modules
+          operation: getContacts
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: Max number of contacts to return
+      responses:
+        '200':
+          description: Array of contact objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    isMe:
+                      type: boolean
+                  required:
+                    - id
+                    - name
