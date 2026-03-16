@@ -5,8 +5,10 @@ import type { OpenApiOperation, OpenApiParameter, OpenApiSpec } from '../lib/ope
 import { validateSSRF } from '../lib/ssrf.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../types/primitives.js'
 import type { ExecutionMode, XOpenWebServer } from '../types/extensions.js'
+import { resolveApiResponse } from './primitives/api-response.js'
 import { resolveCookieSession } from './primitives/cookie-session.js'
 import { resolveCookieToHeader } from './primitives/cookie-to-header.js'
+import { resolveExchangeChain } from './primitives/exchange-chain.js'
 import { resolveLocalStorageJwt } from './primitives/localstorage-jwt.js'
 import { resolveMetaTag } from './primitives/meta-tag.js'
 import { resolvePageGlobal } from './primitives/page-global.js'
@@ -134,7 +136,12 @@ export function buildHeaderParams(
 }
 
 /** Resolve auth primitive to get cookies/headers to inject */
-async function resolveAuth(handle: BrowserHandle, auth: AuthPrimitive, serverUrl: string): Promise<ResolvedInjections> {
+async function resolveAuth(
+  handle: BrowserHandle,
+  auth: AuthPrimitive,
+  serverUrl: string,
+  deps?: SessionHttpDependencies,
+): Promise<ResolvedInjections> {
   switch (auth.type) {
     case 'cookie_session':
       return resolveCookieSession(handle, serverUrl)
@@ -150,6 +157,11 @@ async function resolveAuth(handle: BrowserHandle, auth: AuthPrimitive, serverUrl
         inject: auth.inject,
         values: auth.values,
       })
+    case 'exchange_chain':
+      return resolveExchangeChain(handle, {
+        steps: auth.steps,
+        inject: auth.inject,
+      }, serverUrl, { fetchImpl: deps?.fetchImpl })
     default:
       throw new OpenWebError({
         error: 'execution_failed',
@@ -162,12 +174,29 @@ async function resolveAuth(handle: BrowserHandle, auth: AuthPrimitive, serverUrl
 }
 
 /** Resolve CSRF primitive to get headers to inject */
-async function resolveCsrf(handle: BrowserHandle, csrf: CsrfPrimitive, serverUrl: string): Promise<ResolvedInjections> {
+async function resolveCsrf(
+  handle: BrowserHandle,
+  csrf: CsrfPrimitive,
+  serverUrl: string,
+  deps?: SessionHttpDependencies & { authHeaders?: Record<string, string>; cookieString?: string },
+): Promise<ResolvedInjections> {
   switch (csrf.type) {
     case 'cookie_to_header':
       return resolveCookieToHeader(handle, csrf, serverUrl)
     case 'meta_tag':
       return resolveMetaTag(handle, { name: csrf.name, header: csrf.header })
+    case 'api_response':
+      return resolveApiResponse(handle, {
+        endpoint: csrf.endpoint,
+        method: csrf.method,
+        extract: csrf.extract,
+        inject: csrf.inject,
+        cache: csrf.cache,
+      }, serverUrl, {
+        fetchImpl: deps?.fetchImpl,
+        authHeaders: deps?.authHeaders,
+        cookieString: deps?.cookieString,
+      })
     default:
       throw new OpenWebError({
         error: 'execution_failed',
@@ -320,7 +349,7 @@ export async function executeSessionHttp(
   // Resolve auth
   let cookieString: string | undefined
   if (serverExt?.auth) {
-    const authResult = await resolveAuth(handle, serverExt.auth, serverUrl)
+    const authResult = await resolveAuth(handle, serverExt.auth, serverUrl, deps)
     Object.assign(headers, authResult.headers)
     cookieString = authResult.cookieString
 
@@ -336,7 +365,18 @@ export async function executeSessionHttp(
   // Resolve CSRF (mutations only)
   const csrfConfig = serverExt?.csrf
   if (csrfConfig && MUTATION_METHODS.has(upperMethod)) {
-    const csrfResult = await resolveCsrf(handle, csrfConfig, serverUrl)
+    // Collect resolved auth headers (excluding Cookie) for api_response CSRF
+    const authHeaders: Record<string, string> = {}
+    for (const [k, v] of Object.entries(headers)) {
+      if (k.toLowerCase() !== 'cookie' && k.toLowerCase() !== 'accept' && k.toLowerCase() !== 'referer' && k.toLowerCase() !== 'content-type') {
+        authHeaders[k] = v
+      }
+    }
+    const csrfResult = await resolveCsrf(handle, csrfConfig, serverUrl, {
+      ...deps,
+      authHeaders,
+      cookieString,
+    })
     Object.assign(headers, csrfResult.headers)
   }
 

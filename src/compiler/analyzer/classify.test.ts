@@ -233,4 +233,54 @@ describe('classify', () => {
     const result = classify(data)
     expect(result.signing?.type).toBe('sapisidhash')
   })
+
+  it('detects exchange_chain when token endpoint response matches Bearer Authorization', () => {
+    const data: CaptureData = {
+      harEntries: [
+        // Token exchange request
+        {
+          startedDateTime: '2025-01-01T00:00:00Z',
+          time: 100,
+          request: {
+            method: 'POST',
+            url: 'https://www.reddit.com/svc/shreddit/token',
+            headers: [{ name: 'Cookie', value: 'reddit_session=abc' }],
+          },
+          response: {
+            status: 200,
+            statusText: 'OK',
+            headers: [{ name: 'content-type', value: 'application/json' }],
+            content: {
+              size: 100,
+              mimeType: 'application/json',
+              text: JSON.stringify({ accessToken: 'bearer_token_12345' }),
+            },
+          },
+        },
+        // API request using the token
+        {
+          startedDateTime: '2025-01-01T00:00:01Z',
+          time: 50,
+          request: {
+            method: 'GET',
+            url: 'https://oauth.reddit.com/r/programming/hot',
+            headers: [
+              { name: 'Authorization', value: 'Bearer bearer_token_12345' },
+            ],
+          },
+          response: {
+            status: 200,
+            statusText: 'OK',
+            headers: [{ name: 'content-type', value: 'application/json' }],
+            content: { size: 100, mimeType: 'application/json', text: '{}' },
+          },
+        },
+      ],
+      stateSnapshots: [makeSnapshot([{ name: 'reddit_session', value: 'abc', httpOnly: true }])],
+    }
+
+    const result = classify(data)
+    expect(result.mode).toBe('session_http')
+    expect(result.auth?.type).toBe('exchange_chain')
+  })
 })

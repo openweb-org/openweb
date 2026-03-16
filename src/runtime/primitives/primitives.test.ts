@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { resolveApiResponse } from './api-response.js'
 import { resolveCookieSession } from './cookie-session.js'
 import { resolveCookieToHeader } from './cookie-to-header.js'
+import { resolveExchangeChain } from './exchange-chain.js'
 import { resolveLocalStorageJwt } from './localstorage-jwt.js'
 import { resolveMetaTag } from './meta-tag.js'
 import { resolvePageGlobal } from './page-global.js'
@@ -315,5 +317,157 @@ describe('computeSapisidhash', () => {
     expect(hash).toMatch(/^[0-9a-f]{40}$/)
     // Verify deterministic
     expect(computeSapisidhash(1234567890, 'test_sapisid', 'https://www.youtube.com')).toBe(hash)
+  })
+})
+
+describe('resolveExchangeChain', () => {
+  it('executes exchange step and injects bearer token', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => [
+          { name: 'reddit_session', value: 'sess_abc', domain: '.reddit.com', path: '/', httpOnly: true, secure: true, sameSite: 'Lax', expires: -1 },
+        ]),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ accessToken: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.test' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const result = await resolveExchangeChain(handle, {
+      steps: [{ call: 'https://www.reddit.com/svc/shreddit/token', extract: 'accessToken' }],
+      inject: { header: 'Authorization', prefix: 'Bearer ' },
+    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock })
+
+    expect(result.headers.Authorization).toBe('Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.test')
+  })
+
+  it('throws when exchange step fails', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response('Unauthorized', { status: 401 }),
+    ) as unknown as typeof fetch
+
+    await expect(
+      resolveExchangeChain(handle, {
+        steps: [{ call: 'https://www.reddit.com/svc/shreddit/token', extract: 'accessToken' }],
+        inject: { header: 'Authorization', prefix: 'Bearer ' },
+      }, 'https://oauth.reddit.com', { fetchImpl: fetchMock }),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
+    })
+  })
+
+  it('throws when extract path not found in response', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ otherField: 'value' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    await expect(
+      resolveExchangeChain(handle, {
+        steps: [{ call: 'https://example.com/token', extract: 'accessToken' }],
+        inject: { header: 'Authorization' },
+      }, 'https://example.com', { fetchImpl: fetchMock }),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
+    })
+  })
+})
+
+describe('resolveApiResponse', () => {
+  it('fetches CSRF token from API endpoint', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ data: { modhash: 'abc123modhash' } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const result = await resolveApiResponse(handle, {
+      endpoint: 'https://oauth.reddit.com/api/me.json',
+      extract: 'data.modhash',
+      inject: { header: 'X-Modhash' },
+    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock })
+
+    expect(result.headers).toEqual({ 'X-Modhash': 'abc123modhash' })
+  })
+
+  it('passes auth headers when provided', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ token: 'csrf_tok' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    await resolveApiResponse(handle, {
+      endpoint: 'https://example.com/csrf',
+      extract: 'token',
+      inject: { header: 'X-CSRF' },
+    }, 'https://example.com', {
+      fetchImpl: fetchMock,
+      authHeaders: { Authorization: 'Bearer test_token' },
+    })
+
+    // Verify fetch was called with auth headers
+    const calledHeaders = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![1].headers as Record<string, string>
+    expect(calledHeaders.Authorization).toBe('Bearer test_token')
+  })
+
+  it('throws when endpoint returns error', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response('Not Found', { status: 404 }),
+    ) as unknown as typeof fetch
+
+    await expect(
+      resolveApiResponse(handle, {
+        endpoint: 'https://example.com/csrf',
+        extract: 'token',
+        inject: { header: 'X-CSRF' },
+      }, 'https://example.com', { fetchImpl: fetchMock }),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
+    })
   })
 })

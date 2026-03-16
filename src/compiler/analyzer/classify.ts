@@ -215,13 +215,78 @@ function detectSapisidhash(data: CaptureData): { origin: string } | undefined {
 }
 
 /**
+ * Detect exchange_chain: a POST to a token-like endpoint whose response
+ * contains the Bearer token used in subsequent Authorization headers.
+ */
+function detectExchangeChain(
+  data: CaptureData,
+): { steps: Array<{ call: string; extract: string }>; inject: { header: string; prefix: string } } | undefined {
+  // Look for Bearer token in Authorization headers
+  const bearerEntries = data.harEntries.filter(e =>
+    e.request.headers.some(h => h.name.toLowerCase() === 'authorization' && h.value.startsWith('Bearer ')),
+  )
+  if (bearerEntries.length === 0) return undefined
+
+  // Look for token exchange endpoints (POST requests to URLs containing 'token')
+  const tokenEndpoints = data.harEntries.filter(e =>
+    e.request.method === 'POST' &&
+    /token/i.test(e.request.url) &&
+    e.response.status === 200,
+  )
+  if (tokenEndpoints.length === 0) return undefined
+
+  // Check if the token endpoint response contains the bearer token used in subsequent requests
+  for (const tokenEntry of tokenEndpoints) {
+    if (!tokenEntry.response.content?.text) continue
+    let responseData: Record<string, unknown>
+    try {
+      responseData = JSON.parse(tokenEntry.response.content.text) as Record<string, unknown>
+    } catch {
+      continue
+    }
+
+    for (const bearerEntry of bearerEntries) {
+      const authHeader = bearerEntry.request.headers.find(h => h.name.toLowerCase() === 'authorization')
+      if (!authHeader) continue
+      const token = authHeader.value.replace('Bearer ', '')
+
+      // Check if the token appears in the response data
+      const extractPath = findValueInObject(responseData, token)
+      if (extractPath) {
+        return {
+          steps: [{ call: tokenEntry.request.url, extract: extractPath }],
+          inject: { header: 'Authorization', prefix: 'Bearer ' },
+        }
+      }
+    }
+  }
+
+  return undefined
+}
+
+/** Recursively search an object for a target string value, returning the dot-path. */
+function findValueInObject(obj: unknown, target: string, path = ''): string | undefined {
+  if (typeof obj === 'string' && obj === target) return path
+  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+    for (const [key, value] of Object.entries(obj)) {
+      const result = findValueInObject(value, target, path ? `${path}.${key}` : key)
+      if (result) return result
+    }
+  }
+  return undefined
+}
+
+/**
  * Classify capture data to detect L2 primitives.
  * Returns mode + auth + csrf + signing configuration for x-openweb emission.
+ *
+ * Auth priority: localStorage_jwt > exchange_chain > cookie_session
  */
 export function classify(data: CaptureData): ClassifyResult {
+  const localStorageJwt = detectLocalStorageJwt(data)
+  const exchangeChain = detectExchangeChain(data)
   const hasCookieSession = detectCookieSession(data)
   const cookieToHeader = detectCookieToHeader(data)
-  const localStorageJwt = detectLocalStorageJwt(data)
   const metaTag = detectMetaTag(data)
   const sapisidhash = detectSapisidhash(data)
 
@@ -230,20 +295,26 @@ export function classify(data: CaptureData): ClassifyResult {
     ? { type: 'sapisidhash', origin: sapisidhash.origin, inject: { header: 'Authorization', prefix: 'SAPISIDHASH ' } }
     : undefined
 
+  // Priority: localStorage_jwt > exchange_chain > cookie_session
+  let auth: AuthPrimitive | undefined
   if (localStorageJwt) {
-    return {
-      mode: 'session_http',
-      auth: {
-        type: 'localStorage_jwt',
-        key: localStorageJwt.key,
-        path: localStorageJwt.path,
-        inject: localStorageJwt.inject,
-      },
-      signing,
+    auth = {
+      type: 'localStorage_jwt',
+      key: localStorageJwt.key,
+      path: localStorageJwt.path,
+      inject: localStorageJwt.inject,
     }
+  } else if (exchangeChain) {
+    auth = {
+      type: 'exchange_chain',
+      steps: exchangeChain.steps.map(s => ({ call: s.call, extract: s.extract })),
+      inject: exchangeChain.inject,
+    }
+  } else if (hasCookieSession) {
+    auth = { type: 'cookie_session' }
   }
 
-  if (!hasCookieSession) {
+  if (!auth) {
     return { mode: 'direct_http', signing }
   }
 
@@ -256,7 +327,7 @@ export function classify(data: CaptureData): ClassifyResult {
 
   return {
     mode: 'session_http',
-    auth: { type: 'cookie_session' },
+    auth,
     csrf,
     signing,
   }

@@ -1,0 +1,107 @@
+openapi: '3.1.0'
+info:
+  title: Reddit API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://oauth.reddit.com
+    x-openweb:
+      mode: session_http
+      auth:
+        type: exchange_chain
+        steps:
+          - call: https://www.reddit.com/svc/shreddit/token
+            headers:
+              Content-Type: application/x-www-form-urlencoded
+            extract: accessToken
+        inject:
+          header: Authorization
+          prefix: 'Bearer '
+      csrf:
+        type: api_response
+        endpoint: https://oauth.reddit.com/api/me.json
+        extract: data.modhash
+        inject:
+          header: X-Modhash
+        cache: true
+paths:
+  /r/{subreddit}/hot:
+    get:
+      operationId: getSubreddit
+      summary: Get hot posts from a subreddit
+      x-openweb:
+        risk_tier: safe
+        stable_id: rd0001
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+      parameters:
+        - name: subreddit
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Subreddit name (without r/ prefix).
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+        - name: after
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Fullname of a thing to use as the anchor point.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      children:
+                        type: array
+                        items:
+                          type: object
+                      after:
+                        type: string
+  /api/vote:
+    post:
+      operationId: vote
+      summary: Vote on a post or comment
+      x-openweb:
+        risk_tier: medium
+        stable_id: rd0002
+        tool_version: 1
+        verified: false
+        signals:
+          - status-match
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Fullname of the thing to vote on.
+                dir:
+                  type: integer
+                  description: Vote direction (-1, 0, 1).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
