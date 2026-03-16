@@ -1,6 +1,6 @@
 # OpenWeb — Dev Guide
 
-> **Last updated**: 2026-03-15 (commit `7a29d5a`)
+> **Last updated**: 2026-03-16 (post-M3)
 
 ## Tech Stack
 
@@ -42,7 +42,15 @@ src/
 │   └── primitives/           # L2 primitive resolvers
 │       ├── types.ts          # BrowserHandle, ResolvedInjections
 │       ├── cookie-session.ts # cookie_session auth (extract all cookies)
-│       └── cookie-to-header.ts # cookie_to_header CSRF (cookie → header)
+│       ├── cookie-to-header.ts # cookie_to_header CSRF (cookie → header)
+│       ├── localstorage-jwt.ts # localStorage_jwt auth
+│       ├── page-global.ts    # page_global auth/CSRF (window globals)
+│       ├── sapisidhash.ts    # SAPISIDHASH signing (Google)
+│       ├── meta-tag.ts       # meta_tag CSRF (DOM meta element)
+│       ├── api-response.ts   # api_response CSRF (fetch from endpoint)
+│       ├── exchange-chain.ts # exchange_chain auth (multi-step token exchange)
+│       ├── script-json.ts    # script_json extraction (SSR JSON in <script>)
+│       └── primitives.test.ts # L2 primitive unit tests
 ├── types/
 │   ├── primitives.ts         # L2 primitive discriminated unions (27 types)
 │   ├── primitive-schemas.ts  # JSON Schema for L2 primitives (AJV)
@@ -59,20 +67,24 @@ src/
 │   └── ssrf.ts               # SSRF validation (IPv4/v6, DNS, metadata)
 └── fixtures/
     ├── open-meteo-fixture/   # L1 test fixture (no x-openweb primitives)
-    └── instagram-fixture/    # L2 test fixture (cookie_session + cookie_to_header)
+    ├── instagram-fixture/    # L2 test fixture (cookie_session + cookie_to_header)
+    ├── bluesky-fixture/      # L2 test fixture (localStorage_jwt)
+    ├── youtube-fixture/      # L2 test fixture (page_global + sapisidhash)
+    ├── github-fixture/       # L2 test fixture (meta_tag CSRF + script_json extraction)
+    └── reddit-fixture/       # L2 test fixture (exchange_chain + api_response CSRF)
 ```
 
 ## Commands
 
 ```bash
 pnpm build          # tsup → dist/
-pnpm test           # vitest (84/84 pass)
+pnpm test           # vitest (145/145 pass)
 pnpm lint           # biome check
 ```
 
 ## Current Implementation Status
 
-**Working (L1 + M0 capture + M1 meta-spec + M2 session_http)**:
+**Working (L1 + M0 capture + M1 meta-spec + M2 session_http + M3 L2 breadth)**:
 - CLI: `sites` → `show` → `exec` → `test` full flow
 - CLI: `capture start/stop` — browser capture via CDP
 - Compiler phases 2-4: filter → cluster → differentiate → schema → annotate → emit
@@ -80,14 +92,16 @@ pnpm lint           # biome check
 - Compiler: generator emits server-level x-openweb (mode + auth + csrf) with ClassifyResult
 - Runtime: `direct_http` mode with SSRF protection, redirect handling, schema validation
 - Runtime: `session_http` mode — CDP browser connection, cookie auth, CSRF token injection
-- Runtime: L2 primitive resolvers: cookie_session, cookie_to_header
+- Runtime: L2 primitive resolvers (9 handlers): cookie_session, cookie_to_header, localStorage_jwt, page_global, sapisidhash, meta_tag, api_response, exchange_chain, script_json
+- Runtime: Redirect following with cross-origin header stripping, method rewriting (303)
 - Capture: HAR + WebSocket + state snapshots + DOM extraction (4 sources)
 - Error contract: EXECUTION_FAILED, TOOL_NOT_FOUND, INVALID_PARAMS
 - Types: L2 primitive types (27 types), x-openweb extensions, manifest, CodeAdapter
 - Validation: AJV-based x-openweb spec + manifest.json validation
+- M3 verified sites: Instagram, Bluesky, YouTube, GitHub, Reddit (5 sites, 9 primitive types)
 
 **Not yet implemented (v2 additions)**:
-- Additional L2 primitive handlers (localStorage_jwt, page_global, sapisidhash, meta_tag, etc.)
+- Additional L2 primitive handlers (sessionStorage_msal, webpack_module_walk, websocket_intercept, etc.)
 - L3 code adapter execution
 - `browser_fetch` mode
 - Mode escalation (direct → session → browser)
