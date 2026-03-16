@@ -155,99 +155,66 @@ export async function executeBrowserFetch(
     Object.assign(headers, signingResult.headers)
   }
 
-  // SSRF validation before passing URL to browser context
+  // SSRF: validate the initial URL before handing to browser context.
+  // Redirect safety is delegated to the browser's own network stack (CORS,
+  // mixed-content blocking). Browser-context fetch with redirect:'manual'
+  // returns opaqueredirect (status 0, no headers) — unusable for per-hop
+  // validation. This is the correct model: browser_fetch exists precisely
+  // because we need browser-native request behavior.
   const ssrfValidator = deps.ssrfValidator ?? validateSSRF
   await ssrfValidator(target.toString())
 
-  // Execute fetch inside the browser page context with manual redirect handling.
-  // Each hop is returned to Node for SSRF validation before continuing.
-  let currentUrl = target.toString()
-  let currentMethod = upperMethod
-  let currentBody = jsonBody
-
-  const MAX_REDIRECTS = 5
+  // Execute fetch inside the browser page context
   let fetchResult: { status: number; headers: Record<string, string>; text: string }
-
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    try {
-      fetchResult = await page.evaluate(
-        async (args: { url: string; method: string; headers: Record<string, string>; body: string | undefined }) => {
-          const resp = await fetch(args.url, {
-            method: args.method,
-            headers: args.headers,
-            body: args.method !== 'GET' && args.method !== 'HEAD' ? args.body : undefined,
-            credentials: 'include',
-            redirect: 'manual',
-          })
-          const respHeaders: Record<string, string> = {}
-          resp.headers.forEach((v, k) => { respHeaders[k] = v })
-          const text = resp.status >= 300 && resp.status < 400 ? '' : await resp.text()
-          return { status: resp.status, headers: respHeaders, text }
-        },
-        { url: currentUrl, method: currentMethod, headers, body: currentBody },
-      )
-    } catch (err) {
-      // ME-03: normalize in-page fetch errors (network/CORS failures)
-      const message = err instanceof Error ? err.message : String(err)
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: `browser_fetch failed: ${message}`,
-        action: 'Check network connectivity and CORS policy.',
-        retriable: true,
-      })
-    }
-
-    // Not a redirect — break out
-    if (fetchResult.status < 300 || fetchResult.status >= 400) break
-
-    // Redirect — validate next hop against SSRF before following
-    const location = fetchResult.headers.location
-    if (!location) break
-
-    const nextUrl = new URL(location, currentUrl).toString()
-    await ssrfValidator(nextUrl)
-    currentUrl = nextUrl
-
-    // 303: switch to GET, drop body
-    if (fetchResult.status === 303) {
-      currentMethod = 'GET'
-      currentBody = undefined
-    }
-  }
-
-  if (fetchResult!.status >= 300 && fetchResult!.status < 400) {
+  try {
+    fetchResult = await page.evaluate(
+      async (args: { url: string; method: string; headers: Record<string, string>; body: string | undefined }) => {
+        const resp = await fetch(args.url, {
+          method: args.method,
+          headers: args.headers,
+          body: args.method !== 'GET' && args.method !== 'HEAD' ? args.body : undefined,
+          credentials: 'include',
+        })
+        const respHeaders: Record<string, string> = {}
+        resp.headers.forEach((v, k) => { respHeaders[k] = v })
+        const text = await resp.text()
+        return { status: resp.status, headers: respHeaders, text }
+      },
+      { url: target.toString(), method: upperMethod, headers, body: jsonBody },
+    )
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
-      message: `Too many redirects (>${String(MAX_REDIRECTS)})`,
-      action: 'Retry later or inspect endpoint redirects.',
+      message: `browser_fetch failed: ${message}`,
+      action: 'Check network connectivity and CORS policy.',
       retriable: true,
     })
   }
 
-  if (fetchResult!.status >= 400) {
+  if (fetchResult.status >= 400) {
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
-      message: `HTTP ${String(fetchResult!.status)}`,
+      message: `HTTP ${String(fetchResult.status)}`,
       action: 'Check parameters and ensure you are logged in.',
-      retriable: fetchResult!.status === 429 || fetchResult!.status >= 500,
+      retriable: fetchResult.status === 429 || fetchResult.status >= 500,
     })
   }
 
   let body: unknown
   try {
-    body = JSON.parse(fetchResult!.text) as unknown
+    body = JSON.parse(fetchResult.text) as unknown
   } catch {
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
-      message: `Response is not valid JSON (status ${String(fetchResult!.status)})`,
+      message: `Response is not valid JSON (status ${String(fetchResult.status)})`,
       action: 'The API returned non-JSON content. Check the endpoint.',
       retriable: false,
     })
   }
 
-  return { status: fetchResult!.status, body, responseHeaders: fetchResult!.headers }
+  return { status: fetchResult.status, body, responseHeaders: fetchResult.headers }
 }

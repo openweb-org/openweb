@@ -38,8 +38,10 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
 
   let adapter: CodeAdapter | undefined
   let lastError: Error | undefined
+  let foundFile = false
   for (const filePath of candidates) {
     if (!existsSync(filePath)) continue
+    foundFile = true
     try {
       const fileUrl = pathToFileURL(filePath).href
       const mod = await import(fileUrl) as { default?: CodeAdapter }
@@ -47,8 +49,9 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
         adapter = mod.default
         break
       }
+      // File loaded but wrong shape
+      lastError = new Error(`${filePath}: module has no valid CodeAdapter default export`)
     } catch (err) {
-      // Keep the real error — don't swallow import failures for files that exist
       lastError = err instanceof Error ? err : new Error(String(err))
     }
   }
@@ -67,8 +70,10 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
-      message: `Adapter "${adapterName}" not found in ${adapterDir}`,
-      action: 'Ensure the adapter file exists in the adapters/ directory.',
+      message: foundFile
+        ? `Adapter "${adapterName}" has no valid CodeAdapter export in ${adapterDir}`
+        : `Adapter "${adapterName}" not found in ${adapterDir}`,
+      action: 'Ensure the adapter file exists and exports a default CodeAdapter object.',
       retriable: false,
     })
   }

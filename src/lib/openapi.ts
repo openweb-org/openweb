@@ -202,6 +202,51 @@ export function getServerUrl(spec: OpenApiSpec, operation: OpenApiOperation): st
   })
 }
 
+/**
+ * Validate and apply defaults to user-supplied params against OpenAPI parameter definitions.
+ * Checks: required params present, no unknown params, schema type validation, default application.
+ * Returns a new params object with defaults applied.
+ */
+export function validateParams(
+  parameters: OpenApiParameter[],
+  inputParams: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = { ...inputParams }
+  const knownNames = new Set(parameters.map((p) => p.name))
+  const unknownNames = Object.keys(inputParams).filter((n) => !knownNames.has(n))
+
+  if (unknownNames.length > 0) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'INVALID_PARAMS',
+      message: `Unknown parameter(s): ${unknownNames.join(', ')}`,
+      action: 'Run `openweb <site> <tool>` to inspect valid parameters.',
+      retriable: false,
+    })
+  }
+
+  for (const param of parameters) {
+    const value = result[param.name]
+    if ((value === undefined || value === null) && param.required) {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'INVALID_PARAMS',
+        message: `Missing required parameter: ${param.name}`,
+        action: 'Run `openweb <site> <tool>` to inspect parameters.',
+        retriable: false,
+      })
+    }
+    if ((value === undefined || value === null) && param.schema?.default !== undefined) {
+      result[param.name] = param.schema.default
+    }
+    if (result[param.name] !== undefined && result[param.name] !== null) {
+      validateType(param.name, result[param.name], param.schema)
+    }
+  }
+
+  return result
+}
+
 function validateType(name: string, value: unknown, schema: JsonSchema | undefined): void {
   if (!schema?.type) {
     return
