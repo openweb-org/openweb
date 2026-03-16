@@ -1,3 +1,41 @@
+## 2026-03-16: M4 — L3 + browser_fetch (Discord, WhatsApp, Telegram)
+
+**What changed:**
+- Phase 0: `browser_fetch` executor — `page.evaluate(fetch(...))` with credentials:'include'
+- Phase 1: Discord — `webpack_module_walk` L2 auth primitive + browser_fetch fixture (3 ops)
+- Phase 2: L3 adapter framework — CodeAdapter loading via dynamic import + init/auth/execute lifecycle
+- Phase 3: WhatsApp — L3 adapter via Meta `require()` module system (getChats, getMessages, getContacts)
+- Phase 4: Telegram — L3 adapter via dynamic webpack `getGlobal()` state discovery (getDialogs, getMe, getMessages)
+- Code review: SSRF validation in browser_fetch, path traversal guard in adapter loader, chunk_global format check
+- Pitfall feedback: 8 pitfalls written back to 3 design docs (layer3-code-adapters, runtime-executor, layer2-primitives)
+
+**Why:**
+- M4 proves the three-layer architecture works end-to-end (L1 + L2 + L3 all running)
+- `browser_fetch` needed for sites with TLS fingerprinting or browser-only auth (webpack module cache)
+- L3 adapters handle sites with no HTTP API (WhatsApp Signal Protocol, Telegram MTProto)
+- Key discovery: WhatsApp uses Meta's proprietary `__d/__w/require`, not standard webpack
+- Key discovery: Telegram-t module IDs are mangled per deploy — adapter must search dynamically
+
+**Key files:**
+- `src/runtime/browser-fetch-executor.ts` — browser_fetch mode
+- `src/runtime/adapter-executor.ts` — L3 adapter framework
+- `src/runtime/primitives/webpack-module-walk.ts` — webpack auth primitive (10th L2 handler)
+- `src/fixtures/discord-fixture/` — webpack_module_walk + browser_fetch (getMe, getGuilds, getChannelMessages)
+- `src/fixtures/whatsapp-fixture/` — L3 adapter + Meta require() (getChats, getMessages, getContacts)
+- `src/fixtures/telegram-fixture/` — L3 adapter + teact getGlobal() (getDialogs, getMe, getMessages)
+- `src/types/adapter.ts` — CodeAdapter interface (Page-typed)
+
+**Verification:** 167/167 tests pass, TypeScript strict build clean, all 3 sites verified with real Chrome CDP:
+- Discord: `getMe` returns user object ✅, `getGuilds` returns 3 guilds ✅
+- WhatsApp: `getChats` returns chat list ✅, `getContacts` returns 2574 contacts ✅
+- Telegram: `getMe` returns user ✅, `getDialogs` returns 63 dialogs ✅
+
+**Commit:** `73d244b..2b53bfd` (8 commits)
+**Next:** M5 — Agent skill packaging + self-healing
+**Blockers:** None
+
+---
+
 ## 2026-03-16: M3 — L2 Breadth (4 Diverse Websites)
 
 **What changed:**
