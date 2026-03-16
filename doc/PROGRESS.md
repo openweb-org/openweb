@@ -1,3 +1,22 @@
+## 2026-03-15: M2 Hardening — Final polish (NI-01, NI-02, test checklist)
+
+**What changed:**
+- NI-01: `resolveMode()` now validates server-level mode (was only validating operation-level)
+- NI-02: session_http redirect loop exhaustion now throws "Too many redirects" instead of "HTTP 302"
+- Created M3 test coverage checklist from deferred CR-15/16/17/18/20
+
+**Why:**
+- Round 2 review found 2 low-severity gaps introduced by round 1 fixes — closed the loop
+- Test checklist ensures deferred items aren't forgotten in M3
+
+**Key files:** `src/runtime/session-executor.ts`, `doc/todo/v2_m3/m3-test-checklist.md`
+**Verification:** 84/84 tests pass
+**Commit:** `7a29d5a`
+**Next:** M3 — L2 breadth (5 diverse websites)
+**Blockers:** None
+
+---
+
 ## 2026-03-15: M2 Hardening — Code Review Fixes (9 findings)
 
 **What changed:**
