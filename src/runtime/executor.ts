@@ -32,6 +32,7 @@ export interface ExecuteResult {
   readonly status: number
   readonly body: unknown
   readonly responseSchemaValid: boolean
+  readonly responseHeaders: Readonly<Record<string, string>>
 }
 
 function isRedirect(statusCode: number): boolean {
@@ -98,6 +99,7 @@ export async function executeOperation(
 
   let status: number
   let body: unknown
+  let responseHeaders: Record<string, string> = {}
 
   if (mode === 'browser_fetch') {
     throw new OpenWebError({
@@ -123,6 +125,7 @@ export async function executeOperation(
       )
       status = result.status
       body = result.body
+      responseHeaders = { ...result.responseHeaders }
     } finally {
       // Only disconnect if we created the connection (not injected)
       if (!deps.browser) {
@@ -145,6 +148,9 @@ export async function executeOperation(
     }
 
     status = response.status
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value
+    })
     const text = await response.text()
     try {
       body = JSON.parse(text) as unknown
@@ -172,7 +178,7 @@ export async function executeOperation(
     }
   }
 
-  return { status, body, responseSchemaValid }
+  return { status, body, responseSchemaValid, responseHeaders }
 }
 
 interface TestCase {

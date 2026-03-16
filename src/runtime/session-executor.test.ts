@@ -56,6 +56,25 @@ function instagramSpec(): OpenApiSpec {
           },
         },
       },
+      '/media/{media_id}/comment/': {
+        post: {
+          operationId: 'commentMedia',
+          summary: 'Comment on a media post',
+          'x-openweb': { risk_tier: 'medium' },
+          parameters: [
+            { name: 'X-IG-App-ID', in: 'header', required: true, schema: { type: 'string', default: '936619743392459' } },
+            { name: 'media_id', in: 'path', required: true, schema: { type: 'string' } },
+          ],
+          requestBody: {
+            content: { 'application/json': { schema: { type: 'object', properties: { comment_text: { type: 'string' } } } } },
+          },
+          responses: {
+            '200': {
+              content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string' } } } } },
+            },
+          },
+        },
+      },
     },
   }
 }
@@ -236,5 +255,150 @@ describe('executeSessionHttp', () => {
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED' },
     })
+  })
+
+  it('sends JSON body with non-path/query/header params on POST', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ status: 'ok' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    const result = await executeSessionHttp(
+      browser,
+      spec,
+      '/media/{media_id}/comment/',
+      'post',
+      spec.paths!['/media/{media_id}/comment/']!.post!,
+      { media_id: '99999', comment_text: 'Great photo!' },
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    expect(result.status).toBe(200)
+
+    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    const calledInit = calledArgs[1] as RequestInit
+    const headers = calledInit.headers as Record<string, string>
+
+    // Body contains only the non-path/header param
+    expect(calledInit.body).toBe(JSON.stringify({ comment_text: 'Great photo!' }))
+    expect(headers['Content-Type']).toBe('application/json')
+  })
+
+  it('does NOT send body when POST has no leftover params', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ status: 'ok' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    await executeSessionHttp(
+      browser,
+      spec,
+      '/media/{media_id}/like/',
+      'post',
+      spec.paths!['/media/{media_id}/like/']!.post!,
+      { media_id: '99999' },
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    const calledInit = calledArgs[1] as RequestInit
+    const headers = calledInit.headers as Record<string, string>
+
+    // No leftover params → no body, no Content-Type
+    expect(calledInit.body).toBeUndefined()
+    expect(headers['Content-Type']).toBeUndefined()
+  })
+
+  it('does NOT send body for GET requests', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ items: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    await executeSessionHttp(
+      browser,
+      spec,
+      '/feed/timeline/',
+      'get',
+      spec.paths!['/feed/timeline/']!.get!,
+      {},
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    const calledInit = calledArgs[1] as RequestInit
+
+    expect(calledInit.body).toBeUndefined()
+  })
+
+  it('drops body on 303 redirect', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    let callCount = 0
+    const fetchMock = vi.fn(async () => {
+      callCount++
+      if (callCount === 1) {
+        // First call: 303 redirect
+        return new Response(null, {
+          status: 303,
+          headers: { location: 'https://www.instagram.com/api/v1/media/99999/comment/result/' },
+        })
+      }
+      // Second call: final response after redirect
+      return new Response(JSON.stringify({ status: 'ok' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    }) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    await executeSessionHttp(
+      browser,
+      spec,
+      '/media/{media_id}/comment/',
+      'post',
+      spec.paths!['/media/{media_id}/comment/']!.post!,
+      { media_id: '99999', comment_text: 'Great photo!' },
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    const calls = (fetchMock as ReturnType<typeof vi.fn>).mock.calls
+
+    // First call: POST with body
+    const firstInit = calls[0]![1] as RequestInit
+    expect(firstInit.method).toBe('POST')
+    expect(firstInit.body).toBe(JSON.stringify({ comment_text: 'Great photo!' }))
+
+    // Second call: GET without body (303 redirect)
+    const secondInit = calls[1]![1] as RequestInit
+    expect(secondInit.method).toBe('GET')
+    expect(secondInit.body).toBeUndefined()
   })
 })

@@ -169,6 +169,7 @@ export interface SessionHttpDependencies {
 export interface SessionHttpResult {
   readonly status: number
   readonly body: unknown
+  readonly responseHeaders: Readonly<Record<string, string>>
 }
 
 /**
@@ -248,11 +249,30 @@ export async function executeSessionHttp(
     }
   }
 
+  // Build request body from non-path/query/header params
+  let jsonBody: string | undefined
+  const upperMethod = method.toUpperCase()
+  if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
+    const consumedParams = new Set(allParams.map((p) => p.name))
+    const bodyParams: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(params)) {
+      if (!consumedParams.has(key)) {
+        bodyParams[key] = value
+      }
+    }
+    if (Object.keys(bodyParams).length > 0) {
+      jsonBody = JSON.stringify(bodyParams)
+    }
+  }
+
   // Merge headers — session_http always sends Referer (many sites require it)
   const headers: Record<string, string> = {
     Accept: 'application/json',
     Referer: baseUrl.origin + '/',
     ...headerParams,
+  }
+  if (jsonBody) {
+    headers['Content-Type'] = 'application/json'
   }
 
   // Resolve auth
@@ -264,7 +284,6 @@ export async function executeSessionHttp(
   }
 
   // Resolve CSRF (mutations only)
-  const upperMethod = method.toUpperCase()
   const csrfConfig = serverExt?.csrf
   if (csrfConfig && MUTATION_METHODS.has(upperMethod)) {
     const csrfResult = await resolveCsrf(handle, csrfConfig, serverUrl)
@@ -288,6 +307,7 @@ export async function executeSessionHttp(
     response = await fetchImpl(currentUrl, {
       method: currentMethod,
       headers,
+      body: currentMethod !== 'GET' && currentMethod !== 'HEAD' ? jsonBody : undefined,
       redirect: 'manual',
     })
 
@@ -302,6 +322,7 @@ export async function executeSessionHttp(
     // CR-07: 303 See Other always switches to GET
     if (response.status === 303) {
       currentMethod = 'GET'
+      jsonBody = undefined
     }
 
     // CR-01: Strip sensitive headers on cross-origin redirect
@@ -359,7 +380,12 @@ export async function executeSessionHttp(
     })
   }
 
-  return { status: response.status, body }
+  const responseHeaders: Record<string, string> = {}
+  response.headers.forEach((value, key) => {
+    responseHeaders[key] = value
+  })
+
+  return { status: response.status, body, responseHeaders }
 }
 
 /** Collect parameters from operation + $ref components resolution */
