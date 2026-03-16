@@ -95,7 +95,21 @@ export async function resolveWebpackModuleWalk(
  */
 const BLOCKED_PATTERNS = ['process.', 'child_process', 'globalThis.process']
 
+/** webpack chunk globals must be valid JS identifiers (e.g., webpackChunkdiscord_app) */
+const IDENTIFIER_PATTERN = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
+
 function validateConfig(config: WebpackModuleWalkConfig): void {
+  // chunk_global is a window property name — must be a simple identifier
+  if (!IDENTIFIER_PATTERN.test(config.chunk_global)) {
+    throw new OpenWebError({
+      error: 'auth',
+      code: 'AUTH_FAILED',
+      message: `webpack_module_walk: invalid chunk_global "${config.chunk_global}".`,
+      action: 'chunk_global must be a valid JS identifier (e.g., webpackChunkdiscord_app).',
+      retriable: false,
+    })
+  }
+
   const combined = `${config.chunk_global} ${config.module_test} ${config.call}`
   const lower = combined.toLowerCase()
   for (const pattern of BLOCKED_PATTERNS) {

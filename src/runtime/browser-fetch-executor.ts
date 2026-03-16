@@ -1,6 +1,7 @@
 import type { Browser } from 'playwright'
 
 import { OpenWebError } from '../lib/errors.js'
+import { validateSSRF } from '../lib/ssrf.js'
 import type { OpenApiOperation, OpenApiSpec } from '../lib/openapi.js'
 import type { BrowserHandle } from './primitives/types.js'
 import {
@@ -154,8 +155,12 @@ export async function executeBrowserFetch(
     Object.assign(headers, signingResult.headers)
   }
 
-  // Execute fetch inside the browser page context
+  // SSRF validation before passing URL to browser context
   const fetchUrl = target.toString()
+  const ssrfValidator = deps.ssrfValidator ?? validateSSRF
+  await ssrfValidator(fetchUrl)
+
+  // Execute fetch inside the browser page context
   const fetchResult = await page.evaluate(
     async (args: { url: string; method: string; headers: Record<string, string>; body: string | undefined }) => {
       const resp = await fetch(args.url, {
