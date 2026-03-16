@@ -145,6 +145,24 @@ describe('validateXOpenWebSpec', () => {
     }
   })
 
+  it('rejects falsy operation-level x-openweb values', () => {
+    const falsyValues = [false, 0, '']
+    for (const falsy of falsyValues) {
+      const spec = {
+        paths: { '/test': { get: { operationId: 'test', 'x-openweb': falsy } } },
+      }
+      const result = validateXOpenWebSpec(spec)
+      expect(result.valid).toBe(false)
+    }
+  })
+
+  it('rejects non-object spec inputs', () => {
+    for (const bad of [null, undefined, 0, false, 'x', []]) {
+      const result = validateXOpenWebSpec(bad as never)
+      expect(result.valid).toBe(false)
+    }
+  })
+
   it('rejects auth primitive missing required fields', () => {
     const spec = {
       servers: [

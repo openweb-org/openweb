@@ -1,3 +1,23 @@
+## 2026-03-15: M1 Hardening — Codex Review Round 2
+
+**What changed:**
+- Fixed top-level shape guard: `validateXOpenWebSpec()` now rejects `null`, `undefined`, primitives, and arrays instead of crashing/passing silently
+- Added safe container guards: `servers` checked as array, `paths` checked as object before traversal
+- Added operation-level falsy regression test (round 1 only tested server-level)
+- Tightened `AdapterRef.params` type to exclude arrays (`{ readonly [key: string]: unknown }` instead of `Readonly<Record<string, unknown>>`)
+- Acknowledged s1 (manifest site/site_url coexistence) — both accepted by schema for v1→v2 migration
+
+**Why:**
+- Codex round 2 found the validator crashes on `null` and passes on non-object inputs — boundary hardening for untrusted parser output
+
+**Key files:** `src/types/validator.ts`, `src/types/validator.test.ts`, `src/types/extensions.ts`
+**Verification:** 57/57 tests pass, lint clean
+**Commit:** see below
+**Next:** M2 — First L2 website end-to-end (Instagram)
+**Blockers:** None
+
+---
+
 ## 2026-03-15: M1 Hardening — Codex Review Round 1
 
 **What changed:**

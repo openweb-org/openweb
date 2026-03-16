@@ -56,13 +56,19 @@ const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head'
  * Specs without x-openweb extensions are valid (L1-only).
  */
 export function validateXOpenWebSpec(spec: OpenApiLike): ValidationResult {
+  if (typeof spec !== 'object' || spec === null || Array.isArray(spec)) {
+    return { valid: false, errors: [{ path: '', message: 'spec must be a non-null object' }] }
+  }
+
   const errors: ValidationError[] = []
 
   // Validate server-level x-openweb
-  const servers = spec.servers ?? []
+  const servers = Array.isArray(spec.servers) ? spec.servers : []
   for (let i = 0; i < servers.length; i++) {
     const server = servers[i]
-    const ext = server?.['x-openweb']
+    if (typeof server !== 'object' || server === null) continue
+
+    const ext = server['x-openweb']
     if (ext == null) continue
 
     if (!validateServerExt(ext)) {
@@ -71,7 +77,10 @@ export function validateXOpenWebSpec(spec: OpenApiLike): ValidationResult {
   }
 
   // Validate operation-level x-openweb
-  for (const [path, methods] of Object.entries(spec.paths ?? {})) {
+  const paths = typeof spec.paths === 'object' && spec.paths !== null ? spec.paths : {}
+  for (const [path, methods] of Object.entries(paths)) {
+    if (typeof methods !== 'object' || methods === null) continue
+
     for (const method of HTTP_METHODS) {
       const op = methods?.[method]
       if (!op) continue

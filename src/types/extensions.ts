@@ -13,7 +13,7 @@ export type ExecutionMode = 'direct_http' | 'session_http' | 'browser_fetch'
 export interface AdapterRef {
   readonly name: string
   readonly operation: string
-  readonly params?: Readonly<Record<string, unknown>>
+  readonly params?: { readonly [key: string]: unknown }
 }
 
 // Server-level x-openweb (on servers[] entries)
