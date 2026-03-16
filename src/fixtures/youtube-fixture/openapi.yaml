@@ -1,0 +1,103 @@
+openapi: '3.1.0'
+info:
+  title: YouTube InnerTube API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.youtube.com/youtubei/v1
+    x-openweb:
+      mode: session_http
+      auth:
+        type: page_global
+        expression: 'ytcfg.data_.INNERTUBE_API_KEY'
+        inject:
+          query: key
+      signing:
+        type: sapisidhash
+        cookie: SAPISID
+        origin: https://www.youtube.com
+        inject:
+          header: Authorization
+          prefix: 'SAPISIDHASH '
+paths:
+  /player:
+    post:
+      operationId: getVideoInfo
+      summary: Get video player info
+      x-openweb:
+        risk_tier: safe
+        stable_id: yt0001
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: InnerTube API key (injected by auth).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                videoId:
+                  type: string
+                context:
+                  type: object
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  videoDetails:
+                    type: object
+                  streamingData:
+                    type: object
+  /next:
+    post:
+      operationId: getComments
+      summary: Get video comments
+      x-openweb:
+        risk_tier: safe
+        stable_id: yt0002
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: InnerTube API key (injected by auth).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                videoId:
+                  type: string
+                context:
+                  type: object
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contents:
+                    type: object

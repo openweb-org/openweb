@@ -3,12 +3,14 @@ import type { Browser } from 'playwright'
 import { OpenWebError } from '../lib/errors.js'
 import type { OpenApiOperation, OpenApiParameter, OpenApiSpec } from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
-import type { AuthPrimitive, CsrfPrimitive } from '../types/primitives.js'
+import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../types/primitives.js'
 import type { ExecutionMode, XOpenWebServer } from '../types/extensions.js'
 import { resolveCookieSession } from './primitives/cookie-session.js'
 import { resolveCookieToHeader } from './primitives/cookie-to-header.js'
 import { resolveLocalStorageJwt } from './primitives/localstorage-jwt.js'
 import { resolveMetaTag } from './primitives/meta-tag.js'
+import { resolvePageGlobal } from './primitives/page-global.js'
+import { resolveSapisidhash } from './primitives/sapisidhash.js'
 import type { BrowserHandle, ResolvedInjections } from './primitives/types.js'
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
@@ -142,6 +144,12 @@ async function resolveAuth(handle: BrowserHandle, auth: AuthPrimitive, serverUrl
         path: auth.path,
         inject: auth.inject,
       })
+    case 'page_global':
+      return resolvePageGlobal(handle, {
+        expression: auth.expression,
+        inject: auth.inject,
+        values: auth.values,
+      })
     default:
       throw new OpenWebError({
         error: 'execution_failed',
@@ -166,6 +174,30 @@ async function resolveCsrf(handle: BrowserHandle, csrf: CsrfPrimitive, serverUrl
         code: 'EXECUTION_FAILED',
         message: `Unsupported CSRF primitive: ${csrf.type}`,
         action: 'This CSRF type is not yet implemented.',
+        retriable: false,
+      })
+  }
+}
+
+/** Resolve signing primitive to get headers to inject */
+async function resolveSigning(
+  handle: BrowserHandle,
+  signing: SigningPrimitive,
+  serverUrl: string,
+): Promise<ResolvedInjections> {
+  switch (signing.type) {
+    case 'sapisidhash':
+      return resolveSapisidhash(handle, {
+        cookie: signing.cookie,
+        origin: signing.origin,
+        inject: signing.inject,
+      }, serverUrl)
+    default:
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `Unsupported signing primitive: ${signing.type}`,
+        action: 'This signing type is not yet implemented.',
         retriable: false,
       })
   }
@@ -291,6 +323,14 @@ export async function executeSessionHttp(
     const authResult = await resolveAuth(handle, serverExt.auth, serverUrl)
     Object.assign(headers, authResult.headers)
     cookieString = authResult.cookieString
+
+    // Inject auth query params (e.g., page_global may inject API key as query param)
+    const authQueryParams = (authResult as { queryParams?: Record<string, string> }).queryParams
+    if (authQueryParams) {
+      for (const [key, value] of Object.entries(authQueryParams)) {
+        target.searchParams.set(key, value)
+      }
+    }
   }
 
   // Resolve CSRF (mutations only)
@@ -298,6 +338,12 @@ export async function executeSessionHttp(
   if (csrfConfig && MUTATION_METHODS.has(upperMethod)) {
     const csrfResult = await resolveCsrf(handle, csrfConfig, serverUrl)
     Object.assign(headers, csrfResult.headers)
+  }
+
+  // Resolve signing (per-request computation like SAPISIDHASH)
+  if (serverExt?.signing) {
+    const signingResult = await resolveSigning(handle, serverExt.signing, serverUrl)
+    Object.assign(headers, signingResult.headers)
   }
 
   // Inject cookies

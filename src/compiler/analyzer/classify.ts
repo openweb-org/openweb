@@ -1,11 +1,12 @@
 import type { HarEntry, StateSnapshot } from '../../capture/types.js'
-import type { AuthPrimitive, CsrfPrimitive } from '../../types/primitives.js'
+import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../../types/primitives.js'
 import type { ExecutionMode } from '../../types/extensions.js'
 
 export interface ClassifyResult {
   readonly mode: ExecutionMode
   readonly auth?: AuthPrimitive
   readonly csrf?: CsrfPrimitive
+  readonly signing?: SigningPrimitive
 }
 
 export interface CaptureData {
@@ -194,14 +195,40 @@ function detectMetaTag(data: CaptureData): { name: string; header: string } | un
 }
 
 /**
+ * Detect sapisidhash signing: Authorization header matches
+ * `SAPISIDHASH <timestamp>_<40-char-hex>` pattern.
+ */
+function detectSapisidhash(data: CaptureData): { origin: string } | undefined {
+  for (const entry of data.harEntries) {
+    for (const h of entry.request.headers) {
+      if (h.name.toLowerCase() === 'authorization' && /^SAPISIDHASH \d+_[0-9a-f]{40}$/.test(h.value)) {
+        try {
+          const origin = new URL(entry.request.url).origin
+          return { origin }
+        } catch {
+          continue
+        }
+      }
+    }
+  }
+  return undefined
+}
+
+/**
  * Classify capture data to detect L2 primitives.
- * Returns mode + auth + csrf configuration for x-openweb emission.
+ * Returns mode + auth + csrf + signing configuration for x-openweb emission.
  */
 export function classify(data: CaptureData): ClassifyResult {
   const hasCookieSession = detectCookieSession(data)
   const cookieToHeader = detectCookieToHeader(data)
   const localStorageJwt = detectLocalStorageJwt(data)
   const metaTag = detectMetaTag(data)
+  const sapisidhash = detectSapisidhash(data)
+
+  // Build signing primitive if detected
+  const signing: SigningPrimitive | undefined = sapisidhash
+    ? { type: 'sapisidhash', origin: sapisidhash.origin, inject: { header: 'Authorization', prefix: 'SAPISIDHASH ' } }
+    : undefined
 
   if (localStorageJwt) {
     return {
@@ -212,11 +239,12 @@ export function classify(data: CaptureData): ClassifyResult {
         path: localStorageJwt.path,
         inject: localStorageJwt.inject,
       },
+      signing,
     }
   }
 
   if (!hasCookieSession) {
-    return { mode: 'direct_http' }
+    return { mode: 'direct_http', signing }
   }
 
   // Prefer cookie_to_header over meta_tag if both detected
@@ -230,5 +258,6 @@ export function classify(data: CaptureData): ClassifyResult {
     mode: 'session_http',
     auth: { type: 'cookie_session' },
     csrf,
+    signing,
   }
 }

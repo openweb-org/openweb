@@ -216,4 +216,21 @@ describe('classify', () => {
       expect(result.csrf.header).toBe('X-CSRF-Token')
     }
   })
+
+  it('detects sapisidhash signing from Authorization header pattern', () => {
+    const data: CaptureData = {
+      harEntries: [
+        makeHarEntry({
+          headers: [
+            { name: 'Cookie', value: 'SAPISID=abc123' },
+            { name: 'Authorization', value: 'SAPISIDHASH 1234567890_abcdef0123456789abcdef0123456789abcdef01' },
+          ],
+        }),
+      ],
+      stateSnapshots: [makeSnapshot([{ name: 'SAPISID', value: 'abc123' }])],
+    }
+
+    const result = classify(data)
+    expect(result.signing?.type).toBe('sapisidhash')
+  })
 })

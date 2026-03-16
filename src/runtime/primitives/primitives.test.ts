@@ -4,6 +4,8 @@ import { resolveCookieSession } from './cookie-session.js'
 import { resolveCookieToHeader } from './cookie-to-header.js'
 import { resolveLocalStorageJwt } from './localstorage-jwt.js'
 import { resolveMetaTag } from './meta-tag.js'
+import { resolvePageGlobal } from './page-global.js'
+import { resolveSapisidhash, computeSapisidhash } from './sapisidhash.js'
 import { resolveScriptJson } from './script-json.js'
 import type { BrowserHandle } from './types.js'
 
@@ -209,5 +211,109 @@ describe('resolveScriptJson', () => {
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED' },
     })
+  })
+})
+
+describe('resolvePageGlobal', () => {
+  it('evaluates expression and injects as query param', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    const result = await resolvePageGlobal(handle, {
+      expression: 'ytcfg.data_.INNERTUBE_API_KEY',
+      inject: { query: 'key' },
+    })
+
+    expect(result.queryParams).toEqual({ key: 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8' })
+  })
+
+  it('evaluates expression and injects as header', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => 'some_token_value'),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    const result = await resolvePageGlobal(handle, {
+      expression: '__context__.token',
+      inject: { header: 'X-Token', prefix: 'Bearer ' },
+    })
+
+    expect(result.headers).toEqual({ 'X-Token': 'Bearer some_token_value' })
+  })
+
+  it('throws when expression returns undefined', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => undefined),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    await expect(
+      resolvePageGlobal(handle, {
+        expression: 'nonexistent.value',
+        inject: { query: 'key' },
+      }),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
+    })
+  })
+})
+
+describe('resolveSapisidhash', () => {
+  it('computes SAPISIDHASH from SAPISID cookie', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => [
+          { name: 'SAPISID', value: 'abc123/def456', domain: '.youtube.com', path: '/', httpOnly: false, secure: true, sameSite: 'Lax', expires: -1 },
+        ]),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const result = await resolveSapisidhash(handle, {
+      origin: 'https://www.youtube.com',
+      inject: { header: 'Authorization', prefix: 'SAPISIDHASH ' },
+    }, 'https://www.youtube.com')
+
+    // Verify the header starts with the expected prefix and has the right format
+    const authHeader = result.headers.Authorization
+    expect(authHeader).toBeDefined()
+    expect(authHeader).toMatch(/^SAPISIDHASH \d+_[0-9a-f]{40}$/)
+  })
+
+  it('throws when SAPISID cookie not found', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    await expect(
+      resolveSapisidhash(handle, {
+        origin: 'https://www.youtube.com',
+        inject: { header: 'Authorization', prefix: 'SAPISIDHASH ' },
+      }, 'https://www.youtube.com'),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
+    })
+  })
+})
+
+describe('computeSapisidhash', () => {
+  it('produces correct SHA-1 hash', () => {
+    // Known test vector
+    const hash = computeSapisidhash(1234567890, 'test_sapisid', 'https://www.youtube.com')
+    // SHA1("1234567890 test_sapisid https://www.youtube.com")
+    expect(hash).toMatch(/^[0-9a-f]{40}$/)
+    // Verify deterministic
+    expect(computeSapisidhash(1234567890, 'test_sapisid', 'https://www.youtube.com')).toBe(hash)
   })
 })

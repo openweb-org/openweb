@@ -1,0 +1,86 @@
+import { OpenWebError } from '../../lib/errors.js'
+import type { BrowserHandle, ResolvedInjections } from './types.js'
+
+export interface PageGlobalConfig {
+  readonly expression: string
+  readonly inject: {
+    readonly header?: string
+    readonly prefix?: string
+    readonly query?: string
+  }
+  readonly values?: ReadonlyArray<{
+    readonly expression: string
+    readonly inject: {
+      readonly header?: string
+      readonly prefix?: string
+      readonly query?: string
+    }
+  }>
+}
+
+/**
+ * Resolve page_global auth: evaluate a JS expression on the page to get a token value.
+ * Supports injecting into headers or query parameters.
+ * Optionally resolves multiple values (e.g., YouTube needs API_KEY + SESSION_INDEX).
+ */
+export async function resolvePageGlobal(
+  handle: BrowserHandle,
+  config: PageGlobalConfig,
+): Promise<ResolvedInjections & { queryParams?: Record<string, string> }> {
+  const headers: Record<string, string> = {}
+  const queryParams: Record<string, string> = {}
+
+  // Resolve primary value
+  const primaryValue = await evaluateExpression(handle, config.expression)
+  applyInject(primaryValue, config.inject, headers, queryParams)
+
+  // Resolve additional values if specified
+  if (config.values) {
+    for (const extra of config.values) {
+      const value = await evaluateExpression(handle, extra.expression)
+      applyInject(value, extra.inject, headers, queryParams)
+    }
+  }
+
+  return {
+    headers,
+    queryParams: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+  }
+}
+
+async function evaluateExpression(handle: BrowserHandle, expression: string): Promise<string> {
+  const value = await handle.page.evaluate((expr: string) => {
+    try {
+      // Use Function constructor to safely evaluate the expression
+      return new Function(`return ${expr}`)() as unknown
+    } catch {
+      return undefined
+    }
+  }, expression)
+
+  if (value === undefined || value === null) {
+    throw new OpenWebError({
+      error: 'auth',
+      code: 'AUTH_FAILED',
+      message: `Page global expression "${expression}" returned no value.`,
+      action: 'Ensure you are on the correct page and logged in.',
+      retriable: true,
+    })
+  }
+
+  return String(value)
+}
+
+function applyInject(
+  value: string,
+  inject: { readonly header?: string; readonly prefix?: string; readonly query?: string },
+  headers: Record<string, string>,
+  queryParams: Record<string, string>,
+): void {
+  if (inject.header) {
+    headers[inject.header] = (inject.prefix ?? '') + value
+  }
+  if (inject.query) {
+    queryParams[inject.query] = value
+  }
+}
