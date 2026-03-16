@@ -99,12 +99,19 @@ export async function renderOperation(site: string, operationId: string, full: b
   const lines: string[] = []
   lines.push(`${method.toUpperCase()} ${opPath}`)
 
-  const queryParams = (operation.parameters ?? []).filter((parameter) => parameter.in === 'query')
-  for (const parameter of queryParams) {
-    const itemType = parameter.schema?.type === 'array' ? `${parameter.schema.items?.type ?? 'unknown'}[]` : formatParamType(parameter.schema?.type)
-    const required = parameter.required ? '[required]' : ''
-    const desc = parameter.description ?? ''
-    lines.push(`  ${parameter.name.padEnd(12)} ${itemType.padEnd(9)} ${desc} ${required}`.trimEnd())
+  // Show all parameter types grouped by location
+  const allParams = operation.parameters ?? []
+  const paramGroups = ['path', 'query', 'header'] as const
+  for (const location of paramGroups) {
+    const params = allParams.filter((p) => p.in === location)
+    if (params.length === 0) continue
+    for (const parameter of params) {
+      const itemType = parameter.schema?.type === 'array' ? `${parameter.schema.items?.type ?? 'unknown'}[]` : formatParamType(parameter.schema?.type)
+      const required = parameter.required ? '[required]' : ''
+      const loc = location === 'query' ? '' : `[${location}] `
+      const desc = parameter.description ?? ''
+      lines.push(`  ${parameter.name.padEnd(12)} ${itemType.padEnd(9)} ${loc}${desc} ${required}`.trimEnd())
+    }
   }
 
   const responseSchema = operation.responses?.['200']?.content?.['application/json']?.schema
