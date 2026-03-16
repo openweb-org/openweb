@@ -152,4 +152,40 @@ describe('classify', () => {
     // sessionid is httpOnly, so cookie_to_header should NOT match it
     expect(result.csrf).toBeUndefined()
   })
+
+  it('detects localStorage_jwt when localStorage token matches Authorization header', () => {
+    const data: CaptureData = {
+      harEntries: [
+        makeHarEntry({
+          headers: [
+            { name: 'Authorization', value: 'Bearer eyJhbGciOiJFUzI1NiJ9.testtoken123' },
+          ],
+        }),
+      ],
+      stateSnapshots: [{
+        timestamp: '2025-01-01T00:00:00Z',
+        trigger: 'initial',
+        url: 'https://bsky.app',
+        localStorage: {
+          'BSKY_STORAGE': JSON.stringify({
+            session: {
+              currentAccount: {
+                accessJwt: 'eyJhbGciOiJFUzI1NiJ9.testtoken123',
+              },
+            },
+          }),
+        },
+        sessionStorage: {},
+        cookies: [],
+      }],
+    }
+
+    const result = classify(data)
+    expect(result.mode).toBe('session_http')
+    expect(result.auth?.type).toBe('localStorage_jwt')
+    if (result.auth?.type === 'localStorage_jwt') {
+      expect(result.auth.key).toBe('BSKY_STORAGE')
+      expect(result.auth.path).toBe('session.currentAccount.accessJwt')
+    }
+  })
 })

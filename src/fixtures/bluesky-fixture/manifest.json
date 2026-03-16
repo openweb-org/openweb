@@ -1,0 +1,16 @@
+{
+  "name": "bluesky-fixture",
+  "display_name": "Bluesky",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://bsky.social",
+  "description": "Bluesky AT Protocol API — localStorage_jwt auth + cursor pagination",
+  "requires_auth": true,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 3,
+    "l1_count": 3,
+    "l2_count": 3,
+    "l3_count": 0
+  }
+}

@@ -1,0 +1,141 @@
+openapi: '3.1.0'
+info:
+  title: Bluesky API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://bsky.social/xrpc
+    x-openweb:
+      mode: session_http
+      auth:
+        type: localStorage_jwt
+        key: BSKY_STORAGE
+        path: session.currentAccount.accessJwt
+        inject:
+          header: Authorization
+          prefix: 'Bearer '
+paths:
+  /app.bsky.feed.getTimeline:
+    get:
+      operationId: getTimeline
+      summary: Get the authenticated user's timeline
+      x-openweb:
+        risk_tier: safe
+        stable_id: bsky0001
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+        pagination:
+          type: cursor
+          response_field: cursor
+          request_param: cursor
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor for next page.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Number of items per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  feed:
+                    type: array
+                    items:
+                      type: object
+                  cursor:
+                    type: string
+  /app.bsky.actor.getProfile:
+    get:
+      operationId: getProfile
+      summary: Get a user's profile
+      x-openweb:
+        risk_tier: safe
+        stable_id: bsky0002
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+      parameters:
+        - name: actor
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Handle or DID of the user.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  did:
+                    type: string
+                  handle:
+                    type: string
+                  displayName:
+                    type: string
+  /app.bsky.actor.searchActors:
+    get:
+      operationId: searchActors
+      summary: Search for actors/users
+      x-openweb:
+        risk_tier: safe
+        stable_id: bsky0003
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+        pagination:
+          type: cursor
+          response_field: cursor
+          request_param: cursor
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query.
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actors:
+                    type: array
+                    items:
+                      type: object
+                  cursor:
+                    type: string

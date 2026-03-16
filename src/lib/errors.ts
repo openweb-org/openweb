@@ -2,9 +2,10 @@ export type OpenWebErrorCode =
   | 'EXECUTION_FAILED'
   | 'TOOL_NOT_FOUND'
   | 'INVALID_PARAMS'
+  | 'AUTH_FAILED'
 
 export interface OpenWebErrorPayload {
-  readonly error: 'execution_failed'
+  readonly error: 'execution_failed' | 'auth'
   readonly code: OpenWebErrorCode
   readonly message: string
   readonly action: string

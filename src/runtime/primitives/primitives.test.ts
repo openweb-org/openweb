@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { resolveCookieSession } from './cookie-session.js'
 import { resolveCookieToHeader } from './cookie-to-header.js'
+import { resolveLocalStorageJwt } from './localstorage-jwt.js'
 import type { BrowserHandle } from './types.js'
 
 function mockHandle(cookies: Array<{ name: string; value: string }>): BrowserHandle {
@@ -66,6 +67,70 @@ describe('resolveCookieToHeader', () => {
       resolveCookieToHeader(handle, { cookie: 'csrftoken', header: 'X-CSRFToken' }, 'https://example.com'),
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED' },
+    })
+  })
+})
+
+describe('resolveLocalStorageJwt', () => {
+  it('reads JWT from localStorage and injects as Bearer header', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => JSON.stringify({
+          session: {
+            currentAccount: {
+              accessJwt: 'eyJhbGciOiJFUzI1NiJ9.test.token',
+            },
+          },
+        })),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    const result = await resolveLocalStorageJwt(handle, {
+      key: 'BSKY_STORAGE',
+      path: 'session.currentAccount.accessJwt',
+      inject: { header: 'Authorization', prefix: 'Bearer ' },
+    })
+
+    expect(result.headers).toEqual({
+      Authorization: 'Bearer eyJhbGciOiJFUzI1NiJ9.test.token',
+    })
+  })
+
+  it('throws when localStorage key not found', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => null),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    await expect(
+      resolveLocalStorageJwt(handle, {
+        key: 'MISSING_KEY',
+        inject: { header: 'Authorization' },
+      }),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
+    })
+  })
+
+  it('throws when path does not exist in parsed JSON', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => JSON.stringify({ other: 'data' })),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    await expect(
+      resolveLocalStorageJwt(handle, {
+        key: 'BSKY_STORAGE',
+        path: 'session.currentAccount.accessJwt',
+        inject: { header: 'Authorization' },
+      }),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
     })
   })
 })

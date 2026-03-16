@@ -7,6 +7,7 @@ import type { AuthPrimitive, CsrfPrimitive } from '../types/primitives.js'
 import type { ExecutionMode, XOpenWebServer } from '../types/extensions.js'
 import { resolveCookieSession } from './primitives/cookie-session.js'
 import { resolveCookieToHeader } from './primitives/cookie-to-header.js'
+import { resolveLocalStorageJwt } from './primitives/localstorage-jwt.js'
 import type { BrowserHandle, ResolvedInjections } from './primitives/types.js'
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
@@ -134,6 +135,12 @@ async function resolveAuth(handle: BrowserHandle, auth: AuthPrimitive, serverUrl
   switch (auth.type) {
     case 'cookie_session':
       return resolveCookieSession(handle, serverUrl)
+    case 'localStorage_jwt':
+      return resolveLocalStorageJwt(handle, {
+        key: auth.key,
+        path: auth.path,
+        inject: auth.inject,
+      })
     default:
       throw new OpenWebError({
         error: 'execution_failed',
