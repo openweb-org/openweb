@@ -8,6 +8,7 @@ import type { ExecutionMode, XOpenWebServer } from '../types/extensions.js'
 import { resolveCookieSession } from './primitives/cookie-session.js'
 import { resolveCookieToHeader } from './primitives/cookie-to-header.js'
 import { resolveLocalStorageJwt } from './primitives/localstorage-jwt.js'
+import { resolveMetaTag } from './primitives/meta-tag.js'
 import type { BrowserHandle, ResolvedInjections } from './primitives/types.js'
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
@@ -157,6 +158,8 @@ async function resolveCsrf(handle: BrowserHandle, csrf: CsrfPrimitive, serverUrl
   switch (csrf.type) {
     case 'cookie_to_header':
       return resolveCookieToHeader(handle, csrf, serverUrl)
+    case 'meta_tag':
+      return resolveMetaTag(handle, { name: csrf.name, header: csrf.header })
     default:
       throw new OpenWebError({
         error: 'execution_failed',

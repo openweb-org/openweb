@@ -1,0 +1,153 @@
+openapi: '3.1.0'
+info:
+  title: GitHub API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://api.github.com
+    x-openweb:
+      mode: session_http
+      auth:
+        type: cookie_session
+      csrf:
+        type: meta_tag
+        name: csrf-token
+        header: X-CSRF-Token
+        scope:
+          - PUT
+          - POST
+          - PATCH
+          - DELETE
+paths:
+  /repos/{owner}/{repo}:
+    get:
+      operationId: getRepo
+      summary: Get a repository
+      x-openweb:
+        risk_tier: safe
+        stable_id: gh0001
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  full_name:
+                    type: string
+                  description:
+                    type: string
+  /repos/{owner}/{repo}/issues:
+    get:
+      operationId: listIssues
+      summary: List repository issues
+      x-openweb:
+        risk_tier: safe
+        stable_id: gh0002
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+        pagination:
+          type: link_header
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    title:
+                      type: string
+                    state:
+                      type: string
+  /user/starred/{owner}/{repo}:
+    put:
+      operationId: starRepo
+      summary: Star a repository
+      x-openweb:
+        risk_tier: low
+        stable_id: gh0003
+        tool_version: 1
+        verified: false
+        signals:
+          - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      responses:
+        '204':
+          description: Success (no content).

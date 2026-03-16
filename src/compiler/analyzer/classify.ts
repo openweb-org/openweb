@@ -11,6 +11,7 @@ export interface ClassifyResult {
 export interface CaptureData {
   readonly harEntries: readonly HarEntry[]
   readonly stateSnapshots: readonly StateSnapshot[]
+  readonly domHtml?: string
 }
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
@@ -158,6 +159,41 @@ function detectLocalStorageJwt(
 }
 
 /**
+ * Detect meta_tag CSRF: a <meta name="..." content="..."> tag whose content
+ * value appears in a custom header on mutation requests.
+ */
+function detectMetaTag(data: CaptureData): { name: string; header: string } | undefined {
+  if (!data.domHtml) return undefined
+
+  // Find <meta name="..." content="..."> tags
+  const metaRegex = /<meta\s+name="([^"]+)"\s+content="([^"]+)"/gi
+  const metaTags = new Map<string, string>()
+  let match: RegExpExecArray | null
+  while ((match = metaRegex.exec(data.domHtml)) !== null) {
+    metaTags.set(match[1]!, match[2]!)
+  }
+
+  if (metaTags.size === 0) return undefined
+
+  // Check if any meta tag value appears in mutation request headers
+  const mutations = data.harEntries.filter((e) => MUTATION_METHODS.has(e.request.method))
+  for (const entry of mutations) {
+    for (const header of entry.request.headers) {
+      const name = header.name.toLowerCase()
+      if (['cookie', 'content-type', 'accept', 'user-agent', 'host', 'origin', 'referer'].includes(name)) continue
+
+      for (const [metaName, metaValue] of metaTags) {
+        if (header.value === metaValue && metaValue.length > 0) {
+          return { name: metaName, header: header.name }
+        }
+      }
+    }
+  }
+
+  return undefined
+}
+
+/**
  * Classify capture data to detect L2 primitives.
  * Returns mode + auth + csrf configuration for x-openweb emission.
  */
@@ -165,6 +201,7 @@ export function classify(data: CaptureData): ClassifyResult {
   const hasCookieSession = detectCookieSession(data)
   const cookieToHeader = detectCookieToHeader(data)
   const localStorageJwt = detectLocalStorageJwt(data)
+  const metaTag = detectMetaTag(data)
 
   if (localStorageJwt) {
     return {
@@ -182,11 +219,16 @@ export function classify(data: CaptureData): ClassifyResult {
     return { mode: 'direct_http' }
   }
 
+  // Prefer cookie_to_header over meta_tag if both detected
+  const csrf = cookieToHeader
+    ? { type: 'cookie_to_header' as const, cookie: cookieToHeader.cookie, header: cookieToHeader.header }
+    : metaTag
+      ? { type: 'meta_tag' as const, name: metaTag.name, header: metaTag.header }
+      : undefined
+
   return {
     mode: 'session_http',
     auth: { type: 'cookie_session' },
-    csrf: cookieToHeader
-      ? { type: 'cookie_to_header', cookie: cookieToHeader.cookie, header: cookieToHeader.header }
-      : undefined,
+    csrf,
   }
 }

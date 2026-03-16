@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { resolveCookieSession } from './cookie-session.js'
 import { resolveCookieToHeader } from './cookie-to-header.js'
 import { resolveLocalStorageJwt } from './localstorage-jwt.js'
+import { resolveMetaTag } from './meta-tag.js'
+import { resolveScriptJson } from './script-json.js'
 import type { BrowserHandle } from './types.js'
 
 function mockHandle(cookies: Array<{ name: string; value: string }>): BrowserHandle {
@@ -131,6 +133,81 @@ describe('resolveLocalStorageJwt', () => {
       }),
     ).rejects.toMatchObject({
       payload: { code: 'AUTH_FAILED' },
+    })
+  })
+})
+
+describe('resolveMetaTag', () => {
+  it('reads CSRF token from meta tag', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => 'csrf_token_value_123'),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    const result = await resolveMetaTag(handle, { name: 'csrf-token', header: 'X-CSRF-Token' })
+    expect(result.headers).toEqual({ 'X-CSRF-Token': 'csrf_token_value_123' })
+  })
+
+  it('throws when meta tag not found', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => null),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    await expect(
+      resolveMetaTag(handle, { name: 'csrf-token', header: 'X-CSRF-Token' }),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
+    })
+  })
+})
+
+describe('resolveScriptJson', () => {
+  it('extracts and parses JSON from script tag', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => JSON.stringify({ repo: { name: 'test', stars: 42 } })),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    const result = await resolveScriptJson(handle, {
+      selector: 'script[data-target="react-app.embeddedData"]',
+      path: 'repo',
+    })
+    expect(result).toEqual({ name: 'test', stars: 42 })
+  })
+
+  it('returns full data when no path specified', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => JSON.stringify({ items: [1, 2, 3] })),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    const result = await resolveScriptJson(handle, {
+      selector: 'script[type="application/json"]',
+    })
+    expect(result).toEqual({ items: [1, 2, 3] })
+  })
+
+  it('throws when script element not found', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => null),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    await expect(
+      resolveScriptJson(handle, { selector: 'script.missing' }),
+    ).rejects.toMatchObject({
+      payload: { code: 'EXECUTION_FAILED' },
     })
   })
 })

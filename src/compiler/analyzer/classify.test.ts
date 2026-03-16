@@ -188,4 +188,32 @@ describe('classify', () => {
       expect(result.auth.path).toBe('session.currentAccount.accessJwt')
     }
   })
+
+  it('detects meta_tag CSRF when meta content matches mutation header', () => {
+    const data: CaptureData = {
+      harEntries: [
+        makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+        makeHarEntry({
+          method: 'POST',
+          headers: [
+            { name: 'Cookie', value: 'sessionid=abc' },
+            { name: 'X-CSRF-Token', value: 'meta_csrf_token_456' },
+          ],
+        }),
+      ],
+      stateSnapshots: [
+        makeSnapshot([{ name: 'sessionid', value: 'abc', httpOnly: true }]),
+      ],
+      domHtml: '<html><head><meta name="csrf-token" content="meta_csrf_token_456"></head><body></body></html>',
+    }
+
+    const result = classify(data)
+    expect(result.mode).toBe('session_http')
+    expect(result.auth).toEqual({ type: 'cookie_session' })
+    expect(result.csrf?.type).toBe('meta_tag')
+    if (result.csrf?.type === 'meta_tag') {
+      expect(result.csrf.name).toBe('csrf-token')
+      expect(result.csrf.header).toBe('X-CSRF-Token')
+    }
+  })
 })
