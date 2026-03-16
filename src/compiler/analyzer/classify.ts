@@ -315,7 +315,11 @@ export function classify(data: CaptureData): ClassifyResult {
   }
 
   if (!auth) {
-    return { mode: 'direct_http', signing }
+    // sapisidhash requires browser context (cookies), so force session_http
+    if (signing) {
+      return { mode: 'session_http', signing }
+    }
+    return { mode: 'direct_http' }
   }
 
   // Prefer cookie_to_header over meta_tag if both detected

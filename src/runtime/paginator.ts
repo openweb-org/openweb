@@ -38,7 +38,7 @@ function extractItems(body: unknown): unknown[] {
 
   if (body && typeof body === 'object') {
     const record = body as Record<string, unknown>
-    for (const key of ['items', 'data', 'results']) {
+    for (const key of ['items', 'data', 'results', 'feed']) {
       if (Array.isArray(record[key])) return record[key] as unknown[]
     }
   }

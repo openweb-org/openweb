@@ -266,6 +266,26 @@ describe('resolvePageGlobal', () => {
       payload: { code: 'AUTH_FAILED' },
     })
   })
+
+  it('rejects blocked expressions (defense-in-depth)', async () => {
+    const handle: BrowserHandle = {
+      page: {
+        evaluate: vi.fn(async () => 'should_not_reach'),
+      } as unknown as BrowserHandle['page'],
+      context: {} as BrowserHandle['context'],
+    }
+
+    for (const malicious of ['fetch("http://evil.com")', 'document.cookie', 'eval("alert(1)")']) {
+      await expect(
+        resolvePageGlobal(handle, {
+          expression: malicious,
+          inject: { query: 'key' },
+        }),
+      ).rejects.toMatchObject({
+        payload: { code: 'AUTH_FAILED' },
+      })
+    }
+  })
 })
 
 describe('resolveSapisidhash', () => {
@@ -391,6 +411,100 @@ describe('resolveExchangeChain', () => {
     ).rejects.toMatchObject({
       payload: { code: 'AUTH_FAILED' },
     })
+  })
+
+  it('only sends cookies matching step origin, not all origins', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async (origin: string) => {
+          if (origin === 'https://auth.example.com') {
+            return [{ name: 'auth_cookie', value: 'auth123', domain: '.example.com', path: '/', httpOnly: false, secure: true, sameSite: 'Lax', expires: -1 }]
+          }
+          return [{ name: 'other_cookie', value: 'other456', domain: '.other.com', path: '/', httpOnly: false, secure: true, sameSite: 'Lax', expires: -1 }]
+        }),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ token: 'tok123' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    await resolveExchangeChain(handle, {
+      steps: [{ call: 'https://auth.example.com/token', extract: 'token' }],
+      inject: { header: 'Authorization', prefix: 'Bearer ' },
+    }, 'https://api.example.com', { fetchImpl: fetchMock })
+
+    const calledHeaders = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![1].headers as Record<string, string>
+    expect(calledHeaders.Cookie).toBe('auth_cookie=auth123')
+  })
+
+  it('calls ssrfValidator for each step URL', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const ssrfValidator = vi.fn(async () => {})
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ token: 'tok123' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    await resolveExchangeChain(handle, {
+      steps: [{ call: 'https://example.com/token', extract: 'token' }],
+      inject: { header: 'Authorization' },
+    }, 'https://example.com', { fetchImpl: fetchMock, ssrfValidator })
+
+    expect(ssrfValidator).toHaveBeenCalledWith('https://example.com/token')
+  })
+
+  it('substitutes extracted values into subsequent step URLs, headers, and body', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: 'auth_code_xyz' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'final_token' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as unknown as typeof fetch
+
+    await resolveExchangeChain(handle, {
+      steps: [
+        { call: 'https://example.com/auth', extract: 'code', as: 'auth_code' },
+        {
+          call: 'https://example.com/token?code=${auth_code}',
+          extract: 'access_token',
+          headers: { 'X-Auth-Code': '${auth_code}' },
+          body: { grant_type: 'authorization_code', code: '${auth_code}' },
+        },
+      ],
+      inject: { header: 'Authorization', prefix: 'Bearer ' },
+    }, 'https://example.com', { fetchImpl: fetchMock })
+
+    const secondCall = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[1]!
+    const secondUrl = String(secondCall[0])
+    const secondInit = secondCall[1] as RequestInit
+    const secondHeaders = secondInit.headers as Record<string, string>
+
+    expect(secondUrl).toBe('https://example.com/token?code=auth_code_xyz')
+    expect(secondHeaders['X-Auth-Code']).toBe('auth_code_xyz')
+    expect(secondInit.body).toBe('grant_type=authorization_code&code=auth_code_xyz')
   })
 })
 

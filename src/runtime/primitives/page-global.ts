@@ -48,10 +48,53 @@ export async function resolvePageGlobal(
   }
 }
 
+/**
+ * Blocklist of patterns that should never appear in page_global expressions.
+ * Expressions come from the compiler-generated spec (trusted), but this
+ * provides defense-in-depth against injection if a spec is tampered with.
+ */
+const BLOCKED_PATTERNS = [
+  'fetch(',
+  'document.cookie',
+  'eval(',
+  'Function(',
+  'XMLHttpRequest',
+  'import(',
+  'require(',
+  'process.',
+  'globalThis.process',
+  'child_process',
+]
+
+function validateExpression(expression: string): void {
+  const lower = expression.toLowerCase()
+  for (const pattern of BLOCKED_PATTERNS) {
+    if (lower.includes(pattern.toLowerCase())) {
+      throw new OpenWebError({
+        error: 'auth',
+        code: 'AUTH_FAILED',
+        message: `Blocked page_global expression: contains disallowed pattern "${pattern}".`,
+        action: 'The expression may have been tampered with. Re-capture the site.',
+        retriable: false,
+      })
+    }
+  }
+}
+
 async function evaluateExpression(handle: BrowserHandle, expression: string): Promise<string> {
+  validateExpression(expression)
+
+  /**
+   * SECURITY: `new Function(\`return ${expr}\`)()` executes arbitrary JS in the
+   * page context. This is by design -- page_global needs to evaluate property
+   * lookups like `ytcfg.data_.INNERTUBE_API_KEY` that only exist at runtime.
+   *
+   * Trust boundary: expressions originate from the compiler-generated fixture/spec,
+   * which is created from captured HAR data. The blocklist above provides
+   * defense-in-depth against obviously malicious patterns if a spec is tampered with.
+   */
   const value = await handle.page.evaluate((expr: string) => {
     try {
-      // Use Function constructor to safely evaluate the expression
       return new Function(`return ${expr}`)() as unknown
     } catch {
       return undefined

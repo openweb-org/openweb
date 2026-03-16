@@ -21,6 +21,14 @@ export interface ExchangeChainConfig {
 
 export interface ExchangeChainDeps {
   readonly fetchImpl?: typeof fetch
+  readonly ssrfValidator?: (url: string) => Promise<void>
+}
+
+/**
+ * Substitute `${varName}` template references in a string using extracted values.
+ */
+function substituteTemplates(value: string, extracted: ReadonlyMap<string, string>): string {
+  return value.replace(/\$\{([^}]+)\}/g, (_, key: string) => extracted.get(key) ?? `\${${key}}`)
 }
 
 /**
@@ -34,66 +42,62 @@ export async function resolveExchangeChain(
   deps: ExchangeChainDeps = {},
 ): Promise<ResolvedInjections> {
   const fetchImpl = deps.fetchImpl ?? fetch
-
-  // Get cookies from browser context for authenticating exchange requests
-  const cookies = await handle.context.cookies(serverUrl)
-
-  // Also get cookies for the exchange endpoint origins
-  const allOrigins = new Set<string>()
-  for (const step of config.steps) {
-    try {
-      allOrigins.add(new URL(step.call).origin)
-    } catch { /* skip invalid URLs */ }
-  }
-
-  // Merge cookies from all relevant origins
-  const allCookies = new Map<string, string>()
-  for (const c of cookies) {
-    allCookies.set(c.name, c.value)
-  }
-  for (const origin of allOrigins) {
-    const originCookies = await handle.context.cookies(origin)
-    for (const c of originCookies) {
-      allCookies.set(c.name, c.value)
-    }
-  }
-
-  const cookieString = Array.from(allCookies.entries())
-    .map(([name, value]) => `${name}=${value}`)
-    .join('; ')
+  const ssrfValidator = deps.ssrfValidator
 
   // Execute steps sequentially, accumulating extracted values
   const extracted = new Map<string, string>()
   let lastValue = ''
 
   for (const step of config.steps) {
-    const headers: Record<string, string> = {
-      ...step.headers,
+    // Substitute templates in the step URL
+    const stepUrl = substituteTemplates(step.call, extracted)
+
+    // SSRF validation: validate each step URL before fetching
+    if (ssrfValidator) {
+      await ssrfValidator(stepUrl)
     }
 
-    // Always send cookies with exchange requests
+    // Only send cookies matching this step's origin (not all origins merged)
+    const stepOrigin = new URL(stepUrl).origin
+    const originCookies = await handle.context.cookies(stepOrigin)
+    const cookieString = originCookies
+      .map((c) => `${c.name}=${c.value}`)
+      .join('; ')
+
+    // Build headers, substituting templates from previously extracted values
+    const headers: Record<string, string> = {}
+    if (step.headers) {
+      for (const [k, v] of Object.entries(step.headers)) {
+        headers[k] = substituteTemplates(v, extracted)
+      }
+    }
+
     if (cookieString) {
       headers.Cookie = cookieString
     }
 
-    // Build body if specified
+    // Build body if specified, substituting templates
     let body: string | undefined
     if (step.body) {
-      body = new URLSearchParams(step.body).toString()
+      const substituted: Record<string, string> = {}
+      for (const [k, v] of Object.entries(step.body)) {
+        substituted[k] = substituteTemplates(v, extracted)
+      }
+      body = new URLSearchParams(substituted).toString()
     }
 
-    const response = await fetchImpl(step.call, {
+    const response = await fetchImpl(stepUrl, {
       method: 'POST',
       headers,
       body,
-      redirect: 'follow',
+      redirect: 'manual',
     })
 
     if (!response.ok) {
       throw new OpenWebError({
         error: 'auth',
         code: 'AUTH_FAILED',
-        message: `Exchange chain step failed: ${step.call} returned ${response.status}`,
+        message: `Exchange chain step failed: ${stepUrl} returned ${response.status}`,
         action: 'Ensure you are logged in. The exchange endpoint may require fresh cookies.',
         retriable: true,
       })
@@ -119,7 +123,7 @@ export async function resolveExchangeChain(
       throw new OpenWebError({
         error: 'auth',
         code: 'AUTH_FAILED',
-        message: `Exchange chain: could not extract "${step.extract}" from ${step.call} response.`,
+        message: `Exchange chain: could not extract "${step.extract}" from ${stepUrl} response.`,
         action: 'The response structure may have changed. Re-capture the site.',
         retriable: true,
       })

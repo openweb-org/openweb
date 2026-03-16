@@ -234,6 +234,26 @@ describe('classify', () => {
     expect(result.signing?.type).toBe('sapisidhash')
   })
 
+  it('forces session_http when sapisidhash detected without auth', () => {
+    // No cookies in HAR entries → no cookie_session detected
+    // But SAPISIDHASH in Authorization → signing requires browser context
+    const data: CaptureData = {
+      harEntries: [
+        makeHarEntry({
+          headers: [
+            { name: 'Authorization', value: 'SAPISIDHASH 1234567890_abcdef0123456789abcdef0123456789abcdef01' },
+          ],
+        }),
+      ],
+      stateSnapshots: [],
+    }
+
+    const result = classify(data)
+    expect(result.mode).toBe('session_http')
+    expect(result.signing?.type).toBe('sapisidhash')
+    expect(result.auth).toBeUndefined()
+  })
+
   // CR-20: Partial cookie presence should NOT be detected as cookie_session
   it('returns direct_http when only some HAR entries have Cookie header', () => {
     const data: CaptureData = {

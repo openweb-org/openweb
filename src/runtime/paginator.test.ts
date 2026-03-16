@@ -244,6 +244,12 @@ describe('executePaginated — extractItems heuristic', () => {
     expect(result.items).toEqual([100, 200])
   })
 
+  it('extracts from body.feed (Bluesky)', async () => {
+    executeOperationMock.mockResolvedValueOnce(makeResult({ feed: [{ post: 'a' }, { post: 'b' }] }))
+    const result = await executePaginated('test-site', 'list_items', {})
+    expect(result.items).toEqual([{ post: 'a' }, { post: 'b' }])
+  })
+
   it('wraps non-array body as single-element array', async () => {
     executeOperationMock.mockResolvedValueOnce(makeResult({ name: 'test' }))
     const result = await executePaginated('test-site', 'list_items', {})

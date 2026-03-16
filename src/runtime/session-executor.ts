@@ -15,6 +15,11 @@ import { resolvePageGlobal } from './primitives/page-global.js'
 import { resolveSapisidhash } from './primitives/sapisidhash.js'
 import type { BrowserHandle, ResolvedInjections } from './primitives/types.js'
 
+/** Auth resolution result — extends ResolvedInjections with optional query params */
+interface AuthResult extends ResolvedInjections {
+  readonly queryParams?: Readonly<Record<string, string>>
+}
+
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 const VALID_MODES = new Set<string>(['direct_http', 'session_http', 'browser_fetch'])
 const MAX_REDIRECTS = 5
@@ -181,7 +186,7 @@ async function resolveAuth(
   auth: AuthPrimitive,
   serverUrl: string,
   deps?: SessionHttpDependencies,
-): Promise<ResolvedInjections> {
+): Promise<AuthResult> {
   switch (auth.type) {
     case 'cookie_session':
       return resolveCookieSession(handle, serverUrl)
@@ -201,7 +206,7 @@ async function resolveAuth(
       return resolveExchangeChain(handle, {
         steps: auth.steps,
         inject: auth.inject,
-      }, serverUrl, { fetchImpl: deps?.fetchImpl })
+      }, serverUrl, { fetchImpl: deps?.fetchImpl, ssrfValidator: deps?.ssrfValidator })
     default:
       throw new OpenWebError({
         error: 'execution_failed',
@@ -394,9 +399,8 @@ export async function executeSessionHttp(
     cookieString = authResult.cookieString
 
     // Inject auth query params (e.g., page_global may inject API key as query param)
-    const authQueryParams = (authResult as { queryParams?: Record<string, string> }).queryParams
-    if (authQueryParams) {
-      for (const [key, value] of Object.entries(authQueryParams)) {
+    if (authResult.queryParams) {
+      for (const [key, value] of Object.entries(authResult.queryParams)) {
         target.searchParams.set(key, value)
       }
     }
