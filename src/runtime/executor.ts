@@ -16,6 +16,7 @@ import {
 import { validateSSRF } from '../lib/ssrf.js'
 import { connectWithRetry } from '../capture/connection.js'
 import { resolveMode, executeSessionHttp } from './session-executor.js'
+import { executeBrowserFetch } from './browser-fetch-executor.js'
 
 const MAX_REDIRECTS = 5
 
@@ -102,16 +103,26 @@ export async function executeOperation(
   let responseHeaders: Record<string, string> = {}
 
   if (mode === 'browser_fetch') {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: 'browser_fetch mode is not yet implemented.',
-      action: 'Use session_http mode or contribute a browser_fetch implementation.',
-      retriable: false,
-    })
-  }
-
-  if (mode === 'session_http') {
+    const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
+    try {
+      const result = await executeBrowserFetch(
+        browser,
+        spec,
+        operationRef.path,
+        operationRef.method,
+        operationRef.operation,
+        params,
+        { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator },
+      )
+      status = result.status
+      body = result.body
+      responseHeaders = { ...result.responseHeaders }
+    } finally {
+      if (!deps.browser) {
+        browser.close().catch(() => {})
+      }
+    }
+  } else if (mode === 'session_http') {
     const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
     try {
       const result = await executeSessionHttp(

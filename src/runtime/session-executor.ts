@@ -27,7 +27,7 @@ const SENSITIVE_HEADERS = ['cookie', 'authorization', 'x-csrftoken', 'x-csrf-tok
 const UNSAFE_REF_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
 
 /** Find a page whose URL matches the target server origin (for page.evaluate scoping) */
-function findPageForOrigin(context: BrowserContext, serverUrl: string): import('playwright').Page | undefined {
+export function findPageForOrigin(context: BrowserContext, serverUrl: string): import('playwright').Page | undefined {
   try {
     const targetOrigin = new URL(serverUrl).origin
     const targetHost = new URL(serverUrl).hostname
@@ -181,7 +181,7 @@ export function buildHeaderParams(
 }
 
 /** Resolve auth primitive to get cookies/headers to inject */
-async function resolveAuth(
+export async function resolveAuth(
   handle: BrowserHandle,
   auth: AuthPrimitive,
   serverUrl: string,
@@ -219,7 +219,7 @@ async function resolveAuth(
 }
 
 /** Resolve CSRF primitive to get headers to inject */
-async function resolveCsrf(
+export async function resolveCsrf(
   handle: BrowserHandle,
   csrf: CsrfPrimitive,
   serverUrl: string,
@@ -254,7 +254,7 @@ async function resolveCsrf(
 }
 
 /** Resolve signing primitive to get headers to inject */
-async function resolveSigning(
+export async function resolveSigning(
   handle: BrowserHandle,
   signing: SigningPrimitive,
   serverUrl: string,
@@ -529,7 +529,7 @@ export async function executeSessionHttp(
 }
 
 /** Collect parameters from operation + $ref components resolution */
-function resolveAllParameters(spec: OpenApiSpec, operation: OpenApiOperation): OpenApiParameter[] {
+export function resolveAllParameters(spec: OpenApiSpec, operation: OpenApiOperation): OpenApiParameter[] {
   const params = operation.parameters ?? []
   return params.flatMap((p) => {
     const ref = (p as unknown as Record<string, unknown>)['$ref'] as string | undefined
