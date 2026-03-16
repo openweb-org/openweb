@@ -47,7 +47,17 @@ export function resolveMode(spec: OpenApiSpec, operation: OpenApiOperation): Exe
   }
 
   const serverExt = getServerXOpenWeb(spec, operation)
-  return serverExt?.mode ?? 'direct_http'
+  const serverMode = serverExt?.mode ?? 'direct_http'
+  if (!VALID_MODES.has(serverMode)) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Unknown execution mode: ${serverMode}`,
+      action: 'Valid modes: direct_http, session_http, browser_fetch.',
+      retriable: false,
+    })
+  }
+  return serverMode as ExecutionMode
 }
 
 /** Substitute path parameters like {user_id} in the URL path */
@@ -310,6 +320,16 @@ export async function executeSessionHttp(
       code: 'EXECUTION_FAILED',
       message: 'No response received.',
       action: 'Check network connectivity.',
+      retriable: true,
+    })
+  }
+
+  if (response.status >= 300 && response.status < 400) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Too many redirects (>${MAX_REDIRECTS})`,
+      action: 'Retry later or inspect endpoint redirects.',
       retriable: true,
     })
   }
