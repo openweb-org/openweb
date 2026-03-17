@@ -13,6 +13,7 @@ import { execCommand } from './commands/exec.js'
 import { showCommand } from './commands/show.js'
 import { sitesCommand } from './commands/sites.js'
 import { testCommand } from './commands/test.js'
+import { browserStartCommand, browserStopCommand, browserRestartCommand, browserStatusCommand, loginCommand } from './commands/browser.js'
 import { OpenWebError, toOpenWebError, writeErrorToStderr } from './lib/errors.js'
 
 async function withErrorHandling(fn: () => Promise<void>): Promise<void> {
@@ -28,7 +29,7 @@ async function withErrorHandling(fn: () => Promise<void>): Promise<void> {
 const argv = hideBin(process.argv)
 const firstArg = argv[0] ?? ''
 
-const passthroughTopLevel = new Set(['sites', 'compile', 'capture', 'discover', 'verify', 'registry', '--help', '-h', '--version', '-v'])
+const passthroughTopLevel = new Set(['sites', 'compile', 'capture', 'discover', 'verify', 'registry', 'browser', 'login', '--help', '-h', '--version', '-v'])
 
 if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
   const [site, second, third, fourth] = argv
@@ -236,6 +237,41 @@ await yargs(argv)
           action: String(args.action) as RegistryAction,
           site: args.site ? String(args.site) : undefined,
         })
+      })
+    },
+  )
+  .command(
+    'browser <action>',
+    'Manage Chrome browser for authenticated sites',
+    (cmd) =>
+      cmd
+        .positional('action', {
+          type: 'string',
+          demandOption: true,
+          choices: ['start', 'stop', 'restart', 'status'] as const,
+          describe: 'Browser action',
+        })
+        .option('headless', { type: 'boolean', default: false, describe: 'Run headless' })
+        .option('port', { type: 'number', default: 9222, describe: 'CDP port' }),
+    async (args) => {
+      await withErrorHandling(async () => {
+        const action = String(args.action)
+        const opts = { headless: Boolean(args.headless), port: Number(args.port) }
+        if (action === 'start') await browserStartCommand(opts)
+        else if (action === 'stop') await browserStopCommand()
+        else if (action === 'restart') await browserRestartCommand(opts)
+        else if (action === 'status') await browserStatusCommand()
+      })
+    },
+  )
+  .command(
+    'login <site>',
+    'Open site in default browser for login',
+    (cmd) =>
+      cmd.positional('site', { type: 'string', demandOption: true, describe: 'Site name' }),
+    async (args) => {
+      await withErrorHandling(async () => {
+        await loginCommand(String(args.site))
       })
     },
   )
