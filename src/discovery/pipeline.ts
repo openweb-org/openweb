@@ -13,7 +13,9 @@ import { generatePackage } from '../compiler/generator.js'
 import { cleanupRecordingDir, loadCaptureData, loadRecordedSamples } from '../compiler/recorder.js'
 import type { AnalyzedOperation, ParameterDescriptor } from '../compiler/types.js'
 import { interactiveCapture, type InteractiveCaptureOptions } from './capture.js'
-import { explorePage } from './explorer.js'
+import { explorePage, exploreForIntents } from './explorer.js'
+import { analyzeIntents, type Intent, type IntentAnalysis } from './intent.js'
+import { takePageSnapshot } from './page-snapshot.js'
 
 export interface DiscoverOptions {
   /** CDP endpoint */
@@ -22,8 +24,10 @@ export interface DiscoverOptions {
   readonly targetUrl: string
   /** Output directory for generated fixture (default: ~/.openweb/discovered/{site}-fixture) */
   readonly outputDir?: string
-  /** Enable active exploration (click nav links, search). Default: true */
+  /** Enable active exploration (click nav links, search). Default: false */
   readonly explore?: boolean
+  /** Enable intent-driven discovery. Default: false */
+  readonly intent?: boolean
   /** Capture duration in ms. Default: 8000 */
   readonly captureDuration?: number
   /** Log callback */
@@ -38,6 +42,10 @@ export interface DiscoverResult {
     readonly linksClicked: number
     readonly searchesPerformed: number
     readonly discoveredUrls: string[]
+  }
+  readonly intentCoverage?: {
+    readonly matched: Intent[]
+    readonly gaps: Intent[]
   }
 }
 
@@ -75,13 +83,14 @@ async function mergeHarFiles(passiveHarPath: string, exploreHarPath: string): Pr
 /**
  * End-to-end discovery pipeline:
  * 1. Interactive capture (passive traffic)
- * 2. Active exploration (optional, separate capture dir → merge)
+ * 2. Active exploration (optional — blind or intent-driven)
  * 3. Filter → Cluster → Annotate → Classify → Generate
  */
 export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
   const log = opts.onLog ?? (() => {})
   const site = siteSlugFromUrl(opts.targetUrl)
   const shouldExplore = opts.explore ?? false
+  const shouldIntent = opts.intent ?? false
 
   // Step 1: Interactive capture
   log('=== Phase 1: Passive capture ===')
@@ -94,11 +103,65 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
 
   const capture = await interactiveCapture(captureOpts)
   let explorationStats: DiscoverResult['explorationStats']
+  let intentAnalysis: IntentAnalysis | undefined
 
-  // Step 2: Active exploration (optional)
-  // Uses a SEPARATE capture dir to avoid overwriting passive data, then merges.
+  // Step 2a: Intent-driven exploration (opt-in via --intent)
+  if (shouldIntent) {
+    log('\n=== Phase 2a: Intent analysis ===')
+
+    // Take page snapshot (DOM already rendered after passive capture)
+    const snapshot = await takePageSnapshot(capture.page)
+    log(`snapshot: ${String(snapshot.navLinks.length)} nav, ${String(snapshot.buttons.length)} buttons, ${String(snapshot.searchInputs.length)} search, ${String(snapshot.forms.length)} forms`)
+
+    // Load passive samples for initial intent analysis
+    const passiveSamples = await loadRecordedSamples(capture.recordingDir)
+    const filtered = filterSamples(passiveSamples, { targetUrl: opts.targetUrl })
+    const capturedPaths = filtered.map((s) => ({ path: s.path, method: s.method }))
+
+    intentAnalysis = analyzeIntents(snapshot, capturedPaths)
+    log(`intents matched: ${intentAnalysis.matched.map((m) => m.intent).join(', ') || 'none'}`)
+    log(`intent gaps: ${intentAnalysis.gaps.map((g) => g.intent).join(', ') || 'none'}`)
+
+    // Targeted exploration for gaps
+    if (intentAnalysis.gaps.length > 0) {
+      log('\n=== Phase 2b: Targeted exploration ===')
+
+      const exploreDir = await mkdtemp(path.join(os.tmpdir(), 'openweb-intent-'))
+      const exploreSession = createCaptureSession({
+        cdpEndpoint: opts.cdpEndpoint,
+        outputDir: exploreDir,
+        targetPage: capture.page,
+        isolateToTargetPage: true,
+        onLog: log,
+      })
+
+      try {
+        await exploreSession.ready
+        const result = await exploreForIntents(capture.page, intentAnalysis.gaps, snapshot, log)
+        explorationStats = result
+        log(`intent exploration: ${String(result.linksClicked)} clicks, ${String(result.searchesPerformed)} searches`)
+      } finally {
+        exploreSession.stop()
+        await exploreSession.done
+      }
+
+      // Merge intent exploration HAR into passive HAR
+      try {
+        await mergeHarFiles(
+          path.join(capture.recordingDir, 'traffic.har'),
+          path.join(exploreDir, 'traffic.har'),
+        )
+      } catch {
+        // non-fatal
+      }
+
+      await cleanupRecordingDir(exploreDir)
+    }
+  }
+
+  // Step 2c: Blind exploration (legacy --explore, independent of --intent)
   if (shouldExplore) {
-    log('\n=== Phase 2: Active exploration ===')
+    log('\n=== Phase 2c: Active exploration ===')
 
     const exploreDir = await mkdtemp(path.join(os.tmpdir(), 'openweb-explore-'))
     const exploreSession = createCaptureSession({
@@ -112,7 +175,16 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
     try {
       await exploreSession.ready
       const result = await explorePage(capture.page, log)
-      explorationStats = result
+      // Merge stats if intent already ran
+      if (explorationStats) {
+        explorationStats = {
+          linksClicked: explorationStats.linksClicked + result.linksClicked,
+          searchesPerformed: explorationStats.searchesPerformed + result.searchesPerformed,
+          discoveredUrls: [...explorationStats.discoveredUrls, ...result.discoveredUrls],
+        }
+      } else {
+        explorationStats = result
+      }
       log(`explored ${String(result.linksClicked)} links, ${String(result.searchesPerformed)} searches`)
     } finally {
       exploreSession.stop()
@@ -169,7 +241,7 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
 
   if (filteredSamples.length === 0 && !classifyResult?.extractions) {
     log('WARNING: No API endpoints discovered. The site may require more interaction.')
-    return { site, outputRoot: '', operationCount: 0, explorationStats }
+    return { site, outputRoot: '', operationCount: 0, explorationStats, intentCoverage: intentAnalysis ? { matched: intentAnalysis.matched.map((m) => m.intent), gaps: intentAnalysis.gaps.map((g) => g.intent) } : undefined }
   }
 
   const clusters = clusterSamples(filteredSamples)
@@ -200,6 +272,30 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
 
   log(`analyzed ${String(analyzedOperations.length)} operations`)
 
+  // Intent coverage report (post-compile, final analysis)
+  let intentCoverage: DiscoverResult['intentCoverage']
+  if (shouldIntent && intentAnalysis) {
+    // Re-analyze with full operation set
+    const finalPaths = analyzedOperations.map((op) => ({ path: op.path, method: op.method }))
+    const finalAnalysis = analyzeIntents(
+      { navLinks: [], headings: [], buttons: [], forms: [], searchInputs: [] },
+      finalPaths,
+    )
+    const allMatched = new Set([
+      ...intentAnalysis.matched.map((m) => m.intent),
+      ...finalAnalysis.matched.map((m) => m.intent),
+    ])
+    const remainingGaps = intentAnalysis.gaps
+      .map((g) => g.intent)
+      .filter((intent) => !allMatched.has(intent))
+
+    intentCoverage = {
+      matched: [...allMatched],
+      gaps: remainingGaps,
+    }
+    log(`\nintent coverage: ${String(allMatched.size)} matched, ${String(remainingGaps.length)} gaps remaining`)
+  }
+
   // Generate fixture package — use ~/.openweb/discovered/ to avoid overwriting existing fixtures
   const outputBaseDir = opts.outputDir
     ? path.dirname(opts.outputDir)
@@ -220,5 +316,6 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
     outputRoot,
     operationCount: analyzedOperations.length,
     explorationStats,
+    intentCoverage,
   }
 }

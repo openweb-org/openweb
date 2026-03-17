@@ -4,6 +4,7 @@ export interface DiscoverCommandOptions {
   readonly url: string
   readonly cdpEndpoint: string
   readonly explore?: boolean
+  readonly intent?: boolean
   readonly output?: string
   readonly duration?: number
 }
@@ -13,6 +14,7 @@ export async function discoverCommand(opts: DiscoverCommandOptions): Promise<voi
     cdpEndpoint: opts.cdpEndpoint,
     targetUrl: opts.url,
     explore: opts.explore ?? false,
+    intent: opts.intent ?? false,
     outputDir: opts.output,
     captureDuration: opts.duration,
     onLog: (msg) => process.stdout.write(`${msg}\n`),
@@ -29,4 +31,14 @@ export async function discoverCommand(opts: DiscoverCommandOptions): Promise<voi
     `\nDiscovered ${String(result.operationCount)} operation(s) for ${result.site}.\n` +
       `Output: ${result.outputRoot}\n`,
   )
+
+  if (result.intentCoverage) {
+    process.stdout.write(
+      `Intent coverage: ${String(result.intentCoverage.matched.length)} matched` +
+        (result.intentCoverage.gaps.length > 0
+          ? `, ${String(result.intentCoverage.gaps.length)} gaps (${result.intentCoverage.gaps.join(', ')})`
+          : '') +
+        '\n',
+    )
+  }
 }

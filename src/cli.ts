@@ -193,6 +193,7 @@ await yargs(argv)
           describe: 'Chrome DevTools Protocol endpoint',
         })
         .option('explore', { type: 'boolean', default: false, describe: 'Enable active exploration (clicks nav links, fills search)' })
+        .option('intent', { type: 'boolean', default: false, describe: 'Enable intent-driven discovery (page analysis + targeted exploration)' })
         .option('output', { type: 'string', describe: 'Output directory for generated fixture' })
         .option('duration', { type: 'number', default: 8000, describe: 'Capture duration in ms' }),
     async (args) => {
@@ -201,6 +202,7 @@ await yargs(argv)
           url: String(args.url),
           cdpEndpoint: String(args['cdp-endpoint']),
           explore: Boolean(args.explore),
+          intent: Boolean(args.intent),
           output: args.output ? String(args.output) : undefined,
           duration: Number(args.duration),
         })
