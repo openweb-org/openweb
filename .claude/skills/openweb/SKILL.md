@@ -1,6 +1,6 @@
 ---
 name: openweb
-description: Access web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo, Walmart, Hacker News, Microsoft Word, New Relic) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", "read Hacker News", "list New Relic dashboards", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
+description: Access 15 web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo, Walmart, Hacker News, Microsoft Word, New Relic) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", "read Hacker News", "list New Relic dashboards", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
 ---
 
 # OpenWeb — Web Service Access via CLI
@@ -42,7 +42,7 @@ This shows critical metadata you need before executing:
 ```
 Instagram (3 operations)
 
-Mode:             session_http
+Transport:        node
 Requires browser: yes
 Requires login:   yes
 Risk summary:     safe:2 medium:1
@@ -70,7 +70,7 @@ This shows parameters, their types, which are required, and the response shape:
 GET /feed/timeline/
   max_id       string    Pagination cursor for next page.
 Returns: { feed_items, next_max_id, more_available }
-Mode: session_http
+Transport: node
 Risk: safe
 ```
 
@@ -87,7 +87,7 @@ pnpm --silent dev <site> exec <operation> '<json-params>' --cdp-endpoint http://
 - Exit code 0 = success, 1 = failure
 - If a response is too large for the current task, add `--max-response 8192` to emit a valid JSON string preview on stdout and get a warning on stderr.
 
-Omit `--cdp-endpoint` for `direct_http` sites (Requires browser: no).
+Omit `--cdp-endpoint` for sites where `Requires browser: no`.
 
 ## Error Handling
 
@@ -115,34 +115,33 @@ Errors come as JSON on stderr with a `failureClass` that tells you exactly what 
 
 The `action` field contains a human-readable recovery suggestion — relay it to the user.
 
-## Execution Modes (for your understanding, not the user's)
+## Transports (for your understanding, not the user's)
 
-Sites use different modes depending on their API structure. You don't need to choose the mode — it's configured per-site. But understanding them helps you diagnose issues:
+Sites use different transports depending on their API structure. You don't need to choose the transport — it's configured per-site. But understanding them helps you diagnose issues:
 
-- **direct_http**: Public APIs, no browser needed (e.g., Open-Meteo weather)
-- **session_http**: Uses browser cookies for auth, but the HTTP request runs from Node.js (e.g., Instagram, GitHub, YouTube)
-- **browser_fetch**: The HTTP request runs inside the browser page via `fetch()` (e.g., Discord)
+- **node**: HTTP request runs from Node.js — with or without browser auth (e.g., Open-Meteo has no auth; Instagram, GitHub, YouTube use browser cookies/tokens)
+- **page**: HTTP request runs inside the browser page via `page.evaluate()` (e.g., Discord, X)
 - **L3 adapter**: Arbitrary JavaScript executed in the browser page (e.g., Telegram, WhatsApp)
 
 ## Available Sites
 
-| Site | Mode | Auth | Example Operation |
+| Site | Transport | Auth | Example Operation |
 |---|---|---|---|
-| `open-meteo-fixture` | direct_http | none | `get_forecast` — weather data |
-| `instagram-fixture` | session_http | cookie + CSRF | `getTimeline` — user feed |
-| `github-fixture` | session_http | cookie + CSRF | `listIssues` — repo issues |
-| `youtube-fixture` | session_http | page_global + signing | `getVideoInfo` — video data |
-| `reddit-fixture` | session_http | cookie + exchange_chain | `getMe` — OAuth user profile |
-| `bluesky-fixture` | session_http | cookie | Bluesky social operations |
-| `walmart-fixture` | session_http | page extraction | `getFooterModules` — Next.js footer modules |
-| `hackernews-fixture` | session_http | page extraction | `getTopStories` — front page stories |
-| `microsoft-word-fixture` | session_http | MSAL cache | `getProfile` — Microsoft Graph profile |
-| `newrelic-fixture` | session_http | cookie | `listDashboards` — GraphQL dashboard search |
-| `discord-fixture` | browser_fetch | webpack token | `getMe` — current user |
-| `chatgpt-fixture` | session_http | exchange_chain (GET) | `getProfile` — user profile |
-| `x-fixture` | browser_fetch | cookie + CSRF (all methods) | `listFollowing` — followed accounts |
-| `whatsapp-fixture` | L3 adapter | browser state | `getChats` — chat list |
-| `telegram-fixture` | L3 adapter | browser state | `getDialogs` — dialog list |
+| `open-meteo-fixture` | node | none | `get_forecast` — weather data |
+| `instagram-fixture` | node | cookie + CSRF | `getTimeline` — user feed |
+| `github-fixture` | node | cookie + CSRF | `listIssues` — repo issues |
+| `youtube-fixture` | node | page_global + signing | `getVideoInfo` — video data |
+| `reddit-fixture` | node | cookie + exchange_chain | `getMe` — OAuth user profile |
+| `bluesky-fixture` | node | cookie | Bluesky social operations |
+| `walmart-fixture` | node | page extraction | `getFooterModules` — Next.js footer modules |
+| `hackernews-fixture` | node | page extraction | `getTopStories` — front page stories |
+| `microsoft-word-fixture` | node | MSAL cache | `getProfile` — Microsoft Graph profile |
+| `newrelic-fixture` | node | cookie | `listDashboards` — GraphQL dashboard search |
+| `discord-fixture` | page | webpack token | `getMe` — current user |
+| `chatgpt-fixture` | node | exchange_chain (GET) | `getProfile` — user profile |
+| `x-fixture` | page | cookie + CSRF (all methods) | `listFollowing` — followed accounts |
+| `whatsapp-fixture` | adapter (L3) | browser state | `getChats` — chat list |
+| `telegram-fixture` | adapter (L3) | browser state | `getDialogs` — dialog list |
 
 ## Common Workflow Examples
 
@@ -156,9 +155,9 @@ pnpm --silent dev open-meteo-fixture get_forecast       # Check params: latitude
 pnpm --silent dev open-meteo-fixture exec get_forecast '{"latitude": 52.52, "longitude": 13.41, "hourly": ["temperature_2m"]}'
 ```
 
-No `--cdp-endpoint` needed since it's direct_http.
+No `--cdp-endpoint` needed since it doesn't require browser auth.
 
-### Example 2: Authenticated read (session_http)
+### Example 2: Authenticated read (node transport)
 
 User: "Show my Instagram feed"
 
@@ -179,7 +178,7 @@ pnpm --silent dev github-fixture exec listIssues '{"owner": "facebook", "repo": 
 
 Path parameters (like `owner` and `repo`) go in the same JSON object as query parameters.
 
-### Example 4: Browser fetch mode
+### Example 4: Page transport
 
 User: "Get my Discord profile"
 
@@ -243,7 +242,7 @@ The runtime sends the default GraphQL query with session cookies. Headers (`newr
 - Always check readiness metadata (Step 2) before executing — it prevents wasted retries
 - The `--cdp-endpoint` flag is required for any site where `Requires browser: yes`
 - JSON params must be a single-quoted string containing a JSON object: `'{"key": "value"}'`
-- For `direct_http` sites, omit `--cdp-endpoint` entirely — it's not needed and not used
+- For sites where `Requires browser: no`, omit `--cdp-endpoint` entirely — it's not needed and not used
 - Response data can be large (e.g., full feed responses) — prefer `--max-response 8192` unless you explicitly need the full payload. When truncation happens, stdout is a JSON string preview of the serialized response, not the original response shape.
 - Operations with `Risk: medium` or higher involve mutations (likes, stars, posts) — confirm with the user before executing
 - The CDP endpoint `http://localhost:9222` is the standard port — only change if the user specifies otherwise

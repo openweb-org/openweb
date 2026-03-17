@@ -1,12 +1,12 @@
 # Meta-spec: Type System & Validation
 
 > L2 primitive types, x-openweb extensions, JSON Schema, and AJV validation.
-> Last updated: 2026-03-16 (commit: Tranche B)
+> Last updated: 2026-03-17 (commit: M9)
 
 ## Overview
 
 The meta-spec is the type system that drives everything in OpenWeb. It defines:
-1. **L2 primitive types** — 27 discriminated union types for auth/CSRF/signing/pagination/extraction
+1. **L2 primitive types** — 17 discriminated union types for auth/CSRF/signing/pagination/extraction
 2. **x-openweb extensions** — Server-level and operation-level OpenAPI extensions
 3. **JSON Schema** — Machine-readable schema for validation
 4. **Validation** — AJV-based validation of specs and manifests
@@ -25,7 +25,7 @@ OpenWeb extends OpenAPI 3.1 with `x-openweb` at two levels:
 
 ```typescript
 interface XOpenWebServer {
-  mode: 'direct_http' | 'session_http' | 'browser_fetch'
+  transport: 'node' | 'page'
   auth?: AuthPrimitive
   csrf?: CsrfPrimitive & { scope?: string[] }
   signing?: SigningPrimitive
@@ -38,7 +38,7 @@ Applied to the **server** object — shared across all operations:
 servers:
   - url: https://api.instagram.com
     x-openweb:
-      mode: session_http
+      transport: node
       auth:
         type: cookie_session
       csrf:
@@ -52,14 +52,16 @@ servers:
 ```typescript
 interface XOpenWebOperation {
   risk_tier?: 'safe' | 'low' | 'medium' | 'high' | 'critical'
-  stable_id?: string
-  signature_id?: string
-  tool_version?: number
-  verified?: boolean
+  build?: {
+    stable_id?: string
+    signature_id?: string
+    tool_version?: number
+    verified?: boolean
+  }
   signals?: string[]
-  mode?: ExecutionMode           // Override server mode
-  human_handoff?: boolean
-  csrf?: CsrfPrimitive          // Override server CSRF
+  transport?: Transport             // Override server transport
+  request_encoding?: RequestEncoding
+  csrf?: CsrfPrimitive             // Override server CSRF
   pagination?: PaginationPrimitive
   extraction?: ExtractionPrimitive
   adapter?: AdapterRef
@@ -75,7 +77,8 @@ paths:
       operationId: getTimeline
       x-openweb:
         risk_tier: safe
-        stable_id: instagram_getTimeline_v1
+        build:
+          stable_id: instagram_getTimeline_v1
         pagination:
           type: cursor
           response_field: next_max_id
@@ -88,58 +91,48 @@ paths:
 
 ## L2 Primitive Type Catalog
 
-27 types organized into 5 categories. Each is a **discriminated union** on the `type` field.
+17 types organized into 5 categories. Each is a **discriminated union** on the `type` field.
 
-### Auth (9 types)
+### Auth (7 types)
 
 | Type | Description | Key config |
 |------|-------------|------------|
 | `cookie_session` | Browser cookies | (none) |
 | `localStorage_jwt` | JWT from localStorage | `key`, `path`, `inject` |
-| `sessionStorage_token` | Token from sessionStorage | `key`, `path`, `inject` |
 | `sessionStorage_msal` | MSAL token from sessionStorage | `key_pattern`, `scope_filter`, `token_field`, `inject` |
 | `page_global` | Window global expression | `expression`, `inject`, `values[]` |
 | `webpack_module_walk` | Webpack module cache walk | `chunk_global`, `module_test`, `call`, `inject` |
-| `websocket_intercept` | WebSocket frame interception | `frame_match`, `extract`, `inject` |
-| `lazy_fetch` | Fetch auth endpoint | `endpoint`, `extract`, `inject` |
 | `exchange_chain` | Multi-step token exchange | `steps[]`, `inject` |
+| `fallback` | Try primary auth, fall back to secondary | `primary`, `secondary` |
 
-### CSRF (5 types)
+### CSRF (3 types)
 
 | Type | Description | Key config |
 |------|-------------|------------|
 | `cookie_to_header` | Cookie value → header | `cookie`, `header` |
 | `meta_tag` | DOM meta tag → header | `name`, `header` |
-| `page_global` | Window global → header | `expression`, `inject` |
-| `form_field` | Hidden form field → header | `fetch_url`, `selector`, `header` |
 | `api_response` | CSRF endpoint → header | `endpoint`, `extract`, `inject` |
 
-### Signing (3 types)
+### Signing (1 type)
 
 | Type | Description | Key config |
 |------|-------------|------------|
 | `sapisidhash` | YouTube SAPISIDHASH | `cookie`, `origin`, `inject` |
-| `gapi_proxy` | Google API proxy | `api_key`, `authuser` |
-| `aws_sigv4` | AWS Signature V4 | `credentials`, `region`, `service` |
 
-### Pagination (4 types)
+### Pagination (2 types)
 
 | Type | Description | Key config |
 |------|-------------|------------|
 | `cursor` | Cursor-based | `response_field`, `request_param`, `has_more_field` |
-| `offset_limit` | Offset + limit | `offset_param`, `limit_param`, `total_field` |
 | `link_header` | HTTP Link header | `rel` |
-| `page_number` | Page numbering | `param`, `starts_at`, `total_pages_field` |
 
 `response_field` and `request_param` accept **dotted paths** for nested JSON structures (e.g., `data.actor.entitySearch.results.nextCursor` for reading, `variables.cursor` for writing into GraphQL request bodies).
 
-### Extraction (6 types)
+### Extraction (4 types)
 
 | Type | Description | Key config |
 |------|-------------|------------|
 | `ssr_next_data` | Next.js SSR data | `page_url`, `path` |
-| `ssr_nuxt` | Nuxt SSR data | `path` |
-| `apollo_cache` | Apollo cache | `key_pattern`, `fields` |
 | `html_selector` | CSS selector | `page_url`, `selectors`, `attribute`, `multiple` |
 | `script_json` | Script tag JSON | `selector`, `path` |
 | `page_global_data` | Window global | `page_url`, `expression`, `path` |
@@ -157,8 +150,7 @@ interface Inject {
   header?: string       // HTTP header name
   prefix?: string       // Value prefix (e.g., "Bearer ")
   query?: string        // Query parameter name
-  body_field?: string   // Body field name
-  body_merge?: boolean  // Merge into body root
+  json_body_path?: string   // Body field at JSON path
 }
 ```
 
@@ -190,7 +182,7 @@ AJV validates two things:
 validateXOpenWebSpec(spec: object): ValidationResult
 ```
 
-Validates server-level `x-openweb` (mode, auth, CSRF, signing) and operation-level `x-openweb` (risk_tier, pagination, extraction, adapter).
+Validates server-level `x-openweb` (transport, auth, CSRF, signing) and operation-level `x-openweb` (risk_tier, pagination, extraction, adapter).
 
 ### 2. Manifest Validation
 
@@ -252,10 +244,10 @@ sites/<site>/
 
 ```
 src/types/
-├── primitives.ts          # 27 L2 primitive discriminated unions
+├── primitives.ts          # 17 L2 primitive discriminated unions
 ├── primitive-schemas.ts   # JSON Schema mirrors for AJV
-├── extensions.ts          # XOpenWebServer, XOpenWebOperation, ExecutionMode, RiskTier
-├── adapter.ts             # CodeAdapter interface, AdapterCapability
+├── extensions.ts          # XOpenWebServer, XOpenWebOperation, Transport, RequestEncoding, XOpenWebBuildMeta, RiskTier
+├── adapter.ts             # CodeAdapter interface
 ├── manifest.ts            # Manifest type
 ├── schema.ts              # Composite JSON Schema (server + operation + manifest)
 ├── validator.ts           # AJV validation (validateXOpenWebSpec, validateManifest)

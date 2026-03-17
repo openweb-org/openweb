@@ -1,14 +1,14 @@
 # Runtime Execution Pipeline
 
-> Mode dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-03-16 (commit: Tranche B)
+> Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
+> Last updated: 2026-03-17 (commit: M9)
 
 ## Overview
 
 The runtime is the core of OpenWeb. Given a site name, operation ID, and parameters, it:
 1. Loads the OpenAPI spec
 2. Finds the operation
-3. Resolves the execution mode
+3. Resolves the transport
 4. Dispatches to the correct executor
 5. Returns a structured result
 
@@ -23,7 +23,7 @@ executeOperation(site, operationId, params, deps)
        │
        ├── Load OpenAPI spec (openapi.yaml)
        ├── Find operation by operationId
-       ├── Resolve mode (operation → server → direct_http)
+       ├── Resolve transport (operation → server → node)
        │
        ├── L3 adapter?
        │     └── loadAdapter() → init() → isAuthenticated() → execute()
@@ -31,22 +31,19 @@ executeOperation(site, operationId, params, deps)
        ├── extraction?
        │     └── executeExtraction()
        │
-       ├── browser_fetch?
+       ├── page?
        │     └── executeBrowserFetch()
        │
-       ├── session_http?
-       │     └── executeSessionHttp()
-       │
-       └── direct_http?
-             └── Direct fetch with SSRF validation
+       └── node?
+             └── executeNodeHttp() (with or without auth)
 ```
 
-**Mode Resolution Hierarchy:**
-1. Operation-level: `x-openweb.mode` on the operation
-2. Server-level: `x-openweb.mode` on the server
-3. Default: `direct_http`
+**Transport Resolution Hierarchy:**
+1. Operation-level: `x-openweb.transport` on the operation
+2. Server-level: `x-openweb.transport` on the server
+3. Default: `node`
 
-If an operation has `x-openweb.adapter`, L3 adapter takes priority regardless of mode.
+If an operation has `x-openweb.adapter`, L3 adapter takes priority regardless of transport.
 If an operation has `x-openweb.extraction`, the runtime dispatches to `executeExtraction()` before the HTTP executors.
 
 ---
@@ -54,7 +51,7 @@ If an operation has `x-openweb.extraction`, the runtime dispatches to `executeEx
 ## Parameter Binding
 
 All HTTP executors share the same path/query/header/body binding pipeline.
-`session_http` and `browser_fetch` layer auth/CSRF/signing on top; `direct_http` skips those browser-derived steps.
+`node` transport with auth config layers auth/CSRF/signing on top; `node` without auth skips those browser-derived steps.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -77,7 +74,7 @@ Body parameters come from `requestBody.content['application/json'].schema.proper
 Defaults apply before binding, including body defaults. Body fields are validated against their declared schema types before request construction, and only fields declared in `requestBody` are serialized into the JSON body. Auth-injected query params (for example YouTube's `key`) are merged before validation.
 If an object `requestBody` is marked `required: true`, the runtime sends `{}` even when no explicit body fields are supplied, so the request still includes a JSON body.
 
--> See: `src/runtime/session-executor.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`; `src/runtime/executor.ts` — direct HTTP reuse
+-> See: `src/runtime/session-executor.ts`, `src/runtime/request-builder.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`; `src/runtime/executor.ts` — direct HTTP reuse
 
 ---
 
@@ -98,15 +95,15 @@ Extraction-only operations read data from the live page instead of issuing an HT
 └─────────────────────────────────────────────────────┘
 ```
 
-Extraction operations reuse the same strict page matching as `session_http`: worker-like pages are filtered out, there is no unrelated-tab fallback, and missing tabs surface `needs_page` with an actionable URL hint.
+Extraction operations reuse the same strict page matching as node transport: worker-like pages are filtered out, there is no unrelated-tab fallback, and missing tabs surface `needs_page` with an actionable URL hint.
 
 -> See: `src/runtime/extraction-executor.ts`
 
 ---
 
-## session_http Mode
+## Node Transport (Authenticated)
 
-The primary L2 execution mode. Uses a real HTTP client with cookies/headers extracted from the browser.
+The primary L2 execution path. Uses a real HTTP client with cookies/headers extracted from the browser.
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -129,13 +126,13 @@ The primary L2 execution mode. Uses a real HTTP client with cookies/headers extr
 **Page matching**: The runtime finds a real browser tab matching the API's origin.
 Worker-like pages (`*.js`, empty content) are ignored. There is no fallback to an unrelated tab. If no matching page is found, the runtime raises `needs_page` with a concrete URL to open.
 
--> See: `src/runtime/session-executor.ts`
+-> See: `src/runtime/session-executor.ts`, `src/runtime/redirect.ts`, `src/runtime/request-builder.ts`, `src/runtime/operation-context.ts`
 
 ---
 
-## browser_fetch Mode
+## Page Transport
 
-Same auth/CSRF/signing pipeline as session_http, but the final fetch runs inside the browser:
+Same auth/CSRF/signing pipeline as node transport, but the final fetch runs inside the browser:
 
 ```typescript
 page.evaluate(({ url, method, headers, body }) => {
@@ -144,7 +141,7 @@ page.evaluate(({ url, method, headers, body }) => {
 }, { url, method, headers, body });
 ```
 
-**Key differences from session_http:**
+**Key differences from node transport:**
 - Browser handles cookies automatically via `credentials: 'include'` (no Cookie header injected)
 - Native TLS fingerprint (not Node.js)
 - CORS context preserved
@@ -156,10 +153,10 @@ page.evaluate(({ url, method, headers, body }) => {
 
 ---
 
-## direct_http Mode
+## Node Transport (Public)
 
-Simplest mode — pure HTTP client, no browser.
-It reuses the same path/query/header/body binding as `session_http`, but skips browser-derived auth/CSRF/signing.
+Simplest path — pure HTTP client, no browser.
+It reuses the same path/query/header/body binding as authenticated node transport, but skips browser-derived auth/CSRF/signing.
 
 ```
 fetch(url, { method, headers, body })
@@ -177,7 +174,7 @@ fetch(url, { method, headers, body })
 
 ## Redirect Handling
 
-All modes (except browser_fetch, which delegates to browser) follow redirects manually:
+All transports (except page, which delegates to browser) follow redirects manually:
 
 | Rule | Details |
 |------|---------|
@@ -223,24 +220,6 @@ Cursor pagination accepts dot-paths for both reading and writing:
 
 ---
 
-## Token Cache
-
-Auth tokens can be cached to avoid re-extracting from browser on every request.
-
-```typescript
-class TokenCache {
-  get(key): CachedAuth | undefined
-  set(key, value, ttlMs): void
-  invalidate(key): void
-}
-```
-
-**Default TTL:** 5 minutes. Lazy expiry (checked on `get()`).
-
--> See: `src/runtime/token-cache.ts`
-
----
-
 ## Error Model
 
 All runtime errors are wrapped in `OpenWebError`:
@@ -281,16 +260,20 @@ The CLI catches errors and writes structured JSON to stderr.
 
 ```
 src/runtime/
-├── executor.ts               # Main dispatcher (mode routing, response handling)
-├── session-executor.ts       # session_http mode (parameter binding, auth pipeline)
-├── browser-fetch-executor.ts # browser_fetch mode (page.evaluate)
-├── extraction-executor.ts    # extraction-only operations
+├── executor.ts               # Main dispatcher (transport routing, response handling)
+├── session-executor.ts       # Node transport (parameter binding, auth pipeline)
+├── request-builder.ts        # Shared request construction (path/query/header/body binding)
+├── redirect.ts               # Redirect handling with SSRF validation
+├── operation-context.ts      # Operation metadata resolution (transport, auth, extraction)
+├── browser-fetch-executor.ts # Page transport (page.evaluate)
+├── extraction-executor.ts    # Extraction-only operations
 ├── adapter-executor.ts       # L3 adapter loading + execution
 ├── paginator.ts              # Pagination executor (cursor + link_header)
-├── token-cache.ts            # Auth token cache with TTL
 ├── value-path.ts             # Shared dot-path helper for nested payloads
 ├── navigator.ts              # CLI navigation helper (render site/operation info)
 └── primitives/               # L2 primitive resolvers
+    ├── registry.ts           # Primitive type registry
+    ├── index.ts              # Primitive pipeline orchestration
     └── (→ See: primitives.md)
 ```
 

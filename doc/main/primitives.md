@@ -1,7 +1,7 @@
 # L2 Primitive Resolvers
 
 > Auth, CSRF, signing, pagination, and extraction primitives — the declarative layer that handles ~50% of websites.
-> Last updated: 2026-03-16 (commit: Tranche B)
+> Last updated: 2026-03-17 (commit: M9)
 
 ## Overview
 
@@ -9,13 +9,13 @@ L2 primitives are **declarative config units** stored in the `x-openweb` extensi
 
 Each primitive has a `type` discriminator and type-specific config fields.
 
--> See: `src/types/primitives.ts` — all 27 primitive type definitions
+-> See: `src/types/primitives.ts` — all 17 primitive type definitions
 
 ---
 
 ## Resolution Pipeline
 
-On every L2 HTTP request (`session_http` or `browser_fetch`), three resolvers run in sequence:
+On every L2 HTTP request (`node` or `page` transport), three resolvers run in sequence:
 
 ```
 resolveAuth(handle, auth, serverUrl)     →  cookies + auth headers
@@ -53,13 +53,11 @@ Auth primitives extract credentials from the browser and inject them into reques
 |------|-------------|------------|-------------|
 | `cookie_session` | Extract all cookies for the target URL | `context.cookies()` | Yes |
 | `localStorage_jwt` | Read JWT from localStorage by key | `page.evaluate()` | Yes |
-| `sessionStorage_token` | Read token from sessionStorage | `page.evaluate()` | No |
 | `sessionStorage_msal` | Extract MSAL token from sessionStorage/localStorage | `page.evaluate()` | Yes |
 | `page_global` | Evaluate JS expression on page (e.g., `window.ytcfg.get("ID_TOKEN")`) | `page.evaluate()` | Yes |
 | `webpack_module_walk` | Walk webpack chunk cache, find module, call function | `page.evaluate()` | Yes |
-| `websocket_intercept` | Intercept WebSocket frames for auth tokens | CDP events | No |
-| `lazy_fetch` | Call an auth endpoint, extract token from response | `fetch()` | No |
 | `exchange_chain` | Multi-step token exchange (call A → extract → call B → extract) | `fetch()` chain | Yes |
+| `fallback` | Try primary auth, fall back to secondary on failure | (delegates) | No |
 
 ### cookie_session
 
@@ -67,7 +65,7 @@ The simplest auth. Extracts all cookies from the browser context matching the ta
 
 ```yaml
 x-openweb:
-  mode: session_http
+  transport: node
   auth:
     type: cookie_session
 ```
@@ -175,8 +173,6 @@ CSRF primitives extract anti-forgery tokens. Only resolved for **mutations** (PO
 |------|-------------|-------------|
 | `cookie_to_header` | Read cookie value → set as header | Yes |
 | `meta_tag` | Read `<meta>` tag content → set as header | Yes |
-| `page_global` | Evaluate JS expression → set as header | Yes |
-| `form_field` | Fetch page, find hidden input → set as header | No |
 | `api_response` | Call CSRF endpoint, extract token → set as header | Yes |
 
 ### cookie_to_header
@@ -218,7 +214,6 @@ csrf:
   method: GET
   extract: "token"
   inject: { header: "X-CSRF-Token" }
-  cache: 300
 ```
 
 -> See: `src/runtime/primitives/api-response.ts`
@@ -232,8 +227,6 @@ Signing primitives compute **per-request** signatures. Resolved on every request
 | Type | What it does | Implemented |
 |------|-------------|-------------|
 | `sapisidhash` | Compute YouTube-style SAPISIDHASH from cookie + origin + timestamp | Yes |
-| `gapi_proxy` | Google API proxy signing | No |
-| `aws_sigv4` | AWS Signature V4 | No |
 
 ### sapisidhash
 
@@ -261,8 +254,6 @@ Pagination is configured at the **operation** level in `x-openweb`.
 |------|-----------|-------------|
 | `cursor` | Response field → request param loop | Yes |
 | `link_header` | Follow `Link: <url>; rel="next"` | Yes |
-| `offset_limit` | offset/limit incrementing | No |
-| `page_number` | page number incrementing | No |
 
 ```yaml
 x-openweb:
@@ -296,8 +287,6 @@ Extraction primitives read data directly from the page DOM or SSR state — no A
 |------|-------------|-------------|
 | `script_json` | Extract JSON from `<script>` tags | Yes |
 | `ssr_next_data` | Read `__NEXT_DATA__` | Yes |
-| `ssr_nuxt` | Read `__NUXT__` | No |
-| `apollo_cache` | Read `__APOLLO_STATE__` | No |
 | `html_selector` | CSS selector extraction | Yes |
 | `page_global_data` | Read page global variable | Yes |
 
@@ -377,8 +366,7 @@ interface Inject {
   header?: string       // Set as HTTP header
   prefix?: string       // Prefix the value (e.g., "Bearer ")
   query?: string        // Set as query parameter
-  body_field?: string   // Set in request body
-  body_merge?: boolean  // Merge into body object
+  json_body_path?: string   // Set in request body at JSON path
 }
 ```
 
@@ -391,6 +379,8 @@ Most commonly: `{ header: "Authorization", prefix: "Bearer " }`
 ```
 src/runtime/primitives/
 ├── types.ts                # BrowserHandle, ResolvedInjections
+├── registry.ts             # Primitive resolver registry
+├── index.ts                # Re-exports
 ├── cookie-session.ts       # cookie_session auth
 ├── cookie-to-header.ts     # cookie_to_header CSRF
 ├── localstorage-jwt.ts     # localStorage_jwt auth
@@ -415,6 +405,6 @@ src/runtime/primitives/
 
 - [architecture.md](architecture.md) — System overview and 3-layer model
 - [runtime.md](runtime.md) — Execution pipeline that invokes primitives
-- [meta-spec.md](meta-spec.md) — Type definitions for all 27 primitives
+- [meta-spec.md](meta-spec.md) — Type definitions for all 17 primitives
 - [adapters.md](adapters.md) — L3 escape hatch when primitives aren't enough
 - `src/types/primitives.ts` — Full type definitions

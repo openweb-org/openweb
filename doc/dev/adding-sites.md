@@ -1,7 +1,7 @@
 # Adding a New Site
 
 > How to create a new site fixture — from capture to verified skill package.
-> Last updated: 2026-03-16 (commit: `uncommitted`)
+> Last updated: 2026-03-17 (commit: M9)
 
 ## Decision Tree
 
@@ -9,14 +9,14 @@ Before writing a fixture, determine the site's layer:
 
 ```
 Does the site have a public REST/GraphQL API with API-key auth?
-  └── Yes → L1 (direct_http) — no browser needed
+  └── Yes → L1 (node, no auth) — no browser needed
 
 Does standard cookie/token/header auth work?
-  └── Yes → L2 (session_http or browser_fetch)
+  └── Yes → L2 (node or page transport)
        │
        ├── Does the site check TLS fingerprint or need CORS context?
-       │     └── Yes → browser_fetch mode
-       │     └── No  → session_http mode
+       │     └── Yes → page transport
+       │     └── No  → node transport
        │
        └── Which auth primitive?
              ├── Cookie-based login → cookie_session
@@ -99,7 +99,7 @@ info:
 servers:
   - url: https://i.instagram.com
     x-openweb:
-      mode: session_http
+      transport: node
       auth:
         type: cookie_session
       csrf:
@@ -125,15 +125,16 @@ info:
 servers:
   - url: https://news.ycombinator.com
     x-openweb:
-      mode: session_http
+      transport: node
 paths:
   /news:
     get:
       operationId: getTopStories
       x-openweb:
         risk_tier: safe
-        stable_id: hn0001
-        tool_version: 1
+        build:
+          stable_id: hn0001
+          tool_version: 1
         extraction:
           type: html_selector
           page_url: /news
@@ -150,7 +151,7 @@ paths:
 servers:
   - url: https://web.whatsapp.com
     x-openweb:
-      mode: browser_fetch
+      transport: page
 paths:
   /getChats:
     get:
@@ -198,7 +199,6 @@ import type { CodeAdapter } from '../../../types/adapter.js';
 const adapter: CodeAdapter = {
   name: '<name>',
   description: '<what it does>',
-  provides: [{ type: 'extraction', description: '<capability>' }],
 
   async init(page) {
     // Verify page state, return true if ready

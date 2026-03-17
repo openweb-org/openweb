@@ -1,3 +1,22 @@
+## 2026-03-17: M9 Scale-Ready Refactor — transport model, registry, session-executor slim
+
+**What changed:**
+- Phase A: `ExecutionMode` → `Transport = 'node' | 'page'` (D-1). `direct_http` eliminated — just `node` without auth config. `XOpenWebOperation` restructured with `build` metadata block (D-15) and `request_encoding` (D-7). Primitives pruned 27 → 17 (D-5): removed 10 unimplemented types, added `fallback` auth type-only (D-6). `ExchangeStep` tightened to discriminated union (D-4). Manifest normalized: `site_url`/`compiled_at` (D-11). All 15 fixtures migrated.
+- Phase B: Resolver registry (`Map<string, ResolverFn>`) replaces 3 switch statements (D-3). Session-executor extracted from 666 → 225 lines: new `request-builder.ts`, `redirect.ts` (CR-01 cross-origin header stripping), `operation-context.ts`, `csrf-scope.ts`, `response-parser.ts`. Resolve functions moved to `primitives/index.ts`. Dead code removed: `token-cache.ts`, `AdapterCapability`, `CodeAdapter.provides` (D-12). Error factory methods added (AP-8).
+- Phase C: Integration test framework with real Chrome CDP. `tests/integration/runner.ts` + `sites.config.ts` with 15 site configs. Auth drift → SKIP. `pnpm test:integration` (local-only). Initial: 8 pass, 7 skip, 0 fail.
+- Phase D: All docs synced — SKILL.md, architecture.md, runtime.md, primitives.md, meta-spec.md, adding-sites.md.
+
+**Why:**
+- Architecture review (M8) identified session-executor as monolithic bottleneck for scaling to 50+ sites
+- Registry pattern enables adding new primitives without touching core dispatch
+- Type pruning keeps schema honest — only what runtime implements is declared
+
+**Key files:** `src/runtime/session-executor.ts` (666→225 lines), `src/runtime/primitives/registry.ts`, `src/runtime/primitives/index.ts`, `src/runtime/request-builder.ts`, `src/runtime/redirect.ts`, `src/runtime/operation-context.ts`, `src/lib/csrf-scope.ts`, `src/lib/response-parser.ts`, `src/types/primitives.ts` (27→17 types), `src/types/extensions.ts` (Transport+BuildMeta), `tests/integration/`
+**Verification:** `pnpm build` ✓, 258/258 unit tests ✓, 8/15 integration tests pass (7 skip — no open tab)
+**Commit:** 1dbb7e7..HEAD (5 commits)
+**Next:** M9 Phase 2 — expand to ~20 sites using registry pattern; validate extensibility
+**Blockers:** None
+
 ## 2026-03-16: M7 Close-out — 15 sites, 246 tests, meta-spec hardened
 
 **What changed:**
