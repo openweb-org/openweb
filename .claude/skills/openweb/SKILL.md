@@ -132,13 +132,15 @@ Sites use different modes depending on their API structure. You don't need to ch
 | `instagram-fixture` | session_http | cookie + CSRF | `getTimeline` — user feed |
 | `github-fixture` | session_http | cookie + CSRF | `listIssues` — repo issues |
 | `youtube-fixture` | session_http | page_global + signing | `getVideoInfo` — video data |
-| `reddit-fixture` | session_http | cookie | operations on subreddits |
+| `reddit-fixture` | session_http | cookie + exchange_chain | `getMe` — OAuth user profile |
 | `bluesky-fixture` | session_http | cookie | Bluesky social operations |
 | `walmart-fixture` | session_http | page extraction | `getFooterModules` — Next.js footer modules |
 | `hackernews-fixture` | session_http | page extraction | `getTopStories` — front page stories |
 | `microsoft-word-fixture` | session_http | MSAL cache | `getProfile` — Microsoft Graph profile |
 | `newrelic-fixture` | session_http | cookie | `listDashboards` — GraphQL dashboard search |
 | `discord-fixture` | browser_fetch | webpack token | `getMe` — current user |
+| `chatgpt-fixture` | session_http | exchange_chain (GET) | `getProfile` — user profile |
+| `x-fixture` | browser_fetch | cookie + CSRF (all methods) | `listFollowing` — followed accounts |
 | `whatsapp-fixture` | L3 adapter | browser state | `getChats` — chat list |
 | `telegram-fixture` | L3 adapter | browser state | `getDialogs` — dialog list |
 

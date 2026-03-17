@@ -287,14 +287,16 @@ pnpm --silent dev <site>-fixture test
 | bluesky-fixture | L2 | localStorage_jwt | — | JWT from localStorage |
 | youtube-fixture | L2 | page_global | — | Window global + SAPISIDHASH signing |
 | github-fixture | L2 | cookie_session | meta_tag | DOM meta tag CSRF + SSR extraction |
-| reddit-fixture | L2 | cookie_session | — | Cookie auth with .json API |
+| reddit-fixture | L2 | cookie_session + exchange_chain | — | Cookie auth + OAuth bearer via csrf cookie extraction |
 | walmart-fixture | L2 | — | — | Next.js `__NEXT_DATA__` extraction |
 | hackernews-fixture | L2 | — | — | DOM selector extraction |
 | microsoft-word-fixture | L2 | sessionStorage_msal | — | MSAL cache → Microsoft Graph |
 | discord-fixture | L2 | webpack_module_walk | — | Webpack module cache for auth token |
 | whatsapp-fixture | L3 | adapter | — | Meta require() module system |
 | telegram-fixture | L3 | adapter | — | teact global state |
-| newrelic-fixture | L2 | cookie_session | — | GraphQL cursor pagination (nested paths) |
+| newrelic-fixture | L2 | cookie_session | — | GraphQL cursor pagination (const body + items_path) |
+| chatgpt-fixture | L2 | exchange_chain (GET) | — | Next-auth session token + Cloudflare User-Agent |
+| x-fixture | L2 | cookie_session | cookie_to_header (all methods) | browser_fetch + static bearer + CSRF on GET |
 
 ---
 

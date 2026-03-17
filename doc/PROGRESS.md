@@ -1,3 +1,33 @@
+## 2026-03-16: M7 Close-out — 15 sites, 246 tests, meta-spec hardened
+
+**What changed:**
+- Phase 1 — Meta-spec maturity (3 contract fixes from TB-01/TB-02 codex review):
+  - `const` requestBody fields: `validateParams()` enforces `schema.const`, callers cannot override fixed fields (e.g., GraphQL query strings)
+  - Pagination `items_path`: cursor pagination supports explicit dot-path for deeply nested items (e.g., `data.actor.entitySearch.results.entities`)
+  - `exchange_chain` cookie extraction: `extract_from: 'cookie'` reads browser cookies without HTTP request; `method` field supports GET steps
+- Phase 2 — Targeted expansion (13→15 sites):
+  - Reddit: added `getMe` via exchange_chain auth (cookie CSRF → bearer JWT → oauth.reddit.com)
+  - ChatGPT: new fixture, exchange_chain with GET session endpoint, Cloudflare User-Agent binding
+  - X (Twitter): new fixture, browser_fetch mode (TLS fingerprint protection), CSRF scope on all HTTP methods, static bearer as const header
+  - GitHub: added test files for existing fixture
+- Runtime enhancements:
+  - CSRF scope: both session_http and browser_fetch support `scope` array for per-method CSRF resolution (not just mutations)
+  - session_http always sends browser cookies even when auth doesn't provide cookieString
+  - `findPageForOrigin()` strips `oauth.` subdomain for page matching
+
+**Why:**
+- M7 achieved meta-spec contract hardening (TB-01/TB-02 resolved) and added 2 new sites with novel patterns
+- exchange_chain is now E2E verified with Reddit (cookie extraction + multi-step token exchange)
+- Site expansion limited to sites with verified login state in shared Chrome profile
+
+**Key files:** `src/lib/openapi.ts`, `src/runtime/paginator.ts`, `src/runtime/primitives/exchange-chain.ts`, `src/runtime/session-executor.ts`, `src/runtime/browser-fetch-executor.ts`, `src/fixtures/{chatgpt,x,reddit}-fixture/`
+**Verification:** 246/246 tests pass, `pnpm build` clean, 15 sites CDP-verified
+**Commits:** 5 commits (Phase 1 + Reddit + ChatGPT + X + docs)
+**Next:** M8 — further expansion (Nuxt SSR, non-Google signing, more breadth sites)
+**Blockers:** None
+
+---
+
 ## 2026-03-16: M6 Close-out — 13 sites, 238 tests, 6 review rounds
 
 **What changed:**

@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-16 (commit: Tranche B)
+> Last updated: 2026-03-16 (commit: M7)
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (236/236 pass)
+pnpm test           # Run tests (246/246 pass)
 pnpm lint           # Biome lint check
 ```
 
