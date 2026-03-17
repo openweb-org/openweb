@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-17 (commit: M12)
+> Last updated: 2026-03-17 (commit: M14)
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (315/315 pass)
+pnpm test           # Run tests (338/338 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -45,37 +45,42 @@ pnpm lint           # Biome lint check
 ```bash
 # List all compiled sites
 pnpm dev sites
+pnpm dev sites --json                          # Machine-readable JSON
 
 # List operations for a site
 pnpm dev instagram-fixture
+pnpm dev instagram-fixture --json              # Machine-readable JSON
 
 # Show operation details (params + response schema)
 pnpm dev instagram-fixture getTimeline
+pnpm dev instagram-fixture getTimeline --json   # Machine-readable JSON
+pnpm dev instagram-fixture getTimeline --example # Generate example params
 
-# Execute an operation
+# Execute an operation (auto-detects managed browser)
 pnpm dev instagram-fixture exec getTimeline '{}'
 
-# Execute with CDP (for session_http / browser_fetch / adapter)
+# Execute with explicit CDP endpoint
 pnpm dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222
 
-# Emit a valid JSON preview when the full response would be too large
-pnpm dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222 --max-response 8192
+# Auto-spill: responses > --max-response (default 4096) written to temp file
+pnpm dev instagram-fixture exec getTimeline '{}' --max-response 8192
+
+# Always write response to file
+pnpm dev instagram-fixture exec getTimeline '{}' --output file
 ```
 
-### Browser Capture
+### Browser Management
 
 ```bash
-# 1. Start Chrome with remote debugging
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-  --remote-debugging-port=9222 --no-first-run --user-data-dir=/tmp/openweb-chrome
+# Managed Chrome — auto-copies default Chrome profile, launches with CDP
+pnpm dev browser start
+pnpm dev browser start --headless              # No window
+pnpm dev browser stop                          # Stop, preserve token cache
+pnpm dev browser restart                       # Re-copy profile + clear token cache
+pnpm dev browser status                        # Check if running
 
-# 2. Browse to the target site
-
-# 3. Start capture (Ctrl+C to stop)
-pnpm dev capture start --cdp-endpoint http://localhost:9222
-
-# 4. Or stop from another terminal
-pnpm dev capture stop
+# Open site in default browser for login
+pnpm dev login instagram-fixture
 ```
 
 ### Compile a Site
@@ -161,14 +166,16 @@ pnpm test -- --watch
 For L2/L3 features, verify against a real browser session:
 
 ```bash
-# Start Chrome
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-  --remote-debugging-port=9222 --no-first-run --user-data-dir=/tmp/openweb-chrome
+# Start managed browser
+pnpm dev browser start
 
-# Log in to the target site in Chrome
+# Log in if needed
+pnpm dev login instagram-fixture
+# → log in in Chrome, then:
+pnpm dev browser restart
 
-# Execute an operation
-pnpm dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222
+# Execute an operation (auto-detects managed browser)
+pnpm dev instagram-fixture exec getTimeline '{}'
 ```
 
 ---
@@ -179,13 +186,14 @@ pnpm dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost
 src/
 ├── cli.ts                    # Entry point, yargs routing
 ├── commands/                 # CLI commands
-│   ├── exec.ts               # Execute operation
-│   ├── show.ts               # Show site/operation info
+│   ├── exec.ts               # Execute operation (auto-spill, --output file)
+│   ├── show.ts               # Show site/operation info (--json, --example)
+│   ├── browser.ts            # Browser lifecycle (start/stop/restart/status/login)
 │   ├── compile.ts            # Compile site → skill package
 │   ├── discover.ts           # Discover APIs from URL
 │   ├── capture.ts            # CDP browser capture
 │   ├── test.ts               # Run site tests
-│   ├── sites.ts              # List available sites
+│   ├── sites.ts              # List available sites (--json)
 │   ├── verify.ts             # Verify sites and detect drift
 │   └── registry.ts           # Registry management (install/rollback)
 ├── runtime/                  # Operation execution (3 modes + L3)
@@ -197,7 +205,7 @@ src/
 │   ├── fingerprint.ts        # Response shape fingerprinting
 │   ├── verify.ts             # Site verification engine
 │   └── registry.ts           # Version management + install/rollback
-├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, manifest)
+├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, manifest, permissions)
 └── fixtures/                 # 51 verified site packages
 ```
 
@@ -302,8 +310,9 @@ Use these to validate that agent skill changes do not break the end-to-end flow.
 | Issue | Solution |
 |-------|----------|
 | `pnpm dev` fails | Run `pnpm build` first |
-| CDP connection refused | Start Chrome with `--remote-debugging-port=9222` |
-| Auth fails on exec | Log in to the site in Chrome first |
+| CDP connection refused | Run `pnpm dev browser start` |
+| Auth fails on exec | Run `pnpm dev login <site>` then `pnpm dev browser restart` |
+| Permission denied/required | Update `~/.openweb/permissions.yaml` or confirm the operation |
 | SSRF validation error | Target URL must be HTTPS + public IP |
 | "Site not found" | Check fixture exists in `src/fixtures/` or `~/.openweb/sites/` |
 

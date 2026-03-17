@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
+import { mkdtempSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 
 import { executeOperation } from './executor.js'
+
+const TOKEN_CACHE_DIR = mkdtempSync(join(tmpdir(), 'openweb-test-tokens-'))
 
 function mockBrowser(
   pages: Array<{ url: string; content?: string; evaluateResult?: unknown }>,
@@ -62,7 +67,7 @@ describe('Phase 2 fixtures', () => {
       },
     ])
 
-    const result = await executeOperation('walmart-fixture', 'getFooterModules', {}, { browser })
+    const result = await executeOperation('walmart-fixture', 'getFooterModules', {}, { browser, tokenCacheDir: TOKEN_CACHE_DIR })
 
     expect(result.status).toBe(200)
     expect(result.responseSchemaValid).toBe(true)
@@ -88,7 +93,7 @@ describe('Phase 2 fixtures', () => {
       },
     ])
 
-    const result = await executeOperation('hackernews-fixture', 'getTopStories', {}, { browser })
+    const result = await executeOperation('hackernews-fixture', 'getTopStories', {}, { browser, tokenCacheDir: TOKEN_CACHE_DIR })
 
     expect(result.status).toBe(200)
     expect(result.responseSchemaValid).toBe(true)
@@ -135,6 +140,7 @@ describe('Phase 2 fixtures', () => {
       browser,
       fetchImpl: fetchMock,
       ssrfValidator: async () => {},
+      tokenCacheDir: TOKEN_CACHE_DIR,
     })
 
     expect(result.status).toBe(200)

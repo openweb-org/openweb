@@ -90,7 +90,7 @@ async function generatePackage(input: GeneratePackageInput): Promise<string>
 
 **x-openweb extension emission:**
 - Server-level: mode, auth, CSRF (from ClassifyResult)
-- Operation-level: risk_tier, stable_id, signature_id, tool_version
+- Operation-level: permission, stable_id, signature_id, tool_version
 
 -> See: `src/compiler/generator.ts`
 

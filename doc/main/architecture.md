@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-17 (commit: M12)
+> Last updated: 2026-03-17 (commit: M14)
 
 ## Mission
 
@@ -46,7 +46,7 @@ L1+L2 classification validated against 103 OpenTabs plugins.
                            │ openweb <site> exec <op> '{...}'
                            ▼
                     ┌──────────────┐
-                    │   executor   │  Load spec → find operation → resolve transport
+                    │   executor   │  Load spec → find operation → permission gate → resolve transport
                     └──────┬───────┘
                            │
               ┌────────────┼────────────┐
@@ -83,13 +83,13 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | Component | What it does | Key files | Status |
 |-----------|-------------|-----------|--------|
 | **Meta-spec** | x-openweb schema: L2 types + L3 interface + package format | `src/types/` | Formalized (M1) |
-| **Runtime** | Reads skill packages, resolves primitives, executes requests | `src/runtime/` | L1 + L2 + L3 + extraction complete (M6) |
+| **Runtime** | Reads skill packages, resolves primitives, executes requests | `src/runtime/` | L1 + L2 + L3 + extraction + token cache (M14) |
 | **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | L1 emit + L2 classify (M10) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM) | `src/capture/` | Complete (M0), page isolation (M11) |
 | **Discovery** | Agent-driven API discovery pipeline | `src/discovery/` | Interactive capture + active exploration (M11) |
 | **Lifecycle** | Drift detection, verification, quarantine | `src/lifecycle/` | Fingerprint + verify + quarantine (M12) |
 | **Registry** | Site version management, install, rollback | `src/lifecycle/registry.ts` | Internal registry (M12) |
-| **CLI** | Progressive navigation + exec + capture + compile + discover + verify + registry | `src/cli.ts`, `src/commands/` | Complete |
+| **CLI** | Progressive navigation + exec + browser + capture + compile + discover + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login, --json, --example) |
 | **Skill packages** | Per-site instance specs | `src/fixtures/` | 51 verified sites |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5) |
 
@@ -136,12 +136,15 @@ Auth, CSRF, and signing are resolved as a pipeline on every L2 request:
 ## CLI Interface
 
 ```bash
-openweb sites                                  # list compiled sites
-openweb <site>                                 # list operations (tools)
-openweb <site> <op>                            # show params + response schema
-openweb <site> exec <op> '{...}'               # execute operation
-openweb <site> exec <op> '{...}' --max-response 8192  # emit a valid JSON preview when stdout would be too large
+openweb sites [--json]                         # list compiled sites
+openweb <site> [--json]                        # list operations (tools)
+openweb <site> <op> [--json] [--example]       # show params + response schema
+openweb <site> exec <op> '{...}'               # execute operation (auto-detects managed browser)
+openweb <site> exec <op> '{...}' --output file # always write response to file
 openweb <site> test                            # run site test cases
+openweb browser start [--headless]             # managed Chrome lifecycle
+openweb browser stop / restart / status
+openweb login <site>                           # open site in default browser for auth
 openweb capture start --cdp-endpoint ...       # record browser session
 openweb compile <url>                          # generate skill package
 openweb discover <url>                         # discover APIs and generate fixture
@@ -151,6 +154,35 @@ openweb registry list                          # list registered site versions
 openweb registry install <site>                # archive fixture to registry
 openweb registry rollback <site>               # revert to previous version
 ```
+
+---
+
+## Permission System (M14)
+
+Operations carry a `permission` category that gates execution:
+
+| Category | HTTP Methods | Default Policy |
+|----------|-------------|----------------|
+| `read` | GET, HEAD | `allow` |
+| `write` | POST, PUT, PATCH | `prompt` |
+| `delete` | DELETE | `prompt` |
+| `transact` | checkout/purchase/payment paths | `deny` |
+
+When `x-openweb.permission` is absent, the runtime derives permission from HTTP method (fail-closed).
+Policy is configurable per-site in `~/.openweb/permissions.yaml`.
+`prompt` policy returns a structured error for the agent to relay to the user.
+
+-> See: `src/lib/permissions.ts`, `src/runtime/executor.ts`
+
+---
+
+## Browser Lifecycle (M14)
+
+`openweb browser start` copies auth-relevant files from the default Chrome profile to a secure temp directory (`mkdtemp`, mode 0o700), launches Chrome with CDP, and saves PID/port to `~/.openweb/`. All `exec` commands auto-detect the managed browser — no `--cdp-endpoint` needed.
+
+Token cache at `~/.openweb/tokens/<site>/` stores cookies + localStorage + sessionStorage after successful authenticated requests. Cache has JWT-aware TTL. Cache hit → no browser connection needed. 401/403 → cache invalidated → browser fallback.
+
+-> See: `src/commands/browser.ts`, `src/runtime/token-cache.ts`
 
 ---
 
@@ -210,7 +242,7 @@ openweb registry rollback <site>               # revert to previous version
 | World Time | L1 | — | — | — | — | node |
 | Zippopotam | L1 | — | — | — | — | node |
 
-**Note:** The GitHub public fixture also includes a `graphqlQuery` operation (POST `/graphql`, `risk_tier: medium`) demonstrating POST-based GraphQL on a public API.
+**Note:** The GitHub public fixture also includes a `graphqlQuery` operation (POST `/graphql`, `permission: write`) demonstrating POST-based GraphQL on a public API.
 
 ---
 

@@ -111,7 +111,7 @@ paths:
     post:
       operationId: getTimeline
       x-openweb:
-        risk_tier: safe
+        permission: read
         stable_id: instagram_getTimeline_v1
 ```
 
@@ -131,7 +131,7 @@ paths:
     get:
       operationId: getTopStories
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: hn0001
           tool_version: 1

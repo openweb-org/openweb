@@ -1,7 +1,7 @@
 # Meta-spec: Type System & Validation
 
 > L2 primitive types, x-openweb extensions, JSON Schema, and AJV validation.
-> Last updated: 2026-03-17 (commit: M10)
+> Last updated: 2026-03-17 (commit: M14)
 
 ## Overview
 
@@ -51,7 +51,7 @@ servers:
 
 ```typescript
 interface XOpenWebOperation {
-  risk_tier?: 'safe' | 'low' | 'medium' | 'high' | 'critical'
+  permission?: 'read' | 'write' | 'delete' | 'transact'
   build?: {
     stable_id?: string
     signature_id?: string
@@ -75,7 +75,7 @@ paths:
     get:
       operationId: getTimeline
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: instagram_getTimeline_v1
         pagination:
@@ -181,7 +181,7 @@ AJV validates two things. Spec validation runs automatically at load time (`load
 validateXOpenWebSpec(spec: object): ValidationResult
 ```
 
-Validates server-level `x-openweb` (transport, auth, CSRF, signing) and operation-level `x-openweb` (risk_tier, pagination, extraction, adapter).
+Validates server-level `x-openweb` (transport, auth, CSRF, signing) and operation-level `x-openweb` (permission, pagination, extraction, adapter).
 
 ### 2. Manifest Validation
 

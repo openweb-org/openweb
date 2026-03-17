@@ -1,16 +1,18 @@
 # Runtime Execution Pipeline
 
 > Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-03-17 (commit: M12)
+> Last updated: 2026-03-17 (commit: M14)
 
 ## Overview
 
 The runtime is the core of OpenWeb. Given a site name, operation ID, and parameters, it:
 1. Loads the OpenAPI spec and validates `x-openweb` extensions (AJV)
 2. Finds the operation
-3. Resolves the transport
-4. Dispatches to the correct executor
-5. Returns a structured result
+3. **Permission gate** — checks `x-openweb.permission` (or derives from HTTP method) against `~/.openweb/permissions.yaml`
+4. **Token cache check** — for authenticated node transport, tries cached cookies/storage before browser
+5. Resolves the transport
+6. Dispatches to the correct executor
+7. Returns a structured result
 
 -> See: `src/runtime/executor.ts`
 
@@ -24,6 +26,7 @@ executeOperation(site, operationId, params, deps)
        ├── Check quarantine status (emit warning if quarantined)
        ├── Load OpenAPI spec (openapi.yaml)
        ├── Find operation by operationId
+       ├── Permission gate (read/write/delete/transact → allow/prompt/deny)
        ├── Resolve transport (operation → server → node)
        │
        ├── L3 adapter?
@@ -36,7 +39,9 @@ executeOperation(site, operationId, params, deps)
        │     └── executeBrowserFetch()
        │
        └── node?
-             └── executeNodeHttp() (with or without auth)
+             ├── auth needed? → token cache hit? → executeCachedFetch()
+             │                  cache miss      → executeSessionHttp() → write cache
+             └── no auth → fetchWithValidatedRedirects()
 ```
 
 **Transport Resolution Hierarchy:**
@@ -243,9 +248,11 @@ Every error carries a `failureClass` that tells the agent what to do next:
 
 | Class | Meaning | Agent action |
 |-------|---------|-------------|
-| `needs_browser` | Operation requires a browser but none connected | Launch Chrome with CDP |
-| `needs_login` | User is not authenticated on the target site | Prompt user to log in |
+| `needs_browser` | Operation requires a browser but none connected | Run `openweb browser start` |
+| `needs_login` | User is not authenticated on the target site | Run `openweb login <site>` then `openweb browser restart` |
 | `needs_page` | No browser tab matches the target origin | Open the suggested site URL |
+| `permission_denied` | Operation blocked by permissions.yaml | Update `~/.openweb/permissions.yaml` |
+| `permission_required` | Operation needs user approval (write/delete) | Ask user for confirmation |
 | `retriable` | Transient failure (network, rate-limit) | Retry the request |
 | `fatal` | Unrecoverable error (bad spec, unknown op) | Stop and report |
 
@@ -273,6 +280,7 @@ src/runtime/
 ├── paginator.ts              # Pagination executor (cursor + link_header)
 ├── value-path.ts             # Shared dot-path helper for nested payloads
 ├── navigator.ts              # CLI navigation helper (render site/operation info)
+├── token-cache.ts            # Token cache (cookies + localStorage + sessionStorage, JWT-aware TTL)
 └── primitives/               # L2 primitive resolvers
     ├── registry.ts           # Primitive type registry
     ├── index.ts              # Primitive pipeline orchestration

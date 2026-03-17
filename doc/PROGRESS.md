@@ -1,3 +1,25 @@
+## 2026-03-17: M14 — User Experience Foundation — DONE
+
+**What changed:**
+- Permission system: replaced 5-tier `risk_tier` (safe/low/medium/high/critical) with 4-category `permission` (read/write/delete/transact) across types, schema, compiler, navigator, and all 51 fixtures. Runtime enforcement gates execution against `~/.openweb/permissions.yaml` (defaults: read=allow, write=prompt, delete=prompt, transact=deny). When `x-openweb.permission` is absent, permission is derived from HTTP method (fail-closed).
+- Browser lifecycle: `openweb browser start/stop/restart/status` + `openweb login <site>`. Selective Chrome profile copy (auth files only) to secure temp directory (mkdtemp, 0o700). PID/port management with CDP-verified shutdown. CDP auto-detect from managed browser.
+- Token cache: `~/.openweb/tokens/<site>/` stores cookies + localStorage + sessionStorage after successful authenticated requests. JWT-aware TTL (extracts exp from JWT tokens in cookies/storage). Cache-first execution — cache hit skips browser entirely. 401/403 invalidates cache → browser fallback. Supports localStorage_jwt auth reconstruction from cache.
+- CLI output: auto-spill (response > max-response → temp file + JSON pointer on stdout), `--json` for sites/show, `--example` for operation params, `--output file`.
+- Security hardening (2 codex review rounds): shell injection fix (execFile+argv), profile copy perms, PID verification, spill file exclusive create, temp-profile cleanup validation, NaN metadata handling.
+
+**Why:**
+- Make openweb usable by both agents and humans without manual Chrome management
+- Permission system provides safety gate for mutations (agent-first: structured errors instead of stdin prompts)
+- Token cache eliminates browser dependency for repeated authenticated requests
+
+**Key files:** `src/commands/browser.ts`, `src/runtime/token-cache.ts`, `src/lib/permissions.ts`, `src/runtime/executor.ts`, `src/types/extensions.ts`, `src/commands/exec.ts`, `src/runtime/navigator.ts`, `.claude/skills/openweb/SKILL.md`
+**Verification:** 338 tests pass (23 new), `pnpm build` clean, 2 codex review rounds addressed
+**Commit:** `00ae4a7..e5ff1d7` (9 commits)
+**Next:** M15 (Intent-driven discovery / agent-powered compile)
+**Blockers:** None
+
+---
+
 ## M12: Lifecycle Management + Internal Registry — DONE (2026-03-17)
 
 **Goal:** Make 50+ sites operatable — drift detection, re-verify, registry, rollback. Scale from 35 to 51 sites.
