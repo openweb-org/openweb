@@ -9,6 +9,7 @@ export interface RecordedRequestSample {
   readonly status: number
   readonly contentType: string
   readonly responseJson: unknown
+  readonly requestBody?: string
 }
 
 export interface ClusteredEndpoint {

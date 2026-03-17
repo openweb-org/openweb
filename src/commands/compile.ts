@@ -144,10 +144,11 @@ export async function compileSite(
     const annotatedParams = annotateParameterDescriptions(differentiatedParams)
     const responseSchema = inferSchema(cluster.samples.map((sample) => sample.responseJson))
 
-    // Gate: mutation ops without any inferred parameters are not useful yet
-    // (no request body inference exists — would emit broken write operations)
-    if (MUTATION_METHODS.has(cluster.method.toLowerCase()) && annotatedParams.length === 0) {
-      continue
+    // Gate: skip mutation ops that have recorded request bodies (no body inference yet).
+    // Mutations with only query params are safe to emit — params are modeled.
+    if (MUTATION_METHODS.has(cluster.method.toLowerCase())) {
+      const hasRequestBody = cluster.samples.some((s) => s.requestBody)
+      if (hasRequestBody) continue
     }
 
     const operationBase = {

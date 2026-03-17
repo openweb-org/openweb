@@ -28,6 +28,10 @@ interface HarEntry {
     readonly method?: string
     readonly url?: string
     readonly headers?: Array<{ name?: string; value?: string }>
+    readonly postData?: {
+      readonly mimeType?: string
+      readonly text?: string
+    }
   }
   readonly response?: {
     readonly status?: number
@@ -144,6 +148,7 @@ export async function loadRecordedSamples(recordingDir: string): Promise<Recorde
       status,
       contentType,
       responseJson,
+      requestBody: entry.request?.postData?.text || undefined,
     })
   }
 
