@@ -1,3 +1,54 @@
+## M11: Agent Discovery Pipeline — DONE (2026-03-17)
+
+**Goal:** Agent-driven API discovery pipeline. From URL → captured traffic → compiled fixture → verified tests. Expand from 25 to 35 sites.
+
+**Actual Result:**
+
+- Theme 1: Passive Discovery Engine
+  - Parameterized filter.ts: target URL-based domain matching replaces hardcoded open-meteo host
+  - Analytics/tracking host blocklist (35 domains: google-analytics, facebook, sentry, etc.)
+  - Infrastructure path blocklist (27 patterns: manifest.json, _next/, telemetry, tracking, etc.)
+  - Heuristic annotation: path-based operationId generation (get/list/create/update/delete prefixes)
+  - Plural detection, singular resource detection (/me, /self, /current), search detection
+  - Curated KNOWN map preserved as override layer
+
+- Theme 2: Active Exploration
+  - navigator.ts: safe CDP navigation helpers (goto, click, type, waitForNetworkIdle)
+  - explorer.ts: page exploration strategy (find nav elements, search inputs, click + record)
+  - Separate capture dir for exploration + HAR merge (fixes data overwrite bug)
+
+- Theme 3: E2E Pipeline + Verification
+  - `openweb discover <url>` CLI command — full pipeline from URL to fixture
+  - Interactive capture: start capture BEFORE navigation to catch page-load API calls
+  - recorder.ts: supports both HAR formats (log.entries and top-level entries)
+  - recorder.ts: loadCaptureData reads bundle directory format (state_snapshots/, dom_extractions/)
+  - Pipeline tested on GitHub (8 operations discovered, localStorage_jwt auth detected)
+  - Pipeline tested on 15 candidate sites (13 produced fixtures, 140 total operations)
+  - Key learning: passive capture discovers mostly infrastructure/telemetry, not user-facing APIs
+
+- Theme 4: Site Expansion (25 → 35)
+  - 10 new L1 public API fixtures: Agify, Bored API, Cat Facts, Exchange Rate, Genderize, HTTPBin, Nationalize, Open Library, PokeAPI, Random User
+  - All 10 verified against live APIs (17 operations total)
+  - Integration test configs added for all 35 sites
+  - SKILL.md updated (25 → 35 sites)
+
+- Code Review Fixes
+  - AnalyzedOperation.method widened from 'get' literal to string (supports mutations)
+  - Exploration capture uses separate dir + merge (prevents passive data overwrite)
+  - Browser disconnected after capture (prevents leaked Playwright connections)
+  - Static import for createCaptureSession (was unnecessary dynamic import)
+
+**Exit Criteria:**
+- ✅ `openweb discover <url>` works end-to-end (passive capture + active exploration + compile)
+- ✅ 35 total sites (25 original + 10 new L1)
+- ✅ All new fixtures verified against live APIs
+- ✅ 289/289 tests pass, zero regression
+- ✅ Infrastructure noise filter blocks telemetry/tracking/config paths
+
+**Verification:** 289/289 unit tests pass; 10 new fixtures verified; build clean; 4 commits
+
+---
+
 ## M10: Compiler L2 + Semi-auto Pipeline — DONE (2026-03-17)
 
 **Goal:** Make compiler produce usable L2 specs, expand to ~25 sites, validate semi-auto pipeline.
