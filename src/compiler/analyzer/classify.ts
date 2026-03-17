@@ -28,10 +28,20 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 /** Cookie name prefixes/patterns that indicate tracking/analytics, not auth. */
 const TRACKING_COOKIE_PREFIXES = [
-  '_ga', '_gid', '_gat', '_gcl', '_fbp', '_fbc', 'fbm_', 'fbsr_',
-  'analytics', 'consent', '_hjid', '_hjSession', 'mp_', 'ajs_',
-  '__utm', '_pk_', 'hubspot', '_clck', '_clsk', 'OptanonConsent',
-  'CookieConsent', 'eupubconsent', '__cfduid',
+  // Google
+  '_ga', '_gid', '_gat', '_gcl', '__utm', 'NID', '1P_JAR', 'APISID', 'HSID', 'SSID', 'SID',
+  'SAPISID', 'SIDCC', '__Secure-1P', '__Secure-3P',
+  // Facebook / Meta
+  '_fbp', '_fbc', 'fbm_', 'fbsr_', 'datr', 'sb',
+  // Cloudflare
+  '__cf_bm', '__cfruid', '__cfduid', 'cf_clearance',
+  // Analytics / tracking
+  'analytics', '_hjid', '_hjSession', 'mp_', 'ajs_', '_pk_', 'hubspot',
+  '_clck', '_clsk', 'posthog', 'ph_', '_dd_s',
+  // Consent
+  'consent', 'OptanonConsent', 'CookieConsent', 'eupubconsent', 'cookieyes',
+  // Twitter / X
+  'twid', 'guest_id', 'personalization_id', 'ct0',
 ]
 
 function isTrackingCookie(name: string): boolean {
