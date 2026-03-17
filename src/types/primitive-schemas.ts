@@ -18,6 +18,7 @@ const exchangeStepSchema = {
   required: ['call', 'extract'],
   properties: {
     call: { type: 'string' },
+    method: { type: 'string' },
     headers: { type: 'object', additionalProperties: { type: 'string' } },
     body: { type: 'object', additionalProperties: { type: 'string' } },
     extract: { type: 'string' },

@@ -496,6 +496,14 @@ export async function executeSessionHttp(
     }
   }
 
+  // session_http always sends browser cookies — if auth didn't provide them, extract directly
+  if (!cookieString) {
+    const browserCookies = await context.cookies(serverUrl)
+    if (browserCookies.length > 0) {
+      cookieString = browserCookies.map((c) => `${c.name}=${c.value}`).join('; ')
+    }
+  }
+
   // Resolve CSRF (mutations only)
   const csrfConfig = serverExt?.csrf
   if (csrfConfig && MUTATION_METHODS.has(upperMethod)) {

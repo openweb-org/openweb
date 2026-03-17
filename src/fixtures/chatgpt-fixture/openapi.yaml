@@ -1,0 +1,132 @@
+openapi: '3.1.0'
+info:
+  title: ChatGPT API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://chatgpt.com/backend-api
+    x-openweb:
+      mode: session_http
+      auth:
+        type: exchange_chain
+        steps:
+          - call: https://chatgpt.com/api/auth/session
+            method: GET
+            extract: accessToken
+            headers:
+              User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+        inject:
+          header: Authorization
+          prefix: 'Bearer '
+paths:
+  /me:
+    get:
+      operationId: getProfile
+      summary: Get authenticated user profile
+      x-openweb:
+        risk_tier: safe
+        stable_id: cg0001
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+      parameters:
+        - name: User-Agent
+          in: header
+          required: false
+          schema:
+            type: string
+            default: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+          description: Required for Cloudflare cf_clearance cookie binding.
+      responses:
+        '200':
+          description: User profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  email:
+                    type: string
+                  picture:
+                    type: string
+                  created:
+                    type: number
+  /conversations:
+    get:
+      operationId: listConversations
+      summary: List recent conversations
+      x-openweb:
+        risk_tier: safe
+        stable_id: cg0002
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+        pagination:
+          type: cursor
+          response_field: cursor
+          request_param: cursor
+          items_path: items
+      parameters:
+        - name: User-Agent
+          in: header
+          required: false
+          schema:
+            type: string
+            default: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+          description: Required for Cloudflare cf_clearance cookie binding.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 28
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            default: updated
+      responses:
+        '200':
+          description: Paginated list of conversations.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        create_time:
+                          type: string
+                        update_time:
+                          type: string
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+                  cursor:
+                    type:
+                      - string
+                      - 'null'

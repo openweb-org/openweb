@@ -10,6 +10,7 @@ export interface Inject {
 // ── Auth ────────────────────────────────────────────
 export interface ExchangeStep {
   readonly call: string
+  readonly method?: string
   readonly headers?: Readonly<Record<string, string>>
   readonly body?: Readonly<Record<string, string>>
   readonly extract: string

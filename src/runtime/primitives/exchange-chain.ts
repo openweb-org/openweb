@@ -4,6 +4,7 @@ import type { BrowserHandle, ResolvedInjections } from './types.js'
 
 export interface ExchangeStep {
   readonly call: string
+  readonly method?: string
   readonly headers?: Readonly<Record<string, string>>
   readonly body?: Readonly<Record<string, string>>
   readonly extract: string
@@ -107,7 +108,7 @@ export async function resolveExchangeChain(
     }
 
     const response = await fetchImpl(stepUrl, {
-      method: 'POST',
+      method: (step.method ?? 'POST').toUpperCase(),
       headers,
       body,
       redirect: 'manual',
