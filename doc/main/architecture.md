@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-17 (commit: M11)
+> Last updated: 2026-03-17 (commit: M12)
 
 ## Mission
 
@@ -87,8 +87,10 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | L1 emit + L2 classify (M10) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM) | `src/capture/` | Complete (M0), page isolation (M11) |
 | **Discovery** | Agent-driven API discovery pipeline | `src/discovery/` | Interactive capture + active exploration (M11) |
-| **CLI** | Progressive navigation + exec + capture + compile + discover | `src/cli.ts`, `src/commands/` | Complete |
-| **Skill packages** | Per-site instance specs | `src/fixtures/` | 35 verified sites |
+| **Lifecycle** | Drift detection, verification, quarantine | `src/lifecycle/` | Fingerprint + verify + quarantine (M12) |
+| **Registry** | Site version management, install, rollback | `src/lifecycle/registry.ts` | Internal registry (M12) |
+| **CLI** | Progressive navigation + exec + capture + compile + discover + verify + registry | `src/cli.ts`, `src/commands/` | Complete |
+| **Skill packages** | Per-site instance specs | `src/fixtures/` | 51 verified sites |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5) |
 
 ---
@@ -143,11 +145,16 @@ openweb <site> test                            # run site test cases
 openweb capture start --cdp-endpoint ...       # record browser session
 openweb compile <url>                          # generate skill package
 openweb discover <url>                         # discover APIs and generate fixture
+openweb verify <site>                          # verify site and detect drift
+openweb verify --all                           # batch verify all sites
+openweb registry list                          # list registered site versions
+openweb registry install <site>                # archive fixture to registry
+openweb registry rollback <site>               # revert to previous version
 ```
 
 ---
 
-## Verified Sites (M0-M11)
+## Verified Sites (M0-M12)
 
 | Site | Layer | Auth | CSRF | Signing | Extraction | Transport |
 |------|-------|------|------|---------|------------|-----------|
@@ -186,6 +193,22 @@ openweb discover <url>                         # discover APIs and generate fixt
 | Open Library | L1 | — | — | — | — | node |
 | PokeAPI | L1 | — | — | — | — | node |
 | Random User | L1 | — | — | — | — | node |
+| Advice Slip | L1 | — | — | — | — | node |
+| Affirmations | L1 | — | — | — | — | node |
+| Chuck Norris | L1 | — | — | — | — | node |
+| CocktailDB | L1 | — | — | — | — | node |
+| Color API | L1 | — | — | — | — | node |
+| Country.is | L1 | — | — | — | — | node |
+| Dictionary API | L1 | — | — | — | — | node |
+| Random Fox | L1 | — | — | — | — | node |
+| Kanye Rest | L1 | — | — | — | — | node |
+| Official Joke | L1 | — | — | — | — | node |
+| Public Holidays | L1 | — | — | — | — | node |
+| Sunrise Sunset | L1 | — | — | — | — | node |
+| Universities | L1 | — | — | — | — | node |
+| Useless Facts | L1 | — | — | — | — | node |
+| World Time | L1 | — | — | — | — | node |
+| Zippopotam | L1 | — | — | — | — | node |
 
 **Note:** The GitHub public fixture also includes a `graphqlQuery` operation (POST `/graphql`, `risk_tier: medium`) demonstrating POST-based GraphQL on a public API.
 

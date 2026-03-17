@@ -1,7 +1,7 @@
 # Adding a New Site
 
 > How to create a new site fixture — from capture to verified skill package.
-> Last updated: 2026-03-17 (commit: M9)
+> Last updated: 2026-03-17 (commit: M12)
 
 ## Decision Tree
 
@@ -261,6 +261,19 @@ pnpm --silent dev <site>-fixture exec <op> '{}' --cdp-endpoint http://localhost:
 
 # Run site tests
 pnpm --silent dev <site>-fixture test
+
+# Verify drift detection
+pnpm --silent dev verify <site>-fixture
+```
+
+---
+
+## Step 8: Register (Optional)
+
+Archive verified fixtures to the internal registry for version management:
+
+```bash
+pnpm --silent dev registry install <site>-fixture
 ```
 
 ---
@@ -317,6 +330,22 @@ pnpm --silent dev <site>-fixture test
 | openlib-fixture | L1 | — | — | Public API (book search) |
 | pokeapi-fixture | L1 | — | — | Public API (Pokemon data) |
 | randomuser-fixture | L1 | — | — | Public API (random users) |
+| advice-fixture | L1 | — | — | Public API (advice slips) |
+| affirmations-fixture | L1 | — | — | Public API (affirmations) |
+| chucknorris-fixture | L1 | — | — | Public API (Chuck Norris jokes) |
+| cocktaildb-fixture | L1 | — | — | Public API (cocktail search) |
+| colorapi-fixture | L1 | — | — | Public API (color details) |
+| countryis-fixture | L1 | — | — | Public API (IP geolocation) |
+| dictionaryapi-fixture | L1 | — | — | Public API (word definitions) |
+| foxes-fixture | L1 | — | — | Public API (random fox images) |
+| kanye-fixture | L1 | — | — | Public API (Kanye quotes) |
+| official-joke-fixture | L1 | — | — | Public API (random jokes) |
+| publicholiday-fixture | L1 | — | — | Public API (public holidays) |
+| sunrise-sunset-fixture | L1 | — | — | Public API (sunrise/sunset) |
+| universities-fixture | L1 | — | — | Public API (university search) |
+| uselessfacts-fixture | L1 | — | — | Public API (random facts) |
+| worldtime-fixture | L1 | — | — | Public API (world time) |
+| zippopotam-fixture | L1 | — | — | Public API (ZIP code lookup) |
 
 ---
 

@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-17 (commit: M11)
+> Last updated: 2026-03-17 (commit: M12)
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (293/293 pass)
+pnpm test           # Run tests (315/315 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -104,6 +104,29 @@ pnpm dev discover https://example.com --explore --cdp-endpoint http://localhost:
 pnpm dev instagram-fixture test
 ```
 
+### Verify Sites (Drift Detection)
+
+```bash
+# Verify a single site
+pnpm dev verify catfact-fixture
+
+# Batch verify all sites
+pnpm dev verify --all
+
+# Drift report (JSON or markdown)
+pnpm dev verify --all --report
+pnpm dev verify --all --report markdown
+```
+
+### Registry (Version Management)
+
+```bash
+pnpm dev registry list                    # List registered sites
+pnpm dev registry install catfact-fixture # Archive fixture to registry
+pnpm dev registry rollback catfact-fixture # Revert to previous version
+pnpm dev registry show catfact-fixture    # Show version history
+```
+
 ---
 
 ## Development Cycle
@@ -162,14 +185,20 @@ src/
 │   ├── discover.ts           # Discover APIs from URL
 │   ├── capture.ts            # CDP browser capture
 │   ├── test.ts               # Run site tests
-│   └── sites.ts              # List available sites
+│   ├── sites.ts              # List available sites
+│   ├── verify.ts             # Verify sites and detect drift
+│   └── registry.ts           # Registry management (install/rollback)
 ├── runtime/                  # Operation execution (3 modes + L3)
 ├── types/                    # Meta-spec type system
 ├── compiler/                 # Site compilation pipeline
 ├── capture/                  # Browser CDP recording
 ├── discovery/                # Agent-driven API discovery pipeline
-├── lib/                      # Shared utilities (SSRF, errors, OpenAPI)
-└── fixtures/                 # 35 verified site packages
+├── lifecycle/                # Drift detection, verification, registry
+│   ├── fingerprint.ts        # Response shape fingerprinting
+│   ├── verify.ts             # Site verification engine
+│   └── registry.ts           # Version management + install/rollback
+├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, manifest)
+└── fixtures/                 # 51 verified site packages
 ```
 
 -> See: [doc/main/README.md](../main/README.md) — full code structure with per-file annotations
@@ -180,9 +209,12 @@ src/
 
 The runtime searches for skill packages in this order:
 
-1. `~/.openweb/sites/<site>/openapi.yaml` — User-installed sites
-2. `./sites/<site>/openapi.yaml` — Project-local sites
-3. `./src/fixtures/<site>/openapi.yaml` — Development fixtures
+1. `~/.openweb/registry/<site>/current` → `~/.openweb/registry/<site>/<version>/openapi.yaml` — Registry (versioned)
+2. `~/.openweb/sites/<site>/openapi.yaml` — User-installed sites
+3. `./sites/<site>/openapi.yaml` — Project-local sites
+4. `./src/fixtures/<site>/openapi.yaml` — Development fixtures
+
+Site names must match `/^[a-z0-9][a-z0-9_-]*$/`.
 
 ---
 

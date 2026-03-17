@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-03-17 (commit: M10)
+> Last updated: 2026-03-17 (commit: M12)
 
 ## Overview
 
@@ -21,6 +21,7 @@ The runtime is the core of OpenWeb. Given a site name, operation ID, and paramet
 ```
 executeOperation(site, operationId, params, deps)
        │
+       ├── Check quarantine status (emit warning if quarantined)
        ├── Load OpenAPI spec (openapi.yaml)
        ├── Find operation by operationId
        ├── Resolve transport (operation → server → node)
