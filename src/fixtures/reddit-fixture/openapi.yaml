@@ -10,6 +10,26 @@ servers:
       mode: session_http
       auth:
         type: cookie_session
+  - url: https://oauth.reddit.com
+    x-openweb:
+      mode: session_http
+      auth:
+        type: exchange_chain
+        steps:
+          - call: https://www.reddit.com/svc/shreddit/token
+            extract: csrf_token
+            extract_from: cookie
+            as: csrf
+          - call: https://www.reddit.com/svc/shreddit/token
+            extract: token
+            headers:
+              Content-Type: application/x-www-form-urlencoded
+              Origin: https://www.reddit.com
+            body:
+              csrf_token: '${csrf}'
+        inject:
+          header: Authorization
+          prefix: 'Bearer '
 paths:
   /r/{subreddit}/hot.json:
     get:
@@ -93,3 +113,43 @@ paths:
             application/json:
               schema:
                 type: object
+  /api/v1/me:
+    get:
+      operationId: getMe
+      summary: Get authenticated user profile via OAuth
+      servers:
+        - url: https://oauth.reddit.com
+      x-openweb:
+        risk_tier: safe
+        stable_id: rd0003
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+      parameters: []
+      responses:
+        '200':
+          description: Authenticated user profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - name
+                properties:
+                  name:
+                    type: string
+                  total_karma:
+                    type: integer
+                  link_karma:
+                    type: integer
+                  comment_karma:
+                    type: integer
+                  inbox_count:
+                    type: integer
+                  created_utc:
+                    type: number
+                  is_gold:
+                    type: boolean
+                  has_verified_email:
+                    type: boolean

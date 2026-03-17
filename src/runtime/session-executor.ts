@@ -70,7 +70,7 @@ export async function findPageForOrigin(context: BrowserContext, serverUrl: stri
     }
 
     // Pass 2: same hostname or base domain match (www.youtube.com ↔ youtube.com)
-    const baseDomain = targetHost.replace(/^(www|api)\./, '')
+    const baseDomain = targetHost.replace(/^(www|api|oauth)\./, '')
     for (const page of pages) {
       try {
         const pageHost = new URL(page.url()).hostname

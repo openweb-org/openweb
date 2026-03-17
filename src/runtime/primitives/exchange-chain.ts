@@ -61,6 +61,25 @@ export async function resolveExchangeChain(
     // Only send cookies matching this step's origin (not all origins merged)
     const stepOrigin = new URL(stepUrl).origin
     const originCookies = await handle.context.cookies(stepOrigin)
+
+    // Cookie-only step: read a cookie value without making an HTTP request
+    if (step.extract_from === 'cookie') {
+      const cookie = originCookies.find((c) => c.name === step.extract)
+      if (!cookie) {
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: `Exchange chain: cookie "${step.extract}" not found for ${stepOrigin}.`,
+          action: 'Ensure you are logged in. The required cookie may be missing.',
+          retriable: true,
+          failureClass: 'needs_login',
+        })
+      }
+      lastValue = cookie.value
+      extracted.set(step.as ?? step.extract, lastValue)
+      continue
+    }
+
     const cookieString = originCookies
       .map((c) => `${c.name}=${c.value}`)
       .join('; ')
@@ -122,29 +141,20 @@ export async function resolveExchangeChain(
       })
     }
 
-    // Extract value from response body or cookies
-    let value: unknown
-    if (step.extract_from === 'cookie') {
-      // Extract from response Set-Cookie headers or browser cookies for this origin
-      const responseCookies = await handle.context.cookies(stepOrigin)
-      const cookie = responseCookies.find((c) => c.name === step.extract)
-      value = cookie?.value
+    // Extract value from response body using dot-path
+    let responseData: unknown
+    const contentType = response.headers.get('content-type') ?? ''
+    if (contentType.includes('json')) {
+      responseData = await response.json()
     } else {
-      // Default: extract from response body using dot-path
-      let responseData: unknown
-      const contentType = response.headers.get('content-type') ?? ''
-      if (contentType.includes('json')) {
-        responseData = await response.json()
-      } else {
-        const text = await response.text()
-        try {
-          responseData = JSON.parse(text)
-        } catch {
-          responseData = text
-        }
+      const text = await response.text()
+      try {
+        responseData = JSON.parse(text)
+      } catch {
+        responseData = text
       }
-      value = getValueAtPath(responseData, step.extract)
     }
+    const value = getValueAtPath(responseData, step.extract)
     if (value === undefined || value === null) {
       throw new OpenWebError({
         error: 'execution_failed',

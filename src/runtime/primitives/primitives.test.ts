@@ -538,7 +538,7 @@ describe('resolveExchangeChain', () => {
     expect(ssrfValidator).toHaveBeenCalledWith('https://example.com/token')
   })
 
-  it('extracts value from cookie when extract_from is cookie', async () => {
+  it('extracts value from cookie without making an HTTP request', async () => {
     const handle = {
       page: {} as BrowserHandle['page'],
       context: {
@@ -554,12 +554,7 @@ describe('resolveExchangeChain', () => {
       } as unknown as BrowserHandle['context'],
     }
 
-    const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    ) as unknown as typeof fetch
+    const fetchMock = vi.fn() as unknown as typeof fetch
 
     const result = await resolveExchangeChain(handle, {
       steps: [
@@ -574,9 +569,11 @@ describe('resolveExchangeChain', () => {
     }, 'https://oauth.reddit.com', { fetchImpl: fetchMock })
 
     expect(result.headers['X-CSRF-Token']).toBe('csrf_abc123')
+    // Cookie-only step should NOT make an HTTP request
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(0)
   })
 
-  it('throws when extract_from cookie not found', async () => {
+  it('throws needs_login when extract_from cookie not found', async () => {
     const handle = {
       page: {} as BrowserHandle['page'],
       context: {
@@ -586,12 +583,7 @@ describe('resolveExchangeChain', () => {
       } as unknown as BrowserHandle['context'],
     }
 
-    const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    ) as unknown as typeof fetch
+    const fetchMock = vi.fn() as unknown as typeof fetch
 
     await expect(
       resolveExchangeChain(handle, {
@@ -605,8 +597,10 @@ describe('resolveExchangeChain', () => {
         inject: { header: 'Authorization' },
       }, 'https://example.com', { fetchImpl: fetchMock }),
     ).rejects.toMatchObject({
-      payload: { code: 'EXECUTION_FAILED', failureClass: 'fatal' },
+      payload: { code: 'EXECUTION_FAILED', failureClass: 'needs_login' },
     })
+    // No HTTP request should be made for cookie-only step
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(0)
   })
 
   it('uses cookie-extracted value in subsequent step templates', async () => {
@@ -625,10 +619,6 @@ describe('resolveExchangeChain', () => {
     }
 
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ accessToken: 'final_bearer' }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
@@ -652,9 +642,11 @@ describe('resolveExchangeChain', () => {
     }, 'https://oauth.reddit.com', { fetchImpl: fetchMock })
 
     expect(result.headers.Authorization).toBe('Bearer final_bearer')
-    // Verify the second step used the cookie-extracted csrf value in its body
-    const secondCall = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[1]!
-    expect(secondCall[1].body).toBe('csrf_token=csrf_from_cookie')
+    // Only the second step makes an HTTP request (cookie step skips fetch)
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
+    // Verify the POST used the cookie-extracted csrf value in its body
+    const firstCall = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    expect(firstCall[1].body).toBe('csrf_token=csrf_from_cookie')
   })
 
   it('substitutes extracted values into subsequent step URLs, headers, and body', async () => {

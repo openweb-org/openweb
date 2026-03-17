@@ -1,0 +1,12 @@
+{
+  "operation_id": "getSubreddit",
+  "cases": [
+    {
+      "input": { "subreddit": "funny", "limit": 2 },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
