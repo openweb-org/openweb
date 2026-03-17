@@ -211,7 +211,7 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
   try {
     humanHandoff = await detectHandoffNeeded(capture.page)
     if (humanHandoff) {
-      log(`\n⚠ ${humanHandoff.type} detected at ${humanHandoff.url}`)
+      log(`\nWARNING: ${humanHandoff.type} detected at ${humanHandoff.url}`)
       log(`  Action: ${humanHandoff.action}`)
     }
   } catch {
@@ -228,7 +228,7 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
   // Step 3: Compile pipeline
   log('\n=== Phase 3: Compile ===')
 
-  let filteredSamples
+  let filteredSamples: Awaited<ReturnType<typeof loadRecordedSamples>> = []
   let classifyResult: ReturnType<typeof classify> | undefined
 
   try {

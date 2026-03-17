@@ -230,7 +230,8 @@ export async function exploreForIntents(
           continue
         }
 
-        const selector = `a[href="${link.href}"]`
+        const escapedHref = link.href.replace(/["\\]/g, '\\$&')
+        const selector = `a[href="${escapedHref}"]`
         const clicked = await safeClick(page, selector)
         if (!clicked) continue
 

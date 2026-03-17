@@ -36,7 +36,6 @@ const API_INTENT_PATTERNS: ReadonlyArray<{ intent: Intent; patterns: readonly Re
   { intent: 'profile', patterns: [/\/(me|profile|user|account|settings)\b/i] },
   { intent: 'feed', patterns: [/\/(feed|timeline|home|trending|recommended|popular|hot|top|latest|new)\b/i] },
   { intent: 'search', patterns: [/\/(search|query|find|autocomplete|suggest|lookup)\b/i] },
-  { intent: 'detail', patterns: [/\/[a-z_-]+\/[^/]+$/i] }, // /{resource}/{id} pattern
   { intent: 'social', patterns: [/\/(friends|followers|following|contacts|messages|chat|dm|conversations)\b/i] },
   { intent: 'activity', patterns: [/\/(notifications|activity|history|events|log)\b/i] },
   { intent: 'meta', patterns: [/\/(categories|tags|config|metadata|info|status|version|health)\b/i] },
@@ -45,6 +44,8 @@ const API_INTENT_PATTERNS: ReadonlyArray<{ intent: Intent; patterns: readonly Re
   { intent: 'update', patterns: [/\/(edit|update|modify|patch)\b/i] },
   { intent: 'transact', patterns: [/\/(cart|checkout|purchase|buy|order|book|subscribe|pay)\b/i] },
   { intent: 'delete', patterns: [/\/(delete|remove|destroy|archive|trash)\b/i] },
+  // detail is last: broad /{resource}/{id} pattern, should not shadow specific intents
+  { intent: 'detail', patterns: [/\/[a-z_-]+\/[^/]+$/i] },
 ]
 
 // Non-GET methods strongly imply write intents
