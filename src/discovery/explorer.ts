@@ -9,12 +9,32 @@ export interface ExplorationResult {
   readonly searchesPerformed: number
   /** New URLs discovered during exploration */
   readonly discoveredUrls: string[]
+  /** Links skipped due to destructive denylist */
+  readonly skippedDestructive: number
+}
+
+/** Link text/href patterns that indicate destructive or account-altering actions */
+const DESTRUCTIVE_PATTERNS: readonly RegExp[] = [
+  /\b(sign.?out|log.?out|logout)\b/i,
+  /\b(delete|remove|destroy)\b/i,
+  /\b(unsubscribe|deactivate|close.?account)\b/i,
+  /\b(billing|payment|upgrade|subscription)\b/i,
+  /\bsettings\/account\b/i,
+  /\b(cancel|revoke)\b/i,
+]
+
+function isDestructiveLink(text: string, href: string | null): boolean {
+  const combined = `${text} ${href ?? ''}`
+  return DESTRUCTIVE_PATTERNS.some((pattern) => pattern.test(combined))
 }
 
 /**
  * Explore a page by clicking navigation elements and submitting searches.
  * This generates additional network traffic that gets captured by the active
  * capture session running on the same page.
+ *
+ * Safety: links matching destructive patterns (logout, delete, billing, etc.)
+ * are skipped. Exploration is opt-in (--explore flag).
  */
 export async function explorePage(
   page: Page,
@@ -24,6 +44,7 @@ export async function explorePage(
   const discoveredUrls: string[] = []
   let linksClicked = 0
   let searchesPerformed = 0
+  let skippedDestructive = 0
 
   const startUrl = page.url()
 
@@ -32,6 +53,12 @@ export async function explorePage(
   log(`found ${String(navElements.length)} nav elements`)
 
   for (const nav of navElements) {
+    // Skip destructive links
+    if (isDestructiveLink(nav.text, nav.href)) {
+      skippedDestructive++
+      continue
+    }
+
     // Skip external links
     if (nav.href) {
       try {
@@ -101,5 +128,9 @@ export async function explorePage(
     }
   }
 
-  return { linksClicked, searchesPerformed, discoveredUrls }
+  if (skippedDestructive > 0) {
+    log(`skipped ${String(skippedDestructive)} destructive link(s)`)
+  }
+
+  return { linksClicked, searchesPerformed, discoveredUrls, skippedDestructive }
 }

@@ -12,11 +12,15 @@ export interface CaptureSessionOptions {
   readonly cdpEndpoint: string
   readonly outputDir: string
   readonly onLog?: (message: string) => void
+  /** If provided, capture attaches to this specific page instead of pages()[0] */
+  readonly targetPage?: Page
 }
 
 export interface CaptureSession {
   /** Resolves when the capture session is fully stopped and bundle is written */
   readonly done: Promise<void>
+  /** Resolves when listeners are attached and capture is actively recording */
+  readonly ready: Promise<void>
   /** Gracefully stop capture and write the bundle */
   stop(): void
 }
@@ -38,6 +42,7 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
 
   const stopDfd = deferred()
   const completionDfd = deferred()
+  const readyDfd = deferred()
 
   let stopped = false
   let draining = false
@@ -205,7 +210,8 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
       const context = browser.contexts()[0]
       if (!context) throw new Error('No browser context found. Open a page in Chrome first.')
 
-      const page = context.pages()[0]
+      // Use targetPage if provided, otherwise fall back to first page
+      const page = opts.targetPage ?? context.pages()[0]
       if (!page) throw new Error('No page found. Navigate to a URL in Chrome first.')
 
       log(`connected — capturing on: ${page.url()}`)
@@ -225,6 +231,9 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
         harCaptures.push(newHar)
         attachPageListeners(newPage, context)
       })
+
+      // Signal that capture is ready — listeners are attached
+      readyDfd.resolve()
 
       // Initial snapshots
       const initialSeq = snapshotSeq++
@@ -247,6 +256,9 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
       completionDfd.resolve()
     } catch (err) {
       await cleanup()
+      const error = err instanceof Error ? err : new Error(String(err))
+      // Reject ready if not yet resolved (connection failed before attach)
+      readyDfd.reject(error)
       if (stopped) {
         try {
           await drainPending(1000)
@@ -257,7 +269,6 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
         }
         completionDfd.resolve()
       } else {
-        const error = err instanceof Error ? err : new Error(String(err))
         log(`error: ${error.message}`)
         completionDfd.reject(error)
       }
@@ -266,6 +277,7 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
 
   return {
     done: completionDfd.promise,
+    ready: readyDfd.promise,
     stop() {
       if (stopped) return
       stopped = true

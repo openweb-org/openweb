@@ -51,13 +51,46 @@ const BLOCKED_HOST_PATTERNS: readonly string[] = [
   'cdnjs.cloudflare.com',
 ]
 
+/** Known multi-part public suffixes (ccSLD patterns) */
+const MULTI_PART_TLDS = new Set([
+  'co.uk', 'org.uk', 'me.uk', 'ac.uk', 'gov.uk', 'net.uk',
+  'com.au', 'net.au', 'org.au', 'edu.au', 'gov.au',
+  'co.jp', 'ne.jp', 'or.jp', 'ac.jp', 'go.jp',
+  'co.kr', 'or.kr', 'ne.kr', 'ac.kr', 'go.kr',
+  'co.nz', 'net.nz', 'org.nz', 'govt.nz',
+  'co.za', 'org.za', 'web.za', 'gov.za',
+  'com.br', 'org.br', 'net.br', 'gov.br',
+  'co.in', 'net.in', 'org.in', 'gen.in', 'gov.in',
+  'com.cn', 'net.cn', 'org.cn', 'gov.cn',
+  'com.tw', 'org.tw', 'net.tw', 'gov.tw',
+  'com.mx', 'org.mx', 'gob.mx', 'net.mx',
+  'com.sg', 'org.sg', 'net.sg', 'gov.sg',
+  'co.il', 'org.il', 'net.il', 'ac.il', 'gov.il',
+  'co.id', 'or.id', 'go.id', 'web.id',
+  'com.ar', 'org.ar', 'net.ar', 'gov.ar',
+  'co.th', 'or.th', 'go.th', 'in.th',
+  'com.tr', 'org.tr', 'net.tr', 'gov.tr',
+  'com.ua', 'org.ua', 'net.ua',
+  'com.hk', 'org.hk', 'net.hk', 'gov.hk',
+])
+
 /**
- * Extract the registrable domain (SLD + TLD) from a hostname.
- * e.g. "api.notion.so" → "notion.so", "www.github.com" → "github.com"
+ * Extract the registrable domain from a hostname.
+ * Handles multi-part TLDs: "api.bbc.co.uk" → "bbc.co.uk", not "co.uk".
+ * Simple TLDs: "api.notion.so" → "notion.so".
  */
 function extractBaseDomain(hostname: string): string {
   const parts = hostname.split('.')
   if (parts.length <= 2) return hostname
+
+  // Check if last two parts form a known multi-part TLD
+  const lastTwo = parts.slice(-2).join('.')
+  if (MULTI_PART_TLDS.has(lastTwo)) {
+    // Need at least 3 parts for SLD + multi-part TLD
+    if (parts.length <= 3) return hostname
+    return parts.slice(-3).join('.')
+  }
+
   return parts.slice(-2).join('.')
 }
 
@@ -94,35 +127,28 @@ function isAllowedHost(host: string, allowedDomains: string[]): boolean {
   return allowedDomains.some((domain) => host === domain || host.endsWith(`.${domain}`))
 }
 
-/** Infrastructure/noise path patterns to reject */
+/** Infrastructure/noise path patterns to reject.
+ * Patterns are intentionally narrow to avoid false positives on real API paths.
+ * e.g. /api/tracking/shipments is allowed; /_/tracking is blocked.
+ */
 const BLOCKED_PATH_PATTERNS: readonly RegExp[] = [
   /\/manifest\.json$/,
   /\/_next\//,
   /\/.well-known\//,
   /\/favicon\./,
   /\/robots\.txt$/,
-  /\/sitemap/,
-  /\/trace\b/,
-  /\/telemetry\b/,
-  /\/beacon\b/,
-  /\/collect\b/,
-  /\/envelope\b/,
-  /\/events?\b.*\/(create|batch|track|report)/i,
-  /\/track(ing)?\b/i,
-  /\/log(s)?\b/,
-  /\/metrics\b/,
+  /\/sitemap\.xml/,
+  /^\/_\/(trace|tracking|telemetry|beacon|collect|analytics|pixel)\b/,  // internal-prefixed paths
+  /\/api\/v?\d*\/(trace|telemetry|beacon|collect)\b/i,                  // api/v1/trace etc.
+  /\/events?\/(create|batch|track|report)\b/i,                         // event tracking
   /\/health(z|check)?$/,
   /\/ping$/,
-  /\/experiments?\b/,
   /\/cookie-settings\b/,
-  /\/consent\b/,
   /\/_ajax\b/,
   /\/sw\.js$/,
   /\/service-worker/,
   /\/workbox-/,
-  /\/analytics\b/,
-  /\/pixel\b/,
-  /\/csp-report/,
+  /\/csp-report\b/,
 ]
 
 function isBlockedPath(urlPath: string): boolean {

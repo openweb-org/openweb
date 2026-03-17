@@ -40,9 +40,12 @@ async function waitForNetworkIdle(page: Page, quietMs = 2000, maxWaitMs = 15000)
 }
 
 /**
- * Interactive capture: connect to CDP, start capture, navigate to URL, wait idle.
+ * Interactive capture: connect to CDP, open a NEW page for the target URL,
+ * attach capture to that specific page, navigate, then wait for idle.
  *
- * Key: capture starts BEFORE navigation so we catch page-load API calls.
+ * This avoids capturing credentials from an unrelated tab (CRITICAL fix).
+ * The capture session's `ready` promise ensures listeners are attached
+ * before navigation begins (no race condition).
  */
 export async function interactiveCapture(opts: InteractiveCaptureOptions): Promise<InteractiveCaptureResult> {
   const log = opts.onLog ?? (() => {})
@@ -51,25 +54,26 @@ export async function interactiveCapture(opts: InteractiveCaptureOptions): Promi
   // Create output directory
   const recordingDir = await mkdtemp(path.join(os.tmpdir(), 'openweb-discover-'))
 
-  // Step 1: Start capture session FIRST (connects to CDP, attaches listeners)
-  const session = createCaptureSession({
-    cdpEndpoint: opts.cdpEndpoint,
-    outputDir: recordingDir,
-    onLog: log,
-  })
-
-  // Small delay to let capture session connect and attach listeners
-  await new Promise((resolve) => setTimeout(resolve, 1500))
-
-  // Step 2: Connect separately for our navigation control
+  // Step 1: Connect to browser and open a dedicated page for the target URL
   const browser = await connectWithRetry(opts.cdpEndpoint)
   const context = browser.contexts()[0]
   if (!context) throw new Error('No browser context found')
 
-  const page = context.pages()[0]
-  if (!page) throw new Error('No page found. Open a page in Chrome first.')
+  // Open a new blank page — this is the page we'll capture on
+  const page = await context.newPage()
 
-  // Step 3: Navigate — this triggers API calls that get captured
+  // Step 2: Start capture session attached to our specific page
+  const session = createCaptureSession({
+    cdpEndpoint: opts.cdpEndpoint,
+    outputDir: recordingDir,
+    targetPage: page,
+    onLog: log,
+  })
+
+  // Step 3: Wait for capture to be ready (listeners attached) — no fixed sleep
+  await session.ready
+
+  // Step 4: Navigate — this triggers API calls that get captured
   log(`navigating to ${opts.targetUrl}`)
   try {
     await page.goto(opts.targetUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 })
@@ -78,14 +82,14 @@ export async function interactiveCapture(opts: InteractiveCaptureOptions): Promi
     log(`navigation warning: ${err instanceof Error ? err.message : String(err)}`)
   }
 
-  // Step 4: Wait for network idle + additional capture time
+  // Step 5: Wait for network idle + additional capture time
   log('waiting for page load ...')
   await waitForNetworkIdle(page)
 
   log(`capturing for ${String(captureDuration / 1000)}s ...`)
   await new Promise((resolve) => setTimeout(resolve, captureDuration))
 
-  // Step 5: Stop capture
+  // Step 6: Stop capture
   log('stopping capture ...')
   session.stop()
   await session.done

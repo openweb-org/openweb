@@ -135,13 +135,41 @@ describe('filterSamples', () => {
       makeSample({ path: '/manifest.json' }),
       makeSample({ path: '/_next/data/abc/page.json' }),
       makeSample({ path: '/api/v1/trace' }),
-      makeSample({ path: '/telemetry' }),
+      makeSample({ path: '/_/telemetry' }),
       makeSample({ path: '/.well-known/openid-configuration' }),
-      makeSample({ path: '/api/v1/tracking' }),
+      makeSample({ path: '/_/tracking' }),
     ]
 
     const output = filterSamples(input)
     expect(output).toHaveLength(1)
     expect(output[0].path).toBe('/api/v1/users')
+  })
+
+  it('does not false-positive on real API paths with similar words', () => {
+    const input = [
+      makeSample({ path: '/api/v1/tracking/shipments' }),     // real: shipment tracking
+      makeSample({ path: '/api/v1/metrics/revenue' }),         // real: business metrics
+      makeSample({ path: '/api/v1/logs/audit' }),              // real: audit logs
+      makeSample({ path: '/api/v1/experiments/list' }),        // real: A/B test management
+      makeSample({ path: '/api/v1/analytics/reports' }),       // real: analytics product
+      makeSample({ path: '/api/v1/consent/preferences' }),     // real: consent management
+      makeSample({ path: '/api/v1/pixel/campaigns' }),         // real: marketing pixel mgmt
+    ]
+
+    const output = filterSamples(input)
+    expect(output).toHaveLength(7) // all should pass
+  })
+
+  it('handles multi-part TLDs correctly', () => {
+    const input = [
+      makeSample({ host: 'api.bbc.co.uk' }),
+      makeSample({ host: 'www.bbc.co.uk' }),
+      makeSample({ host: 'bbc.co.uk' }),
+      makeSample({ host: 'unrelated.co.uk' }),
+    ]
+
+    const output = filterSamples(input, { targetUrl: 'https://www.bbc.co.uk' })
+    expect(output).toHaveLength(3)
+    expect(output.map((s) => s.host)).toEqual(['api.bbc.co.uk', 'www.bbc.co.uk', 'bbc.co.uk'])
   })
 })

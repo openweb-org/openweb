@@ -81,7 +81,7 @@ async function mergeHarFiles(passiveHarPath: string, exploreHarPath: string): Pr
 export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
   const log = opts.onLog ?? (() => {})
   const site = siteSlugFromUrl(opts.targetUrl)
-  const shouldExplore = opts.explore ?? true
+  const shouldExplore = opts.explore ?? false
 
   // Step 1: Interactive capture
   log('=== Phase 1: Passive capture ===')

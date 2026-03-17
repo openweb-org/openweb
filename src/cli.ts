@@ -180,7 +180,7 @@ await yargs(argv)
           default: 'http://localhost:9222',
           describe: 'Chrome DevTools Protocol endpoint',
         })
-        .option('explore', { type: 'boolean', default: true, describe: 'Enable active exploration (--no-explore to skip)' })
+        .option('explore', { type: 'boolean', default: false, describe: 'Enable active exploration (clicks nav links, fills search)' })
         .option('output', { type: 'string', describe: 'Output directory for generated fixture' })
         .option('duration', { type: 'number', default: 8000, describe: 'Capture duration in ms' }),
     async (args) => {
