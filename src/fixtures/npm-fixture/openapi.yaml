@@ -1,0 +1,146 @@
+openapi: '3.1.0'
+info:
+  title: npm Registry
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://registry.npmjs.org
+paths:
+  /{package}:
+    get:
+      operationId: getPackage
+      summary: Get metadata for an npm package by name
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: npm0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: package
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Package name (e.g. express).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, dist-tags, versions, time, maintainers]
+                properties:
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  dist-tags:
+                    type: object
+                    required: [latest]
+                    properties:
+                      latest:
+                        type: string
+                  versions:
+                    type: object
+                  time:
+                    type: object
+                  maintainers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        email:
+                          type: string
+                  repository:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      url:
+                        type: string
+  /-/v1/search:
+    get:
+      operationId: searchPackages
+      summary: Search npm packages by text query
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: npm0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: text
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query text.
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of results to return.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [objects, total, time]
+                properties:
+                  objects:
+                    type: array
+                    items:
+                      type: object
+                      required: [package, score]
+                      properties:
+                        package:
+                          type: object
+                          required: [name, version]
+                          properties:
+                            name:
+                              type: string
+                            version:
+                              type: string
+                            description:
+                              type: string
+                            keywords:
+                              type: array
+                              items:
+                                type: string
+                            date:
+                              type: string
+                            links:
+                              type: object
+                            publisher:
+                              type: object
+                            maintainers:
+                              type: array
+                              items:
+                                type: object
+                        score:
+                          type: object
+                          properties:
+                            final:
+                              type: number
+                            detail:
+                              type: object
+                  total:
+                    type: integer
+                  time:
+                    type: string

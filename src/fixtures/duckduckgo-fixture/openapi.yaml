@@ -1,0 +1,82 @@
+openapi: '3.1.0'
+info:
+  title: DuckDuckGo
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.duckduckgo.com
+paths:
+  /:
+    get:
+      operationId: instantAnswer
+      summary: Get instant answer data for a search query
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: ddg0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query.
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            const: json
+          description: Response format.
+        - name: no_redirect
+          in: query
+          required: true
+          schema:
+            type: integer
+            const: 1
+          description: Disable redirects.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Abstract:
+                    type: string
+                  AbstractText:
+                    type: string
+                  AbstractSource:
+                    type: string
+                  AbstractURL:
+                    type: string
+                  Image:
+                    type: string
+                  Heading:
+                    type: string
+                  Answer:
+                    type: string
+                  AnswerType:
+                    type: string
+                  Definition:
+                    type: string
+                  DefinitionSource:
+                    type: string
+                  DefinitionURL:
+                    type: string
+                  RelatedTopics:
+                    type: array
+                  Results:
+                    type: array
+                  Type:
+                    type: string
+                  Redirect:
+                    type: string

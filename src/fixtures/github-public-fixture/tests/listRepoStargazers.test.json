@@ -1,0 +1,16 @@
+{
+  "operation_id": "listRepoStargazers",
+  "cases": [
+    {
+      "input": {
+        "owner": "anthropics",
+        "repo": "claude-code",
+        "per_page": 5
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

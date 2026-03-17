@@ -35,15 +35,15 @@ describe('buildQueryUrl', () => {
     ).toThrowError(OpenWebError)
   })
 
-  it('throws INVALID_PARAMS for unknown input parameter', () => {
-    expect(() =>
-      buildQueryUrl(
-        'https://api.example.com',
-        '/v1/forecast',
-        [{ name: 'latitude', in: 'query', required: true, schema: { type: 'number' } }],
-        { latitude: 52.52, lat: 52.52 },
-      ),
-    ).toThrowError(OpenWebError)
+  it('ignores extra input params not in query/path/header (body params handled separately)', () => {
+    const url = buildQueryUrl(
+      'https://api.example.com',
+      '/v1/forecast',
+      [{ name: 'latitude', in: 'query', required: true, schema: { type: 'number' } }],
+      { latitude: 52.52, lat: 52.52 },
+    )
+    expect(url).toContain('latitude=52.52')
+    expect(url).not.toContain('lat=')
   })
 
   it('applies query defaults when the caller omits an optional parameter', () => {

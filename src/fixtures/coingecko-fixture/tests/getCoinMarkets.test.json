@@ -1,0 +1,16 @@
+{
+  "operation_id": "getCoinMarkets",
+  "cases": [
+    {
+      "input": {
+        "vs_currency": "usd",
+        "per_page": 10,
+        "page": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

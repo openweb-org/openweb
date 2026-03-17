@@ -1,0 +1,16 @@
+{
+  "operation_id": "createPost",
+  "cases": [
+    {
+      "input": {
+        "title": "test post",
+        "body": "test body",
+        "userId": 1
+      },
+      "assertions": {
+        "status": 201,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

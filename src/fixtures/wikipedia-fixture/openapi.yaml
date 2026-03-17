@@ -1,0 +1,171 @@
+openapi: '3.1.0'
+info:
+  title: Wikipedia
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://en.wikipedia.org
+paths:
+  /w/api.php:
+    get:
+      operationId: searchArticles
+      summary: Search Wikipedia articles by keyword
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: wp0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            const: query
+          description: API action.
+        - name: list
+          in: query
+          required: true
+          schema:
+            type: string
+            const: search
+          description: Query list type.
+        - name: srsearch
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query.
+        - name: srlimit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Maximum number of results.
+        - name: sroffset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Offset for pagination.
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            const: json
+          description: Response format.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [batchcomplete, query]
+                properties:
+                  batchcomplete:
+                    type: string
+                  query:
+                    type: object
+                    required: [searchinfo, search]
+                    properties:
+                      searchinfo:
+                        type: object
+                        required: [totalhits]
+                        properties:
+                          totalhits:
+                            type: integer
+                      search:
+                        type: array
+                        items:
+                          type: object
+                          required: [ns, title, pageid, size, wordcount, snippet, timestamp]
+                          properties:
+                            ns:
+                              type: integer
+                            title:
+                              type: string
+                            pageid:
+                              type: integer
+                            size:
+                              type: integer
+                            wordcount:
+                              type: integer
+                            snippet:
+                              type: string
+                            timestamp:
+                              type: string
+  /api/rest_v1/page/summary/{title}:
+    get:
+      operationId: getPageSummary
+      summary: Get a summary of a Wikipedia page by title
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: wp0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: title
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Page title.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [type, title, pageid, lang, dir, revision, tid, extract]
+                properties:
+                  type:
+                    type: string
+                  title:
+                    type: string
+                  displaytitle:
+                    type: string
+                  namespace:
+                    type: object
+                  wikibase_item:
+                    type: string
+                  titles:
+                    type: object
+                  pageid:
+                    type: integer
+                  thumbnail:
+                    type: object
+                  originalimage:
+                    type: object
+                  lang:
+                    type: string
+                  dir:
+                    type: string
+                  revision:
+                    type: string
+                  tid:
+                    type: string
+                  description:
+                    type: string
+                  description_source:
+                    type: string
+                  content_urls:
+                    type: object
+                  extract:
+                    type: string
+                  extract_html:
+                    type: string

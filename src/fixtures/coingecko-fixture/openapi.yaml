@@ -1,0 +1,168 @@
+openapi: '3.1.0'
+info:
+  title: CoinGecko
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-17T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://api.coingecko.com
+paths:
+  /api/v3/simple/price:
+    get:
+      operationId: getPrice
+      summary: Get current price of one or more coins in given currencies
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          verified: true
+          stable_id: cg0001
+          signature_id: cg0001s
+          tool_version: 1
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated coin IDs (e.g. bitcoin,ethereum).
+        - name: vs_currencies
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated target currencies (e.g. usd,eur).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties:
+                    type: number
+  /api/v3/search:
+    get:
+      operationId: searchCoins
+      summary: Search for coins, exchanges, and categories by query
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          verified: true
+          stable_id: cg0002
+          signature_id: cg0002s
+          tool_version: 1
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query string.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [coins]
+                properties:
+                  coins:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, symbol]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        symbol:
+                          type: string
+                        market_cap_rank:
+                          type: integer
+                        thumb:
+                          type: string
+                        large:
+                          type: string
+                  exchanges:
+                    type: array
+                  categories:
+                    type: array
+                  nfts:
+                    type: array
+  /api/v3/coins/markets:
+    get:
+      operationId: getCoinMarkets
+      summary: List coins with market data ordered by market cap
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          verified: true
+          stable_id: cg0003
+          signature_id: cg0003s
+          tool_version: 1
+      parameters:
+        - name: vs_currency
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target currency (e.g. usd).
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            default: market_cap_desc
+          description: Sort order.
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+          description: Results per page.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, symbol, name]
+                  properties:
+                    id:
+                      type: string
+                    symbol:
+                      type: string
+                    name:
+                      type: string
+                    image:
+                      type: string
+                    current_price:
+                      type: number
+                    market_cap:
+                      type: number
+                    market_cap_rank:
+                      type: integer
+                    total_volume:
+                      type: number
+                    price_change_percentage_24h:
+                      type: number

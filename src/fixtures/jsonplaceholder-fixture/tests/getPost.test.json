@@ -1,0 +1,14 @@
+{
+  "operation_id": "getPost",
+  "cases": [
+    {
+      "input": {
+        "id": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

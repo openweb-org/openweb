@@ -154,3 +154,47 @@ paths:
       responses:
         '204':
           description: Success (no content).
+  /graphql:
+    post:
+      operationId: graphqlQuery
+      summary: Execute a GraphQL query
+      x-openweb:
+        risk_tier: low
+        build:
+          stable_id: gh0004
+          tool_version: 1
+          verified: false
+          signals:
+            - graphql
+      parameters:
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: GraphQL query string
+                variables:
+                  type: object
+                  description: GraphQL variables
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object

@@ -1,0 +1,179 @@
+openapi: '3.1.0'
+info:
+  title: Stack Overflow API
+  version: '2.3'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.stackexchange.com/2.3
+paths:
+  /search:
+    get:
+      operationId: searchQuestions
+      summary: Search questions by title keywords
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: so0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: intitle
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Text that must appear in the question title.
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            const: stackoverflow
+          description: Stack Exchange site to query.
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            default: desc
+          description: Sort order (asc or desc).
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            default: activity
+          description: Sort field (activity, votes, creation, relevance).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+        - name: pagesize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more, quota_remaining]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        question_id:
+                          type: integer
+                        title:
+                          type: string
+                        link:
+                          type: string
+                        score:
+                          type: integer
+                        answer_count:
+                          type: integer
+                        is_answered:
+                          type: boolean
+                        tags:
+                          type: array
+                          items:
+                            type: string
+                        owner:
+                          type: object
+                  has_more:
+                    type: boolean
+                  quota_remaining:
+                    type: integer
+  /questions/{ids}/answers:
+    get:
+      operationId: getQuestionAnswers
+      summary: Get answers for one or more questions
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: so0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: ids
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Semicolon-separated question IDs.
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            const: stackoverflow
+          description: Stack Exchange site to query.
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            default: desc
+          description: Sort order (asc or desc).
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            default: votes
+          description: Sort field (activity, votes, creation).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more, quota_remaining]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        answer_id:
+                          type: integer
+                        question_id:
+                          type: integer
+                        score:
+                          type: integer
+                        is_accepted:
+                          type: boolean
+                        body:
+                          type: string
+                        owner:
+                          type: object
+                  has_more:
+                    type: boolean
+                  quota_remaining:
+                    type: integer

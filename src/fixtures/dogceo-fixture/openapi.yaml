@@ -1,0 +1,68 @@
+openapi: '3.1.0'
+info:
+  title: Dog CEO
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://dog.ceo
+paths:
+  /api/breeds/image/random:
+    get:
+      operationId: getRandomImage
+      summary: Get a random dog image URL
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: dog0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, status]
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: string
+  /api/breeds/list/all:
+    get:
+      operationId: listBreeds
+      summary: List all dog breeds and sub-breeds
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: dog0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, status]
+                properties:
+                  message:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: string
+                  status:
+                    type: string

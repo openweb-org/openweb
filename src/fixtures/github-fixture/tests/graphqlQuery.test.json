@@ -1,0 +1,14 @@
+{
+  "operation_id": "graphqlQuery",
+  "cases": [
+    {
+      "input": {
+        "query": "query { viewer { login } }"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

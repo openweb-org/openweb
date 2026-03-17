@@ -367,19 +367,6 @@ export function buildQueryUrl(
 
   const allParameters = parameters ?? []
   const queryParameters = allParameters.filter((param) => param.in === 'query')
-  const knownParameterNames = new Set(allParameters.map((parameter) => parameter.name))
-  const unknownParameterNames = Object.keys(inputParams).filter((name) => !knownParameterNames.has(name))
-
-  if (unknownParameterNames.length > 0) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'INVALID_PARAMS',
-      message: `Unknown parameter(s): ${unknownParameterNames.join(', ')}`,
-      action: 'Run `openweb <site> <tool>` to inspect valid parameters.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
 
   for (const parameter of queryParameters) {
     const value = inputParams[parameter.name] ?? (
