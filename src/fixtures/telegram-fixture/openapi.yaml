@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://web.telegram.org
     x-openweb:
-      mode: browser_fetch
+      transport: page
 paths:
   /internal/dialogs:
     get:

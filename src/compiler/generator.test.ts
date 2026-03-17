@@ -93,7 +93,7 @@ describe('generatePackage', () => {
         sourceUrl: 'https://www.instagram.com',
         outputBaseDir,
         classify: {
-          mode: 'session_http',
+          transport: 'node',
           auth: { type: 'cookie_session' },
           csrf: { type: 'cookie_to_header', cookie: 'csrftoken', header: 'X-CSRFToken' },
         },
@@ -107,7 +107,7 @@ describe('generatePackage', () => {
       })
 
       const openapiRaw = await readFile(path.join(outputRoot, 'openapi.yaml'), 'utf8')
-      expect(openapiRaw).toContain('mode: session_http')
+      expect(openapiRaw).toContain('transport: node')
       expect(openapiRaw).toContain('type: cookie_session')
       expect(openapiRaw).toContain('cookie: csrftoken')
       expect(openapiRaw).toContain('header: X-CSRFToken')

@@ -27,7 +27,7 @@ function mockInstagramBrowser() {
   } as unknown as import('playwright').Browser
 }
 
-describe('executeOperation with instagram-fixture (session_http)', () => {
+describe('executeOperation with instagram-fixture (node transport)', () => {
   it('executes getTimeline with cookie auth and header params', async () => {
     const fetchMock = vi.fn(async () =>
       new Response(
@@ -153,8 +153,8 @@ describe('executeOperation with instagram-fixture (session_http)', () => {
   })
 })
 
-describe('direct_http regression', () => {
-  it('open-meteo-fixture still works via direct_http path', async () => {
+describe('node transport regression', () => {
+  it('open-meteo-fixture still works via node transport path', async () => {
     const fetchMock = vi.fn(async () =>
       new Response(
         JSON.stringify({

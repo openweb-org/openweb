@@ -20,8 +20,8 @@ const adapterRefSchema = {
   additionalProperties: false,
 } as const
 
-const executionModeSchema = {
-  enum: ['direct_http', 'session_http', 'browser_fetch'],
+const transportSchema = {
+  enum: ['node', 'page'],
 } as const
 
 const riskTierSchema = {
@@ -32,9 +32,9 @@ const riskTierSchema = {
 
 export const xOpenWebServerSchema = {
   type: 'object',
-  required: ['mode'],
+  required: ['transport'],
   properties: {
-    mode: executionModeSchema,
+    transport: transportSchema,
     auth: authPrimitiveSchema,
     csrf: csrfWithScopeSchema,
     signing: signingPrimitiveSchema,
@@ -53,8 +53,7 @@ export const xOpenWebOperationSchema = {
     tool_version: { type: 'integer', minimum: 1 },
     verified: { type: 'boolean' },
     signals: { type: 'array', items: { type: 'string' } },
-    mode: executionModeSchema,
-    human_handoff: { type: 'boolean' },
+    transport: transportSchema,
     csrf: csrfWithScopeSchema,
     pagination: paginationPrimitiveSchema,
     extraction: extractionPrimitiveSchema,

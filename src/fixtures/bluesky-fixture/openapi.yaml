@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://bsky.social/xrpc
     x-openweb:
-      mode: session_http
+      transport: node
       auth:
         type: localStorage_jwt
         key: BSKY_STORAGE

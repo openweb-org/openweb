@@ -23,8 +23,9 @@ import {
   createNeedsPageError,
   executeSessionHttp,
   findPageForOrigin,
+  getServerXOpenWeb,
   resolveAllParameters,
-  resolveMode,
+  resolveTransport,
   substitutePath,
 } from './session-executor.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
@@ -124,7 +125,7 @@ export async function executeOperation(
 ): Promise<ExecuteResult> {
   const spec = await loadOpenApi(site)
   const operationRef = findOperation(spec, operationId)
-  const mode = resolveMode(spec, operationRef.operation)
+  const transport = resolveTransport(spec, operationRef.operation)
 
   let status: number
   let body: unknown
@@ -182,7 +183,7 @@ export async function executeOperation(
         browser.close().catch(() => {})
       }
     }
-  } else if (mode === 'browser_fetch') {
+  } else if (transport === 'page') {
     const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
     try {
       const result = await executeBrowserFetch(
@@ -202,77 +203,82 @@ export async function executeOperation(
         browser.close().catch(() => {})
       }
     }
-  } else if (mode === 'session_http') {
-    const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
-    try {
-      const result = await executeSessionHttp(
-        browser,
-        spec,
-        operationRef.path,
-        operationRef.method,
-        operationRef.operation,
-        params,
-        { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator },
-      )
-      status = result.status
-      body = result.body
-      responseHeaders = { ...result.responseHeaders }
-    } finally {
-      // Only disconnect if we created the connection (not injected)
-      if (!deps.browser) {
-        browser.close().catch(() => {})
+  } else if (transport === 'node') {
+    // Check if server has auth/csrf/signing — if so, needs browser for cookie extraction
+    const serverExt = getServerXOpenWeb(spec, operationRef.operation)
+    const needsBrowser = !!(serverExt?.auth || serverExt?.csrf || serverExt?.signing)
+
+    if (needsBrowser) {
+      const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
+      try {
+        const result = await executeSessionHttp(
+          browser,
+          spec,
+          operationRef.path,
+          operationRef.method,
+          operationRef.operation,
+          params,
+          { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator },
+        )
+        status = result.status
+        body = result.body
+        responseHeaders = { ...result.responseHeaders }
+      } finally {
+        if (!deps.browser) {
+          browser.close().catch(() => {})
+        }
       }
-    }
-  } else {
-    const serverUrl = getServerUrl(spec, operationRef.operation)
-    const allParams = resolveAllParameters(spec, operationRef.operation)
-    const inputParams = validateParams(
-      [...allParams, ...getRequestBodyParameters(operationRef.operation)],
-      params,
-    )
-    const resolvedPath = substitutePath(operationRef.path, allParams, inputParams)
-    const url = buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
-    const requestHeaders = buildHeaderParams(allParams, inputParams)
-    const upperMethod = operationRef.method.toUpperCase()
-    const jsonBody = upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH'
-      ? buildJsonRequestBody(operationRef.operation, inputParams)
-      : undefined
-    if (jsonBody) {
-      requestHeaders['Content-Type'] = 'application/json'
-    }
-    const response = await fetchWithValidatedRedirects(url, upperMethod, deps, {
-      headers: requestHeaders,
-      body: jsonBody,
-    })
-
-    if (!response.ok) {
-      const httpFailure = getHttpFailure(response.status)
-      throw new OpenWebError({
-        error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
-        code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
-        message: `HTTP ${response.status}`,
-        action: `Check parameters with: openweb ${site} ${operationId}`,
-        retriable: httpFailure.retriable,
-        failureClass: httpFailure.failureClass,
+    } else {
+      const serverUrl = getServerUrl(spec, operationRef.operation)
+      const allParams = resolveAllParameters(spec, operationRef.operation)
+      const inputParams = validateParams(
+        [...allParams, ...getRequestBodyParameters(operationRef.operation)],
+        params,
+      )
+      const resolvedPath = substitutePath(operationRef.path, allParams, inputParams)
+      const url = buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
+      const requestHeaders = buildHeaderParams(allParams, inputParams)
+      const upperMethod = operationRef.method.toUpperCase()
+      const jsonBody = upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH'
+        ? buildJsonRequestBody(operationRef.operation, inputParams)
+        : undefined
+      if (jsonBody) {
+        requestHeaders['Content-Type'] = 'application/json'
+      }
+      const response = await fetchWithValidatedRedirects(url, upperMethod, deps, {
+        headers: requestHeaders,
+        body: jsonBody,
       })
-    }
 
-    status = response.status
-    response.headers.forEach((value, key) => {
-      responseHeaders[key] = value
-    })
-    const text = await response.text()
-    try {
-      body = JSON.parse(text) as unknown
-    } catch {
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: `Response is not valid JSON (status ${response.status})`,
-        action: 'The API returned non-JSON content. Check the endpoint.',
-        retriable: false,
-        failureClass: 'fatal',
+      if (!response.ok) {
+        const httpFailure = getHttpFailure(response.status)
+        throw new OpenWebError({
+          error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
+          code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
+          message: `HTTP ${response.status}`,
+          action: `Check parameters with: openweb ${site} ${operationId}`,
+          retriable: httpFailure.retriable,
+          failureClass: httpFailure.failureClass,
+        })
+      }
+
+      status = response.status
+      response.headers.forEach((value, key) => {
+        responseHeaders[key] = value
       })
+      const text = await response.text()
+      try {
+        body = JSON.parse(text) as unknown
+      } catch {
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: `Response is not valid JSON (status ${response.status})`,
+          action: 'The API returned non-JSON content. Check the endpoint.',
+          retriable: false,
+          failureClass: 'fatal',
+        })
+      }
     }
   }
 

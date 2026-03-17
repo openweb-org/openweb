@@ -131,8 +131,8 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
   const generatedAt = nowIso()
   const primaryHost = choosePrimaryServerHost(input.operations)
 
-  const mode = input.classify?.mode ?? 'direct_http'
-  const requiresAuth = mode !== 'direct_http'
+  const transport = input.classify?.transport ?? 'node'
+  const requiresAuth = !!(input.classify?.auth || input.classify?.csrf || input.classify?.signing)
 
   const paths: Record<string, Record<string, unknown>> = {}
 
@@ -146,9 +146,7 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
       operationId: operation.operationId,
       summary: operation.summary,
       'x-openweb': {
-        mode,
         risk_tier: riskTier,
-        human_handoff: false,
         verified: operation.verified,
         stable_id: stableId,
         signature_id: signatureId,
@@ -205,8 +203,8 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
 
   // Build server entry with optional x-openweb for L2
   const serverEntry: Record<string, unknown> = { url: `https://${primaryHost}` }
-  if (input.classify && input.classify.mode !== 'direct_http') {
-    const serverXOpenWeb: Record<string, unknown> = { mode: input.classify.mode }
+  if (input.classify && (input.classify.auth || input.classify.csrf || input.classify.signing)) {
+    const serverXOpenWeb: Record<string, unknown> = { transport: input.classify.transport }
     if (input.classify.auth) serverXOpenWeb.auth = input.classify.auth
     if (input.classify.csrf) serverXOpenWeb.csrf = input.classify.csrf
     serverEntry['x-openweb'] = serverXOpenWeb

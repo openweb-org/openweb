@@ -4,7 +4,7 @@ import { OpenWebError } from '../lib/errors.js'
 import {
   createNeedsPageError,
   findPageForOrigin,
-  resolveMode,
+  resolveTransport,
   substitutePath,
   buildHeaderParams,
   getServerXOpenWeb,
@@ -20,7 +20,7 @@ function instagramSpec(): OpenApiSpec {
       {
         url: 'https://www.instagram.com/api/v1',
         'x-openweb': {
-          mode: 'session_http',
+          transport: 'node',
           auth: { type: 'cookie_session' },
           csrf: { type: 'cookie_to_header', cookie: 'csrftoken', header: 'X-CSRFToken' },
         },
@@ -81,21 +81,21 @@ function instagramSpec(): OpenApiSpec {
   }
 }
 
-describe('resolveMode', () => {
-  it('reads mode from server-level x-openweb', () => {
+describe('resolveTransport', () => {
+  it('reads transport from server-level x-openweb', () => {
     const spec = instagramSpec()
     const op = spec.paths!['/feed/timeline/']!.get!
-    expect(resolveMode(spec, op)).toBe('session_http')
+    expect(resolveTransport(spec, op)).toBe('node')
   })
 
-  it('defaults to direct_http when no x-openweb', () => {
+  it('defaults to node when no x-openweb', () => {
     const spec: OpenApiSpec = {
       openapi: '3.1.0',
       info: { title: 'Test', version: '1.0' },
       servers: [{ url: 'https://example.com' }],
       paths: { '/test': { get: { operationId: 'test' } } },
     }
-    expect(resolveMode(spec, spec.paths!['/test']!.get!)).toBe('direct_http')
+    expect(resolveTransport(spec, spec.paths!['/test']!.get!)).toBe('node')
   })
 })
 
@@ -132,7 +132,7 @@ describe('getServerXOpenWeb', () => {
     const spec = instagramSpec()
     const op = spec.paths!['/feed/timeline/']!.get!
     const ext = getServerXOpenWeb(spec, op)
-    expect(ext?.mode).toBe('session_http')
+    expect(ext?.transport).toBe('node')
     expect(ext?.auth).toEqual({ type: 'cookie_session' })
     expect(ext?.csrf).toEqual({ type: 'cookie_to_header', cookie: 'csrftoken', header: 'X-CSRFToken' })
   })
@@ -368,7 +368,7 @@ describe('executeSessionHttp', () => {
         {
           url: 'https://api.github.com',
           'x-openweb': {
-            mode: 'session_http',
+            transport: 'node',
           },
         } as unknown as { url: string },
       ],
@@ -453,7 +453,7 @@ describe('executeSessionHttp', () => {
         {
           url: 'https://www.youtube.com/youtubei/v1',
           'x-openweb': {
-            mode: 'session_http',
+            transport: 'node',
             auth: {
               type: 'page_global',
               expression: 'ytcfg.data_.INNERTUBE_API_KEY',
@@ -580,7 +580,7 @@ describe('executeSessionHttp', () => {
         {
           url: 'https://www.instagram.com/api/v1',
           'x-openweb': {
-            mode: 'session_http',
+            transport: 'node',
             auth: { type: 'cookie_session' },
             csrf: { type: 'cookie_to_header', cookie: 'csrftoken', header: 'X-CSRFToken' },
           },
@@ -998,7 +998,7 @@ describe('executeSessionHttp', () => {
         {
           url: 'https://www.instagram.com/api/v1',
           'x-openweb': {
-            mode: 'session_http',
+            transport: 'node',
             auth: { type: 'cookie_session' },
           },
         } as unknown as { url: string },
@@ -1055,7 +1055,7 @@ describe('executeSessionHttp', () => {
         {
           url: 'https://www.instagram.com/api/v1',
           'x-openweb': {
-            mode: 'session_http',
+            transport: 'node',
             auth: { type: 'cookie_session' },
           },
         } as unknown as { url: string },
@@ -1109,7 +1109,7 @@ describe('executeSessionHttp', () => {
         {
           url: 'https://www.instagram.com/api/v1',
           'x-openweb': {
-            mode: 'session_http',
+            transport: 'node',
             auth: { type: 'cookie_session' },
           },
         } as unknown as { url: string },

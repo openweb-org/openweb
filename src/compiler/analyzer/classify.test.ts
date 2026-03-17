@@ -55,7 +55,7 @@ describe('classify', () => {
     }
 
     const result = classify(data)
-    expect(result.mode).toBe('session_http')
+    expect(result.transport).toBe('node')
     expect(result.auth).toEqual({ type: 'cookie_session' })
   })
 
@@ -80,30 +80,30 @@ describe('classify', () => {
     }
 
     const result = classify(data)
-    expect(result.mode).toBe('session_http')
+    expect(result.transport).toBe('node')
     expect(result.auth).toEqual({ type: 'cookie_session' })
     expect(result.csrf).toEqual({ type: 'cookie_to_header', cookie: 'csrftoken', header: 'X-CSRFToken' })
   })
 
-  it('returns direct_http when no cookies in requests', () => {
+  it('returns node when no cookies in requests', () => {
     const data: CaptureData = {
       harEntries: [makeHarEntry({ headers: [{ name: 'Accept', value: 'application/json' }] })],
       stateSnapshots: [makeSnapshot([{ name: 'sessionid', value: 'abc' }])],
     }
 
     const result = classify(data)
-    expect(result.mode).toBe('direct_http')
+    expect(result.transport).toBe('node')
     expect(result.auth).toBeUndefined()
   })
 
-  it('returns direct_http when no state snapshots', () => {
+  it('returns node when no state snapshots', () => {
     const data: CaptureData = {
       harEntries: [makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] })],
       stateSnapshots: [],
     }
 
     const result = classify(data)
-    expect(result.mode).toBe('direct_http')
+    expect(result.transport).toBe('node')
   })
 
   it('detects cookie_session without CSRF when no mutations present', () => {
@@ -115,19 +115,19 @@ describe('classify', () => {
     }
 
     const result = classify(data)
-    expect(result.mode).toBe('session_http')
+    expect(result.transport).toBe('node')
     expect(result.auth).toEqual({ type: 'cookie_session' })
     expect(result.csrf).toBeUndefined()
   })
 
-  it('returns direct_http when HAR entries are empty', () => {
+  it('returns node when HAR entries are empty', () => {
     const data: CaptureData = {
       harEntries: [],
       stateSnapshots: [makeSnapshot([{ name: 'sessionid', value: 'abc' }])],
     }
 
     const result = classify(data)
-    expect(result.mode).toBe('direct_http')
+    expect(result.transport).toBe('node')
   })
 
   it('skips httpOnly cookies for cookie_to_header detection', () => {
@@ -148,7 +148,7 @@ describe('classify', () => {
     }
 
     const result = classify(data)
-    expect(result.mode).toBe('session_http')
+    expect(result.transport).toBe('node')
     // sessionid is httpOnly, so cookie_to_header should NOT match it
     expect(result.csrf).toBeUndefined()
   })
@@ -181,7 +181,7 @@ describe('classify', () => {
     }
 
     const result = classify(data)
-    expect(result.mode).toBe('session_http')
+    expect(result.transport).toBe('node')
     expect(result.auth?.type).toBe('localStorage_jwt')
     if (result.auth?.type === 'localStorage_jwt') {
       expect(result.auth.key).toBe('BSKY_STORAGE')
@@ -208,7 +208,7 @@ describe('classify', () => {
     }
 
     const result = classify(data)
-    expect(result.mode).toBe('session_http')
+    expect(result.transport).toBe('node')
     expect(result.auth).toEqual({ type: 'cookie_session' })
     expect(result.csrf?.type).toBe('meta_tag')
     if (result.csrf?.type === 'meta_tag') {
@@ -234,7 +234,7 @@ describe('classify', () => {
     expect(result.signing?.type).toBe('sapisidhash')
   })
 
-  it('forces session_http when sapisidhash detected without auth', () => {
+  it('forces node transport when sapisidhash detected without auth', () => {
     // No cookies in HAR entries → no cookie_session detected
     // But SAPISIDHASH in Authorization → signing requires browser context
     const data: CaptureData = {
@@ -249,13 +249,13 @@ describe('classify', () => {
     }
 
     const result = classify(data)
-    expect(result.mode).toBe('session_http')
+    expect(result.transport).toBe('node')
     expect(result.signing?.type).toBe('sapisidhash')
     expect(result.auth).toBeUndefined()
   })
 
   // CR-20: Partial cookie presence should NOT be detected as cookie_session
-  it('returns direct_http when only some HAR entries have Cookie header', () => {
+  it('returns node when only some HAR entries have Cookie header', () => {
     const data: CaptureData = {
       harEntries: [
         makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
@@ -267,7 +267,7 @@ describe('classify', () => {
 
     const result = classify(data)
     // Not all entries have Cookie → should NOT be cookie_session
-    expect(result.mode).toBe('direct_http')
+    expect(result.transport).toBe('node')
     expect(result.auth).toBeUndefined()
   })
 
@@ -317,7 +317,7 @@ describe('classify', () => {
     }
 
     const result = classify(data)
-    expect(result.mode).toBe('session_http')
+    expect(result.transport).toBe('node')
     expect(result.auth?.type).toBe('exchange_chain')
   })
 })

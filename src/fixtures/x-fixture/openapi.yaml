@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://x.com/i/api/1.1
     x-openweb:
-      mode: browser_fetch
+      transport: page
       auth:
         type: cookie_session
       csrf:

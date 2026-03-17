@@ -7,12 +7,12 @@ info:
 servers:
   - url: https://www.reddit.com
     x-openweb:
-      mode: session_http
+      transport: node
       auth:
         type: cookie_session
   - url: https://oauth.reddit.com
     x-openweb:
-      mode: session_http
+      transport: node
       auth:
         type: exchange_chain
         steps:

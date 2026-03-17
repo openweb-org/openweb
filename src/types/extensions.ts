@@ -8,7 +8,7 @@ import type {
 
 export type RiskTier = 'safe' | 'low' | 'medium' | 'high' | 'critical'
 
-export type ExecutionMode = 'direct_http' | 'session_http' | 'browser_fetch'
+export type Transport = 'node' | 'page'
 
 export interface AdapterRef {
   readonly name: string
@@ -18,7 +18,7 @@ export interface AdapterRef {
 
 // Server-level x-openweb (on servers[] entries)
 export interface XOpenWebServer {
-  readonly mode: ExecutionMode
+  readonly transport: Transport
   readonly auth?: AuthPrimitive
   readonly csrf?: CsrfPrimitive & { readonly scope?: readonly string[] }
   readonly signing?: SigningPrimitive
@@ -32,8 +32,7 @@ export interface XOpenWebOperation {
   readonly tool_version?: number
   readonly verified?: boolean
   readonly signals?: readonly string[]
-  readonly mode?: ExecutionMode
-  readonly human_handoff?: boolean
+  readonly transport?: Transport
   readonly csrf?: CsrfPrimitive & { readonly scope?: readonly string[] }
   readonly pagination?: PaginationPrimitive
   readonly extraction?: ExtractionPrimitive

@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://www.walmart.com
     x-openweb:
-      mode: session_http
+      transport: node
 paths:
   /:
     get:

@@ -16,9 +16,8 @@ paths:
       servers:
         - url: https://geocoding-api.open-meteo.com
       x-openweb:
-        mode: direct_http
+        transport: node
         risk_tier: safe
-        human_handoff: false
         verified: true
         stable_id: 0e18811a69644d95
         signature_id: d1542cc530f44161
@@ -70,9 +69,8 @@ paths:
       operationId: get_forecast
       summary: Get hourly and daily weather forecast for a location
       x-openweb:
-        mode: direct_http
+        transport: node
         risk_tier: safe
-        human_handoff: false
         verified: true
         stable_id: ad259e4f9ecf4367
         signature_id: ef25de6136074dd0
@@ -136,9 +134,8 @@ paths:
       servers:
         - url: https://archive-api.open-meteo.com
       x-openweb:
-        mode: direct_http
+        transport: node
         risk_tier: safe
-        human_handoff: false
         verified: true
         stable_id: 0c7ac34bc5df4f8d
         signature_id: 804682fffc434888
@@ -198,9 +195,8 @@ paths:
       servers:
         - url: https://air-quality-api.open-meteo.com
       x-openweb:
-        mode: direct_http
+        transport: node
         risk_tier: safe
-        human_handoff: false
         verified: true
         stable_id: d45f1604dd2f4265
         signature_id: d76954444f8746e5

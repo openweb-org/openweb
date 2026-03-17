@@ -29,7 +29,7 @@ const baseSpec: OpenApiSpec = {
   servers: [
     {
       url: 'https://example.com/api',
-      'x-openweb': { mode: 'browser_fetch' },
+      'x-openweb': { transport: 'page' },
     } as OpenApiSpec['servers'][0],
   ],
   paths: {},
@@ -245,7 +245,7 @@ describe('executeBrowserFetch', () => {
       servers: [
         {
           url: 'https://example.com/api',
-          'x-openweb': { mode: 'browser_fetch', auth: { type: 'cookie_session' } },
+          'x-openweb': { transport: 'page', auth: { type: 'cookie_session' } },
         } as OpenApiSpec['servers'][0],
       ],
     }
@@ -318,7 +318,7 @@ describe('executeBrowserFetch', () => {
       servers: [
         {
           url: 'https://discord.com/api/v9',
-          'x-openweb': { mode: 'browser_fetch' },
+          'x-openweb': { transport: 'page' },
         } as OpenApiSpec['servers'][0],
       ],
       paths: {},

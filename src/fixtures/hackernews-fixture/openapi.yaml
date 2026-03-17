@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://news.ycombinator.com
     x-openweb:
-      mode: session_http
+      transport: node
 paths:
   /news:
     get:

@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://www.youtube.com/youtubei/v1
     x-openweb:
-      mode: session_http
+      transport: node
       auth:
         type: page_global
         expression: 'ytcfg.data_.INNERTUBE_API_KEY'

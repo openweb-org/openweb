@@ -5,7 +5,7 @@ import { getRequestBodyParameters, isArraySchema, type JsonSchema } from '../lib
 import { findOperation, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import type { RiskTier } from '../types/extensions.js'
 import type { Manifest } from '../types/manifest.js'
-import { getServerXOpenWeb, resolveAllParameters, resolveMode } from './session-executor.js'
+import { getServerXOpenWeb, resolveAllParameters, resolveTransport } from './session-executor.js'
 
 function formatParamType(type: string | string[] | undefined): string {
   if (!type) {
@@ -52,8 +52,8 @@ async function loadManifest(site: string): Promise<Manifest | undefined> {
   }
 }
 
-function getModeLabel(mode: string, hasAdapter: boolean): string {
-  return hasAdapter ? 'adapter (L3)' : mode
+function getTransportLabel(transport: string, hasAdapter: boolean): string {
+  return hasAdapter ? 'adapter (L3)' : transport
 }
 
 export async function renderSite(site: string): Promise<string> {
@@ -72,18 +72,18 @@ export async function renderSite(site: string): Promise<string> {
   lines.push(`${displayName} (${operations.length} operations)`)
   lines.push('')
 
-  // Derive site-level mode from the first server
+  // Derive site-level transport from the first server
   const firstOp = operations[0]
   const serverExt = getServerXOpenWeb(spec, firstOp.operation)
-  const siteMode = serverExt?.mode ?? 'direct_http'
+  const siteTransport = serverExt?.transport ?? 'node'
   const hasAdapter = operations.some((entry) => {
     const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
     return !!opExt?.adapter
   })
-  const requiresBrowser = siteMode !== 'direct_http'
+  const requiresBrowser = siteTransport === 'page' || !!(serverExt?.auth || serverExt?.csrf || serverExt?.signing)
   const requiresAuth = manifest?.requires_auth ?? !!serverExt?.auth
 
-  lines.push(`Mode:             ${getModeLabel(siteMode, hasAdapter)}`)
+  lines.push(`Transport:        ${getTransportLabel(siteTransport, hasAdapter)}`)
   lines.push(`Requires browser: ${requiresBrowser ? 'yes' : 'no'}`)
   lines.push(`Requires login:   ${requiresAuth ? 'yes' : 'no'}`)
 
@@ -113,9 +113,9 @@ export async function renderSite(site: string): Promise<string> {
 export async function renderOperation(site: string, operationId: string, full: boolean): Promise<string> {
   const spec = await loadOpenApi(site)
   const { method, path: opPath, operation } = findOperation(spec, operationId)
-  const mode = resolveMode(spec, operation)
+  const transport = resolveTransport(spec, operation)
   const opExt = operation['x-openweb'] as Record<string, unknown> | undefined
-  const modeLabel = getModeLabel(mode, !!opExt?.adapter)
+  const transportLabel = getTransportLabel(transport, !!opExt?.adapter)
 
   const lines: string[] = []
   lines.push(`${method.toUpperCase()} ${opPath}`)
@@ -151,7 +151,7 @@ export async function renderOperation(site: string, operationId: string, full: b
     lines.push(`Returns: ${summarizeSchema(responseSchema)}`)
   }
 
-  lines.push(`Mode: ${modeLabel}`)
+  lines.push(`Transport: ${transportLabel}`)
 
   // Operation-level metadata
   if (opExt?.risk_tier) {

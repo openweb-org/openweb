@@ -30,7 +30,7 @@ function extractionSpec(serverUrl: string): OpenApiSpec {
       {
         url: serverUrl,
         'x-openweb': {
-          mode: 'session_http',
+          transport: 'node',
         },
       } as unknown as { url: string },
     ],

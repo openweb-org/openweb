@@ -39,7 +39,7 @@ describe('validateXOpenWebSpec', () => {
 
   it('rejects invalid server-level x-openweb', () => {
     const spec = {
-      servers: [{ url: 'https://example.com', 'x-openweb': { mode: 'invalid_mode' } }],
+      servers: [{ url: 'https://example.com', 'x-openweb': { transport: 'invalid_transport' } }],
       paths: {},
     }
     const result = validateXOpenWebSpec(spec)
@@ -53,7 +53,7 @@ describe('validateXOpenWebSpec', () => {
         {
           url: 'https://example.com',
           'x-openweb': {
-            mode: 'direct_http',
+            transport: 'node',
             auth: { type: 'nonexistent_auth' },
           },
         },
@@ -191,7 +191,7 @@ describe('validateXOpenWebSpec', () => {
         {
           url: 'https://example.com',
           'x-openweb': {
-            mode: 'direct_http',
+            transport: 'node',
             auth: { type: 'localStorage_jwt' }, // missing key + inject
           },
         },
@@ -208,7 +208,7 @@ describe('validateXOpenWebSpec', () => {
         {
           url: 'https://example.com',
           'x-openweb': {
-            mode: 'browser_fetch',
+            transport: 'page',
             signing: {
               type: 'sapisidhash',
               origin: 'https://example.com',
@@ -229,7 +229,7 @@ describe('validateXOpenWebSpec', () => {
         {
           url: 'https://example.com',
           'x-openweb': {
-            mode: 'session_http',
+            transport: 'node',
             csrf: {
               type: 'cookie_to_header',
               cookie: 'csrftoken',

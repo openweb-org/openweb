@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://www.instagram.com/api/v1
     x-openweb:
-      mode: session_http
+      transport: node
       auth:
         type: cookie_session
       csrf:

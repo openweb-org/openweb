@@ -1,9 +1,9 @@
 import type { HarEntry, StateSnapshot } from '../../capture/types.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../../types/primitives.js'
-import type { ExecutionMode } from '../../types/extensions.js'
+import type { Transport } from '../../types/extensions.js'
 
 export interface ClassifyResult {
-  readonly mode: ExecutionMode
+  readonly transport: Transport
   readonly auth?: AuthPrimitive
   readonly csrf?: CsrfPrimitive
   readonly signing?: SigningPrimitive
@@ -315,11 +315,11 @@ export function classify(data: CaptureData): ClassifyResult {
   }
 
   if (!auth) {
-    // sapisidhash requires browser context (cookies), so force session_http
+    // sapisidhash requires browser context (cookies), so force node transport
     if (signing) {
-      return { mode: 'session_http', signing }
+      return { transport: 'node', signing }
     }
-    return { mode: 'direct_http' }
+    return { transport: 'node' }
   }
 
   // Prefer cookie_to_header over meta_tag if both detected
@@ -330,7 +330,7 @@ export function classify(data: CaptureData): ClassifyResult {
       : undefined
 
   return {
-    mode: 'session_http',
+    transport: 'node',
     auth,
     csrf,
     signing,

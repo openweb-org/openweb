@@ -12,7 +12,7 @@ import {
 } from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../types/primitives.js'
-import type { ExecutionMode, XOpenWebServer } from '../types/extensions.js'
+import type { Transport, XOpenWebServer } from '../types/extensions.js'
 import { resolveApiResponse } from './primitives/api-response.js'
 import { resolveCookieSession } from './primitives/cookie-session.js'
 import { resolveCookieToHeader } from './primitives/cookie-to-header.js'
@@ -32,7 +32,7 @@ interface AuthResult extends ResolvedInjections {
 }
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
-const VALID_MODES = new Set<string>(['direct_http', 'session_http', 'browser_fetch'])
+const VALID_TRANSPORTS = new Set<string>(['node', 'page'])
 const MAX_REDIRECTS = 5
 const SENSITIVE_HEADERS = ['cookie', 'authorization', 'x-csrftoken', 'x-csrf-token']
 const UNSAFE_REF_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
@@ -155,37 +155,37 @@ export function getServerXOpenWeb(spec: OpenApiSpec, operation: OpenApiOperation
   return undefined
 }
 
-/** Determine execution mode: operation-level overrides server-level */
-export function resolveMode(spec: OpenApiSpec, operation: OpenApiOperation): ExecutionMode {
+/** Determine transport: operation-level overrides server-level, default node */
+export function resolveTransport(spec: OpenApiSpec, operation: OpenApiOperation): Transport {
   const opExt = operation['x-openweb'] as Record<string, unknown> | undefined
-  if (opExt?.mode) {
-    const m = opExt.mode as string
-    if (!VALID_MODES.has(m)) {
+  if (opExt?.transport) {
+    const t = opExt.transport as string
+    if (!VALID_TRANSPORTS.has(t)) {
       throw new OpenWebError({
         error: 'execution_failed',
         code: 'EXECUTION_FAILED',
-        message: `Unknown execution mode: ${m}`,
-        action: 'Valid modes: direct_http, session_http, browser_fetch.',
+        message: `Unknown transport: ${t}`,
+        action: 'Valid transports: node, page.',
         retriable: false,
         failureClass: 'fatal',
       })
     }
-    return m as ExecutionMode
+    return t as Transport
   }
 
   const serverExt = getServerXOpenWeb(spec, operation)
-  const serverMode = serverExt?.mode ?? 'direct_http'
-  if (!VALID_MODES.has(serverMode)) {
+  const serverTransport = serverExt?.transport ?? 'node'
+  if (!VALID_TRANSPORTS.has(serverTransport)) {
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
-      message: `Unknown execution mode: ${serverMode}`,
-      action: 'Valid modes: direct_http, session_http, browser_fetch.',
+      message: `Unknown transport: ${serverTransport}`,
+      action: 'Valid transports: node, page.',
       retriable: false,
       failureClass: 'fatal',
     })
   }
-  return serverMode as ExecutionMode
+  return serverTransport as Transport
 }
 
 /** Substitute path parameters like {user_id} in the URL path */

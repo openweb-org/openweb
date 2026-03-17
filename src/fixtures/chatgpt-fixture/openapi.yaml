@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://chatgpt.com/backend-api
     x-openweb:
-      mode: session_http
+      transport: node
       auth:
         type: exchange_chain
         steps:

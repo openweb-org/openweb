@@ -6,7 +6,7 @@ describe('navigator', () => {
   it('renders site with readiness metadata', async () => {
     const output = await renderSite('open-meteo-fixture')
     expect(output).toContain('4 operations')
-    expect(output).toContain('Mode:             direct_http')
+    expect(output).toContain('Transport:        node')
     expect(output).toContain('Requires browser: no')
     expect(output).toContain('Requires login:   no')
     expect(output).toContain('Risk summary:')
@@ -19,15 +19,15 @@ describe('navigator', () => {
   it('renders site with auth requirements', async () => {
     const output = await renderSite('instagram-fixture')
     expect(output).toContain('Instagram')
-    expect(output).toContain('Mode:             session_http')
+    expect(output).toContain('Transport:        node')
     expect(output).toContain('Requires browser: yes')
     expect(output).toContain('Requires login:   yes')
   })
 
-  it('renders one operation with resolved mode', async () => {
+  it('renders one operation with resolved transport', async () => {
     const output = await renderOperation('open-meteo-fixture', 'get_forecast', false)
     expect(output).toContain('GET /v1/forecast')
-    expect(output).toContain('Mode: direct_http')
+    expect(output).toContain('Transport: node')
     expect(output).toContain('Risk: safe')
   })
 
@@ -44,11 +44,11 @@ describe('navigator', () => {
     expect(output).toContain('Returns: array<{ title, score, author }>')
   })
 
-  it('renders L3 adapter mode for adapter-backed sites and operations', async () => {
+  it('renders L3 adapter transport for adapter-backed sites and operations', async () => {
     const siteOutput = await renderSite('telegram-fixture')
     const opOutput = await renderOperation('telegram-fixture', 'getDialogs', false)
 
-    expect(siteOutput).toContain('Mode:             adapter (L3)')
-    expect(opOutput).toContain('Mode: adapter (L3)')
+    expect(siteOutput).toContain('Transport:        adapter (L3)')
+    expect(opOutput).toContain('Transport: adapter (L3)')
   })
 })
