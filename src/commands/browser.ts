@@ -120,33 +120,42 @@ async function readPort(): Promise<number | null> {
   }
 }
 
-async function killManaged(): Promise<void> {
+/** Attempt to stop the managed Chrome. Returns true if stopped or already dead, false if unverified. */
+async function killManaged(): Promise<boolean> {
   const pid = await readPid()
   const port = await readPort()
 
-  if (pid && isProcessAlive(pid)) {
-    // Verify this PID is actually our managed Chrome by checking CDP on the stored port
-    let verified = false
-    if (port) {
-      verified = await isCdpReady(port)
-    }
-
-    if (verified) {
-      process.kill(pid, 'SIGTERM')
-      await new Promise((r) => setTimeout(r, 500))
-    }
-    // If not verified, PID may have been reused — don't kill, just clean up state files
+  if (!pid || !isProcessAlive(pid)) {
+    // Already dead — clean up state files
+    try { await unlink(PID_FILE) } catch { /* already gone */ }
+    try { await unlink(PORT_FILE) } catch { /* already gone */ }
+    return true
   }
 
-  try { await unlink(PID_FILE) } catch { /* already gone */ }
-  try { await unlink(PORT_FILE) } catch { /* already gone */ }
+  // Verify this PID is actually our managed Chrome by checking CDP on the stored port
+  if (port && await isCdpReady(port)) {
+    process.kill(pid, 'SIGTERM')
+    await new Promise((r) => setTimeout(r, 500))
+    try { await unlink(PID_FILE) } catch { /* already gone */ }
+    try { await unlink(PORT_FILE) } catch { /* already gone */ }
+    return true
+  }
+
+  // PID alive but CDP unreachable — cannot verify identity. Don't kill, don't clean up.
+  process.stderr.write(
+    `warning: Chrome process (PID ${pid}) may still be running but CDP is unreachable on port ${port ?? DEFAULT_PORT}. ` +
+    `Use \`kill -TERM ${pid}\` manually if needed.\n`,
+  )
+  return false
 }
 
 async function cleanTempProfile(): Promise<void> {
   try {
-    const profileDir = await readFile(PROFILE_DIR_FILE, 'utf8')
-    if (profileDir.trim()) {
-      await rm(profileDir.trim(), { recursive: true, force: true })
+    const profileDir = (await readFile(PROFILE_DIR_FILE, 'utf8')).trim()
+    // Safety: only rm -rf paths that look like our mkdtemp output
+    const expectedPrefix = join(tmpdir(), 'openweb-profile-')
+    if (profileDir && profileDir.startsWith(expectedPrefix)) {
+      await rm(profileDir, { recursive: true, force: true })
     }
     await unlink(PROFILE_DIR_FILE)
   } catch { /* already gone */ }
@@ -216,16 +225,23 @@ export async function browserStopCommand(): Promise<void> {
     process.stdout.write('No managed Chrome process running.\n')
     try { await unlink(PID_FILE) } catch { /* already gone */ }
     try { await unlink(PORT_FILE) } catch { /* already gone */ }
+    await cleanTempProfile()
     return
   }
 
-  await killManaged()
-  await cleanTempProfile()
-  process.stdout.write('Chrome stopped.\n')
+  const stopped = await killManaged()
+  if (stopped) {
+    await cleanTempProfile()
+    process.stdout.write('Chrome stopped.\n')
+  }
+  // If not stopped, killManaged already printed the warning
 }
 
 export async function browserRestartCommand(options: { headless?: boolean; port?: number } = {}): Promise<void> {
-  await killManaged()
+  const stopped = await killManaged()
+  if (!stopped) {
+    throw new Error('Cannot restart: previous Chrome process could not be verified and stopped. Resolve manually first.')
+  }
   await cleanTempProfile()
 
   // Clear token cache

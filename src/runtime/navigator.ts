@@ -7,6 +7,15 @@ import type { PermissionCategory } from '../types/extensions.js'
 import type { Manifest } from '../types/manifest.js'
 import { getServerXOpenWeb, resolveAllParameters, resolveTransport } from './session-executor.js'
 
+/** Derive permission from HTTP method when x-openweb.permission is absent */
+function derivePermission(method: string): PermissionCategory {
+  switch (method.toLowerCase()) {
+    case 'delete': return 'delete'
+    case 'post': case 'put': case 'patch': return 'write'
+    default: return 'read'
+  }
+}
+
 function formatParamType(type: string | string[] | undefined): string {
   if (!type) {
     return 'unknown'
@@ -91,7 +100,7 @@ export async function renderSite(site: string): Promise<string> {
   const permissionCounts: Record<string, number> = {}
   for (const entry of operations) {
     const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
-    const perm = (opExt?.permission as PermissionCategory | undefined) ?? 'read'
+    const perm = (opExt?.permission as PermissionCategory | undefined) ?? derivePermission(entry.method)
     permissionCounts[perm] = (permissionCounts[perm] ?? 0) + 1
   }
   const permParts = Object.entries(permissionCounts).map(([perm, count]) => `${perm}:${count}`)
@@ -154,9 +163,8 @@ export async function renderOperation(site: string, operationId: string, full: b
   lines.push(`Transport: ${transportLabel}`)
 
   // Operation-level metadata
-  if (opExt?.permission) {
-    lines.push(`Permission: ${opExt.permission as string}`)
-  }
+  const effectivePerm = (opExt?.permission as string | undefined) ?? derivePermission(method)
+  lines.push(`Permission: ${effectivePerm}`)
 
   if (full) {
     lines.push('')
@@ -179,7 +187,7 @@ export async function renderSiteJson(site: string): Promise<string> {
         id: entry.operation.operationId,
         method: entry.method.toUpperCase(),
         path: entry.path,
-        permission: (opExt?.permission as string | undefined) ?? 'read',
+        permission: (opExt?.permission as string | undefined) ?? derivePermission(entry.method),
         summary: entry.operation.summary ?? '',
       }
     }),
@@ -199,7 +207,7 @@ export async function renderOperationJson(site: string, operationId: string): Pr
     id: operationId,
     method: method.toUpperCase(),
     path: opPath,
-    permission: (opExt?.permission as string | undefined) ?? 'read',
+    permission: (opExt?.permission as string | undefined) ?? derivePermission(method),
     parameters: [...allParams, ...bodyParams].map((p) => ({
       name: p.name,
       in: p.in,

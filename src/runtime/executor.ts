@@ -399,6 +399,28 @@ async function executeCachedFetch(
   const cookieStr = cached.cookies.map((c) => `${c.name}=${c.value}`).join('; ')
   if (cookieStr) requestHeaders.Cookie = cookieStr
 
+  // Reconstruct auth headers from cached localStorage (localStorage_jwt)
+  const auth = serverExt?.auth
+  if (auth?.type === 'localStorage_jwt' && Object.keys(cached.localStorage).length > 0) {
+    const authConfig = auth as { key: string; path?: string; inject: { header?: string; prefix?: string; query?: string } }
+    const raw = cached.localStorage[authConfig.key]
+    if (raw) {
+      let value: unknown
+      try { value = JSON.parse(raw) } catch { value = raw }
+      if (authConfig.path) {
+        for (const seg of authConfig.path.split('.')) {
+          if (value && typeof value === 'object') value = (value as Record<string, unknown>)[seg]
+          else { value = undefined; break }
+        }
+      }
+      if (typeof value === 'string' && value) {
+        if (authConfig.inject.header) {
+          requestHeaders[authConfig.inject.header] = (authConfig.inject.prefix ?? '') + value
+        }
+      }
+    }
+  }
+
   // Derive CSRF from cached cookies if applicable
   const csrf = serverExt?.csrf
   if (csrf?.type === 'cookie_to_header' && shouldApplyCsrf(csrf.scope, operationRef.method)) {
@@ -452,7 +474,7 @@ async function executeCachedFetch(
   return { status: response.status, body, responseHeaders }
 }
 
-/** Extract cookies from browser and write to token cache */
+/** Extract cookies and storage from browser and write to token cache */
 async function writeBrowserCookiesToCache(
   browser: import('playwright').Browser,
   site: string,
@@ -463,11 +485,13 @@ async function writeBrowserCookiesToCache(
     const context = browser.contexts()[0]
     if (!context) return
 
-    const cookies = await context.cookies()
     const serverUrl = spec.servers?.[0]?.url
     if (!serverUrl) return
 
     const origin = new URL(serverUrl).hostname
+
+    // Extract cookies
+    const cookies = await context.cookies()
     const siteCookies = cookies
       .filter((c) => origin.endsWith(c.domain.replace(/^\./, '')) || c.domain.replace(/^\./, '').endsWith(origin))
       .map((c) => ({
@@ -481,17 +505,63 @@ async function writeBrowserCookiesToCache(
         expires: c.expires,
       }))
 
-    if (siteCookies.length === 0) return
+    // Extract localStorage/sessionStorage from the matching page
+    let localStorage: Record<string, string> = {}
+    let sessionStorage: Record<string, string> = {}
+    const serverExt = getServerXOpenWeb(spec, Object.values(spec.paths ?? {})[0]?.get ?? Object.values(spec.paths ?? {})[0]?.post ?? {})
+    const authType = serverExt?.auth?.type
+
+    if (authType === 'localStorage_jwt' || authType === 'sessionStorage_msal') {
+      const pages = context.pages()
+      const page = pages.find((p) => {
+        try { return new URL(p.url()).hostname.endsWith(origin) || origin.endsWith(new URL(p.url()).hostname) }
+        catch { return false }
+      })
+      if (page) {
+        try {
+          localStorage = await page.evaluate(() => {
+            const result: Record<string, string> = {}
+            for (let i = 0; i < window.localStorage.length; i++) {
+              const key = window.localStorage.key(i)
+              if (key) result[key] = window.localStorage.getItem(key) ?? ''
+            }
+            return result
+          })
+        } catch { /* page may be closed */ }
+        try {
+          sessionStorage = await page.evaluate(() => {
+            const result: Record<string, string> = {}
+            for (let i = 0; i < window.sessionStorage.length; i++) {
+              const key = window.sessionStorage.key(i)
+              if (key) result[key] = window.sessionStorage.getItem(key) ?? ''
+            }
+            return result
+          })
+        } catch { /* page may be closed */ }
+      }
+    }
+
+    // Must have either cookies or storage to cache
+    if (siteCookies.length === 0 && Object.keys(localStorage).length === 0 && Object.keys(sessionStorage).length === 0) return
 
     // Derive TTL: use earliest cookie expiry or try to find JWT exp in cookie values
     let jwtExp: number | undefined
     let ttlSeconds = DEFAULT_TTL_SECONDS
 
     for (const c of siteCookies) {
-      // Check if any cookie value looks like a JWT with exp claim
       const exp = extractJwtExp(c.value)
       if (exp && (!jwtExp || exp < jwtExp)) {
         jwtExp = exp
+      }
+    }
+
+    // Also check localStorage values for JWT exp
+    if (!jwtExp) {
+      for (const v of Object.values(localStorage)) {
+        const exp = extractJwtExp(v)
+        if (exp && (!jwtExp || exp < jwtExp)) {
+          jwtExp = exp
+        }
       }
     }
 
@@ -510,8 +580,8 @@ async function writeBrowserCookiesToCache(
 
     await writeTokenCache(site, {
       cookies: siteCookies,
-      localStorage: {},
-      sessionStorage: {},
+      localStorage,
+      sessionStorage,
       capturedAt: new Date().toISOString(),
       ttlSeconds,
       jwtExp,
