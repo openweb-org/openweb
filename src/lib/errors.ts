@@ -8,6 +8,8 @@ export type FailureClass =
   | 'needs_browser'
   | 'needs_login'
   | 'needs_page'
+  | 'permission_denied'
+  | 'permission_required'
   | 'retriable'
   | 'fatal'
 
@@ -97,6 +99,28 @@ export class OpenWebError extends Error {
         : 'Check parameters and endpoint availability.',
       retriable: failure.retriable,
       failureClass: failure.failureClass,
+    })
+  }
+
+  static permissionDenied(site: string, operationId: string, category: string): OpenWebError {
+    return new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Permission denied: ${category} on ${site}/${operationId}`,
+      action: `Update ~/.openweb/permissions.yaml to allow '${category}' for '${site}'.`,
+      retriable: false,
+      failureClass: 'permission_denied',
+    })
+  }
+
+  static permissionRequired(site: string, operationId: string, category: string): OpenWebError {
+    return new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Permission required: ${category} on ${site}/${operationId}`,
+      action: `This operation requires '${category}' permission. Update ~/.openweb/permissions.yaml to allow it.`,
+      retriable: false,
+      failureClass: 'permission_required',
     })
   }
 }

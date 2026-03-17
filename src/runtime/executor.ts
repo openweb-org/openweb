@@ -5,6 +5,7 @@ import type { Browser } from 'playwright'
 import Ajv from 'ajv'
 
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
+import { checkPermission, loadPermissions } from '../lib/permissions.js'
 import {
   buildQueryUrl,
   findOperation,
@@ -32,7 +33,7 @@ import {
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 import { loadAdapter, executeAdapter } from './adapter-executor.js'
 import { executeExtraction } from './extraction-executor.js'
-import type { AdapterRef, XOpenWebOperation } from '../types/extensions.js'
+import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types/extensions.js'
 
 const MAX_REDIRECTS = 5
 const SENSITIVE_HEADERS = ['cookie', 'authorization', 'x-csrftoken', 'x-csrf-token']
@@ -44,6 +45,8 @@ export interface ExecuteDependencies {
   readonly cdpEndpoint?: string
   /** Pre-connected browser instance (used in tests to inject mocks) */
   readonly browser?: Browser
+  /** Override permissions config (used in tests to bypass permission checks) */
+  readonly permissionsConfig?: import('../lib/permissions.js').PermissionsConfig
 }
 
 export interface ExecuteResult {
@@ -151,12 +154,23 @@ export async function executeOperation(
   const operationRef = findOperation(spec, operationId)
   const transport = resolveTransport(spec, operationRef.operation)
 
+  // Permission gate: check before executing
+  const opExt = operationRef.operation['x-openweb'] as XOpenWebOperation | undefined
+  const category = (opExt?.permission ?? 'read') as PermissionCategory
+  const permConfig = deps.permissionsConfig ?? loadPermissions()
+  const policy = checkPermission(permConfig, site, category)
+  if (policy === 'deny') {
+    throw OpenWebError.permissionDenied(site, operationId, category)
+  }
+  if (policy === 'prompt') {
+    throw OpenWebError.permissionRequired(site, operationId, category)
+  }
+
   let status: number
   let body: unknown
   let responseHeaders: Record<string, string> = {}
 
   // Check for L3 adapter — if present, adapter handles the entire operation
-  const opExt = operationRef.operation['x-openweb'] as XOpenWebOperation | undefined
   const adapterRef = opExt?.adapter as AdapterRef | undefined
   if (adapterRef) {
     const siteRoot = await resolveSiteRoot(site)

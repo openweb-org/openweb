@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { executeOperation } from './executor.js'
+import type { PermissionsConfig } from '../lib/permissions.js'
+
+const ALL_ALLOW: PermissionsConfig = {
+  defaults: { read: 'allow', write: 'allow', delete: 'allow', transact: 'allow' },
+}
 
 /**
  * Create a mock browser that simulates an already-logged-in Instagram session.
@@ -111,6 +116,7 @@ describe('executeOperation with instagram-fixture (node transport)', () => {
         browser: mockInstagramBrowser(),
         fetchImpl: fetchMock,
         ssrfValidator: async () => {},
+        permissionsConfig: ALL_ALLOW,
       },
     )
 
