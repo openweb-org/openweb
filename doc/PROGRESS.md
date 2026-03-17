@@ -5,28 +5,33 @@
 **Actual Result:**
 - Theme 1: Compiler L2 Emit
   - Fixed signing emission bug (classify detected sapisidhash but generator never emitted it)
-  - Added extraction detection (ssr_next_data, script_json) to classify.ts
+  - Added extraction detection (ssr_next_data, script_json) to classify.ts with ExtractionSignal type
   - Generator emits skeleton extraction operations with placeholder paths
-  - Build.signals array derived from classify results
-  - Parity test now validates x-openweb AJV validation on generated specs
+  - Build.signals array derived from classify results (status-match, auth_detected, extraction_detected, etc.)
+  - Parity test validates generated spec passes AJV x-openweb validation
   - Wired classify() into compile pipeline (loadCaptureData → classify → generatePackage)
+  - Extraction-only compilation supported (zero HTTP ops + extraction signals)
 - Theme 2: Site Expansion (15 → 25)
   - 10 new L1 fixtures: StackOverflow, CoinGecko, Wikipedia, npm, DuckDuckGo, JSONPlaceholder, Dog CEO, GitHub Public, REST Countries, IP API
-  - Extended GitHub fixture with GraphQL POST /graphql operation
-  - Fixed buildQueryUrl() body param rejection bug
+  - Extended GitHub fixture with GraphQL POST /graphql (risk_tier: medium)
+  - Fixed buildQueryUrl() body param rejection bug (enabled POST mutations)
   - All new fixtures verified against live APIs
   - Integration test configs updated for all 25 sites
 - Theme 3: Semi-auto Pipeline Validation
   - Round-trip test: Open-Meteo capture → compile → compare = 4/4 operations match
   - scripts/roundtrip-test.ts for repeatable validation
+- Codex Review (2 rounds, all resolved)
+  - R1 (3 HIGH + 3 MEDIUM + 1 LOW): cookie_session overlap check, link_header pagination type coercion, extraction-only compile, extraction_detected on normal ops, getResponseSchema 2xx, GitHub GraphQL risk_tier, ipapi flaky flag
+  - R2 (3 HIGH + 1 MEDIUM): tracking cookie deny-list, loadRecordedSamples non-throwing, extraction ops sourceUrl fallback, getResponseSchema dynamic 2xx iteration
 
 **Exit Criteria:**
 - ✅ Compiler emits signing, extraction detection, build signals
-- ✅ 25 total sites (15 original + 10 new)
+- ✅ 25 total sites (15 original + 10 new L1 + GitHub GraphQL extension)
 - ✅ Round-trip pipeline validated on Open-Meteo
-- ✅ 269/269 tests pass, zero regression
+- ✅ 271/271 tests pass, zero regression
+- ✅ 2 codex review rounds resolved (0 critical, 0 high remaining)
 
-**Verification:** 269/269 unit tests pass; all new L1 fixtures verified against live APIs
+**Verification:** 271/271 unit tests pass; all new L1 fixtures verified against live APIs; 8 commits + 2 review fix commits
 
 ---
 

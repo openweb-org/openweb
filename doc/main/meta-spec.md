@@ -1,7 +1,7 @@
 # Meta-spec: Type System & Validation
 
 > L2 primitive types, x-openweb extensions, JSON Schema, and AJV validation.
-> Last updated: 2026-03-17 (commit: M9)
+> Last updated: 2026-03-17 (commit: M10)
 
 ## Overview
 

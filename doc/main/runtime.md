@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-03-17 (commit: M9)
+> Last updated: 2026-03-17 (commit: M10)
 
 ## Overview
 

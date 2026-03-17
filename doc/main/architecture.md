@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-17 (commit: M9)
+> Last updated: 2026-03-17 (commit: M10)
 
 ## Mission
 
@@ -87,7 +87,7 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | Phases 2-4 partial (L1 emit) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM) | `src/capture/` | Complete (M0) |
 | **CLI** | Progressive navigation + exec + capture + compile | `src/cli.ts`, `src/commands/` | Complete |
-| **Skill packages** | Per-site instance specs | `src/fixtures/` | 15 verified sites |
+| **Skill packages** | Per-site instance specs | `src/fixtures/` | 25 verified sites |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5) |
 
 ---
@@ -145,7 +145,7 @@ openweb compile <url>                          # generate skill package
 
 ---
 
-## Verified Sites (M0-M6 Tranche B)
+## Verified Sites (M0-M10)
 
 | Site | Layer | Auth | CSRF | Signing | Extraction | Transport |
 |------|-------|------|------|---------|------------|-----------|
@@ -162,6 +162,18 @@ openweb compile <url>                          # generate skill package
 | Discord | L2 | webpack_module_walk | — | — | — | page |
 | WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |
 | Telegram | L3 | adapter | — | — | adapter | adapter (L3) |
+| Stack Overflow | L1 | — | — | — | — | node |
+| CoinGecko | L1 | — | — | — | — | node |
+| Wikipedia | L1 | — | — | — | — | node |
+| npm | L1 | — | — | — | — | node |
+| DuckDuckGo | L1 | — | — | — | — | node |
+| JSONPlaceholder | L1 | — | — | — | — | node |
+| Dog CEO | L1 | — | — | — | — | node |
+| GitHub (public) | L1 | — | — | — | — | node |
+| REST Countries | L1 | — | — | — | — | node |
+| IP API | L1 | — | — | — | — | node |
+
+**Note:** The GitHub public fixture also includes a `graphqlQuery` operation (POST `/graphql`, `risk_tier: medium`) demonstrating POST-based GraphQL on a public API.
 
 ---
 
