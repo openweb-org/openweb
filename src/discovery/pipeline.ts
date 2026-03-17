@@ -253,7 +253,7 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
     await cleanupRecordingDir(capture.recordingDir)
   }
 
-  if (filteredSamples.length === 0 && !classifyResult?.extractions) {
+  if (filteredSamples.length === 0 && !classifyResult?.extractions?.length) {
     if (humanHandoff) {
       log(`human_handoff: ${humanHandoff.type} — ${humanHandoff.action}`)
     } else {
