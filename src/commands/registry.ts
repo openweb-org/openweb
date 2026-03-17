@@ -54,7 +54,7 @@ async function registryList(): Promise<void> {
 }
 
 async function registryInstall(site: string): Promise<void> {
-  const siteRoot = await resolveSiteRoot(site)
+  const siteRoot = await resolveSiteRoot(site, { skipRegistry: true })
   const version = await archiveSite(site, siteRoot)
   process.stdout.write(`Installed ${site} v${version} to registry.\n`)
 }

@@ -98,8 +98,7 @@ export async function verifySite(
   // Determine overall status
   const hasDrift = operations.some((o) => o.status === 'DRIFT')
   const hasRealFail = operations.some((o) => o.status === 'FAIL' && o.driftType !== 'auth_drift')
-  const hasAuthOnly = operations.length > 0
-    && operations.every((o) => o.status === 'FAIL' && o.driftType === 'auth_drift')
+  const hasAuthDrift = operations.some((o) => o.driftType === 'auth_drift')
   const hasPass = operations.some((o) => o.status === 'PASS')
 
   let overallStatus: SiteOverallStatus
@@ -107,7 +106,8 @@ export async function verifySite(
     overallStatus = 'FAIL'
   } else if (hasDrift) {
     overallStatus = 'DRIFT'
-  } else if (hasAuthOnly) {
+  } else if (hasAuthDrift) {
+    // ANY auth_drift taints the result — even if some ops passed
     overallStatus = 'auth_expired'
   } else if (hasPass) {
     overallStatus = 'PASS'

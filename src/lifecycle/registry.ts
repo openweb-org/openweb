@@ -1,6 +1,7 @@
 import os from 'node:os'
 import path from 'node:path'
-import { readFile, writeFile, readdir, mkdir, cp, rm, chmod } from 'node:fs/promises'
+import { readFile, writeFile, readdir, mkdir, cp, rm, realpath } from 'node:fs/promises'
+import { realpathSync } from 'node:fs'
 
 import type { Manifest } from '../types/manifest.js'
 import { resolveSiteRoot } from '../lib/openapi.js'
@@ -17,16 +18,31 @@ function validatePathComponent(value: string, label: string): void {
   }
 }
 
-/** Resolve and verify a path stays inside REGISTRY_ROOT. */
+/** Resolve and verify a path stays inside REGISTRY_ROOT. Resolves symlinks. */
 function safeRegistryPath(...segments: string[]): string {
   for (const seg of segments) {
     validatePathComponent(seg, 'path component')
   }
   const resolved = path.resolve(REGISTRY_ROOT, ...segments)
-  if (!resolved.startsWith(path.resolve(REGISTRY_ROOT) + path.sep) && resolved !== path.resolve(REGISTRY_ROOT)) {
+  const resolvedRoot = path.resolve(REGISTRY_ROOT)
+  if (!resolved.startsWith(resolvedRoot + path.sep) && resolved !== resolvedRoot) {
     throw new Error(`Path escapes registry root: ${resolved}`)
   }
-  return resolved
+  // Resolve symlinks if the path exists on disk
+  try {
+    const real = realpathSync(resolved)
+    const realRoot = realpathSync(resolvedRoot)
+    if (!real.startsWith(realRoot + path.sep) && real !== realRoot) {
+      throw new Error(`Symlink escapes registry root: ${real}`)
+    }
+    return real
+  } catch (err) {
+    // ENOENT = path doesn't exist yet (pre-creation), that's fine — string check passed
+    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return resolved
+    }
+    throw err
+  }
 }
 
 function registrySitePath(site: string): string {

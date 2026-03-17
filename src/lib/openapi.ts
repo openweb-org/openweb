@@ -90,12 +90,26 @@ function candidateSiteRoots(site: string): string[] {
   ]
 }
 
+/** Site names must be lowercase alphanumeric with hyphens/underscores. */
+const SAFE_SITE_NAME = /^[a-z0-9][a-z0-9_-]*$/
+
 export interface ResolveSiteOptions {
   /** Skip registry lookup — use when installing to avoid self-copy. */
   readonly skipRegistry?: boolean
 }
 
 export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): Promise<string> {
+  if (!SAFE_SITE_NAME.test(site)) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'INVALID_PARAMS',
+      message: `Invalid site name: ${site}`,
+      action: 'Site names must be lowercase alphanumeric with hyphens/underscores.',
+      retriable: false,
+      failureClass: 'fatal',
+    })
+  }
+
   // Check registry current version first (inlined to avoid circular dep with lifecycle/registry)
   if (!opts?.skipRegistry) {
     const registryCurrentFile = path.join(os.homedir(), '.openweb', 'registry', site, 'current')
