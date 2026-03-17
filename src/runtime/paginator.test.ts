@@ -186,6 +186,56 @@ describe('executePaginated — cursor', () => {
     expect(result.pages).toBe(2)
     expect(executeOperationMock.mock.calls[1][2]).toEqual({ cursor: 'abc' })
   })
+
+  it('injects cursor into nested request_param (GraphQL variables.cursor)', async () => {
+    mockXOpenWeb = {
+      pagination: {
+        type: 'cursor',
+        response_field: 'data.actor.entitySearch.results.nextCursor',
+        request_param: 'variables.cursor',
+      },
+    }
+
+    executeOperationMock
+      .mockResolvedValueOnce(
+        makeResult({
+          data: {
+            actor: {
+              entitySearch: {
+                results: {
+                  entities: [{ name: 'Dashboard 1' }],
+                  nextCursor: 'page2cursor',
+                },
+              },
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeResult({
+          data: {
+            actor: {
+              entitySearch: {
+                results: {
+                  entities: [{ name: 'Dashboard 2' }],
+                  nextCursor: null,
+                },
+              },
+            },
+          },
+        }),
+      )
+
+    const initialParams = { query: 'graphql query', variables: { limit: 10 } }
+    const result = await executePaginated('test-site', 'list_items', initialParams)
+    expect(result.pages).toBe(2)
+
+    // Verify the nested cursor was injected into variables
+    const page2Params = executeOperationMock.mock.calls[1][2] as Record<string, unknown>
+    expect(page2Params.variables).toEqual({ limit: 10, cursor: 'page2cursor' })
+    // query param should be preserved
+    expect(page2Params.query).toBe('graphql query')
+  })
 })
 
 // ── executePaginated — link_header ───────────────────────

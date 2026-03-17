@@ -2,7 +2,7 @@ import type { PaginationPrimitive } from '../types/primitives.js'
 import type { ExecuteDependencies, ExecuteResult } from './executor.js'
 import { OpenWebError } from '../lib/errors.js'
 import { findOperation, loadOpenApi } from '../lib/openapi.js'
-import { getValueAtPath } from './value-path.js'
+import { getValueAtPath, setValueAtPath } from './value-path.js'
 
 const MAX_PAGES = 10
 
@@ -114,7 +114,7 @@ async function executeCursorPagination(
       break
     }
 
-    currentParams = { ...currentParams, [config.request_param]: cursor }
+    currentParams = setValueAtPath(currentParams, config.request_param, cursor)
   }
 
   return { items: allItems, pages }

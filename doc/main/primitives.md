@@ -273,7 +273,18 @@ x-openweb:
     has_more_field: "has_more"
 ```
 
--> See: `src/runtime/paginator.ts`
+Both `response_field` and `has_more_field` support **dotted paths** for nested responses (e.g., `data.actor.entitySearch.results.nextCursor`).
+
+`request_param` also supports dotted paths for writing the cursor into a nested request parameter. This is useful for GraphQL where the cursor must be injected into `variables.cursor` rather than a top-level param:
+
+```yaml
+pagination:
+  type: cursor
+  response_field: "data.actor.entitySearch.results.nextCursor"
+  request_param: "variables.cursor"
+```
+
+-> See: `src/runtime/paginator.ts`, `src/runtime/value-path.ts`
 
 ---
 

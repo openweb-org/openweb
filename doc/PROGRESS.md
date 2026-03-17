@@ -1,3 +1,23 @@
+## 2026-03-16: M6 Phase 2 Tranche B — New Relic GraphQL cursor fixture + exchange_chain discovery
+
+**What changed:**
+- Added `newrelic-fixture` as site #13: first GraphQL POST fixture with `cookie_session` auth, cursor pagination via nested `data.actor.entitySearch.results.nextCursor` response path
+- Extended cursor pagination runtime to support **dotted `request_param`** paths — `setValueAtPath()` in `value-path.ts` + paginator update to write cursor into nested objects (e.g., `variables.cursor` for GraphQL)
+- Ran exchange_chain discovery gate against Reddit and all logged-in sites in the Chrome profile; **result: FAIL / defer** — no site meets all gate criteria (Reddit needs cookie-to-body extraction not supported by the primitive, endpoint is undocumented, logged-out returns 200/400 not 401/403)
+
+**Why:**
+- Tranche B needed a GraphQL cursor target to prove the pagination primitive works beyond flat REST APIs
+- The nested `request_param` gap was a real blocker: without it, GraphQL cursor injection into `variables.cursor` required site-specific code
+- exchange_chain discovery prevents shipping a flaky fixture based on unstable live behavior
+
+**Key files:** `src/runtime/value-path.ts`, `src/runtime/paginator.ts`, `src/fixtures/newrelic-fixture/`, `doc/todo/v2_m6/exchange-chain-discovery-gate.md`
+**Verification:** `pnpm test` passed (236/236), `pnpm build` passed, real Chrome CDP verified (cold-start ✓, repeated ✓, 401 unauth ✓)
+**Commit:** (this session)
+**Next:** Code review, then M6 Phase 2 Tranche C or close-out depending on exchange_chain defer decision
+**Blockers:** exchange_chain fixture deferred — no stable target in current profile
+
+---
+
 ## 2026-03-16: M6 Phase 2 Tranche A review fixes + Tranche B target decisions
 
 **What changed:**

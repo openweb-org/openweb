@@ -1,6 +1,6 @@
 ---
 name: openweb
-description: Access web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo, Walmart, Hacker News, Microsoft Word) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", "read Hacker News", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
+description: Access web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo, Walmart, Hacker News, Microsoft Word, New Relic) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", "read Hacker News", "list New Relic dashboards", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
 ---
 
 # OpenWeb — Web Service Access via CLI
@@ -137,6 +137,7 @@ Sites use different modes depending on their API structure. You don't need to ch
 | `walmart-fixture` | session_http | page extraction | `getFooterModules` — Next.js footer modules |
 | `hackernews-fixture` | session_http | page extraction | `getTopStories` — front page stories |
 | `microsoft-word-fixture` | session_http | MSAL cache | `getProfile` — Microsoft Graph profile |
+| `newrelic-fixture` | session_http | cookie | `listDashboards` — GraphQL dashboard search |
 | `discord-fixture` | browser_fetch | webpack token | `getMe` — current user |
 | `whatsapp-fixture` | L3 adapter | browser state | `getChats` — chat list |
 | `telegram-fixture` | L3 adapter | browser state | `getDialogs` — dialog list |
@@ -222,6 +223,18 @@ pnpm --silent dev microsoft-word-fixture exec getProfile '{}' --cdp-endpoint htt
 ```
 
 The runtime reads Word's MSAL token cache from browser storage and injects a Graph bearer token automatically.
+
+### Example 8: GraphQL API (New Relic)
+
+User: "List my New Relic dashboards"
+
+```bash
+pnpm --silent dev newrelic-fixture                        # Check: Requires browser: yes, Requires login: yes
+pnpm --silent dev newrelic-fixture listDashboards         # Check params (query + variables default to dashboard search)
+pnpm --silent dev newrelic-fixture exec listDashboards '{}' --cdp-endpoint http://localhost:9222 --max-response 4096
+```
+
+The runtime sends the default GraphQL query with session cookies. Headers (`newrelic-requesting-services`, `x-requested-with`) are auto-populated from spec defaults.
 
 ## Important Notes
 

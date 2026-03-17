@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getValueAtPath } from './value-path.js'
+import { getValueAtPath, setValueAtPath } from './value-path.js'
 
 describe('getValueAtPath', () => {
   it('reads nested object paths', () => {
@@ -56,5 +56,58 @@ describe('getValueAtPath', () => {
 
   it('returns undefined when a primitive appears before the path ends', () => {
     expect(getValueAtPath({ data: { viewer: 'moonkey' } }, 'data.viewer.id')).toBeUndefined()
+  })
+})
+
+describe('setValueAtPath', () => {
+  it('sets a top-level key', () => {
+    const result = setValueAtPath({ a: 1 }, 'b', 2)
+    expect(result).toEqual({ a: 1, b: 2 })
+  })
+
+  it('sets a nested key, creating intermediate objects', () => {
+    const result = setValueAtPath({}, 'variables.cursor', 'abc')
+    expect(result).toEqual({ variables: { cursor: 'abc' } })
+  })
+
+  it('preserves existing sibling keys in nested objects', () => {
+    const result = setValueAtPath(
+      { variables: { limit: 10 } },
+      'variables.cursor',
+      'xyz',
+    )
+    expect(result).toEqual({ variables: { limit: 10, cursor: 'xyz' } })
+  })
+
+  it('does not mutate the original object', () => {
+    const original = { variables: { limit: 10 } }
+    const result = setValueAtPath(original, 'variables.cursor', 'abc')
+    expect(original).toEqual({ variables: { limit: 10 } })
+    expect(result.variables).not.toBe(original.variables)
+  })
+
+  it('overwrites non-object intermediate with new object', () => {
+    const result = setValueAtPath({ variables: 'old' }, 'variables.cursor', 'abc')
+    expect(result).toEqual({ variables: { cursor: 'abc' } })
+  })
+
+  it('handles deeply nested paths', () => {
+    const result = setValueAtPath({}, 'a.b.c.d', 42)
+    expect(result).toEqual({ a: { b: { c: { d: 42 } } } })
+  })
+
+  it('returns input unchanged for empty path', () => {
+    const input = { x: 1 }
+    expect(setValueAtPath(input, '', 99)).toEqual({ x: 1 })
+  })
+
+  it('overwrites an existing leaf value', () => {
+    const result = setValueAtPath({ a: { b: 1 } }, 'a.b', 2)
+    expect(result).toEqual({ a: { b: 2 } })
+  })
+
+  it('replaces array intermediate with object', () => {
+    const result = setValueAtPath({ a: [1, 2] }, 'a.x', 3)
+    expect(result).toEqual({ a: { x: 3 } })
   })
 })

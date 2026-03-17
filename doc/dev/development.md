@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-16 (commit: `1847175`)
+> Last updated: 2026-03-16 (commit: Tranche B)
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (226/226 pass)
+pnpm test           # Run tests (236/236 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -157,7 +157,7 @@ src/
 ├── compiler/                 # Site compilation pipeline
 ├── capture/                  # Browser CDP recording
 ├── lib/                      # Shared utilities (SSRF, errors, OpenAPI)
-└── fixtures/                 # 12 test site packages
+└── fixtures/                 # 13 test site packages
 ```
 
 -> See: [doc/main/README.md](../main/README.md) — full code structure with per-file annotations
