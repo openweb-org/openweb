@@ -29,7 +29,7 @@ interface BenchmarkResult {
 }
 
 const CDP_ENDPOINT = process.env.CDP_ENDPOINT ?? 'http://localhost:9222'
-const DISCOVER_TIMEOUT = 60_000
+const DISCOVER_TIMEOUT = 90_000
 
 async function runSingleBenchmark(site: BenchmarkSite): Promise<BenchmarkResult> {
   const start = Date.now()
