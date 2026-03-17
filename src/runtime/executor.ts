@@ -34,6 +34,7 @@ import { executeExtraction } from './extraction-executor.js'
 import type { AdapterRef, XOpenWebOperation } from '../types/extensions.js'
 
 const MAX_REDIRECTS = 5
+const SENSITIVE_HEADERS = ['cookie', 'authorization', 'x-csrftoken', 'x-csrf-token']
 
 export interface ExecuteDependencies {
   readonly fetchImpl?: typeof fetch
@@ -101,9 +102,22 @@ export async function fetchWithValidatedRedirects(
 
     current = new URL(location, current).toString()
 
-    if (response.status === 303) {
+    // 301/302/303: rewrite to GET and drop body (matches native fetch behavior)
+    // Only 307/308 preserve the original method
+    if (response.status === 301 || response.status === 302 || response.status === 303) {
       currentMethod = 'GET'
       currentBody = undefined
+    }
+
+    // CR-01: Strip sensitive headers on cross-origin redirect
+    const nextOrigin = new URL(current).origin
+    const originalOrigin = new URL(inputUrl).origin
+    if (nextOrigin !== originalOrigin) {
+      for (const name of SENSITIVE_HEADERS) {
+        for (const key of Object.keys(currentHeaders)) {
+          if (key.toLowerCase() === name) delete currentHeaders[key]
+        }
+      }
     }
   }
 

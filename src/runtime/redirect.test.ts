@@ -62,6 +62,49 @@ describe('fetchWithRedirects', () => {
     expect((calls[1]![1] as RequestInit).body).toBeUndefined()
   })
 
+  it('rewrites POST to GET on 301 redirect', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('', {
+        status: 301,
+        headers: { location: 'https://example.com/result' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 })) as unknown as typeof fetch
+
+    await fetchWithRedirects(
+      'https://example.com/api',
+      'POST',
+      {},
+      '{"data":true}',
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    const calls = (fetchMock as ReturnType<typeof vi.fn>).mock.calls
+    expect((calls[0]![1] as RequestInit).method).toBe('POST')
+    expect((calls[1]![1] as RequestInit).method).toBe('GET')
+    expect((calls[1]![1] as RequestInit).body).toBeUndefined()
+  })
+
+  it('preserves method on 307 redirect', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('', {
+        status: 307,
+        headers: { location: 'https://example.com/result' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 })) as unknown as typeof fetch
+
+    await fetchWithRedirects(
+      'https://example.com/api',
+      'POST',
+      {},
+      '{"data":true}',
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    const calls = (fetchMock as ReturnType<typeof vi.fn>).mock.calls
+    expect((calls[0]![1] as RequestInit).method).toBe('POST')
+    expect((calls[1]![1] as RequestInit).method).toBe('POST')
+  })
+
   it('strips sensitive headers on cross-origin redirect', async () => {
     const capturedHeaders: Record<string, string>[] = []
     const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {

@@ -19,6 +19,7 @@ const exchangeCookieStepSchema = {
     extract_from: { const: 'cookie' },
     call: { type: 'string' },
     extract: { type: 'string' },
+    as: { type: 'string' },
   },
   additionalProperties: false,
 } as const

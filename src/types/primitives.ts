@@ -11,6 +11,7 @@ export interface ExchangeCookieStep {
   readonly extract_from: 'cookie'
   readonly call: string
   readonly extract: string
+  readonly as?: string
 }
 
 export interface ExchangeHttpStep {

@@ -53,8 +53,9 @@ export async function fetchWithRedirects(
     const nextUrl = new URL(location, currentUrl)
     currentUrl = nextUrl.toString()
 
-    // CR-07: 303 See Other always switches to GET
-    if (response.status === 303) {
+    // 301/302/303: rewrite to GET and drop body (matches native fetch behavior)
+    // Only 307/308 preserve the original method
+    if (response.status === 301 || response.status === 302 || response.status === 303) {
       currentMethod = 'GET'
       currentBody = undefined
     }

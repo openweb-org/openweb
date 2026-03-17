@@ -47,12 +47,13 @@ function isPageMissing(error: unknown): boolean {
 /** Check if any open tab matches the expected page_url origin */
 async function hasMatchingPage(browser: import('playwright').Browser, pageUrl: string): Promise<boolean> {
   try {
-    const origin = new URL(pageUrl).origin
+    const expectedOrigin = new URL(pageUrl).origin
     const context = browser.contexts()[0]
     if (!context) return false
     for (const page of context.pages()) {
       try {
-        if (page.url().startsWith(origin)) return true
+        const pageOrigin = new URL(page.url()).origin
+        if (pageOrigin === expectedOrigin) return true
       } catch { /* skip */ }
     }
   } catch { /* skip */ }
@@ -106,7 +107,7 @@ async function runPagination(
       config.site,
       config.pagination.operation,
       config.pagination.params,
-      { maxPages: 2, cdpEndpoint: CDP_ENDPOINT, browser },
+      { maxPages: 2, deps: { cdpEndpoint: CDP_ENDPOINT, browser } },
     )
     if (result.pages > 1) {
       return { site: config.site, operation: `${config.pagination.operation} (paginated)`, status: 'PASS', detail: `${result.pages} pages` }

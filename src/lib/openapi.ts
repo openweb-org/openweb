@@ -5,6 +5,7 @@ import { access, readdir, readFile } from 'node:fs/promises'
 import { parse } from 'yaml'
 
 import { OpenWebError } from './errors.js'
+import { validateXOpenWebSpec } from '../types/validator.js'
 
 export type JsonSchema = {
   readonly type?: string | string[]
@@ -148,6 +149,21 @@ export async function loadOpenApi(site: string): Promise<OpenApiSpec> {
       code: 'EXECUTION_FAILED',
       message: `Invalid OpenAPI spec for site: ${site}`,
       action: `Regenerate the spec for ${site} and retry.`,
+      retriable: false,
+      failureClass: 'fatal',
+    })
+  }
+
+  // Validate x-openweb extensions at load time — catches unsupported
+  // auth types and unknown fields before they reach runtime
+  const validation = validateXOpenWebSpec(parsed)
+  if (!validation.valid) {
+    const details = validation.errors.map((e) => `${e.path}: ${e.message}`).join('; ')
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `x-openweb validation failed for ${site}: ${details}`,
+      action: 'Fix the x-openweb extensions in the OpenAPI spec.',
       retriable: false,
       failureClass: 'fatal',
     })
