@@ -367,6 +367,30 @@ describe('resolveExchangeChain', () => {
     expect(result.headers.Authorization).toBe('Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.test')
   })
 
+  it('supports nested extract paths and query injection', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ data: { tokens: [{ accessToken: 'query-token' }] } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const result = await resolveExchangeChain(handle, {
+      steps: [{ call: 'https://example.com/token', extract: 'data.tokens.0.accessToken' }],
+      inject: { query: 'access_token' },
+    }, 'https://example.com', { fetchImpl: fetchMock })
+
+    expect(result.headers).toEqual({})
+    expect(result.queryParams).toEqual({ access_token: 'query-token' })
+  })
+
   it('throws when exchange step fails', async () => {
     const handle = {
       page: {} as BrowserHandle['page'],

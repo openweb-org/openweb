@@ -804,7 +804,7 @@ describe('executeSessionHttp', () => {
     expect(capturedHeaders[1]!.Authorization).toBeUndefined()
   })
 
-  it('throws "Too many redirects" when Location header is missing', async () => {
+  it('throws an explicit error when Location header is missing', async () => {
     const browser = mockBrowser([
       { name: 'sessionid', value: 'sess_abc' },
       { name: 'csrftoken', value: 'csrf_xyz' },
@@ -825,11 +825,48 @@ describe('executeSessionHttp', () => {
         { fetchImpl: fetchMock, ssrfValidator: async () => {} },
       ),
     ).rejects.toMatchObject({
-      payload: { message: expect.stringContaining('Too many redirects') },
+      payload: { message: expect.stringContaining('missing Location header') },
     })
 
     // Fetch should only be called once (no infinite loop)
     expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
+  })
+
+  it('allows MAX_REDIRECTS redirects before succeeding', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    let callCount = 0
+    const fetchMock = vi.fn(async () => {
+      callCount += 1
+      if (callCount <= 5) {
+        return new Response('', {
+          status: 301,
+          headers: { location: `https://www.instagram.com/api/v1/redirect/${callCount}/` },
+        })
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    }) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    const result = await executeSessionHttp(
+      browser,
+      spec,
+      '/feed/timeline/',
+      'get',
+      spec.paths!['/feed/timeline/']!.get!,
+      {},
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    expect(result.status).toBe(200)
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(6)
   })
 
   it('throws "Too many redirects" after exceeding MAX_REDIRECTS', async () => {
@@ -862,8 +899,8 @@ describe('executeSessionHttp', () => {
       payload: { message: expect.stringContaining('Too many redirects') },
     })
 
-    // MAX_REDIRECTS is 5, loop runs 5 times (0..4), then exits with redirect status → error
-    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(5)
+    // MAX_REDIRECTS is 5, so the executor follows up to 5 redirects and fails on the 6th redirect response.
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(6)
   })
 
   it('drops body on 303 redirect', async () => {

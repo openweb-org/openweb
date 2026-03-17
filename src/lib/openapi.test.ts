@@ -45,6 +45,40 @@ describe('buildQueryUrl', () => {
       ),
     ).toThrowError(OpenWebError)
   })
+
+  it('applies query defaults when the caller omits an optional parameter', () => {
+    const url = buildQueryUrl(
+      'https://api.example.com',
+      '/v1/issues',
+      [
+        { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+      ],
+      {},
+    )
+
+    expect(url).toBe('https://api.example.com/v1/issues?page=1')
+  })
+
+  it('allows known non-query parameters without treating them as unknown', () => {
+    const url = buildQueryUrl(
+      'https://api.example.com',
+      '/repos/openweb/openweb/issues',
+      [
+        { name: 'owner', in: 'path', required: true, schema: { type: 'string' } },
+        { name: 'repo', in: 'path', required: true, schema: { type: 'string' } },
+        { name: 'If-None-Match', in: 'header', required: false, schema: { type: 'string' } },
+        { name: 'page', in: 'query', required: false, schema: { type: 'integer' } },
+      ],
+      {
+        owner: 'openweb',
+        repo: 'openweb',
+        'If-None-Match': 'etag-123',
+        page: 2,
+      },
+    )
+
+    expect(url).toBe('https://api.example.com/repos/openweb/openweb/issues?page=2')
+  })
 })
 
 describe('getRequestBodyParameters', () => {

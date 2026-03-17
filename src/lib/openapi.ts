@@ -332,8 +332,9 @@ export function buildQueryUrl(
 ): string {
   const target = new URL(apiPath, baseServerUrl)
 
-  const queryParameters = (parameters ?? []).filter((param) => param.in === 'query')
-  const knownParameterNames = new Set(queryParameters.map((parameter) => parameter.name))
+  const allParameters = parameters ?? []
+  const queryParameters = allParameters.filter((param) => param.in === 'query')
+  const knownParameterNames = new Set(allParameters.map((parameter) => parameter.name))
   const unknownParameterNames = Object.keys(inputParams).filter((name) => !knownParameterNames.has(name))
 
   if (unknownParameterNames.length > 0) {
@@ -348,7 +349,9 @@ export function buildQueryUrl(
   }
 
   for (const parameter of queryParameters) {
-    const value = inputParams[parameter.name]
+    const value = inputParams[parameter.name] ?? (
+      parameter.schema?.default !== undefined ? structuredClone(parameter.schema.default) : undefined
+    )
     if ((value === undefined || value === null) && parameter.required) {
       throw new OpenWebError({
         error: 'execution_failed',

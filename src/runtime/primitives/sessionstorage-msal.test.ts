@@ -93,4 +93,46 @@ describe('resolveSessionStorageMsal', () => {
       payload: { code: 'AUTH_FAILED', failureClass: 'needs_login' },
     })
   })
+
+  it('ignores expired tokens and picks the newest valid candidate', async () => {
+    const now = Math.floor(Date.now() / 1000)
+    const handle = mockHandle({
+      sessionStorage: {
+        'msal.token.keys.client': JSON.stringify({
+          accessToken: ['token.expired', 'token.valid'],
+        }),
+        'token.expired': accessTokenEntry('expired-token', 'https://graph.microsoft.com/User.Read', String(now - 60)),
+        'token.valid': accessTokenEntry('valid-token', 'https://graph.microsoft.com/User.Read', String(now + 3600)),
+      },
+      localStorage: {},
+    })
+
+    const result = await resolveSessionStorageMsal(handle, {
+      key_pattern: 'msal.token.keys.*',
+      scope_filter: 'user.read',
+      token_field: 'secret',
+      inject: { header: 'Authorization', prefix: 'Bearer ' },
+    })
+
+    expect(result.headers.Authorization).toBe('Bearer valid-token')
+  })
+
+  it('reads direct AccessToken entries and can inject them as query params', async () => {
+    const handle = mockHandle({
+      sessionStorage: {
+        'msal.AccessToken.graph': accessTokenEntry('query-token', 'https://graph.microsoft.com/User.Read'),
+      },
+      localStorage: {},
+    })
+
+    const result = await resolveSessionStorageMsal(handle, {
+      key_pattern: 'msal.AccessToken.*',
+      scope_filter: 'user.read',
+      token_field: 'secret',
+      inject: { query: 'access_token' },
+    })
+
+    expect(result.headers).toEqual({})
+    expect(result.queryParams).toEqual({ access_token: 'query-token' })
+  })
 })

@@ -24,6 +24,7 @@ import { resolveSapisidhash } from './primitives/sapisidhash.js'
 import { resolveSessionStorageMsal } from './primitives/sessionstorage-msal.js'
 import { resolveWebpackModuleWalk } from './primitives/webpack-module-walk.js'
 import type { BrowserHandle, ResolvedInjections } from './primitives/types.js'
+import { listCandidatePages } from './page-candidates.js'
 
 /** Auth resolution result — extends ResolvedInjections with optional query params */
 interface AuthResult extends ResolvedInjections {
@@ -52,34 +53,6 @@ function getPageHintUrl(serverUrl: string): string {
   } catch {
     return serverUrl
   }
-}
-
-async function listCandidatePages(context: BrowserContext): Promise<Page[]> {
-  const candidates: Page[] = []
-  for (const page of context.pages()) {
-    try {
-      const currentUrl = page.url()
-      if (!currentUrl) {
-        continue
-      }
-
-      const pathname = new URL(currentUrl).pathname
-      if (pathname.endsWith('.js')) {
-        continue
-      }
-
-      const content = (await page.content()).trim()
-      if (!content) {
-        continue
-      }
-
-      candidates.push(page)
-    } catch {
-      // Ignore detached pages and invalid URLs.
-    }
-  }
-
-  return candidates
 }
 
 /** Find a page whose URL matches the target server origin (for page.evaluate scoping) */
@@ -132,6 +105,17 @@ export function createNeedsPageError(serverUrl: string): OpenWebError {
     action: `Open a tab to ${pageHintUrl} and retry.`,
     retriable: true,
     failureClass: 'needs_page',
+  })
+}
+
+function createMissingLocationError(): OpenWebError {
+  return new OpenWebError({
+    error: 'execution_failed',
+    code: 'EXECUTION_FAILED',
+    message: 'Redirect response missing Location header.',
+    action: 'Retry or inspect upstream endpoint behavior.',
+    retriable: true,
+    failureClass: 'retriable',
   })
 }
 
@@ -547,7 +531,7 @@ export async function executeSessionHttp(
   let currentMethod = upperMethod
   let response: Response | undefined
 
-  for (let attempt = 0; attempt < MAX_REDIRECTS; attempt++) {
+  for (let attempt = 0; attempt <= MAX_REDIRECTS; attempt += 1) {
     await ssrfValidator(currentUrl)
 
     response = await fetchImpl(currentUrl, {
@@ -557,10 +541,14 @@ export async function executeSessionHttp(
       redirect: 'manual',
     })
 
-    if (response.status < 300 || response.status >= 400) break
+    if (response.status < 300 || response.status >= 400) {
+      break
+    }
 
     const location = response.headers.get('location')
-    if (!location) break
+    if (!location) {
+      throw createMissingLocationError()
+    }
 
     const nextUrl = new URL(location, currentUrl)
     currentUrl = nextUrl.toString()

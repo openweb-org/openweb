@@ -22,7 +22,6 @@ const exchangeStepSchema = {
     body: { type: 'object', additionalProperties: { type: 'string' } },
     extract: { type: 'string' },
     as: { type: 'string' },
-    expires_field: { type: 'string' },
   },
   additionalProperties: false,
 } as const
@@ -391,6 +390,7 @@ export const extractionPrimitiveSchema = {
       required: ['type', 'expression'],
       properties: {
         type: { const: 'page_global_data' },
+        page_url: { type: 'string' },
         expression: { type: 'string' },
         path: { type: 'string' },
       },

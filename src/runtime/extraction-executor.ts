@@ -8,6 +8,7 @@ import { resolvePageGlobalData } from './primitives/page-global-data.js'
 import { resolveScriptJson } from './primitives/script-json.js'
 import { resolveSsrNextData } from './primitives/ssr-next-data.js'
 import type { BrowserHandle } from './primitives/types.js'
+import { listCandidatePages } from './page-candidates.js'
 import { findPageForOrigin } from './session-executor.js'
 
 export interface ExtractionResult {
@@ -25,34 +26,6 @@ function createExtractionNeedsPageError(targetPageUrl: string): OpenWebError {
     retriable: true,
     failureClass: 'needs_page',
   })
-}
-
-async function listCandidatePages(context: BrowserContext): Promise<Page[]> {
-  const candidates: Page[] = []
-  for (const page of context.pages()) {
-    try {
-      const currentUrl = page.url()
-      if (!currentUrl) {
-        continue
-      }
-
-      const pathname = new URL(currentUrl).pathname
-      if (pathname.endsWith('.js')) {
-        continue
-      }
-
-      const content = (await page.content()).trim()
-      if (!content) {
-        continue
-      }
-
-      candidates.push(page)
-    } catch {
-      // Ignore detached pages and invalid URLs.
-    }
-  }
-
-  return candidates
 }
 
 async function findPageForTarget(

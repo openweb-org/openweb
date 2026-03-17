@@ -121,6 +121,28 @@ describe('validateXOpenWebSpec', () => {
     expect(result.valid).toBe(true)
   })
 
+  it('validates page_global_data extraction with an explicit page_url', () => {
+    const spec = {
+      paths: {
+        '/app': {
+          get: {
+            operationId: 'getBootstrap',
+            'x-openweb': {
+              extraction: {
+                type: 'page_global_data',
+                page_url: '/app',
+                expression: 'window.__BOOTSTRAP__',
+                path: 'viewer.id',
+              },
+            },
+          },
+        },
+      },
+    }
+    const result = validateXOpenWebSpec(spec)
+    expect(result.valid).toBe(true)
+  })
+
   it('passes for spec with no x-openweb at all', () => {
     const spec = {
       servers: [{ url: 'https://example.com' }],

@@ -14,7 +14,6 @@ export interface ExchangeStep {
   readonly body?: Readonly<Record<string, string>>
   readonly extract: string
   readonly as?: string
-  readonly expires_field?: string
 }
 
 export type AuthPrimitive =
@@ -143,4 +142,4 @@ export type ExtractionPrimitive =
       readonly multiple?: boolean
     }
   | { readonly type: 'script_json'; readonly selector: string; readonly path?: string }
-  | { readonly type: 'page_global_data'; readonly expression: string; readonly path?: string }
+  | { readonly type: 'page_global_data'; readonly page_url?: string; readonly expression: string; readonly path?: string }

@@ -4,12 +4,12 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.reddit.com",
-  "description": "Reddit API — exchange_chain auth + api_response CSRF",
+  "description": "Reddit API — cookie_session auth over session_http",
   "requires_auth": true,
   "dependencies": {},
   "stats": {
     "operation_count": 2,
-    "l1_count": 2,
+    "l1_count": 0,
     "l2_count": 2,
     "l3_count": 0
   }

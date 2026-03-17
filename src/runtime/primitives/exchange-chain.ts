@@ -1,4 +1,5 @@
 import { OpenWebError, getHttpFailure } from '../../lib/errors.js'
+import { getValueAtPath } from '../value-path.js'
 import type { BrowserHandle, ResolvedInjections } from './types.js'
 
 export interface ExchangeStep {
@@ -7,7 +8,6 @@ export interface ExchangeStep {
   readonly body?: Readonly<Record<string, string>>
   readonly extract: string
   readonly as?: string
-  readonly expires_field?: string
 }
 
 export interface ExchangeChainConfig {
@@ -38,9 +38,9 @@ function substituteTemplates(value: string, extracted: ReadonlyMap<string, strin
 export async function resolveExchangeChain(
   handle: BrowserHandle,
   config: ExchangeChainConfig,
-  serverUrl: string,
+  _serverUrl: string,
   deps: ExchangeChainDeps = {},
-): Promise<ResolvedInjections> {
+): Promise<ResolvedInjections & { queryParams?: Readonly<Record<string, string>> }> {
   const fetchImpl = deps.fetchImpl ?? fetch
   const ssrfValidator = deps.ssrfValidator
 
@@ -136,8 +136,8 @@ export async function resolveExchangeChain(
     }
 
     // Extract value using dot-path from response
-    const value = extractPath(responseData, step.extract)
-    if (!value) {
+    const value = getValueAtPath(responseData, step.extract)
+    if (value === undefined || value === null) {
       throw new OpenWebError({
         error: 'execution_failed',
         code: 'EXECUTION_FAILED',
@@ -148,30 +148,22 @@ export async function resolveExchangeChain(
       })
     }
 
-    lastValue = value
-    extracted.set(step.as ?? step.extract, value)
+    lastValue = String(value)
+    extracted.set(step.as ?? step.extract, lastValue)
   }
 
   // Build final injection
   const resultHeaders: Record<string, string> = {}
+  const queryParams: Record<string, string> = {}
   if (config.inject.header) {
     resultHeaders[config.inject.header] = (config.inject.prefix ?? '') + lastValue
   }
-
-  return { headers: resultHeaders }
-}
-
-function extractPath(data: unknown, path: string): string | undefined {
-  const segments = path.split('.')
-  let current: unknown = data
-
-  for (const segment of segments) {
-    if (current === null || current === undefined || typeof current !== 'object') {
-      return undefined
-    }
-    current = (current as Record<string, unknown>)[segment]
+  if (config.inject.query) {
+    queryParams[config.inject.query] = lastValue
   }
 
-  if (current === null || current === undefined) return undefined
-  return String(current)
+  return {
+    headers: resultHeaders,
+    ...(Object.keys(queryParams).length > 0 ? { queryParams } : {}),
+  }
 }

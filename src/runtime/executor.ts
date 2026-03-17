@@ -17,7 +17,16 @@ import {
 } from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import { connectWithRetry } from '../capture/connection.js'
-import { createNeedsPageError, resolveMode, executeSessionHttp, findPageForOrigin, resolveAllParameters } from './session-executor.js'
+import {
+  buildHeaderParams,
+  buildJsonRequestBody,
+  createNeedsPageError,
+  executeSessionHttp,
+  findPageForOrigin,
+  resolveAllParameters,
+  resolveMode,
+  substitutePath,
+} from './session-executor.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 import { loadAdapter, executeAdapter } from './adapter-executor.js'
 import { executeExtraction } from './extraction-executor.js'
@@ -49,20 +58,27 @@ export async function fetchWithValidatedRedirects(
   inputUrl: string,
   method: string,
   deps: ExecuteDependencies,
+  requestInit: RequestInit = {},
 ): Promise<Response> {
   const fetchImpl = deps.fetchImpl ?? fetch
   const ssrfValidator = deps.ssrfValidator ?? validateSSRF
 
   let current = inputUrl
+  let currentMethod = method
+  let currentBody = requestInit.body
+  const currentHeaders = {
+    Accept: 'application/json',
+    ...((requestInit.headers as Record<string, string> | undefined) ?? {}),
+  }
 
   for (let attempt = 0; attempt <= MAX_REDIRECTS; attempt += 1) {
     await ssrfValidator(current)
 
     const response = await fetchImpl(current, {
-      method,
-      headers: {
-        Accept: 'application/json',
-      },
+      ...requestInit,
+      method: currentMethod,
+      headers: currentHeaders,
+      body: currentMethod !== 'GET' && currentMethod !== 'HEAD' ? currentBody : undefined,
       redirect: 'manual',
     })
 
@@ -83,6 +99,11 @@ export async function fetchWithValidatedRedirects(
     }
 
     current = new URL(location, current).toString()
+
+    if (response.status === 303) {
+      currentMethod = 'GET'
+      currentBody = undefined
+    }
   }
 
   throw new OpenWebError({
@@ -204,8 +225,25 @@ export async function executeOperation(
     }
   } else {
     const serverUrl = getServerUrl(spec, operationRef.operation)
-    const url = buildQueryUrl(serverUrl, operationRef.path, operationRef.operation.parameters, params)
-    const response = await fetchWithValidatedRedirects(url, operationRef.method.toUpperCase(), deps)
+    const allParams = resolveAllParameters(spec, operationRef.operation)
+    const inputParams = validateParams(
+      [...allParams, ...getRequestBodyParameters(operationRef.operation)],
+      params,
+    )
+    const resolvedPath = substitutePath(operationRef.path, allParams, inputParams)
+    const url = buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
+    const requestHeaders = buildHeaderParams(allParams, inputParams)
+    const upperMethod = operationRef.method.toUpperCase()
+    const jsonBody = upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH'
+      ? buildJsonRequestBody(operationRef.operation, inputParams)
+      : undefined
+    if (jsonBody) {
+      requestHeaders['Content-Type'] = 'application/json'
+    }
+    const response = await fetchWithValidatedRedirects(url, upperMethod, deps, {
+      headers: requestHeaders,
+      body: jsonBody,
+    })
 
     if (!response.ok) {
       const httpFailure = getHttpFailure(response.status)
