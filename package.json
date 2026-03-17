@@ -11,7 +11,8 @@
     "dev": "tsx src/cli.ts",
     "lint": "biome lint src scripts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:integration": "tsx tests/integration/runner.ts"
   },
   "engines": {
     "node": ">=20"
