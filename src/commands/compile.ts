@@ -134,6 +134,7 @@ export async function compileSite(
     })
   }
 
+  const MUTATION_METHODS = new Set(['post', 'put', 'patch', 'delete'])
   const clusters = clusterSamples(filteredSamples)
   const analyzedOperations: AnalyzedOperation[] = []
 
@@ -142,6 +143,12 @@ export async function compileSite(
     const differentiatedParams = differentiateParameters(cluster)
     const annotatedParams = annotateParameterDescriptions(differentiatedParams)
     const responseSchema = inferSchema(cluster.samples.map((sample) => sample.responseJson))
+
+    // Gate: mutation ops without any inferred parameters are not useful yet
+    // (no request body inference exists — would emit broken write operations)
+    if (MUTATION_METHODS.has(cluster.method.toLowerCase()) && annotatedParams.length === 0) {
+      continue
+    }
 
     const operationBase = {
       method: cluster.method.toLowerCase(),
@@ -193,8 +200,7 @@ export async function compileSite(
       })
     }
     try {
-      const serverUrl = `https://${new URL(args.url).hostname}`
-      const probeResults = await probeOperations(analyzedOperations, serverUrl, { browser })
+      const probeResults = await probeOperations(analyzedOperations, { browser })
       classifyResult = mergeProbeResults(classifyResult, probeResults)
     } finally {
       await browser.close()

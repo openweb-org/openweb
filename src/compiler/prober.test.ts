@@ -29,7 +29,6 @@ describe('probeOperations', () => {
 
     const results = await probeOperations(
       [mockOperation()],
-      'https://api.example.com',
       { fetchImpl: fetchMock, timeout: 1000, ssrfValidator: noopSsrf },
     )
 
@@ -39,12 +38,25 @@ describe('probeOperations', () => {
     expect(results[0]!.transport).toBe('node')
   })
 
+  it('builds URL from operation.host, not a serverUrl parameter', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    ) as unknown as typeof fetch
+
+    await probeOperations(
+      [mockOperation({ host: 'api.other.com', path: '/v2/items' })],
+      { fetchImpl: fetchMock, timeout: 1000, ssrfValidator: noopSsrf },
+    )
+
+    const calledUrl = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]
+    expect(calledUrl).toBe('https://api.other.com/v2/items')
+  })
+
   it('skips non-GET operations', async () => {
     const fetchMock = vi.fn() as unknown as typeof fetch
 
     const results = await probeOperations(
       [mockOperation({ method: 'post', operationId: 'create_item' })],
-      'https://api.example.com',
       { fetchImpl: fetchMock, timeout: 1000, ssrfValidator: noopSsrf },
     )
 
@@ -59,7 +71,6 @@ describe('probeOperations', () => {
 
     const results = await probeOperations(
       [mockOperation()],
-      'https://api.example.com',
       { fetchImpl: fetchMock, timeout: 1000, ssrfValidator: noopSsrf },
     )
 
@@ -86,7 +97,6 @@ describe('probeOperations', () => {
 
     const results = await probeOperations(
       [mockOperation()],
-      'https://api.example.com',
       { fetchImpl: fetchMock, browser: mockBrowser, timeout: 1000, ssrfValidator: noopSsrf },
     )
 
@@ -102,11 +112,70 @@ describe('probeOperations', () => {
 
     const results = await probeOperations(
       [mockOperation()],
-      'https://api.example.com',
       { fetchImpl: fetchMock, timeout: 1000, ssrfValidator: noopSsrf },
     )
 
     expect(results).toHaveLength(0)
+  })
+
+  it('validates SSRF on redirect hops (rejects internal redirect)', async () => {
+    const ssrfCalls: string[] = []
+    const ssrfValidator = async (url: string) => {
+      ssrfCalls.push(url)
+      if (url.includes('169.254.169.254')) {
+        throw new Error('SSRF blocked')
+      }
+    }
+
+    // First call returns a redirect to a metadata IP
+    let callCount = 0
+    const fetchMock = vi.fn(async () => {
+      callCount++
+      if (callCount === 1) {
+        return new Response('', {
+          status: 302,
+          headers: { Location: 'http://169.254.169.254/latest/meta-data/' },
+        })
+      }
+      return new Response('', { status: 200 })
+    }) as unknown as typeof fetch
+
+    const results = await probeOperations(
+      [mockOperation()],
+      { fetchImpl: fetchMock, timeout: 1000, ssrfValidator },
+    )
+
+    // Probe should fail — redirect to metadata IP blocked
+    expect(results).toHaveLength(0)
+    // SSRF validator called for both the original URL and the redirect target
+    expect(ssrfCalls).toHaveLength(2)
+    expect(ssrfCalls[1]).toContain('169.254.169.254')
+  })
+
+  it('counts 401→cookie escalation as 2 outbound requests toward budget', async () => {
+    let callCount = 0
+    const fetchMock = vi.fn(async () => {
+      callCount++
+      if (callCount % 2 === 1) return new Response('', { status: 401 })
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    }) as unknown as typeof fetch
+
+    const mockBrowser = {
+      contexts: () => [{
+        cookies: vi.fn(async () => [
+          { name: 'session', value: 'abc', domain: '.example.com', path: '/' },
+        ]),
+      }],
+    } as unknown as import('playwright').Browser
+
+    const results = await probeOperations(
+      [mockOperation()],
+      { fetchImpl: fetchMock, browser: mockBrowser, timeout: 1000, ssrfValidator: noopSsrf },
+    )
+
+    expect(results).toHaveLength(1)
+    // 2 requests: unauthenticated (401) + authenticated (200)
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2)
   })
 })
 
@@ -127,7 +196,20 @@ describe('mergeProbeResults', () => {
 
     const merged = mergeProbeResults(baseClassify, probes)
     expect(merged.transport).toBe('node')
-    expect(merged.auth).toBeUndefined()
+  })
+
+  it('preserves auth even when all GET probes succeed without auth (fail-closed)', () => {
+    const probes: ProbeResult[] = [{
+      operationId: 'get_data',
+      transport: 'node',
+      authRequired: false,
+      status: 200,
+      probeMethod: 'node_no_auth',
+    }]
+
+    const merged = mergeProbeResults(baseClassify, probes)
+    // Auth preserved — mutations may still need it
+    expect(merged.auth).toEqual({ type: 'cookie_session' })
   })
 
   it('preserves classify auth when probe shows auth needed', () => {

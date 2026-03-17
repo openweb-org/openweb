@@ -3,6 +3,7 @@ import type { Browser } from 'playwright'
 import type { AnalyzedOperation } from './types.js'
 import type { ClassifyResult } from './analyzer/classify.js'
 import { validateSSRF } from '../lib/ssrf.js'
+import { fetchWithRedirects } from '../runtime/redirect.js'
 
 export interface ProbeResult {
   readonly operationId: string
@@ -22,58 +23,75 @@ export interface ProbeOptions {
 
 const PROBE_TIMEOUT = 5000
 const PROBE_DELAY = 500
-const MAX_TOTAL_PROBES = 30
+const MAX_OUTBOUND_REQUESTS = 30
 
-/** Probe a single GET operation through the escalation ladder */
-async function probeOne(
-  operation: AnalyzedOperation,
-  serverUrl: string,
-  browser: Browser | undefined,
+/** Fetch with per-hop SSRF validation, cross-origin header stripping, and timeout */
+async function probeFetch(
+  url: string,
+  headers: Record<string, string>,
   options: ProbeOptions,
-): Promise<ProbeResult | null> {
-  // Only probe GET — mutations are not safe to replay
-  if (operation.method.toLowerCase() !== 'get') return null
-
+): Promise<Response> {
   const fetchImpl = options.fetchImpl ?? fetch
   const ssrfValidator = options.ssrfValidator ?? validateSSRF
   const timeout = options.timeout ?? PROBE_TIMEOUT
-  const url = `${serverUrl}${operation.path}`
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeout)
+  try {
+    // Wrap fetchImpl to inject abort signal
+    const wrappedFetch: typeof fetch = (input, init) =>
+      fetchImpl(input, { ...init, signal: controller.signal })
+    return await fetchWithRedirects(url, 'GET', headers, undefined, {
+      fetchImpl: wrappedFetch,
+      ssrfValidator,
+    })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** Probe a single GET operation through the escalation ladder. Returns [result, requestCount]. */
+async function probeOne(
+  operation: AnalyzedOperation,
+  browser: Browser | undefined,
+  options: ProbeOptions,
+  remainingBudget: number,
+): Promise<[ProbeResult | null, number]> {
+  // Only probe GET — mutations are not safe to replay
+  if (operation.method.toLowerCase() !== 'get') return [null, 0]
+  if (remainingBudget <= 0) return [null, 0]
+
+  const url = `https://${operation.host}${operation.path}`
+  let requestsMade = 0
 
   // Step 1: node no auth
   try {
-    await ssrfValidator(url)
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeout)
-    const response = await fetchImpl(url, {
-      headers: { Accept: 'application/json' },
-      redirect: 'follow',
-      signal: controller.signal,
-    })
-    clearTimeout(timer)
+    requestsMade++
+    const response = await probeFetch(url, { Accept: 'application/json' }, options)
 
     if (response.ok) {
-      return {
+      return [{
         operationId: operation.operationId,
         transport: 'node',
         authRequired: false,
         status: response.status,
         probeMethod: 'node_no_auth',
-      }
+      }, requestsMade]
     }
 
     if (response.status === 401 || response.status === 403) {
       // Needs auth — try step 2
     } else {
       // Other error (404, 500, etc.) — can't determine, skip
-      return null
+      return [null, requestsMade]
     }
   } catch {
     // Network error, SSRF block, timeout — can't determine
-    return null
+    return [null, requestsMade]
   }
 
   // Step 2: node with auth (browser cookies)
-  if (browser) {
+  if (browser && remainingBudget - requestsMade > 0) {
     try {
       const context = browser.contexts()[0]
       if (context) {
@@ -90,23 +108,21 @@ async function probeOne(
           .join('; ')
 
         if (cookieStr) {
-          const controller = new AbortController()
-          const timer = setTimeout(() => controller.abort(), timeout)
-          const response = await fetchImpl(url, {
-            headers: { Accept: 'application/json', Cookie: cookieStr },
-            redirect: 'follow',
-            signal: controller.signal,
-          })
-          clearTimeout(timer)
+          requestsMade++
+          const response = await probeFetch(
+            url,
+            { Accept: 'application/json', Cookie: cookieStr },
+            options,
+          )
 
           if (response.ok) {
-            return {
+            return [{
               operationId: operation.operationId,
               transport: 'node',
               authRequired: true,
               status: response.status,
               probeMethod: 'node_with_auth',
-            }
+            }, requestsMade]
           }
         }
       }
@@ -115,10 +131,7 @@ async function probeOne(
     }
   }
 
-  // Step 3: page (browser_fetch) — would need full page.evaluate which is heavy
-  // For now, if node_with_auth failed, mark as needing page transport
-  // (actual page probing requires a matching tab which we can't guarantee)
-  return null
+  return [null, requestsMade]
 }
 
 /**
@@ -128,26 +141,28 @@ async function probeOne(
  */
 export async function probeOperations(
   operations: AnalyzedOperation[],
-  serverUrl: string,
   options: ProbeOptions = {},
 ): Promise<ProbeResult[]> {
   const results: ProbeResult[] = []
-  let probeCount = 0
+  let totalRequests = 0
 
   for (const operation of operations) {
-    if (probeCount >= MAX_TOTAL_PROBES) break
+    if (totalRequests >= MAX_OUTBOUND_REQUESTS) break
 
     // Skip non-GET early — don't consume probe budget
     if (operation.method.toLowerCase() !== 'get') continue
 
-    const result = await probeOne(operation, serverUrl, options.browser, options)
+    const [result, requestsMade] = await probeOne(
+      operation, options.browser, options, MAX_OUTBOUND_REQUESTS - totalRequests,
+    )
+    totalRequests += requestsMade
+
     if (result) {
       results.push(result)
     }
-    probeCount++
 
     // Rate limit between probes
-    if (probeCount < operations.length) {
+    if (totalRequests < MAX_OUTBOUND_REQUESTS) {
       await new Promise((r) => setTimeout(r, PROBE_DELAY))
     }
   }
@@ -157,7 +172,8 @@ export async function probeOperations(
 
 /**
  * Merge probe results with classify heuristics.
- * Probe is ground truth — overrides heuristic when available.
+ * Fail-closed: probe only overrides transport, never drops auth.
+ * Since mutations are never probed, auth must be preserved from classify.
  */
 export function mergeProbeResults(
   classify: ClassifyResult,
@@ -165,19 +181,12 @@ export function mergeProbeResults(
 ): ClassifyResult {
   if (probes.length === 0) return classify
 
-  // Check if any probe succeeded without auth
-  const noAuthSuccess = probes.some((p) => !p.authRequired)
-  // Check if any probe needed auth
-  const authNeeded = probes.some((p) => p.authRequired)
-
-  // Determine transport: if all successful probes used node, keep node
+  // Determine transport: if all successful probes used node, override to node
   const allNode = probes.every((p) => p.transport === 'node')
 
   return {
     ...classify,
     transport: allNode ? 'node' : classify.transport,
-    // If probes show no auth needed but classify detected auth, trust the probe
-    // (but only if ALL probed operations succeeded without auth)
-    auth: noAuthSuccess && !authNeeded ? undefined : classify.auth,
+    // Auth is always preserved — probes only cover GET, mutations may still need auth
   }
 }
