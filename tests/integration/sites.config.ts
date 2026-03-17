@@ -7,6 +7,8 @@ export interface SiteIntegrationTest {
   readonly site: string
   readonly page_url: string
   readonly requires_login: boolean
+  /** Mark as flaky if the site rate-limits or returns intermittent errors. */
+  readonly flaky?: boolean
   readonly smoke: {
     readonly operation: string
     readonly params: Record<string, unknown>
@@ -168,6 +170,7 @@ export const sites: SiteIntegrationTest[] = [
     site: 'ipapi-fixture',
     page_url: 'https://ipapi.co',
     requires_login: false,
+    flaky: true, // Rate-limited: may return 429 under load
     smoke: { operation: 'lookupIp', params: { ip: '8.8.8.8' } },
   },
 ]

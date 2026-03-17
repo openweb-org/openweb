@@ -159,7 +159,8 @@ paths:
       operationId: graphqlQuery
       summary: Execute a GraphQL query
       x-openweb:
-        risk_tier: low
+        # medium: unrestricted query string can carry mutations
+        risk_tier: medium
         build:
           stable_id: gh0004
           tool_version: 1

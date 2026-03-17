@@ -96,6 +96,20 @@ describe('classify', () => {
     expect(result.auth).toBeUndefined()
   })
 
+  it('rejects cookie_session when request cookies have no overlap with snapshot cookies', () => {
+    // Analytics/consent cookies in requests but session cookies only in snapshots
+    const data: CaptureData = {
+      harEntries: [
+        makeHarEntry({ headers: [{ name: 'Cookie', value: 'analytics_id=abc; _ga=GA1.2' }] }),
+      ],
+      stateSnapshots: [makeSnapshot([{ name: 'sessionid', value: 'secret' }])],
+    }
+
+    const result = classify(data)
+    expect(result.transport).toBe('node')
+    expect(result.auth).toBeUndefined()
+  })
+
   it('returns node when no state snapshots', () => {
     const data: CaptureData = {
       harEntries: [makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] })],

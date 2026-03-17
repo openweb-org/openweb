@@ -1,7 +1,7 @@
 import type { PaginationPrimitive } from '../types/primitives.js'
 import type { ExecuteDependencies, ExecuteResult } from './executor.js'
 import { OpenWebError } from '../lib/errors.js'
-import { findOperation, loadOpenApi } from '../lib/openapi.js'
+import { findOperation, loadOpenApi, type OpenApiParameter } from '../lib/openapi.js'
 import { getValueAtPath, setValueAtPath } from './value-path.js'
 
 const MAX_PAGES = 10
@@ -76,7 +76,7 @@ export async function executePaginated(
     case 'cursor':
       return executeCursorPagination(site, operationId, params, pagination, maxPages, opts.deps)
     case 'link_header':
-      return executeLinkHeaderPagination(site, operationId, params, pagination, maxPages, opts.deps)
+      return executeLinkHeaderPagination(site, operationId, params, pagination, maxPages, operationRef.operation.parameters ?? [], opts.deps)
     default:
       throw new OpenWebError({
         error: 'execution_failed',
@@ -124,18 +124,36 @@ async function executeCursorPagination(
   return { items: allItems, pages }
 }
 
+/** Coerce a string value to match a declared parameter type (integer, number). */
+function coerceParamType(value: string, paramSchema: OpenApiParameter | undefined): unknown {
+  const schemaType = paramSchema?.schema?.type
+  if (schemaType === 'integer') {
+    const parsed = Number.parseInt(value, 10)
+    return Number.isNaN(parsed) ? value : parsed
+  }
+  if (schemaType === 'number') {
+    const parsed = Number.parseFloat(value)
+    return Number.isNaN(parsed) ? value : parsed
+  }
+  return value
+}
+
 async function executeLinkHeaderPagination(
   site: string,
   operationId: string,
   params: Record<string, unknown>,
   config: Extract<PaginationPrimitive, { type: 'link_header' }>,
   maxPages: number,
+  declaredParams: readonly OpenApiParameter[],
   deps?: ExecuteDependencies,
 ): Promise<PaginatedResult> {
   const { executeOperation } = await import('./executor.js')
   const allItems: unknown[] = []
   let currentParams = { ...params }
   let pages = 0
+
+  // Build a lookup from param name → schema for type coercion
+  const paramByName = new Map(declaredParams.map((p) => [p.name, p]))
 
   for (let i = 0; i < maxPages; i++) {
     const result: ExecuteResult = await executeOperation(site, operationId, currentParams, deps)
@@ -148,11 +166,11 @@ async function executeLinkHeaderPagination(
     const nextUrl = parseLinkHeader(linkHeader, config.rel ?? 'next')
     if (!nextUrl) break
 
-    // Extract query params from the next URL and merge into params
+    // Extract query params from the next URL, coercing to declared types
     const url = new URL(nextUrl)
     const nextParams: Record<string, unknown> = { ...params }
     url.searchParams.forEach((value, key) => {
-      nextParams[key] = value
+      nextParams[key] = coerceParamType(value, paramByName.get(key))
     })
     currentParams = nextParams
   }

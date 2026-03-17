@@ -28,7 +28,7 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 /**
  * Detect cookie_session: all API requests carry Cookie headers,
- * and state_snapshots contain cookies that match.
+ * and at least one snapshot cookie name appears in the request Cookie headers.
  */
 function detectCookieSession(data: CaptureData): boolean {
   if (data.harEntries.length === 0 || data.stateSnapshots.length === 0) {
@@ -44,10 +44,15 @@ function detectCookieSession(data: CaptureData): boolean {
 
   if (snapshotCookieNames.size === 0) return false
 
-  // Check: do all HAR entries have Cookie headers?
+  // Check: do all HAR entries have Cookie headers with at least one snapshot cookie name?
   for (const entry of data.harEntries) {
-    const hasCookie = entry.request.headers.some((h) => h.name.toLowerCase() === 'cookie')
-    if (!hasCookie) return false
+    const cookieHeader = entry.request.headers.find((h) => h.name.toLowerCase() === 'cookie')
+    if (!cookieHeader) return false
+
+    // Parse cookie header into names and check overlap with snapshot cookies
+    const requestCookieNames = cookieHeader.value.split(';').map((c) => c.trim().split('=')[0]!)
+    const hasOverlap = requestCookieNames.some((name) => snapshotCookieNames.has(name))
+    if (!hasOverlap) return false
   }
 
   return true

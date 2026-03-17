@@ -403,10 +403,15 @@ export function buildQueryUrl(
 }
 
 export function getResponseSchema(operation: OpenApiOperation): JsonSchema | undefined {
-  return (
-    operation.responses?.['200']?.content?.['application/json']?.schema ??
-    operation.responses?.['2XX']?.content?.['application/json']?.schema
-  )
+  const responses = operation.responses
+  if (!responses) return undefined
+
+  // Check specific status codes in priority order, then 2XX wildcard
+  for (const code of ['200', '201', '202', '204', '2XX']) {
+    const schema = responses[code]?.content?.['application/json']?.schema
+    if (schema) return schema
+  }
+  return undefined
 }
 
 export function getRequestBodySchema(operation: OpenApiOperation): JsonSchema | undefined {

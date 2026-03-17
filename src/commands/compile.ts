@@ -119,7 +119,7 @@ export async function compileSite(
     await cleanupRecordingDir(recordingDir)
   }
 
-  if (filteredSamples.length === 0) {
+  if (filteredSamples.length === 0 && !classifyResult?.extractions) {
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
@@ -162,7 +162,7 @@ export async function compileSite(
     })
   }
 
-  if (analyzedOperations.length === 0) {
+  if (analyzedOperations.length === 0 && !classifyResult?.extractions) {
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',

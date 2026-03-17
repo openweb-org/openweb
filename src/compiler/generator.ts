@@ -129,6 +129,7 @@ function deriveSignals(classify: ClassifyResult | undefined, verified: boolean):
   if (classify?.auth) signals.push('auth_detected')
   if (classify?.csrf) signals.push('csrf_detected')
   if (classify?.signing) signals.push('signing_detected')
+  if (classify?.extractions) signals.push('extraction_detected')
   return signals
 }
 
