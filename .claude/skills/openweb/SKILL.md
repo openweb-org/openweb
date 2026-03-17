@@ -13,11 +13,33 @@ OpenWeb lets you execute API operations against websites using the user's real b
 # All commands run from the openweb project root
 # Use --silent to suppress pnpm banner (important for JSON piping)
 pnpm --silent dev sites                                    # List available sites
+pnpm --silent dev sites --json                             # JSON: [{name, transport, operationCount, permission}]
 pnpm --silent dev <site>                                   # Show operations + readiness info
+pnpm --silent dev <site> --json                            # JSON: {name, operations: [{id, method, path, permission}]}
 pnpm --silent dev <site> <operation>                       # Show operation params + response shape
-pnpm --silent dev <site> exec <op> '<json>' --cdp-endpoint http://localhost:9222  # Execute
-pnpm --silent dev <site> exec <op> '<json>' --cdp-endpoint http://localhost:9222 --max-response 8192  # Agent-safe output
+pnpm --silent dev <site> <operation> --json                # JSON: {id, method, path, permission, parameters}
+pnpm --silent dev <site> <operation> --example             # Generate example params JSON
+pnpm --silent dev <site> exec <op> '<json>'                # Execute (auto-detects managed browser)
+pnpm --silent dev <site> exec <op> '<json>' --cdp-endpoint http://localhost:9222  # Explicit CDP
+pnpm --silent dev <site> exec <op> '<json>' --output file  # Always write response to file
 ```
+
+## Browser Management
+
+For sites that require authentication, Chrome must be running with CDP. Use the managed browser:
+
+```bash
+pnpm --silent dev browser start                    # Copy Chrome profile + launch with CDP on port 9222
+pnpm --silent dev browser start --headless         # Headless mode (no window)
+pnpm --silent dev browser stop                     # Stop managed Chrome (preserves token cache)
+pnpm --silent dev browser restart                  # Re-copy profile + clear token cache + restart
+pnpm --silent dev browser status                   # Check if managed Chrome is running
+pnpm --silent dev login <site>                     # Open site in default browser for login
+```
+
+**How it works:** `browser start` copies auth-relevant files from your default Chrome profile to a temp directory, then launches Chrome with `--remote-debugging-port=9222`. When a managed browser is running, `exec` auto-detects it — no `--cdp-endpoint` needed.
+
+**Token caching:** After a successful authenticated request, cookies are cached in `~/.openweb/tokens/<site>/`. Subsequent requests use the cache (no browser connection needed). Cache auto-expires by TTL (1h default or JWT exp). Run `browser restart` to clear the cache.
 
 ## Workflow: How to Complete a Task
 
@@ -45,7 +67,7 @@ Instagram (3 operations)
 Transport:        node
 Requires browser: yes
 Requires login:   yes
-Risk summary:     safe:2 medium:1
+Permissions:      read:2 write:1
 
 Operations:
   getTimeline            Get the authenticated user's feed
@@ -54,8 +76,8 @@ Operations:
 ```
 
 **Read the readiness info carefully:**
-- `Requires browser: no` → You can execute directly, no `--cdp-endpoint` needed
-- `Requires browser: yes` → Chrome must be running with CDP. Add `--cdp-endpoint http://localhost:9222`
+- `Requires browser: no` → Execute directly, no browser needed
+- `Requires browser: yes` → Run `openweb browser start` first (or pass `--cdp-endpoint`)
 - `Requires login: yes` → The user must be logged in to that site in Chrome
 
 ### Step 3: Inspect the operation
@@ -71,23 +93,38 @@ GET /feed/timeline/
   max_id       string    Pagination cursor for next page.
 Returns: { feed_items, next_max_id, more_available }
 Transport: node
-Risk: safe
+Permission: read
 ```
 
-Use this to build your JSON params object. Only include parameters you need — defaults are applied automatically.
+Use `--example` to generate a ready-to-use params JSON:
+```bash
+pnpm --silent dev <site> <operation> --example
+```
 
 ### Step 4: Execute
 
 ```bash
-pnpm --silent dev <site> exec <operation> '<json-params>' --cdp-endpoint http://localhost:9222
+pnpm --silent dev <site> exec <operation> '<json-params>'
 ```
 
 - **stdout** = JSON result (success)
 - **stderr** = JSON error (failure)
 - Exit code 0 = success, 1 = failure
-- If a response is too large for the current task, add `--max-response 8192` to emit a valid JSON string preview on stdout and get a warning on stderr.
+- **Auto-spill**: If response exceeds `--max-response` (default 4096 bytes), the full response is written to a temp file and stdout returns `{"status":200,"output":"/tmp/openweb-xxx.json","size":125000,"truncated":true}`. Use `jq` or `cat` on the output path to inspect.
+- Use `--output file` to always write to file regardless of size.
 
-Omit `--cdp-endpoint` for sites where `Requires browser: no`.
+## Permission System
+
+Operations are classified by permission category:
+
+| Permission | HTTP Methods | Default Policy |
+|---|---|---|
+| `read` | GET, HEAD | **allow** — executes without prompt |
+| `write` | POST, PUT, PATCH | **prompt** — returns structured error for agent to relay |
+| `delete` | DELETE | **prompt** — returns structured error for agent to relay |
+| `transact` | checkout/purchase/payment paths | **deny** — blocked by default |
+
+When an operation requires `prompt` or higher, the executor returns a `permission_required` error. Relay this to the user for approval. Users can customize policies in `~/.openweb/permissions.yaml`.
 
 ## Error Handling
 
@@ -95,23 +132,13 @@ Errors come as JSON on stderr with a `failureClass` that tells you exactly what 
 
 | failureClass | Meaning | What to Do |
 |---|---|---|
-| `needs_browser` | Chrome isn't running or CDP isn't reachable | Tell the user to start Chrome with `--remote-debugging-port=9222` |
-| `needs_login` | Auth failed — cookies expired or not logged in | Tell the user to log in to the site in Chrome |
-| `needs_page` | Browser is connected but no tab matches the site | Tell the user to open a tab and navigate to the site |
+| `needs_browser` | Chrome isn't running or CDP isn't reachable | Run `openweb browser start` or tell user to start Chrome |
+| `needs_login` | Auth failed — cookies expired or not logged in | Tell user: `openweb login <site>` then `openweb browser restart` |
+| `needs_page` | Browser connected but no tab matches the site | Tell user to open a tab to the site URL |
+| `permission_denied` | Operation blocked by permissions.yaml | Tell user to update `~/.openweb/permissions.yaml` |
+| `permission_required` | Operation needs user approval (write/delete) | Ask user for confirmation before retrying |
 | `retriable` | Transient failure (rate limit, network, timeout) | Wait a few seconds and retry (max 2 retries) |
 | `fatal` | Permanent failure (wrong params, bad site name) | Don't retry. Fix the parameters or check the site name |
-
-**Error response example:**
-```json
-{
-  "error": "execution_failed",
-  "code": "EXECUTION_FAILED",
-  "message": "No browser context available.",
-  "action": "Open Chrome with --remote-debugging-port=9222.",
-  "retriable": true,
-  "failureClass": "needs_browser"
-}
-```
 
 The `action` field contains a human-readable recovery suggestion — relay it to the user.
 
@@ -191,16 +218,17 @@ pnpm --silent dev open-meteo-fixture get_forecast       # Check params: latitude
 pnpm --silent dev open-meteo-fixture exec get_forecast '{"latitude": 52.52, "longitude": 13.41, "hourly": ["temperature_2m"]}'
 ```
 
-No `--cdp-endpoint` needed since it doesn't require browser auth.
+No browser needed since it doesn't require auth.
 
-### Example 2: Authenticated read (node transport)
+### Example 2: Authenticated read (managed browser)
 
 User: "Show my Instagram feed"
 
 ```bash
-pnpm --silent dev instagram-fixture                     # Check: Requires browser: yes, Requires login: yes
-pnpm --silent dev instagram-fixture getTimeline         # Check params
-pnpm --silent dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222 --max-response 8192
+pnpm --silent dev browser start                          # Start managed Chrome with auth
+pnpm --silent dev instagram-fixture                      # Check: Requires browser: yes, Requires login: yes
+pnpm --silent dev instagram-fixture getTimeline          # Check params
+pnpm --silent dev instagram-fixture exec getTimeline '{}'  # Auto-detects managed browser
 ```
 
 ### Example 3: Path parameters
@@ -209,7 +237,7 @@ User: "List 5 issues from facebook/react"
 
 ```bash
 pnpm --silent dev github-fixture listIssues             # Shows: owner (path), repo (path), per_page (query)
-pnpm --silent dev github-fixture exec listIssues '{"owner": "facebook", "repo": "react", "per_page": 5}' --cdp-endpoint http://localhost:9222
+pnpm --silent dev github-fixture exec listIssues '{"owner": "facebook", "repo": "react", "per_page": 5}'
 ```
 
 Path parameters (like `owner` and `repo`) go in the same JSON object as query parameters.
@@ -220,21 +248,24 @@ User: "Get my Discord profile"
 
 ```bash
 pnpm --silent dev discord-fixture getMe                 # No params needed
-pnpm --silent dev discord-fixture exec getMe '{}' --cdp-endpoint http://localhost:9222
+pnpm --silent dev discord-fixture exec getMe '{}'
 ```
 
 ### Example 5: Error recovery
 
 If you get `failureClass: "needs_browser"`:
 ```
-The operation failed because Chrome isn't connected. Please ensure Chrome is running with:
-  --remote-debugging-port=9222
-Then try again.
+Run `openweb browser start` to start Chrome with CDP, then try again.
 ```
 
 If you get `failureClass: "needs_login"`:
 ```
-Authentication failed. Please log in to [site] in Chrome, then try again.
+Run `openweb login <site>` to open the login page, log in, then run `openweb browser restart`.
+```
+
+If you get `failureClass: "permission_required"`:
+```
+This operation requires write permission. Shall I proceed?
 ```
 
 ### Example 6: Extraction-only read
@@ -244,36 +275,38 @@ User: "Show the top Hacker News stories"
 ```bash
 pnpm --silent dev hackernews-fixture                  # Check: Requires browser: yes, Requires login: no
 pnpm --silent dev hackernews-fixture getTopStories    # No params; returns array<{ title, score, author }>
-pnpm --silent dev hackernews-fixture exec getTopStories '{}' --cdp-endpoint http://localhost:9222 --max-response 2048
+pnpm --silent dev hackernews-fixture exec getTopStories '{}'
 ```
-
-The operation runs against the open page state instead of making an HTTP API call, so `needs_page` means the matching tab is missing.
 
 ### Example 7: MSAL-backed auth
 
 User: "Get my Microsoft Word profile"
 
 ```bash
-pnpm --silent dev microsoft-word-fixture                 # Check: Requires browser: yes, Requires login: yes
-pnpm --silent dev microsoft-word-fixture getProfile      # No params; response comes from Microsoft Graph
-pnpm --silent dev microsoft-word-fixture exec getProfile '{}' --cdp-endpoint http://localhost:9222
+pnpm --silent dev microsoft-word-fixture exec getProfile '{}'
 ```
 
 The runtime reads Word's MSAL token cache from browser storage and injects a Graph bearer token automatically.
 
-### Example 8: GraphQL API (New Relic)
-
-User: "List my New Relic dashboards"
+### Example 8: Machine-readable output
 
 ```bash
-pnpm --silent dev newrelic-fixture                        # Check: Requires browser: yes, Requires login: yes
-pnpm --silent dev newrelic-fixture listDashboards         # Check params (query + variables default to dashboard search)
-pnpm --silent dev newrelic-fixture exec listDashboards '{}' --cdp-endpoint http://localhost:9222 --max-response 4096
+pnpm --silent dev sites --json                         # JSON array of all sites
+pnpm --silent dev github-fixture --json                # JSON site + operations
+pnpm --silent dev github-fixture listIssues --example  # Example params JSON
 ```
 
-The runtime sends the default GraphQL query with session cookies. Headers (`newrelic-requesting-services`, `x-requested-with`) are auto-populated from spec defaults.
-
 ## Lifecycle Commands
+
+### Browser Management
+
+```bash
+pnpm --silent dev browser start [--headless] [--port 9222]
+pnpm --silent dev browser stop
+pnpm --silent dev browser restart
+pnpm --silent dev browser status
+pnpm --silent dev login <site>
+```
 
 ### Verify (Drift Detection)
 
@@ -284,12 +317,6 @@ pnpm --silent dev verify --all --report            # JSON drift report
 pnpm --silent dev verify --all --report markdown   # Markdown drift report
 ```
 
-- **PASS** = test passes, response fingerprint matches
-- **DRIFT** = test passes but response shape changed (schema drift)
-- **FAIL** = test fails (status error, auth expired, endpoint removed)
-- Auth drift (401/403) is classified separately — not auto-quarantined
-- Quarantined sites show ⚠️ in `openweb sites` output
-
 ### Registry (Version Management)
 
 ```bash
@@ -299,14 +326,12 @@ pnpm --silent dev registry rollback <site>         # Revert to previous version
 pnpm --silent dev registry show <site>             # Show version history
 ```
 
-Registry lives at `~/.openweb/registry/`. Max 5 versions retained per site.
-
 ## Important Notes
 
 - Always check readiness metadata (Step 2) before executing — it prevents wasted retries
-- The `--cdp-endpoint` flag is required for any site where `Requires browser: yes`
+- Use `openweb browser start` for authenticated sites — it auto-detects, no `--cdp-endpoint` needed
 - JSON params must be a single-quoted string containing a JSON object: `'{"key": "value"}'`
-- For sites where `Requires browser: no`, omit `--cdp-endpoint` entirely — it's not needed and not used
-- Response data can be large (e.g., full feed responses) — prefer `--max-response 8192` unless you explicitly need the full payload. When truncation happens, stdout is a JSON string preview of the serialized response, not the original response shape.
-- Operations with `Risk: medium` or higher involve mutations (likes, stars, posts) — confirm with the user before executing
-- The CDP endpoint `http://localhost:9222` is the standard port — only change if the user specifies otherwise
+- For sites where `Requires browser: no`, no browser or CDP endpoint is needed
+- Large responses auto-spill to temp files when over `--max-response` (default 4096 bytes). The stdout pointer includes the file path.
+- Operations with `Permission: write` or higher involve mutations — the permission system will prompt for confirmation
+- The token cache at `~/.openweb/tokens/` speeds up repeated authenticated requests. Run `browser restart` to clear it.

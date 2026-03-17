@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
+import { mkdtempSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 
 import { executeOperation } from './executor.js'
 import type { PermissionsConfig } from '../lib/permissions.js'
@@ -6,6 +9,8 @@ import type { PermissionsConfig } from '../lib/permissions.js'
 const ALL_ALLOW: PermissionsConfig = {
   defaults: { read: 'allow', write: 'allow', delete: 'allow', transact: 'allow' },
 }
+
+const TOKEN_CACHE_DIR = mkdtempSync(join(tmpdir(), 'openweb-test-tokens-'))
 
 /**
  * Create a mock browser that simulates an already-logged-in Instagram session.
@@ -53,6 +58,7 @@ describe('executeOperation with instagram-fixture (node transport)', () => {
         browser: mockInstagramBrowser(),
         fetchImpl: fetchMock,
         ssrfValidator: async () => {},
+        tokenCacheDir: TOKEN_CACHE_DIR,
       },
     )
 
@@ -90,6 +96,7 @@ describe('executeOperation with instagram-fixture (node transport)', () => {
         browser: mockInstagramBrowser(),
         fetchImpl: fetchMock,
         ssrfValidator: async () => {},
+        tokenCacheDir: TOKEN_CACHE_DIR,
       },
     )
 
@@ -117,6 +124,7 @@ describe('executeOperation with instagram-fixture (node transport)', () => {
         fetchImpl: fetchMock,
         ssrfValidator: async () => {},
         permissionsConfig: ALL_ALLOW,
+        tokenCacheDir: TOKEN_CACHE_DIR,
       },
     )
 
@@ -151,6 +159,7 @@ describe('executeOperation with instagram-fixture (node transport)', () => {
         browser: mockInstagramBrowser(),
         fetchImpl: fetchMock,
         ssrfValidator: async () => {},
+        tokenCacheDir: TOKEN_CACHE_DIR,
       },
     )
 
@@ -175,7 +184,7 @@ describe('node transport regression', () => {
       'open-meteo-fixture',
       'search_location',
       { name: 'Berlin', count: 1 },
-      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+      { fetchImpl: fetchMock, ssrfValidator: async () => {}, tokenCacheDir: TOKEN_CACHE_DIR },
     )
 
     expect(result.status).toBe(200)
