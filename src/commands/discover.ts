@@ -23,7 +23,13 @@ export async function discoverCommand(opts: DiscoverCommandOptions): Promise<voi
   const result = await discover(discoverOpts)
 
   if (result.operationCount === 0) {
-    process.stdout.write('\nNo operations discovered. Try browsing the site manually first.\n')
+    if (result.humanHandoff) {
+      process.stdout.write(`\nhuman_handoff: ${result.humanHandoff.type}\n`)
+      process.stdout.write(`  URL: ${result.humanHandoff.url}\n`)
+      process.stdout.write(`  Action: ${result.humanHandoff.action}\n`)
+    } else {
+      process.stdout.write('\nNo operations discovered. Try browsing the site manually first.\n')
+    }
     return
   }
 

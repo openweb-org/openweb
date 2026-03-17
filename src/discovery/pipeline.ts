@@ -14,6 +14,7 @@ import { cleanupRecordingDir, loadCaptureData, loadRecordedSamples } from '../co
 import type { AnalyzedOperation, ParameterDescriptor } from '../compiler/types.js'
 import { interactiveCapture, type InteractiveCaptureOptions } from './capture.js'
 import { explorePage, exploreForIntents } from './explorer.js'
+import { detectHandoffNeeded, type HumanHandoffNeeded } from './handoff.js'
 import { analyzeIntents, type Intent, type IntentAnalysis } from './intent.js'
 import { takePageSnapshot } from './page-snapshot.js'
 
@@ -47,6 +48,7 @@ export interface DiscoverResult {
     readonly matched: Intent[]
     readonly gaps: Intent[]
   }
+  readonly humanHandoff?: HumanHandoffNeeded
 }
 
 function siteSlugFromUrl(urlString: string): string {
@@ -204,6 +206,18 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
     await cleanupRecordingDir(exploreDir)
   }
 
+  // Check for human handoff conditions before disconnecting browser
+  let humanHandoff: HumanHandoffNeeded | null = null
+  try {
+    humanHandoff = await detectHandoffNeeded(capture.page)
+    if (humanHandoff) {
+      log(`\n⚠ ${humanHandoff.type} detected at ${humanHandoff.url}`)
+      log(`  Action: ${humanHandoff.action}`)
+    }
+  } catch {
+    // detection failure is non-fatal
+  }
+
   // Disconnect browser (Fix #4: prevent leaked Playwright connections)
   try {
     capture.browser.disconnect()
@@ -240,8 +254,12 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
   }
 
   if (filteredSamples.length === 0 && !classifyResult?.extractions) {
-    log('WARNING: No API endpoints discovered. The site may require more interaction.')
-    return { site, outputRoot: '', operationCount: 0, explorationStats, intentCoverage: intentAnalysis ? { matched: intentAnalysis.matched.map((m) => m.intent), gaps: intentAnalysis.gaps.map((g) => g.intent) } : undefined }
+    if (humanHandoff) {
+      log(`human_handoff: ${humanHandoff.type} — ${humanHandoff.action}`)
+    } else {
+      log('WARNING: No API endpoints discovered. The site may require more interaction.')
+    }
+    return { site, outputRoot: '', operationCount: 0, explorationStats, humanHandoff: humanHandoff ?? undefined, intentCoverage: intentAnalysis ? { matched: intentAnalysis.matched.map((m) => m.intent), gaps: intentAnalysis.gaps.map((g) => g.intent) } : undefined }
   }
 
   const clusters = clusterSamples(filteredSamples)
@@ -317,5 +335,6 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
     operationCount: analyzedOperations.length,
     explorationStats,
     intentCoverage,
+    humanHandoff: humanHandoff ?? undefined,
   }
 }
