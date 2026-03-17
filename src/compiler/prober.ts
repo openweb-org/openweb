@@ -83,7 +83,7 @@ async function probeOne(
             try {
               const urlHost = new URL(url).hostname
               const cookieDomain = c.domain.replace(/^\./, '')
-              return urlHost.endsWith(cookieDomain) || cookieDomain.endsWith(urlHost)
+              return urlHost === cookieDomain || urlHost.endsWith('.' + cookieDomain)
             } catch { return false }
           })
           .map((c) => `${c.name}=${c.value}`)
@@ -136,6 +136,9 @@ export async function probeOperations(
 
   for (const operation of operations) {
     if (probeCount >= MAX_TOTAL_PROBES) break
+
+    // Skip non-GET early — don't consume probe budget
+    if (operation.method.toLowerCase() !== 'get') continue
 
     const result = await probeOne(operation, serverUrl, options.browser, options)
     if (result) {

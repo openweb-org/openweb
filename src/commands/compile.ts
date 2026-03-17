@@ -12,6 +12,8 @@ import { filterSamples } from '../compiler/analyzer/filter.js'
 import { inferSchema } from '../compiler/analyzer/schema.js'
 import { generatePackage } from '../compiler/generator.js'
 import { cleanupRecordingDir, loadCaptureData, loadRecordedSamples, runScriptedRecording } from '../compiler/recorder.js'
+import { probeOperations, mergeProbeResults } from '../compiler/prober.js'
+import { connectWithRetry } from '../capture/connection.js'
 import type { AnalyzedOperation, ParameterDescriptor, RecordedRequestSample } from '../compiler/types.js'
 import { fetchWithValidatedRedirects } from '../runtime/executor.js'
 
@@ -19,6 +21,8 @@ interface CompileArgs {
   readonly url: string
   readonly script?: string
   readonly interactive?: boolean
+  readonly probe?: boolean
+  readonly cdpEndpoint?: string
 }
 
 interface CompileSiteOptions {
@@ -104,7 +108,7 @@ export async function compileSite(
 
   const recordingDir = await runScriptedRecording(scriptPath)
   let filteredSamples: RecordedRequestSample[] = []
-  let classifyResult: ReturnType<typeof classify> | undefined
+  let classifyResult: ReturnType<typeof classify> | undefined // mutable: probe may override
   const site = siteSlugFromUrl(args.url)
   try {
     const recordedSamples = await loadRecordedSamples(recordingDir)
@@ -170,6 +174,31 @@ export async function compileSite(
       retriable: false,
       failureClass: 'fatal',
     })
+  }
+
+  // Probe: validate classify heuristics with real requests (opt-in)
+  if (args.probe && classifyResult) {
+    const cdpEndpoint = args.cdpEndpoint ?? 'http://localhost:9222'
+    let browser
+    try {
+      browser = await connectWithRetry(cdpEndpoint, 1)
+    } catch {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: '--probe requires a managed browser. Could not connect to CDP.',
+        action: `Run \`openweb browser start\` first, then retry with --probe.`,
+        retriable: true,
+        failureClass: 'needs_browser',
+      })
+    }
+    try {
+      const serverUrl = `https://${new URL(args.url).hostname}`
+      const probeResults = await probeOperations(analyzedOperations, serverUrl, { browser })
+      classifyResult = mergeProbeResults(classifyResult, probeResults)
+    } finally {
+      await browser.close()
+    }
   }
 
   const outputRoot = await generatePackage({

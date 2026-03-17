@@ -134,13 +134,17 @@ await yargs(argv)
       cmd
         .positional('url', { type: 'string', demandOption: true })
         .option('script', { type: 'string', describe: 'Playwright script file path' })
-        .option('interactive', { type: 'boolean', default: false, describe: 'Use interactive recording mode' }),
+        .option('interactive', { type: 'boolean', default: false, describe: 'Use interactive recording mode' })
+        .option('probe', { type: 'boolean', default: false, describe: 'Probe operations to validate classify heuristics (requires managed browser)' })
+        .option('cdp-endpoint', { type: 'string', default: 'http://localhost:9222', describe: 'CDP endpoint for --probe' }),
     async (args) => {
       await withErrorHandling(async () => {
         await compileCommand({
           url: String(args.url),
           script: args.script ? String(args.script) : undefined,
           interactive: Boolean(args.interactive),
+          probe: Boolean(args.probe),
+          cdpEndpoint: args['cdp-endpoint'] ? String(args['cdp-endpoint']) : undefined,
         })
       })
     },
