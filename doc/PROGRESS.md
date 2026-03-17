@@ -1,3 +1,35 @@
+## M10: Compiler L2 + Semi-auto Pipeline — DONE (2026-03-17)
+
+**Goal:** Make compiler produce usable L2 specs, expand to ~25 sites, validate semi-auto pipeline.
+
+**Actual Result:**
+- Theme 1: Compiler L2 Emit
+  - Fixed signing emission bug (classify detected sapisidhash but generator never emitted it)
+  - Added extraction detection (ssr_next_data, script_json) to classify.ts
+  - Generator emits skeleton extraction operations with placeholder paths
+  - Build.signals array derived from classify results
+  - Parity test now validates x-openweb AJV validation on generated specs
+  - Wired classify() into compile pipeline (loadCaptureData → classify → generatePackage)
+- Theme 2: Site Expansion (15 → 25)
+  - 10 new L1 fixtures: StackOverflow, CoinGecko, Wikipedia, npm, DuckDuckGo, JSONPlaceholder, Dog CEO, GitHub Public, REST Countries, IP API
+  - Extended GitHub fixture with GraphQL POST /graphql operation
+  - Fixed buildQueryUrl() body param rejection bug
+  - All new fixtures verified against live APIs
+  - Integration test configs updated for all 25 sites
+- Theme 3: Semi-auto Pipeline Validation
+  - Round-trip test: Open-Meteo capture → compile → compare = 4/4 operations match
+  - scripts/roundtrip-test.ts for repeatable validation
+
+**Exit Criteria:**
+- ✅ Compiler emits signing, extraction detection, build signals
+- ✅ 25 total sites (15 original + 10 new)
+- ✅ Round-trip pipeline validated on Open-Meteo
+- ✅ 269/269 tests pass, zero regression
+
+**Verification:** 269/269 unit tests pass; all new L1 fixtures verified against live APIs
+
+---
+
 ## 2026-03-17: M9 Codex review fixes — redirect hardening, load-time validation, schema cleanup
 
 **What changed:**

@@ -1,6 +1,6 @@
 ---
 name: openweb
-description: Access 15 web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo, Walmart, Hacker News, Microsoft Word, New Relic) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", "read Hacker News", "list New Relic dashboards", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
+description: Access 25 web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo, Walmart, Hacker News, Microsoft Word, New Relic, ChatGPT, X, StackOverflow, CoinGecko, Wikipedia, npm, DuckDuckGo, JSONPlaceholder, Dog CEO, GitHub Public, REST Countries, IP API) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", "read Hacker News", "list New Relic dashboards", "search StackOverflow", "check crypto prices", "look up Wikipedia", "search npm packages", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
 ---
 
 # OpenWeb — Web Service Access via CLI
@@ -142,6 +142,16 @@ Sites use different transports depending on their API structure. You don't need 
 | `x-fixture` | page | cookie + CSRF (all methods) | `listFollowing` — followed accounts |
 | `whatsapp-fixture` | adapter (L3) | browser state | `getChats` — chat list |
 | `telegram-fixture` | adapter (L3) | browser state | `getDialogs` — dialog list |
+| `stackoverflow-fixture` | node | none | `search` — search + answers |
+| `coingecko-fixture` | node | none | `getPrice` — crypto prices |
+| `wikipedia-fixture` | node | none | `search` — search + page summary |
+| `npm-fixture` | node | none | `getPackage` — package lookup + search |
+| `duckduckgo-fixture` | node | none | `instantAnswer` — instant answer |
+| `jsonplaceholder-fixture` | node | none | `getPosts` — CRUD posts |
+| `dogceo-fixture` | node | none | `randomImage` — random dog images |
+| `github-public-fixture` | node | none | `listRepos` — public repos + stargazers (link_header pagination) |
+| `restcountries-fixture` | node | none | `search` — country search |
+| `ipapi-fixture` | node | none | `lookup` — IP geolocation |
 
 ## Common Workflow Examples
 
