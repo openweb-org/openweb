@@ -7,13 +7,23 @@ const injectSchema = {
     header: { type: 'string' },
     prefix: { type: 'string' },
     query: { type: 'string' },
-    body_field: { type: 'string' },
-    body_merge: { type: 'boolean' },
+    json_body_path: { type: 'string' },
   },
   additionalProperties: false,
 } as const
 
-const exchangeStepSchema = {
+const exchangeCookieStepSchema = {
+  type: 'object',
+  required: ['extract_from', 'call', 'extract'],
+  properties: {
+    extract_from: { const: 'cookie' },
+    call: { type: 'string' },
+    extract: { type: 'string' },
+  },
+  additionalProperties: false,
+} as const
+
+const exchangeHttpStepSchema = {
   type: 'object',
   required: ['call', 'extract'],
   properties: {
@@ -22,13 +32,17 @@ const exchangeStepSchema = {
     headers: { type: 'object', additionalProperties: { type: 'string' } },
     body: { type: 'object', additionalProperties: { type: 'string' } },
     extract: { type: 'string' },
-    extract_from: { type: 'string', enum: ['body', 'cookie'] },
+    extract_from: { const: 'body' },
     as: { type: 'string' },
   },
   additionalProperties: false,
 } as const
 
-// ── Auth (9 variants) ──────────────────────────────
+const exchangeStepSchema = {
+  oneOf: [exchangeCookieStepSchema, exchangeHttpStepSchema],
+} as const
+
+// ── Auth (7 variants) ──────────────────────────────
 
 export const authPrimitiveSchema = {
   oneOf: [
@@ -43,17 +57,6 @@ export const authPrimitiveSchema = {
       required: ['type', 'key', 'inject'],
       properties: {
         type: { const: 'localStorage_jwt' },
-        key: { type: 'string' },
-        path: { type: 'string' },
-        inject: injectSchema,
-      },
-      additionalProperties: false,
-    },
-    {
-      type: 'object',
-      required: ['type', 'key', 'inject'],
-      properties: {
-        type: { const: 'sessionStorage_token' },
         key: { type: 'string' },
         path: { type: 'string' },
         inject: injectSchema,
@@ -108,54 +111,27 @@ export const authPrimitiveSchema = {
     },
     {
       type: 'object',
-      required: ['type', 'frame_match', 'extract', 'inject'],
-      properties: {
-        type: { const: 'websocket_intercept' },
-        frame_match: {
-          type: 'object',
-          required: ['field', 'value'],
-          properties: {
-            field: { type: 'string' },
-            value: { type: 'string' },
-          },
-          additionalProperties: false,
-        },
-        extract: { type: 'string' },
-        inject: injectSchema,
-        timeout: { type: 'number' },
-      },
-      additionalProperties: false,
-    },
-    {
-      type: 'object',
-      required: ['type', 'endpoint', 'extract', 'inject'],
-      properties: {
-        type: { const: 'lazy_fetch' },
-        endpoint: { type: 'string' },
-        method: { type: 'string' },
-        headers: { type: 'object', additionalProperties: { type: 'string' } },
-        extract: { type: 'string' },
-        inject: injectSchema,
-        cache: { type: 'boolean' },
-        refresh_on: { type: 'array', items: { type: 'number' } },
-      },
-      additionalProperties: false,
-    },
-    {
-      type: 'object',
       required: ['type', 'steps', 'inject'],
       properties: {
         type: { const: 'exchange_chain' },
         steps: { type: 'array', items: exchangeStepSchema, minItems: 1 },
-        refresh_before: { type: 'string' },
         inject: injectSchema,
+      },
+      additionalProperties: false,
+    },
+    {
+      type: 'object',
+      required: ['type', 'strategies'],
+      properties: {
+        type: { const: 'fallback' },
+        strategies: { type: 'array', items: { $ref: '#' }, minItems: 1 },
       },
       additionalProperties: false,
     },
   ],
 } as const
 
-// ── CSRF (5 variants, each with optional scope) ────
+// ── CSRF (3 variants, each with optional scope) ────
 
 const scopeProperty = { scope: { type: 'array', items: { type: 'string' } } } as const
 
@@ -185,31 +161,6 @@ export const csrfWithScopeSchema = {
     },
     {
       type: 'object',
-      required: ['type', 'expression', 'inject'],
-      properties: {
-        type: { const: 'page_global' },
-        expression: { type: 'string' },
-        inject: injectSchema,
-        ...scopeProperty,
-      },
-      additionalProperties: false,
-    },
-    {
-      type: 'object',
-      required: ['type', 'selector'],
-      properties: {
-        type: { const: 'form_field' },
-        fetch_url: { type: 'string' },
-        selector: { type: 'string' },
-        attribute: { type: 'string' },
-        header: { type: 'string' },
-        body_field: { type: 'string' },
-        ...scopeProperty,
-      },
-      additionalProperties: false,
-    },
-    {
-      type: 'object',
       required: ['type', 'endpoint', 'extract', 'inject'],
       properties: {
         type: { const: 'api_response' },
@@ -217,7 +168,6 @@ export const csrfWithScopeSchema = {
         method: { type: 'string' },
         extract: { type: 'string' },
         inject: injectSchema,
-        cache: { type: 'boolean' },
         ...scopeProperty,
       },
       additionalProperties: false,
@@ -225,7 +175,7 @@ export const csrfWithScopeSchema = {
   ],
 } as const
 
-// ── Signing (3 variants) ───────────────────────────
+// ── Signing (1 variant) ───────────────────────────
 
 export const signingPrimitiveSchema = {
   oneOf: [
@@ -240,47 +190,10 @@ export const signingPrimitiveSchema = {
       },
       additionalProperties: false,
     },
-    {
-      type: 'object',
-      required: ['type', 'api_key'],
-      properties: {
-        type: { const: 'gapi_proxy' },
-        api_key: {
-          type: 'object',
-          required: ['source', 'expression'],
-          properties: {
-            source: { type: 'string' },
-            expression: { type: 'string' },
-          },
-          additionalProperties: false,
-        },
-        authuser: {
-          type: 'object',
-          required: ['source', 'expression'],
-          properties: {
-            source: { type: 'string' },
-            expression: { type: 'string' },
-          },
-          additionalProperties: false,
-        },
-      },
-      additionalProperties: false,
-    },
-    {
-      type: 'object',
-      required: ['type', 'credentials', 'region', 'service'],
-      properties: {
-        type: { const: 'aws_sigv4' },
-        credentials: { type: 'object', additionalProperties: { type: 'string' } },
-        region: { type: 'string' },
-        service: { type: 'string' },
-      },
-      additionalProperties: false,
-    },
   ],
 } as const
 
-// ── Pagination (4 variants) ────────────────────────
+// ── Pagination (2 variants) ────────────────────────
 
 export const paginationPrimitiveSchema = {
   oneOf: [
@@ -300,38 +213,15 @@ export const paginationPrimitiveSchema = {
       type: 'object',
       required: ['type'],
       properties: {
-        type: { const: 'offset_limit' },
-        offset_param: { type: 'string' },
-        limit_param: { type: 'string' },
-        total_field: { type: 'string' },
-        default_limit: { type: 'number' },
-      },
-      additionalProperties: false,
-    },
-    {
-      type: 'object',
-      required: ['type'],
-      properties: {
         type: { const: 'link_header' },
         rel: { type: 'string' },
-      },
-      additionalProperties: false,
-    },
-    {
-      type: 'object',
-      required: ['type'],
-      properties: {
-        type: { const: 'page_number' },
-        param: { type: 'string' },
-        starts_at: { type: 'number' },
-        total_pages_field: { type: 'string' },
       },
       additionalProperties: false,
     },
   ],
 } as const
 
-// ── Extraction (6 variants) ────────────────────────
+// ── Extraction (4 variants) ────────────────────────
 
 export const extractionPrimitiveSchema = {
   oneOf: [
@@ -342,27 +232,6 @@ export const extractionPrimitiveSchema = {
         type: { const: 'ssr_next_data' },
         page_url: { type: 'string' },
         path: { type: 'string' },
-      },
-      additionalProperties: false,
-    },
-    {
-      type: 'object',
-      required: ['type', 'path'],
-      properties: {
-        type: { const: 'ssr_nuxt' },
-        path: { type: 'string' },
-        payload_url: { type: 'string' },
-      },
-      additionalProperties: false,
-    },
-    {
-      type: 'object',
-      required: ['type', 'key_pattern'],
-      properties: {
-        type: { const: 'apollo_cache' },
-        source: { type: 'string' },
-        key_pattern: { type: 'string' },
-        fields: { type: 'array', items: { type: 'string' } },
       },
       additionalProperties: false,
     },

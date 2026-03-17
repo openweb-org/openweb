@@ -331,7 +331,6 @@ export async function resolveCsrf(
         method: csrf.method,
         extract: csrf.extract,
         inject: csrf.inject,
-        cache: csrf.cache,
       }, serverUrl, {
         fetchImpl: deps?.fetchImpl,
         authHeaders: deps?.authHeaders,

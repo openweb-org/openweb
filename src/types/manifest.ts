@@ -18,10 +18,8 @@ export interface Manifest {
   readonly version: string
   readonly spec_version: string
   readonly compiled_at?: string
-  readonly generated_at?: string
   readonly compiler_version?: string
   readonly site_url?: string
-  readonly site?: string
   readonly description?: string
   readonly requires_auth?: boolean
   readonly fingerprint?: ManifestFingerprint

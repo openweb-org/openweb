@@ -3,25 +3,31 @@ export interface Inject {
   readonly header?: string
   readonly prefix?: string
   readonly query?: string
-  readonly body_field?: string
-  readonly body_merge?: boolean
+  readonly json_body_path?: string
 }
 
 // ── Auth ────────────────────────────────────────────
-export interface ExchangeStep {
+export interface ExchangeCookieStep {
+  readonly extract_from: 'cookie'
+  readonly call: string
+  readonly extract: string
+}
+
+export interface ExchangeHttpStep {
   readonly call: string
   readonly method?: string
   readonly headers?: Readonly<Record<string, string>>
   readonly body?: Readonly<Record<string, string>>
   readonly extract: string
-  readonly extract_from?: 'body' | 'cookie'
+  readonly extract_from?: 'body'
   readonly as?: string
 }
+
+export type ExchangeStep = ExchangeCookieStep | ExchangeHttpStep
 
 export type AuthPrimitive =
   | { readonly type: 'cookie_session' }
   | { readonly type: 'localStorage_jwt'; readonly key: string; readonly path?: string; readonly inject: Inject }
-  | { readonly type: 'sessionStorage_token'; readonly key: string; readonly path?: string; readonly inject: Inject }
   | {
       readonly type: 'sessionStorage_msal'
       readonly key_pattern: string
@@ -43,65 +49,27 @@ export type AuthPrimitive =
       readonly inject: Inject
     }
   | {
-      readonly type: 'websocket_intercept'
-      readonly frame_match: { readonly field: string; readonly value: string }
-      readonly extract: string
-      readonly inject: Inject
-      readonly timeout?: number
-    }
-  | {
-      readonly type: 'lazy_fetch'
-      readonly endpoint: string
-      readonly method?: string
-      readonly headers?: Readonly<Record<string, string>>
-      readonly extract: string
-      readonly inject: Inject
-      readonly cache?: boolean
-      readonly refresh_on?: readonly number[]
-    }
-  | {
       readonly type: 'exchange_chain'
       readonly steps: readonly ExchangeStep[]
-      readonly refresh_before?: string
       readonly inject: Inject
     }
+  | { readonly type: 'fallback'; readonly strategies: readonly AuthPrimitive[] }
 
 // ── CSRF ────────────────────────────────────────────
 export type CsrfPrimitive =
   | { readonly type: 'cookie_to_header'; readonly cookie: string; readonly header: string }
   | { readonly type: 'meta_tag'; readonly name: string; readonly header: string }
-  | { readonly type: 'page_global'; readonly expression: string; readonly inject: Inject }
-  | {
-      readonly type: 'form_field'
-      readonly fetch_url?: string
-      readonly selector: string
-      readonly attribute?: string
-      readonly header?: string
-      readonly body_field?: string
-    }
   | {
       readonly type: 'api_response'
       readonly endpoint: string
       readonly method?: string
       readonly extract: string
       readonly inject: Inject
-      readonly cache?: boolean
     }
 
 // ── Signing ─────────────────────────────────────────
 export type SigningPrimitive =
   | { readonly type: 'sapisidhash'; readonly cookie?: string; readonly origin: string; readonly inject: Inject }
-  | {
-      readonly type: 'gapi_proxy'
-      readonly api_key: { readonly source: string; readonly expression: string }
-      readonly authuser?: { readonly source: string; readonly expression: string }
-    }
-  | {
-      readonly type: 'aws_sigv4'
-      readonly credentials: Readonly<Record<string, string>>
-      readonly region: string
-      readonly service: string
-    }
 
 // ── Pagination ──────────────────────────────────────
 export type PaginationPrimitive =
@@ -112,31 +80,11 @@ export type PaginationPrimitive =
       readonly has_more_field?: string
       readonly items_path?: string
     }
-  | {
-      readonly type: 'offset_limit'
-      readonly offset_param?: string
-      readonly limit_param?: string
-      readonly total_field?: string
-      readonly default_limit?: number
-    }
   | { readonly type: 'link_header'; readonly rel?: string }
-  | {
-      readonly type: 'page_number'
-      readonly param?: string
-      readonly starts_at?: number
-      readonly total_pages_field?: string
-    }
 
 // ── Extraction ──────────────────────────────────────
 export type ExtractionPrimitive =
   | { readonly type: 'ssr_next_data'; readonly page_url?: string; readonly path: string }
-  | { readonly type: 'ssr_nuxt'; readonly path: string; readonly payload_url?: string }
-  | {
-      readonly type: 'apollo_cache'
-      readonly source?: string
-      readonly key_pattern: string
-      readonly fields?: readonly string[]
-    }
   | {
       readonly type: 'html_selector'
       readonly page_url?: string

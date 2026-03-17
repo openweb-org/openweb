@@ -8,9 +8,8 @@ export interface ApiResponseConfig {
   readonly inject: {
     readonly header?: string
     readonly prefix?: string
-    readonly body_field?: string
+    readonly json_body_path?: string
   }
-  readonly cache?: boolean
 }
 
 export interface ApiResponseDeps {

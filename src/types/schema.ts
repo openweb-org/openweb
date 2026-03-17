@@ -88,10 +88,8 @@ export const manifestSchema = {
     compiled_at: { type: 'string' },
     compiler_version: { type: 'string' },
     site_url: { type: 'string' },
-    site: { type: 'string' },
     description: { type: 'string' },
     requires_auth: { type: 'boolean' },
-    generated_at: { type: 'string' },
     fingerprint: {
       type: 'object',
       properties: {

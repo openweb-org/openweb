@@ -219,7 +219,7 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
       version: '1.0.0',
       'x-openweb': {
         spec_version: '2.0',
-        generated_at: generatedAt,
+        compiled_at: generatedAt,
         requires_auth: requiresAuth,
       },
     },
@@ -231,8 +231,8 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
     name: input.site,
     version: '1.0.0',
     spec_version: '2.0',
-    site: new URL(input.sourceUrl).hostname,
-    generated_at: generatedAt,
+    site_url: input.sourceUrl,
+    compiled_at: generatedAt,
     requires_auth: requiresAuth,
     dependencies: buildDependencies(input.operations),
   }

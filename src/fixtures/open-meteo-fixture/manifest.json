@@ -2,8 +2,8 @@
   "name": "open-meteo-fixture",
   "version": "1.0.0",
   "spec_version": "0.1.0",
-  "site": "open-meteo-fixture.com",
-  "generated_at": "2026-03-04T00:00:00Z",
+  "site_url": "https://open-meteo.com",
+  "compiled_at": "2026-03-04T00:00:00Z",
   "requires_auth": false,
   "dependencies": {
     "search_location.results[].latitude": "get_forecast.latitude",
