@@ -22,11 +22,12 @@ paths:
       summary: Get the current user
       x-openweb:
         risk_tier: safe
-        stable_id: discord0001
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: discord0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
       responses:
         '200':
           description: Current user object
@@ -56,11 +57,12 @@ paths:
       summary: List guilds the user belongs to
       x-openweb:
         risk_tier: safe
-        stable_id: discord0002
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: discord0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
       parameters:
         - name: limit
           in: query
@@ -95,11 +97,12 @@ paths:
       summary: Get messages from a channel
       x-openweb:
         risk_tier: safe
-        stable_id: discord0003
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: discord0003
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
       parameters:
         - name: channel_id
           in: path

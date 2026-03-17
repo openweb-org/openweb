@@ -27,11 +27,12 @@ paths:
       summary: Get video player info
       x-openweb:
         risk_tier: safe
-        stable_id: yt0001
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: yt0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
       parameters:
         - name: key
           in: query
@@ -76,11 +77,12 @@ paths:
       summary: Get video comments
       x-openweb:
         risk_tier: safe
-        stable_id: yt0002
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: yt0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
       parameters:
         - name: key
           in: query

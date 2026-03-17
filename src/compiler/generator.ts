@@ -147,10 +147,12 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
       summary: operation.summary,
       'x-openweb': {
         risk_tier: riskTier,
-        verified: operation.verified,
-        stable_id: stableId,
-        signature_id: signatureId,
-        tool_version: 1,
+        build: {
+          verified: operation.verified,
+          stable_id: stableId,
+          signature_id: signatureId,
+          tool_version: 1,
+        },
       },
       parameters: operation.parameters.map((parameter) => ({
         name: parameter.name,

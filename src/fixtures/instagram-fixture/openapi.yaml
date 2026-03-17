@@ -31,12 +31,13 @@ paths:
       summary: Get the authenticated user's feed
       x-openweb:
         risk_tier: safe
-        stable_id: a1b2c3d4
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
-          - schema-match
+        build:
+          stable_id: a1b2c3d4
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+            - schema-match
         pagination:
           type: cursor
           response_field: next_max_id
@@ -71,11 +72,12 @@ paths:
       summary: Get a user's profile information
       x-openweb:
         risk_tier: safe
-        stable_id: e5f6a7b8
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: e5f6a7b8
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
       parameters:
         - $ref: '#/components/parameters/X-IG-App-ID'
         - name: user_id
@@ -107,11 +109,12 @@ paths:
       summary: Like a media post
       x-openweb:
         risk_tier: medium
-        stable_id: c9d0e1f2
-        tool_version: 1
-        verified: false
-        signals:
-          - status-match
+        build:
+          stable_id: c9d0e1f2
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
       parameters:
         - $ref: '#/components/parameters/X-IG-App-ID'
         - name: media_id

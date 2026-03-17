@@ -17,11 +17,12 @@ paths:
       summary: List dashboards via GraphQL entity search
       x-openweb:
         risk_tier: safe
-        stable_id: nr0001
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: nr0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
         pagination:
           type: cursor
           response_field: data.actor.entitySearch.results.nextCursor

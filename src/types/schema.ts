@@ -42,17 +42,30 @@ export const xOpenWebServerSchema = {
   additionalProperties: false,
 } as const
 
+const requestEncodingSchema = {
+  enum: ['json', 'form'],
+} as const
+
+const buildMetaSchema = {
+  type: 'object',
+  properties: {
+    stable_id: { type: 'string' },
+    signature_id: { type: 'string' },
+    tool_version: { type: 'integer', minimum: 1 },
+    verified: { type: 'boolean' },
+    signals: { type: 'array', items: { type: 'string' } },
+  },
+  additionalProperties: false,
+} as const
+
 // ── Operation-level x-openweb ──────────────────────
 
 export const xOpenWebOperationSchema = {
   type: 'object',
   properties: {
     risk_tier: riskTierSchema,
-    stable_id: { type: 'string' },
-    signature_id: { type: 'string' },
-    tool_version: { type: 'integer', minimum: 1 },
-    verified: { type: 'boolean' },
-    signals: { type: 'array', items: { type: 'string' } },
+    build: buildMetaSchema,
+    request_encoding: requestEncodingSchema,
     transport: transportSchema,
     csrf: csrfWithScopeSchema,
     pagination: paginationPrimitiveSchema,

@@ -37,11 +37,12 @@ paths:
       summary: Get hot posts from a subreddit
       x-openweb:
         risk_tier: safe
-        stable_id: rd0001
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: rd0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
       parameters:
         - name: subreddit
           in: path
@@ -84,11 +85,12 @@ paths:
       summary: Vote on a post or comment
       x-openweb:
         risk_tier: medium
-        stable_id: rd0002
-        tool_version: 1
-        verified: false
-        signals:
-          - status-match
+        build:
+          stable_id: rd0002
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
       parameters: []
       requestBody:
         required: true
@@ -121,11 +123,12 @@ paths:
         - url: https://oauth.reddit.com
       x-openweb:
         risk_tier: safe
-        stable_id: rd0003
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: rd0003
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
       parameters: []
       responses:
         '200':

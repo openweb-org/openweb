@@ -18,10 +18,11 @@ paths:
       x-openweb:
         transport: node
         risk_tier: safe
-        verified: true
-        stable_id: 0e18811a69644d95
-        signature_id: d1542cc530f44161
-        tool_version: 1
+        build:
+          verified: true
+          stable_id: 0e18811a69644d95
+          signature_id: d1542cc530f44161
+          tool_version: 1
       parameters:
         - name: name
           in: query
@@ -71,10 +72,11 @@ paths:
       x-openweb:
         transport: node
         risk_tier: safe
-        verified: true
-        stable_id: ad259e4f9ecf4367
-        signature_id: ef25de6136074dd0
-        tool_version: 1
+        build:
+          verified: true
+          stable_id: ad259e4f9ecf4367
+          signature_id: ef25de6136074dd0
+          tool_version: 1
       parameters:
         - name: latitude
           in: query
@@ -136,10 +138,11 @@ paths:
       x-openweb:
         transport: node
         risk_tier: safe
-        verified: true
-        stable_id: 0c7ac34bc5df4f8d
-        signature_id: 804682fffc434888
-        tool_version: 1
+        build:
+          verified: true
+          stable_id: 0c7ac34bc5df4f8d
+          signature_id: 804682fffc434888
+          tool_version: 1
       parameters:
         - name: latitude
           in: query
@@ -197,10 +200,11 @@ paths:
       x-openweb:
         transport: node
         risk_tier: safe
-        verified: true
-        stable_id: d45f1604dd2f4265
-        signature_id: d76954444f8746e5
-        tool_version: 1
+        build:
+          verified: true
+          stable_id: d45f1604dd2f4265
+          signature_id: d76954444f8746e5
+          tool_version: 1
       parameters:
         - name: latitude
           in: query

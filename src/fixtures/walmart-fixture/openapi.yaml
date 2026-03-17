@@ -15,11 +15,12 @@ paths:
       summary: Extract Walmart footer modules from Next.js SSR state
       x-openweb:
         risk_tier: safe
-        stable_id: wm0001
-        tool_version: 1
-        verified: true
-        signals:
-          - next_data
+        build:
+          stable_id: wm0001
+          tool_version: 1
+          verified: true
+          signals:
+            - next_data
         extraction:
           type: ssr_next_data
           page_url: /

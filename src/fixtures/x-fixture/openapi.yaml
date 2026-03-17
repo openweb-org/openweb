@@ -27,11 +27,12 @@ paths:
       summary: List accounts the authenticated user is following
       x-openweb:
         risk_tier: safe
-        stable_id: x0001
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: x0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
         pagination:
           type: cursor
           response_field: next_cursor_str
@@ -98,11 +99,12 @@ paths:
       summary: List the authenticated user's followers
       x-openweb:
         risk_tier: safe
-        stable_id: x0002
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: x0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
         pagination:
           type: cursor
           response_field: next_cursor_str

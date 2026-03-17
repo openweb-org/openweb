@@ -26,11 +26,12 @@ paths:
       summary: Get authenticated user profile
       x-openweb:
         risk_tier: safe
-        stable_id: cg0001
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: cg0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
       parameters:
         - name: User-Agent
           in: header
@@ -66,11 +67,12 @@ paths:
       summary: List recent conversations
       x-openweb:
         risk_tier: safe
-        stable_id: cg0002
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: cg0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
         pagination:
           type: cursor
           response_field: cursor

@@ -15,11 +15,12 @@ paths:
       summary: Get chat list from internal module system
       x-openweb:
         risk_tier: safe
-        stable_id: wa0001
-        tool_version: 1
-        verified: true
-        signals:
-          - adapter-verified
+        build:
+          stable_id: wa0001
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: whatsapp-modules
           operation: getChats
@@ -61,11 +62,12 @@ paths:
       summary: Get messages from a specific chat
       x-openweb:
         risk_tier: low
-        stable_id: wa0002
-        tool_version: 1
-        verified: true
-        signals:
-          - adapter-verified
+        build:
+          stable_id: wa0002
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: whatsapp-modules
           operation: getMessages
@@ -113,11 +115,12 @@ paths:
       summary: Get contact list from internal module system
       x-openweb:
         risk_tier: safe
-        stable_id: wa0003
-        tool_version: 1
-        verified: true
-        signals:
-          - adapter-verified
+        build:
+          stable_id: wa0003
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: whatsapp-modules
           operation: getContacts

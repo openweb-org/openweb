@@ -15,11 +15,12 @@ paths:
       summary: Get dialog/chat list from Telegram global state
       x-openweb:
         risk_tier: safe
-        stable_id: tg0001
-        tool_version: 1
-        verified: true
-        signals:
-          - adapter-verified
+        build:
+          stable_id: tg0001
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: telegram-protocol
           operation: getDialogs
@@ -55,11 +56,12 @@ paths:
       summary: Get current user info
       x-openweb:
         risk_tier: safe
-        stable_id: tg0002
-        tool_version: 1
-        verified: true
-        signals:
-          - adapter-verified
+        build:
+          stable_id: tg0002
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: telegram-protocol
           operation: getMe
@@ -87,11 +89,12 @@ paths:
       summary: Get messages from a specific chat
       x-openweb:
         risk_tier: low
-        stable_id: tg0003
-        tool_version: 1
-        verified: true
-        signals:
-          - adapter-verified
+        build:
+          stable_id: tg0003
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: telegram-protocol
           operation: getMessages

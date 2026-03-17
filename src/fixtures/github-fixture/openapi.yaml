@@ -26,11 +26,12 @@ paths:
       summary: Get a repository
       x-openweb:
         risk_tier: safe
-        stable_id: gh0001
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: gh0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
       parameters:
         - name: owner
           in: path
@@ -68,11 +69,12 @@ paths:
       summary: List repository issues
       x-openweb:
         risk_tier: safe
-        stable_id: gh0002
-        tool_version: 1
-        verified: true
-        signals:
-          - status-match
+        build:
+          stable_id: gh0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
         pagination:
           type: link_header
       parameters:
@@ -126,11 +128,12 @@ paths:
       summary: Star a repository
       x-openweb:
         risk_tier: low
-        stable_id: gh0003
-        tool_version: 1
-        verified: false
-        signals:
-          - status-match
+        build:
+          stable_id: gh0003
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
       parameters:
         - name: owner
           in: path

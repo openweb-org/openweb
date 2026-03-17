@@ -24,14 +24,21 @@ export interface XOpenWebServer {
   readonly signing?: SigningPrimitive
 }
 
-// Operation-level x-openweb (on paths[].{method})
-export interface XOpenWebOperation {
-  readonly risk_tier?: RiskTier
+export type RequestEncoding = 'json' | 'form'
+
+export interface XOpenWebBuildMeta {
   readonly stable_id?: string
   readonly signature_id?: string
   readonly tool_version?: number
   readonly verified?: boolean
   readonly signals?: readonly string[]
+}
+
+// Operation-level x-openweb (on paths[].{method})
+export interface XOpenWebOperation {
+  readonly risk_tier?: RiskTier
+  readonly build?: XOpenWebBuildMeta
+  readonly request_encoding?: RequestEncoding
   readonly transport?: Transport
   readonly csrf?: CsrfPrimitive & { readonly scope?: readonly string[] }
   readonly pagination?: PaginationPrimitive

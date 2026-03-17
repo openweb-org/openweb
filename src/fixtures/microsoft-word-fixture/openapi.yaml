@@ -23,11 +23,12 @@ paths:
       summary: Get the signed-in Microsoft Graph profile from Word's MSAL cache
       x-openweb:
         risk_tier: safe
-        stable_id: mw0001
-        tool_version: 1
-        verified: true
-        signals:
-          - msal_storage
+        build:
+          stable_id: mw0001
+          tool_version: 1
+          verified: true
+          signals:
+            - msal_storage
       responses:
         '200':
           description: Success.
