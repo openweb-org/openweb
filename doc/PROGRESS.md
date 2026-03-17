@@ -1,3 +1,22 @@
+## 2026-03-17: M17 — Operational Automation — DONE
+
+**What changed:**
+- Theme 1 (Self-heal): New `src/lifecycle/heal.ts` with `healSite()` — re-discovers drifted sites using the discovery pipeline, diffs old vs new spec by path+method, auto-accepts read operations, reports write/delete/transact changes. `--auto-heal` flag added to `openweb verify` command. Safety gates: auth_expired skipped, CAPTCHA/login-wall aborts heal. Successful heals archive with version bump via registry.
+- Theme 2 (Knowledge Base): `src/knowledge/patterns.ts` — 25 seed pattern entries from M3-M16 reviews. `src/knowledge/heuristics.ts` — probe success rate tracking with 30-day staleness decay. `src/knowledge/failures.ts` — auto-records verify DRIFT/FAIL outcomes to `~/.openweb/knowledge/`. Prober records outcomes after each probe step.
+- Theme 3 (KNOWN_GLOBALS Dynamic): `detectDynamicGlobals(page)` compares window keys against BROWSER_BASELINE to discover site-specific globals. `captureDomAndGlobals` accepts optional `extraGlobals` parameter. Filters out browser built-ins, frameworks, and analytics globals.
+
+**Why:**
+- Drift detection alone is insufficient — sites need automatic recovery for read operations without human intervention
+- Knowledge base captures institutional knowledge from 16 milestones of site reviews, making future compilation and probing smarter
+- Static KNOWN_GLOBALS missed site-specific globals; dynamic detection adapts to each page
+
+**Key files:** `src/lifecycle/heal.ts`, `src/knowledge/patterns.ts`, `src/knowledge/heuristics.ts`, `src/knowledge/failures.ts`, `src/capture/dom-capture.ts`, `src/commands/verify.ts`, `src/cli.ts`
+**Verification:** 423 tests pass (32 new), `pnpm build` clean
+**Next:** M18+
+**Blockers:** None
+
+---
+
 ## 2026-03-17: M16 — Smart Discovery — DONE
 
 **What changed:**

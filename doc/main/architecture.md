@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-17 (commit: M16)
+> Last updated: 2026-03-17 (commit: M17)
 
 ## Mission
 
@@ -85,11 +85,12 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | **Meta-spec** | x-openweb schema: L2 types + L3 interface + package format | `src/types/` | Formalized (M1) |
 | **Runtime** | Reads skill packages, resolves primitives, executes requests | `src/runtime/` | L1 + L2 + L3 + extraction + token cache (M14) |
 | **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | L1 emit + L2 classify + probe (M15) |
-| **Capture** | CDP browser recording (HAR + WS + state + DOM) | `src/capture/` | Complete (M0), page isolation (M11) |
+| **Capture** | CDP browser recording (HAR + WS + state + DOM), dynamic globals detection | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17) |
 | **Discovery** | Agent-driven API discovery pipeline | `src/discovery/` | Interactive capture + active exploration (M11), intent-driven discovery + human_handoff (M16) |
-| **Lifecycle** | Drift detection, verification, quarantine | `src/lifecycle/` | Fingerprint + verify + quarantine (M12) |
+| **Lifecycle** | Drift detection, verification, quarantine, auto-heal | `src/lifecycle/` | Fingerprint + verify + quarantine (M12), self-heal (M17) |
+| **Knowledge** | Pattern library, probe heuristics, failure recording | `src/knowledge/` | Patterns + heuristics + failures (M17) |
 | **Registry** | Site version management, install, rollback | `src/lifecycle/registry.ts` | Internal registry (M12) |
-| **CLI** | Progressive navigation + exec + browser + capture + compile + discover + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M16: --intent) |
+| **CLI** | Progressive navigation + exec + browser + capture + compile + discover + verify + registry + auto-heal | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M16: --intent; M17: --auto-heal) |
 | **Skill packages** | Per-site instance specs | `src/fixtures/` | 51 verified sites |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5) |
 
@@ -151,7 +152,10 @@ openweb discover <url>                         # discover APIs and generate fixt
 openweb discover <url> --intent                # intent-driven discovery (page analysis + targeted exploration)
 openweb discover <url> --explore               # blind active exploration (click nav, search)
 openweb verify <site>                          # verify site and detect drift
+openweb verify <site> --auto-heal              # verify and auto-heal drifted read operations
 openweb verify --all                           # batch verify all sites
+openweb verify --all --auto-heal               # batch verify and auto-heal all sites
+openweb verify --all --auto-heal --report      # auto-heal with drift/heal report
 openweb registry list                          # list registered site versions
 openweb registry install <site>                # archive fixture to registry
 openweb registry rollback <site>               # revert to previous version

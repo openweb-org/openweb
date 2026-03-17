@@ -315,7 +315,12 @@ pnpm --silent dev verify <site>                   # Verify single site — PASS/
 pnpm --silent dev verify --all                     # Verify all sites sequentially
 pnpm --silent dev verify --all --report            # JSON drift report
 pnpm --silent dev verify --all --report markdown   # Markdown drift report
+pnpm --silent dev verify <site> --auto-heal        # Auto-heal drifted read operations
+pnpm --silent dev verify --all --auto-heal         # Batch auto-heal all sites
+pnpm --silent dev verify --all --auto-heal --report # Auto-heal with report
 ```
+
+`--auto-heal` re-discovers drifted sites, diffs old vs new spec by path+method, and auto-accepts read operation changes. Write/delete/transact changes are reported but not applied. Skips `auth_expired` sites and aborts on CAPTCHA/login-wall.
 
 ### Discover (API Discovery)
 

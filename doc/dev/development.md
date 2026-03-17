@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-17 (commit: M16)
+> Last updated: 2026-03-17 (commit: M17)
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (386/386 pass)
+pnpm test           # Run tests (423/423 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -131,7 +131,14 @@ pnpm dev verify --all
 # Drift report (JSON or markdown)
 pnpm dev verify --all --report
 pnpm dev verify --all --report markdown
+
+# Auto-heal: re-discover drifted sites, auto-accept read ops
+pnpm dev verify catfact-fixture --auto-heal
+pnpm dev verify --all --auto-heal
+pnpm dev verify --all --auto-heal --report
 ```
+
+Auto-heal re-discovers drifted sites, diffs old vs new spec by path+method, and auto-accepts read operation changes. Write/delete/transact changes are reported but not applied. Safety gates: `auth_expired` is skipped, CAPTCHA/login-wall aborts heal. Successful heals archive with a version bump.
 
 ### Registry (Version Management)
 
@@ -211,10 +218,15 @@ src/
 ├── compiler/                 # Site compilation pipeline
 ├── capture/                  # Browser CDP recording
 ├── discovery/                # API discovery: capture, intent analysis, exploration, handoff
-├── lifecycle/                # Drift detection, verification, registry
+├── lifecycle/                # Drift detection, verification, registry, auto-heal
 │   ├── fingerprint.ts        # Response shape fingerprinting
 │   ├── verify.ts             # Site verification engine
+│   ├── heal.ts               # Auto-heal: re-discover + diff + apply read ops
 │   └── registry.ts           # Version management + install/rollback
+├── knowledge/                # Pattern library, probe heuristics, failure recording
+│   ├── patterns.ts           # 25 seed patterns from M3-M16 reviews
+│   ├── heuristics.ts         # Probe success rate tracking + staleness decay (30d)
+│   └── failures.ts           # Auto-records verify DRIFT/FAIL to ~/.openweb/knowledge/
 ├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, manifest, permissions)
 └── fixtures/                 # 51 verified site packages
 ```
