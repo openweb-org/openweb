@@ -108,7 +108,7 @@ export async function compileSite(
   const site = siteSlugFromUrl(args.url)
   try {
     const recordedSamples = await loadRecordedSamples(recordingDir)
-    filteredSamples = filterSamples(recordedSamples, { targetUrl: args.url, allowMutations: false })
+    filteredSamples = filterSamples(recordedSamples, { targetUrl: args.url })
 
     // Load full capture data for L2 classification
     const captureData = await loadCaptureData(recordingDir)
@@ -134,17 +134,13 @@ export async function compileSite(
   const analyzedOperations: AnalyzedOperation[] = []
 
   for (const cluster of clusters) {
-    if (cluster.method !== 'GET') {
-      continue
-    }
-
     const annotation = annotateOperation(cluster.host, cluster.path, cluster.method)
     const differentiatedParams = differentiateParameters(cluster)
     const annotatedParams = annotateParameterDescriptions(differentiatedParams)
     const responseSchema = inferSchema(cluster.samples.map((sample) => sample.responseJson))
 
     const operationBase = {
-      method: 'get' as const,
+      method: cluster.method.toLowerCase(),
       host: cluster.host,
       path: cluster.path,
       operationId: annotation.operationId,
@@ -154,7 +150,10 @@ export async function compileSite(
       exampleInput: buildExampleInput(annotatedParams),
     }
 
-    const verified = options.verifyReplay === false ? false : await verifyOperation(operationBase)
+    // Only verify GET operations — mutations are not safe to replay
+    const verified = options.verifyReplay === false || cluster.method !== 'GET'
+      ? false
+      : await verifyOperation(operationBase)
 
     analyzedOperations.push({
       ...operationBase,
