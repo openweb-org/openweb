@@ -1,13 +1,13 @@
-import { spawn, execSync } from 'node:child_process'
-import { mkdir, readFile, writeFile, rm, unlink, copyFile, readdir, stat } from 'node:fs/promises'
+import { spawn, execFile } from 'node:child_process'
+import { mkdtemp, mkdir, readFile, writeFile, rm, unlink, copyFile, readdir, chmod } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { homedir, platform } from 'node:os'
-import { createHash } from 'node:crypto'
+import { join } from 'node:path'
+import { homedir, platform, tmpdir } from 'node:os'
 
 const OPENWEB_DIR = join(homedir(), '.openweb')
 const PID_FILE = join(OPENWEB_DIR, 'browser.pid')
 const PORT_FILE = join(OPENWEB_DIR, 'browser.port')
+const PROFILE_DIR_FILE = join(OPENWEB_DIR, 'browser.profile')
 const DEFAULT_PORT = 9222
 
 function getDefaultProfilePath(): string {
@@ -38,13 +38,9 @@ function getChromePath(): string {
   throw new Error(`Unsupported platform: ${os}`)
 }
 
-function profileHash(profilePath: string): string {
-  return createHash('sha256').update(profilePath).digest('hex').slice(0, 8)
-}
-
 /** Copy only auth-relevant files from Chrome profile (not cache/history) */
 async function copyProfileSelective(src: string, dest: string): Promise<void> {
-  await mkdir(dest, { recursive: true })
+  await mkdir(dest, { recursive: true, mode: 0o700 })
 
   // Only copy files needed for auth: Cookies, Local Storage, Session Storage, Web Data
   const relevantDirs = ['Local Storage', 'Session Storage']
@@ -53,7 +49,9 @@ async function copyProfileSelective(src: string, dest: string): Promise<void> {
   for (const file of relevantFiles) {
     const srcPath = join(src, file)
     if (existsSync(srcPath)) {
-      await copyFile(srcPath, join(dest, file))
+      const destPath = join(dest, file)
+      await copyFile(srcPath, destPath)
+      await chmod(destPath, 0o600)
     }
   }
 
@@ -62,12 +60,14 @@ async function copyProfileSelective(src: string, dest: string): Promise<void> {
     if (!existsSync(srcDir)) continue
 
     const destDir = join(dest, dir)
-    await mkdir(destDir, { recursive: true })
+    await mkdir(destDir, { recursive: true, mode: 0o700 })
 
     const entries = await readdir(srcDir, { withFileTypes: true })
     for (const entry of entries) {
       if (entry.isFile()) {
-        await copyFile(join(srcDir, entry.name), join(destDir, entry.name))
+        const destPath = join(destDir, entry.name)
+        await copyFile(join(srcDir, entry.name), destPath)
+        await chmod(destPath, 0o600)
       }
     }
   }
@@ -122,20 +122,34 @@ async function readPort(): Promise<number | null> {
 
 async function killManaged(): Promise<void> {
   const pid = await readPid()
+  const port = await readPort()
+
   if (pid && isProcessAlive(pid)) {
-    process.kill(pid, 'SIGTERM')
-    // Wait briefly for cleanup
-    await new Promise((r) => setTimeout(r, 500))
+    // Verify this PID is actually our managed Chrome by checking CDP on the stored port
+    let verified = false
+    if (port) {
+      verified = await isCdpReady(port)
+    }
+
+    if (verified) {
+      process.kill(pid, 'SIGTERM')
+      await new Promise((r) => setTimeout(r, 500))
+    }
+    // If not verified, PID may have been reused — don't kill, just clean up state files
   }
+
   try { await unlink(PID_FILE) } catch { /* already gone */ }
   try { await unlink(PORT_FILE) } catch { /* already gone */ }
 }
 
 async function cleanTempProfile(): Promise<void> {
-  const profilePath = getDefaultProfilePath()
-  const hash = profileHash(profilePath)
-  const tempDir = join('/tmp', `openweb-profile-${hash}`)
-  await rm(tempDir, { recursive: true, force: true })
+  try {
+    const profileDir = await readFile(PROFILE_DIR_FILE, 'utf8')
+    if (profileDir.trim()) {
+      await rm(profileDir.trim(), { recursive: true, force: true })
+    }
+    await unlink(PROFILE_DIR_FILE)
+  } catch { /* already gone */ }
 }
 
 export async function browserStartCommand(options: { headless?: boolean; port?: number } = {}): Promise<void> {
@@ -157,11 +171,10 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
     throw new Error(`Chrome profile not found at ${profilePath}. Is Chrome installed?`)
   }
 
-  const hash = profileHash(profilePath)
-  const tempUserDataDir = join('/tmp', `openweb-profile-${hash}`)
+  // Use mkdtemp for an unpredictable temp directory
+  const tempUserDataDir = await mkdtemp(join(tmpdir(), 'openweb-profile-'))
+  await chmod(tempUserDataDir, 0o700)
   const tempProfileDir = join(tempUserDataDir, 'Default')
-
-  await rm(tempUserDataDir, { recursive: true, force: true })
   await copyProfileSelective(profilePath, tempProfileDir)
 
   // Launch Chrome
@@ -186,10 +199,11 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
     throw new Error('Failed to start Chrome')
   }
 
-  // Save PID and port
+  // Save PID, port, and temp profile path
   await mkdir(OPENWEB_DIR, { recursive: true })
   await writeFile(PID_FILE, String(child.pid), { mode: 0o600 })
   await writeFile(PORT_FILE, String(port), { mode: 0o600 })
+  await writeFile(PROFILE_DIR_FILE, tempUserDataDir, { mode: 0o600 })
 
   // Wait for CDP
   await waitForCdp(port)
@@ -258,15 +272,27 @@ export async function loginCommand(site: string): Promise<void> {
     throw new Error(`No site_url in manifest for ${site}. Cannot determine login URL.`)
   }
 
-  // Open in default browser
-  const os = platform()
-  if (os === 'darwin') {
-    execSync(`open ${JSON.stringify(url)}`)
-  } else if (os === 'linux') {
-    execSync(`xdg-open ${JSON.stringify(url)}`)
-  } else if (os === 'win32') {
-    execSync(`start ${JSON.stringify(url)}`)
+  // Validate URL scheme — only allow http/https to prevent command injection
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw new Error(`Invalid URL in manifest for ${site}: ${url}`)
   }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`Refusing to open non-HTTP URL: ${url}`)
+  }
+
+  // Open in default browser using execFile with argv (no shell)
+  const os = platform()
+  await new Promise<void>((resolve, reject) => {
+    const cmd = os === 'darwin' ? 'open' : os === 'linux' ? 'xdg-open' : 'cmd'
+    const args = os === 'win32' ? ['/c', 'start', '', url] : [url]
+    execFile(cmd, args, (err) => {
+      if (err) reject(err)
+      else resolve()
+    })
+  })
 
   process.stdout.write(`Opened ${url} in your browser.\nLogin, then run: openweb browser restart\n`)
 }

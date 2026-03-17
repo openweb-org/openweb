@@ -52,17 +52,33 @@ sites:
     expect(config.defaults.read).toBe('allow')
   })
 
-  it('merges partial defaults with built-in defaults', () => {
+  it('accepts config with only sites (no defaults key)', () => {
     const path = tmpConfig(`
-defaults:
-  read: prompt
-  write: allow
-  delete: allow
-  transact: prompt
+sites:
+  bank-fixture:
+    read: deny
+    write: deny
 `)
     const config = loadPermissions(path)
-    expect(config.defaults.read).toBe('prompt')
-    expect(config.defaults.transact).toBe('prompt')
+    // Should merge with built-in defaults
+    expect(config.defaults.read).toBe('allow')
+    expect(config.defaults.write).toBe('prompt')
+    expect(config.sites?.['bank-fixture']?.read).toBe('deny')
+    expect(config.sites?.['bank-fixture']?.write).toBe('deny')
+  })
+
+  it('ignores invalid policy values in defaults', () => {
+    const path = tmpConfig(`
+defaults:
+  read: invalid_policy
+  write: allow
+  delete: prompt
+  transact: deny
+`)
+    const config = loadPermissions(path)
+    // invalid_policy ignored → falls back to built-in default for read
+    expect(config.defaults.read).toBe('allow')
+    expect(config.defaults.write).toBe('allow')
   })
 })
 

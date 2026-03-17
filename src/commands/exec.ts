@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto'
-import { writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { open } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -35,9 +35,16 @@ export interface ExecOptions {
   readonly output?: 'stdout' | 'file'
 }
 
-function spillToFile(text: string): string {
-  const hash = createHash('sha256').update(text).digest('hex').slice(0, 12)
-  return join(tmpdir(), `openweb-${hash}.json`)
+/** Write spill file with unguessable name and exclusive create (0o600) */
+async function writeSpillFile(text: string): Promise<string> {
+  const filePath = join(tmpdir(), `openweb-${randomUUID()}.json`)
+  const fd = await open(filePath, 'wx', 0o600)
+  try {
+    await fd.writeFile(text, 'utf8')
+  } finally {
+    await fd.close()
+  }
+  return filePath
 }
 
 export async function execCommand(
@@ -61,16 +68,14 @@ export async function execCommand(
 
   if (options.output === 'file') {
     // Always write to file, return path on stdout
-    const filePath = spillToFile(text)
-    await writeFile(filePath, text, 'utf8')
+    const filePath = await writeSpillFile(text)
     process.stdout.write(`${JSON.stringify({ status: result.status, output: filePath, size: byteSize })}\n`)
     return
   }
 
   // Default: stdout with auto-spill when over max-response
   if (byteSize > maxResponse) {
-    const filePath = spillToFile(text)
-    await writeFile(filePath, text, 'utf8')
+    const filePath = await writeSpillFile(text)
     process.stdout.write(`${JSON.stringify({ status: result.status, output: filePath, size: byteSize, truncated: true })}\n`)
   } else {
     process.stdout.write(`${text}\n`)

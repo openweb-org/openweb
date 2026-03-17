@@ -95,6 +95,31 @@ describe('token cache', () => {
     expect(result).toBeNull()
   })
 
+  it('returns null when metadata contains NaN values', async () => {
+    const dir = makeTempDir()
+    dirs.push(dir)
+
+    // Write valid cache first, then corrupt the meta.json
+    await writeTokenCache('corrupt-site', sampleTokens(), dir)
+    const { writeFileSync } = await import('node:fs')
+    writeFileSync(
+      join(dir, 'corrupt-site', 'meta.json'),
+      JSON.stringify({ captured_at: 'not-a-date', ttl_seconds: 'NaN' }),
+    )
+    const result = await readTokenCache('corrupt-site', dir)
+    expect(result).toBeNull()
+  })
+
+  it('returns null when ttl_seconds is zero or negative', async () => {
+    const dir = makeTempDir()
+    dirs.push(dir)
+
+    const tokens = sampleTokens({ ttlSeconds: 0 })
+    await writeTokenCache('zero-ttl', tokens, dir)
+    const result = await readTokenCache('zero-ttl', dir)
+    expect(result).toBeNull()
+  })
+
   it('clear removes site cache', async () => {
     const dir = makeTempDir()
     dirs.push(dir)

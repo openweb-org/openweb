@@ -33,12 +33,15 @@ interface CacheMeta {
 
 function isExpired(meta: CacheMeta): boolean {
   const capturedMs = new Date(meta.captured_at).getTime()
-  if (Number.isNaN(capturedMs)) return true
+  if (!Number.isFinite(capturedMs)) return true
 
-  // If JWT exp is present, use it as the primary expiry
-  if (meta.jwt_exp) {
+  // If JWT exp is present and valid, use it as the primary expiry
+  if (meta.jwt_exp !== undefined) {
+    if (!Number.isFinite(meta.jwt_exp)) return true
     return Date.now() > meta.jwt_exp * 1000
   }
+
+  if (!Number.isFinite(meta.ttl_seconds) || meta.ttl_seconds <= 0) return true
 
   return Date.now() > capturedMs + meta.ttl_seconds * 1000
 }

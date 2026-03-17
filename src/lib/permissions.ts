@@ -25,25 +25,44 @@ const DEFAULT_PERMISSIONS: PermissionsConfig = {
 const VALID_CATEGORIES = new Set<string>(['read', 'write', 'delete', 'transact'])
 const VALID_POLICIES = new Set<string>(['allow', 'prompt', 'deny'])
 
-function isValidConfig(raw: unknown): raw is PermissionsConfig {
-  if (!raw || typeof raw !== 'object') return false
+function isValidPolicy(value: unknown): value is Policy {
+  return typeof value === 'string' && VALID_POLICIES.has(value)
+}
+
+/** Parse and merge a partial config with defaults. Accepts configs with only `sites:` or only `defaults:`. */
+function parseConfig(raw: unknown): PermissionsConfig | null {
+  if (!raw || typeof raw !== 'object') return null
   const obj = raw as Record<string, unknown>
-  if (!obj.defaults || typeof obj.defaults !== 'object') return false
 
-  for (const [key, value] of Object.entries(obj.defaults as Record<string, unknown>)) {
-    if (!VALID_CATEGORIES.has(key) || !VALID_POLICIES.has(value as string)) return false
-  }
-
-  if (obj.sites && typeof obj.sites === 'object') {
-    for (const siteOverrides of Object.values(obj.sites as Record<string, unknown>)) {
-      if (!siteOverrides || typeof siteOverrides !== 'object') return false
-      for (const [key, value] of Object.entries(siteOverrides as Record<string, unknown>)) {
-        if (!VALID_CATEGORIES.has(key) || !VALID_POLICIES.has(value as string)) return false
+  // Parse defaults (optional — merge with built-in defaults)
+  const defaults = { ...DEFAULT_PERMISSIONS.defaults }
+  if (obj.defaults && typeof obj.defaults === 'object') {
+    for (const [key, value] of Object.entries(obj.defaults as Record<string, unknown>)) {
+      if (VALID_CATEGORIES.has(key) && isValidPolicy(value)) {
+        defaults[key as PermissionCategory] = value
       }
     }
   }
 
-  return true
+  // Parse sites (optional)
+  let sites: Record<string, Partial<Record<PermissionCategory, Policy>>> | undefined
+  if (obj.sites && typeof obj.sites === 'object') {
+    sites = {}
+    for (const [siteName, siteOverrides] of Object.entries(obj.sites as Record<string, unknown>)) {
+      if (!siteOverrides || typeof siteOverrides !== 'object') continue
+      const overrides: Partial<Record<PermissionCategory, Policy>> = {}
+      for (const [key, value] of Object.entries(siteOverrides as Record<string, unknown>)) {
+        if (VALID_CATEGORIES.has(key) && isValidPolicy(value)) {
+          overrides[key as PermissionCategory] = value
+        }
+      }
+      if (Object.keys(overrides).length > 0) {
+        sites[siteName] = overrides
+      }
+    }
+  }
+
+  return { defaults, sites }
 }
 
 export function loadPermissions(configPath?: string): PermissionsConfig {
@@ -51,13 +70,8 @@ export function loadPermissions(configPath?: string): PermissionsConfig {
   try {
     const raw = readFileSync(filePath, 'utf8')
     const parsed = parse(raw) as unknown
-    if (isValidConfig(parsed)) {
-      // Merge with defaults to ensure all categories exist
-      return {
-        defaults: { ...DEFAULT_PERMISSIONS.defaults, ...parsed.defaults },
-        sites: parsed.sites,
-      }
-    }
+    const config = parseConfig(parsed)
+    if (config) return config
   } catch {
     // File missing or unreadable — use defaults
   }

@@ -6,7 +6,7 @@ import Ajv from 'ajv'
 
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { checkPermission, loadPermissions } from '../lib/permissions.js'
-import { readTokenCache, writeTokenCache, clearTokenCache, DEFAULT_TTL_SECONDS, type CachedTokens } from './token-cache.js'
+import { readTokenCache, writeTokenCache, clearTokenCache, DEFAULT_TTL_SECONDS, extractJwtExp, type CachedTokens } from './token-cache.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import {
   buildQueryUrl,
@@ -39,6 +39,15 @@ import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types
 
 const MAX_REDIRECTS = 5
 const SENSITIVE_HEADERS = ['cookie', 'authorization', 'x-csrftoken', 'x-csrf-token']
+
+/** Derive permission category from HTTP method when x-openweb.permission is absent */
+function derivePermissionFromMethod(method: string): PermissionCategory {
+  switch (method.toLowerCase()) {
+    case 'delete': return 'delete'
+    case 'post': case 'put': case 'patch': return 'write'
+    default: return 'read'
+  }
+}
 
 export interface ExecuteDependencies {
   readonly fetchImpl?: typeof fetch
@@ -159,8 +168,9 @@ export async function executeOperation(
   const transport = resolveTransport(spec, operationRef.operation)
 
   // Permission gate: check before executing
+  // Derive permission from x-openweb.permission or HTTP method (fail-closed)
   const opExt = operationRef.operation['x-openweb'] as XOpenWebOperation | undefined
-  const category = (opExt?.permission ?? 'read') as PermissionCategory
+  const category: PermissionCategory = opExt?.permission ?? derivePermissionFromMethod(operationRef.method)
   const permConfig = deps.permissionsConfig ?? loadPermissions()
   const policy = checkPermission(permConfig, site, category)
   if (policy === 'deny') {
@@ -255,7 +265,7 @@ export async function executeOperation(
       const cached = await readTokenCache(site, deps.tokenCacheDir)
       let cacheHit = false
 
-      if (cached && cached.cookies.length > 0) {
+      if (cached && (cached.cookies.length > 0 || Object.keys(cached.localStorage).length > 0)) {
         try {
           const result = await executeCachedFetch(spec, operationRef, serverExt, params, cached, deps)
           status = result.status
@@ -473,12 +483,38 @@ async function writeBrowserCookiesToCache(
 
     if (siteCookies.length === 0) return
 
+    // Derive TTL: use earliest cookie expiry or try to find JWT exp in cookie values
+    let jwtExp: number | undefined
+    let ttlSeconds = DEFAULT_TTL_SECONDS
+
+    for (const c of siteCookies) {
+      // Check if any cookie value looks like a JWT with exp claim
+      const exp = extractJwtExp(c.value)
+      if (exp && (!jwtExp || exp < jwtExp)) {
+        jwtExp = exp
+      }
+    }
+
+    // If no JWT found, use earliest finite cookie expiry to derive TTL
+    if (!jwtExp) {
+      const now = Date.now() / 1000
+      for (const c of siteCookies) {
+        if (typeof c.expires === 'number' && c.expires > now) {
+          const remaining = Math.floor(c.expires - now)
+          if (remaining < ttlSeconds) {
+            ttlSeconds = remaining
+          }
+        }
+      }
+    }
+
     await writeTokenCache(site, {
       cookies: siteCookies,
       localStorage: {},
       sessionStorage: {},
       capturedAt: new Date().toISOString(),
-      ttlSeconds: DEFAULT_TTL_SECONDS,
+      ttlSeconds,
+      jwtExp,
     }, baseDir)
   } catch {
     // Cache write failure is not critical — continue silently
