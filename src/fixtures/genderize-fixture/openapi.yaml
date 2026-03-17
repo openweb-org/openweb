@@ -14,7 +14,7 @@ paths:
       summary: Predict gender from a given name
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: gz0001
           tool_version: 1

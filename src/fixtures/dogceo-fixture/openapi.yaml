@@ -14,7 +14,7 @@ paths:
       summary: Get a random dog image URL
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: dog0001
           tool_version: 1
@@ -41,7 +41,7 @@ paths:
       summary: List all dog breeds and sub-breeds
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: dog0002
           tool_version: 1

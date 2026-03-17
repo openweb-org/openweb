@@ -31,7 +31,7 @@ function instagramSpec(): OpenApiSpec {
         get: {
           operationId: 'getTimeline',
           summary: 'Get timeline',
-          'x-openweb': { risk_tier: 'safe' },
+          'x-openweb': { permission: 'read' },
           parameters: [
             { name: 'X-IG-App-ID', in: 'header', required: true, schema: { type: 'string', default: '936619743392459' } },
           ],
@@ -46,7 +46,7 @@ function instagramSpec(): OpenApiSpec {
         post: {
           operationId: 'likeMedia',
           summary: 'Like a media post',
-          'x-openweb': { risk_tier: 'medium' },
+          'x-openweb': { permission: 'write' },
           parameters: [
             { name: 'X-IG-App-ID', in: 'header', required: true, schema: { type: 'string', default: '936619743392459' } },
             { name: 'media_id', in: 'path', required: true, schema: { type: 'string' } },
@@ -62,7 +62,7 @@ function instagramSpec(): OpenApiSpec {
         post: {
           operationId: 'commentMedia',
           summary: 'Comment on a media post',
-          'x-openweb': { risk_tier: 'medium' },
+          'x-openweb': { permission: 'write' },
           parameters: [
             { name: 'X-IG-App-ID', in: 'header', required: true, schema: { type: 'string', default: '936619743392459' } },
             { name: 'media_id', in: 'path', required: true, schema: { type: 'string' } },

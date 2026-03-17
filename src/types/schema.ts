@@ -24,8 +24,8 @@ const transportSchema = {
   enum: ['node', 'page'],
 } as const
 
-const riskTierSchema = {
-  enum: ['safe', 'low', 'medium', 'high', 'critical'],
+const permissionSchema = {
+  enum: ['read', 'write', 'delete', 'transact'],
 } as const
 
 // ── Server-level x-openweb ─────────────────────────
@@ -59,7 +59,7 @@ const buildMetaSchema = {
 export const xOpenWebOperationSchema = {
   type: 'object',
   properties: {
-    risk_tier: riskTierSchema,
+    permission: permissionSchema,
     build: buildMetaSchema,
     transport: transportSchema,
     csrf: csrfWithScopeSchema,

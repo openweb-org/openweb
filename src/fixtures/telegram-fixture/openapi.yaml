@@ -14,7 +14,7 @@ paths:
       operationId: getDialogs
       summary: Get dialog/chat list from Telegram global state
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: tg0001
           tool_version: 1
@@ -55,7 +55,7 @@ paths:
       operationId: getMe
       summary: Get current user info
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: tg0002
           tool_version: 1
@@ -88,7 +88,7 @@ paths:
       operationId: getMessages
       summary: Get messages from a specific chat
       x-openweb:
-        risk_tier: low
+        permission: read
         build:
           stable_id: tg0003
           tool_version: 1

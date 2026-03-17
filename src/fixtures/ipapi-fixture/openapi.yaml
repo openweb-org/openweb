@@ -14,7 +14,7 @@ paths:
       summary: Look up geolocation data for an IP address
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: ip0001
           tool_version: 1

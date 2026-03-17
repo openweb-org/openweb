@@ -14,7 +14,7 @@ paths:
       operationId: getFooterModules
       summary: Extract Walmart footer modules from Next.js SSR state
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: wm0001
           tool_version: 1

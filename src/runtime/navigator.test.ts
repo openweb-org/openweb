@@ -9,8 +9,8 @@ describe('navigator', () => {
     expect(output).toContain('Transport:        node')
     expect(output).toContain('Requires browser: no')
     expect(output).toContain('Requires login:   no')
-    expect(output).toContain('Risk summary:')
-    expect(output).toContain('safe:')
+    expect(output).toContain('Permissions:')
+    expect(output).toContain('read:')
     expect(output).toContain('Operations:')
     expect(output).toContain('get_forecast')
     expect(output).toContain('search_location')
@@ -28,7 +28,7 @@ describe('navigator', () => {
     const output = await renderOperation('open-meteo-fixture', 'get_forecast', false)
     expect(output).toContain('GET /v1/forecast')
     expect(output).toContain('Transport: node')
-    expect(output).toContain('Risk: safe')
+    expect(output).toContain('Permission: read')
   })
 
   it('renders request body fields for JSON operations', async () => {

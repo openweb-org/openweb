@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { getRequestBodyParameters, isArraySchema, type JsonSchema } from '../lib/openapi.js'
 import { findOperation, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
-import type { RiskTier } from '../types/extensions.js'
+import type { PermissionCategory } from '../types/extensions.js'
 import type { Manifest } from '../types/manifest.js'
 import { getServerXOpenWeb, resolveAllParameters, resolveTransport } from './session-executor.js'
 
@@ -87,15 +87,15 @@ export async function renderSite(site: string): Promise<string> {
   lines.push(`Requires browser: ${requiresBrowser ? 'yes' : 'no'}`)
   lines.push(`Requires login:   ${requiresAuth ? 'yes' : 'no'}`)
 
-  // Risk summary
-  const riskCounts: Record<string, number> = {}
+  // Permission summary
+  const permissionCounts: Record<string, number> = {}
   for (const entry of operations) {
     const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
-    const tier = (opExt?.risk_tier as RiskTier | undefined) ?? 'unknown'
-    riskCounts[tier] = (riskCounts[tier] ?? 0) + 1
+    const perm = (opExt?.permission as PermissionCategory | undefined) ?? 'read'
+    permissionCounts[perm] = (permissionCounts[perm] ?? 0) + 1
   }
-  const riskParts = Object.entries(riskCounts).map(([tier, count]) => `${tier}:${count}`)
-  lines.push(`Risk summary:     ${riskParts.join(' ')}`)
+  const permParts = Object.entries(permissionCounts).map(([perm, count]) => `${perm}:${count}`)
+  lines.push(`Permissions:      ${permParts.join(' ')}`)
 
   lines.push('')
   lines.push('Operations:')
@@ -154,8 +154,8 @@ export async function renderOperation(site: string, operationId: string, full: b
   lines.push(`Transport: ${transportLabel}`)
 
   // Operation-level metadata
-  if (opExt?.risk_tier) {
-    lines.push(`Risk: ${opExt.risk_tier as string}`)
+  if (opExt?.permission) {
+    lines.push(`Permission: ${opExt.permission as string}`)
   }
 
   if (full) {

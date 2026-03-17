@@ -14,7 +14,7 @@ paths:
       summary: Get metadata for an npm package by name
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: npm0001
           tool_version: 1
@@ -73,7 +73,7 @@ paths:
       summary: Search npm packages by text query
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: npm0002
           tool_version: 1

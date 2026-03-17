@@ -14,7 +14,7 @@ paths:
       summary: Get the caller's IP address
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: hb0001
           tool_version: 1
@@ -39,7 +39,7 @@ paths:
       summary: Get the caller's User-Agent string
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: hb0002
           tool_version: 1
@@ -64,7 +64,7 @@ paths:
       summary: Get the caller's request headers
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: hb0003
           tool_version: 1
@@ -98,7 +98,7 @@ paths:
       summary: Generate a UUID
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: hb0004
           tool_version: 1

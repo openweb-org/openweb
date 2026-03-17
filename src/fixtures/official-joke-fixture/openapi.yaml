@@ -14,7 +14,7 @@ paths:
       summary: Get a random joke
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: oj0001
           tool_version: 1

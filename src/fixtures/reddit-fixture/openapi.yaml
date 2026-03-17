@@ -36,7 +36,7 @@ paths:
       operationId: getSubreddit
       summary: Get hot posts from a subreddit
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: rd0001
           tool_version: 1
@@ -84,7 +84,7 @@ paths:
       operationId: vote
       summary: Vote on a post or comment
       x-openweb:
-        risk_tier: medium
+        permission: write
         build:
           stable_id: rd0002
           tool_version: 1
@@ -122,7 +122,7 @@ paths:
       servers:
         - url: https://oauth.reddit.com
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: rd0003
           tool_version: 1

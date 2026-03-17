@@ -22,7 +22,7 @@ paths:
       operationId: getProfile
       summary: Get the signed-in Microsoft Graph profile from Word's MSAL cache
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: mw0001
           tool_version: 1

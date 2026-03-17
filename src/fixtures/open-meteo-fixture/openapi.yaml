@@ -17,7 +17,7 @@ paths:
         - url: https://geocoding-api.open-meteo.com
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           verified: true
           stable_id: 0e18811a69644d95
@@ -71,7 +71,7 @@ paths:
       summary: Get hourly and daily weather forecast for a location
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           verified: true
           stable_id: ad259e4f9ecf4367
@@ -137,7 +137,7 @@ paths:
         - url: https://archive-api.open-meteo.com
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           verified: true
           stable_id: 0c7ac34bc5df4f8d
@@ -199,7 +199,7 @@ paths:
         - url: https://air-quality-api.open-meteo.com
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           verified: true
           stable_id: d45f1604dd2f4265

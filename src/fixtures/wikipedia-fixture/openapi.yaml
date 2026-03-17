@@ -14,7 +14,7 @@ paths:
       summary: Search Wikipedia articles by keyword
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: wp0001
           tool_version: 1
@@ -110,7 +110,7 @@ paths:
       summary: Get a summary of a Wikipedia page by title
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: wp0002
           tool_version: 1

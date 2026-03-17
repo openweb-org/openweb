@@ -14,7 +14,7 @@ paths:
       summary: Get Pokemon by name
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: pk0001
           tool_version: 1
@@ -67,7 +67,7 @@ paths:
       summary: List Pokemon
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: pk0002
           tool_version: 1

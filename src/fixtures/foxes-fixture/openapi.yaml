@@ -14,7 +14,7 @@ paths:
       summary: Get a random fox image URL
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: fx0001
           tool_version: 1

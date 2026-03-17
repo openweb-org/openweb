@@ -21,7 +21,7 @@ paths:
       operationId: getTimeline
       summary: Get the authenticated user's timeline
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: bsky0001
           tool_version: 1
@@ -65,7 +65,7 @@ paths:
       operationId: getProfile
       summary: Get a user's profile
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: bsky0002
           tool_version: 1
@@ -98,7 +98,7 @@ paths:
       operationId: searchActors
       summary: Search for actors/users
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: bsky0003
           tool_version: 1

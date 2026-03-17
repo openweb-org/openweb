@@ -25,7 +25,7 @@ paths:
       operationId: getRepo
       summary: Get a repository
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: gh0001
           tool_version: 1
@@ -68,7 +68,7 @@ paths:
       operationId: listIssues
       summary: List repository issues
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: gh0002
           tool_version: 1
@@ -127,7 +127,7 @@ paths:
       operationId: starRepo
       summary: Star a repository
       x-openweb:
-        risk_tier: low
+        permission: read
         build:
           stable_id: gh0003
           tool_version: 1
@@ -160,7 +160,7 @@ paths:
       summary: Execute a GraphQL query
       x-openweb:
         # medium: unrestricted query string can carry mutations
-        risk_tier: medium
+        permission: write
         build:
           stable_id: gh0004
           tool_version: 1

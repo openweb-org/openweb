@@ -26,7 +26,7 @@ paths:
       operationId: listFollowing
       summary: List accounts the authenticated user is following
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: x0001
           tool_version: 1
@@ -98,7 +98,7 @@ paths:
       operationId: listFollowers
       summary: List the authenticated user's followers
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: x0002
           tool_version: 1

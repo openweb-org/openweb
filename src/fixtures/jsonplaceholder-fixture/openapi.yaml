@@ -14,7 +14,7 @@ paths:
       summary: List posts with optional limit
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: jp0001
           tool_version: 1
@@ -53,7 +53,7 @@ paths:
       summary: Create a new post
       x-openweb:
         transport: node
-        risk_tier: medium
+        permission: write
         build:
           stable_id: jp0003
           tool_version: 1
@@ -97,7 +97,7 @@ paths:
       summary: Get a single post by ID
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: jp0002
           tool_version: 1

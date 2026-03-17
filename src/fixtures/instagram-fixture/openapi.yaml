@@ -30,7 +30,7 @@ paths:
       operationId: getTimeline
       summary: Get the authenticated user's feed
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: a1b2c3d4
           tool_version: 1
@@ -71,7 +71,7 @@ paths:
       operationId: getUserProfile
       summary: Get a user's profile information
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: e5f6a7b8
           tool_version: 1
@@ -108,7 +108,7 @@ paths:
       operationId: likeMedia
       summary: Like a media post
       x-openweb:
-        risk_tier: medium
+        permission: write
         build:
           stable_id: c9d0e1f2
           tool_version: 1

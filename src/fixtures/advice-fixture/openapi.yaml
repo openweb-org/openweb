@@ -14,7 +14,7 @@ paths:
       summary: Get a random advice slip
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: ad0001
           tool_version: 1
@@ -45,7 +45,7 @@ paths:
       summary: Search for advice slips by query
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: ad0002
           tool_version: 1

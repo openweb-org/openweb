@@ -14,7 +14,7 @@ paths:
       summary: Search countries by name
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: rc0001
           tool_version: 1
@@ -71,7 +71,7 @@ paths:
       summary: Get all countries with optional field filtering
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: rc0002
           tool_version: 1

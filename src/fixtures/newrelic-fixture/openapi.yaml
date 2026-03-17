@@ -16,7 +16,7 @@ paths:
       operationId: listDashboards
       summary: List dashboards via GraphQL entity search
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: nr0001
           tool_version: 1

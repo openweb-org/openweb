@@ -1,5 +1,5 @@
 export type { Inject, ExchangeCookieStep, ExchangeHttpStep, ExchangeStep, AuthPrimitive, CsrfPrimitive, SigningPrimitive, PaginationPrimitive, ExtractionPrimitive } from './primitives.js'
-export type { RiskTier, Transport, XOpenWebBuildMeta, AdapterRef, XOpenWebServer, XOpenWebOperation } from './extensions.js'
+export type { PermissionCategory, Transport, XOpenWebBuildMeta, AdapterRef, XOpenWebServer, XOpenWebOperation } from './extensions.js'
 export type { Manifest, ManifestFingerprint, ManifestStats } from './manifest.js'
 export type { CodeAdapter } from './adapter.js'
 export { xOpenWebServerSchema, xOpenWebOperationSchema, manifestSchema } from './schema.js'

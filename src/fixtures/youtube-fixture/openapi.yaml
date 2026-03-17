@@ -26,7 +26,7 @@ paths:
       operationId: getVideoInfo
       summary: Get video player info
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: yt0001
           tool_version: 1
@@ -76,7 +76,7 @@ paths:
       operationId: getComments
       summary: Get video comments
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: yt0002
           tool_version: 1

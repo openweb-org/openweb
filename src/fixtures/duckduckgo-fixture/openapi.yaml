@@ -14,7 +14,7 @@ paths:
       summary: Get instant answer data for a search query
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: ddg0001
           tool_version: 1

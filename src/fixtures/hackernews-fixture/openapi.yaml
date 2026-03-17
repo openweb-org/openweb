@@ -14,7 +14,7 @@ paths:
       operationId: getTopStories
       summary: Extract top stories from the Hacker News front page
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: hn0001
           tool_version: 1

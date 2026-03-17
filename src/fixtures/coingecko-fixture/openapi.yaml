@@ -15,7 +15,7 @@ paths:
       summary: Get current price of one or more coins in given currencies
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           verified: true
           stable_id: cg0001
@@ -51,7 +51,7 @@ paths:
       summary: Search for coins, exchanges, and categories by query
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           verified: true
           stable_id: cg0002
@@ -103,7 +103,7 @@ paths:
       summary: List coins with market data ordered by market cap
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           verified: true
           stable_id: cg0003

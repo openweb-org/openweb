@@ -14,7 +14,7 @@ paths:
       summary: Get random user profile(s)
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: ru0001
           tool_version: 1

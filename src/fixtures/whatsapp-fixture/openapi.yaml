@@ -14,7 +14,7 @@ paths:
       operationId: getChats
       summary: Get chat list from internal module system
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: wa0001
           tool_version: 1
@@ -61,7 +61,7 @@ paths:
       operationId: getMessages
       summary: Get messages from a specific chat
       x-openweb:
-        risk_tier: low
+        permission: read
         build:
           stable_id: wa0002
           tool_version: 1
@@ -114,7 +114,7 @@ paths:
       operationId: getContacts
       summary: Get contact list from internal module system
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: wa0003
           tool_version: 1

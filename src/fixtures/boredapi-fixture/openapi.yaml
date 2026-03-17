@@ -14,7 +14,7 @@ paths:
       summary: Get a random boredom-busting activity
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: ba0001
           tool_version: 1
@@ -57,7 +57,7 @@ paths:
       summary: List activities with optional type filter
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: ba0002
           tool_version: 1

@@ -14,7 +14,7 @@ paths:
       summary: Get dictionary definition of an English word
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: da0001
           tool_version: 1

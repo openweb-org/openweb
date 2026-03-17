@@ -71,7 +71,7 @@ describe('validateXOpenWebSpec', () => {
         '/test': {
           get: {
             operationId: 'test',
-            'x-openweb': { risk_tier: 'invalid_tier' },
+            'x-openweb': { permission: 'invalid_perm' },
           },
         },
       },

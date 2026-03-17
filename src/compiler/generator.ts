@@ -82,16 +82,19 @@ function responseContainsResultsLatLon(schema: JsonSchema): boolean {
   return Boolean(results.items.properties.latitude && results.items.properties.longitude)
 }
 
-function deriveRiskTier(method: string): string {
+function derivePermission(method: string, path: string): string {
+  const transactPatterns = /\/(checkout|purchase|payment|order|subscribe)\b/i
+  if (transactPatterns.test(path)) return 'transact'
+
   switch (method.toLowerCase()) {
     case 'delete':
-      return 'high'
+      return 'delete'
     case 'post':
     case 'put':
     case 'patch':
-      return 'medium'
+      return 'write'
     default:
-      return 'safe'
+      return 'read'
   }
 }
 
@@ -159,7 +162,7 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
     const stableId = hash16(`${operation.operationId}:${signatureSeed(operation)}`)
     const signatureId = hash16(signatureSeed(operation))
 
-    const riskTier = deriveRiskTier(operation.method)
+    const permission = derivePermission(operation.method, operation.path)
     const signals = deriveSignals(input.classify, operation.verified)
 
     const buildMeta: Record<string, unknown> = {
@@ -174,7 +177,7 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
       operationId: operation.operationId,
       summary: operation.summary,
       'x-openweb': {
-        risk_tier: riskTier,
+        permission,
         build: buildMeta,
       },
       parameters: operation.parameters.map((parameter) => ({
@@ -234,7 +237,7 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
       const extractionPath = `/_extraction/${opId}`
 
       const extractionXOpenWeb: Record<string, unknown> = {
-        risk_tier: 'safe',
+        permission: 'read',
         build: {
           verified: false,
           stable_id: hash16(`${opId}:extraction`),

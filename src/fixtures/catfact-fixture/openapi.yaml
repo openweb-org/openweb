@@ -14,7 +14,7 @@ paths:
       summary: Get a random cat fact
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: cf0001
           tool_version: 1
@@ -41,7 +41,7 @@ paths:
       summary: List cat facts with pagination
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: cf0002
           tool_version: 1

@@ -14,7 +14,7 @@ paths:
       summary: List all public repositories in the order they were created
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: ghp0001
           tool_version: 1
@@ -81,7 +81,7 @@ paths:
       summary: List users who have starred a repository
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: ghp0002
           tool_version: 1

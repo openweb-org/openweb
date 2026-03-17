@@ -15,7 +15,7 @@ paths:
       summary: Search universities by name and country
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: un0001
           tool_version: 1

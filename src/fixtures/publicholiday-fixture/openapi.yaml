@@ -14,7 +14,7 @@ paths:
       summary: Get public holidays for a country and year
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: ph0001
           tool_version: 1

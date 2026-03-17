@@ -14,7 +14,7 @@ paths:
       summary: Get a random Chuck Norris joke
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: cn0001
           tool_version: 1
@@ -53,7 +53,7 @@ paths:
       summary: Search for Chuck Norris jokes
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: cn0002
           tool_version: 1

@@ -21,7 +21,7 @@ paths:
       operationId: getMe
       summary: Get the current user
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: discord0001
           tool_version: 1
@@ -56,7 +56,7 @@ paths:
       operationId: getGuilds
       summary: List guilds the user belongs to
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: discord0002
           tool_version: 1
@@ -96,7 +96,7 @@ paths:
       operationId: getChannelMessages
       summary: Get messages from a channel
       x-openweb:
-        risk_tier: safe
+        permission: read
         build:
           stable_id: discord0003
           tool_version: 1

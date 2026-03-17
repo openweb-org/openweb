@@ -14,7 +14,7 @@ paths:
       summary: Get country for an IP address
       x-openweb:
         transport: node
-        risk_tier: safe
+        permission: read
         build:
           stable_id: ci0001
           tool_version: 1

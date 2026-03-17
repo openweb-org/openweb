@@ -6,7 +6,7 @@ import type {
   SigningPrimitive,
 } from './primitives.js'
 
-export type RiskTier = 'safe' | 'low' | 'medium' | 'high' | 'critical'
+export type PermissionCategory = 'read' | 'write' | 'delete' | 'transact'
 
 export type Transport = 'node' | 'page'
 
@@ -34,7 +34,7 @@ export interface XOpenWebBuildMeta {
 
 // Operation-level x-openweb (on paths[].{method})
 export interface XOpenWebOperation {
-  readonly risk_tier?: RiskTier
+  readonly permission?: PermissionCategory
   readonly build?: XOpenWebBuildMeta
   readonly transport?: Transport
   readonly csrf?: CsrfPrimitive & { readonly scope?: readonly string[] }
