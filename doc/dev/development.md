@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-17 (commit: M10)
+> Last updated: 2026-03-17 (commit: M11)
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (271/271 pass)
+pnpm test           # Run tests (293/293 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -88,6 +88,16 @@ pnpm dev compile https://api.example.com
 pnpm dev compile https://api.example.com --script ./scripts/record.ts
 ```
 
+### Discover APIs
+
+```bash
+# Discover APIs from a website (passive capture only)
+pnpm dev discover https://example.com --cdp-endpoint http://localhost:9222
+
+# With active exploration (clicks nav links, tries search)
+pnpm dev discover https://example.com --explore --cdp-endpoint http://localhost:9222
+```
+
 ### Run Site Tests
 
 ```bash
@@ -149,6 +159,7 @@ src/
 │   ├── exec.ts               # Execute operation
 │   ├── show.ts               # Show site/operation info
 │   ├── compile.ts            # Compile site → skill package
+│   ├── discover.ts           # Discover APIs from URL
 │   ├── capture.ts            # CDP browser capture
 │   ├── test.ts               # Run site tests
 │   └── sites.ts              # List available sites
@@ -156,8 +167,9 @@ src/
 ├── types/                    # Meta-spec type system
 ├── compiler/                 # Site compilation pipeline
 ├── capture/                  # Browser CDP recording
+├── discovery/                # Agent-driven API discovery pipeline
 ├── lib/                      # Shared utilities (SSRF, errors, OpenAPI)
-└── fixtures/                 # 13 test site packages
+└── fixtures/                 # 35 verified site packages
 ```
 
 -> See: [doc/main/README.md](../main/README.md) — full code structure with per-file annotations

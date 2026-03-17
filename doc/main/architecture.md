@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-17 (commit: M10)
+> Last updated: 2026-03-17 (commit: M11)
 
 ## Mission
 
@@ -84,10 +84,11 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 |-----------|-------------|-----------|--------|
 | **Meta-spec** | x-openweb schema: L2 types + L3 interface + package format | `src/types/` | Formalized (M1) |
 | **Runtime** | Reads skill packages, resolves primitives, executes requests | `src/runtime/` | L1 + L2 + L3 + extraction complete (M6) |
-| **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | Phases 2-4 partial (L1 emit) |
-| **Capture** | CDP browser recording (HAR + WS + state + DOM) | `src/capture/` | Complete (M0) |
-| **CLI** | Progressive navigation + exec + capture + compile | `src/cli.ts`, `src/commands/` | Complete |
-| **Skill packages** | Per-site instance specs | `src/fixtures/` | 25 verified sites |
+| **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | L1 emit + L2 classify (M10) |
+| **Capture** | CDP browser recording (HAR + WS + state + DOM) | `src/capture/` | Complete (M0), page isolation (M11) |
+| **Discovery** | Agent-driven API discovery pipeline | `src/discovery/` | Interactive capture + active exploration (M11) |
+| **CLI** | Progressive navigation + exec + capture + compile + discover | `src/cli.ts`, `src/commands/` | Complete |
+| **Skill packages** | Per-site instance specs | `src/fixtures/` | 35 verified sites |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5) |
 
 ---
@@ -141,11 +142,12 @@ openweb <site> exec <op> '{...}' --max-response 8192  # emit a valid JSON previe
 openweb <site> test                            # run site test cases
 openweb capture start --cdp-endpoint ...       # record browser session
 openweb compile <url>                          # generate skill package
+openweb discover <url>                         # discover APIs and generate fixture
 ```
 
 ---
 
-## Verified Sites (M0-M10)
+## Verified Sites (M0-M11)
 
 | Site | Layer | Auth | CSRF | Signing | Extraction | Transport |
 |------|-------|------|------|---------|------------|-----------|
@@ -160,6 +162,8 @@ openweb compile <url>                          # generate skill package
 | Microsoft Word | L2 | sessionStorage_msal | — | — | — | node |
 | New Relic | L2 | cookie_session | — | — | — | node |
 | Discord | L2 | webpack_module_walk | — | — | — | page |
+| ChatGPT | L2 | exchange_chain | — | — | — | node |
+| X | L2 | cookie_session | cookie_to_header | — | — | page |
 | WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |
 | Telegram | L3 | adapter | — | — | adapter | adapter (L3) |
 | Stack Overflow | L1 | — | — | — | — | node |
@@ -172,6 +176,16 @@ openweb compile <url>                          # generate skill package
 | GitHub (public) | L1 | — | — | — | — | node |
 | REST Countries | L1 | — | — | — | — | node |
 | IP API | L1 | — | — | — | — | node |
+| Agify | L1 | — | — | — | — | node |
+| Bored API | L1 | — | — | — | — | node |
+| Cat Facts | L1 | — | — | — | — | node |
+| Exchange Rate | L1 | — | — | — | — | node |
+| Genderize | L1 | — | — | — | — | node |
+| HTTPBin | L1 | — | — | — | — | node |
+| Nationalize | L1 | — | — | — | — | node |
+| Open Library | L1 | — | — | — | — | node |
+| PokeAPI | L1 | — | — | — | — | node |
+| Random User | L1 | — | — | — | — | node |
 
 **Note:** The GitHub public fixture also includes a `graphqlQuery` operation (POST `/graphql`, `risk_tier: medium`) demonstrating POST-based GraphQL on a public API.
 

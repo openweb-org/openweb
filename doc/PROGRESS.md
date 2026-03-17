@@ -37,15 +37,28 @@
   - Exploration capture uses separate dir + merge (prevents passive data overwrite)
   - Browser disconnected after capture (prevents leaked Playwright connections)
   - Static import for createCaptureSession (was unnecessary dynamic import)
+- Codex Review Round 1 (1 CRITICAL + 3 HIGH + 1 MEDIUM)
+  - CRITICAL: Wrong-tab credential capture — opens dedicated page, navigates to target, attaches capture
+  - HIGH: Capture readiness — CaptureSession.ready promise replaces 1500ms sleep
+  - HIGH: Active exploration unsafe — --explore defaults false, destructive link denylist
+  - HIGH: Public-suffix — 80+ known multi-part TLDs (co.uk, com.au, etc.)
+  - MEDIUM: Noise-path patterns narrowed, false-positive tests added
+- Codex Review Round 2 (2 HIGH + 3 MEDIUM)
+  - HIGH: Exploration capture passes targetPage + awaits ready
+  - HIGH: Session page isolation — isolateToTargetPage skips unrelated tabs
+  - MEDIUM: discoverCommand default explore=false matches CLI
+  - MEDIUM: Hosting platform isolation (github.io, netlify.app, etc.)
+  - MEDIUM: Escaped dot in .well-known regex
 
 **Exit Criteria:**
 - ✅ `openweb discover <url>` works end-to-end (passive capture + active exploration + compile)
 - ✅ 35 total sites (25 original + 10 new L1)
 - ✅ All new fixtures verified against live APIs
-- ✅ 289/289 tests pass, zero regression
+- ✅ 293/293 tests pass, zero regression
 - ✅ Infrastructure noise filter blocks telemetry/tracking/config paths
+- ✅ 2 codex review rounds resolved (0 critical, 0 high remaining)
 
-**Verification:** 289/289 unit tests pass; 10 new fixtures verified; build clean; 4 commits
+**Verification:** 293/293 unit tests pass; 10 new fixtures verified; build clean; 8 commits + 2 review fix commits
 
 ---
 

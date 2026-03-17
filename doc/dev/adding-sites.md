@@ -297,6 +297,26 @@ pnpm --silent dev <site>-fixture test
 | newrelic-fixture | L2 | cookie_session | — | GraphQL cursor pagination (const body + items_path) |
 | chatgpt-fixture | L2 | exchange_chain (GET) | — | Next-auth session token + Cloudflare User-Agent |
 | x-fixture | L2 | cookie_session | cookie_to_header (all methods) | browser_fetch + static bearer + CSRF on GET |
+| stackoverflow-fixture | L1 | — | — | Public API |
+| coingecko-fixture | L1 | — | — | Public API |
+| wikipedia-fixture | L1 | — | — | Public API |
+| npm-fixture | L1 | — | — | Public API |
+| duckduckgo-fixture | L1 | — | — | Public API |
+| jsonplaceholder-fixture | L1 | — | — | Public API (CRUD) |
+| dogceo-fixture | L1 | — | — | Public API |
+| github-public-fixture | L1 | — | — | Public API (link_header pagination) |
+| restcountries-fixture | L1 | — | — | Public API |
+| ipapi-fixture | L1 | — | — | Public API |
+| agify-fixture | L1 | — | — | Public API (name → age prediction) |
+| boredapi-fixture | L1 | — | — | Public API (random activities) |
+| catfact-fixture | L1 | — | — | Public API (cat facts) |
+| exchangerate-fixture | L1 | — | — | Public API (currency rates) |
+| genderize-fixture | L1 | — | — | Public API (name → gender) |
+| httpbin-fixture | L1 | — | — | Public API (HTTP testing) |
+| nationalize-fixture | L1 | — | — | Public API (name → nationality) |
+| openlib-fixture | L1 | — | — | Public API (book search) |
+| pokeapi-fixture | L1 | — | — | Public API (Pokemon data) |
+| randomuser-fixture | L1 | — | — | Public API (random users) |
 
 ---
 
