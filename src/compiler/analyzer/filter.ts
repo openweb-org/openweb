@@ -98,13 +98,48 @@ function isBlockedHost(host: string): boolean {
   return BLOCKED_HOST_PATTERNS.some((blocked) => host === blocked || host.endsWith(`.${blocked}`))
 }
 
+/**
+ * Hosting platforms where each subdomain is a different tenant.
+ * For these, the allowed domain must be the full hostname, not just the base.
+ * e.g. target=foo.github.io should NOT allow bar.github.io.
+ */
+const HOSTING_PLATFORMS = new Set([
+  'github.io',
+  'gitlab.io',
+  'netlify.app',
+  'netlify.com',
+  'vercel.app',
+  'herokuapp.com',
+  'pages.dev',
+  'web.app',
+  'firebaseapp.com',
+  'azurewebsites.net',
+  'azurestaticapps.net',
+  'fly.dev',
+  'render.com',
+  'railway.app',
+  'surge.sh',
+  'deno.dev',
+  'workers.dev',
+])
+
+function isHostingPlatform(baseDomain: string): boolean {
+  return HOSTING_PLATFORMS.has(baseDomain)
+}
+
 function buildAllowedDomains(options: FilterOptions): string[] {
   const domains: string[] = []
 
   if (options.targetUrl) {
     try {
-      const baseDomain = extractBaseDomain(new URL(options.targetUrl).hostname)
-      domains.push(baseDomain)
+      const hostname = new URL(options.targetUrl).hostname
+      const baseDomain = extractBaseDomain(hostname)
+      // For hosting platforms, use full hostname to prevent cross-tenant matching
+      if (isHostingPlatform(baseDomain)) {
+        domains.push(hostname)
+      } else {
+        domains.push(baseDomain)
+      }
     } catch {
       // invalid URL — skip
     }
@@ -134,7 +169,7 @@ function isAllowedHost(host: string, allowedDomains: string[]): boolean {
 const BLOCKED_PATH_PATTERNS: readonly RegExp[] = [
   /\/manifest\.json$/,
   /\/_next\//,
-  /\/.well-known\//,
+  /\/\.well-known\//,
   /\/favicon\./,
   /\/robots\.txt$/,
   /\/sitemap\.xml/,

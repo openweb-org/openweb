@@ -172,4 +172,27 @@ describe('filterSamples', () => {
     expect(output).toHaveLength(3)
     expect(output.map((s) => s.host)).toEqual(['api.bbc.co.uk', 'www.bbc.co.uk', 'bbc.co.uk'])
   })
+
+  it('isolates hosting platform subdomains (github.io, netlify.app, etc.)', () => {
+    const input = [
+      makeSample({ host: 'mysite.github.io' }),
+      makeSample({ host: 'othersite.github.io' }),
+      makeSample({ host: 'github.io' }),
+    ]
+
+    const output = filterSamples(input, { targetUrl: 'https://mysite.github.io' })
+    expect(output).toHaveLength(1)
+    expect(output[0].host).toBe('mysite.github.io')
+  })
+
+  it('does not block .well-known with unescaped dot', () => {
+    const input = [
+      makeSample({ path: '/xwell-known/something' }),  // should NOT be blocked
+      makeSample({ path: '/.well-known/openid' }),      // should be blocked
+    ]
+
+    const output = filterSamples(input)
+    expect(output).toHaveLength(1)
+    expect(output[0].path).toBe('/xwell-known/something')
+  })
 })

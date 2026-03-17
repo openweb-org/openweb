@@ -12,7 +12,7 @@ export async function discoverCommand(opts: DiscoverCommandOptions): Promise<voi
   const discoverOpts: DiscoverOptions = {
     cdpEndpoint: opts.cdpEndpoint,
     targetUrl: opts.url,
-    explore: opts.explore ?? true,
+    explore: opts.explore ?? false,
     outputDir: opts.output,
     captureDuration: opts.duration,
     onLog: (msg) => process.stdout.write(`${msg}\n`),

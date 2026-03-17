@@ -14,6 +14,8 @@ export interface CaptureSessionOptions {
   readonly onLog?: (message: string) => void
   /** If provided, capture attaches to this specific page instead of pages()[0] */
   readonly targetPage?: Page
+  /** If true, only record traffic from the target page — ignore other tabs */
+  readonly isolateToTargetPage?: boolean
 }
 
 export interface CaptureSession {
@@ -223,14 +225,16 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
       wsCapture = await attachWsCapture(cdp)
       attachPageListeners(page, context)
 
-      // Listen for new pages (tabs)
-      context.on('page', (newPage) => {
-        if (stopped) return
-        log(`  new page detected: ${newPage.url()}`)
-        const newHar = attachHarCapture(newPage)
-        harCaptures.push(newHar)
-        attachPageListeners(newPage, context)
-      })
+      // Listen for new pages (tabs) — skip if isolating to target page
+      if (!opts.isolateToTargetPage) {
+        context.on('page', (newPage) => {
+          if (stopped) return
+          log(`  new page detected: ${newPage.url()}`)
+          const newHar = attachHarCapture(newPage)
+          harCaptures.push(newHar)
+          attachPageListeners(newPage, context)
+        })
+      }
 
       // Signal that capture is ready — listeners are attached
       readyDfd.resolve()

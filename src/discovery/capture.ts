@@ -62,11 +62,12 @@ export async function interactiveCapture(opts: InteractiveCaptureOptions): Promi
   // Open a new blank page — this is the page we'll capture on
   const page = await context.newPage()
 
-  // Step 2: Start capture session attached to our specific page
+  // Step 2: Start capture session attached to our specific page only
   const session = createCaptureSession({
     cdpEndpoint: opts.cdpEndpoint,
     outputDir: recordingDir,
     targetPage: page,
+    isolateToTargetPage: true,
     onLog: log,
   })
 

@@ -104,10 +104,13 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
     const exploreSession = createCaptureSession({
       cdpEndpoint: opts.cdpEndpoint,
       outputDir: exploreDir,
+      targetPage: capture.page,
+      isolateToTargetPage: true,
       onLog: log,
     })
 
     try {
+      await exploreSession.ready
       const result = await explorePage(capture.page, log)
       explorationStats = result
       log(`explored ${String(result.linksClicked)} links, ${String(result.searchesPerformed)} searches`)
