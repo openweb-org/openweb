@@ -108,7 +108,7 @@ export async function compileSite(
   const site = siteSlugFromUrl(args.url)
   try {
     const recordedSamples = await loadRecordedSamples(recordingDir)
-    filteredSamples = filterSamples(recordedSamples)
+    filteredSamples = filterSamples(recordedSamples, { targetUrl: args.url, allowMutations: false })
 
     // Load full capture data for L2 classification
     const captureData = await loadCaptureData(recordingDir)
@@ -138,7 +138,7 @@ export async function compileSite(
       continue
     }
 
-    const annotation = annotateOperation(cluster.host, cluster.path)
+    const annotation = annotateOperation(cluster.host, cluster.path, cluster.method)
     const differentiatedParams = differentiateParameters(cluster)
     const annotatedParams = annotateParameterDescriptions(differentiatedParams)
     const responseSchema = inferSchema(cluster.samples.map((sample) => sample.responseJson))
