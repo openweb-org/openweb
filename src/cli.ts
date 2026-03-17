@@ -216,6 +216,7 @@ await yargs(argv)
       cmd
         .positional('site', { type: 'string', describe: 'Site to verify (omit with --all for all sites)' })
         .option('all', { type: 'boolean', default: false, describe: 'Verify all sites' })
+        .option('auto-heal', { type: 'boolean', default: false, describe: 'Auto-heal drifted read operations' })
         .option('report', {
           describe: 'Output drift report (json or markdown)',
           coerce: (val: string | boolean) => val === true ? 'json' : val,
@@ -225,6 +226,7 @@ await yargs(argv)
         await verifyCommand({
           site: args.site ? String(args.site) : undefined,
           all: Boolean(args.all),
+          autoHeal: Boolean(args['auto-heal']),
           report: args.report as boolean | string | undefined,
         })
       })
