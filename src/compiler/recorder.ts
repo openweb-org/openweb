@@ -5,6 +5,8 @@ import { spawn } from 'node:child_process'
 
 import { OpenWebError } from '../lib/errors.js'
 import type { RecordedRequestSample } from './types.js'
+import type { CaptureData } from './analyzer/classify.js'
+import type { HarEntry as CaptureHarEntry, StateSnapshot } from '../capture/types.js'
 
 interface HarLog {
   readonly log?: {
@@ -13,14 +15,19 @@ interface HarLog {
 }
 
 interface HarEntry {
+  readonly startedDateTime?: string
+  readonly time?: number
   readonly request?: {
     readonly method?: string
     readonly url?: string
+    readonly headers?: Array<{ name?: string; value?: string }>
   }
   readonly response?: {
     readonly status?: number
+    readonly statusText?: string
     readonly headers?: Array<{ name?: string; value?: string }>
     readonly content?: {
+      readonly size?: number
       readonly mimeType?: string
       readonly text?: string
       readonly encoding?: string
@@ -149,4 +156,74 @@ export async function loadRecordedSamples(recordingDir: string): Promise<Recorde
 
 export async function cleanupRecordingDir(recordingDir: string): Promise<void> {
   await rm(recordingDir, { recursive: true, force: true })
+}
+
+/**
+ * Load full capture data from a recording directory for classify().
+ * Reads: traffic.har (raw entries), state_snapshots.json, dom.html.
+ * Missing files are treated as empty — only traffic.har is required.
+ */
+export async function loadCaptureData(recordingDir: string): Promise<CaptureData> {
+  const harPath = path.join(recordingDir, 'traffic.har')
+  const raw = await readFile(harPath, 'utf8')
+  const har = JSON.parse(raw) as HarLog
+
+  // Convert local HAR entries to capture module HarEntry format
+  const harEntries: CaptureHarEntry[] = []
+  for (const entry of har.log?.entries ?? []) {
+    if (!entry.request?.method || !entry.request.url || entry.response?.status === undefined) continue
+
+    const requestHeaders = (entry.request?.headers ?? [])
+      .filter((h): h is { name: string; value: string } => Boolean(h?.name && h.value !== undefined))
+      .map(h => ({ name: h.name, value: h.value }))
+
+    const responseHeaders = (entry.response?.headers ?? [])
+      .filter((h): h is { name: string; value: string } => Boolean(h?.name && h.value !== undefined))
+      .map(h => ({ name: h.name, value: h.value }))
+
+    const contentText = entry.response.content?.text
+    const encoding = entry.response.content?.encoding?.toLowerCase()
+    const decodedText = contentText && encoding === 'base64'
+      ? Buffer.from(contentText, 'base64').toString('utf8')
+      : contentText
+
+    harEntries.push({
+      startedDateTime: entry.startedDateTime ?? new Date().toISOString(),
+      time: entry.time ?? 0,
+      request: {
+        method: entry.request.method,
+        url: entry.request.url,
+        headers: requestHeaders,
+      },
+      response: {
+        status: entry.response.status,
+        statusText: entry.response.statusText ?? '',
+        headers: responseHeaders,
+        content: {
+          size: entry.response.content?.size ?? 0,
+          mimeType: entry.response.content?.mimeType ?? '',
+          text: decodedText,
+        },
+      },
+    })
+  }
+
+  // Load state snapshots if available
+  let stateSnapshots: StateSnapshot[] = []
+  try {
+    const stateRaw = await readFile(path.join(recordingDir, 'state_snapshots.json'), 'utf8')
+    stateSnapshots = JSON.parse(stateRaw) as StateSnapshot[]
+  } catch {
+    // No state snapshots — OK for L1 sites
+  }
+
+  // Load DOM HTML if available
+  let domHtml: string | undefined
+  try {
+    domHtml = await readFile(path.join(recordingDir, 'dom.html'), 'utf8')
+  } catch {
+    // No DOM capture — OK
+  }
+
+  return { harEntries, stateSnapshots, domHtml }
 }

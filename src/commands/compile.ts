@@ -6,11 +6,12 @@ import { OpenWebError } from '../lib/errors.js'
 import { buildQueryUrl } from '../lib/openapi.js'
 import { annotateOperation, annotateParameterDescriptions } from '../compiler/analyzer/annotate.js'
 import { clusterSamples } from '../compiler/analyzer/cluster.js'
+import { classify } from '../compiler/analyzer/classify.js'
 import { differentiateParameters } from '../compiler/analyzer/differentiate.js'
 import { filterSamples } from '../compiler/analyzer/filter.js'
 import { inferSchema } from '../compiler/analyzer/schema.js'
 import { generatePackage } from '../compiler/generator.js'
-import { cleanupRecordingDir, loadRecordedSamples, runScriptedRecording } from '../compiler/recorder.js'
+import { cleanupRecordingDir, loadCaptureData, loadRecordedSamples, runScriptedRecording } from '../compiler/recorder.js'
 import type { AnalyzedOperation, ParameterDescriptor, RecordedRequestSample } from '../compiler/types.js'
 import { fetchWithValidatedRedirects } from '../runtime/executor.js'
 
@@ -103,10 +104,17 @@ export async function compileSite(
 
   const recordingDir = await runScriptedRecording(scriptPath)
   let filteredSamples: RecordedRequestSample[] = []
+  let classifyResult: ReturnType<typeof classify> | undefined
   const site = siteSlugFromUrl(args.url)
   try {
     const recordedSamples = await loadRecordedSamples(recordingDir)
     filteredSamples = filterSamples(recordedSamples)
+
+    // Load full capture data for L2 classification
+    const captureData = await loadCaptureData(recordingDir)
+    if (captureData.harEntries.length > 0 || captureData.stateSnapshots.length > 0 || captureData.domHtml) {
+      classifyResult = classify(captureData)
+    }
   } finally {
     await cleanupRecordingDir(recordingDir)
   }
@@ -170,6 +178,7 @@ export async function compileSite(
     sourceUrl: args.url,
     operations: analyzedOperations,
     outputBaseDir: options.outputBaseDir,
+    classify: classifyResult,
   })
 
   const verifiedCount = analyzedOperations.filter((operation) => operation.verified).length
