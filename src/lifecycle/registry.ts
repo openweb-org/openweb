@@ -1,6 +1,6 @@
 import os from 'node:os'
 import path from 'node:path'
-import { readFile, writeFile, readdir, mkdir, cp, rm } from 'node:fs/promises'
+import { readFile, writeFile, readdir, mkdir, cp, rm, chmod } from 'node:fs/promises'
 
 import type { Manifest } from '../types/manifest.js'
 import { resolveSiteRoot } from '../lib/openapi.js'
@@ -8,16 +8,37 @@ import { resolveSiteRoot } from '../lib/openapi.js'
 const REGISTRY_ROOT = path.join(os.homedir(), '.openweb', 'registry')
 const MAX_VERSIONS = 5
 
+/** Alphanumeric, hyphens, dots only. No empty, no '..' components. */
+const SAFE_NAME = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/
+
+function validatePathComponent(value: string, label: string): void {
+  if (!SAFE_NAME.test(value) || value.includes('..')) {
+    throw new Error(`Invalid ${label}: ${value}`)
+  }
+}
+
+/** Resolve and verify a path stays inside REGISTRY_ROOT. */
+function safeRegistryPath(...segments: string[]): string {
+  for (const seg of segments) {
+    validatePathComponent(seg, 'path component')
+  }
+  const resolved = path.resolve(REGISTRY_ROOT, ...segments)
+  if (!resolved.startsWith(path.resolve(REGISTRY_ROOT) + path.sep) && resolved !== path.resolve(REGISTRY_ROOT)) {
+    throw new Error(`Path escapes registry root: ${resolved}`)
+  }
+  return resolved
+}
+
 function registrySitePath(site: string): string {
-  return path.join(REGISTRY_ROOT, site)
+  return safeRegistryPath(site)
 }
 
 function registryVersionPath(site: string, version: string): string {
-  return path.join(REGISTRY_ROOT, site, version)
+  return safeRegistryPath(site, version)
 }
 
 function currentFilePath(site: string): string {
-  return path.join(REGISTRY_ROOT, site, 'current')
+  return path.join(safeRegistryPath(site), 'current')
 }
 
 async function pathExists(p: string): Promise<boolean> {
@@ -39,6 +60,14 @@ async function loadManifestFrom(dir: string): Promise<Manifest | undefined> {
   }
 }
 
+async function mkdirSecure(dir: string): Promise<void> {
+  await mkdir(dir, { recursive: true, mode: 0o700 })
+}
+
+async function writeFileSecure(filePath: string, data: string): Promise<void> {
+  await writeFile(filePath, data, { encoding: 'utf8', mode: 0o600 })
+}
+
 /**
  * List all archived versions for a site, sorted by semver ascending.
  */
@@ -58,7 +87,9 @@ export async function listVersions(site: string): Promise<string[]> {
  */
 export async function getCurrentVersion(site: string): Promise<string | undefined> {
   try {
-    return (await readFile(currentFilePath(site), 'utf8')).trim()
+    const version = (await readFile(currentFilePath(site), 'utf8')).trim()
+    validatePathComponent(version, 'version')
+    return version
   } catch {
     return undefined
   }
@@ -68,7 +99,8 @@ export async function getCurrentVersion(site: string): Promise<string | undefine
  * Set the current version for a site.
  */
 export async function setCurrentVersion(site: string, version: string): Promise<void> {
-  await writeFile(currentFilePath(site), version, 'utf8')
+  validatePathComponent(version, 'version')
+  await writeFileSecure(currentFilePath(site), version)
 }
 
 /**
@@ -77,12 +109,13 @@ export async function setCurrentVersion(site: string, version: string): Promise<
  * Returns the archived version string.
  */
 export async function archiveSite(site: string, siteRoot?: string): Promise<string> {
-  const source = siteRoot ?? (await resolveSiteRoot(site))
+  const source = siteRoot ?? (await resolveSiteRoot(site, { skipRegistry: true }))
   const manifest = await loadManifestFrom(source)
   const version = manifest?.version ?? '1.0.0'
+  validatePathComponent(version, 'version')
 
   const dest = registryVersionPath(site, version)
-  await mkdir(dest, { recursive: true })
+  await mkdirSecure(dest)
 
   // Copy entire fixture
   await cp(source, dest, { recursive: true, force: true })
@@ -109,15 +142,16 @@ export function bumpMinor(version: string): string {
 
 /**
  * Archive with a version bump (for drift scenarios).
- * Bumps minor version, copies to registry, then updates source manifest.
+ * Bumps minor version, copies to registry, then updates the registry copy's manifest.
  * Idempotent: won't bump if the same version already exists in registry.
  */
 export async function archiveWithBump(site: string, siteRoot?: string): Promise<string> {
-  const source = siteRoot ?? (await resolveSiteRoot(site))
+  const source = siteRoot ?? (await resolveSiteRoot(site, { skipRegistry: true }))
   const manifest = await loadManifestFrom(source)
   if (!manifest) return archiveSite(site, source)
 
   const newVersion = bumpMinor(manifest.version)
+  validatePathComponent(newVersion, 'version')
 
   // Idempotent: if this version already exists, skip
   const existing = await listVersions(site)
@@ -125,12 +159,12 @@ export async function archiveWithBump(site: string, siteRoot?: string): Promise<
 
   // Copy to registry first, then update the copy's manifest (not source)
   const dest = registryVersionPath(site, newVersion)
-  await mkdir(dest, { recursive: true })
+  await mkdirSecure(dest)
   await cp(source, dest, { recursive: true, force: true })
 
   // Update manifest in the registry copy only
   const updated = { ...manifest, version: newVersion }
-  await writeFile(path.join(dest, 'manifest.json'), `${JSON.stringify(updated, null, 2)}\n`, 'utf8')
+  await writeFileSecure(path.join(dest, 'manifest.json'), `${JSON.stringify(updated, null, 2)}\n`)
 
   await setCurrentVersion(site, newVersion)
   await pruneSite(site, MAX_VERSIONS)
@@ -183,6 +217,7 @@ export async function listRegisteredSites(): Promise<Array<{ site: string; versi
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
+    if (!SAFE_NAME.test(entry.name)) continue
     const versions = await listVersions(entry.name)
     if (versions.length === 0) continue
     const current = await getCurrentVersion(entry.name)
@@ -197,6 +232,7 @@ export async function listRegisteredSites(): Promise<Array<{ site: string; versi
  * Returns undefined if the site is not in the registry.
  */
 export async function getRegistryCurrentPath(site: string): Promise<string | undefined> {
+  if (!SAFE_NAME.test(site)) return undefined
   const current = await getCurrentVersion(site)
   if (!current) return undefined
   const versionPath = registryVersionPath(site, current)

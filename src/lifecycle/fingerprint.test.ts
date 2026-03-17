@@ -29,6 +29,13 @@ describe('computeResponseFingerprint', () => {
   it('handles arrays with element type', () => {
     const a = computeResponseFingerprint([{ id: 1 }, { id: 2 }])
     const b = computeResponseFingerprint([{ id: 3 }])
+    // Different array lengths produce different fingerprints
+    expect(a).not.toBe(b)
+  })
+
+  it('same-shape arrays with same length match', () => {
+    const a = computeResponseFingerprint([{ id: 1 }, { id: 2 }, { id: 3 }])
+    const b = computeResponseFingerprint([{ id: 4 }, { id: 5 }, { id: 6 }])
     expect(a).toBe(b)
   })
 
@@ -51,5 +58,23 @@ describe('computeResponseFingerprint', () => {
     const a = computeResponseFingerprint({ z: 1, a: 'x' })
     const b = computeResponseFingerprint({ a: 'y', z: 2 })
     expect(a).toBe(b)
+  })
+
+  it('detects nested object changes', () => {
+    const a = computeResponseFingerprint({ data: { name: 'test', age: 30 } })
+    const b = computeResponseFingerprint({ data: { name: 'test', email: 'x' } })
+    expect(a).not.toBe(b)
+  })
+
+  it('includes field count in fingerprint', () => {
+    const a = computeResponseFingerprint({ a: 1 })
+    const b = computeResponseFingerprint({ a: 1, b: 2 })
+    expect(a).not.toBe(b)
+  })
+
+  it('detects heterogeneous arrays', () => {
+    const a = computeResponseFingerprint([{ id: 1 }, { id: 2, extra: true }])
+    const b = computeResponseFingerprint([{ id: 1 }, { id: 2 }])
+    expect(a).not.toBe(b)
   })
 })

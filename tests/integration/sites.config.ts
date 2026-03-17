@@ -324,6 +324,7 @@ export const sites: SiteIntegrationTest[] = [
     site: 'worldtime-fixture',
     page_url: 'http://worldtimeapi.org',
     requires_login: false,
+    flaky: true, // API intermittently down; HTTP only
     smoke: { operation: 'getTimezone', params: { area: 'America', location: 'New_York' } },
   },
   {

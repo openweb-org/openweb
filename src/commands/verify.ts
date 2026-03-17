@@ -1,10 +1,19 @@
-import { verifySite, verifyAll, generateDriftReport, generateDriftReportMarkdown, type OperationStatus } from '../lifecycle/verify.js'
+import {
+  verifySite,
+  verifyAll,
+  hasNonPassResults,
+  generateDriftReport,
+  generateDriftReportMarkdown,
+  type SiteOverallStatus,
+} from '../lifecycle/verify.js'
+import { OpenWebError } from '../lib/errors.js'
 
-function statusIcon(status: OperationStatus): string {
+function statusIcon(status: SiteOverallStatus): string {
   switch (status) {
     case 'PASS': return '✓'
     case 'DRIFT': return '△'
     case 'FAIL': return '✗'
+    case 'auth_expired': return '🔒'
   }
 }
 
@@ -32,8 +41,9 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
     // Summary line
     const passed = results.filter((r) => r.overallStatus === 'PASS').length
     const drifted = results.filter((r) => r.overallStatus === 'DRIFT').length
+    const authExpired = results.filter((r) => r.overallStatus === 'auth_expired').length
     const failed = results.filter((r) => r.overallStatus === 'FAIL').length
-    process.stdout.write(`\n${passed} passed, ${drifted} drifted, ${failed} failed (${results.length} total)\n`)
+    process.stdout.write(`\n${passed} passed, ${drifted} drifted, ${authExpired} auth_expired, ${failed} failed (${results.length} total)\n`)
 
     // Report output
     if (opts.report) {
@@ -43,6 +53,18 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
       } else {
         process.stdout.write(`\n${JSON.stringify(generateDriftReport(results), null, 2)}\n`)
       }
+    }
+
+    // Exit non-zero on drift or failure (CI-friendly)
+    if (hasNonPassResults(results)) {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `${drifted} drifted, ${authExpired} auth_expired, ${failed} failed`,
+        action: 'Run `openweb verify --all --report` for details.',
+        retriable: false,
+        failureClass: 'fatal',
+      })
     }
 
     return
@@ -56,6 +78,19 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
     for (const o of result.operations) {
       process.stdout.write(`  ${statusIcon(o.status)} ${o.operationId}: ${o.status}${o.detail ? ` — ${o.detail}` : ''}\n`)
     }
+
+    // Exit non-zero on non-PASS
+    if (result.overallStatus !== 'PASS') {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `${result.site}: ${result.overallStatus}`,
+        action: 'Inspect the per-operation details above.',
+        retriable: false,
+        failureClass: 'fatal',
+      })
+    }
+
     return
   }
 

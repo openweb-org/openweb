@@ -6,6 +6,7 @@ info:
     spec_version: '2.0'
     requires_auth: false
 servers:
+  # HTTP only — this API does not support HTTPS
   - url: http://universities.hipolabs.com
 paths:
   /search:

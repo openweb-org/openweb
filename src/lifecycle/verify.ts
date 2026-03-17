@@ -12,6 +12,9 @@ export type DriftType = 'schema_drift' | 'auth_drift' | 'endpoint_removed' | 'er
 
 export type OperationStatus = 'PASS' | 'DRIFT' | 'FAIL'
 
+/** Site-level overall status — includes 'auth_expired' for auth-only failures. */
+export type SiteOverallStatus = OperationStatus | 'auth_expired'
+
 export interface OperationVerifyResult {
   readonly operationId: string
   readonly status: OperationStatus
@@ -24,7 +27,7 @@ export interface OperationVerifyResult {
 export interface SiteVerifyResult {
   readonly site: string
   readonly operations: OperationVerifyResult[]
-  readonly overallStatus: OperationStatus
+  readonly overallStatus: SiteOverallStatus
   readonly shouldQuarantine: boolean
 }
 
@@ -94,11 +97,26 @@ export async function verifySite(
 
   // Determine overall status
   const hasDrift = operations.some((o) => o.status === 'DRIFT')
-  const hasFail = operations.some((o) => o.status === 'FAIL' && o.driftType !== 'auth_drift')
-  const overallStatus: OperationStatus = hasFail ? 'FAIL' : hasDrift ? 'DRIFT' : 'PASS'
+  const hasRealFail = operations.some((o) => o.status === 'FAIL' && o.driftType !== 'auth_drift')
+  const hasAuthOnly = operations.length > 0
+    && operations.every((o) => o.status === 'FAIL' && o.driftType === 'auth_drift')
+  const hasPass = operations.some((o) => o.status === 'PASS')
 
-  // Only quarantine on real failures, not auth drift
-  const shouldQuarantine = hasFail
+  let overallStatus: SiteOverallStatus
+  if (hasRealFail) {
+    overallStatus = 'FAIL'
+  } else if (hasDrift) {
+    overallStatus = 'DRIFT'
+  } else if (hasAuthOnly) {
+    overallStatus = 'auth_expired'
+  } else if (hasPass) {
+    overallStatus = 'PASS'
+  } else {
+    overallStatus = 'FAIL'
+  }
+
+  // Quarantine on real failures — NOT on auth_expired, NOT on PASS
+  const shouldQuarantine = hasRealFail
 
   // Update manifest with verification results
   if (manifest) {
@@ -109,10 +127,15 @@ export async function verifySite(
       }
     }
 
+    // Only clear quarantine on actual PASS — not auth_expired
+    const updatedQuarantine = shouldQuarantine
+      ? true
+      : overallStatus === 'PASS' ? false : manifest.quarantined
+
     const updated: Manifest = {
       ...manifest,
       last_verified: new Date().toISOString(),
-      quarantined: shouldQuarantine ? true : (overallStatus === 'PASS' ? false : manifest.quarantined),
+      quarantined: updatedQuarantine,
       fingerprint: {
         ...manifest.fingerprint,
         response_shape_hash: serializeFingerprints(newFingerprints),
@@ -216,17 +239,25 @@ export async function verifyAll(deps?: ExecuteDependencies): Promise<SiteVerifyR
 }
 
 /**
+ * Check if any site result represents a non-passing state (for exit codes).
+ */
+export function hasNonPassResults(results: SiteVerifyResult[]): boolean {
+  return results.some((r) => r.overallStatus !== 'PASS')
+}
+
+/**
  * Generate a drift report as JSON.
  */
 export function generateDriftReport(results: SiteVerifyResult[]): object {
-  const driftedSites = results.filter((r) => r.overallStatus !== 'PASS')
+  const nonPassSites = results.filter((r) => r.overallStatus !== 'PASS')
   return {
     timestamp: new Date().toISOString(),
     total_sites: results.length,
     passed: results.filter((r) => r.overallStatus === 'PASS').length,
     drifted: results.filter((r) => r.overallStatus === 'DRIFT').length,
+    auth_expired: results.filter((r) => r.overallStatus === 'auth_expired').length,
     failed: results.filter((r) => r.overallStatus === 'FAIL').length,
-    sites: driftedSites.map((r) => ({
+    sites: nonPassSites.map((r) => ({
       site: r.site,
       status: r.overallStatus,
       quarantined: r.shouldQuarantine,
@@ -250,15 +281,16 @@ export function generateDriftReportMarkdown(results: SiteVerifyResult[]): string
   const ts = new Date().toISOString()
   const passed = results.filter((r) => r.overallStatus === 'PASS').length
   const drifted = results.filter((r) => r.overallStatus === 'DRIFT').length
+  const authExpired = results.filter((r) => r.overallStatus === 'auth_expired').length
   const failed = results.filter((r) => r.overallStatus === 'FAIL').length
 
   lines.push(`**Date:** ${ts}`)
-  lines.push(`**Sites:** ${results.length} total | ${passed} passed | ${drifted} drifted | ${failed} failed`)
+  lines.push(`**Sites:** ${results.length} total | ${passed} passed | ${drifted} drifted | ${authExpired} auth_expired | ${failed} failed`)
   lines.push('')
 
   for (const r of results) {
     if (r.overallStatus === 'PASS') continue
-    const icon = r.overallStatus === 'DRIFT' ? '⚠️' : '❌'
+    const icon = r.overallStatus === 'DRIFT' ? '⚠️' : r.overallStatus === 'auth_expired' ? '🔒' : '❌'
     lines.push(`## ${icon} ${r.site} — ${r.overallStatus}`)
     if (r.shouldQuarantine) lines.push('**Quarantined**')
     lines.push('')

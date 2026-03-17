@@ -90,16 +90,25 @@ function candidateSiteRoots(site: string): string[] {
   ]
 }
 
-export async function resolveSiteRoot(site: string): Promise<string> {
+export interface ResolveSiteOptions {
+  /** Skip registry lookup — use when installing to avoid self-copy. */
+  readonly skipRegistry?: boolean
+}
+
+export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): Promise<string> {
   // Check registry current version first (inlined to avoid circular dep with lifecycle/registry)
-  const registryCurrentFile = path.join(os.homedir(), '.openweb', 'registry', site, 'current')
-  try {
-    const currentVersion = (await readFile(registryCurrentFile, 'utf8')).trim()
-    const registryVersionPath = path.join(os.homedir(), '.openweb', 'registry', site, currentVersion)
-    if (await pathExists(path.join(registryVersionPath, 'openapi.yaml'))) {
-      return registryVersionPath
-    }
-  } catch { /* no registry entry — fall through */ }
+  if (!opts?.skipRegistry) {
+    const registryCurrentFile = path.join(os.homedir(), '.openweb', 'registry', site, 'current')
+    try {
+      const currentVersion = (await readFile(registryCurrentFile, 'utf8')).trim()
+      if (/^\d+\.\d+\.\d+$/.test(currentVersion)) {
+        const registryVersionPath = path.join(os.homedir(), '.openweb', 'registry', site, currentVersion)
+        if (await pathExists(path.join(registryVersionPath, 'openapi.yaml'))) {
+          return registryVersionPath
+        }
+      }
+    } catch { /* no registry entry — fall through */ }
+  }
 
   const roots = candidateSiteRoots(site)
 
