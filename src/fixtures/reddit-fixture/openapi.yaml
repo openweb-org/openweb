@@ -76,6 +76,9 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - id
+                - dir
               properties:
                 id:
                   type: string

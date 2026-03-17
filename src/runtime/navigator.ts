@@ -1,15 +1,18 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import { getRequestBodyParameters, type JsonSchema } from '../lib/openapi.js'
+import { getRequestBodyParameters, isArraySchema, type JsonSchema } from '../lib/openapi.js'
 import { findOperation, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import type { RiskTier } from '../types/extensions.js'
 import type { Manifest } from '../types/manifest.js'
 import { getServerXOpenWeb, resolveAllParameters, resolveMode } from './session-executor.js'
 
-function formatParamType(type: string | undefined): string {
+function formatParamType(type: string | string[] | undefined): string {
   if (!type) {
     return 'unknown'
+  }
+  if (Array.isArray(type)) {
+    return type.join(' | ')
   }
   if (type === 'array') {
     return 'array'
@@ -116,7 +119,7 @@ export async function renderOperation(site: string, operationId: string, full: b
     const params = allParams.filter((p) => p.in === location)
     if (params.length === 0) continue
     for (const parameter of params) {
-      const itemType = parameter.schema?.type === 'array' ? `${parameter.schema.items?.type ?? 'unknown'}[]` : formatParamType(parameter.schema?.type)
+      const itemType = isArraySchema(parameter.schema) ? `${formatParamType(parameter.schema?.items?.type)}[]` : formatParamType(parameter.schema?.type)
       const required = parameter.required ? '[required]' : ''
       const loc = location === 'query' ? '' : `[${location}] `
       const desc = parameter.description ?? ''
@@ -128,7 +131,7 @@ export async function renderOperation(site: string, operationId: string, full: b
   if (bodyParams.length > 0) {
     lines.push('Body:')
     for (const parameter of bodyParams) {
-      const itemType = parameter.schema?.type === 'array' ? `${parameter.schema.items?.type ?? 'unknown'}[]` : formatParamType(parameter.schema?.type)
+      const itemType = isArraySchema(parameter.schema) ? `${formatParamType(parameter.schema?.items?.type)}[]` : formatParamType(parameter.schema?.type)
       const required = parameter.required ? '[required]' : ''
       const desc = parameter.description ?? ''
       lines.push(`  ${parameter.name.padEnd(12)} ${itemType.padEnd(9)} ${desc} ${required}`.trimEnd())

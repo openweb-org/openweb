@@ -106,6 +106,53 @@ describe('executeBrowserFetch', () => {
     expect(callArgs.headers['Content-Type']).toBe('application/json')
   })
 
+  it('sends an empty JSON object when requestBody is required but has no explicit fields', async () => {
+    const evaluateFn = vi.fn(async () => ({
+      status: 200,
+      headers: {},
+      text: '{"ok":true}',
+    }))
+    const page = {
+      url: () => 'https://example.com',
+      evaluate: evaluateFn,
+      content: vi.fn(async () => '<html><body>ready</body></html>'),
+    }
+    const context = {
+      pages: () => [page],
+      cookies: vi.fn(async () => []),
+    }
+    const browser = {
+      contexts: () => [context],
+    } as unknown as import('playwright').Browser
+
+    await executeBrowserFetch(
+      browser,
+      baseSpec,
+      '/items',
+      'post',
+      {
+        operationId: 'createItem',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {},
+              },
+            },
+          },
+        },
+        responses: {},
+      },
+      {},
+    )
+
+    const callArgs = evaluateFn.mock.calls[0]![1] as { body: string; headers: Record<string, string> }
+    expect(callArgs.body).toBe('{}')
+    expect(callArgs.headers['Content-Type']).toBe('application/json')
+  })
+
   it('throws on HTTP error status', async () => {
     const browser = mockBrowser('https://example.com', {
       status: 401,

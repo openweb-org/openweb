@@ -411,6 +411,31 @@ describe('resolveExchangeChain', () => {
     })
   })
 
+  it('treats login redirects as needs_login instead of fatal', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => []),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response('', {
+        status: 302,
+        headers: { location: 'https://www.reddit.com/login/' },
+      }),
+    ) as unknown as typeof fetch
+
+    await expect(
+      resolveExchangeChain(handle, {
+        steps: [{ call: 'https://www.reddit.com/svc/shreddit/token', extract: 'accessToken' }],
+        inject: { header: 'Authorization', prefix: 'Bearer ' },
+      }, 'https://oauth.reddit.com', { fetchImpl: fetchMock }),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED', failureClass: 'needs_login' },
+    })
+  })
+
   it('throws when extract path not found in response', async () => {
     const handle = {
       page: {} as BrowserHandle['page'],

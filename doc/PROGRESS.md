@@ -1,3 +1,22 @@
+## 2026-03-16: M6 Phase 1 review fixes — body validation, exchange redirects, and safe truncation
+
+**What changed:**
+- Tightened request-body handling: object body params are type-checked, `requestBody.required` keeps an empty JSON object present when needed, and the Reddit vote fixture now marks `id`/`dir` as required
+- Fixed `exchange_chain` auth recovery so manual 3xx redirects surface as `needs_login` instead of `fatal`
+- Changed `--max-response` to emit a valid JSON string preview on stdout instead of raw byte fragments, and required a minimum of 2 bytes for that preview contract
+- Added regression tests for body schema validation, required request bodies, exchange redirects, and truncation output
+
+**Why:**
+- The Phase 1 review found three contract breaks that still leaked bad inputs to HTTP, misclassified expired-session redirects, or produced unparsable stdout in the agent-safe truncation path
+
+**Key files:** `src/lib/openapi.ts`, `src/runtime/session-executor.ts`, `src/runtime/primitives/exchange-chain.ts`, `src/commands/exec.ts`, `src/cli.ts`, `src/fixtures/reddit-fixture/openapi.yaml`, `src/lib/openapi.test.ts`, `src/runtime/primitives/primitives.test.ts`, `src/runtime/session-executor.test.ts`, `.claude/skills/openweb/SKILL.md`
+**Verification:** `pnpm test` passed (191/191), `pnpm build` passed
+**Commit:** (uncommitted)
+**Next:** M6 Phase 2 — pattern-driven expansion (Next.js SSR, DOM-only extraction, GraphQL cursor, MSAL/sessionStorage, exchange_chain E2E)
+**Blockers:** None
+
+---
+
 ## 2026-03-16: M6 Phase 1 — Core hardening on the existing 9 sites
 
 **What changed:**

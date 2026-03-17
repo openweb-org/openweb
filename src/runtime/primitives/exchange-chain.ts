@@ -93,6 +93,20 @@ export async function resolveExchangeChain(
       redirect: 'manual',
     })
 
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location')
+      throw new OpenWebError({
+        error: 'auth',
+        code: 'AUTH_FAILED',
+        message: location
+          ? `Exchange chain step redirected to ${location}`
+          : `Exchange chain step redirected with HTTP ${response.status}`,
+        action: 'Ensure you are logged in. The exchange endpoint may require fresh cookies.',
+        retriable: true,
+        failureClass: 'needs_login',
+      })
+    }
+
     if (!response.ok) {
       const httpFailure = getHttpFailure(response.status)
       throw new OpenWebError({

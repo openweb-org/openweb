@@ -85,7 +85,7 @@ pnpm --silent dev <site> exec <operation> '<json-params>' --cdp-endpoint http://
 - **stdout** = JSON result (success)
 - **stderr** = JSON error (failure)
 - Exit code 0 = success, 1 = failure
-- If a response is too large for the current task, add `--max-response 8192` to truncate stdout and get a warning on stderr.
+- If a response is too large for the current task, add `--max-response 8192` to emit a valid JSON string preview on stdout and get a warning on stderr.
 
 Omit `--cdp-endpoint` for `direct_http` sites (Requires browser: no).
 
@@ -202,6 +202,6 @@ Authentication failed. Please log in to [site] in Chrome, then try again.
 - The `--cdp-endpoint` flag is required for any site where `Requires browser: yes`
 - JSON params must be a single-quoted string containing a JSON object: `'{"key": "value"}'`
 - For `direct_http` sites, omit `--cdp-endpoint` entirely — it's not needed and not used
-- Response data can be large (e.g., full feed responses) — prefer `--max-response 8192` unless you explicitly need the full payload
+- Response data can be large (e.g., full feed responses) — prefer `--max-response 8192` unless you explicitly need the full payload. When truncation happens, stdout is a JSON string preview of the serialized response, not the original response shape.
 - Operations with `Risk: medium` or higher involve mutations (likes, stars, posts) — confirm with the user before executing
 - The CDP endpoint `http://localhost:9222` is the standard port — only change if the user specifies otherwise

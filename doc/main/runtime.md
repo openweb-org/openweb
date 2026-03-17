@@ -69,7 +69,8 @@ All L2 modes share the same parameter binding pipeline:
 
 Path/query/header parameters come from OpenAPI `parameters[]`.
 Body parameters come from `requestBody.content['application/json'].schema.properties`.
-Defaults apply before binding, including body defaults. Auth-injected query params (for example YouTube's `key`) are merged before validation.
+Defaults apply before binding, including body defaults. Body fields are validated against their declared schema types before request construction, and only fields declared in `requestBody` are serialized into the JSON body. Auth-injected query params (for example YouTube's `key`) are merged before validation.
+If an object `requestBody` is marked `required: true`, the runtime sends `{}` even when no explicit body fields are supplied, so the request still includes a JSON body.
 
 -> See: `src/runtime/session-executor.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`
 
@@ -237,6 +238,7 @@ Every error carries a `failureClass` that tells the agent what to do next:
 -> See: `src/lib/errors.ts`
 
 HTTP-backed executors map statuses as follows: `401/403 -> needs_login`, `429/5xx -> retriable`, `400/404/405 -> fatal`.
+`exchange_chain` uses `redirect: 'manual'`; a 3xx redirect from an exchange step is treated as `needs_login`, because valid exchange endpoints should not bounce to a login page.
 
 The CLI catches errors and writes structured JSON to stderr.
 

@@ -130,6 +130,7 @@ Used by Discord — the auth token lives inside a webpack module.
 ### exchange_chain
 
 Multi-step auth exchange. Each step calls an endpoint, extracts a token, and feeds it to the next step.
+If a step returns a manual 3xx redirect (for example to `/login`), the runtime classifies it as `needs_login` rather than `fatal`.
 
 ```yaml
 auth:

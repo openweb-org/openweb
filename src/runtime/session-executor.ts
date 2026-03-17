@@ -3,6 +3,8 @@ import type { Browser, BrowserContext, Page } from 'playwright'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import {
   getRequestBodyParameters,
+  getRequestBodySchema,
+  isObjectSchema,
   validateParams,
   type OpenApiOperation,
   type OpenApiParameter,
@@ -133,11 +135,12 @@ export function createNeedsPageError(serverUrl: string): OpenWebError {
 }
 
 export function buildJsonRequestBody(operation: OpenApiOperation, params: Record<string, unknown>): string | undefined {
-  const bodyParams = getRequestBodyParameters(operation)
-  if (bodyParams.length === 0) {
+  const bodySchema = getRequestBodySchema(operation)
+  if (!isObjectSchema(bodySchema)) {
     return undefined
   }
 
+  const bodyParams = getRequestBodyParameters(operation)
   const body: Record<string, unknown> = {}
   for (const param of bodyParams) {
     const value = params[param.name]
@@ -146,7 +149,11 @@ export function buildJsonRequestBody(operation: OpenApiOperation, params: Record
     }
   }
 
-  return Object.keys(body).length > 0 ? JSON.stringify(body) : undefined
+  if (Object.keys(body).length === 0 && !operation.requestBody?.required) {
+    return undefined
+  }
+
+  return JSON.stringify(body)
 }
 
 /** Read x-openweb config from the server entry matching this operation */

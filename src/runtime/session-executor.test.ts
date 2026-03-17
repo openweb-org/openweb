@@ -560,6 +560,75 @@ describe('executeSessionHttp', () => {
     expect(headers['Content-Type']).toBe('application/json')
   })
 
+  it('sends an empty JSON object when requestBody is required but has no explicit fields', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ status: 'ok' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const spec: OpenApiSpec = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0' },
+      servers: [
+        {
+          url: 'https://www.instagram.com/api/v1',
+          'x-openweb': {
+            mode: 'session_http',
+            auth: { type: 'cookie_session' },
+            csrf: { type: 'cookie_to_header', cookie: 'csrftoken', header: 'X-CSRFToken' },
+          },
+        } as unknown as { url: string },
+      ],
+      paths: {
+        '/required-body/': {
+          post: {
+            operationId: 'requiredBody',
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {},
+                  },
+                },
+              },
+            },
+            responses: {
+              '200': {
+                content: { 'application/json': { schema: { type: 'object' } } },
+              },
+            },
+          },
+        },
+      },
+    }
+
+    await executeSessionHttp(
+      browser,
+      spec,
+      '/required-body/',
+      'post',
+      spec.paths!['/required-body/']!.post!,
+      {},
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    const calledInit = calledArgs[1] as RequestInit
+    const headers = calledInit.headers as Record<string, string>
+
+    expect(calledInit.body).toBe('{}')
+    expect(headers['Content-Type']).toBe('application/json')
+  })
+
   it('does NOT send body when POST has no leftover params', async () => {
     const browser = mockBrowser([
       { name: 'sessionid', value: 'sess_abc' },

@@ -80,11 +80,11 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
       let maxResponse: number | undefined
       if (maxResponseRaw !== undefined) {
         const parsedMaxResponse = Number(maxResponseRaw)
-        if (!Number.isInteger(parsedMaxResponse) || parsedMaxResponse < 0) {
+        if (!Number.isInteger(parsedMaxResponse) || parsedMaxResponse < 2) {
           throw new OpenWebError({
             error: 'execution_failed',
             code: 'INVALID_PARAMS',
-            message: '--max-response must be a non-negative integer.',
+            message: '--max-response must be an integer of at least 2 bytes.',
             action: 'Example: --max-response 8192',
             retriable: false,
             failureClass: 'fatal',

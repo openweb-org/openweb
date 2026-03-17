@@ -7,7 +7,7 @@ import { parse } from 'yaml'
 import { OpenWebError } from './errors.js'
 
 export type JsonSchema = {
-  readonly type?: string
+  readonly type?: string | string[]
   readonly items?: JsonSchema
   readonly properties?: Record<string, JsonSchema>
   readonly required?: string[]
@@ -239,7 +239,7 @@ export function validateParams(
   for (const param of parameters) {
     const value = result[param.name]
     if ((value === undefined || value === null) && param.schema?.default !== undefined) {
-      result[param.name] = param.schema.default
+      result[param.name] = structuredClone(param.schema.default)
     }
     if ((result[param.name] === undefined || result[param.name] === null) && param.required) {
       throw new OpenWebError({
@@ -260,84 +260,68 @@ export function validateParams(
 }
 
 function validateType(name: string, value: unknown, schema: JsonSchema | undefined): void {
-  if (!schema?.type) {
+  const types = getSchemaTypes(schema)
+  if (types.length === 0) {
     return
   }
 
-  if (schema.type === 'integer') {
-    if (typeof value !== 'number' || !Number.isInteger(value)) {
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'INVALID_PARAMS',
-        message: `Parameter ${name} must be integer`,
-        action: 'Run `openweb <site> <tool>` to inspect parameters.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
-    }
+  if (types.includes('null') && value === null) {
     return
   }
 
-  if (schema.type === 'number') {
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'INVALID_PARAMS',
-        message: `Parameter ${name} must be number`,
-        action: 'Run `openweb <site> <tool>` to inspect parameters.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
-    }
+  if (types.includes('integer') && typeof value === 'number' && Number.isInteger(value)) {
     return
   }
 
-  if (schema.type === 'string') {
-    if (typeof value !== 'string') {
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'INVALID_PARAMS',
-        message: `Parameter ${name} must be string`,
-        action: 'Run `openweb <site> <tool>` to inspect parameters.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
-    }
+  if (types.includes('number') && typeof value === 'number' && !Number.isNaN(value)) {
     return
   }
 
-  if (schema.type === 'boolean') {
-    if (typeof value !== 'boolean') {
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'INVALID_PARAMS',
-        message: `Parameter ${name} must be boolean`,
-        action: 'Run `openweb <site> <tool>` to inspect parameters.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
-    }
+  if (types.includes('string') && typeof value === 'string') {
     return
   }
 
-  if (schema.type === 'array') {
-    if (!Array.isArray(value)) {
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'INVALID_PARAMS',
-        message: `Parameter ${name} must be array`,
-        action: 'Run `openweb <site> <tool>` to inspect parameters.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
-    }
-    if (!schema.items) {
+  if (types.includes('boolean') && typeof value === 'boolean') {
+    return
+  }
+
+  if (types.includes('array')) {
+    if (Array.isArray(value)) {
+      if (!schema?.items) {
+        return
+      }
+      for (const item of value) {
+        validateType(name, item, schema.items)
+      }
       return
     }
-    for (const item of value) {
-      validateType(name, item, schema.items)
+  }
+
+  if (types.includes('object')) {
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      return
     }
   }
+
+  throw invalidTypeError(name, types)
+}
+
+function invalidTypeError(name: string, types: string[]): OpenWebError {
+  return new OpenWebError({
+    error: 'execution_failed',
+    code: 'INVALID_PARAMS',
+    message: `Parameter ${name} must be ${types.join(' | ')}`,
+    action: 'Run `openweb <site> <tool>` to inspect parameters.',
+    retriable: false,
+    failureClass: 'fatal',
+  })
+}
+
+function getSchemaTypes(schema: JsonSchema | undefined): string[] {
+  if (!schema?.type) {
+    return []
+  }
+  return Array.isArray(schema.type) ? schema.type : [schema.type]
 }
 
 export function buildQueryUrl(
@@ -406,9 +390,17 @@ export function getRequestBodySchema(operation: OpenApiOperation): JsonSchema | 
   return operation.requestBody?.content?.['application/json']?.schema
 }
 
+export function isObjectSchema(schema: JsonSchema | undefined): boolean {
+  return getSchemaTypes(schema).includes('object')
+}
+
+export function isArraySchema(schema: JsonSchema | undefined): boolean {
+  return getSchemaTypes(schema).includes('array')
+}
+
 export function getRequestBodyParameters(operation: OpenApiOperation): OpenApiParameter[] {
   const schema = getRequestBodySchema(operation)
-  if (schema?.type !== 'object') {
+  if (!isObjectSchema(schema)) {
     return []
   }
 

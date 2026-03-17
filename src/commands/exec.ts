@@ -28,19 +28,36 @@ export interface ExecOptions {
   readonly maxResponse?: number
 }
 
+function truncateJsonPreview(text: string, maxResponse: number): string {
+  let preview = ''
+  let serialized = '""'
+
+  for (const char of text) {
+    const nextPreview = preview + char
+    const nextSerialized = JSON.stringify(nextPreview)
+    if (Buffer.byteLength(nextSerialized, 'utf8') > maxResponse) {
+      break
+    }
+    preview = nextPreview
+    serialized = nextSerialized
+  }
+
+  return serialized
+}
+
 function serializeBody(body: unknown, maxResponse: number | undefined): { text: string; truncated: boolean } {
   const text = JSON.stringify(body)
   if (maxResponse === undefined) {
     return { text, truncated: false }
   }
 
-  const encoded = Buffer.from(text, 'utf8')
-  if (encoded.byteLength <= maxResponse) {
+  if (Buffer.byteLength(text, 'utf8') <= maxResponse) {
     return { text, truncated: false }
   }
 
   return {
-    text: encoded.subarray(0, maxResponse).toString('utf8'),
+    // When truncated, stdout stays valid JSON by switching to a JSON string preview.
+    text: truncateJsonPreview(text, maxResponse),
     truncated: true,
   }
 }

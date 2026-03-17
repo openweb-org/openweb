@@ -140,7 +140,7 @@ openweb sites                                  # list compiled sites
 openweb <site>                                 # list operations (tools)
 openweb <site> <op>                            # show params + response schema
 openweb <site> exec <op> '{...}'               # execute operation
-openweb <site> exec <op> '{...}' --max-response 8192  # truncate oversized stdout
+openweb <site> exec <op> '{...}' --max-response 8192  # emit a valid JSON preview when stdout would be too large
 openweb <site> test                            # run site test cases
 openweb capture start --cdp-endpoint ...       # record browser session
 openweb compile <url>                          # generate skill package

@@ -34,7 +34,7 @@ describe('execCommand', () => {
 
   it('truncates oversized responses and emits a warning', async () => {
     executeOperationMock.mockResolvedValue({
-      body: { data: 'abcdefghijklmnopqrstuvwxyz' },
+      body: { data: '😀abcdefghijklmnopqrstuvwxyz' },
     })
     const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
     const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
@@ -43,7 +43,11 @@ describe('execCommand', () => {
 
     const written = stdout.mock.calls[0]?.[0]
     expect(typeof written).toBe('string')
-    expect(Buffer.byteLength((written as string).trimEnd(), 'utf8')).toBeLessThanOrEqual(16)
+    const serialized = (written as string).trimEnd()
+    expect(Buffer.byteLength(serialized, 'utf8')).toBeLessThanOrEqual(16)
+    const preview = JSON.parse(serialized) as string
+    expect(typeof preview).toBe('string')
+    expect(JSON.stringify({ data: '😀abcdefghijklmnopqrstuvwxyz' }).startsWith(preview)).toBe(true)
     expect(stderr).toHaveBeenCalledWith('warning: truncated at 16 bytes\n')
   })
 })

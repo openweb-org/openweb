@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { OpenWebError } from './errors.js'
-import { buildQueryUrl } from './openapi.js'
+import { buildQueryUrl, findOperation, getRequestBodyParameters, loadOpenApi, validateParams } from './openapi.js'
 
 describe('buildQueryUrl', () => {
   it('builds query string for scalar and array params', () => {
@@ -44,5 +44,56 @@ describe('buildQueryUrl', () => {
         { latitude: 52.52, lat: 52.52 },
       ),
     ).toThrowError(OpenWebError)
+  })
+})
+
+describe('getRequestBodyParameters', () => {
+  it('reads required request body fields from fixture schemas', async () => {
+    const spec = await loadOpenApi('reddit-fixture')
+    const operation = findOperation(spec, 'vote').operation
+
+    const params = getRequestBodyParameters(operation)
+
+    expect(params.find((param) => param.name === 'id')?.required).toBe(true)
+    expect(params.find((param) => param.name === 'dir')?.required).toBe(true)
+  })
+})
+
+describe('validateParams', () => {
+  it('rejects non-object values for object body parameters', () => {
+    expect(() =>
+      validateParams(
+        [
+          {
+            name: 'context',
+            in: 'body',
+            schema: {
+              type: 'object',
+              properties: {
+                client: { type: 'string' },
+              },
+            },
+          },
+        ],
+        { context: 'oops' },
+      ),
+    ).toThrow('Parameter context must be object')
+  })
+
+  it('accepts union schemas that allow either array or object', () => {
+    expect(
+      validateParams(
+        [
+          {
+            name: 'payload',
+            in: 'body',
+            schema: {
+              type: ['array', 'object'],
+            },
+          },
+        ],
+        { payload: { ok: true } },
+      ),
+    ).toEqual({ payload: { ok: true } })
   })
 })

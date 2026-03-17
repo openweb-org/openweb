@@ -57,6 +57,9 @@ pnpm dev instagram-fixture exec getTimeline '{}'
 
 # Execute with CDP (for session_http / browser_fetch / adapter)
 pnpm dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222
+
+# Emit a valid JSON preview when the full response would be too large
+pnpm dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222 --max-response 8192
 ```
 
 ### Browser Capture
