@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-17 (commit: M15)
+> Last updated: 2026-03-17 (commit: M16)
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (346/346 pass)
+pnpm test           # Run tests (386/386 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -105,6 +105,12 @@ pnpm dev discover https://example.com --cdp-endpoint http://localhost:9222
 
 # With active exploration (clicks nav links, tries search)
 pnpm dev discover https://example.com --explore --cdp-endpoint http://localhost:9222
+
+# Intent-driven discovery (page analysis + targeted exploration for missing intents)
+pnpm dev discover https://example.com --intent --cdp-endpoint http://localhost:9222
+
+# Combine both — intent-driven first, then blind exploration
+pnpm dev discover https://example.com --intent --explore --cdp-endpoint http://localhost:9222
 ```
 
 ### Run Site Tests
@@ -204,7 +210,7 @@ src/
 ├── types/                    # Meta-spec type system
 ├── compiler/                 # Site compilation pipeline
 ├── capture/                  # Browser CDP recording
-├── discovery/                # Agent-driven API discovery pipeline
+├── discovery/                # API discovery: capture, intent analysis, exploration, handoff
 ├── lifecycle/                # Drift detection, verification, registry
 │   ├── fingerprint.ts        # Response shape fingerprinting
 │   ├── verify.ts             # Site verification engine

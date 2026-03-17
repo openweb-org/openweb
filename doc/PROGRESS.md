@@ -1,3 +1,24 @@
+## 2026-03-17: M16 — Smart Discovery — DONE
+
+**What changed:**
+- Theme 1 (Intent-Driven Discovery): Page structure snapshot (`page-snapshot.ts`) extracts nav links, headings, buttons, forms, search inputs from DOM. Intent analysis (`intent.ts`) maps captured API paths + page structure to an intent checklist (profile/feed/search/detail/social/activity/meta + write intents). Gap analysis identifies page-visible intents not yet covered by captured APIs. Targeted exploration (`explorer.ts:exploreForIntents`) clicks only gap-related elements (max 3/intent, 15 total). Pipeline integrates snapshot → intent → targeted explore when `--intent` flag set.
+- Theme 2 (human_handoff): `handoff.ts` detects CAPTCHA (recaptcha/hcaptcha/turnstile iframes, captcha classes), 2FA (verification code inputs, headings), and login walls (password forms, /login URLs). Returns structured `HumanHandoffNeeded` with actionable guidance. Pipeline checks before browser disconnect; surfaces in CLI output.
+- Theme 3 (Discovery Benchmark): `tests/benchmark/discovery/` with 20 public API site configs, benchmark runner that discovers + verifies first GET op returns 2xx.
+- Code review fixes: `filteredSamples` init to prevent TypeError on throw, `detail` intent pattern moved to end to avoid shadowing specific intents, CSS selector escaping for hrefs.
+
+**Why:**
+- Discovery was passive (record whatever happens) — now it has a goal (intent checklist) and explores strategically
+- CAPTCHA/2FA/login wall detection prevents confusing "no operations" errors
+- Benchmark quantifies discovery success rate for ongoing improvement
+
+**Key files:** `src/discovery/page-snapshot.ts`, `src/discovery/intent.ts`, `src/discovery/explorer.ts`, `src/discovery/handoff.ts`, `src/discovery/pipeline.ts`, `src/commands/discover.ts`, `src/cli.ts`, `tests/benchmark/discovery/`
+**Verification:** 386 tests pass (36 new), `pnpm build` clean
+**Commit:** 3 commits (feat: intent-driven discovery, feat: human_handoff, fix: code review)
+**Next:** M17
+**Blockers:** None
+
+---
+
 ## 2026-03-17: M15 — Compiler Maturity — IN PROGRESS
 
 **What changed:**

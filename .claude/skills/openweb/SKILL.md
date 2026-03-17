@@ -317,6 +317,17 @@ pnpm --silent dev verify --all --report            # JSON drift report
 pnpm --silent dev verify --all --report markdown   # Markdown drift report
 ```
 
+### Discover (API Discovery)
+
+```bash
+pnpm --silent dev discover <url>                   # Passive capture only
+pnpm --silent dev discover <url> --explore         # Blind active exploration
+pnpm --silent dev discover <url> --intent          # Intent-driven (page analysis + targeted exploration)
+pnpm --silent dev discover <url> --intent --explore # Both strategies combined
+```
+
+When `--intent` discovers a CAPTCHA, 2FA page, or login wall, it returns a `human_handoff` result with the required action (e.g., complete CAPTCHA in browser, then `openweb browser restart`).
+
 ### Registry (Version Management)
 
 ```bash

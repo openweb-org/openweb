@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-17 (commit: M14)
+> Last updated: 2026-03-17 (commit: M16)
 
 ## Mission
 
@@ -86,10 +86,10 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | **Runtime** | Reads skill packages, resolves primitives, executes requests | `src/runtime/` | L1 + L2 + L3 + extraction + token cache (M14) |
 | **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | L1 emit + L2 classify + probe (M15) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM) | `src/capture/` | Complete (M0), page isolation (M11) |
-| **Discovery** | Agent-driven API discovery pipeline | `src/discovery/` | Interactive capture + active exploration (M11) |
+| **Discovery** | Agent-driven API discovery pipeline | `src/discovery/` | Interactive capture + active exploration (M11), intent-driven discovery + human_handoff (M16) |
 | **Lifecycle** | Drift detection, verification, quarantine | `src/lifecycle/` | Fingerprint + verify + quarantine (M12) |
 | **Registry** | Site version management, install, rollback | `src/lifecycle/registry.ts` | Internal registry (M12) |
-| **CLI** | Progressive navigation + exec + browser + capture + compile + discover + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login, --json, --example) |
+| **CLI** | Progressive navigation + exec + browser + capture + compile + discover + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M16: --intent) |
 | **Skill packages** | Per-site instance specs | `src/fixtures/` | 51 verified sites |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5) |
 
@@ -148,6 +148,8 @@ openweb login <site>                           # open site in default browser fo
 openweb capture start --cdp-endpoint ...       # record browser session
 openweb compile <url> [--probe]                  # generate skill package (--probe validates heuristics)
 openweb discover <url>                         # discover APIs and generate fixture
+openweb discover <url> --intent                # intent-driven discovery (page analysis + targeted exploration)
+openweb discover <url> --explore               # blind active exploration (click nav, search)
 openweb verify <site>                          # verify site and detect drift
 openweb verify --all                           # batch verify all sites
 openweb registry list                          # list registered site versions
