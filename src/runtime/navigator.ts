@@ -165,3 +165,84 @@ export async function renderOperation(site: string, operationId: string, full: b
 
   return lines.join('\n')
 }
+
+export async function renderSiteJson(site: string): Promise<string> {
+  const spec = await loadOpenApi(site)
+  const operations = listOperations(spec)
+  const manifest = await loadManifest(site)
+
+  const result = {
+    name: manifest?.display_name ?? site,
+    operations: operations.map((entry) => {
+      const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
+      return {
+        id: entry.operation.operationId,
+        method: entry.method.toUpperCase(),
+        path: entry.path,
+        permission: (opExt?.permission as string | undefined) ?? 'read',
+        summary: entry.operation.summary ?? '',
+      }
+    }),
+  }
+
+  return JSON.stringify(result)
+}
+
+export async function renderOperationJson(site: string, operationId: string): Promise<string> {
+  const spec = await loadOpenApi(site)
+  const { method, path: opPath, operation } = findOperation(spec, operationId)
+  const allParams = resolveAllParameters(spec, operation)
+  const bodyParams = getRequestBodyParameters(operation)
+  const opExt = operation['x-openweb'] as Record<string, unknown> | undefined
+
+  const result = {
+    id: operationId,
+    method: method.toUpperCase(),
+    path: opPath,
+    permission: (opExt?.permission as string | undefined) ?? 'read',
+    parameters: [...allParams, ...bodyParams].map((p) => ({
+      name: p.name,
+      in: p.in,
+      required: !!p.required,
+      type: formatParamType(p.schema?.type),
+      default: p.schema?.default,
+    })),
+  }
+
+  return JSON.stringify(result)
+}
+
+/** Generate example params JSON from schema defaults and parameter names */
+export async function renderExample(site: string, operationId: string): Promise<string> {
+  const spec = await loadOpenApi(site)
+  const { operation } = findOperation(spec, operationId)
+  const allParams = resolveAllParameters(spec, operation)
+  const bodyParams = getRequestBodyParameters(operation)
+
+  const example: Record<string, unknown> = {}
+
+  for (const p of [...allParams, ...bodyParams]) {
+    // Skip header params with defaults (auto-injected)
+    if (p.in === 'header' && p.schema?.default !== undefined) continue
+
+    if (p.schema?.default !== undefined) {
+      example[p.name] = p.schema.default
+    } else if (p.schema?.const !== undefined) {
+      continue // const params are auto-filled
+    } else {
+      // Generate a placeholder based on type
+      const type = typeof p.schema?.type === 'string' ? p.schema.type : 'string'
+      if (type === 'integer' || type === 'number') {
+        example[p.name] = 0
+      } else if (type === 'boolean') {
+        example[p.name] = false
+      } else if (type === 'array') {
+        example[p.name] = []
+      } else {
+        example[p.name] = `<${p.name}>`
+      }
+    }
+  }
+
+  return JSON.stringify(example, null, 2)
+}

@@ -96,8 +96,11 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
         }
         maxResponse = parsedMaxResponse
       }
+      const outputIdx = argv.indexOf('--output')
+      const outputRaw = outputIdx >= 0 ? argv[outputIdx + 1] : undefined
+      const output = outputRaw === 'file' ? 'file' as const : undefined
       const paramsJson = fourth && !fourth.startsWith('--') ? fourth : undefined
-      await execCommand(site, third, paramsJson, { cdpEndpoint, maxResponse })
+      await execCommand(site, third, paramsJson, { cdpEndpoint, maxResponse, output })
       return
     }
 
@@ -108,7 +111,9 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
 
     const tool = second && !second.startsWith('-') ? second : undefined
     const full = argv.includes('--full') || argv.includes('-f')
-    await showCommand(site, tool, full)
+    const json = argv.includes('--json')
+    const example = argv.includes('--example')
+    await showCommand(site, tool, { full, json, example })
   })
 
   process.exit(0)
@@ -117,9 +122,9 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
 await yargs(argv)
   .scriptName('openweb')
   .strict()
-  .command('sites', 'List available sites', {}, async () => {
+  .command('sites', 'List available sites', (cmd) => cmd.option('json', { type: 'boolean', default: false, describe: 'Output as JSON' }), async (args) => {
     await withErrorHandling(async () => {
-      await sitesCommand()
+      await sitesCommand({ json: Boolean(args.json) })
     })
   })
   .command(

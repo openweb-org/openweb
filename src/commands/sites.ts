@@ -1,10 +1,54 @@
-import { listSites, resolveSiteRoot } from '../lib/openapi.js'
+import { listSites, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import { loadManifest } from '../lib/manifest.js'
+import { getServerXOpenWeb, resolveTransport } from '../runtime/session-executor.js'
+import type { PermissionCategory } from '../types/extensions.js'
 
-export async function sitesCommand(): Promise<void> {
+export interface SitesOptions {
+  readonly json?: boolean
+}
+
+export async function sitesCommand(options: SitesOptions = {}): Promise<void> {
   const sites = await listSites()
   if (sites.length === 0) {
-    process.stdout.write('No sites found.\n')
+    if (options.json) {
+      process.stdout.write('[]\n')
+    } else {
+      process.stdout.write('No sites found.\n')
+    }
+    return
+  }
+
+  if (options.json) {
+    const result = await Promise.all(sites.map(async (site) => {
+      try {
+        const spec = await loadOpenApi(site)
+        const operations = listOperations(spec)
+        const firstOp = operations[0]
+        const serverExt = firstOp ? getServerXOpenWeb(spec, firstOp.operation) : undefined
+        const transport = firstOp ? resolveTransport(spec, firstOp.operation) : 'node'
+
+        // Aggregate highest permission category
+        let maxPerm: PermissionCategory = 'read'
+        for (const entry of operations) {
+          const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
+          const perm = (opExt?.permission as PermissionCategory | undefined) ?? 'read'
+          if (perm === 'transact') { maxPerm = 'transact'; break }
+          if (perm === 'delete' && maxPerm !== 'transact') maxPerm = 'delete'
+          if (perm === 'write' && maxPerm === 'read') maxPerm = 'write'
+        }
+
+        return {
+          name: site,
+          transport,
+          operationCount: operations.length,
+          permission: maxPerm,
+        }
+      } catch {
+        return { name: site, transport: 'unknown', operationCount: 0, permission: 'read' }
+      }
+    }))
+
+    process.stdout.write(`${JSON.stringify(result)}\n`)
     return
   }
 

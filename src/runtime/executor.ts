@@ -49,6 +49,8 @@ export interface ExecuteDependencies {
   readonly browser?: Browser
   /** Override permissions config (used in tests to bypass permission checks) */
   readonly permissionsConfig?: import('../lib/permissions.js').PermissionsConfig
+  /** Override token cache directory (used in tests to isolate cache) */
+  readonly tokenCacheDir?: string
 }
 
 export interface ExecuteResult {
@@ -250,7 +252,7 @@ export async function executeOperation(
 
     if (needsBrowser) {
       // Token cache: try cached cookies first (avoids browser connection)
-      const cached = await readTokenCache(site)
+      const cached = await readTokenCache(site, deps.tokenCacheDir)
       let cacheHit = false
 
       if (cached && cached.cookies.length > 0) {
@@ -263,7 +265,7 @@ export async function executeOperation(
         } catch (err) {
           // 401/403 means cache is stale — clear and fall through to browser
           if (err instanceof OpenWebError && err.payload.failureClass === 'needs_login') {
-            await clearTokenCache(site)
+            await clearTokenCache(site, deps.tokenCacheDir)
           } else {
             throw err
           }
@@ -287,7 +289,7 @@ export async function executeOperation(
           responseHeaders = { ...result.responseHeaders }
 
           // Write cookies to cache for future requests
-          await writeBrowserCookiesToCache(browser, site, spec)
+          await writeBrowserCookiesToCache(browser, site, spec, deps.tokenCacheDir)
         } finally {
           if (!deps.browser) {
             browser.close().catch(() => {})
@@ -445,6 +447,7 @@ async function writeBrowserCookiesToCache(
   browser: import('playwright').Browser,
   site: string,
   spec: import('../lib/openapi.js').OpenApiSpec,
+  baseDir?: string,
 ): Promise<void> {
   try {
     const context = browser.contexts()[0]
@@ -476,7 +479,7 @@ async function writeBrowserCookiesToCache(
       sessionStorage: {},
       capturedAt: new Date().toISOString(),
       ttlSeconds: DEFAULT_TTL_SECONDS,
-    })
+    }, baseDir)
   } catch {
     // Cache write failure is not critical — continue silently
   }

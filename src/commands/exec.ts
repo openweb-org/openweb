@@ -1,3 +1,8 @@
+import { createHash } from 'node:crypto'
+import { writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+
 import { OpenWebError } from '../lib/errors.js'
 import { executeOperation } from '../runtime/executor.js'
 import { getManagedCdpEndpoint } from './browser.js'
@@ -27,40 +32,12 @@ function parseParams(paramsJson: string | undefined): Record<string, unknown> {
 export interface ExecOptions {
   readonly cdpEndpoint?: string
   readonly maxResponse?: number
+  readonly output?: 'stdout' | 'file'
 }
 
-function truncateJsonPreview(text: string, maxResponse: number): string {
-  let preview = ''
-  let serialized = '""'
-
-  for (const char of text) {
-    const nextPreview = preview + char
-    const nextSerialized = JSON.stringify(nextPreview)
-    if (Buffer.byteLength(nextSerialized, 'utf8') > maxResponse) {
-      break
-    }
-    preview = nextPreview
-    serialized = nextSerialized
-  }
-
-  return serialized
-}
-
-function serializeBody(body: unknown, maxResponse: number | undefined): { text: string; truncated: boolean } {
-  const text = JSON.stringify(body)
-  if (maxResponse === undefined) {
-    return { text, truncated: false }
-  }
-
-  if (Buffer.byteLength(text, 'utf8') <= maxResponse) {
-    return { text, truncated: false }
-  }
-
-  return {
-    // When truncated, stdout stays valid JSON by switching to a JSON string preview.
-    text: truncateJsonPreview(text, maxResponse),
-    truncated: true,
-  }
+function spillToFile(text: string): string {
+  const hash = createHash('sha256').update(text).digest('hex').slice(0, 12)
+  return join(tmpdir(), `openweb-${hash}.json`)
 }
 
 export async function execCommand(
@@ -77,9 +54,25 @@ export async function execCommand(
   const result = await executeOperation(site, tool, params, {
     cdpEndpoint,
   })
-  const serialized = serializeBody(result.body, options.maxResponse)
-  process.stdout.write(`${serialized.text}\n`)
-  if (serialized.truncated && options.maxResponse !== undefined) {
-    process.stderr.write(`warning: truncated at ${options.maxResponse} bytes\n`)
+
+  const text = JSON.stringify(result.body)
+  const byteSize = Buffer.byteLength(text, 'utf8')
+  const maxResponse = options.maxResponse ?? 4096
+
+  if (options.output === 'file') {
+    // Always write to file, return path on stdout
+    const filePath = spillToFile(text)
+    await writeFile(filePath, text, 'utf8')
+    process.stdout.write(`${JSON.stringify({ status: result.status, output: filePath, size: byteSize })}\n`)
+    return
+  }
+
+  // Default: stdout with auto-spill when over max-response
+  if (byteSize > maxResponse) {
+    const filePath = spillToFile(text)
+    await writeFile(filePath, text, 'utf8')
+    process.stdout.write(`${JSON.stringify({ status: result.status, output: filePath, size: byteSize, truncated: true })}\n`)
+  } else {
+    process.stdout.write(`${text}\n`)
   }
 }
