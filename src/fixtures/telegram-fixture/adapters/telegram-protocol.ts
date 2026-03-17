@@ -90,10 +90,6 @@ function normalizeTelegramError(error: unknown): OpenWebError {
 export default {
   name: 'telegram-protocol',
   description: 'Telegram Web A global state access via teact/webpack',
-  provides: [
-    { type: 'protocol', description: 'Global state via dynamic webpack getGlobal()' },
-    { type: 'extraction', description: 'Chat/user/message data serialization' },
-  ],
 
   async init(page: Page): Promise<boolean> {
     return page.evaluate(() => {

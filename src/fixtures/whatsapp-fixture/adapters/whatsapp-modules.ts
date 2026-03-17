@@ -43,10 +43,6 @@ function normalizeWhatsAppError(error: unknown): OpenWebError {
 export default {
   name: 'whatsapp-modules',
   description: 'WhatsApp Web internal module access for chat/contact/message data',
-  provides: [
-    { type: 'protocol', description: 'Internal collections via Meta require() module system' },
-    { type: 'extraction', description: 'Chat/contact/message serialization' },
-  ],
 
   async init(page: Page): Promise<boolean> {
     return page.evaluate(() => {

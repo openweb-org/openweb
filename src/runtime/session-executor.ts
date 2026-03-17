@@ -1,85 +1,58 @@
 import type { Browser, BrowserContext, Page } from 'playwright'
 
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
-import {
-  getRequestBodyParameters,
-  getRequestBodySchema,
-  isObjectSchema,
-  validateParams,
-  type OpenApiOperation,
-  type OpenApiParameter,
-  type OpenApiSpec,
-} from '../lib/openapi.js'
+import { getRequestBodyParameters, validateParams, type OpenApiOperation, type OpenApiSpec } from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
-import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../types/primitives.js'
-import type { Transport, XOpenWebServer } from '../types/extensions.js'
-import { getResolver } from './primitives/index.js'
-import type { BrowserHandle, ResolvedInjections } from './primitives/types.js'
-import type { ResolverResult } from './primitives/registry.js'
+import { shouldApplyCsrf } from '../lib/csrf-scope.js'
+import { parseResponseBody } from '../lib/response-parser.js'
+import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
+import type { BrowserHandle } from './primitives/types.js'
+import { resolveAllParameters, substitutePath, buildHeaderParams, buildJsonRequestBody } from './request-builder.js'
+import { getServerXOpenWeb } from './operation-context.js'
+import { fetchWithRedirects } from './redirect.js'
 import { listCandidatePages } from './page-candidates.js'
-
-/** Auth resolution result — extends ResolvedInjections with optional query params */
-interface AuthResult extends ResolvedInjections {
-  readonly queryParams?: Readonly<Record<string, string>>
-}
-
-const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
-const VALID_TRANSPORTS = new Set<string>(['node', 'page'])
-const MAX_REDIRECTS = 5
-const SENSITIVE_HEADERS = ['cookie', 'authorization', 'x-csrftoken', 'x-csrf-token']
-const UNSAFE_REF_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
 
 function getPageHintUrl(serverUrl: string): string {
   try {
     const url = new URL(serverUrl)
-    const pageUrl = new URL(url.toString())
-    if (pageUrl.hostname.startsWith('api.')) {
+    if (url.hostname.startsWith('api.')) {
+      const pageUrl = new URL(url.toString())
       pageUrl.hostname = pageUrl.hostname.slice(4)
       pageUrl.pathname = '/'
       pageUrl.search = ''
       pageUrl.hash = ''
       return pageUrl.toString()
     }
-
     return `${url.origin}/`
   } catch {
     return serverUrl
   }
 }
 
-/** Find a page whose URL matches the target server origin (for page.evaluate scoping) */
+/** Find a page whose URL matches the target server origin */
 export async function findPageForOrigin(context: BrowserContext, serverUrl: string): Promise<Page | undefined> {
   try {
     const targetOrigin = new URL(serverUrl).origin
     const targetHost = new URL(serverUrl).hostname
     const pages = await listCandidatePages(context)
 
-    // Pass 1: exact origin match
     for (const page of pages) {
-      try {
-        if (page.url().startsWith(targetOrigin)) return page
-      } catch { /* skip */ }
+      try { if (page.url().startsWith(targetOrigin)) return page } catch { /* skip */ }
     }
 
-    // Pass 2: same hostname or base domain match (www.youtube.com ↔ youtube.com)
     const baseDomain = targetHost.replace(/^(www|api|oauth)\./, '')
     for (const page of pages) {
       try {
         const pageHost = new URL(page.url()).hostname
-        if (pageHost === baseDomain || pageHost === 'www.' + baseDomain || pageHost.endsWith('.' + baseDomain)) {
-          return page
-        }
+        if (pageHost === baseDomain || pageHost === 'www.' + baseDomain || pageHost.endsWith('.' + baseDomain)) return page
       } catch { /* skip */ }
     }
 
-    // Pass 3: same SLD match (bsky.social ↔ bsky.app shares "bsky" SLD prefix)
-    // This handles cases like API at bsky.social, web app at bsky.app
     const sld = baseDomain.split('.')[0]
-    if (sld && sld.length > 3) { // Only for non-trivial SLDs (skip "api", "www", etc.)
+    if (sld && sld.length > 3) {
       for (const page of pages) {
         try {
-          const pageHost = new URL(page.url()).hostname
-          const pageSld = pageHost.replace(/^www\./, '').split('.')[0]
+          const pageSld = new URL(page.url()).hostname.replace(/^www\./, '').split('.')[0]
           if (pageSld === sld) return page
         } catch { /* skip */ }
       }
@@ -100,229 +73,6 @@ export function createNeedsPageError(serverUrl: string): OpenWebError {
   })
 }
 
-function createMissingLocationError(): OpenWebError {
-  return new OpenWebError({
-    error: 'execution_failed',
-    code: 'EXECUTION_FAILED',
-    message: 'Redirect response missing Location header.',
-    action: 'Retry or inspect upstream endpoint behavior.',
-    retriable: true,
-    failureClass: 'retriable',
-  })
-}
-
-export function buildJsonRequestBody(operation: OpenApiOperation, params: Record<string, unknown>): string | undefined {
-  const bodySchema = getRequestBodySchema(operation)
-  if (!isObjectSchema(bodySchema)) {
-    return undefined
-  }
-
-  const bodyParams = getRequestBodyParameters(operation)
-  const body: Record<string, unknown> = {}
-  for (const param of bodyParams) {
-    const value = params[param.name]
-    if (value !== undefined) {
-      body[param.name] = value
-    }
-  }
-
-  if (Object.keys(body).length === 0 && !operation.requestBody?.required) {
-    return undefined
-  }
-
-  return JSON.stringify(body)
-}
-
-/** Read x-openweb config from the server entry matching this operation */
-export function getServerXOpenWeb(spec: OpenApiSpec, operation: OpenApiOperation): XOpenWebServer | undefined {
-  const serverUrl = operation.servers?.[0]?.url ?? spec.servers?.[0]?.url
-  if (!serverUrl) return undefined
-
-  for (const server of spec.servers ?? []) {
-    if (server.url === serverUrl) {
-      return (server as Record<string, unknown>)['x-openweb'] as XOpenWebServer | undefined
-    }
-  }
-
-  return undefined
-}
-
-/** Determine transport: operation-level overrides server-level, default node */
-export function resolveTransport(spec: OpenApiSpec, operation: OpenApiOperation): Transport {
-  const opExt = operation['x-openweb'] as Record<string, unknown> | undefined
-  if (opExt?.transport) {
-    const t = opExt.transport as string
-    if (!VALID_TRANSPORTS.has(t)) {
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: `Unknown transport: ${t}`,
-        action: 'Valid transports: node, page.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
-    }
-    return t as Transport
-  }
-
-  const serverExt = getServerXOpenWeb(spec, operation)
-  const serverTransport = serverExt?.transport ?? 'node'
-  if (!VALID_TRANSPORTS.has(serverTransport)) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: `Unknown transport: ${serverTransport}`,
-      action: 'Valid transports: node, page.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
-  return serverTransport as Transport
-}
-
-/** Substitute path parameters like {user_id} in the URL path */
-export function substitutePath(
-  pathTemplate: string,
-  parameters: OpenApiParameter[] | undefined,
-  params: Record<string, unknown>,
-): string {
-  let result = pathTemplate
-  const pathParams = (parameters ?? []).filter((p) => p.in === 'path')
-
-  for (const param of pathParams) {
-    const value = params[param.name]
-    if (value === undefined || value === null) {
-      if (param.required !== false) {
-        throw new OpenWebError({
-          error: 'execution_failed',
-          code: 'INVALID_PARAMS',
-          message: `Missing required path parameter: ${param.name}`,
-          action: 'Run `openweb <site> <tool>` to inspect parameters.',
-          retriable: false,
-          failureClass: 'fatal',
-        })
-      }
-      continue
-    }
-    result = result.replace(`{${param.name}}`, encodeURIComponent(String(value)))
-  }
-
-  // Guard against unreplaced template variables (spec/params mismatch)
-  const unreplaced = result.match(/\{[^}]+\}/g)
-  if (unreplaced) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'INVALID_PARAMS',
-      message: `Unresolved path variables: ${unreplaced.join(', ')}`,
-      action: 'Provide values for all path parameters.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
-
-  return result
-}
-
-/** Build headers from parameters with in=header (applying defaults) */
-export function buildHeaderParams(
-  parameters: OpenApiParameter[] | undefined,
-  params: Record<string, unknown>,
-): Record<string, string> {
-  const headers: Record<string, string> = {}
-  const headerParams = (parameters ?? []).filter((p) => p.in === 'header')
-
-  for (const param of headerParams) {
-    const value = params[param.name] ?? param.schema?.default
-    if (value === undefined || value === null) {
-      if (param.required) {
-        throw new OpenWebError({
-          error: 'execution_failed',
-          code: 'INVALID_PARAMS',
-          message: `Missing required header parameter: ${param.name}`,
-          action: 'Run `openweb <site> <tool>` to inspect parameters.',
-          retriable: false,
-          failureClass: 'fatal',
-        })
-      }
-      continue
-    }
-    headers[param.name] = String(value)
-  }
-
-  return headers
-}
-
-/** Resolve auth primitive to get cookies/headers to inject */
-export async function resolveAuth(
-  handle: BrowserHandle,
-  auth: AuthPrimitive,
-  serverUrl: string,
-  deps?: SessionHttpDependencies,
-): Promise<AuthResult> {
-  const resolver = getResolver(auth.type)
-  if (!resolver) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: `Unsupported auth primitive: ${auth.type}`,
-      action: 'This auth type is not yet implemented.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
-  return resolver(
-    { handle, serverUrl, deps: { fetchImpl: deps?.fetchImpl, ssrfValidator: deps?.ssrfValidator } },
-    auth as unknown as Record<string, unknown>,
-  )
-}
-
-/** Resolve CSRF primitive to get headers to inject */
-export async function resolveCsrf(
-  handle: BrowserHandle,
-  csrf: CsrfPrimitive,
-  serverUrl: string,
-  deps?: SessionHttpDependencies & { authHeaders?: Record<string, string>; cookieString?: string },
-): Promise<ResolvedInjections> {
-  const resolver = getResolver(csrf.type)
-  if (!resolver) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: `Unsupported CSRF primitive: ${csrf.type}`,
-      action: 'This CSRF type is not yet implemented.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
-  return resolver(
-    { handle, serverUrl, deps: { fetchImpl: deps?.fetchImpl, authHeaders: deps?.authHeaders, cookieString: deps?.cookieString } },
-    csrf as unknown as Record<string, unknown>,
-  )
-}
-
-/** Resolve signing primitive to get headers to inject */
-export async function resolveSigning(
-  handle: BrowserHandle,
-  signing: SigningPrimitive,
-  serverUrl: string,
-): Promise<ResolvedInjections> {
-  const resolver = getResolver(signing.type)
-  if (!resolver) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: `Unsupported signing primitive: ${signing.type}`,
-      action: 'This signing type is not yet implemented.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
-  return resolver(
-    { handle, serverUrl },
-    signing as unknown as Record<string, unknown>,
-  )
-}
-
 export interface SessionHttpDependencies {
   readonly fetchImpl?: typeof fetch
   readonly ssrfValidator?: (url: string) => Promise<void>
@@ -335,11 +85,11 @@ export interface SessionHttpResult {
 }
 
 /**
- * Execute an operation in session_http mode:
- * 1. Get browser handle from connected CDP browser
- * 2. Resolve auth primitive → cookies/headers
- * 3. Resolve CSRF primitive (mutations only) → headers
- * 4. Make HTTP request with injected credentials
+ * Execute an operation via node transport with browser auth:
+ * 1. Resolve auth/CSRF/signing via registry
+ * 2. Build request with injected credentials
+ * 3. Fetch with redirect following
+ * 4. Parse response
  */
 export async function executeSessionHttp(
   browser: Browser,
@@ -352,208 +102,101 @@ export async function executeSessionHttp(
 ): Promise<SessionHttpResult> {
   const fetchImpl = deps.fetchImpl ?? fetch
   const ssrfValidator = deps.ssrfValidator ?? validateSSRF
-
   const serverExt = getServerXOpenWeb(spec, operation)
   const serverUrl = operation.servers?.[0]?.url ?? spec.servers?.[0]?.url
   if (!serverUrl) {
     throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
       message: 'No server URL found in OpenAPI spec.',
       action: 'Add `servers` to the spec and retry.',
-      retriable: false,
-      failureClass: 'fatal',
+      retriable: false, failureClass: 'fatal',
     })
   }
 
   const context = browser.contexts()[0]
   if (!context) {
     throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
       message: 'No browser context available. Is Chrome open with the site loaded?',
       action: 'Open Chrome with --remote-debugging-port=9222 and navigate to the site.',
-      retriable: true,
-      failureClass: 'needs_browser',
+      retriable: true, failureClass: 'needs_browser',
     })
   }
 
   const page = await findPageForOrigin(context, serverUrl)
-  if (!page) {
-    throw createNeedsPageError(serverUrl)
-  }
-
+  if (!page) throw createNeedsPageError(serverUrl)
   const handle: BrowserHandle = { page, context }
+
+  // 1. Resolve auth
   const authResult = serverExt?.auth
     ? await resolveAuth(handle, serverExt.auth, serverUrl, deps)
     : undefined
 
-  // Resolve all parameters into: path, query, header
+  // 2. Build request
   const allParams = resolveAllParameters(spec, operation)
   const inputParams = validateParams(
     [...allParams, ...getRequestBodyParameters(operation)],
     { ...params, ...authResult?.queryParams },
   )
   const resolvedPath = substitutePath(operationPath, allParams, inputParams)
-  const headerParams = buildHeaderParams(allParams, inputParams)
-
-  // Build URL with query params only
   const baseUrl = new URL(serverUrl)
-  const fullPath = baseUrl.pathname.replace(/\/$/, '') + resolvedPath
-  const target = new URL(fullPath, baseUrl.origin)
-  const queryParams = allParams.filter((p) => p.in === 'query')
-  for (const param of queryParams) {
+  const target = new URL(baseUrl.pathname.replace(/\/$/, '') + resolvedPath, baseUrl.origin)
+  for (const param of allParams.filter((p) => p.in === 'query')) {
     const value = inputParams[param.name]
     if (value === undefined || value === null) continue
     if (Array.isArray(value)) {
-      for (const item of value) {
-        target.searchParams.append(param.name, String(item))
-      }
+      for (const item of value) target.searchParams.append(param.name, String(item))
     } else {
       target.searchParams.set(param.name, String(value))
     }
   }
 
-  // Build request body from non-path/query/header params
-  let jsonBody: string | undefined
   const upperMethod = method.toUpperCase()
+  let jsonBody: string | undefined
   if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
     jsonBody = buildJsonRequestBody(operation, inputParams)
   }
 
-  // Merge headers — session_http always sends Referer (many sites require it)
   const headers: Record<string, string> = {
     Accept: 'application/json',
     Referer: baseUrl.origin + '/',
-    ...headerParams,
+    ...buildHeaderParams(allParams, inputParams),
   }
-  if (jsonBody) {
-    headers['Content-Type'] = 'application/json'
-  }
+  if (jsonBody) headers['Content-Type'] = 'application/json'
 
-  // Resolve auth
   let cookieString: string | undefined
   if (authResult) {
     Object.assign(headers, authResult.headers)
     cookieString = authResult.cookieString
-
-    // Inject auth query params (e.g., page_global may inject API key as query param)
     if (authResult.queryParams) {
-      for (const [key, value] of Object.entries(authResult.queryParams)) {
-        target.searchParams.set(key, value)
-      }
+      for (const [key, value] of Object.entries(authResult.queryParams)) target.searchParams.set(key, value)
     }
   }
 
-  // session_http always sends browser cookies — if auth didn't provide them, extract directly
+  // D-14: node transport always sends browser cookies
   if (!cookieString) {
     const browserCookies = await context.cookies(serverUrl)
-    if (browserCookies.length > 0) {
-      cookieString = browserCookies.map((c) => `${c.name}=${c.value}`).join('; ')
-    }
+    if (browserCookies.length > 0) cookieString = browserCookies.map((c) => `${c.name}=${c.value}`).join('; ')
   }
 
-  // Resolve CSRF (mutations by default, or any method if scope is defined)
-  const csrfConfig = serverExt?.csrf
-  if (csrfConfig) {
-    const csrfScope = (csrfConfig as Record<string, unknown>).scope as string[] | undefined
-    const shouldResolveCsrf = csrfScope
-      ? csrfScope.some((s) => s.toUpperCase() === upperMethod)
-      : MUTATION_METHODS.has(upperMethod)
-
-    if (shouldResolveCsrf) {
-      // Collect resolved auth headers (excluding Cookie) for api_response CSRF
+  // 3. Resolve CSRF
+  if (serverExt?.csrf) {
+    const csrfScope = (serverExt.csrf as Record<string, unknown>).scope as string[] | undefined
+    if (shouldApplyCsrf(csrfScope, upperMethod)) {
       const authHeaders: Record<string, string> = {}
       for (const [k, v] of Object.entries(headers)) {
-        if (k.toLowerCase() !== 'cookie' && k.toLowerCase() !== 'accept' && k.toLowerCase() !== 'referer' && k.toLowerCase() !== 'content-type') {
-          authHeaders[k] = v
-        }
+        if (!['cookie', 'accept', 'referer', 'content-type'].includes(k.toLowerCase())) authHeaders[k] = v
       }
-      const csrfResult = await resolveCsrf(handle, csrfConfig, serverUrl, {
-        ...deps,
-        authHeaders,
-        cookieString,
-      })
-      Object.assign(headers, csrfResult.headers)
+      Object.assign(headers, (await resolveCsrf(handle, serverExt.csrf, serverUrl, { ...deps, authHeaders, cookieString })).headers)
     }
   }
 
-  // Resolve signing (per-request computation like SAPISIDHASH)
-  if (serverExt?.signing) {
-    const signingResult = await resolveSigning(handle, serverExt.signing, serverUrl)
-    Object.assign(headers, signingResult.headers)
-  }
+  // 4. Resolve signing
+  if (serverExt?.signing) Object.assign(headers, (await resolveSigning(handle, serverExt.signing, serverUrl)).headers)
+  if (cookieString) headers.Cookie = cookieString
 
-  // Inject cookies
-  if (cookieString) {
-    headers.Cookie = cookieString
-  }
-
-  // Fetch with redirect following + SSRF validation
-  const originalOrigin = new URL(target.toString()).origin
-  let currentUrl = target.toString()
-  let currentMethod = upperMethod
-  let response: Response | undefined
-
-  for (let attempt = 0; attempt <= MAX_REDIRECTS; attempt += 1) {
-    await ssrfValidator(currentUrl)
-
-    response = await fetchImpl(currentUrl, {
-      method: currentMethod,
-      headers,
-      body: currentMethod !== 'GET' && currentMethod !== 'HEAD' ? jsonBody : undefined,
-      redirect: 'manual',
-    })
-
-    if (response.status < 300 || response.status >= 400) {
-      break
-    }
-
-    const location = response.headers.get('location')
-    if (!location) {
-      throw createMissingLocationError()
-    }
-
-    const nextUrl = new URL(location, currentUrl)
-    currentUrl = nextUrl.toString()
-
-    // CR-07: 303 See Other always switches to GET
-    if (response.status === 303) {
-      currentMethod = 'GET'
-      jsonBody = undefined
-    }
-
-    // CR-01: Strip sensitive headers on cross-origin redirect
-    if (nextUrl.origin !== originalOrigin) {
-      for (const name of SENSITIVE_HEADERS) {
-        for (const key of Object.keys(headers)) {
-          if (key.toLowerCase() === name) delete headers[key]
-        }
-      }
-    }
-  }
-
-  if (!response) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: 'No response received.',
-      action: 'Check network connectivity.',
-      retriable: true,
-      failureClass: 'retriable',
-    })
-  }
-
-  if (response.status >= 300 && response.status < 400) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: `Too many redirects (>${MAX_REDIRECTS})`,
-      action: 'Retry later or inspect endpoint redirects.',
-      retriable: true,
-      failureClass: 'retriable',
-    })
-  }
+  // 5. Fetch with redirects
+  const response = await fetchWithRedirects(target.toString(), upperMethod, headers, jsonBody, { fetchImpl, ssrfValidator })
 
   if (!response.ok) {
     const httpFailure = getHttpFailure(response.status)
@@ -564,51 +207,19 @@ export async function executeSessionHttp(
       action: httpFailure.failureClass === 'needs_login'
         ? 'Log in to the site in Chrome and retry.'
         : 'Check parameters and endpoint availability.',
-      retriable: httpFailure.retriable,
-      failureClass: httpFailure.failureClass,
+      retriable: httpFailure.retriable, failureClass: httpFailure.failureClass,
     })
   }
 
-  // Parse JSON safely
+  // 6. Parse response
   const text = await response.text()
-  let body: unknown
-  try {
-    body = JSON.parse(text) as unknown
-  } catch {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: `Response is not valid JSON (status ${response.status})`,
-      action: 'The API returned non-JSON content. Check the endpoint.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
-
+  const body = parseResponseBody(text, response.headers.get('content-type'), response.status)
   const responseHeaders: Record<string, string> = {}
-  response.headers.forEach((value, key) => {
-    responseHeaders[key] = value
-  })
-
+  response.headers.forEach((value, key) => { responseHeaders[key] = value })
   return { status: response.status, body, responseHeaders }
 }
 
-/** Collect parameters from operation + $ref components resolution */
-export function resolveAllParameters(spec: OpenApiSpec, operation: OpenApiOperation): OpenApiParameter[] {
-  const params = operation.parameters ?? []
-  return params.flatMap((p) => {
-    const ref = (p as unknown as Record<string, unknown>)['$ref'] as string | undefined
-    if (!ref) return [p]
-
-    // Resolve $ref like '#/components/parameters/X-IG-App-ID'
-    const parts = ref.replace('#/', '').split('/')
-    if (parts.some((part) => UNSAFE_REF_SEGMENTS.has(part))) return []
-    let resolved: unknown = spec
-    for (const part of parts) {
-      resolved = (resolved as Record<string, unknown>)?.[part]
-    }
-
-    if (!resolved || typeof resolved !== 'object') return []
-    return [resolved as OpenApiParameter]
-  })
-}
+// Re-export extracted modules for backward compat with existing imports
+export { getServerXOpenWeb, resolveTransport } from './operation-context.js'
+export { substitutePath, buildHeaderParams, buildJsonRequestBody, resolveAllParameters } from './request-builder.js'
+export { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'

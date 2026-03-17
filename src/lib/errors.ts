@@ -49,6 +49,56 @@ export class OpenWebError extends Error {
     this.name = 'OpenWebError'
     this.payload = payload
   }
+
+  static needsBrowser(): OpenWebError {
+    return new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: 'No browser context available.',
+      action: 'Open Chrome with --remote-debugging-port=9222.',
+      retriable: true, failureClass: 'needs_browser',
+    })
+  }
+
+  static needsPage(url: string): OpenWebError {
+    return new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: `No open page matches ${url}`,
+      action: `Open a tab to ${url} and retry.`,
+      retriable: true, failureClass: 'needs_page',
+    })
+  }
+
+  static needsLogin(): OpenWebError {
+    return new OpenWebError({
+      error: 'auth', code: 'AUTH_FAILED',
+      message: 'Authentication required.',
+      action: 'Log in to the site in Chrome and retry.',
+      retriable: true, failureClass: 'needs_login',
+    })
+  }
+
+  static unsupportedPrimitive(type: string): OpenWebError {
+    return new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: `Unsupported primitive: ${type}`,
+      action: 'This primitive type is not yet implemented.',
+      retriable: false, failureClass: 'fatal',
+    })
+  }
+
+  static httpError(status: number): OpenWebError {
+    const failure = getHttpFailure(status)
+    return new OpenWebError({
+      error: failure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
+      code: failure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
+      message: `HTTP ${status}`,
+      action: failure.failureClass === 'needs_login'
+        ? 'Log in to the site in Chrome and retry.'
+        : 'Check parameters and endpoint availability.',
+      retriable: failure.retriable,
+      failureClass: failure.failureClass,
+    })
+  }
 }
 
 export function writeErrorToStderr(payload: OpenWebErrorPayload): void {
