@@ -6,6 +6,7 @@ import { hideBin } from 'yargs/helpers'
 
 import { captureStartCommand, captureStopCommand } from './commands/capture.js'
 import { compileCommand } from './commands/compile.js'
+import { discoverCommand } from './commands/discover.js'
 import { execCommand } from './commands/exec.js'
 import { showCommand } from './commands/show.js'
 import { sitesCommand } from './commands/sites.js'
@@ -25,7 +26,7 @@ async function withErrorHandling(fn: () => Promise<void>): Promise<void> {
 const argv = hideBin(process.argv)
 const firstArg = argv[0] ?? ''
 
-const passthroughTopLevel = new Set(['sites', 'compile', 'capture', '--help', '-h', '--version', '-v'])
+const passthroughTopLevel = new Set(['sites', 'compile', 'capture', 'discover', '--help', '-h', '--version', '-v'])
 
 if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
   const [site, second, third, fourth] = argv
@@ -167,6 +168,32 @@ await yargs(argv)
           })
         })
         .demandCommand(1),
+  )
+  .command(
+    'discover <url>',
+    'Discover API endpoints from a website and generate a fixture',
+    (cmd) =>
+      cmd
+        .positional('url', { type: 'string', demandOption: true, describe: 'Target site URL' })
+        .option('cdp-endpoint', {
+          type: 'string',
+          default: 'http://localhost:9222',
+          describe: 'Chrome DevTools Protocol endpoint',
+        })
+        .option('explore', { type: 'boolean', default: true, describe: 'Enable active exploration (--no-explore to skip)' })
+        .option('output', { type: 'string', describe: 'Output directory for generated fixture' })
+        .option('duration', { type: 'number', default: 8000, describe: 'Capture duration in ms' }),
+    async (args) => {
+      await withErrorHandling(async () => {
+        await discoverCommand({
+          url: String(args.url),
+          cdpEndpoint: String(args['cdp-endpoint']),
+          explore: Boolean(args.explore),
+          output: args.output ? String(args.output) : undefined,
+          duration: Number(args.duration),
+        })
+      })
+    },
   )
   .demandCommand(1)
   .help()

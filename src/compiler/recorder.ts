@@ -1,6 +1,6 @@
 import os from 'node:os'
 import path from 'node:path'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 
 import { OpenWebError } from '../lib/errors.js'
@@ -12,6 +12,13 @@ interface HarLog {
   readonly log?: {
     readonly entries?: HarEntry[]
   }
+  /** Capture bundle format: entries at top level */
+  readonly entries?: HarEntry[]
+}
+
+/** Extract entries from HAR — supports both { log: { entries } } and { entries } formats */
+function getHarEntries(har: HarLog): HarEntry[] {
+  return har.log?.entries ?? har.entries ?? []
 }
 
 interface HarEntry {
@@ -97,7 +104,7 @@ export async function loadRecordedSamples(recordingDir: string): Promise<Recorde
 
   const samples: RecordedRequestSample[] = []
 
-  for (const entry of har.log?.entries ?? []) {
+  for (const entry of getHarEntries(har)) {
     const method = entry.request?.method?.toUpperCase()
     const rawUrl = entry.request?.url
     const status = entry.response?.status
@@ -159,7 +166,7 @@ export async function loadCaptureData(recordingDir: string): Promise<CaptureData
 
   // Convert local HAR entries to capture module HarEntry format
   const harEntries: CaptureHarEntry[] = []
-  for (const entry of har.log?.entries ?? []) {
+  for (const entry of getHarEntries(har)) {
     if (!entry.request?.method || !entry.request.url || entry.response?.status === undefined) continue
 
     const requestHeaders = (entry.request?.headers ?? [])
@@ -197,21 +204,68 @@ export async function loadCaptureData(recordingDir: string): Promise<CaptureData
     })
   }
 
-  // Load state snapshots if available
+  // Load state snapshots — supports both single-file (state_snapshots.json)
+  // and bundle directory (state_snapshots/*.json) formats
   let stateSnapshots: StateSnapshot[] = []
   try {
     const stateRaw = await readFile(path.join(recordingDir, 'state_snapshots.json'), 'utf8')
     stateSnapshots = JSON.parse(stateRaw) as StateSnapshot[]
   } catch {
-    // No state snapshots — OK for L1 sites
+    // Try bundle directory format
+    try {
+      const snapshotDir = path.join(recordingDir, 'state_snapshots')
+      const files = await readdir(snapshotDir)
+      const jsonFiles = files.filter((f) => f.endsWith('.json')).sort()
+      for (const file of jsonFiles) {
+        const raw = await readFile(path.join(snapshotDir, file), 'utf8')
+        stateSnapshots.push(JSON.parse(raw) as StateSnapshot)
+      }
+    } catch {
+      // No state snapshots — OK for L1 sites
+    }
   }
 
-  // Load DOM HTML if available
+  // Load DOM HTML — supports both single-file (dom.html) and bundle
+  // directory (dom_extractions/*.json) formats
   let domHtml: string | undefined
   try {
     domHtml = await readFile(path.join(recordingDir, 'dom.html'), 'utf8')
   } catch {
-    // No DOM capture — OK
+    // Try bundle directory format — extract HTML from first dom extraction
+    try {
+      const domDir = path.join(recordingDir, 'dom_extractions')
+      const files = await readdir(domDir)
+      const jsonFiles = files.filter((f) => f.endsWith('.json')).sort()
+      if (jsonFiles[0]) {
+        const raw = await readFile(path.join(domDir, jsonFiles[0]), 'utf8')
+        const extraction = JSON.parse(raw) as Record<string, unknown>
+        // DomExtraction contains meta/script/hidden info — reconstruct minimal HTML
+        // for classify.ts pattern detection (meta_tag, ssr_next_data, script_json)
+        const parts: string[] = ['<html><head>']
+        const metaTags = extraction.metaTags as Array<{ name: string; content: string }> | undefined
+        if (metaTags) {
+          for (const tag of metaTags) {
+            parts.push(`<meta name="${tag.name}" content="${tag.content}">`)
+          }
+        }
+        const scriptJsonTags = extraction.scriptJsonTags as Array<{
+          id: string | null
+          type: string | null
+          size: number
+        }> | undefined
+        if (scriptJsonTags) {
+          for (const tag of scriptJsonTags) {
+            const idAttr = tag.id ? ` id="${tag.id}"` : ''
+            const typeAttr = tag.type ? ` type="${tag.type}"` : ''
+            parts.push(`<script${idAttr}${typeAttr}>{}</script>`)
+          }
+        }
+        parts.push('</head><body></body></html>')
+        domHtml = parts.join('\n')
+      }
+    } catch {
+      // No DOM capture — OK
+    }
   }
 
   return { harEntries, stateSnapshots, domHtml }
