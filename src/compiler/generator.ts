@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto'
 import { stringify } from 'yaml'
 
 import type { AnalyzedOperation } from './types.js'
-import type { ClassifyResult } from './analyzer/classify.js'
+import type { ClassifyResult, ExtractionSignal } from './analyzer/classify.js'
 import type { JsonSchema } from '../lib/openapi.js'
 
 interface GeneratePackageInput {
@@ -122,6 +122,23 @@ function buildDependencies(operations: AnalyzedOperation[]): Record<string, stri
   }
 }
 
+/** Derive build.signals from classify result and operation state. */
+function deriveSignals(classify: ClassifyResult | undefined, verified: boolean): string[] {
+  const signals: string[] = []
+  if (verified) signals.push('status-match')
+  if (classify?.auth) signals.push('auth_detected')
+  if (classify?.csrf) signals.push('csrf_detected')
+  if (classify?.signing) signals.push('signing_detected')
+  return signals
+}
+
+/** Generate operationId for extraction operation from signal. */
+function extractionOperationId(signal: ExtractionSignal, index: number): string {
+  if (signal.id) return `extract_${signal.id.replace(/[^a-zA-Z0-9_]/g, '_')}`
+  if (signal.type === 'ssr_next_data') return `extract_next_data${index > 0 ? `_${index}` : ''}`
+  return `extract_script_json${index > 0 ? `_${index}` : ''}`
+}
+
 export async function generatePackage(input: GeneratePackageInput): Promise<string> {
   const outputBaseDir = input.outputBaseDir ?? path.join(os.homedir(), '.openweb', 'sites')
   const outputRoot = path.join(outputBaseDir, input.site)
@@ -141,18 +158,22 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
     const signatureId = hash16(signatureSeed(operation))
 
     const riskTier = deriveRiskTier(operation.method)
+    const signals = deriveSignals(input.classify, operation.verified)
+
+    const buildMeta: Record<string, unknown> = {
+      verified: operation.verified,
+      stable_id: stableId,
+      signature_id: signatureId,
+      tool_version: 1,
+    }
+    if (signals.length > 0) buildMeta.signals = signals
 
     const operationObject: Record<string, unknown> = {
       operationId: operation.operationId,
       summary: operation.summary,
       'x-openweb': {
         risk_tier: riskTier,
-        build: {
-          verified: operation.verified,
-          stable_id: stableId,
-          signature_id: signatureId,
-          tool_version: 1,
-        },
+        build: buildMeta,
       },
       parameters: operation.parameters.map((parameter) => ({
         name: parameter.name,
@@ -203,12 +224,81 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
     )
   }
 
+  // Generate extraction operations from classify signals
+  if (input.classify?.extractions) {
+    for (let i = 0; i < input.classify.extractions.length; i++) {
+      const signal = input.classify.extractions[i]!
+      const opId = extractionOperationId(signal, i)
+      const extractionPath = `/_extraction/${opId}`
+
+      const extractionXOpenWeb: Record<string, unknown> = {
+        risk_tier: 'safe',
+        build: {
+          verified: false,
+          stable_id: hash16(`${opId}:extraction`),
+          tool_version: 1,
+          signals: ['extraction_detected', signal.type],
+        },
+      }
+
+      if (signal.type === 'ssr_next_data') {
+        extractionXOpenWeb.extraction = {
+          type: 'ssr_next_data',
+          page_url: '/',
+          path: 'props.pageProps.TODO',
+        }
+      } else {
+        extractionXOpenWeb.extraction = {
+          type: 'script_json',
+          selector: signal.selector ?? 'script[type="application/json"]',
+        }
+      }
+
+      const extractionOp: Record<string, unknown> = {
+        operationId: opId,
+        summary: `Extract data via ${signal.type}${signal.id ? ` (${signal.id})` : ''}`,
+        'x-openweb': extractionXOpenWeb,
+        parameters: [],
+        responses: {
+          '200': {
+            description: 'Extracted data.',
+            content: {
+              'application/json': {
+                schema: { type: 'object' },
+              },
+            },
+          },
+        },
+      }
+
+      if (!paths[extractionPath]) paths[extractionPath] = {}
+      paths[extractionPath]!.get = extractionOp
+
+      const testShape = {
+        operation_id: opId,
+        cases: [
+          {
+            input: {},
+            assertions: { status: 200 },
+          },
+        ],
+      }
+
+      await writeFile(
+        path.join(testsDir, `${opId}.test.json`),
+        `${JSON.stringify(testShape, null, 2)}\n`,
+        'utf8',
+      )
+    }
+  }
+
   // Build server entry with optional x-openweb for L2
   const serverEntry: Record<string, unknown> = { url: `https://${primaryHost}` }
   if (input.classify && (input.classify.auth || input.classify.csrf || input.classify.signing)) {
     const serverXOpenWeb: Record<string, unknown> = { transport: input.classify.transport }
     if (input.classify.auth) serverXOpenWeb.auth = input.classify.auth
     if (input.classify.csrf) serverXOpenWeb.csrf = input.classify.csrf
+    if (input.classify.signing) serverXOpenWeb.signing = input.classify.signing
     serverEntry['x-openweb'] = serverXOpenWeb
   }
 

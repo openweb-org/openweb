@@ -320,4 +320,94 @@ describe('classify', () => {
     expect(result.transport).toBe('node')
     expect(result.auth?.type).toBe('exchange_chain')
   })
+
+  it('detects ssr_next_data from domHtml', () => {
+    const data: CaptureData = {
+      harEntries: [],
+      stateSnapshots: [],
+      domHtml: '<html><head></head><body><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"data":"value"}}}</script></body></html>',
+    }
+
+    const result = classify(data)
+    expect(result.extractions).toBeDefined()
+    expect(result.extractions).toHaveLength(1)
+    expect(result.extractions![0]!.type).toBe('ssr_next_data')
+    expect(result.extractions![0]!.selector).toBe('script#__NEXT_DATA__')
+  })
+
+  it('detects ssr_next_data from HAR HTML responses', () => {
+    const data: CaptureData = {
+      harEntries: [{
+        startedDateTime: '2025-01-01T00:00:00Z',
+        time: 100,
+        request: {
+          method: 'GET',
+          url: 'https://www.walmart.com/',
+          headers: [],
+        },
+        response: {
+          status: 200,
+          statusText: 'OK',
+          headers: [{ name: 'content-type', value: 'text/html' }],
+          content: {
+            size: 1000,
+            mimeType: 'text/html',
+            text: '<html><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"bootstrapData":{}}}}</script></html>',
+          },
+        },
+      }],
+      stateSnapshots: [],
+    }
+
+    const result = classify(data)
+    expect(result.extractions).toBeDefined()
+    expect(result.extractions![0]!.type).toBe('ssr_next_data')
+  })
+
+  it('detects script_json tags (excluding __NEXT_DATA__)', () => {
+    const data: CaptureData = {
+      harEntries: [],
+      stateSnapshots: [],
+      domHtml: `<html><head>
+        <script id="__NEXT_DATA__" type="application/json">{"skip":"me"}</script>
+        <script id="repo-data" type="application/json">{"name":"claude-code","stars":1000}</script>
+        <script type="application/json" data-target="react-app.embeddedData">{"viewer":{"login":"user"}}</script>
+      </head></html>`,
+    }
+
+    const result = classify(data)
+    expect(result.extractions).toBeDefined()
+    // Should detect ssr_next_data + 2 script_json (excluding __NEXT_DATA__)
+    expect(result.extractions!.length).toBe(3)
+    const ssrSignal = result.extractions!.find(e => e.type === 'ssr_next_data')
+    expect(ssrSignal).toBeDefined()
+    const scriptSignals = result.extractions!.filter(e => e.type === 'script_json')
+    expect(scriptSignals).toHaveLength(2)
+    expect(scriptSignals[0]!.id).toBe('repo-data')
+    expect(scriptSignals[0]!.selector).toBe('script#repo-data')
+    expect(scriptSignals[1]!.dataType).toBe('react-app.embeddedData')
+  })
+
+  it('returns no extractions when domHtml has no matching tags', () => {
+    const data: CaptureData = {
+      harEntries: [],
+      stateSnapshots: [],
+      domHtml: '<html><body><h1>Hello</h1></body></html>',
+    }
+
+    const result = classify(data)
+    expect(result.extractions).toBeUndefined()
+  })
+
+  it('ignores script_json tags with tiny content', () => {
+    const data: CaptureData = {
+      harEntries: [],
+      stateSnapshots: [],
+      domHtml: '<html><script id="tiny" type="application/json">{}</script></html>',
+    }
+
+    const result = classify(data)
+    // {} is only 2 chars, below the 10-char threshold
+    expect(result.extractions).toBeUndefined()
+  })
 })

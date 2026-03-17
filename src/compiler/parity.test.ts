@@ -13,6 +13,7 @@ import {
   type JsonSchema,
   type OpenApiSpec,
 } from '../lib/openapi.js'
+import { validateXOpenWebSpec } from '../types/validator.js'
 
 interface OperationParityShape {
   readonly operationId: string
@@ -203,6 +204,10 @@ describe('compiler parity', () => {
           }
           expectParity(expectedOperation, actualOperation)
         }
+
+        // Validate generated spec passes x-openweb AJV validation
+        const validation = validateXOpenWebSpec(generatedSpec)
+        expect(validation.valid).toBe(true)
       } finally {
         await rm(outputBaseDir, { recursive: true, force: true })
       }

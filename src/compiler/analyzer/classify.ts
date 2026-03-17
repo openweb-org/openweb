@@ -2,11 +2,20 @@ import type { HarEntry, StateSnapshot } from '../../capture/types.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../../types/primitives.js'
 import type { Transport } from '../../types/extensions.js'
 
+export interface ExtractionSignal {
+  readonly type: 'ssr_next_data' | 'script_json'
+  readonly selector?: string
+  readonly id?: string
+  readonly dataType?: string
+  readonly estimatedSize?: number
+}
+
 export interface ClassifyResult {
   readonly transport: Transport
   readonly auth?: AuthPrimitive
   readonly csrf?: CsrfPrimitive
   readonly signing?: SigningPrimitive
+  readonly extractions?: readonly ExtractionSignal[]
 }
 
 export interface CaptureData {
@@ -277,6 +286,81 @@ function findValueInObject(obj: unknown, target: string, path = ''): string | un
 }
 
 /**
+ * Detect ssr_next_data: HTML contains a `<script id="__NEXT_DATA__">` tag.
+ * Returns extraction signal with estimated JSON size.
+ */
+function detectSsrNextData(data: CaptureData): ExtractionSignal | undefined {
+  const html = data.domHtml ?? getHtmlFromHar(data)
+  if (!html) return undefined
+
+  const match = /<script\s+id="__NEXT_DATA__"\s+type="application\/json"[^>]*>/i.exec(html)
+  if (!match) return undefined
+
+  // Estimate payload size from closing tag position
+  const startIdx = match.index + match[0].length
+  const endIdx = html.indexOf('</script>', startIdx)
+  const estimatedSize = endIdx > startIdx ? endIdx - startIdx : 0
+
+  return { type: 'ssr_next_data', selector: 'script#__NEXT_DATA__', estimatedSize }
+}
+
+/**
+ * Detect script_json: HTML contains `<script type="application/json">` tags
+ * (excluding __NEXT_DATA__ which is handled separately).
+ * Returns all detected script_json signals.
+ */
+function detectScriptJson(data: CaptureData): ExtractionSignal[] {
+  const html = data.domHtml ?? getHtmlFromHar(data)
+  if (!html) return []
+
+  const signals: ExtractionSignal[] = []
+  const regex = /<script\s+([^>]*)type="application\/json"([^>]*)>/gi
+  let match: RegExpExecArray | null
+
+  while ((match = regex.exec(html)) !== null) {
+    const attrs = match[1]! + match[2]!
+
+    // Skip __NEXT_DATA__ — handled by detectSsrNextData
+    if (/id="__NEXT_DATA__"/i.test(attrs)) continue
+
+    const idMatch = /id="([^"]+)"/i.exec(attrs)
+    const dataTargetMatch = /data-target="([^"]+)"/i.exec(attrs)
+
+    const startIdx = match.index + match[0].length
+    const endIdx = html.indexOf('</script>', startIdx)
+    const estimatedSize = endIdx > startIdx ? endIdx - startIdx : 0
+
+    // Only report tags with non-trivial content
+    if (estimatedSize < 10) continue
+
+    signals.push({
+      type: 'script_json',
+      id: idMatch?.[1] ?? undefined,
+      selector: idMatch?.[1] ? `script#${idMatch[1]}` : (dataTargetMatch?.[1] ? `script[data-target="${dataTargetMatch[1]}"]` : undefined),
+      dataType: dataTargetMatch?.[1] ?? undefined,
+      estimatedSize,
+    })
+  }
+
+  return signals
+}
+
+/** Extract HTML from HAR entries (for sites where domHtml isn't provided separately). */
+function getHtmlFromHar(data: CaptureData): string | undefined {
+  for (const entry of data.harEntries) {
+    if (
+      entry.request.method === 'GET' &&
+      entry.response.status === 200 &&
+      entry.response.content.mimeType.includes('text/html') &&
+      entry.response.content.text
+    ) {
+      return entry.response.content.text
+    }
+  }
+  return undefined
+}
+
+/**
  * Classify capture data to detect L2 primitives.
  * Returns mode + auth + csrf + signing configuration for x-openweb emission.
  *
@@ -289,6 +373,13 @@ export function classify(data: CaptureData): ClassifyResult {
   const cookieToHeader = detectCookieToHeader(data)
   const metaTag = detectMetaTag(data)
   const sapisidhash = detectSapisidhash(data)
+
+  // Detect extraction patterns
+  const extractionSignals: ExtractionSignal[] = []
+  const ssrNextData = detectSsrNextData(data)
+  if (ssrNextData) extractionSignals.push(ssrNextData)
+  extractionSignals.push(...detectScriptJson(data))
+  const extractions = extractionSignals.length > 0 ? extractionSignals : undefined
 
   // Build signing primitive if detected
   const signing: SigningPrimitive | undefined = sapisidhash
@@ -315,11 +406,10 @@ export function classify(data: CaptureData): ClassifyResult {
   }
 
   if (!auth) {
-    // sapisidhash requires browser context (cookies), so force node transport
     if (signing) {
-      return { transport: 'node', signing }
+      return { transport: 'node', signing, extractions }
     }
-    return { transport: 'node' }
+    return { transport: 'node', extractions }
   }
 
   // Prefer cookie_to_header over meta_tag if both detected
@@ -334,5 +424,6 @@ export function classify(data: CaptureData): ClassifyResult {
     auth,
     csrf,
     signing,
+    extractions,
   }
 }
