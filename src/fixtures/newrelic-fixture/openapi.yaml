@@ -91,20 +91,30 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     type: object
+                    required:
+                      - actor
                     properties:
                       actor:
                         type: object
+                        required:
+                          - entitySearch
                         properties:
                           entitySearch:
                             type: object
+                            required:
+                              - results
                             properties:
                               count:
                                 type: integer
                               results:
                                 type: object
+                                required:
+                                  - entities
                                 properties:
                                   entities:
                                     type: array

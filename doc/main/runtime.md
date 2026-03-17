@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Mode dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-03-16 (commit: `1847175`)
+> Last updated: 2026-03-16 (commit: Tranche B)
 
 ## Overview
 
@@ -215,9 +215,11 @@ Two pagination modes are implemented:
 | `link_header` | Follow `Link: <url>; rel="next"` header | `rel` (default: "next") |
 
 **Safety:** Max 10 pages by default (configurable).
-Cursor pagination accepts dot-paths for nested fields such as `pageInfo.endCursor` and `pageInfo.hasNextPage`.
+Cursor pagination accepts dot-paths for both reading and writing:
+- `response_field` and `has_more_field` support nested extraction (e.g., `data.actor.entitySearch.results.nextCursor`)
+- `request_param` supports nested injection (e.g., `variables.cursor` for GraphQL), using `setValueAtPath()` to write the cursor into a nested request body object
 
--> See: `src/runtime/paginator.ts`
+-> See: `src/runtime/paginator.ts`, `src/runtime/value-path.ts`
 
 ---
 

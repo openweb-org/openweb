@@ -2,6 +2,8 @@
  * Set a value at a dotted path within an object, creating intermediate objects as needed.
  * Returns a shallow clone with the value set. Does not mutate the original.
  */
+const UNSAFE_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
+
 export function setValueAtPath(
   input: Record<string, unknown>,
   path: string,
@@ -9,6 +11,7 @@ export function setValueAtPath(
 ): Record<string, unknown> {
   const segments = path.split('.').map((s) => s.trim()).filter(Boolean)
   if (segments.length === 0) return input
+  if (segments.some((s) => UNSAFE_SEGMENTS.has(s))) return input
 
   const root = { ...input }
   let current: Record<string, unknown> = root

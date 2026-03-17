@@ -110,4 +110,15 @@ describe('setValueAtPath', () => {
     const result = setValueAtPath({ a: [1, 2] }, 'a.x', 3)
     expect(result).toEqual({ a: { x: 3 } })
   })
+
+  it('rejects __proto__ path segments', () => {
+    const result = setValueAtPath({}, '__proto__.polluted', true)
+    expect(result).toEqual({})
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined()
+  })
+
+  it('rejects constructor.prototype path segments', () => {
+    const result = setValueAtPath({}, 'constructor.prototype.polluted', true)
+    expect(result).toEqual({})
+  })
 })

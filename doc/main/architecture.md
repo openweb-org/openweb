@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, execution modes, and component map.
-> Last updated: 2026-03-16 (commit: `uncommitted`)
+> Last updated: 2026-03-16 (commit: Tranche B)
 
 ## Mission
 
@@ -90,7 +90,7 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | Phases 2-4 partial (L1 emit) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM) | `src/capture/` | Complete (M0) |
 | **CLI** | Progressive navigation + exec + capture + compile | `src/cli.ts`, `src/commands/` | Complete |
-| **Skill packages** | Per-site instance specs | `src/fixtures/` | 12 verified sites |
+| **Skill packages** | Per-site instance specs | `src/fixtures/` | 13 verified sites |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5) |
 
 ---
@@ -149,7 +149,7 @@ openweb compile <url>                          # generate skill package
 
 ---
 
-## Verified Sites (M0-M6 Tranche A)
+## Verified Sites (M0-M6 Tranche B)
 
 | Site | Layer | Auth | CSRF | Signing | Extraction | Mode |
 |------|-------|------|------|---------|------------|------|
@@ -162,6 +162,7 @@ openweb compile <url>                          # generate skill package
 | Walmart | L2 | — | — | — | ssr_next_data | session_http |
 | Hacker News | L2 | — | — | — | html_selector | session_http |
 | Microsoft Word | L2 | sessionStorage_msal | — | — | — | session_http |
+| New Relic | L2 | cookie_session | — | — | — | session_http |
 | Discord | L2 | webpack_module_walk | — | — | — | browser_fetch |
 | WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |
 | Telegram | L3 | adapter | — | — | adapter | adapter (L3) |

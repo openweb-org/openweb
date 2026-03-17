@@ -1,7 +1,7 @@
 # Meta-spec: Type System & Validation
 
 > L2 primitive types, x-openweb extensions, JSON Schema, and AJV validation.
-> Last updated: 2026-03-16 (commit: `1847175`)
+> Last updated: 2026-03-16 (commit: Tranche B)
 
 ## Overview
 
@@ -130,6 +130,8 @@ paths:
 | `offset_limit` | Offset + limit | `offset_param`, `limit_param`, `total_field` |
 | `link_header` | HTTP Link header | `rel` |
 | `page_number` | Page numbering | `param`, `starts_at`, `total_pages_field` |
+
+`response_field` and `request_param` accept **dotted paths** for nested JSON structures (e.g., `data.actor.entitySearch.results.nextCursor` for reading, `variables.cursor` for writing into GraphQL request bodies).
 
 ### Extraction (6 types)
 

@@ -294,6 +294,7 @@ pnpm --silent dev <site>-fixture test
 | discord-fixture | L2 | webpack_module_walk | — | Webpack module cache for auth token |
 | whatsapp-fixture | L3 | adapter | — | Meta require() module system |
 | telegram-fixture | L3 | adapter | — | teact global state |
+| newrelic-fixture | L2 | cookie_session | — | GraphQL cursor pagination (nested paths) |
 
 ---
 
