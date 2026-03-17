@@ -1,3 +1,28 @@
+## 2026-03-16: M6 Close-out — 13 sites, 238 tests, 6 review rounds
+
+**What changed:**
+- Closed M6 milestone: 9→13 verified sites covering 4 new archetypes (ssr_next_data, html_selector, sessionStorage_msal, graphql_cursor)
+- Phase 1: 8 core hardening fixes on 9 existing sites (page matching, failureClass, requestBody, adapter errors, truncation)
+- Phase 2A: Walmart, Hacker News, Microsoft Word — extraction runtime + MSAL auth
+- Phase 2B: New Relic — GraphQL cursor pagination with nested `request_param` support
+- exchange_chain discovery gate: FAIL → deferred (no stable target in profile)
+- 6 code review rounds (3 Claude, 3 Codex), all findings resolved or documented
+- Doc sync across architecture, runtime, primitives, meta-spec, adding-sites, roadmap
+- Codex review fixes: prototype-safe `setValueAtPath`, tightened response schema with required fields
+- Created M7 scope: meta-spec maturity + targeted expansion to ~20 sites
+
+**Why:**
+- M6 achieved its core goals: hardened runtime, proved 4 new pattern archetypes, established discovery gate discipline
+- Site count (13 vs aspirational 20) was limited by exchange_chain deferral and archetypes needing new primitives (Nuxt, non-Google signing) — these carry to M7
+
+**Key files:** all `src/runtime/`, `src/fixtures/newrelic-fixture/`, `doc/todo/v2_m6/`, `doc/todo/roadmap.md`
+**Verification:** 238/238 tests pass, `pnpm build` clean, 13 sites CDP-verified
+**Commits:** `fecc59c`..`5b7b193` (8 commits across Phase 1 + Phase 2A + Phase 2B + reviews + docs)
+**Next:** M7 — Meta-spec maturity (const body fields, items_path, exchange_chain cookie extraction) + expansion to ~20 sites
+**Blockers:** None
+
+---
+
 ## 2026-03-16: M6 Phase 2 Tranche B — New Relic GraphQL cursor fixture + exchange_chain discovery
 
 **What changed:**
