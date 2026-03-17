@@ -61,3 +61,7 @@ export function computeSapisidhash(timestamp: number, sapisid: string, origin: s
   const input = `${timestamp} ${sapisid} ${origin}`
   return createHash('sha1').update(input).digest('hex')
 }
+
+import { registerResolver } from './registry.js'
+registerResolver('sapisidhash', async (ctx, config) =>
+  resolveSapisidhash(ctx.handle, config as unknown as Parameters<typeof resolveSapisidhash>[1], ctx.serverUrl))

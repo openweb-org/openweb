@@ -81,3 +81,7 @@ export async function resolveLocalStorageJwt(
 
   return { headers }
 }
+
+import { registerResolver } from './registry.js'
+registerResolver('localStorage_jwt', async (ctx, config) =>
+  resolveLocalStorageJwt(ctx.handle, config as unknown as Parameters<typeof resolveLocalStorageJwt>[1]))

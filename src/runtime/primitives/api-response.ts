@@ -105,6 +105,14 @@ export async function resolveApiResponse(
   return { headers: resultHeaders }
 }
 
+import { registerResolver } from './registry.js'
+registerResolver('api_response', async (ctx, config) =>
+  resolveApiResponse(ctx.handle, config as unknown as Parameters<typeof resolveApiResponse>[1], ctx.serverUrl, {
+    fetchImpl: ctx.deps?.fetchImpl,
+    authHeaders: ctx.deps?.authHeaders as Record<string, string> | undefined,
+    cookieString: ctx.deps?.cookieString,
+  }))
+
 function extractPath(data: unknown, path: string): string | undefined {
   const segments = path.split('.')
   let current: unknown = data

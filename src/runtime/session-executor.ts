@@ -13,17 +13,9 @@ import {
 import { validateSSRF } from '../lib/ssrf.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../types/primitives.js'
 import type { Transport, XOpenWebServer } from '../types/extensions.js'
-import { resolveApiResponse } from './primitives/api-response.js'
-import { resolveCookieSession } from './primitives/cookie-session.js'
-import { resolveCookieToHeader } from './primitives/cookie-to-header.js'
-import { resolveExchangeChain } from './primitives/exchange-chain.js'
-import { resolveLocalStorageJwt } from './primitives/localstorage-jwt.js'
-import { resolveMetaTag } from './primitives/meta-tag.js'
-import { resolvePageGlobal } from './primitives/page-global.js'
-import { resolveSapisidhash } from './primitives/sapisidhash.js'
-import { resolveSessionStorageMsal } from './primitives/sessionstorage-msal.js'
-import { resolveWebpackModuleWalk } from './primitives/webpack-module-walk.js'
+import { getResolver } from './primitives/index.js'
 import type { BrowserHandle, ResolvedInjections } from './primitives/types.js'
+import type { ResolverResult } from './primitives/registry.js'
 import { listCandidatePages } from './page-candidates.js'
 
 /** Auth resolution result — extends ResolvedInjections with optional query params */
@@ -267,50 +259,21 @@ export async function resolveAuth(
   serverUrl: string,
   deps?: SessionHttpDependencies,
 ): Promise<AuthResult> {
-  switch (auth.type) {
-    case 'cookie_session':
-      return resolveCookieSession(handle, serverUrl)
-    case 'localStorage_jwt':
-      return resolveLocalStorageJwt(handle, {
-        key: auth.key,
-        path: auth.path,
-        inject: auth.inject,
-      })
-    case 'sessionStorage_msal':
-      return resolveSessionStorageMsal(handle, {
-        key_pattern: auth.key_pattern,
-        scope_filter: auth.scope_filter,
-        token_field: auth.token_field,
-        inject: auth.inject,
-      })
-    case 'page_global':
-      return resolvePageGlobal(handle, {
-        expression: auth.expression,
-        inject: auth.inject,
-        values: auth.values,
-      })
-    case 'exchange_chain':
-      return resolveExchangeChain(handle, {
-        steps: auth.steps,
-        inject: auth.inject,
-      }, serverUrl, { fetchImpl: deps?.fetchImpl, ssrfValidator: deps?.ssrfValidator })
-    case 'webpack_module_walk':
-      return resolveWebpackModuleWalk(handle, {
-        chunk_global: auth.chunk_global,
-        module_test: auth.module_test,
-        call: auth.call,
-        inject: auth.inject,
-      })
-    default:
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: `Unsupported auth primitive: ${auth.type}`,
-        action: 'This auth type is not yet implemented.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
+  const resolver = getResolver(auth.type)
+  if (!resolver) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Unsupported auth primitive: ${auth.type}`,
+      action: 'This auth type is not yet implemented.',
+      retriable: false,
+      failureClass: 'fatal',
+    })
   }
+  return resolver(
+    { handle, serverUrl, deps: { fetchImpl: deps?.fetchImpl, ssrfValidator: deps?.ssrfValidator } },
+    auth as unknown as Record<string, unknown>,
+  )
 }
 
 /** Resolve CSRF primitive to get headers to inject */
@@ -320,32 +283,21 @@ export async function resolveCsrf(
   serverUrl: string,
   deps?: SessionHttpDependencies & { authHeaders?: Record<string, string>; cookieString?: string },
 ): Promise<ResolvedInjections> {
-  switch (csrf.type) {
-    case 'cookie_to_header':
-      return resolveCookieToHeader(handle, csrf, serverUrl)
-    case 'meta_tag':
-      return resolveMetaTag(handle, { name: csrf.name, header: csrf.header })
-    case 'api_response':
-      return resolveApiResponse(handle, {
-        endpoint: csrf.endpoint,
-        method: csrf.method,
-        extract: csrf.extract,
-        inject: csrf.inject,
-      }, serverUrl, {
-        fetchImpl: deps?.fetchImpl,
-        authHeaders: deps?.authHeaders,
-        cookieString: deps?.cookieString,
-      })
-    default:
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: `Unsupported CSRF primitive: ${csrf.type}`,
-        action: 'This CSRF type is not yet implemented.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
+  const resolver = getResolver(csrf.type)
+  if (!resolver) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Unsupported CSRF primitive: ${csrf.type}`,
+      action: 'This CSRF type is not yet implemented.',
+      retriable: false,
+      failureClass: 'fatal',
+    })
   }
+  return resolver(
+    { handle, serverUrl, deps: { fetchImpl: deps?.fetchImpl, authHeaders: deps?.authHeaders, cookieString: deps?.cookieString } },
+    csrf as unknown as Record<string, unknown>,
+  )
 }
 
 /** Resolve signing primitive to get headers to inject */
@@ -354,23 +306,21 @@ export async function resolveSigning(
   signing: SigningPrimitive,
   serverUrl: string,
 ): Promise<ResolvedInjections> {
-  switch (signing.type) {
-    case 'sapisidhash':
-      return resolveSapisidhash(handle, {
-        cookie: signing.cookie,
-        origin: signing.origin,
-        inject: signing.inject,
-      }, serverUrl)
-    default:
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: `Unsupported signing primitive: ${signing.type}`,
-        action: 'This signing type is not yet implemented.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
+  const resolver = getResolver(signing.type)
+  if (!resolver) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Unsupported signing primitive: ${signing.type}`,
+      action: 'This signing type is not yet implemented.',
+      retriable: false,
+      failureClass: 'fatal',
+    })
   }
+  return resolver(
+    { handle, serverUrl },
+    signing as unknown as Record<string, unknown>,
+  )
 }
 
 export interface SessionHttpDependencies {

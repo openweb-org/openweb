@@ -33,3 +33,7 @@ export async function resolveCookieToHeader(
     headers: { [config.header]: match.value },
   }
 }
+
+import { registerResolver } from './registry.js'
+registerResolver('cookie_to_header', async (ctx, config) =>
+  resolveCookieToHeader(ctx.handle, config as unknown as Parameters<typeof resolveCookieToHeader>[1], ctx.serverUrl))

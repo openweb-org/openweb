@@ -186,3 +186,10 @@ export async function resolveExchangeChain(
     ...(Object.keys(queryParams).length > 0 ? { queryParams } : {}),
   }
 }
+
+import { registerResolver } from './registry.js'
+registerResolver('exchange_chain', async (ctx, config) =>
+  resolveExchangeChain(ctx.handle, config as unknown as Parameters<typeof resolveExchangeChain>[1], ctx.serverUrl, {
+    fetchImpl: ctx.deps?.fetchImpl,
+    ssrfValidator: ctx.deps?.ssrfValidator,
+  }))

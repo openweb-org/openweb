@@ -36,3 +36,7 @@ export async function resolveMetaTag(
 
   return { headers: { [header]: content } }
 }
+
+import { registerResolver } from './registry.js'
+registerResolver('meta_tag', async (ctx, config) =>
+  resolveMetaTag(ctx.handle, config as unknown as Parameters<typeof resolveMetaTag>[1]))

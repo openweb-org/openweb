@@ -81,3 +81,7 @@ function applyInject(
     queryParams[inject.query] = value
   }
 }
+
+import { registerResolver } from './registry.js'
+registerResolver('page_global', async (ctx, config) =>
+  resolvePageGlobal(ctx.handle, config as unknown as Parameters<typeof resolvePageGlobal>[1]))

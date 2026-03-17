@@ -13,3 +13,6 @@ export async function resolveCookieSession(handle: BrowserHandle, serverUrl: str
   const cookieString = cookies.map((c) => `${c.name}=${c.value}`).join('; ')
   return { headers: {}, cookieString }
 }
+
+import { registerResolver } from './registry.js'
+registerResolver('cookie_session', async (ctx) => resolveCookieSession(ctx.handle, ctx.serverUrl))

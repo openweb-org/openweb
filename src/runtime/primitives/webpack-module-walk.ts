@@ -149,3 +149,7 @@ function validateConfig(config: WebpackModuleWalkConfig): void {
     }
   }
 }
+
+import { registerResolver } from './registry.js'
+registerResolver('webpack_module_walk', async (ctx, config) =>
+  resolveWebpackModuleWalk(ctx.handle, config as unknown as Parameters<typeof resolveWebpackModuleWalk>[1]))

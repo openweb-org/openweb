@@ -206,3 +206,7 @@ export async function resolveSessionStorageMsal(
     ...(Object.keys(queryParams).length > 0 ? { queryParams } : {}),
   }
 }
+
+import { registerResolver } from './registry.js'
+registerResolver('sessionStorage_msal', async (ctx, config) =>
+  resolveSessionStorageMsal(ctx.handle, config as unknown as Parameters<typeof resolveSessionStorageMsal>[1]))

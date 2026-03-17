@@ -1,0 +1,15 @@
+// Barrel import — triggers self-registration of all resolvers
+import './cookie-session.js'
+import './localstorage-jwt.js'
+import './sessionstorage-msal.js'
+import './page-global.js'
+import './webpack-module-walk.js'
+import './exchange-chain.js'
+import './cookie-to-header.js'
+import './meta-tag.js'
+import './api-response.js'
+import './sapisidhash.js'
+
+export { registerResolver, getResolver } from './registry.js'
+export type { ResolverFn, ResolverContext, ResolverResult } from './registry.js'
+export type { BrowserHandle, ResolvedInjections } from './types.js'
