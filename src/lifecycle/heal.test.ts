@@ -297,4 +297,21 @@ describe('healSite', () => {
     expect(result.failed).toContain('getFeed')
     expect(result.healed).toHaveLength(0)
   })
+
+  it('returns no_operations_discovered when discovery finds nothing', async () => {
+    vi.mocked(resolveSiteRoot).mockResolvedValue('/fixtures/test-site')
+    vi.mocked(loadManifest).mockResolvedValue({
+      name: 'test-site', version: '1.0.0', spec_version: '3.1.0',
+      site_url: 'https://example.com',
+    })
+    vi.mocked(resolveCdpEndpoint).mockResolvedValue('http://localhost:9222')
+    vi.mocked(discover).mockResolvedValue({
+      site: 'test-site', outputRoot: '/tmp/discovered', operationCount: 0,
+    })
+    vi.mocked(rm).mockResolvedValue(undefined)
+
+    const result = await healSite('test-site', mockVerifyResult())
+    expect(result.failed).toContain('no_operations_discovered')
+    expect(result.healed).toHaveLength(0)
+  })
 })

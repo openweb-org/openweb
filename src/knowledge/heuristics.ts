@@ -81,7 +81,7 @@ function decayedScore(stat: ProbeHeuristic): number {
   const ageMs = Date.now() - new Date(stat.lastUpdated).getTime()
   const ageDays = ageMs / (1000 * 60 * 60 * 24)
   if (ageDays <= STALENESS_DAYS) return stat.successRate
-  // Linear decay: halves at 2x STALENESS_DAYS
+  // Linear decay: halves at 1.5x STALENESS_DAYS (45d), reaches zero at 2x (60d)
   const decayFactor = Math.max(0, 1 - (ageDays - STALENESS_DAYS) / STALENESS_DAYS)
   return stat.successRate * decayFactor
 }

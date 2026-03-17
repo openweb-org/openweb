@@ -135,7 +135,10 @@ async function probeOne(
     }
   }
 
-  try { await recordProbeOutcome('node_with_auth', false) } catch { /* non-fatal */ }
+  // Only record node_with_auth failure if Step 2 was actually attempted (requestsMade > 1)
+  if (requestsMade > 1) {
+    try { await recordProbeOutcome('node_with_auth', false) } catch { /* non-fatal */ }
+  }
   return [null, requestsMade]
 }
 
