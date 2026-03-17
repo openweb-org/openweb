@@ -1,0 +1,53 @@
+openapi: '3.1.0'
+info:
+  title: Nationalize
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.nationalize.io
+paths:
+  /:
+    get:
+      operationId: predictNationality
+      summary: Predict nationality from a given name
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: nz0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Name to predict nationality for (e.g. "michael").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, name, country]
+                properties:
+                  count:
+                    type: integer
+                  name:
+                    type: string
+                  country:
+                    type: array
+                    items:
+                      type: object
+                      required: [country_id, probability]
+                      properties:
+                        country_id:
+                          type: string
+                        probability:
+                          type: number

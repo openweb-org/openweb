@@ -128,4 +128,20 @@ describe('filterSamples', () => {
     expect(output).toHaveLength(1)
     expect(output[0].host).toBe('custom-api.io')
   })
+
+  it('blocks infrastructure/noise paths', () => {
+    const input = [
+      makeSample({ path: '/api/v1/users' }),
+      makeSample({ path: '/manifest.json' }),
+      makeSample({ path: '/_next/data/abc/page.json' }),
+      makeSample({ path: '/api/v1/trace' }),
+      makeSample({ path: '/telemetry' }),
+      makeSample({ path: '/.well-known/openid-configuration' }),
+      makeSample({ path: '/api/v1/tracking' }),
+    ]
+
+    const output = filterSamples(input)
+    expect(output).toHaveLength(1)
+    expect(output[0].path).toBe('/api/v1/users')
+  })
 })

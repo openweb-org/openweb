@@ -1,0 +1,14 @@
+{
+  "operation_id": "listActivities",
+  "cases": [
+    {
+      "input": {
+        "type": "education"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

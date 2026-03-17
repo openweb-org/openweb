@@ -1,0 +1,14 @@
+{
+  "name": "randomuser-fixture",
+  "display_name": "Random User",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://randomuser.me",
+  "requires_auth": false,
+  "stats": {
+    "operation_count": 1,
+    "l1_count": 1,
+    "l2_count": 0,
+    "l3_count": 0
+  }
+}

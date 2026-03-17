@@ -27,7 +27,7 @@ export interface ParameterDescriptor {
 }
 
 export interface AnalyzedOperation {
-  readonly method: 'get'
+  readonly method: string
   readonly host: string
   readonly path: string
   readonly operationId: string

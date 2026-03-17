@@ -1,0 +1,47 @@
+openapi: '3.1.0'
+info:
+  title: Genderize
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.genderize.io
+paths:
+  /:
+    get:
+      operationId: predictGender
+      summary: Predict gender from a given name
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: gz0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Name to predict gender for (e.g. "michael").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, name, gender, probability]
+                properties:
+                  count:
+                    type: integer
+                  name:
+                    type: string
+                  gender:
+                    type: string
+                  probability:
+                    type: number

@@ -1,6 +1,8 @@
 import os from 'node:os'
 import path from 'node:path'
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 
+import { createCaptureSession } from '../capture/session.js'
 import { annotateOperation, annotateParameterDescriptions } from '../compiler/analyzer/annotate.js'
 import { classify } from '../compiler/analyzer/classify.js'
 import { clusterSamples } from '../compiler/analyzer/cluster.js'
@@ -18,7 +20,7 @@ export interface DiscoverOptions {
   readonly cdpEndpoint: string
   /** Target site URL */
   readonly targetUrl: string
-  /** Output directory for generated fixture (default: src/fixtures/{site}-fixture) */
+  /** Output directory for generated fixture (default: ~/.openweb/discovered/{site}-fixture) */
   readonly outputDir?: string
   /** Enable active exploration (click nav links, search). Default: true */
   readonly explore?: boolean
@@ -54,9 +56,26 @@ function buildExampleInput(parameters: ParameterDescriptor[]): Record<string, un
 }
 
 /**
+ * Merge two HAR files by combining their entries arrays.
+ * Reads passiveHar, appends entries from exploreHar, writes back to passiveHar.
+ */
+async function mergeHarFiles(passiveHarPath: string, exploreHarPath: string): Promise<void> {
+  const passiveRaw = await readFile(passiveHarPath, 'utf8')
+  const exploreRaw = await readFile(exploreHarPath, 'utf8')
+  const passiveHar = JSON.parse(passiveRaw) as { entries?: unknown[] }
+  const exploreHar = JSON.parse(exploreRaw) as { entries?: unknown[] }
+
+  const merged = {
+    ...passiveHar,
+    entries: [...(passiveHar.entries ?? []), ...(exploreHar.entries ?? [])],
+  }
+  await writeFile(passiveHarPath, JSON.stringify(merged, null, 2))
+}
+
+/**
  * End-to-end discovery pipeline:
  * 1. Interactive capture (passive traffic)
- * 2. Active exploration (optional)
+ * 2. Active exploration (optional, separate capture dir → merge)
  * 3. Filter → Cluster → Annotate → Classify → Generate
  */
 export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
@@ -77,16 +96,14 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
   let explorationStats: DiscoverResult['explorationStats']
 
   // Step 2: Active exploration (optional)
-  // Note: capture session is already stopped at this point.
-  // For active exploration, we start a second capture session.
+  // Uses a SEPARATE capture dir to avoid overwriting passive data, then merges.
   if (shouldExplore) {
     log('\n=== Phase 2: Active exploration ===')
 
-    // Start a second capture that records during exploration
-    const { createCaptureSession } = await import('../capture/session.js')
+    const exploreDir = await mkdtemp(path.join(os.tmpdir(), 'openweb-explore-'))
     const exploreSession = createCaptureSession({
       cdpEndpoint: opts.cdpEndpoint,
-      outputDir: capture.recordingDir, // Append to same dir (overwrites)
+      outputDir: exploreDir,
       onLog: log,
     })
 
@@ -98,6 +115,25 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
       exploreSession.stop()
       await exploreSession.done
     }
+
+    // Merge exploration HAR into passive HAR
+    try {
+      await mergeHarFiles(
+        path.join(capture.recordingDir, 'traffic.har'),
+        path.join(exploreDir, 'traffic.har'),
+      )
+    } catch {
+      // Merge failure is non-fatal — passive data still available
+    }
+
+    await cleanupRecordingDir(exploreDir)
+  }
+
+  // Disconnect browser (Fix #4: prevent leaked Playwright connections)
+  try {
+    capture.browser.disconnect()
+  } catch {
+    // already disconnected
   }
 
   // Step 3: Compile pipeline
@@ -142,8 +178,9 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
     const annotatedParams = annotateParameterDescriptions(params)
     const responseSchema = inferSchema(cluster.samples.map((s) => s.responseJson))
 
-    // Mutations are marked unverified by default (safety constraint)
-    const verified = cluster.method === 'GET' ? false : false
+    // Discovery pipeline marks all operations unverified — verification
+    // requires auth context which discover doesn't have yet
+    const verified = false
 
     analyzedOperations.push({
       method: cluster.method.toLowerCase(),

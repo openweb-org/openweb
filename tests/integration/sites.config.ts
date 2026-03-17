@@ -173,4 +173,65 @@ export const sites: SiteIntegrationTest[] = [
     flaky: true, // Rate-limited: may return 429 under load
     smoke: { operation: 'lookupIp', params: { ip: '8.8.8.8' } },
   },
+  // ── M11 new sites ──────────────────────────────────────────
+  {
+    site: 'agify-fixture',
+    page_url: 'https://agify.io',
+    requires_login: false,
+    smoke: { operation: 'predictAge', params: { name: 'michael' } },
+  },
+  {
+    site: 'boredapi-fixture',
+    page_url: 'https://bored-api.appbrewery.com',
+    requires_login: false,
+    smoke: { operation: 'getRandomActivity', params: {} },
+  },
+  {
+    site: 'catfact-fixture',
+    page_url: 'https://catfact.ninja',
+    requires_login: false,
+    smoke: { operation: 'getFact', params: {} },
+  },
+  {
+    site: 'exchangerate-fixture',
+    page_url: 'https://open.er-api.com',
+    requires_login: false,
+    smoke: { operation: 'getLatestRates', params: { base: 'USD' } },
+  },
+  {
+    site: 'genderize-fixture',
+    page_url: 'https://genderize.io',
+    requires_login: false,
+    smoke: { operation: 'predictGender', params: { name: 'michael' } },
+  },
+  {
+    site: 'httpbin-fixture',
+    page_url: 'https://httpbin.org',
+    requires_login: false,
+    smoke: { operation: 'getIp', params: {} },
+  },
+  {
+    site: 'nationalize-fixture',
+    page_url: 'https://nationalize.io',
+    requires_login: false,
+    smoke: { operation: 'predictNationality', params: { name: 'michael' } },
+  },
+  {
+    site: 'openlib-fixture',
+    page_url: 'https://openlibrary.org',
+    requires_login: false,
+    smoke: { operation: 'searchBooks', params: { q: 'javascript' } },
+  },
+  {
+    site: 'pokeapi-fixture',
+    page_url: 'https://pokeapi.co',
+    requires_login: false,
+    smoke: { operation: 'getPokemon', params: { name: 'pikachu' } },
+  },
+  {
+    site: 'randomuser-fixture',
+    page_url: 'https://randomuser.me',
+    requires_login: false,
+    smoke: { operation: 'getRandomUser', params: { results: '1' } },
+  },
 ]

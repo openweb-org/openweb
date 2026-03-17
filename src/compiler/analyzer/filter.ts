@@ -94,6 +94,41 @@ function isAllowedHost(host: string, allowedDomains: string[]): boolean {
   return allowedDomains.some((domain) => host === domain || host.endsWith(`.${domain}`))
 }
 
+/** Infrastructure/noise path patterns to reject */
+const BLOCKED_PATH_PATTERNS: readonly RegExp[] = [
+  /\/manifest\.json$/,
+  /\/_next\//,
+  /\/.well-known\//,
+  /\/favicon\./,
+  /\/robots\.txt$/,
+  /\/sitemap/,
+  /\/trace\b/,
+  /\/telemetry\b/,
+  /\/beacon\b/,
+  /\/collect\b/,
+  /\/envelope\b/,
+  /\/events?\b.*\/(create|batch|track|report)/i,
+  /\/track(ing)?\b/i,
+  /\/log(s)?\b/,
+  /\/metrics\b/,
+  /\/health(z|check)?$/,
+  /\/ping$/,
+  /\/experiments?\b/,
+  /\/cookie-settings\b/,
+  /\/consent\b/,
+  /\/_ajax\b/,
+  /\/sw\.js$/,
+  /\/service-worker/,
+  /\/workbox-/,
+  /\/analytics\b/,
+  /\/pixel\b/,
+  /\/csp-report/,
+]
+
+function isBlockedPath(urlPath: string): boolean {
+  return BLOCKED_PATH_PATTERNS.some((pattern) => pattern.test(urlPath))
+}
+
 export function filterSamples(samples: RecordedRequestSample[], options: FilterOptions = {}): RecordedRequestSample[] {
   const allowedDomains = buildAllowedDomains(options)
   const allowMutations = options.allowMutations ?? true
@@ -103,6 +138,7 @@ export function filterSamples(samples: RecordedRequestSample[], options: FilterO
     if (sample.status < 200 || sample.status >= 300) return false
     if (isBlockedHost(sample.host)) return false
     if (!isAllowedHost(sample.host, allowedDomains)) return false
+    if (isBlockedPath(sample.path)) return false
     if (sample.contentType && !sample.contentType.includes('application/json')) return false
     return true
   })

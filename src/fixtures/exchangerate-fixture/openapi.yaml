@@ -1,0 +1,51 @@
+openapi: '3.1.0'
+info:
+  title: Exchange Rate API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://open.er-api.com
+paths:
+  /v6/latest/{base}:
+    get:
+      operationId: getLatestRates
+      summary: Get latest exchange rates
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: er0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: base
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Base currency code (e.g. "USD").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result, base_code, rates]
+                properties:
+                  result:
+                    type: string
+                  provider:
+                    type: string
+                  base_code:
+                    type: string
+                  time_last_update_utc:
+                    type: string
+                  rates:
+                    type: object
+                    additionalProperties:
+                      type: number

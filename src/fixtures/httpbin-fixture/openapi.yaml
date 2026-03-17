@@ -1,0 +1,119 @@
+openapi: '3.1.0'
+info:
+  title: httpbin
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://httpbin.org
+paths:
+  /ip:
+    get:
+      operationId: getIp
+      summary: Get the caller's IP address
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: hb0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [origin]
+                properties:
+                  origin:
+                    type: string
+  /user-agent:
+    get:
+      operationId: getUserAgent
+      summary: Get the caller's User-Agent string
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: hb0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user-agent]
+                properties:
+                  user-agent:
+                    type: string
+  /headers:
+    get:
+      operationId: getHeaders
+      summary: Get the caller's request headers
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: hb0003
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [headers]
+                properties:
+                  headers:
+                    type: object
+                    properties:
+                      Host:
+                        type: string
+                      Accept:
+                        type: string
+                      User-Agent:
+                        type: string
+                    additionalProperties:
+                      type: string
+  /uuid:
+    get:
+      operationId: getUuid
+      summary: Generate a UUID
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: hb0004
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uuid]
+                properties:
+                  uuid:
+                    type: string

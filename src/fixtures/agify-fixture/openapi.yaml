@@ -1,0 +1,45 @@
+openapi: '3.1.0'
+info:
+  title: Agify
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.agify.io
+paths:
+  /:
+    get:
+      operationId: predictAge
+      summary: Predict age from name
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: ag0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+          description: First name to predict age for (e.g. "michael").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, name, age]
+                properties:
+                  count:
+                    type: integer
+                  name:
+                    type: string
+                  age:
+                    type: integer

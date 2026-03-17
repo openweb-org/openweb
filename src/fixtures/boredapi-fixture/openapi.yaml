@@ -1,0 +1,104 @@
+openapi: '3.1.0'
+info:
+  title: Bored API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://bored-api.appbrewery.com
+paths:
+  /random:
+    get:
+      operationId: getRandomActivity
+      summary: Get a random boredom-busting activity
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: ba0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [activity, type, participants, price]
+                properties:
+                  activity:
+                    type: string
+                  availability:
+                    type: number
+                  type:
+                    type: string
+                  participants:
+                    type: integer
+                  price:
+                    type: number
+                  accessibility:
+                    type: string
+                  duration:
+                    type: string
+                  kidFriendly:
+                    type: boolean
+                  link:
+                    type: string
+                  key:
+                    type: string
+  /filter:
+    get:
+      operationId: listActivities
+      summary: List activities with optional type filter
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: ba0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by activity type (e.g. "education", "social", "cooking").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [activity, type, participants, price]
+                  properties:
+                    activity:
+                      type: string
+                    availability:
+                      type: number
+                    type:
+                      type: string
+                    participants:
+                      type: integer
+                    price:
+                      type: number
+                    accessibility:
+                      type: string
+                    duration:
+                      type: string
+                    kidFriendly:
+                      type: boolean
+                    link:
+                      type: string
+                    key:
+                      type: string

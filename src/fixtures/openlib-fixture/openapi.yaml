@@ -1,0 +1,125 @@
+openapi: '3.1.0'
+info:
+  title: Open Library
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://openlibrary.org
+paths:
+  /search.json:
+    get:
+      operationId: searchBooks
+      summary: Search for books by query
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: ol0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (e.g. "the lord of the rings").
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Results per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [numFound, docs]
+                properties:
+                  numFound:
+                    type: integer
+                  start:
+                    type: integer
+                  docs:
+                    type: array
+                    items:
+                      type: object
+                      required: [title]
+                      properties:
+                        title:
+                          type: string
+                        author_name:
+                          type: array
+                          items:
+                            type: string
+                        first_publish_year:
+                          type: integer
+                        key:
+                          type: string
+                        isbn:
+                          type: array
+                          items:
+                            type: string
+  /works/{olid}.json:
+    get:
+      operationId: getWork
+      summary: Get a book work by its Open Library ID
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: ol0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: olid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Open Library work ID (e.g. "OL45804W").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [title, key]
+                properties:
+                  title:
+                    type: string
+                  key:
+                    type: string
+                  description:
+                    oneOf:
+                      - type: string
+                      - type: object
+                        properties:
+                          value:
+                            type: string
+                  subjects:
+                    type: array
+                    items:
+                      type: string
+                  covers:
+                    type: array
+                    items:
+                      type: integer

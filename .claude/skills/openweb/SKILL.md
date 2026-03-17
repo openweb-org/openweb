@@ -1,6 +1,6 @@
 ---
 name: openweb
-description: Access 25 web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo, Walmart, Hacker News, Microsoft Word, New Relic, ChatGPT, X, StackOverflow, CoinGecko, Wikipedia, npm, DuckDuckGo, JSONPlaceholder, Dog CEO, GitHub Public, REST Countries, IP API) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", "read Hacker News", "list New Relic dashboards", "search StackOverflow", "check crypto prices", "look up Wikipedia", "search npm packages", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
+description: Access 35 web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo, Walmart, Hacker News, Microsoft Word, New Relic, ChatGPT, X, StackOverflow, CoinGecko, Wikipedia, npm, DuckDuckGo, JSONPlaceholder, Dog CEO, GitHub Public, REST Countries, IP API, Cat Facts, PokeAPI, Random User, Agify, Genderize, Nationalize, Bored API, Open Library, Exchange Rate, HTTPBin) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", "read Hacker News", "list New Relic dashboards", "search StackOverflow", "check crypto prices", "look up Wikipedia", "search npm packages", "get a cat fact", "look up a Pokemon", "predict age from name", "get exchange rates", "search books", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
 ---
 
 # OpenWeb — Web Service Access via CLI
@@ -152,6 +152,16 @@ Sites use different transports depending on their API structure. You don't need 
 | `github-public-fixture` | node | none | `listRepos` — public repos + stargazers (link_header pagination) |
 | `restcountries-fixture` | node | none | `search` — country search |
 | `ipapi-fixture` | node | none | `lookup` — IP geolocation |
+| `agify-fixture` | node | none | `predictAge` — age prediction from name |
+| `boredapi-fixture` | node | none | `getRandomActivity` — random activity suggestion |
+| `catfact-fixture` | node | none | `getFact` — random cat fact |
+| `exchangerate-fixture` | node | none | `getLatestRates` — currency exchange rates |
+| `genderize-fixture` | node | none | `predictGender` — gender prediction from name |
+| `httpbin-fixture` | node | none | `getIp` — HTTP testing (ip, headers, uuid) |
+| `nationalize-fixture` | node | none | `predictNationality` — nationality prediction from name |
+| `openlib-fixture` | node | none | `searchBooks` — book search + work details |
+| `pokeapi-fixture` | node | none | `getPokemon` — Pokemon data |
+| `randomuser-fixture` | node | none | `getRandomUser` — random user profiles |
 
 ## Common Workflow Examples
 
