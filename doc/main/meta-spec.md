@@ -1,7 +1,7 @@
 # Meta-spec: Type System & Validation
 
 > L2 primitive types, x-openweb extensions, JSON Schema, and AJV validation.
-> Last updated: 2026-03-16 (commit: `uncommitted`)
+> Last updated: 2026-03-16 (commit: `1847175`)
 
 ## Overview
 
@@ -54,11 +54,11 @@ interface XOpenWebOperation {
   risk_tier?: 'safe' | 'low' | 'medium' | 'high' | 'critical'
   stable_id?: string
   signature_id?: string
-  tool_version?: string
+  tool_version?: number
   verified?: boolean
   signals?: string[]
   mode?: ExecutionMode           // Override server mode
-  human_handoff?: string
+  human_handoff?: boolean
   csrf?: CsrfPrimitive          // Override server CSRF
   pagination?: PaginationPrimitive
   extraction?: ExtractionPrimitive
@@ -140,7 +140,7 @@ paths:
 | `apollo_cache` | Apollo cache | `key_pattern`, `fields` |
 | `html_selector` | CSS selector | `page_url`, `selectors`, `attribute`, `multiple` |
 | `script_json` | Script tag JSON | `selector`, `path` |
-| `page_global_data` | Window global | `expression`, `path` |
+| `page_global_data` | Window global | `page_url`, `expression`, `path` |
 
 -> See: `src/types/primitives.ts` — full TypeScript definitions
 
@@ -232,13 +232,13 @@ sites/<site>/
 
 ```json
 {
-  "name": "instagram",
-  "version": "0.1.0",
-  "spec_version": "0.1.0",
-  "site": "instagram.com",
-  "generated_at": "2026-03-16T...",
+  "name": "instagram-fixture",
+  "display_name": "Instagram",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.instagram.com",
   "requires_auth": true,
-  "dependencies": { "playwright": "^1.52.0" }
+  "stats": { "operation_count": 3, "l1_count": 0, "l2_count": 3, "l3_count": 0 }
 }
 ```
 

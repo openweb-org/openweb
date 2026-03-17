@@ -1,3 +1,22 @@
+## 2026-03-16: M6 Phase 2 Tranche A review fixes + Tranche B target decisions
+
+**What changed:**
+- Closed the Tranche A review gaps: `direct_http` now reuses the full path/query/header/body binding pipeline with defaults, both HTTP executors share the same redirect budget and explicit missing-`Location` error, `exchange_chain` supports `inject.query`, and `page_global_data` formally accepts `page_url`
+- Fixed stale fixture and benchmark metadata: the Reddit manifest now matches the current `cookie_session` fixture, benchmark 10 includes `--max-response 2048`, and duplicated candidate-page filtering moved into shared `src/runtime/page-candidates.ts`
+- Locked the next Tranche B batch in the implementation plan: `newrelic-fixture` is the GraphQL cursor target, while `exchange_chain` stays behind a discovery gate until a stable live flow is captured
+
+**Why:**
+- The Tranche A follow-up review found real contract drift between execution paths plus stale metadata left over from earlier fixture changes
+- Tranche B needed a concrete "build next" target; otherwise the milestone would stall on target churn and ambiguous `exchange_chain` candidates
+
+**Key files:** `src/runtime/executor.ts`, `src/runtime/session-executor.ts`, `src/runtime/primitives/exchange-chain.ts`, `src/runtime/page-candidates.ts`, `src/types/primitives.ts`, `src/fixtures/reddit-fixture/manifest.json`, `doc/todo/v2_m6/implement-plan.md`
+**Verification:** `pnpm test` passed (226/226), `pnpm build` passed
+**Commit:** `1847175`
+**Next:** Implement `newrelic-fixture` for the GraphQL cursor tranche; separately run `exchange_chain` target discovery before committing to an E2E site
+**Blockers:** None
+
+---
+
 ## 2026-03-16: M6 Phase 2 Tranche A — extraction sites, MSAL auth, and agent-surface sync
 
 **What changed:**
@@ -11,7 +30,7 @@
 
 **Key files:** `src/runtime/extraction-executor.ts`, `src/runtime/paginator.ts`, `src/runtime/navigator.ts`, `src/runtime/primitives/page-expression.ts`, `src/runtime/primitives/page-global-data.ts`, `src/fixtures/walmart-fixture/`, `src/fixtures/hackernews-fixture/`, `src/fixtures/microsoft-word-fixture/`, `.claude/skills/openweb/SKILL.md`, `doc/main/runtime.md`, `tests/benchmark/`
 **Verification:** `pnpm build` passed, `pnpm test` passed (214/214), real Chrome CDP smoke passed for Hacker News/Walmart/Microsoft Word, repeated live execution passed for Hacker News/Walmart/Microsoft Word
-**Commit:** (uncommitted)
+**Commit:** `93c9893`
 **Next:** Phase 2 Tranche B — pick a stable GraphQL cursor target and re-confirm the `exchange_chain` target before implementing the next site batch
 **Blockers:** None
 
@@ -30,7 +49,7 @@
 
 **Key files:** `src/lib/openapi.ts`, `src/runtime/session-executor.ts`, `src/runtime/primitives/exchange-chain.ts`, `src/commands/exec.ts`, `src/cli.ts`, `src/fixtures/reddit-fixture/openapi.yaml`, `src/lib/openapi.test.ts`, `src/runtime/primitives/primitives.test.ts`, `src/runtime/session-executor.test.ts`, `.claude/skills/openweb/SKILL.md`
 **Verification:** `pnpm test` passed (191/191), `pnpm build` passed
-**Commit:** (uncommitted)
+**Commit:** `9319297`
 **Next:** M6 Phase 2 — pattern-driven expansion (Next.js SSR, DOM-only extraction, GraphQL cursor, MSAL/sessionStorage, exchange_chain E2E)
 **Blockers:** None
 
@@ -51,7 +70,7 @@
 
 **Key files:** `src/runtime/session-executor.ts`, `src/runtime/browser-fetch-executor.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/navigator.ts`, `src/lib/openapi.ts`, `src/lib/errors.ts`, `src/commands/exec.ts`, `src/cli.ts`, `src/fixtures/instagram-fixture/openapi.yaml`, `src/fixtures/youtube-fixture/openapi.yaml`, `.claude/skills/openweb/SKILL.md`, `tests/benchmark/`
 **Verification:** `pnpm test` passed (183/183), `pnpm build` passed, real Chrome CDP smoke passed for Open-Meteo/Instagram/GitHub/YouTube/Discord/Telegram, benchmark error cases passed (`needs_browser`, `fatal`)
-**Commit:** (uncommitted)
+**Commit:** `fecc59c`
 **Next:** M6 Phase 2 — pattern-driven expansion (Next.js SSR, DOM-only extraction, GraphQL cursor, MSAL/sessionStorage, exchange_chain E2E)
 **Blockers:** None
 
@@ -141,7 +160,7 @@
 
 **Key files:** `doc/todo/roadmap.md`, `doc/todo/note.md`, `doc/todo/meta-schema-review/review.md`, `doc/todo/primitive-customization/design.md`, `doc/todo/intelligent-discovery/design.md`, `src/capture/dom-capture.ts`
 **Verification:** 167/167 tests pass, Discord getMe verified via CDP after KNOWN_GLOBALS cleanup
-**Commit:** (uncommitted)
+**Commit:** `375def2`
 **Next:** M5 — Agent skill MVP
 **Blockers:** None
 
@@ -165,7 +184,7 @@
 
 **Key files:** `doc/main/*.md` (9 files), `doc/dev/*.md` (2 files)
 **Verification:** All file/code references verified against current codebase
-**Commit:** (uncommitted)
+**Commit:** `a34cc32`
 **Next:** M5 — Agent skill packaging
 **Blockers:** None
 

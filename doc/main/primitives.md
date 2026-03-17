@@ -1,7 +1,7 @@
 # L2 Primitive Resolvers
 
 > Auth, CSRF, signing, pagination, and extraction primitives — the declarative layer that handles ~50% of websites.
-> Last updated: 2026-03-16 (commit: `uncommitted`)
+> Last updated: 2026-03-16 (commit: `1847175`)
 
 ## Overview
 
@@ -148,21 +148,19 @@ Used by Discord — the auth token lives inside a webpack module.
 
 ### exchange_chain
 
-Multi-step auth exchange. Each step calls an endpoint, extracts a token, and feeds it to the next step.
+Multi-step auth exchange. Each step calls an endpoint, extracts a value via dot-path, and feeds it to the next step.
+The final extracted value can be injected into either a header or a query parameter.
 If a step returns a manual 3xx redirect (for example to `/login`), the runtime classifies it as `needs_login` rather than `fatal`.
 
 ```yaml
 auth:
   type: exchange_chain
   steps:
-    - url: "https://api.example.com/auth/token"
-      method: POST
+    - call: "https://api.example.com/auth/token"
       headers: { "Content-Type": "application/json" }
-      extract: "access_token"
-    - url: "https://api.example.com/auth/session"
-      method: POST
-      extract: "session_id"
-  inject: { header: "X-Session-Id" }
+      body: { "grant_type": "session" }
+      extract: "data.access_token"
+  inject: { header: "Authorization", prefix: "Bearer " }
 ```
 
 -> See: `src/runtime/primitives/exchange-chain.ts`
@@ -348,6 +346,7 @@ Evaluates a safe page-global expression and optionally follows a nested path int
 ```yaml
 extraction:
   type: page_global_data
+  page_url: "/app"
   expression: "window.__STATE__"
   path: "viewer.profile.id"
 ```

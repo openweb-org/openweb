@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Mode dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-03-16 (commit: `uncommitted`)
+> Last updated: 2026-03-16 (commit: `1847175`)
 
 ## Overview
 
@@ -53,7 +53,8 @@ If an operation has `x-openweb.extraction`, the runtime dispatches to `executeEx
 
 ## Parameter Binding
 
-All L2 modes share the same parameter binding pipeline:
+All HTTP executors share the same path/query/header/body binding pipeline.
+`session_http` and `browser_fetch` layer auth/CSRF/signing on top; `direct_http` skips those browser-derived steps.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -76,7 +77,7 @@ Body parameters come from `requestBody.content['application/json'].schema.proper
 Defaults apply before binding, including body defaults. Body fields are validated against their declared schema types before request construction, and only fields declared in `requestBody` are serialized into the JSON body. Auth-injected query params (for example YouTube's `key`) are merged before validation.
 If an object `requestBody` is marked `required: true`, the runtime sends `{}` even when no explicit body fields are supplied, so the request still includes a JSON body.
 
--> See: `src/runtime/session-executor.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`
+-> See: `src/runtime/session-executor.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`; `src/runtime/executor.ts` — direct HTTP reuse
 
 ---
 
@@ -158,6 +159,7 @@ page.evaluate(({ url, method, headers, body }) => {
 ## direct_http Mode
 
 Simplest mode — pure HTTP client, no browser.
+It reuses the same path/query/header/body binding as `session_http`, but skips browser-derived auth/CSRF/signing.
 
 ```
 fetch(url, { method, headers, body })
@@ -179,10 +181,11 @@ All modes (except browser_fetch, which delegates to browser) follow redirects ma
 
 | Rule | Details |
 |------|---------|
-| Max redirects | 5 (fail on >= 5) |
+| Max redirects | Follow up to 5 redirects; fail if the 6th response is still a redirect |
 | SSRF per hop | Each redirect URL validated against SSRF blocklist |
 | Cross-origin | Strip `Authorization`, `Cookie`, `X-*` headers |
 | 303 See Other | Rewrite method to GET, drop request body |
+| Missing `Location` | A 3xx without `Location` raises a retriable execution error |
 | `opaqueredirect` | Respected — stops redirect chain, returns as-is |
 
 -> See: [security.md](security.md) — SSRF protection details
