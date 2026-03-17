@@ -2,7 +2,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 
 import { executeOperation, type ExecuteDependencies } from '../runtime/executor.js'
-import { recordFailure } from '../knowledge/failures.js'
+import { recordFailures } from '../knowledge/failures.js'
 import { listSites, resolveSiteRoot } from '../lib/openapi.js'
 import { OpenWebError } from '../lib/errors.js'
 import { computeResponseFingerprint } from './fingerprint.js'
@@ -96,16 +96,15 @@ export async function verifySite(
     }
   }
 
-  // Record failures to knowledge base (non-fatal)
-  for (const op of operations) {
-    if (op.status !== 'PASS') {
-      recordFailure({
-        site,
-        operationId: op.operationId,
-        failureClass: op.driftType ?? 'unknown',
-        detail: op.detail ?? '',
-      }).catch(() => {}) // non-fatal: don't block verify on knowledge write
-    }
+  // Batch-record failures to knowledge base (single write, no race)
+  const failedOps = operations.filter((op) => op.status !== 'PASS')
+  if (failedOps.length > 0) {
+    recordFailures(failedOps.map((op) => ({
+      site,
+      operationId: op.operationId,
+      failureClass: op.driftType ?? 'unknown',
+      detail: op.detail ?? '',
+    }))).catch(() => {}) // non-fatal: don't block verify on knowledge write
   }
 
   // Determine overall status

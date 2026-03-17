@@ -30,6 +30,7 @@ vi.mock('node:fs/promises', () => ({
   readdir: vi.fn(),
   cp: vi.fn(),
   rm: vi.fn(),
+  mkdtemp: vi.fn(),
 }))
 
 vi.mock('yaml', () => ({
@@ -42,7 +43,7 @@ const { loadManifest } = await import('../lib/manifest.js')
 const { discover } = await import('../discovery/pipeline.js')
 const { resolveCdpEndpoint } = await import('../commands/browser.js')
 const { archiveWithBump } = await import('./registry.js')
-const { readFile, writeFile, readdir, cp, rm } = await import('node:fs/promises')
+const { readFile, writeFile, readdir, cp, rm, mkdtemp } = await import('node:fs/promises')
 const { parse } = await import('yaml')
 
 function mockVerifyResult(overrides?: Partial<SiteVerifyResult>): SiteVerifyResult {
@@ -124,6 +125,7 @@ describe('healSite', () => {
       site: 'test-site', outputRoot: '/tmp/discovered', operationCount: 3,
     })
     vi.mocked(archiveWithBump).mockResolvedValue('1.1.0')
+    vi.mocked(mkdtemp).mockResolvedValue('/tmp/openweb-heal-xxx')
 
     // Old spec: GET /feed (read, drifted) + POST /posts (write, drifted)
     const oldSpec = {
@@ -188,6 +190,7 @@ describe('healSite', () => {
       site: 'test-site', outputRoot: '/tmp/discovered', operationCount: 2,
     })
     vi.mocked(archiveWithBump).mockResolvedValue('1.1.0')
+    vi.mocked(mkdtemp).mockResolvedValue('/tmp/openweb-heal-xxx')
 
     // No x-openweb.permission — derive from method
     const oldSpec = {
@@ -312,6 +315,76 @@ describe('healSite', () => {
 
     const result = await healSite('test-site', mockVerifyResult())
     expect(result.failed).toContain('no_operations_discovered')
+    expect(result.healed).toHaveLength(0)
+  })
+
+  it('skips runtime error driftType (only heals schema_drift and endpoint_removed)', async () => {
+    vi.mocked(resolveSiteRoot).mockResolvedValue('/fixtures/test-site')
+    vi.mocked(loadManifest).mockResolvedValue({
+      name: 'test-site', version: '1.0.0', spec_version: '3.1.0',
+      site_url: 'https://example.com',
+    })
+
+    const vr = mockVerifyResult({
+      operations: [
+        { operationId: 'getFeed', status: 'FAIL', driftType: 'error', detail: 'no browser tab open' },
+      ],
+    })
+
+    const result = await healSite('test-site', vr)
+    // driftType 'error' is not healable → early return with no ops
+    expect(result.healed).toHaveLength(0)
+    expect(result.reported).toHaveLength(0)
+    expect(result.failed).toHaveLength(0)
+  })
+
+  it('reports GET /checkout as transact (not auto-healed)', async () => {
+    vi.mocked(resolveSiteRoot).mockResolvedValue('/fixtures/test-site')
+    vi.mocked(loadManifest).mockResolvedValue({
+      name: 'test-site', version: '1.0.0', spec_version: '3.1.0',
+      site_url: 'https://example.com',
+    })
+    vi.mocked(resolveCdpEndpoint).mockResolvedValue('http://localhost:9222')
+    vi.mocked(discover).mockResolvedValue({
+      site: 'test-site', outputRoot: '/tmp/discovered', operationCount: 1,
+    })
+
+    // GET /checkout — no x-openweb.permission, but path triggers transact
+    const oldSpec = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/api/checkout': {
+          get: { operationId: 'getCheckout', summary: 'Get checkout' },
+        },
+      },
+    }
+    const newSpec = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/api/checkout': {
+          get: { operationId: 'getCheckout', summary: 'Get checkout v2' },
+        },
+      },
+    }
+
+    vi.mocked(readFile).mockImplementation(async (filePath: any) => {
+      if (String(filePath).includes('/fixtures/test-site/openapi.yaml')) return JSON.stringify(oldSpec)
+      if (String(filePath).includes('/tmp/discovered/openapi.yaml')) return JSON.stringify(newSpec)
+      throw new Error(`unexpected readFile: ${filePath}`)
+    })
+    vi.mocked(parse).mockImplementation((raw: string) => JSON.parse(raw))
+    vi.mocked(rm).mockResolvedValue(undefined)
+
+    const vr = mockVerifyResult({
+      operations: [
+        { operationId: 'getCheckout', status: 'DRIFT', driftType: 'schema_drift' },
+      ],
+    })
+
+    const result = await healSite('test-site', vr)
+    expect(result.reported).toEqual(['getCheckout'])  // transact → reported, not healed
     expect(result.healed).toHaveLength(0)
   })
 })

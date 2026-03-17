@@ -38,8 +38,17 @@ export async function saveFailures(failures: FailureEntry[]): Promise<void> {
 }
 
 export async function recordFailure(entry: Omit<FailureEntry, 'timestamp'>): Promise<void> {
+  return recordFailures([entry])
+}
+
+/** Batch-record multiple failures in a single write (avoids race conditions). */
+export async function recordFailures(entries: Omit<FailureEntry, 'timestamp'>[]): Promise<void> {
+  if (entries.length === 0) return
   const failures = await loadFailures()
-  failures.push({ ...entry, timestamp: new Date().toISOString() })
+  const now = new Date().toISOString()
+  for (const entry of entries) {
+    failures.push({ ...entry, timestamp: now })
+  }
   await saveFailures(failures)
 }
 

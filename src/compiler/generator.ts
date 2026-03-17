@@ -8,6 +8,7 @@ import { stringify } from 'yaml'
 import type { AnalyzedOperation } from './types.js'
 import type { ClassifyResult, ExtractionSignal } from './analyzer/classify.js'
 import type { JsonSchema } from '../lib/openapi.js'
+import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 
 interface GeneratePackageInput {
   readonly site: string
@@ -83,19 +84,7 @@ function responseContainsResultsLatLon(schema: JsonSchema): boolean {
 }
 
 function derivePermission(method: string, path: string): string {
-  const transactPatterns = /\/(checkout|purchase|payment|order|subscribe)\b/i
-  if (transactPatterns.test(path)) return 'transact'
-
-  switch (method.toLowerCase()) {
-    case 'delete':
-      return 'delete'
-    case 'post':
-    case 'put':
-    case 'patch':
-      return 'write'
-    default:
-      return 'read'
-  }
+  return derivePermissionFromMethod(method, path)
 }
 
 function buildDependencies(operations: AnalyzedOperation[]): Record<string, string> {

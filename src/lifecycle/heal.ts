@@ -1,5 +1,6 @@
+import os from 'node:os'
 import path from 'node:path'
-import { readFile, writeFile, readdir, cp, rm } from 'node:fs/promises'
+import { readFile, writeFile, readdir, cp, rm, mkdtemp } from 'node:fs/promises'
 
 import { parse, stringify } from 'yaml'
 
@@ -7,6 +8,7 @@ import { discover, type DiscoverResult } from '../discovery/pipeline.js'
 import { type OpenApiSpec, type OpenApiOperation } from '../lib/openapi.js'
 import { loadManifest } from '../lib/manifest.js'
 import { resolveSiteRoot } from '../lib/openapi.js'
+import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 import { archiveWithBump } from './registry.js'
 import { resolveCdpEndpoint } from '../commands/browser.js'
 import type { SiteVerifyResult } from './verify.js'
@@ -19,14 +21,14 @@ export interface HealResult {
   readonly newVersion?: string
 }
 
-/** Derive permission from x-openweb extension or HTTP method. */
-function derivePermission(op: OpenApiOperation, method: string): string {
+/** Drift types that represent actual API changes (healable via re-discovery). */
+const HEALABLE_DRIFT_TYPES = new Set(['schema_drift', 'endpoint_removed'])
+
+/** Derive permission: prefer x-openweb.permission, fall back to method+path heuristic. */
+function derivePermission(op: OpenApiOperation, method: string, apiPath: string): string {
   const xow = op['x-openweb']
   if (typeof xow?.permission === 'string') return xow.permission
-  const m = method.toLowerCase()
-  if (m === 'delete') return 'delete'
-  if (['post', 'put', 'patch'].includes(m)) return 'write'
-  return 'read'
+  return derivePermissionFromMethod(method, apiPath)
 }
 
 function opKey(method: string, apiPath: string): string {
@@ -39,8 +41,10 @@ function opKey(method: string, apiPath: string): string {
  * Safety constraints:
  * - Only auto-heals read operations (permission: 'read')
  * - Write/delete/transact operations are reported, not updated
- * - Auth failures don't trigger heal (caller checks overallStatus)
+ * - Only heals schema_drift and endpoint_removed (not runtime errors)
+ * - Auth failures don't trigger heal
  * - CAPTCHA/login wall aborts heal
+ * - Writes to staging dir first, archives, then publishes to siteRoot
  */
 export async function healSite(
   site: string,
@@ -58,9 +62,9 @@ export async function healSite(
     return { site, healed, reported, failed: ['no_site_url'] }
   }
 
-  // Filter to drifted operations (exclude auth_drift — needs re-login, not re-discover)
+  // Only heal actual API drift (schema_drift, endpoint_removed), not runtime errors
   const driftedOps = verifyResult.operations.filter(
-    (o) => o.status === 'DRIFT' || (o.status === 'FAIL' && o.driftType !== 'auth_drift'),
+    (o) => o.driftType !== undefined && HEALABLE_DRIFT_TYPES.has(o.driftType),
   )
   if (driftedOps.length === 0) {
     return { site, healed, reported, failed }
@@ -94,7 +98,7 @@ export async function healSite(
   // Abort on human handoff (CAPTCHA, 2FA, login wall)
   if (discoverResult.humanHandoff) {
     log(`human_handoff: ${discoverResult.humanHandoff.type}`)
-    await cleanupDiscovery(discoverResult.outputRoot)
+    await cleanupDir(discoverResult.outputRoot)
     return {
       site, healed, reported,
       failed: [`human_handoff: ${discoverResult.humanHandoff.type}`],
@@ -102,7 +106,7 @@ export async function healSite(
   }
 
   if (discoverResult.operationCount === 0) {
-    await cleanupDiscovery(discoverResult.outputRoot)
+    await cleanupDir(discoverResult.outputRoot)
     return { site, healed, reported, failed: ['no_operations_discovered'] }
   }
 
@@ -123,7 +127,7 @@ export async function healSite(
     }
   }
 
-  // Build merged paths: read ops get new version, write ops keep old
+  // Build merged paths: read ops get new version, write/delete/transact keep old
   const mergedPaths: Record<string, Record<string, unknown>> = {}
 
   for (const [apiPath, methods] of Object.entries(oldSpec.paths ?? {})) {
@@ -134,7 +138,7 @@ export async function healSite(
       const key = opKey(method, apiPath)
 
       if (opId && driftedIds.has(opId)) {
-        const permission = derivePermission(typedOp, method)
+        const permission = derivePermission(typedOp, method, apiPath)
         if (permission === 'read') {
           const newOp = newOpByKey.get(key)
           if (newOp) {
@@ -158,38 +162,50 @@ export async function healSite(
   }
 
   if (healed.length === 0) {
-    await cleanupDiscovery(discoverResult.outputRoot)
+    await cleanupDir(discoverResult.outputRoot)
     return { site, healed, reported, failed }
   }
 
-  // Write merged spec
-  const mergedSpec = { ...oldSpec, paths: mergedPaths }
-  await writeFile(path.join(siteRoot, 'openapi.yaml'), stringify(mergedSpec), 'utf8')
-
-  // Copy test files for healed operations only
-  await copyHealedTests(discoverResult.outputRoot, siteRoot, healed)
-
-  // Archive with version bump
-  let newVersion: string | undefined
+  // Build staged fixture in temp dir (never mutate siteRoot until archive succeeds)
+  const stagingDir = await mkdtemp(path.join(os.tmpdir(), 'openweb-heal-'))
   try {
-    newVersion = await archiveWithBump(site, siteRoot)
-    log(`archived v${newVersion}`)
-  } catch {
-    // non-fatal: heal succeeded even if archive fails
-  }
+    // Copy current fixture as base
+    await cp(siteRoot, stagingDir, { recursive: true })
 
-  await cleanupDiscovery(discoverResult.outputRoot)
-  return { site, healed, reported, failed, newVersion }
+    // Write merged spec to staging
+    const mergedSpec = { ...oldSpec, paths: mergedPaths }
+    await writeFile(path.join(stagingDir, 'openapi.yaml'), stringify(mergedSpec), 'utf8')
+
+    // Copy healed test files from discovery to staging
+    await copyHealedTests(discoverResult.outputRoot, stagingDir, healed)
+
+    // Archive from staging → registry (siteRoot untouched if this fails)
+    const newVersion = await archiveWithBump(site, stagingDir)
+    log(`archived v${newVersion}`)
+
+    // Success: publish staging to siteRoot
+    await cp(stagingDir, siteRoot, { recursive: true, force: true })
+
+    await cleanupDir(stagingDir)
+    await cleanupDir(discoverResult.outputRoot)
+    return { site, healed, reported, failed, newVersion }
+  } catch (error) {
+    // Archive or publish failed: siteRoot is untouched
+    await cleanupDir(stagingDir)
+    await cleanupDir(discoverResult.outputRoot)
+    failed.push(`archive_failed: ${error instanceof Error ? error.message : String(error)}`)
+    return { site, healed, reported, failed }
+  }
 }
 
 async function copyHealedTests(
   newRoot: string,
-  oldRoot: string,
+  targetRoot: string,
   healedOpIds: string[],
 ): Promise<void> {
   const healedSet = new Set(healedOpIds)
   const newTestsDir = path.join(newRoot, 'tests')
-  const oldTestsDir = path.join(oldRoot, 'tests')
+  const targetTestsDir = path.join(targetRoot, 'tests')
 
   let testFiles: string[]
   try {
@@ -203,7 +219,7 @@ async function copyHealedTests(
       const raw = await readFile(path.join(newTestsDir, fileName), 'utf8')
       const testFile = JSON.parse(raw) as { operation_id?: string }
       if (testFile.operation_id && healedSet.has(testFile.operation_id)) {
-        await cp(path.join(newTestsDir, fileName), path.join(oldTestsDir, fileName), { force: true })
+        await cp(path.join(newTestsDir, fileName), path.join(targetTestsDir, fileName), { force: true })
       }
     } catch {
       // non-fatal: test copy failure doesn't block heal
@@ -211,9 +227,9 @@ async function copyHealedTests(
   }
 }
 
-async function cleanupDiscovery(outputRoot: string): Promise<void> {
+async function cleanupDir(dir: string): Promise<void> {
   try {
-    await rm(outputRoot, { recursive: true, force: true })
+    await rm(dir, { recursive: true, force: true })
   } catch {
     // non-fatal
   }

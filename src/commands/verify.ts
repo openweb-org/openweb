@@ -70,10 +70,19 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
 
         if (opts.report) {
           const format = typeof opts.report === 'string' ? opts.report : 'json'
-          if (format === 'json') {
-            process.stdout.write(`\n${JSON.stringify({ verify: generateDriftReport(results), heal: healResults }, null, 2)}\n`)
-          } else {
+          if (format === 'markdown') {
             process.stdout.write(`\n${generateDriftReportMarkdown(results)}\n`)
+            process.stdout.write(`\n## Heal Results\n\n`)
+            for (const hr of healResults) {
+              process.stdout.write(`### ${hr.site}\n`)
+              if (hr.healed.length > 0) process.stdout.write(`- Healed: ${hr.healed.join(', ')}\n`)
+              if (hr.reported.length > 0) process.stdout.write(`- Reported: ${hr.reported.join(', ')}\n`)
+              if (hr.failed.length > 0) process.stdout.write(`- Failed: ${hr.failed.join(', ')}\n`)
+              if (hr.newVersion) process.stdout.write(`- Archived: v${hr.newVersion}\n`)
+              process.stdout.write('\n')
+            }
+          } else {
+            process.stdout.write(`\n${JSON.stringify({ verify: generateDriftReport(results), heal: healResults }, null, 2)}\n`)
           }
         }
 
