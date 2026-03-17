@@ -2,6 +2,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 
 import { executeOperation, type ExecuteDependencies } from '../runtime/executor.js'
+import { recordFailure } from '../knowledge/failures.js'
 import { listSites, resolveSiteRoot } from '../lib/openapi.js'
 import { OpenWebError } from '../lib/errors.js'
 import { computeResponseFingerprint } from './fingerprint.js'
@@ -92,6 +93,18 @@ export async function verifySite(
         deps,
       )
       operations.push(result)
+    }
+  }
+
+  // Record failures to knowledge base (non-fatal)
+  for (const op of operations) {
+    if (op.status !== 'PASS') {
+      recordFailure({
+        site,
+        operationId: op.operationId,
+        failureClass: op.driftType ?? 'unknown',
+        detail: op.detail ?? '',
+      }).catch(() => {}) // non-fatal: don't block verify on knowledge write
     }
   }
 
