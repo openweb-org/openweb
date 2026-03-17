@@ -504,22 +504,29 @@ export async function executeSessionHttp(
     }
   }
 
-  // Resolve CSRF (mutations only)
+  // Resolve CSRF (mutations by default, or any method if scope is defined)
   const csrfConfig = serverExt?.csrf
-  if (csrfConfig && MUTATION_METHODS.has(upperMethod)) {
-    // Collect resolved auth headers (excluding Cookie) for api_response CSRF
-    const authHeaders: Record<string, string> = {}
-    for (const [k, v] of Object.entries(headers)) {
-      if (k.toLowerCase() !== 'cookie' && k.toLowerCase() !== 'accept' && k.toLowerCase() !== 'referer' && k.toLowerCase() !== 'content-type') {
-        authHeaders[k] = v
+  if (csrfConfig) {
+    const csrfScope = (csrfConfig as Record<string, unknown>).scope as string[] | undefined
+    const shouldResolveCsrf = csrfScope
+      ? csrfScope.some((s) => s.toUpperCase() === upperMethod)
+      : MUTATION_METHODS.has(upperMethod)
+
+    if (shouldResolveCsrf) {
+      // Collect resolved auth headers (excluding Cookie) for api_response CSRF
+      const authHeaders: Record<string, string> = {}
+      for (const [k, v] of Object.entries(headers)) {
+        if (k.toLowerCase() !== 'cookie' && k.toLowerCase() !== 'accept' && k.toLowerCase() !== 'referer' && k.toLowerCase() !== 'content-type') {
+          authHeaders[k] = v
+        }
       }
+      const csrfResult = await resolveCsrf(handle, csrfConfig, serverUrl, {
+        ...deps,
+        authHeaders,
+        cookieString,
+      })
+      Object.assign(headers, csrfResult.headers)
     }
-    const csrfResult = await resolveCsrf(handle, csrfConfig, serverUrl, {
-      ...deps,
-      authHeaders,
-      cookieString,
-    })
-    Object.assign(headers, csrfResult.headers)
   }
 
   // Resolve signing (per-request computation like SAPISIDHASH)

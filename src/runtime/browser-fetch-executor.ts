@@ -129,19 +129,26 @@ export async function executeBrowserFetch(
     // Note: cookieString is NOT injected — browser handles cookies via credentials:'include'
   }
 
-  // Resolve CSRF (mutations only)
-  if (serverExt?.csrf && MUTATION_METHODS.has(upperMethod)) {
-    const authHeaders: Record<string, string> = {}
-    for (const [k, v] of Object.entries(headers)) {
-      if (k.toLowerCase() !== 'accept' && k.toLowerCase() !== 'content-type') {
-        authHeaders[k] = v
+  // Resolve CSRF (mutations by default, or any method if scope is defined)
+  if (serverExt?.csrf) {
+    const csrfScope = (serverExt.csrf as Record<string, unknown>).scope as string[] | undefined
+    const shouldResolveCsrf = csrfScope
+      ? csrfScope.some((s) => s.toUpperCase() === upperMethod)
+      : MUTATION_METHODS.has(upperMethod)
+
+    if (shouldResolveCsrf) {
+      const authHeaders: Record<string, string> = {}
+      for (const [k, v] of Object.entries(headers)) {
+        if (k.toLowerCase() !== 'accept' && k.toLowerCase() !== 'content-type') {
+          authHeaders[k] = v
+        }
       }
+      const csrfResult = await resolveCsrf(handle, serverExt.csrf, serverUrl, {
+        ...deps,
+        authHeaders,
+      })
+      Object.assign(headers, csrfResult.headers)
     }
-    const csrfResult = await resolveCsrf(handle, serverExt.csrf, serverUrl, {
-      ...deps,
-      authHeaders,
-    })
-    Object.assign(headers, csrfResult.headers)
   }
 
   // Resolve signing

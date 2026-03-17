@@ -1,0 +1,12 @@
+{
+  "operation_id": "getRepo",
+  "cases": [
+    {
+      "input": { "owner": "anthropics", "repo": "claude-code" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

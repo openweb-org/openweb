@@ -1,0 +1,12 @@
+{
+  "operation_id": "listIssues",
+  "cases": [
+    {
+      "input": { "owner": "anthropics", "repo": "claude-code", "per_page": 3 },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

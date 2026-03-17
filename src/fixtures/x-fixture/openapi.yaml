@@ -1,0 +1,165 @@
+openapi: '3.1.0'
+info:
+  title: X (Twitter) API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://x.com/i/api/1.1
+    x-openweb:
+      mode: browser_fetch
+      auth:
+        type: cookie_session
+      csrf:
+        type: cookie_to_header
+        cookie: ct0
+        header: x-csrf-token
+        scope:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+paths:
+  /friends/list.json:
+    get:
+      operationId: listFollowing
+      summary: List accounts the authenticated user is following
+      x-openweb:
+        risk_tier: safe
+        stable_id: x0001
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+        pagination:
+          type: cursor
+          response_field: next_cursor_str
+          request_param: cursor
+          items_path: users
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+            const: Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA
+          description: Static X web app bearer token (fixed).
+        - name: x-twitter-auth-type
+          in: header
+          required: false
+          schema:
+            type: string
+            default: OAuth2Session
+        - name: x-twitter-active-user
+          in: header
+          required: false
+          schema:
+            type: string
+            default: 'yes'
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of followed users.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - users
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id_str:
+                          type: string
+                        name:
+                          type: string
+                        screen_name:
+                          type: string
+                        followers_count:
+                          type: integer
+                  next_cursor_str:
+                    type: string
+                  total_count:
+                    type:
+                      - integer
+                      - 'null'
+  /followers/list.json:
+    get:
+      operationId: listFollowers
+      summary: List the authenticated user's followers
+      x-openweb:
+        risk_tier: safe
+        stable_id: x0002
+        tool_version: 1
+        verified: true
+        signals:
+          - status-match
+        pagination:
+          type: cursor
+          response_field: next_cursor_str
+          request_param: cursor
+          items_path: users
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+            const: Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA
+          description: Static X web app bearer token (fixed).
+        - name: x-twitter-auth-type
+          in: header
+          required: false
+          schema:
+            type: string
+            default: OAuth2Session
+        - name: x-twitter-active-user
+          in: header
+          required: false
+          schema:
+            type: string
+            default: 'yes'
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of followers.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - users
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id_str:
+                          type: string
+                        name:
+                          type: string
+                        screen_name:
+                          type: string
+                        followers_count:
+                          type: integer
+                  next_cursor_str:
+                    type: string
+                  total_count:
+                    type:
+                      - integer
+                      - 'null'
