@@ -538,6 +538,125 @@ describe('resolveExchangeChain', () => {
     expect(ssrfValidator).toHaveBeenCalledWith('https://example.com/token')
   })
 
+  it('extracts value from cookie when extract_from is cookie', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async (origin: string) => {
+          if (origin === 'https://www.reddit.com') {
+            return [
+              { name: 'csrf_token', value: 'csrf_abc123', domain: '.reddit.com', path: '/', httpOnly: false, secure: true, sameSite: 'Lax', expires: -1 },
+              { name: 'reddit_session', value: 'sess_xyz', domain: '.reddit.com', path: '/', httpOnly: true, secure: true, sameSite: 'Lax', expires: -1 },
+            ]
+          }
+          return []
+        }),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const result = await resolveExchangeChain(handle, {
+      steps: [
+        {
+          call: 'https://www.reddit.com/svc/shreddit/token',
+          extract: 'csrf_token',
+          extract_from: 'cookie',
+          as: 'csrf',
+        },
+      ],
+      inject: { header: 'X-CSRF-Token' },
+    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock })
+
+    expect(result.headers['X-CSRF-Token']).toBe('csrf_abc123')
+  })
+
+  it('throws when extract_from cookie not found', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async () => [
+          { name: 'other_cookie', value: 'val', domain: '.example.com', path: '/', httpOnly: false, secure: true, sameSite: 'Lax', expires: -1 },
+        ]),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    await expect(
+      resolveExchangeChain(handle, {
+        steps: [
+          {
+            call: 'https://example.com/token',
+            extract: 'missing_cookie',
+            extract_from: 'cookie',
+          },
+        ],
+        inject: { header: 'Authorization' },
+      }, 'https://example.com', { fetchImpl: fetchMock }),
+    ).rejects.toMatchObject({
+      payload: { code: 'EXECUTION_FAILED', failureClass: 'fatal' },
+    })
+  })
+
+  it('uses cookie-extracted value in subsequent step templates', async () => {
+    const handle = {
+      page: {} as BrowserHandle['page'],
+      context: {
+        cookies: vi.fn(async (origin: string) => {
+          if (origin === 'https://www.reddit.com') {
+            return [
+              { name: 'csrf_token', value: 'csrf_from_cookie', domain: '.reddit.com', path: '/', httpOnly: false, secure: true, sameSite: 'Lax', expires: -1 },
+            ]
+          }
+          return []
+        }),
+      } as unknown as BrowserHandle['context'],
+    }
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ accessToken: 'final_bearer' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as unknown as typeof fetch
+
+    const result = await resolveExchangeChain(handle, {
+      steps: [
+        {
+          call: 'https://www.reddit.com/svc/shreddit/token',
+          extract: 'csrf_token',
+          extract_from: 'cookie',
+          as: 'csrf',
+        },
+        {
+          call: 'https://www.reddit.com/svc/shreddit/token',
+          extract: 'accessToken',
+          body: { csrf_token: '${csrf}' },
+        },
+      ],
+      inject: { header: 'Authorization', prefix: 'Bearer ' },
+    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock })
+
+    expect(result.headers.Authorization).toBe('Bearer final_bearer')
+    // Verify the second step used the cookie-extracted csrf value in its body
+    const secondCall = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[1]!
+    expect(secondCall[1].body).toBe('csrf_token=csrf_from_cookie')
+  })
+
   it('substitutes extracted values into subsequent step URLs, headers, and body', async () => {
     const handle = {
       page: {} as BrowserHandle['page'],

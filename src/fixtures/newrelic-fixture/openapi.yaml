@@ -26,6 +26,7 @@ paths:
           type: cursor
           response_field: data.actor.entitySearch.results.nextCursor
           request_param: variables.cursor
+          items_path: data.actor.entitySearch.results.entities
       parameters:
         - name: newrelic-requesting-services
           in: header
@@ -52,8 +53,8 @@ paths:
               properties:
                 query:
                   type: string
-                  description: GraphQL query string.
-                  default: >-
+                  description: GraphQL query string (fixed, cannot be overridden).
+                  const: >-
                     query ListDashboards($cursor: String) {
                       actor {
                         entitySearch(query: "domain = 'VIZ' AND type = 'DASHBOARD'") {

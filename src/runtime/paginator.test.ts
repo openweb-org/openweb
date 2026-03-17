@@ -236,6 +236,74 @@ describe('executePaginated — cursor', () => {
     // query param should be preserved
     expect(page2Params.query).toBe('graphql query')
   })
+
+  it('extracts items via items_path for deeply nested GraphQL responses', async () => {
+    mockXOpenWeb = {
+      pagination: {
+        type: 'cursor',
+        response_field: 'data.actor.entitySearch.results.nextCursor',
+        request_param: 'variables.cursor',
+        items_path: 'data.actor.entitySearch.results.entities',
+      },
+    }
+
+    executeOperationMock
+      .mockResolvedValueOnce(
+        makeResult({
+          data: {
+            actor: {
+              entitySearch: {
+                results: {
+                  entities: [{ name: 'Dashboard 1' }, { name: 'Dashboard 2' }],
+                  nextCursor: 'page2',
+                },
+                count: 5,
+              },
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeResult({
+          data: {
+            actor: {
+              entitySearch: {
+                results: {
+                  entities: [{ name: 'Dashboard 3' }],
+                  nextCursor: null,
+                },
+                count: 5,
+              },
+            },
+          },
+        }),
+      )
+
+    const result = await executePaginated('test-site', 'list_items', {})
+    // Should extract entities, not the entire response envelope
+    expect(result.items).toEqual([
+      { name: 'Dashboard 1' },
+      { name: 'Dashboard 2' },
+      { name: 'Dashboard 3' },
+    ])
+    expect(result.pages).toBe(2)
+  })
+
+  it('falls back to extractItems heuristic when items_path is not set', async () => {
+    mockXOpenWeb = {
+      pagination: {
+        type: 'cursor',
+        response_field: 'next_cursor',
+        request_param: 'cursor',
+        // no items_path
+      },
+    }
+
+    executeOperationMock.mockResolvedValueOnce(makeResult({ data: [1, 2, 3] }))
+
+    const result = await executePaginated('test-site', 'list_items', {})
+    expect(result.items).toEqual([1, 2, 3])
+  })
 })
 
 // ── executePaginated — link_header ───────────────────────

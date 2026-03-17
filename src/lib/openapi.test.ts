@@ -130,4 +130,50 @@ describe('validateParams', () => {
       ),
     ).toEqual({ payload: { ok: true } })
   })
+
+  it('enforces const value when caller omits the parameter', () => {
+    const result = validateParams(
+      [
+        {
+          name: 'query',
+          in: 'body',
+          required: true,
+          schema: { type: 'string', const: 'SELECT * FROM Entity' },
+        },
+      ],
+      {},
+    )
+    expect(result.query).toBe('SELECT * FROM Entity')
+  })
+
+  it('allows caller to pass the exact const value', () => {
+    const result = validateParams(
+      [
+        {
+          name: 'query',
+          in: 'body',
+          required: true,
+          schema: { type: 'string', const: 'SELECT * FROM Entity' },
+        },
+      ],
+      { query: 'SELECT * FROM Entity' },
+    )
+    expect(result.query).toBe('SELECT * FROM Entity')
+  })
+
+  it('throws when caller tries to override a const field', () => {
+    expect(() =>
+      validateParams(
+        [
+          {
+            name: 'query',
+            in: 'body',
+            required: true,
+            schema: { type: 'string', const: 'SELECT * FROM Entity' },
+          },
+        ],
+        { query: 'DROP TABLE users' },
+      ),
+    ).toThrow('Parameter query is fixed and cannot be overridden')
+  })
 })

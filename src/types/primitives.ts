@@ -13,6 +13,7 @@ export interface ExchangeStep {
   readonly headers?: Readonly<Record<string, string>>
   readonly body?: Readonly<Record<string, string>>
   readonly extract: string
+  readonly extract_from?: 'body' | 'cookie'
   readonly as?: string
 }
 
@@ -108,6 +109,7 @@ export type PaginationPrimitive =
       readonly response_field: string
       readonly request_param: string
       readonly has_more_field?: string
+      readonly items_path?: string
     }
   | {
       readonly type: 'offset_limit'

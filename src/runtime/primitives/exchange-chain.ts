@@ -7,6 +7,7 @@ export interface ExchangeStep {
   readonly headers?: Readonly<Record<string, string>>
   readonly body?: Readonly<Record<string, string>>
   readonly extract: string
+  readonly extract_from?: 'body' | 'cookie'
   readonly as?: string
 }
 
@@ -121,22 +122,29 @@ export async function resolveExchangeChain(
       })
     }
 
-    let responseData: unknown
-    const contentType = response.headers.get('content-type') ?? ''
-    if (contentType.includes('json')) {
-      responseData = await response.json()
+    // Extract value from response body or cookies
+    let value: unknown
+    if (step.extract_from === 'cookie') {
+      // Extract from response Set-Cookie headers or browser cookies for this origin
+      const responseCookies = await handle.context.cookies(stepOrigin)
+      const cookie = responseCookies.find((c) => c.name === step.extract)
+      value = cookie?.value
     } else {
-      // Try to parse as JSON anyway, fall back to text
-      const text = await response.text()
-      try {
-        responseData = JSON.parse(text)
-      } catch {
-        responseData = text
+      // Default: extract from response body using dot-path
+      let responseData: unknown
+      const contentType = response.headers.get('content-type') ?? ''
+      if (contentType.includes('json')) {
+        responseData = await response.json()
+      } else {
+        const text = await response.text()
+        try {
+          responseData = JSON.parse(text)
+        } catch {
+          responseData = text
+        }
       }
+      value = getValueAtPath(responseData, step.extract)
     }
-
-    // Extract value using dot-path from response
-    const value = getValueAtPath(responseData, step.extract)
     if (value === undefined || value === null) {
       throw new OpenWebError({
         error: 'execution_failed',

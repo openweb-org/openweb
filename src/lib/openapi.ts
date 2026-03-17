@@ -237,6 +237,23 @@ export function validateParams(
   }
 
   for (const param of parameters) {
+    // Enforce const: field is immutable, caller cannot override
+    if (param.schema?.const !== undefined) {
+      const callerValue = result[param.name]
+      if (callerValue !== undefined && callerValue !== null && callerValue !== param.schema.const) {
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'INVALID_PARAMS',
+          message: `Parameter ${param.name} is fixed and cannot be overridden`,
+          action: 'This parameter is a const field defined by the fixture. Remove it from your input.',
+          retriable: false,
+          failureClass: 'fatal',
+        })
+      }
+      result[param.name] = param.schema.const
+      continue
+    }
+
     const value = result[param.name]
     if ((value === undefined || value === null) && param.schema?.default !== undefined) {
       result[param.name] = structuredClone(param.schema.default)

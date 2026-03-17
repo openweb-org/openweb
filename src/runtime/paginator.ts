@@ -105,7 +105,11 @@ async function executeCursorPagination(
   for (let i = 0; i < maxPages; i++) {
     const result = await executeOperation(site, operationId, currentParams, deps)
     pages++
-    allItems.push(...extractItems(result.body))
+
+    const items = config.items_path
+      ? (getValueAtPath(result.body, config.items_path) as unknown[] ?? [])
+      : extractItems(result.body)
+    allItems.push(...(Array.isArray(items) ? items : []))
 
     const cursor = getValueAtPath(result.body, config.response_field)
     if (cursor === undefined || cursor === null || cursor === '') break
