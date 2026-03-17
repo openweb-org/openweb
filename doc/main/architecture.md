@@ -84,7 +84,7 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 |-----------|-------------|-----------|--------|
 | **Meta-spec** | x-openweb schema: L2 types + L3 interface + package format | `src/types/` | Formalized (M1) |
 | **Runtime** | Reads skill packages, resolves primitives, executes requests | `src/runtime/` | L1 + L2 + L3 + extraction + token cache (M14) |
-| **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | L1 emit + L2 classify (M10) |
+| **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | L1 emit + L2 classify + probe (M15) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM) | `src/capture/` | Complete (M0), page isolation (M11) |
 | **Discovery** | Agent-driven API discovery pipeline | `src/discovery/` | Interactive capture + active exploration (M11) |
 | **Lifecycle** | Drift detection, verification, quarantine | `src/lifecycle/` | Fingerprint + verify + quarantine (M12) |
@@ -146,7 +146,7 @@ openweb browser start [--headless]             # managed Chrome lifecycle
 openweb browser stop / restart / status
 openweb login <site>                           # open site in default browser for auth
 openweb capture start --cdp-endpoint ...       # record browser session
-openweb compile <url>                          # generate skill package
+openweb compile <url> [--probe]                  # generate skill package (--probe validates heuristics)
 openweb discover <url>                         # discover APIs and generate fixture
 openweb verify <site>                          # verify site and detect drift
 openweb verify --all                           # batch verify all sites

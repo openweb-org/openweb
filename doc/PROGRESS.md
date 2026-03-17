@@ -1,3 +1,24 @@
+## 2026-03-17: M15 — Compiler Maturity — IN PROGRESS
+
+**What changed:**
+- Phase 1: Compiler accepts PUT/PATCH/DELETE methods (previously GET/POST only). Annotate derives operationId for new verbs (update/patch/delete).
+- Phase 2: Expanded analytics cookie denylist in classify — __cf_bm, __cfruid, NID, 1P_JAR, _gid, APISID, etc. excluded from cookie_session detection.
+- Phase 3: New prober module (`src/compiler/prober.ts`) — escalation ladder validates classify heuristics with real GET requests (node_no_auth → node_with_auth → page). Rate limited (500ms), max 30 probes, 5s timeout, SSRF-validated.
+- Phase 4: `--probe` / `--cdp-endpoint` flags wired into `openweb compile`. Connects to managed browser via CDP, runs probes after classify, merges probe results (ground truth) with classify heuristics before emission.
+
+**Why:**
+- Compiler now supports full CRUD APIs (not just GET/POST)
+- Classify accuracy improved by excluding analytics cookies from auth detection
+- Probe validates heuristic guesses with real requests — catches transport/auth misclassification
+
+**Key files:** `src/compiler/prober.ts`, `src/commands/compile.ts`, `src/cli.ts`, `src/compiler/analyzer/classify.ts`, `src/compiler/analyzer/annotate.ts`, `src/compiler/recorder.ts`
+**Verification:** 346 tests pass, `pnpm build` clean
+**Commit:** Phases 1-4 committed individually
+**Next:** Phase 5 doc sync (this entry), then M16
+**Blockers:** None
+
+---
+
 ## 2026-03-17: M14 — User Experience Foundation — DONE
 
 **What changed:**

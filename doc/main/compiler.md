@@ -1,7 +1,7 @@
 # Compiler Pipeline
 
-> Record → Analyze → Classify → Emit: turning website observations into skill packages.
-> Last updated: 2026-03-16 (commit: `dd2b17e`)
+> Record → Analyze → Classify → Probe → Emit: turning website observations into skill packages.
+> Last updated: 2026-03-17 (commit: M15)
 
 ## Overview
 
@@ -10,11 +10,12 @@ The compiler observes a website's behavior and generates a skill package (OpenAP
 ```
 Phase 1: Capture    Record HTTP traffic, WebSocket frames, state, DOM
 Phase 2: Analyze    Cluster requests, differentiate params, infer schemas
-Phase 3: Classify   Detect L2 primitives, probe mode, assign risk tier
-Phase 4: Emit       Generate openapi.yaml + manifest.json + tests/
+Phase 3: Classify   Detect L2 primitives, assign risk tier
+Phase 4: Probe      (opt-in) Validate classify heuristics with real requests
+Phase 5: Emit       Generate openapi.yaml + manifest.json + tests/
 ```
 
-Currently: Phase 1 is complete (M0), Phases 2-4 handle L1 emission with partial L2 classification.
+Currently: Phase 1 is complete (M0), Phases 2-5 handle L1 emission with partial L2 classification + optional probing (M15).
 
 -> See: `src/compiler/`
 
@@ -67,6 +68,35 @@ Currently detects:
 **Output:** `ClassifyResult` with detected auth, CSRF, and mode.
 
 -> See: `src/compiler/analyzer/classify`
+
+---
+
+## Phase 3b: Probe (opt-in)
+
+Validates classify heuristics by making real GET requests through an escalation ladder:
+
+```
+Step 1: node (no auth)  → fetch with Accept: application/json
+  200 → transport=node, authRequired=false
+  401/403 → Step 2
+
+Step 2: node (with auth) → fetch with browser cookies
+  200 → transport=node, authRequired=true
+  fail → fallback to classify heuristic
+
+Step 3: page (deferred) → browser_fetch via CDP
+  Not yet implemented; falls back to classify
+```
+
+**Constraints:**
+- Only probes GET operations (mutations are never replayed)
+- Rate limited: 500ms between probes, max 30 probes per compile
+- Per-probe timeout: 5s
+- SSRF-validated before every outbound request
+
+**Merge strategy:** Probe results override classify heuristics (ground truth). If probe fails, classify heuristic is preserved as fallback.
+
+-> See: `src/compiler/prober.ts`
 
 ---
 
@@ -136,6 +166,10 @@ openweb compile <url>
 # Scripted recording + compile
 openweb compile <url> --script ./scripts/record-instagram.ts
 
+# Compile with probing (validates classify heuristics via real requests)
+openweb compile <url> --probe
+openweb compile <url> --probe --cdp-endpoint http://localhost:9222
+
 # Capture only (manual)
 openweb capture start --cdp-endpoint http://localhost:9222
 openweb capture stop
@@ -152,6 +186,7 @@ openweb <site> test
 src/compiler/
 ├── recorder.ts         # HAR parsing + scripted recording spawn
 ├── generator.ts        # OpenAPI + manifest emission
+├── prober.ts           # Probe escalation ladder + merge
 └── analyzer/           # Analysis pipeline
     ├── cluster.ts      # Group requests by path template
     ├── filter.ts       # Remove non-API requests

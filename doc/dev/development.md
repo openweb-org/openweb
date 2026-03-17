@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-17 (commit: M14)
+> Last updated: 2026-03-17 (commit: M15)
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (338/338 pass)
+pnpm test           # Run tests (346/346 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -91,6 +91,10 @@ pnpm dev compile https://api.example.com
 
 # Compile with scripted recording
 pnpm dev compile https://api.example.com --script ./scripts/record.ts
+
+# Compile with probing (validates classify heuristics via real GET requests)
+pnpm dev compile https://api.example.com --probe
+pnpm dev compile https://api.example.com --probe --cdp-endpoint http://localhost:9222
 ```
 
 ### Discover APIs
