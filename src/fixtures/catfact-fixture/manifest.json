@@ -10,5 +10,11 @@
     "l1_count": 2,
     "l2_count": 0,
     "l3_count": 0
+  },
+  "last_verified": "2026-03-17T10:28:15.608Z",
+  "quarantined": false,
+  "fingerprint": {
+    "response_shape_hash": "getFact:b1af8d499a5a519c,listFacts:70ed94674fd9777f",
+    "last_validated": "2026-03-17T10:28:15.609Z"
   }
 }

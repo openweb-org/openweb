@@ -91,6 +91,16 @@ function candidateSiteRoots(site: string): string[] {
 }
 
 export async function resolveSiteRoot(site: string): Promise<string> {
+  // Check registry current version first (inlined to avoid circular dep with lifecycle/registry)
+  const registryCurrentFile = path.join(os.homedir(), '.openweb', 'registry', site, 'current')
+  try {
+    const currentVersion = (await readFile(registryCurrentFile, 'utf8')).trim()
+    const registryVersionPath = path.join(os.homedir(), '.openweb', 'registry', site, currentVersion)
+    if (await pathExists(path.join(registryVersionPath, 'openapi.yaml'))) {
+      return registryVersionPath
+    }
+  } catch { /* no registry entry — fall through */ }
+
   const roots = candidateSiteRoots(site)
 
   for (const root of roots) {
@@ -111,6 +121,7 @@ export async function resolveSiteRoot(site: string): Promise<string> {
 
 export async function listSites(): Promise<string[]> {
   const roots = [
+    path.join(os.homedir(), '.openweb', 'registry'),
     path.join(os.homedir(), '.openweb', 'sites'),
     path.join(process.cwd(), 'sites'),
     path.join(process.cwd(), 'src', 'fixtures'),
@@ -123,6 +134,14 @@ export async function listSites(): Promise<string[]> {
       const entries = await readdir(root, { withFileTypes: true })
       for (const entry of entries) {
         if (!entry.isDirectory()) {
+          continue
+        }
+        // Registry entries have version subdirs — check for `current` file
+        if (root.endsWith('registry')) {
+          const currentFile = path.join(root, entry.name, 'current')
+          if (await pathExists(currentFile)) {
+            names.add(entry.name)
+          }
           continue
         }
         const candidate = path.join(root, entry.name, 'openapi.yaml')

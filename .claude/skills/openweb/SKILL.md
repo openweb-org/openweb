@@ -1,6 +1,6 @@
 ---
 name: openweb
-description: Access 35 web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo, Walmart, Hacker News, Microsoft Word, New Relic, ChatGPT, X, StackOverflow, CoinGecko, Wikipedia, npm, DuckDuckGo, JSONPlaceholder, Dog CEO, GitHub Public, REST Countries, IP API, Cat Facts, PokeAPI, Random User, Agify, Genderize, Nationalize, Bored API, Open Library, Exchange Rate, HTTPBin) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", "read Hacker News", "list New Relic dashboards", "search StackOverflow", "check crypto prices", "look up Wikipedia", "search npm packages", "get a cat fact", "look up a Pokemon", "predict age from name", "get exchange rates", "search books", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
+description: Access 51 web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo, Walmart, Hacker News, Microsoft Word, New Relic, ChatGPT, X, StackOverflow, CoinGecko, Wikipedia, npm, DuckDuckGo, JSONPlaceholder, Dog CEO, GitHub Public, REST Countries, IP API, Cat Facts, PokeAPI, Random User, Agify, Genderize, Nationalize, Bored API, Open Library, Exchange Rate, HTTPBin, Advice Slip, Affirmations, Chuck Norris, CocktailDB, Color API, Country.is, Dictionary API, Random Fox, Kanye Rest, Official Joke, Public Holidays, Sunrise Sunset, Universities, Useless Facts, World Time, Zippopotam) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", "read Hacker News", "list New Relic dashboards", "search StackOverflow", "check crypto prices", "look up Wikipedia", "search npm packages", "get a cat fact", "look up a Pokemon", "predict age from name", "get exchange rates", "search books", "get a random joke", "search cocktails", "get color info", "look up holidays", "get sunrise time", "search universities", "get a random fact", "get world time", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, verify site health, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
 ---
 
 # OpenWeb — Web Service Access via CLI
@@ -162,6 +162,22 @@ Sites use different transports depending on their API structure. You don't need 
 | `openlib-fixture` | node | none | `searchBooks` — book search + work details |
 | `pokeapi-fixture` | node | none | `getPokemon` — Pokemon data |
 | `randomuser-fixture` | node | none | `getRandomUser` — random user profiles |
+| `advice-fixture` | node | none | `getRandomAdvice` — random advice slip |
+| `affirmations-fixture` | node | none | `getAffirmation` — random affirmation |
+| `chucknorris-fixture` | node | none | `getRandomJoke` — Chuck Norris jokes |
+| `cocktaildb-fixture` | node | none | `searchCocktails` — cocktail search |
+| `colorapi-fixture` | node | none | `getColor` — color details by hex |
+| `countryis-fixture` | node | none | `getCountry` — IP geolocation |
+| `dictionaryapi-fixture` | node | none | `getDefinition` — word definitions |
+| `foxes-fixture` | node | none | `getRandomFox` — random fox image |
+| `kanye-fixture` | node | none | `getQuote` — Kanye West quotes |
+| `official-joke-fixture` | node | none | `getRandomJoke` — random jokes |
+| `publicholiday-fixture` | node | none | `getPublicHolidays` — public holidays by country |
+| `sunrise-sunset-fixture` | node | none | `getSunriseSunset` — sunrise/sunset times |
+| `universities-fixture` | node | none | `searchUniversities` — university search |
+| `uselessfacts-fixture` | node | none | `getRandomFact` — random useless fact |
+| `worldtime-fixture` | node | none | `getTimezone` — world time by timezone |
+| `zippopotam-fixture` | node | none | `getZipInfo` — ZIP code lookup |
 
 ## Common Workflow Examples
 
@@ -256,6 +272,34 @@ pnpm --silent dev newrelic-fixture exec listDashboards '{}' --cdp-endpoint http:
 ```
 
 The runtime sends the default GraphQL query with session cookies. Headers (`newrelic-requesting-services`, `x-requested-with`) are auto-populated from spec defaults.
+
+## Lifecycle Commands
+
+### Verify (Drift Detection)
+
+```bash
+pnpm --silent dev verify <site>                   # Verify single site — PASS/DRIFT/FAIL per operation
+pnpm --silent dev verify --all                     # Verify all sites sequentially
+pnpm --silent dev verify --all --report            # JSON drift report
+pnpm --silent dev verify --all --report markdown   # Markdown drift report
+```
+
+- **PASS** = test passes, response fingerprint matches
+- **DRIFT** = test passes but response shape changed (schema drift)
+- **FAIL** = test fails (status error, auth expired, endpoint removed)
+- Auth drift (401/403) is classified separately — not auto-quarantined
+- Quarantined sites show ⚠️ in `openweb sites` output
+
+### Registry (Version Management)
+
+```bash
+pnpm --silent dev registry list                    # List registered sites with versions
+pnpm --silent dev registry install <site>          # Archive fixture to registry
+pnpm --silent dev registry rollback <site>         # Revert to previous version
+pnpm --silent dev registry show <site>             # Show version history
+```
+
+Registry lives at `~/.openweb/registry/`. Max 5 versions retained per site.
 
 ## Important Notes
 

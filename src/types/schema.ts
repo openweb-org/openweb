@@ -115,6 +115,8 @@ export const manifestSchema = {
       },
       additionalProperties: false,
     },
+    last_verified: { type: 'string' },
+    quarantined: { type: 'boolean' },
   },
   additionalProperties: false,
 } as const

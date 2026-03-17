@@ -1,3 +1,49 @@
+## M12: Lifecycle Management + Internal Registry — DONE (2026-03-17)
+
+**Goal:** Make 50+ sites operatable — drift detection, re-verify, registry, rollback. Scale from 35 to 51 sites.
+
+**Actual Result:**
+
+- Theme 1: Drift Detection
+  - `computeResponseFingerprint()` — hash of response shape (sorted keys + value types)
+  - `openweb verify <site>` — verify single site, compare fingerprints
+  - `openweb verify --all` — sequential batch verify with 500ms rate limiting
+  - `openweb verify --all --report` — JSON drift report output
+  - `openweb verify --all --report markdown` — markdown drift report
+  - Per-operation status: PASS / DRIFT / FAIL
+  - Drift classification: schema_drift, auth_drift, endpoint_removed, error
+  - Auto-quarantine on FAIL (not on auth_drift — auth expiry is not API change)
+  - Auto-unquarantine when verify passes
+  - Quarantine warning in `openweb sites` output (⚠️ marker)
+  - Quarantine warning in `executeOperation()` stderr (soft block, not hard error)
+
+- Theme 2: Internal Registry
+  - Registry storage at `~/.openweb/registry/<site>/<version>/`
+  - `openweb registry list` — list registered sites with versions
+  - `openweb registry install <site>` — archive fixture to registry
+  - `openweb registry rollback <site>` — revert to previous verified version
+  - `openweb registry show <site>` — show version history
+  - Auto-version bump on drift (minor bump, idempotent)
+  - Max 5 versions retained per site (pruning)
+  - `current` file (not symlink) for Windows compatibility
+  - Site resolution updated: registry → ~/.openweb/sites → ./sites → ./src/fixtures
+
+- Theme 3: Scale to 51 Sites (35 → 51)
+  - 16 new L1 public API fixtures: Advice Slip, Affirmations, Chuck Norris, CocktailDB, Color API, Country.is, Dictionary API, Random Fox, Kanye Rest, Official Joke, Public Holidays, Sunrise Sunset, Universities, Useless Facts, World Time, Zippopotam
+  - All fixtures include openapi.yaml + manifest.json + tests/*.test.json
+  - All 16 new sites added to integration test config (sites.config.ts)
+  - 3 live API tests verified (Chuck Norris, Public Holidays, Color API)
+
+- Code Quality
+  - Shared `loadManifest()` utility extracted to `lib/manifest.ts`
+  - Circular dependency avoided (registry path check inlined in openapi.ts)
+  - `archiveWithBump()` does not mutate source fixtures
+  - Code review: 4 HIGH + 6 MEDIUM issues found and fixed
+
+**Stats:** 51 sites | 308 unit tests | 51 integration test entries | 4 new modules (fingerprint, verify, registry, manifest)
+
+---
+
 ## M11: Agent Discovery Pipeline — DONE (2026-03-17)
 
 **Goal:** Agent-driven API discovery pipeline. From URL → captured traffic → compiled fixture → verified tests. Expand from 25 to 35 sites.

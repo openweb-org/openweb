@@ -1,0 +1,63 @@
+openapi: '3.1.0'
+info:
+  title: Nager.Date Public Holiday
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://date.nager.at
+paths:
+  /api/v3/PublicHolidays/{year}/{countryCode}:
+    get:
+      operationId: getPublicHolidays
+      summary: Get public holidays for a country and year
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: ph0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: year
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Year (e.g. 2025).
+        - name: countryCode
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ISO 3166-1 alpha-2 country code (e.g. "US").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [date, localName, name, countryCode]
+                  properties:
+                    date:
+                      type: string
+                    localName:
+                      type: string
+                    name:
+                      type: string
+                    countryCode:
+                      type: string
+                    fixed:
+                      type: boolean
+                    global:
+                      type: boolean
+                    types:
+                      type: array
+                      items:
+                        type: string

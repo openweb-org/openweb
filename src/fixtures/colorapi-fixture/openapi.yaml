@@ -1,0 +1,86 @@
+openapi: '3.1.0'
+info:
+  title: The Color API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://www.thecolorapi.com
+paths:
+  /id:
+    get:
+      operationId: getColor
+      summary: Get color details by hex value
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: co0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: hex
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Hex color value without hash (e.g. "0047AB").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [hex, rgb, name]
+                properties:
+                  hex:
+                    type: object
+                    properties:
+                      value:
+                        type: string
+                      clean:
+                        type: string
+                  rgb:
+                    type: object
+                    properties:
+                      fraction:
+                        type: object
+                      r:
+                        type: integer
+                      g:
+                        type: integer
+                      b:
+                        type: integer
+                      value:
+                        type: string
+                  hsl:
+                    type: object
+                    properties:
+                      h:
+                        type: integer
+                      s:
+                        type: integer
+                      l:
+                        type: integer
+                      value:
+                        type: string
+                  name:
+                    type: object
+                    properties:
+                      value:
+                        type: string
+                      closest_named_hex:
+                        type: string
+                      exact_match_name:
+                        type: boolean
+                      distance:
+                        type: integer
+                  contrast:
+                    type: object
+                    properties:
+                      value:
+                        type: string

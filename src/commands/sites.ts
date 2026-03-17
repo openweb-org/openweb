@@ -1,4 +1,5 @@
-import { listSites } from '../lib/openapi.js'
+import { listSites, resolveSiteRoot } from '../lib/openapi.js'
+import { loadManifest } from '../lib/manifest.js'
 
 export async function sitesCommand(): Promise<void> {
   const sites = await listSites()
@@ -8,6 +9,14 @@ export async function sitesCommand(): Promise<void> {
   }
 
   for (const site of sites) {
-    process.stdout.write(`${site}\n`)
+    let suffix = ''
+    try {
+      const root = await resolveSiteRoot(site)
+      const manifest = await loadManifest(root)
+      if (manifest?.quarantined) {
+        suffix = ' ⚠️  quarantined'
+      }
+    } catch { /* ignore */ }
+    process.stdout.write(`${site}${suffix}\n`)
   }
 }

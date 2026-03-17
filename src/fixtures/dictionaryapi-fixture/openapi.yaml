@@ -1,0 +1,76 @@
+openapi: '3.1.0'
+info:
+  title: Free Dictionary
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.dictionaryapi.dev
+paths:
+  /api/v2/entries/en/{word}:
+    get:
+      operationId: getDefinition
+      summary: Get dictionary definition of an English word
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: da0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: word
+          in: path
+          required: true
+          schema:
+            type: string
+          description: English word to look up (e.g. "hello").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [word, meanings]
+                  properties:
+                    word:
+                      type: string
+                    phonetic:
+                      type: string
+                    phonetics:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          text:
+                            type: string
+                          audio:
+                            type: string
+                    meanings:
+                      type: array
+                      items:
+                        type: object
+                        required: [partOfSpeech, definitions]
+                        properties:
+                          partOfSpeech:
+                            type: string
+                          definitions:
+                            type: array
+                            items:
+                              type: object
+                              required: [definition]
+                              properties:
+                                definition:
+                                  type: string
+                                example:
+                                  type: string
+                    sourceUrls:
+                      type: array
+                      items:
+                        type: string

@@ -15,6 +15,7 @@ import {
   resolveSiteRoot,
   validateParams,
 } from '../lib/openapi.js'
+import { loadManifest } from '../lib/manifest.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import { connectWithRetry } from '../capture/connection.js'
 import {
@@ -137,6 +138,15 @@ export async function executeOperation(
   params: Record<string, unknown>,
   deps: ExecuteDependencies = {},
 ): Promise<ExecuteResult> {
+  // Quarantine warning: emit to stderr but continue execution
+  try {
+    const siteRoot = await resolveSiteRoot(site)
+    const manifest = await loadManifest(siteRoot)
+    if (manifest?.quarantined) {
+      process.stderr.write(`warning: site ${site} is quarantined — verification failed, results may be unreliable\n`)
+    }
+  } catch { /* manifest missing or unreadable — not an error */ }
+
   const spec = await loadOpenApi(site)
   const operationRef = findOperation(spec, operationId)
   const transport = resolveTransport(spec, operationRef.operation)

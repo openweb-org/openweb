@@ -1,0 +1,71 @@
+openapi: '3.1.0'
+info:
+  title: Sunrise Sunset
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.sunrise-sunset.org
+paths:
+  /json:
+    get:
+      operationId: getSunriseSunset
+      summary: Get sunrise and sunset times for a location
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: ss0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Latitude in decimal degrees.
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Longitude in decimal degrees.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results, status]
+                properties:
+                  results:
+                    type: object
+                    required: [sunrise, sunset]
+                    properties:
+                      sunrise:
+                        type: string
+                      sunset:
+                        type: string
+                      solar_noon:
+                        type: string
+                      day_length:
+                        type: string
+                      civil_twilight_begin:
+                        type: string
+                      civil_twilight_end:
+                        type: string
+                      nautical_twilight_begin:
+                        type: string
+                      nautical_twilight_end:
+                        type: string
+                      astronomical_twilight_begin:
+                        type: string
+                      astronomical_twilight_end:
+                        type: string
+                  status:
+                    type: string

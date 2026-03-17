@@ -1,0 +1,102 @@
+openapi: '3.1.0'
+info:
+  title: Chuck Norris Jokes
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.chucknorris.io
+paths:
+  /jokes/random:
+    get:
+      operationId: getRandomJoke
+      summary: Get a random Chuck Norris joke
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: cn0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, value, url]
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      type: string
+                  created_at:
+                    type: string
+                  icon_url:
+                    type: string
+                  id:
+                    type: string
+                  updated_at:
+                    type: string
+                  url:
+                    type: string
+                  value:
+                    type: string
+  /jokes/search:
+    get:
+      operationId: searchJokes
+      summary: Search for Chuck Norris jokes
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: cn0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query string.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total, result]
+                properties:
+                  total:
+                    type: integer
+                  result:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, value, url]
+                      properties:
+                        categories:
+                          type: array
+                          items:
+                            type: string
+                        created_at:
+                          type: string
+                        icon_url:
+                          type: string
+                        id:
+                          type: string
+                        updated_at:
+                          type: string
+                        url:
+                          type: string
+                        value:
+                          type: string

@@ -1,0 +1,14 @@
+{
+  "operation_id": "searchUniversities",
+  "cases": [
+    {
+      "input": {
+        "name": "MIT"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

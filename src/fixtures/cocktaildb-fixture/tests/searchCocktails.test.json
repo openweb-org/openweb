@@ -1,0 +1,14 @@
+{
+  "operation_id": "searchCocktails",
+  "cases": [
+    {
+      "input": {
+        "s": "margarita"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

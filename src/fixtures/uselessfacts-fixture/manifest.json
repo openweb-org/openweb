@@ -1,0 +1,14 @@
+{
+  "name": "uselessfacts-fixture",
+  "display_name": "Useless Facts",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://uselessfacts.jsph.pl",
+  "requires_auth": false,
+  "stats": {
+    "operation_count": 1,
+    "l1_count": 1,
+    "l2_count": 0,
+    "l3_count": 0
+  }
+}

@@ -7,6 +7,8 @@ import { hideBin } from 'yargs/helpers'
 import { captureStartCommand, captureStopCommand } from './commands/capture.js'
 import { compileCommand } from './commands/compile.js'
 import { discoverCommand } from './commands/discover.js'
+import { verifyCommand } from './commands/verify.js'
+import { registryCommand, type RegistryAction } from './commands/registry.js'
 import { execCommand } from './commands/exec.js'
 import { showCommand } from './commands/show.js'
 import { sitesCommand } from './commands/sites.js'
@@ -26,7 +28,7 @@ async function withErrorHandling(fn: () => Promise<void>): Promise<void> {
 const argv = hideBin(process.argv)
 const firstArg = argv[0] ?? ''
 
-const passthroughTopLevel = new Set(['sites', 'compile', 'capture', 'discover', '--help', '-h', '--version', '-v'])
+const passthroughTopLevel = new Set(['sites', 'compile', 'capture', 'discover', 'verify', 'registry', '--help', '-h', '--version', '-v'])
 
 if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
   const [site, second, third, fourth] = argv
@@ -191,6 +193,48 @@ await yargs(argv)
           explore: Boolean(args.explore),
           output: args.output ? String(args.output) : undefined,
           duration: Number(args.duration),
+        })
+      })
+    },
+  )
+  .command(
+    'verify [site]',
+    'Verify site(s) and detect drift',
+    (cmd) =>
+      cmd
+        .positional('site', { type: 'string', describe: 'Site to verify (omit with --all for all sites)' })
+        .option('all', { type: 'boolean', default: false, describe: 'Verify all sites' })
+        .option('report', {
+          describe: 'Output drift report (json or markdown)',
+          coerce: (val: string | boolean) => val === true ? 'json' : val,
+        }),
+    async (args) => {
+      await withErrorHandling(async () => {
+        await verifyCommand({
+          site: args.site ? String(args.site) : undefined,
+          all: Boolean(args.all),
+          report: args.report as boolean | string | undefined,
+        })
+      })
+    },
+  )
+  .command(
+    'registry <action> [site]',
+    'Manage the site registry (list, install, rollback, show)',
+    (cmd) =>
+      cmd
+        .positional('action', {
+          type: 'string',
+          demandOption: true,
+          choices: ['list', 'install', 'rollback', 'show'] as const,
+          describe: 'Registry action',
+        })
+        .positional('site', { type: 'string', describe: 'Site name' }),
+    async (args) => {
+      await withErrorHandling(async () => {
+        await registryCommand({
+          action: String(args.action) as RegistryAction,
+          site: args.site ? String(args.site) : undefined,
         })
       })
     },

@@ -234,4 +234,102 @@ export const sites: SiteIntegrationTest[] = [
     requires_login: false,
     smoke: { operation: 'getRandomUser', params: { results: '1' } },
   },
+  // ── M12 new sites ──────────────────────────────────────────
+  {
+    site: 'advice-fixture',
+    page_url: 'https://api.adviceslip.com',
+    requires_login: false,
+    smoke: { operation: 'getRandomAdvice', params: {} },
+  },
+  {
+    site: 'affirmations-fixture',
+    page_url: 'https://www.affirmations.dev',
+    requires_login: false,
+    smoke: { operation: 'getAffirmation', params: {} },
+  },
+  {
+    site: 'chucknorris-fixture',
+    page_url: 'https://api.chucknorris.io',
+    requires_login: false,
+    smoke: { operation: 'getRandomJoke', params: {} },
+  },
+  {
+    site: 'cocktaildb-fixture',
+    page_url: 'https://www.thecocktaildb.com',
+    requires_login: false,
+    smoke: { operation: 'searchCocktails', params: { s: 'margarita' } },
+  },
+  {
+    site: 'colorapi-fixture',
+    page_url: 'https://www.thecolorapi.com',
+    requires_login: false,
+    smoke: { operation: 'getColor', params: { hex: '0047AB' } },
+  },
+  {
+    site: 'countryis-fixture',
+    page_url: 'https://api.country.is',
+    requires_login: false,
+    smoke: { operation: 'getCountry', params: { ip: '8.8.8.8' } },
+  },
+  {
+    site: 'dictionaryapi-fixture',
+    page_url: 'https://api.dictionaryapi.dev',
+    requires_login: false,
+    smoke: { operation: 'getDefinition', params: { word: 'hello' } },
+  },
+  {
+    site: 'foxes-fixture',
+    page_url: 'https://randomfox.ca',
+    requires_login: false,
+    smoke: { operation: 'getRandomFox', params: {} },
+  },
+  {
+    site: 'kanye-fixture',
+    page_url: 'https://api.kanye.rest',
+    requires_login: false,
+    flaky: true, // API may be intermittently down
+    smoke: { operation: 'getQuote', params: {} },
+  },
+  {
+    site: 'official-joke-fixture',
+    page_url: 'https://official-joke-api.appspot.com',
+    requires_login: false,
+    smoke: { operation: 'getRandomJoke', params: {} },
+  },
+  {
+    site: 'publicholiday-fixture',
+    page_url: 'https://date.nager.at',
+    requires_login: false,
+    smoke: { operation: 'getPublicHolidays', params: { year: 2025, countryCode: 'US' } },
+  },
+  {
+    site: 'sunrise-sunset-fixture',
+    page_url: 'https://api.sunrise-sunset.org',
+    requires_login: false,
+    smoke: { operation: 'getSunriseSunset', params: { lat: 36.7201, lng: -4.4203 } },
+  },
+  {
+    site: 'universities-fixture',
+    page_url: 'http://universities.hipolabs.com',
+    requires_login: false,
+    smoke: { operation: 'searchUniversities', params: { name: 'MIT' } },
+  },
+  {
+    site: 'uselessfacts-fixture',
+    page_url: 'https://uselessfacts.jsph.pl',
+    requires_login: false,
+    smoke: { operation: 'getRandomFact', params: {} },
+  },
+  {
+    site: 'worldtime-fixture',
+    page_url: 'http://worldtimeapi.org',
+    requires_login: false,
+    smoke: { operation: 'getTimezone', params: { area: 'America', location: 'New_York' } },
+  },
+  {
+    site: 'zippopotam-fixture',
+    page_url: 'https://api.zippopotam.us',
+    requires_login: false,
+    smoke: { operation: 'getZipInfo', params: { zipcode: '90210' } },
+  },
 ]

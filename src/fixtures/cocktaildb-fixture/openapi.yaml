@@ -1,0 +1,65 @@
+openapi: '3.1.0'
+info:
+  title: TheCocktailDB
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://www.thecocktaildb.com
+paths:
+  /api/json/v1/1/search.php:
+    get:
+      operationId: searchCocktails
+      summary: Search cocktails by name
+      x-openweb:
+        transport: node
+        risk_tier: safe
+        build:
+          stable_id: cd0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: s
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Cocktail name to search for (e.g. "margarita").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [drinks]
+                properties:
+                  drinks:
+                    type: [array, 'null']
+                    items:
+                      type: object
+                      required: [idDrink, strDrink]
+                      properties:
+                        idDrink:
+                          type: string
+                        strDrink:
+                          type: string
+                        strCategory:
+                          type: [string, 'null']
+                        strAlcoholic:
+                          type: [string, 'null']
+                        strGlass:
+                          type: [string, 'null']
+                        strInstructions:
+                          type: [string, 'null']
+                        strDrinkThumb:
+                          type: [string, 'null']
+                        strIngredient1:
+                          type: [string, 'null']
+                        strIngredient2:
+                          type: [string, 'null']
+                        strIngredient3:
+                          type: [string, 'null']

@@ -25,4 +25,8 @@ export interface Manifest {
   readonly fingerprint?: ManifestFingerprint
   readonly dependencies?: Readonly<Record<string, string | readonly string[]>>
   readonly stats?: ManifestStats
+  /** ISO timestamp of last successful verification */
+  readonly last_verified?: string
+  /** Set to true when verification fails — agent receives warning */
+  readonly quarantined?: boolean
 }
