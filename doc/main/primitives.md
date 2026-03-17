@@ -1,7 +1,7 @@
 # L2 Primitive Resolvers
 
 > Auth, CSRF, signing, pagination, and extraction primitives — the declarative layer that handles ~50% of websites.
-> Last updated: 2026-03-16 (commit: `dd2b17e`)
+> Last updated: 2026-03-16 (commit: `uncommitted`)
 
 ## Overview
 
@@ -15,7 +15,7 @@ Each primitive has a `type` discriminator and type-specific config fields.
 
 ## Resolution Pipeline
 
-On every L2 request (session_http or browser_fetch), three resolvers run in sequence:
+On every L2 HTTP request (`session_http` or `browser_fetch`), three resolvers run in sequence:
 
 ```
 resolveAuth(handle, auth, serverUrl)     →  cookies + auth headers
@@ -41,6 +41,8 @@ interface ResolvedInjections {
 
 -> See: `src/runtime/primitives/types.ts`
 
+Extraction-only operations skip this auth/CSRF/signing pipeline and call the extraction resolvers directly through `executeExtraction()`.
+
 ---
 
 ## Auth Primitives
@@ -52,7 +54,7 @@ Auth primitives extract credentials from the browser and inject them into reques
 | `cookie_session` | Extract all cookies for the target URL | `context.cookies()` | Yes |
 | `localStorage_jwt` | Read JWT from localStorage by key | `page.evaluate()` | Yes |
 | `sessionStorage_token` | Read token from sessionStorage | `page.evaluate()` | No |
-| `sessionStorage_msal` | Extract MSAL token from sessionStorage | `page.evaluate()` | No |
+| `sessionStorage_msal` | Extract MSAL token from sessionStorage/localStorage | `page.evaluate()` | Yes |
 | `page_global` | Evaluate JS expression on page (e.g., `window.ytcfg.get("ID_TOKEN")`) | `page.evaluate()` | Yes |
 | `webpack_module_walk` | Walk webpack chunk cache, find module, call function | `page.evaluate()` | Yes |
 | `websocket_intercept` | Intercept WebSocket frames for auth tokens | CDP events | No |
@@ -92,6 +94,23 @@ auth:
 
 -> See: `src/runtime/primitives/localstorage-jwt.ts`
 
+### sessionStorage_msal
+
+Reads an MSAL access token from browser storage and injects it into a header or query param.
+
+```yaml
+auth:
+  type: sessionStorage_msal
+  key_pattern: "msal.token.keys.*"
+  scope_filter: "user.read"
+  token_field: "secret"
+  inject: { header: "Authorization", prefix: "Bearer " }
+```
+
+The resolver checks `sessionStorage` first, falls back to `localStorage`, filters by scope, and chooses the freshest unexpired token.
+
+-> See: `src/runtime/primitives/sessionstorage-msal.ts`
+
 ### page_global
 
 Evaluates a JS expression on the page and extracts a value.
@@ -102,7 +121,7 @@ auth:
   expression: "window.ytcfg.data_"
   inject: { header: "Authorization", prefix: "SAPISIDHASH " }
   values:
-    - path: "DELEGATED_SESSION_ID"
+    - expression: "window.ytcfg.data_.DELEGATED_SESSION_ID"
       inject: { header: "X-Goog-PageId" }
 ```
 
@@ -267,11 +286,11 @@ Extraction primitives read data directly from the page DOM or SSR state — no A
 | Type | What it does | Implemented |
 |------|-------------|-------------|
 | `script_json` | Extract JSON from `<script>` tags | Yes |
-| `ssr_next_data` | Read `__NEXT_DATA__` | No |
+| `ssr_next_data` | Read `__NEXT_DATA__` | Yes |
 | `ssr_nuxt` | Read `__NUXT__` | No |
 | `apollo_cache` | Read `__APOLLO_STATE__` | No |
-| `html_selector` | CSS selector extraction | No |
-| `page_global_data` | Read page global variable | No |
+| `html_selector` | CSS selector extraction | Yes |
+| `page_global_data` | Read page global variable | Yes |
 
 ### script_json
 
@@ -287,6 +306,55 @@ extraction:
 Used by GitHub for SSR-embedded data.
 
 -> See: `src/runtime/primitives/script-json.ts`
+
+### ssr_next_data
+
+Reads structured data from Next.js pages via `window.__NEXT_DATA__` or the `#__NEXT_DATA__` script.
+
+```yaml
+extraction:
+  type: ssr_next_data
+  page_url: "/"
+  path: "props.pageProps.bootstrapData.footer.data.contentLayout.modules"
+```
+
+Used by Walmart for homepage footer modules.
+
+-> See: `src/runtime/primitives/ssr-next-data.ts`
+
+### html_selector
+
+Extracts DOM content by CSS selectors. Multiple selectors can be zipped into row objects.
+
+```yaml
+extraction:
+  type: html_selector
+  page_url: "/news"
+  selectors:
+    title: ".titleline > a"
+    score: ".score"
+    author: ".hnuser"
+  multiple: true
+```
+
+Used by Hacker News for front-page story extraction.
+
+-> See: `src/runtime/primitives/html-selector.ts`
+
+### page_global_data
+
+Evaluates a safe page-global expression and optionally follows a nested path into the returned object.
+
+```yaml
+extraction:
+  type: page_global_data
+  expression: "window.__STATE__"
+  path: "viewer.profile.id"
+```
+
+This shares the same expression safety checks as `page_global` auth resolution.
+
+-> See: `src/runtime/primitives/page-global-data.ts`
 
 ---
 
@@ -317,11 +385,16 @@ src/runtime/primitives/
 ├── cookie-to-header.ts     # cookie_to_header CSRF
 ├── localstorage-jwt.ts     # localStorage_jwt auth
 ├── page-global.ts          # page_global auth/CSRF
+├── page-expression.ts      # shared safe expression evaluator
+├── sessionstorage-msal.ts  # sessionStorage_msal auth
 ├── sapisidhash.ts          # SAPISIDHASH signing
 ├── meta-tag.ts             # meta_tag CSRF
 ├── api-response.ts         # api_response CSRF
 ├── exchange-chain.ts       # exchange_chain auth
 ├── script-json.ts          # script_json extraction
+├── ssr-next-data.ts        # ssr_next_data extraction
+├── html-selector.ts        # html_selector extraction
+├── page-global-data.ts     # page_global_data extraction
 ├── webpack-module-walk.ts  # webpack_module_walk auth
 └── primitives.test.ts      # Unit tests
 ```

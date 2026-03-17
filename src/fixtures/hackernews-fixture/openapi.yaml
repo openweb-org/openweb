@@ -1,0 +1,52 @@
+openapi: '3.1.0'
+info:
+  title: Hacker News DOM Data
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://news.ycombinator.com
+    x-openweb:
+      mode: session_http
+paths:
+  /news:
+    get:
+      operationId: getTopStories
+      summary: Extract top stories from the Hacker News front page
+      x-openweb:
+        risk_tier: safe
+        stable_id: hn0001
+        tool_version: 1
+        verified: true
+        signals:
+          - dom_only
+        extraction:
+          type: html_selector
+          page_url: /news
+          selectors:
+            title: .titleline > a
+            score: .score
+            author: .hnuser
+          multiple: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type:
+                        - string
+                        - 'null'
+                    score:
+                      type:
+                        - string
+                        - 'null'
+                    author:
+                      type:
+                        - string
+                        - 'null'

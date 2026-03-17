@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-16 (commit: `dd2b17e`)
+> Last updated: 2026-03-16 (commit: `uncommitted`)
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (167/167 pass)
+pnpm test           # Run tests (214/214 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -214,9 +214,9 @@ Test JSON format:
 
 ---
 
-## Benchmark Suite (M5)
+## Benchmark Suite
 
-Agent validation benchmarks live in `tests/benchmark/`. Each benchmark is a scripted task that an agent must complete end-to-end. 7 tasks cover all 4 execution modes:
+Agent validation benchmarks live in `tests/benchmark/`. Each benchmark is a scripted task that an agent must complete end-to-end. 10 tasks cover the original 4 execution modes plus the new extraction and MSAL auth paths:
 
 | # | Task | Mode |
 |---|------|------|
@@ -227,6 +227,9 @@ Agent validation benchmarks live in `tests/benchmark/`. Each benchmark is a scri
 | 05 | browser_fetch (Discord) | browser_fetch |
 | 06 | L3 adapter (Telegram) | L3 adapter |
 | 07 | Auth failure handling | error recovery |
+| 08 | DOM extraction (Hacker News) | extraction + `html_selector` |
+| 09 | Next.js SSR extraction (Walmart) | extraction + `ssr_next_data` |
+| 10 | MSAL auth (Microsoft Word) | `sessionStorage_msal` |
 
 Use these to validate that agent skill changes do not break the end-to-end flow.
 

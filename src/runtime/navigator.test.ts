@@ -38,6 +38,12 @@ describe('navigator', () => {
     expect(output).toMatch(/videoId.*\[required\]/)
   })
 
+  it('summarizes array responses with item fields', async () => {
+    const output = await renderOperation('hackernews-fixture', 'getTopStories', false)
+
+    expect(output).toContain('Returns: array<{ title, score, author }>')
+  })
+
   it('renders L3 adapter mode for adapter-backed sites and operations', async () => {
     const siteOutput = await renderSite('telegram-fixture')
     const opOutput = await renderOperation('telegram-fixture', 'getDialogs', false)

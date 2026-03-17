@@ -28,6 +28,9 @@ executeOperation(site, operationId, params, deps)
        ├── L3 adapter?
        │     └── loadAdapter() → init() → isAuthenticated() → execute()
        │
+       ├── extraction?
+       │     └── executeExtraction()
+       │
        ├── browser_fetch?
        │     └── executeBrowserFetch()
        │
@@ -44,6 +47,7 @@ executeOperation(site, operationId, params, deps)
 3. Default: `direct_http`
 
 If an operation has `x-openweb.adapter`, L3 adapter takes priority regardless of mode.
+If an operation has `x-openweb.extraction`, the runtime dispatches to `executeExtraction()` before the HTTP executors.
 
 ---
 
@@ -73,6 +77,29 @@ Defaults apply before binding, including body defaults. Body fields are validate
 If an object `requestBody` is marked `required: true`, the runtime sends `{}` even when no explicit body fields are supplied, so the request still includes a JSON body.
 
 -> See: `src/runtime/session-executor.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`
+
+---
+
+## Extraction Operations
+
+Extraction-only operations read data from the live page instead of issuing an HTTP request.
+
+```
+┌─────────────────────────────────────────────────────┐
+│  1. Connect to browser via CDP                      │
+│  2. Find page matching page_url/origin              │
+│  3. Resolve extraction primitive                    │
+│     - script_json                                   │
+│     - ssr_next_data                                 │
+│     - html_selector                                 │
+│     - page_global_data                              │
+│  4. Return extracted JSON-ish payload               │
+└─────────────────────────────────────────────────────┘
+```
+
+Extraction operations reuse the same strict page matching as `session_http`: worker-like pages are filtered out, there is no unrelated-tab fallback, and missing tabs surface `needs_page` with an actionable URL hint.
+
+-> See: `src/runtime/extraction-executor.ts`
 
 ---
 
@@ -185,6 +212,7 @@ Two pagination modes are implemented:
 | `link_header` | Follow `Link: <url>; rel="next"` header | `rel` (default: "next") |
 
 **Safety:** Max 10 pages by default (configurable).
+Cursor pagination accepts dot-paths for nested fields such as `pageInfo.endCursor` and `pageInfo.hasNextPage`.
 
 -> See: `src/runtime/paginator.ts`
 
@@ -251,9 +279,11 @@ src/runtime/
 ├── executor.ts               # Main dispatcher (mode routing, response handling)
 ├── session-executor.ts       # session_http mode (parameter binding, auth pipeline)
 ├── browser-fetch-executor.ts # browser_fetch mode (page.evaluate)
+├── extraction-executor.ts    # extraction-only operations
 ├── adapter-executor.ts       # L3 adapter loading + execution
 ├── paginator.ts              # Pagination executor (cursor + link_header)
 ├── token-cache.ts            # Auth token cache with TTL
+├── value-path.ts             # Shared dot-path helper for nested payloads
 ├── navigator.ts              # CLI navigation helper (render site/operation info)
 └── primitives/               # L2 primitive resolvers
     └── (→ See: primitives.md)

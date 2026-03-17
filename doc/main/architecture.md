@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, execution modes, and component map.
-> Last updated: 2026-03-16 (commit: `dd2b17e`)
+> Last updated: 2026-03-16 (commit: `uncommitted`)
 
 ## Mission
 
@@ -86,11 +86,11 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | Component | What it does | Key files | Status |
 |-----------|-------------|-----------|--------|
 | **Meta-spec** | x-openweb schema: L2 types + L3 interface + package format | `src/types/` | Formalized (M1) |
-| **Runtime** | Reads skill packages, resolves primitives, executes requests | `src/runtime/` | L1 + L2 + L3 complete (M4) |
+| **Runtime** | Reads skill packages, resolves primitives, executes requests | `src/runtime/` | L1 + L2 + L3 + extraction complete (M6) |
 | **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | Phases 2-4 partial (L1 emit) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM) | `src/capture/` | Complete (M0) |
 | **CLI** | Progressive navigation + exec + capture + compile | `src/cli.ts`, `src/commands/` | Complete |
-| **Skill packages** | Per-site instance specs | `src/fixtures/` | 9 verified sites |
+| **Skill packages** | Per-site instance specs | `src/fixtures/` | 12 verified sites |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5) |
 
 ---
@@ -104,6 +104,7 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | `browser_fetch` | `page.evaluate(fetch(...))` | Yes (CDP) | Signing, native TLS, CORS-bound APIs |
 
 **Mode resolution**: operation-level `x-openweb.mode` → server-level `x-openweb.mode` → `direct_http`
+`x-openweb.extraction` short-circuits HTTP mode dispatch and runs directly against the matching page state.
 
 -> See: [runtime.md](runtime.md) — mode dispatch details
 
@@ -148,7 +149,7 @@ openweb compile <url>                          # generate skill package
 
 ---
 
-## Verified Sites (M0-M4)
+## Verified Sites (M0-M6 Tranche A)
 
 | Site | Layer | Auth | CSRF | Signing | Extraction | Mode |
 |------|-------|------|------|---------|------------|------|
@@ -158,6 +159,9 @@ openweb compile <url>                          # generate skill package
 | YouTube | L2 | page_global | — | sapisidhash | — | session_http |
 | GitHub | L2 | cookie_session | meta_tag | — | script_json | session_http |
 | Reddit | L2 | cookie_session | — | — | — | session_http |
+| Walmart | L2 | — | — | — | ssr_next_data | session_http |
+| Hacker News | L2 | — | — | — | html_selector | session_http |
+| Microsoft Word | L2 | sessionStorage_msal | — | — | — | session_http |
 | Discord | L2 | webpack_module_walk | — | — | — | browser_fetch |
 | WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |
 | Telegram | L3 | adapter | — | — | adapter | adapter (L3) |

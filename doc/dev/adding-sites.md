@@ -1,7 +1,7 @@
 # Adding a New Site
 
 > How to create a new site fixture — from capture to verified skill package.
-> Last updated: 2026-03-16 (commit: `dd2b17e`)
+> Last updated: 2026-03-16 (commit: `uncommitted`)
 
 ## Decision Tree
 
@@ -115,6 +115,35 @@ paths:
         stable_id: instagram_getTimeline_v1
 ```
 
+### Extraction Example (Hacker News)
+
+```yaml
+openapi: "3.1.0"
+info:
+  title: Hacker News DOM Data
+  version: "1.0.0"
+servers:
+  - url: https://news.ycombinator.com
+    x-openweb:
+      mode: session_http
+paths:
+  /news:
+    get:
+      operationId: getTopStories
+      x-openweb:
+        risk_tier: safe
+        stable_id: hn0001
+        tool_version: 1
+        extraction:
+          type: html_selector
+          page_url: /news
+          selectors:
+            title: .titleline > a
+            score: .score
+            author: .hnuser
+          multiple: true
+```
+
 ### L3 Example (WhatsApp)
 
 ```yaml
@@ -138,14 +167,21 @@ paths:
 
 ```json
 {
-  "name": "<site>",
-  "version": "0.1.0",
-  "spec_version": "0.1.0",
-  "site": "<domain.com>",
-  "generated_at": "2026-03-16T00:00:00Z",
+  "name": "<site>-fixture",
+  "display_name": "<Site Name>",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://<domain.com>",
+  "description": "<what the fixture exposes>",
   "requires_auth": true,
   "dependencies": {
     "playwright": "^1.52.0"
+  },
+  "stats": {
+    "operation_count": 1,
+    "l1_count": 0,
+    "l2_count": 1,
+    "l3_count": 0
   }
 }
 ```
@@ -196,12 +232,16 @@ Create `tests/<operationId>.test.json`:
 
 ```json
 {
-  "operationId": "getTimeline",
-  "params": {},
-  "expected": {
-    "status": 200,
-    "bodyContains": ["feed_items"]
-  }
+  "operation_id": "getTimeline",
+  "cases": [
+    {
+      "input": {},
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
 }
 ```
 
@@ -217,10 +257,10 @@ pnpm build
 pnpm test
 
 # Verify with real browser
-pnpm dev <site>-fixture exec <op> '{}' --cdp-endpoint http://localhost:9222
+pnpm --silent dev <site>-fixture exec <op> '{}' --cdp-endpoint http://localhost:9222
 
 # Run site tests
-pnpm dev <site>-fixture test
+pnpm --silent dev <site>-fixture test
 ```
 
 ---
@@ -242,15 +282,18 @@ pnpm dev <site>-fixture test
 
 | Fixture | Layer | Auth | CSRF | Key pattern |
 |---------|-------|------|------|-------------|
-| open-meteo | L1 | — | — | Public API |
-| instagram | L2 | cookie_session | cookie_to_header | Classic cookie auth + CSRF |
-| bluesky | L2 | localStorage_jwt | — | JWT from localStorage |
-| youtube | L2 | page_global | — | Window global + SAPISIDHASH signing |
-| github | L2 | cookie_session | meta_tag | DOM meta tag CSRF + SSR extraction |
-| reddit | L2 | cookie_session | — | Cookie auth with .json API |
-| discord | L2 | webpack_module_walk | — | Webpack module cache for auth token |
-| whatsapp | L3 | adapter | — | Meta require() module system |
-| telegram | L3 | adapter | — | teact global state |
+| open-meteo-fixture | L1 | — | — | Public API |
+| instagram-fixture | L2 | cookie_session | cookie_to_header | Classic cookie auth + CSRF |
+| bluesky-fixture | L2 | localStorage_jwt | — | JWT from localStorage |
+| youtube-fixture | L2 | page_global | — | Window global + SAPISIDHASH signing |
+| github-fixture | L2 | cookie_session | meta_tag | DOM meta tag CSRF + SSR extraction |
+| reddit-fixture | L2 | cookie_session | — | Cookie auth with .json API |
+| walmart-fixture | L2 | — | — | Next.js `__NEXT_DATA__` extraction |
+| hackernews-fixture | L2 | — | — | DOM selector extraction |
+| microsoft-word-fixture | L2 | sessionStorage_msal | — | MSAL cache → Microsoft Graph |
+| discord-fixture | L2 | webpack_module_walk | — | Webpack module cache for auth token |
+| whatsapp-fixture | L3 | adapter | — | Meta require() module system |
+| telegram-fixture | L3 | adapter | — | teact global state |
 
 ---
 

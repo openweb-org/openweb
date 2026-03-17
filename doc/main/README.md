@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-03-16 (commit: `dd2b17e`)
+> Last updated: 2026-03-16 (commit: `uncommitted`)
 
 ## Quick Start
 
@@ -56,19 +56,25 @@ src/
 │   ├── session-executor.ts     #   session_http mode (HTTP + browser cookies)
 │   ├── browser-fetch-executor.ts # browser_fetch mode (page.evaluate)
 │   ├── adapter-executor.ts     #   L3 adapter loading + execution
+│   ├── extraction-executor.ts  #   extraction-only operations
 │   ├── paginator.ts            #   Pagination (cursor + link_header)
 │   ├── token-cache.ts          #   Auth token cache with TTL
 │   ├── navigator.ts            #   CLI navigation helper
-│   └── primitives/             #   L2 primitive resolvers (11 handlers)
+│   ├── value-path.ts           #   Shared dot-path helper
+│   └── primitives/             #   L2 primitive resolvers (14 handlers + helpers)
 │       ├── cookie-session.ts
 │       ├── cookie-to-header.ts
 │       ├── localstorage-jwt.ts
 │       ├── page-global.ts
+│       ├── sessionstorage-msal.ts
 │       ├── sapisidhash.ts
 │       ├── meta-tag.ts
 │       ├── api-response.ts
 │       ├── exchange-chain.ts
 │       ├── script-json.ts
+│       ├── ssr-next-data.ts
+│       ├── html-selector.ts
+│       ├── page-global-data.ts
 │       └── webpack-module-walk.ts
 │
 ├── types/                      # Meta-spec type system
@@ -101,13 +107,16 @@ src/
 │   ├── ssrf.ts                 #   SSRF validation (IPv4/v6, DNS, metadata)
 │   └── errors.ts               #   Structured error contract
 │
-└── fixtures/                   # Test site packages (9 sites)
+└── fixtures/                   # Test site packages (12 sites)
     ├── open-meteo-fixture/     #   L1 (no x-openweb)
     ├── instagram-fixture/      #   L2 (cookie_session + cookie_to_header)
     ├── bluesky-fixture/        #   L2 (localStorage_jwt)
     ├── youtube-fixture/        #   L2 (page_global + sapisidhash)
     ├── github-fixture/         #   L2 (meta_tag + script_json)
     ├── reddit-fixture/         #   L2 (cookie_session)
+    ├── walmart-fixture/        #   L2 (ssr_next_data extraction)
+    ├── hackernews-fixture/     #   L2 (html_selector extraction)
+    ├── microsoft-word-fixture/ #   L2 (sessionStorage_msal auth)
     ├── discord-fixture/        #   L2 (webpack_module_walk + browser_fetch)
     ├── whatsapp-fixture/       #   L3 adapter (Meta require() module system)
     └── telegram-fixture/       #   L3 adapter (teact global state)

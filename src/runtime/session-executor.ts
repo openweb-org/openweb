@@ -21,6 +21,7 @@ import { resolveLocalStorageJwt } from './primitives/localstorage-jwt.js'
 import { resolveMetaTag } from './primitives/meta-tag.js'
 import { resolvePageGlobal } from './primitives/page-global.js'
 import { resolveSapisidhash } from './primitives/sapisidhash.js'
+import { resolveSessionStorageMsal } from './primitives/sessionstorage-msal.js'
 import { resolveWebpackModuleWalk } from './primitives/webpack-module-walk.js'
 import type { BrowserHandle, ResolvedInjections } from './primitives/types.js'
 
@@ -289,6 +290,13 @@ export async function resolveAuth(
       return resolveLocalStorageJwt(handle, {
         key: auth.key,
         path: auth.path,
+        inject: auth.inject,
+      })
+    case 'sessionStorage_msal':
+      return resolveSessionStorageMsal(handle, {
+        key_pattern: auth.key_pattern,
+        scope_filter: auth.scope_filter,
+        token_field: auth.token_field,
         inject: auth.inject,
       })
     case 'page_global':

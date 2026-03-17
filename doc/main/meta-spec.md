@@ -1,7 +1,7 @@
 # Meta-spec: Type System & Validation
 
 > L2 primitive types, x-openweb extensions, JSON Schema, and AJV validation.
-> Last updated: 2026-03-16 (commit: `dd2b17e`)
+> Last updated: 2026-03-16 (commit: `uncommitted`)
 
 ## Overview
 
@@ -90,14 +90,14 @@ paths:
 
 27 types organized into 5 categories. Each is a **discriminated union** on the `type` field.
 
-### Auth (10 types)
+### Auth (9 types)
 
 | Type | Description | Key config |
 |------|-------------|------------|
 | `cookie_session` | Browser cookies | (none) |
 | `localStorage_jwt` | JWT from localStorage | `key`, `path`, `inject` |
 | `sessionStorage_token` | Token from sessionStorage | `key`, `path`, `inject` |
-| `sessionStorage_msal` | MSAL token from sessionStorage | `key_pattern`, `scope_filter`, `inject` |
+| `sessionStorage_msal` | MSAL token from sessionStorage | `key_pattern`, `scope_filter`, `token_field`, `inject` |
 | `page_global` | Window global expression | `expression`, `inject`, `values[]` |
 | `webpack_module_walk` | Webpack module cache walk | `chunk_global`, `module_test`, `call`, `inject` |
 | `websocket_intercept` | WebSocket frame interception | `frame_match`, `extract`, `inject` |
@@ -135,10 +135,10 @@ paths:
 
 | Type | Description | Key config |
 |------|-------------|------------|
-| `ssr_next_data` | Next.js SSR data | `path` |
+| `ssr_next_data` | Next.js SSR data | `page_url`, `path` |
 | `ssr_nuxt` | Nuxt SSR data | `path` |
-| `apollo_cache` | Apollo cache | `cache_key`, `path` |
-| `html_selector` | CSS selector | `selector`, `attribute`, `path` |
+| `apollo_cache` | Apollo cache | `key_pattern`, `fields` |
+| `html_selector` | CSS selector | `page_url`, `selectors`, `attribute`, `multiple` |
 | `script_json` | Script tag JSON | `selector`, `path` |
 | `page_global_data` | Window global | `expression`, `path` |
 

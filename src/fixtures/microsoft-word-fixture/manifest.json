@@ -1,0 +1,16 @@
+{
+  "name": "microsoft-word-fixture",
+  "display_name": "Microsoft Word",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://word.cloud.microsoft",
+  "description": "Microsoft Graph profile access via Word's MSAL token cache",
+  "requires_auth": true,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 1,
+    "l1_count": 0,
+    "l2_count": 1,
+    "l3_count": 0
+  }
+}

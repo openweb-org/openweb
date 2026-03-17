@@ -156,6 +156,36 @@ describe('executePaginated — cursor', () => {
     expect(result.pages).toBe(2)
     expect(executeOperationMock).toHaveBeenCalledTimes(2)
   })
+
+  it('supports nested cursor paths for GraphQL-style pageInfo', async () => {
+    mockXOpenWeb = {
+      pagination: {
+        type: 'cursor',
+        response_field: 'pageInfo.endCursor',
+        request_param: 'cursor',
+        has_more_field: 'pageInfo.hasNextPage',
+      },
+    }
+
+    executeOperationMock
+      .mockResolvedValueOnce(
+        makeResult({
+          data: [1, 2],
+          pageInfo: { endCursor: 'abc', hasNextPage: true },
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeResult({
+          data: [3],
+          pageInfo: { endCursor: 'def', hasNextPage: false },
+        }),
+      )
+
+    const result = await executePaginated('test-site', 'list_items', {})
+    expect(result.items).toEqual([1, 2, 3])
+    expect(result.pages).toBe(2)
+    expect(executeOperationMock.mock.calls[1][2]).toEqual({ cursor: 'abc' })
+  })
 })
 
 // ── executePaginated — link_header ───────────────────────

@@ -1,0 +1,43 @@
+openapi: '3.1.0'
+info:
+  title: Walmart SSR Data
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.walmart.com
+    x-openweb:
+      mode: session_http
+paths:
+  /:
+    get:
+      operationId: getFooterModules
+      summary: Extract Walmart footer modules from Next.js SSR state
+      x-openweb:
+        risk_tier: safe
+        stable_id: wm0001
+        tool_version: 1
+        verified: true
+        signals:
+          - next_data
+        extraction:
+          type: ssr_next_data
+          page_url: /
+          path: props.pageProps.bootstrapData.footer.data.contentLayout.modules
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    module:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        name:
+                          type: string

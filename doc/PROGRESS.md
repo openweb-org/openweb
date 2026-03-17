@@ -1,3 +1,22 @@
+## 2026-03-16: M6 Phase 2 Tranche A — extraction sites, MSAL auth, and agent-surface sync
+
+**What changed:**
+- Completed the first Phase 2 tranche with three new fixtures: `walmart-fixture` (`ssr_next_data`), `hackernews-fixture` (`html_selector`), and `microsoft-word-fixture` (`sessionStorage_msal`)
+- Finished the missing runtime pieces behind that tranche: extraction dispatch now also supports `page_global_data`, extraction path matching requires the configured `page_url`, nested dot-path helpers are used by extraction and cursor pagination, and navigator response summaries now render array item shapes
+- Synced the local `openweb` skill and docs to the 12-site surface, including new benchmark task definitions for DOM extraction, Next.js SSR extraction, and MSAL-backed auth
+
+**Why:**
+- Phase 2 needed to add genuinely new patterns rather than more copies of the existing 9 sites
+- The in-progress tranche already covered SSR extraction, DOM extraction, and MSAL auth, but it still had a runtime hole (`page_global_data` was declared but not executable) and an extraction matching bug that could silently run against the wrong same-origin page
+
+**Key files:** `src/runtime/extraction-executor.ts`, `src/runtime/paginator.ts`, `src/runtime/navigator.ts`, `src/runtime/primitives/page-expression.ts`, `src/runtime/primitives/page-global-data.ts`, `src/fixtures/walmart-fixture/`, `src/fixtures/hackernews-fixture/`, `src/fixtures/microsoft-word-fixture/`, `.claude/skills/openweb/SKILL.md`, `doc/main/runtime.md`, `tests/benchmark/`
+**Verification:** `pnpm build` passed, `pnpm test` passed (214/214), real Chrome CDP smoke passed for Hacker News/Walmart/Microsoft Word, repeated live execution passed for Hacker News/Walmart/Microsoft Word
+**Commit:** (uncommitted)
+**Next:** Phase 2 Tranche B — pick a stable GraphQL cursor target and re-confirm the `exchange_chain` target before implementing the next site batch
+**Blockers:** None
+
+---
+
 ## 2026-03-16: M6 Phase 1 review fixes — body validation, exchange redirects, and safe truncation
 
 **What changed:**

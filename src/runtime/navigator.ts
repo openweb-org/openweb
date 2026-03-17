@@ -26,6 +26,14 @@ function summarizeSchema(schema: unknown): string {
   }
 
   const typed = schema as JsonSchema
+  if (typed.type === 'array') {
+    return `array<${summarizeSchema(typed.items)}>`
+  }
+
+  if (typed.type && typed.type !== 'object') {
+    return formatParamType(typed.type)
+  }
+
   const keys = Object.keys(typed.properties ?? {})
   if (keys.length === 0) {
     return 'object'

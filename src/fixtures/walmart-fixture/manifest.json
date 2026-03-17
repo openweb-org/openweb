@@ -1,0 +1,16 @@
+{
+  "name": "walmart-fixture",
+  "display_name": "Walmart",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.walmart.com",
+  "description": "Walmart homepage SSR extraction via __NEXT_DATA__ footer modules",
+  "requires_auth": false,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 1,
+    "l1_count": 0,
+    "l2_count": 1,
+    "l3_count": 0
+  }
+}

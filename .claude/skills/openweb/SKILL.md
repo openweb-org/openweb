@@ -1,6 +1,6 @@
 ---
 name: openweb
-description: Access web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
+description: Access web services (Instagram, Discord, YouTube, GitHub, Telegram, WhatsApp, Reddit, Bluesky, Open-Meteo, Walmart, Hacker News, Microsoft Word) through the openweb CLI. Use this skill whenever the user wants to fetch data from, interact with, or query any of these websites — whether they say "check my Instagram", "get Discord messages", "fetch weather data", "list GitHub issues", "read Hacker News", or anything involving reading/writing data from these web services. Also use this when the user wants to explore what openweb can do, check site availability, or troubleshoot connection issues. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly.
 ---
 
 # OpenWeb — Web Service Access via CLI
@@ -134,6 +134,9 @@ Sites use different modes depending on their API structure. You don't need to ch
 | `youtube-fixture` | session_http | page_global + signing | `getVideoInfo` — video data |
 | `reddit-fixture` | session_http | cookie | operations on subreddits |
 | `bluesky-fixture` | session_http | cookie | Bluesky social operations |
+| `walmart-fixture` | session_http | page extraction | `getFooterModules` — Next.js footer modules |
+| `hackernews-fixture` | session_http | page extraction | `getTopStories` — front page stories |
+| `microsoft-word-fixture` | session_http | MSAL cache | `getProfile` — Microsoft Graph profile |
 | `discord-fixture` | browser_fetch | webpack token | `getMe` — current user |
 | `whatsapp-fixture` | L3 adapter | browser state | `getChats` — chat list |
 | `telegram-fixture` | L3 adapter | browser state | `getDialogs` — dialog list |
@@ -195,6 +198,30 @@ If you get `failureClass: "needs_login"`:
 ```
 Authentication failed. Please log in to [site] in Chrome, then try again.
 ```
+
+### Example 6: Extraction-only read
+
+User: "Show the top Hacker News stories"
+
+```bash
+pnpm --silent dev hackernews-fixture                  # Check: Requires browser: yes, Requires login: no
+pnpm --silent dev hackernews-fixture getTopStories    # No params; returns array<{ title, score, author }>
+pnpm --silent dev hackernews-fixture exec getTopStories '{}' --cdp-endpoint http://localhost:9222 --max-response 2048
+```
+
+The operation runs against the open page state instead of making an HTTP API call, so `needs_page` means the matching tab is missing.
+
+### Example 7: MSAL-backed auth
+
+User: "Get my Microsoft Word profile"
+
+```bash
+pnpm --silent dev microsoft-word-fixture                 # Check: Requires browser: yes, Requires login: yes
+pnpm --silent dev microsoft-word-fixture getProfile      # No params; response comes from Microsoft Graph
+pnpm --silent dev microsoft-word-fixture exec getProfile '{}' --cdp-endpoint http://localhost:9222
+```
+
+The runtime reads Word's MSAL token cache from browser storage and injects a Graph bearer token automatically.
 
 ## Important Notes
 

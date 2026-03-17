@@ -20,6 +20,7 @@ import { connectWithRetry } from '../capture/connection.js'
 import { createNeedsPageError, resolveMode, executeSessionHttp, findPageForOrigin, resolveAllParameters } from './session-executor.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 import { loadAdapter, executeAdapter } from './adapter-executor.js'
+import { executeExtraction } from './extraction-executor.js'
 import type { AdapterRef, XOpenWebOperation } from '../types/extensions.js'
 
 const MAX_REDIRECTS = 5
@@ -143,6 +144,18 @@ export async function executeOperation(
 
       body = await executeAdapter(page, adapter, adapterRef.operation, adapterParams)
       status = 200
+    } finally {
+      if (!deps.browser) {
+        browser.close().catch(() => {})
+      }
+    }
+  } else if (opExt?.extraction) {
+    const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
+    try {
+      const result = await executeExtraction(browser, spec, operationRef.operation)
+      status = result.status
+      body = result.body
+      responseHeaders = { ...result.responseHeaders }
     } finally {
       if (!deps.browser) {
         browser.close().catch(() => {})

@@ -1,4 +1,5 @@
 import { OpenWebError } from '../../lib/errors.js'
+import { getValueAtPath } from '../value-path.js'
 import type { BrowserHandle } from './types.js'
 
 export interface ScriptJsonConfig {
@@ -46,22 +47,21 @@ export async function resolveScriptJson(
     })
   }
 
-  if (path) {
-    const segments = path.split('.')
-    for (const segment of segments) {
-      if (data === null || data === undefined || typeof data !== 'object') {
-        throw new OpenWebError({
-          error: 'execution_failed',
-          code: 'EXECUTION_FAILED',
-          message: `Path "${path}" not found in script JSON.`,
-          action: 'Verify the JSON structure.',
-          retriable: false,
-          failureClass: 'fatal',
-        })
-      }
-      data = (data as Record<string, unknown>)[segment]
-    }
+  if (!path) {
+    return data
   }
 
-  return data
+  const value = getValueAtPath(data, path)
+  if (value === undefined) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Path "${path}" not found in script JSON.`,
+      action: 'Verify the JSON structure.',
+      retriable: false,
+      failureClass: 'fatal',
+    })
+  }
+
+  return value
 }
