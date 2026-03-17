@@ -6,6 +6,8 @@ import Ajv from 'ajv'
 
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { checkPermission, loadPermissions } from '../lib/permissions.js'
+import { readTokenCache, writeTokenCache, clearTokenCache, DEFAULT_TTL_SECONDS, type CachedTokens } from './token-cache.js'
+import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import {
   buildQueryUrl,
   findOperation,
@@ -247,23 +249,49 @@ export async function executeOperation(
     const needsBrowser = !!(serverExt?.auth || serverExt?.csrf || serverExt?.signing)
 
     if (needsBrowser) {
-      const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
-      try {
-        const result = await executeSessionHttp(
-          browser,
-          spec,
-          operationRef.path,
-          operationRef.method,
-          operationRef.operation,
-          params,
-          { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator },
-        )
-        status = result.status
-        body = result.body
-        responseHeaders = { ...result.responseHeaders }
-      } finally {
-        if (!deps.browser) {
-          browser.close().catch(() => {})
+      // Token cache: try cached cookies first (avoids browser connection)
+      const cached = await readTokenCache(site)
+      let cacheHit = false
+
+      if (cached && cached.cookies.length > 0) {
+        try {
+          const result = await executeCachedFetch(spec, operationRef, serverExt, params, cached, deps)
+          status = result.status
+          body = result.body
+          responseHeaders = result.responseHeaders
+          cacheHit = true
+        } catch (err) {
+          // 401/403 means cache is stale — clear and fall through to browser
+          if (err instanceof OpenWebError && err.payload.failureClass === 'needs_login') {
+            await clearTokenCache(site)
+          } else {
+            throw err
+          }
+        }
+      }
+
+      if (!cacheHit) {
+        const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
+        try {
+          const result = await executeSessionHttp(
+            browser,
+            spec,
+            operationRef.path,
+            operationRef.method,
+            operationRef.operation,
+            params,
+            { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator },
+          )
+          status = result.status
+          body = result.body
+          responseHeaders = { ...result.responseHeaders }
+
+          // Write cookies to cache for future requests
+          await writeBrowserCookiesToCache(browser, site, spec)
+        } finally {
+          if (!deps.browser) {
+            browser.close().catch(() => {})
+          }
         }
       }
     } else {
@@ -334,6 +362,124 @@ export async function executeOperation(
   }
 
   return { status, body, responseSchemaValid, responseHeaders }
+}
+
+/** Execute a request using cached cookies instead of browser extraction */
+async function executeCachedFetch(
+  spec: import('../lib/openapi.js').OpenApiSpec,
+  operationRef: { path: string; method: string; operation: import('../lib/openapi.js').OpenApiOperation },
+  serverExt: import('../types/extensions.js').XOpenWebServer | undefined,
+  params: Record<string, unknown>,
+  cached: CachedTokens,
+  deps: ExecuteDependencies,
+): Promise<{ status: number; body: unknown; responseHeaders: Record<string, string> }> {
+  const serverUrl = getServerUrl(spec, operationRef.operation)
+  const allParams = resolveAllParameters(spec, operationRef.operation)
+  const inputParams = validateParams(
+    [...allParams, ...getRequestBodyParameters(operationRef.operation)],
+    params,
+  )
+  const resolvedPath = substitutePath(operationRef.path, allParams, inputParams)
+  const url = buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
+  const requestHeaders = buildHeaderParams(allParams, inputParams)
+
+  // Inject cached cookies
+  const cookieStr = cached.cookies.map((c) => `${c.name}=${c.value}`).join('; ')
+  if (cookieStr) requestHeaders.Cookie = cookieStr
+
+  // Derive CSRF from cached cookies if applicable
+  const csrf = serverExt?.csrf
+  if (csrf?.type === 'cookie_to_header' && shouldApplyCsrf(csrf.scope, operationRef.method)) {
+    const csrfCookie = cached.cookies.find((c) => c.name === csrf.cookie)
+    if (csrfCookie) {
+      requestHeaders[csrf.header] = csrfCookie.value
+    }
+  }
+
+  const upperMethod = operationRef.method.toUpperCase()
+  const jsonBody = upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH'
+    ? buildJsonRequestBody(operationRef.operation, inputParams)
+    : undefined
+  if (jsonBody) requestHeaders['Content-Type'] = 'application/json'
+
+  const response = await fetchWithValidatedRedirects(url, upperMethod, deps, {
+    headers: requestHeaders,
+    body: jsonBody,
+  })
+
+  if (!response.ok) {
+    const httpFailure = getHttpFailure(response.status)
+    throw new OpenWebError({
+      error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
+      code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
+      message: `HTTP ${response.status}`,
+      action: 'Cached credentials may have expired.',
+      retriable: httpFailure.retriable,
+      failureClass: httpFailure.failureClass,
+    })
+  }
+
+  const responseHeaders: Record<string, string> = {}
+  response.headers.forEach((value, key) => { responseHeaders[key] = value })
+
+  const text = await response.text()
+  let body: unknown
+  try {
+    body = JSON.parse(text) as unknown
+  } catch {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Response is not valid JSON (status ${response.status})`,
+      action: 'The API returned non-JSON content.',
+      retriable: false,
+      failureClass: 'fatal',
+    })
+  }
+
+  return { status: response.status, body, responseHeaders }
+}
+
+/** Extract cookies from browser and write to token cache */
+async function writeBrowserCookiesToCache(
+  browser: import('playwright').Browser,
+  site: string,
+  spec: import('../lib/openapi.js').OpenApiSpec,
+): Promise<void> {
+  try {
+    const context = browser.contexts()[0]
+    if (!context) return
+
+    const cookies = await context.cookies()
+    const serverUrl = spec.servers?.[0]?.url
+    if (!serverUrl) return
+
+    const origin = new URL(serverUrl).hostname
+    const siteCookies = cookies
+      .filter((c) => origin.endsWith(c.domain.replace(/^\./, '')) || c.domain.replace(/^\./, '').endsWith(origin))
+      .map((c) => ({
+        name: c.name,
+        value: c.value,
+        domain: c.domain,
+        path: c.path,
+        httpOnly: c.httpOnly,
+        secure: c.secure,
+        sameSite: c.sameSite,
+        expires: c.expires,
+      }))
+
+    if (siteCookies.length === 0) return
+
+    await writeTokenCache(site, {
+      cookies: siteCookies,
+      localStorage: {},
+      sessionStorage: {},
+      capturedAt: new Date().toISOString(),
+      ttlSeconds: DEFAULT_TTL_SECONDS,
+    })
+  } catch {
+    // Cache write failure is not critical — continue silently
+  }
 }
 
 interface TestCase {

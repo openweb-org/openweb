@@ -1,5 +1,6 @@
 import { OpenWebError } from '../lib/errors.js'
 import { executeOperation } from '../runtime/executor.js'
+import { getManagedCdpEndpoint } from './browser.js'
 
 function parseParams(paramsJson: string | undefined): Record<string, unknown> {
   if (!paramsJson) return {}
@@ -69,8 +70,12 @@ export async function execCommand(
   options: ExecOptions = {},
 ): Promise<void> {
   const params = parseParams(paramsJson)
+
+  // CDP auto-detect: managed browser → explicit flag
+  const cdpEndpoint = options.cdpEndpoint ?? await getManagedCdpEndpoint()
+
   const result = await executeOperation(site, tool, params, {
-    cdpEndpoint: options.cdpEndpoint,
+    cdpEndpoint,
   })
   const serialized = serializeBody(result.body, options.maxResponse)
   process.stdout.write(`${serialized.text}\n`)
