@@ -81,9 +81,10 @@ export async function findNavElements(page: Page): Promise<NavElement[]> {
         if (seen.has(href)) continue
         seen.add(href)
 
-        // Build a reasonable selector
-        const id = link.id ? `#${link.id}` : ''
-        const selector = id || `a[href="${href}"]`
+        // Build a reasonable selector — CSS.escape handles metacharacters
+        const id = link.id ? `#${CSS.escape(link.id)}` : ''
+        const escapedHref = href.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+        const selector = id || `a[href="${escapedHref}"]`
         elements.push({ selector, text: text.slice(0, 80), href })
       }
     }
@@ -104,9 +105,9 @@ export async function findSearchInputs(page: Page): Promise<string[]> {
     )
 
     for (const input of inputs) {
-      const id = input.id ? `#${input.id}` : ''
+      const id = input.id ? `#${CSS.escape(input.id)}` : ''
       const name = input.getAttribute('name')
-      const selector = id || (name ? `input[name="${name}"]` : 'input[type="search"]')
+      const selector = id || (name ? `input[name="${CSS.escape(name)}"]` : 'input[type="search"]')
       selectors.push(selector)
     }
 

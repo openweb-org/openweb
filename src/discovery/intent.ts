@@ -76,7 +76,7 @@ const BUTTON_TEXT_PATTERNS: ReadonlyArray<{ intent: WriteIntent; patterns: reado
 
 // --- Core analysis ---
 
-function matchIntentsFromApi(paths: CapturedPath[]): IntentMatch[] {
+export function matchIntentsFromApi(paths: CapturedPath[]): IntentMatch[] {
   const matched: IntentMatch[] = []
   const seenIntents = new Set<Intent>()
 

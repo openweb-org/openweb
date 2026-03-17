@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { PageSnapshot } from './page-snapshot.js'
-import { analyzeIntents, type CapturedPath, type IntentAnalysis } from './intent.js'
+import { analyzeIntents, matchIntentsFromApi, type CapturedPath, type IntentAnalysis } from './intent.js'
 
 function emptySnapshot(): PageSnapshot {
   return { navLinks: [], headings: [], buttons: [], forms: [], searchInputs: [] }
@@ -162,6 +162,48 @@ describe('analyzeIntents', () => {
       const result = analyzeIntents(snapshot, [])
       const gap = result.gaps.find((g) => g.intent === 'activity')
       expect(gap?.suggestion).toContain('Notifications')
+    })
+  })
+
+  describe('matchIntentsFromApi', () => {
+    it('returns matched intents from API paths', () => {
+      const paths: CapturedPath[] = [
+        { path: '/api/search', method: 'GET' },
+        { path: '/api/me', method: 'GET' },
+      ]
+      const matches = matchIntentsFromApi(paths)
+      expect(matches.find((m) => m.intent === 'search')).toBeDefined()
+      expect(matches.find((m) => m.intent === 'profile')).toBeDefined()
+    })
+
+    it('page-only gap persists when no API covers it', () => {
+      // Scenario: page has Profile nav link, no API path matches profile
+      const snapshot: PageSnapshot = {
+        ...emptySnapshot(),
+        navLinks: [{ text: 'Profile', href: '/profile', isInternal: true }],
+      }
+      const analysis = analyzeIntents(snapshot, [])
+      expect(analysis.gaps.find((g) => g.intent === 'profile')).toBeDefined()
+
+      // After exploration, still no API path for profile → gap should remain
+      const postApiIntents = new Set(matchIntentsFromApi([]).map((m) => m.intent))
+      const remaining = analysis.gaps.map((g) => g.intent).filter((i) => !postApiIntents.has(i))
+      expect(remaining).toContain('profile')
+    })
+
+    it('page-only gap is resolved when API path covers it', () => {
+      const snapshot: PageSnapshot = {
+        ...emptySnapshot(),
+        navLinks: [{ text: 'Profile', href: '/profile', isInternal: true }],
+      }
+      const analysis = analyzeIntents(snapshot, [])
+      expect(analysis.gaps.find((g) => g.intent === 'profile')).toBeDefined()
+
+      // After exploration, API path for /me found → gap resolved
+      const postPaths: CapturedPath[] = [{ path: '/api/me', method: 'GET' }]
+      const postApiIntents = new Set(matchIntentsFromApi(postPaths).map((m) => m.intent))
+      const remaining = analysis.gaps.map((g) => g.intent).filter((i) => !postApiIntents.has(i))
+      expect(remaining).not.toContain('profile')
     })
   })
 })

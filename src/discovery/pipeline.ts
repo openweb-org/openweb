@@ -15,7 +15,7 @@ import type { AnalyzedOperation, ParameterDescriptor } from '../compiler/types.j
 import { interactiveCapture, type InteractiveCaptureOptions } from './capture.js'
 import { explorePage, exploreForIntents } from './explorer.js'
 import { detectHandoffNeeded, type HumanHandoffNeeded } from './handoff.js'
-import { analyzeIntents, type Intent, type IntentAnalysis } from './intent.js'
+import { analyzeIntents, matchIntentsFromApi, type Intent, type IntentAnalysis } from './intent.js'
 import { takePageSnapshot } from './page-snapshot.js'
 
 export interface DiscoverOptions {
@@ -291,27 +291,21 @@ export async function discover(opts: DiscoverOptions): Promise<DiscoverResult> {
   log(`analyzed ${String(analyzedOperations.length)} operations`)
 
   // Intent coverage report (post-compile, final analysis)
+  // Compare pre-exploration API intents vs post-exploration API intents.
+  // A gap is resolved only when a NEW API path matches the gap intent.
   let intentCoverage: DiscoverResult['intentCoverage']
   if (shouldIntent && intentAnalysis) {
-    // Re-analyze with full operation set
     const finalPaths = analyzedOperations.map((op) => ({ path: op.path, method: op.method }))
-    const finalAnalysis = analyzeIntents(
-      { navLinks: [], headings: [], buttons: [], forms: [], searchInputs: [] },
-      finalPaths,
-    )
-    const allMatched = new Set([
-      ...intentAnalysis.matched.map((m) => m.intent),
-      ...finalAnalysis.matched.map((m) => m.intent),
-    ])
+    const finalApiIntents = new Set(matchIntentsFromApi(finalPaths).map((m) => m.intent))
     const remainingGaps = intentAnalysis.gaps
       .map((g) => g.intent)
-      .filter((intent) => !allMatched.has(intent))
+      .filter((intent) => !finalApiIntents.has(intent))
 
     intentCoverage = {
-      matched: [...allMatched],
+      matched: [...finalApiIntents],
       gaps: remainingGaps,
     }
-    log(`\nintent coverage: ${String(allMatched.size)} matched, ${String(remainingGaps.length)} gaps remaining`)
+    log(`\nintent coverage: ${String(finalApiIntents.size)} matched, ${String(remainingGaps.length)} gaps remaining`)
   }
 
   // Generate fixture package — use ~/.openweb/discovered/ to avoid overwriting existing fixtures

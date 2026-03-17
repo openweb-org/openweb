@@ -54,4 +54,15 @@ describe('detectHandoffNeeded', () => {
     const result = await detectHandoffNeeded(mockPage({ type: 'login_wall' }))
     expect(result?.action).toContain('openweb browser restart')
   })
+
+  it('does not flag /auth/callback as login wall', async () => {
+    const result = await detectHandoffNeeded(mockPage(null, 'https://example.com/auth/callback'))
+    expect(result).toBeNull()
+  })
+
+  it('does not flag password form on non-login URL', async () => {
+    // Password form on /settings/account (not a login URL) should not trigger
+    const result = await detectHandoffNeeded(mockPage(null, 'https://example.com/settings'))
+    expect(result).toBeNull()
+  })
 })

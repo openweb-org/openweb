@@ -50,20 +50,19 @@ export async function detectHandoffNeeded(page: Page): Promise<HumanHandoffNeede
       }
     }
 
-    // Login wall detection: form with password + submit
-    const forms = document.querySelectorAll('form')
-    for (const form of forms) {
-      const hasPassword = form.querySelector('input[type="password"]') !== null
-      const hasSubmit = form.querySelector('button[type="submit"], input[type="submit"], button:not([type])') !== null
-      if (hasPassword && hasSubmit) {
-        return { type: 'login_wall' as const }
-      }
-    }
-
-    // URL-based login wall detection
+    // Login wall detection: password form on a login-patterned URL.
+    // Require both signals to avoid flagging change-password or account settings pages.
     const path = window.location.pathname.toLowerCase()
-    if (/\/(login|signin|sign-in|auth|authenticate)\b/.test(path)) {
-      return { type: 'login_wall' as const }
+    const isLoginUrl = /\/(login|signin|sign-in)\b/.test(path) && !/\/(callback|verify|confirm|reset)\b/.test(path)
+    if (isLoginUrl) {
+      const forms = document.querySelectorAll('form')
+      for (const form of forms) {
+        const hasPassword = form.querySelector('input[type="password"]') !== null
+        const hasSubmit = form.querySelector('button[type="submit"], input[type="submit"], button:not([type])') !== null
+        if (hasPassword && hasSubmit) {
+          return { type: 'login_wall' as const }
+        }
+      }
     }
 
     return null

@@ -4,6 +4,11 @@ import type { IntentGap } from './intent.js'
 import { findNavElements, findSearchInputs, safeClick, safeType, waitForNetworkIdle } from './navigator.js'
 import type { PageSnapshot } from './page-snapshot.js'
 
+/** Escape a value for use inside a CSS attribute selector: a[href="<value>"] */
+function escapeCssAttrValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
 export interface ExplorationResult {
   /** Number of nav links clicked */
   readonly linksClicked: number
@@ -230,7 +235,7 @@ export async function exploreForIntents(
           continue
         }
 
-        const escapedHref = link.href.replace(/["\\]/g, '\\$&')
+        const escapedHref = escapeCssAttrValue(link.href)
         const selector = `a[href="${escapedHref}"]`
         const clicked = await safeClick(page, selector)
         if (!clicked) continue

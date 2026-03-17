@@ -109,9 +109,9 @@ export async function takePageSnapshot(page: Page): Promise<PageSnapshot> {
         if (seen.has(el)) continue
         seen.add(el)
         const placeholder = (el as HTMLInputElement).placeholder ?? ''
-        const id = el.id ? `#${el.id}` : ''
+        const id = el.id ? `#${CSS.escape(el.id)}` : ''
         const name = el.getAttribute('name')
-        const selector = id || (name ? `input[name="${name}"]` : sel)
+        const selector = id || (name ? `input[name="${CSS.escape(name)}"]` : sel)
         searchInputs.push({ placeholder, selector })
       }
     }
