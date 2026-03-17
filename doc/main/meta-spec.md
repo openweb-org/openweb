@@ -57,10 +57,9 @@ interface XOpenWebOperation {
     signature_id?: string
     tool_version?: number
     verified?: boolean
+    signals?: string[]
   }
-  signals?: string[]
   transport?: Transport             // Override server transport
-  request_encoding?: RequestEncoding
   csrf?: CsrfPrimitive             // Override server CSRF
   pagination?: PaginationPrimitive
   extraction?: ExtractionPrimitive
@@ -103,7 +102,7 @@ paths:
 | `page_global` | Window global expression | `expression`, `inject`, `values[]` |
 | `webpack_module_walk` | Webpack module cache walk | `chunk_global`, `module_test`, `call`, `inject` |
 | `exchange_chain` | Multi-step token exchange | `steps[]`, `inject` |
-| `fallback` | Try primary auth, fall back to secondary | `primary`, `secondary` |
+| `fallback` | Ordered auth strategy list (TS type only — not in JSON schema, no runtime resolver) | `strategies[]` |
 
 ### CSRF (3 types)
 
@@ -174,7 +173,7 @@ Composite schema (src/types/schema.ts)          ← server + operation + manifes
 
 ## Validation
 
-AJV validates two things:
+AJV validates two things. Spec validation runs automatically at load time (`loadOpenApi()`) so unsupported auth types and unknown fields are caught before reaching runtime.
 
 ### 1. x-openweb Spec Validation
 

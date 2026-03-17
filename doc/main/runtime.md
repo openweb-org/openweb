@@ -6,7 +6,7 @@
 ## Overview
 
 The runtime is the core of OpenWeb. Given a site name, operation ID, and parameters, it:
-1. Loads the OpenAPI spec
+1. Loads the OpenAPI spec and validates `x-openweb` extensions (AJV)
 2. Finds the operation
 3. Resolves the transport
 4. Dispatches to the correct executor
@@ -180,8 +180,9 @@ All transports (except page, which delegates to browser) follow redirects manual
 |------|---------|
 | Max redirects | Follow up to 5 redirects; fail if the 6th response is still a redirect |
 | SSRF per hop | Each redirect URL validated against SSRF blocklist |
-| Cross-origin | Strip `Authorization`, `Cookie`, `X-*` headers |
-| 303 See Other | Rewrite method to GET, drop request body |
+| Cross-origin | Strip `Authorization`, `Cookie`, `X-CSRF-*` headers |
+| 301 / 302 / 303 | Rewrite method to GET, drop request body (matches native `fetch` behavior) |
+| 307 / 308 | Preserve original method and body |
 | Missing `Location` | A 3xx without `Location` raises a retriable execution error |
 | `opaqueredirect` | Respected — stops redirect chain, returns as-is |
 

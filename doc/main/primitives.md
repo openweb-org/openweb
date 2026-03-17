@@ -57,7 +57,7 @@ Auth primitives extract credentials from the browser and inject them into reques
 | `page_global` | Evaluate JS expression on page (e.g., `window.ytcfg.get("ID_TOKEN")`) | `page.evaluate()` | Yes |
 | `webpack_module_walk` | Walk webpack chunk cache, find module, call function | `page.evaluate()` | Yes |
 | `exchange_chain` | Multi-step token exchange (call A → extract → call B → extract) | `fetch()` chain | Yes |
-| `fallback` | Try primary auth, fall back to secondary on failure | (delegates) | No |
+| `fallback` | Ordered auth strategy list (TS type only — not in JSON schema) | — | No |
 
 ### cookie_session
 

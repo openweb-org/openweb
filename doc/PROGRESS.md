@@ -1,3 +1,23 @@
+## 2026-03-17: M9 Codex review fixes — redirect hardening, load-time validation, schema cleanup
+
+**What changed:**
+- Redirect handling: 301/302 now rewrite POST→GET (matching native fetch); only 307/308 preserve method. Applied to both `fetchWithRedirects` and `fetchWithValidatedRedirects`.
+- Cross-origin header stripping added to direct-node redirect path (`fetchWithValidatedRedirects`).
+- `api_response` CSRF resolver routed through `fetchWithRedirects` (SSRF + CR-01 hardened).
+- Load-time x-openweb validation: `loadOpenApi()` now runs AJV against the spec before returning, catching unsupported auth types and unknown fields early.
+- `fallback` auth removed from JSON schema (kept as TS type only per D-6); `ExchangeCookieStep` schema fixed to allow `as` field.
+- `request_encoding` removed from types/schema (no runtime consumer yet).
+- Integration runner: pagination deps shape fixed; page verification uses parsed origin comparison.
+
+**Why:**
+- Codex review rounds 1+2 identified security gaps (SSRF bypass, header leaks) and schema/runtime drift
+
+**Key files:** `src/runtime/redirect.ts`, `src/runtime/executor.ts`, `src/runtime/primitives/api-response.ts`, `src/lib/openapi.ts`, `src/types/primitive-schemas.ts`, `src/types/extensions.ts`
+**Verification:** `pnpm build` + 260/260 tests pass; integration 9 pass, 6 skip, 1 fail (HN stale tab)
+**Commit:** 3af9a50, 89ecfa2
+**Next:** M9 expansion — add ~5 new sites using registry pattern
+**Blockers:** None
+
 ## 2026-03-17: M9 Scale-Ready Refactor — transport model, registry, session-executor slim
 
 **What changed:**
