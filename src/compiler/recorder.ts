@@ -140,17 +140,6 @@ export async function loadRecordedSamples(recordingDir: string): Promise<Recorde
     })
   }
 
-  if (samples.length === 0) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: 'No valid API samples found in recorded HAR.',
-      action: 'Ensure the script issues successful JSON API requests.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
-
   return samples
 }
 

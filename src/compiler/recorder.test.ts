@@ -45,7 +45,7 @@ describe('recorder helpers', () => {
     await expect(access(recordingDir)).rejects.toBeDefined()
   })
 
-  it('throws when HAR has no usable JSON API entries', async () => {
+  it('returns empty array when HAR has no usable JSON API entries', async () => {
     const recordingDir = await mkdtemp(path.join(os.tmpdir(), 'openweb-recorder-test-'))
 
     try {
@@ -72,11 +72,8 @@ describe('recorder helpers', () => {
 
       await writeFile(path.join(recordingDir, 'traffic.har'), `${JSON.stringify(har, null, 2)}\n`, 'utf8')
 
-      await expect(loadRecordedSamples(recordingDir)).rejects.toMatchObject({
-        payload: {
-          code: 'EXECUTION_FAILED',
-        },
-      })
+      const samples = await loadRecordedSamples(recordingDir)
+      expect(samples).toHaveLength(0)
     } finally {
       await rm(recordingDir, { recursive: true, force: true })
     }

@@ -110,6 +110,23 @@ describe('classify', () => {
     expect(result.auth).toBeUndefined()
   })
 
+  it('rejects cookie_session when only tracking cookies overlap', () => {
+    // Same tracking cookie in both HAR and snapshot — should NOT trigger cookie_session
+    const data: CaptureData = {
+      harEntries: [
+        makeHarEntry({ headers: [{ name: 'Cookie', value: '_ga=GA1.2.123; _fbp=fb.1.456' }] }),
+      ],
+      stateSnapshots: [makeSnapshot([
+        { name: '_ga', value: 'GA1.2.123' },
+        { name: '_fbp', value: 'fb.1.456' },
+      ])],
+    }
+
+    const result = classify(data)
+    expect(result.transport).toBe('node')
+    expect(result.auth).toBeUndefined()
+  })
+
   it('returns node when no state snapshots', () => {
     const data: CaptureData = {
       harEntries: [makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] })],

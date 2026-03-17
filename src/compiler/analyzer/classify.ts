@@ -26,9 +26,23 @@ export interface CaptureData {
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
+/** Cookie name prefixes/patterns that indicate tracking/analytics, not auth. */
+const TRACKING_COOKIE_PREFIXES = [
+  '_ga', '_gid', '_gat', '_gcl', '_fbp', '_fbc', 'fbm_', 'fbsr_',
+  'analytics', 'consent', '_hjid', '_hjSession', 'mp_', 'ajs_',
+  '__utm', '_pk_', 'hubspot', '_clck', '_clsk', 'OptanonConsent',
+  'CookieConsent', 'eupubconsent', '__cfduid',
+]
+
+function isTrackingCookie(name: string): boolean {
+  const lower = name.toLowerCase()
+  return TRACKING_COOKIE_PREFIXES.some((prefix) => lower.startsWith(prefix.toLowerCase()))
+}
+
 /**
  * Detect cookie_session: all API requests carry Cookie headers,
- * and at least one snapshot cookie name appears in the request Cookie headers.
+ * and at least one non-tracking snapshot cookie name appears in the request
+ * Cookie headers.
  */
 function detectCookieSession(data: CaptureData): boolean {
   if (data.harEntries.length === 0 || data.stateSnapshots.length === 0) {
@@ -38,20 +52,23 @@ function detectCookieSession(data: CaptureData): boolean {
   const snapshotCookieNames = new Set<string>()
   for (const snapshot of data.stateSnapshots) {
     for (const cookie of snapshot.cookies) {
-      snapshotCookieNames.add(cookie.name)
+      if (!isTrackingCookie(cookie.name)) {
+        snapshotCookieNames.add(cookie.name)
+      }
     }
   }
 
   if (snapshotCookieNames.size === 0) return false
 
-  // Check: do all HAR entries have Cookie headers with at least one snapshot cookie name?
+  // Check: do all HAR entries have Cookie headers with at least one non-tracking snapshot cookie?
   for (const entry of data.harEntries) {
     const cookieHeader = entry.request.headers.find((h) => h.name.toLowerCase() === 'cookie')
     if (!cookieHeader) return false
 
-    // Parse cookie header into names and check overlap with snapshot cookies
     const requestCookieNames = cookieHeader.value.split(';').map((c) => c.trim().split('=')[0]!)
-    const hasOverlap = requestCookieNames.some((name) => snapshotCookieNames.has(name))
+    const hasOverlap = requestCookieNames.some(
+      (name) => snapshotCookieNames.has(name) && !isTrackingCookie(name),
+    )
     if (!hasOverlap) return false
   }
 

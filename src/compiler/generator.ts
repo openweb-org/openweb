@@ -38,13 +38,14 @@ function hash16(value: string): string {
   return createHash('sha256').update(value).digest('hex').slice(0, 16)
 }
 
-function choosePrimaryServerHost(operations: AnalyzedOperation[]): string {
+function choosePrimaryServerHost(operations: AnalyzedOperation[], fallbackUrl?: string): string {
   const counts = new Map<string, number>()
   for (const operation of operations) {
     counts.set(operation.host, (counts.get(operation.host) ?? 0) + 1)
   }
 
-  let winnerHost = operations[0]?.host ?? 'api.example.com'
+  const fallbackHost = fallbackUrl ? new URL(fallbackUrl).hostname : 'api.example.com'
+  let winnerHost = operations[0]?.host ?? fallbackHost
   let winnerCount = -1
 
   for (const [host, count] of counts.entries()) {
@@ -147,7 +148,7 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
   await mkdir(testsDir, { recursive: true })
 
   const generatedAt = nowIso()
-  const primaryHost = choosePrimaryServerHost(input.operations)
+  const primaryHost = choosePrimaryServerHost(input.operations, input.sourceUrl)
 
   const transport = input.classify?.transport ?? 'node'
   const requiresAuth = !!(input.classify?.auth || input.classify?.csrf || input.classify?.signing)

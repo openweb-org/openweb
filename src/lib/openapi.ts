@@ -406,12 +406,17 @@ export function getResponseSchema(operation: OpenApiOperation): JsonSchema | und
   const responses = operation.responses
   if (!responses) return undefined
 
-  // Check specific status codes in priority order, then 2XX wildcard
-  for (const code of ['200', '201', '202', '204', '2XX']) {
-    const schema = responses[code]?.content?.['application/json']?.schema
-    if (schema) return schema
+  // Prefer 200, then any 2xx status code, then 2XX wildcard
+  if (responses['200']?.content?.['application/json']?.schema) {
+    return responses['200'].content['application/json'].schema
   }
-  return undefined
+  for (const code of Object.keys(responses)) {
+    if (/^2\d{2}$/.test(code)) {
+      const schema = responses[code]?.content?.['application/json']?.schema
+      if (schema) return schema
+    }
+  }
+  return responses['2XX']?.content?.['application/json']?.schema
 }
 
 export function getRequestBodySchema(operation: OpenApiOperation): JsonSchema | undefined {
