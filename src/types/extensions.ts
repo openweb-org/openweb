@@ -24,8 +24,6 @@ export interface XOpenWebServer {
   readonly signing?: SigningPrimitive
 }
 
-export type RequestEncoding = 'json' | 'form'
-
 export interface XOpenWebBuildMeta {
   readonly stable_id?: string
   readonly signature_id?: string
@@ -38,7 +36,6 @@ export interface XOpenWebBuildMeta {
 export interface XOpenWebOperation {
   readonly risk_tier?: RiskTier
   readonly build?: XOpenWebBuildMeta
-  readonly request_encoding?: RequestEncoding
   readonly transport?: Transport
   readonly csrf?: CsrfPrimitive & { readonly scope?: readonly string[] }
   readonly pagination?: PaginationPrimitive

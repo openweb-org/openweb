@@ -1,4 +1,6 @@
 import { OpenWebError, getHttpFailure } from '../../lib/errors.js'
+import { validateSSRF } from '../../lib/ssrf.js'
+import { fetchWithRedirects } from '../redirect.js'
 import type { BrowserHandle, ResolvedInjections } from './types.js'
 
 export interface ApiResponseConfig {
@@ -14,6 +16,7 @@ export interface ApiResponseConfig {
 
 export interface ApiResponseDeps {
   readonly fetchImpl?: typeof fetch
+  readonly ssrfValidator?: (url: string) => Promise<void>
   readonly authHeaders?: Readonly<Record<string, string>>
   readonly cookieString?: string
 }
@@ -29,6 +32,7 @@ export async function resolveApiResponse(
   deps: ApiResponseDeps = {},
 ): Promise<ResolvedInjections> {
   const fetchImpl = deps.fetchImpl ?? fetch
+  const ssrfValidator = deps.ssrfValidator ?? validateSSRF
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
@@ -50,11 +54,13 @@ export async function resolveApiResponse(
     }
   }
 
-  const response = await fetchImpl(config.endpoint, {
-    method: config.method ?? 'GET',
+  const response = await fetchWithRedirects(
+    config.endpoint,
+    config.method ?? 'GET',
     headers,
-    redirect: 'follow',
-  })
+    undefined,
+    { fetchImpl, ssrfValidator },
+  )
 
   if (!response.ok) {
     const httpFailure = getHttpFailure(response.status)
@@ -109,6 +115,7 @@ import { registerResolver } from './registry.js'
 registerResolver('api_response', async (ctx, config) =>
   resolveApiResponse(ctx.handle, config as unknown as Parameters<typeof resolveApiResponse>[1], ctx.serverUrl, {
     fetchImpl: ctx.deps?.fetchImpl,
+    ssrfValidator: ctx.deps?.ssrfValidator,
     authHeaders: ctx.deps?.authHeaders as Record<string, string> | undefined,
     cookieString: ctx.deps?.cookieString,
   }))

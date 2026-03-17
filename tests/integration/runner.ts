@@ -7,6 +7,7 @@
 import { chromium } from 'playwright'
 
 import { executeOperation } from '../../src/runtime/executor.js'
+import { executePaginated } from '../../src/runtime/paginator.js'
 import { OpenWebError } from '../../src/lib/errors.js'
 import { sites, type SiteIntegrationTest } from './sites.config.js'
 
@@ -31,9 +32,30 @@ async function checkCdpAvailable(): Promise<boolean> {
 
 function isAuthDrift(error: unknown): boolean {
   if (error instanceof OpenWebError) {
-    const fc = error.payload.failureClass
-    return fc === 'needs_login' || fc === 'needs_page'
+    return error.payload.failureClass === 'needs_login'
   }
+  return false
+}
+
+function isPageMissing(error: unknown): boolean {
+  if (error instanceof OpenWebError) {
+    return error.payload.failureClass === 'needs_page'
+  }
+  return false
+}
+
+/** Check if any open tab matches the expected page_url origin */
+async function hasMatchingPage(browser: import('playwright').Browser, pageUrl: string): Promise<boolean> {
+  try {
+    const origin = new URL(pageUrl).origin
+    const context = browser.contexts()[0]
+    if (!context) return false
+    for (const page of context.pages()) {
+      try {
+        if (page.url().startsWith(origin)) return true
+      } catch { /* skip */ }
+    }
+  } catch { /* skip */ }
   return false
 }
 
@@ -59,8 +81,43 @@ async function runSmoke(
       const msg = error instanceof Error ? error.message : String(error)
       return { site: config.site, operation: config.smoke.operation, status: 'SKIP', detail: `auth expired: ${msg}` }
     }
+    if (isPageMissing(error)) {
+      // Verify whether the page is genuinely not open (SKIP) or if page matching is broken (FAIL)
+      const tabOpen = await hasMatchingPage(browser, config.page_url)
+      if (!tabOpen) {
+        return { site: config.site, operation: config.smoke.operation, status: 'SKIP', detail: `no tab open for ${config.page_url}` }
+      }
+      // Tab is open but page matcher didn't find it — this is a real regression
+      const msg = error instanceof Error ? error.message : String(error)
+      return { site: config.site, operation: config.smoke.operation, status: 'FAIL', detail: `page_url matched but needs_page: ${msg}` }
+    }
     const msg = error instanceof Error ? error.message : String(error)
     return { site: config.site, operation: config.smoke.operation, status: 'FAIL', detail: msg }
+  }
+}
+
+async function runPagination(
+  config: SiteIntegrationTest,
+  browser: import('playwright').Browser,
+): Promise<TestResult | undefined> {
+  if (!config.pagination) return undefined
+  try {
+    const result = await executePaginated(
+      config.site,
+      config.pagination.operation,
+      config.pagination.params,
+      { maxPages: 2, cdpEndpoint: CDP_ENDPOINT, browser },
+    )
+    if (result.pages > 1) {
+      return { site: config.site, operation: `${config.pagination.operation} (paginated)`, status: 'PASS', detail: `${result.pages} pages` }
+    }
+    return { site: config.site, operation: `${config.pagination.operation} (paginated)`, status: 'PASS', detail: '1 page (may be end of data)' }
+  } catch (error) {
+    if (isAuthDrift(error) || isPageMissing(error)) {
+      return { site: config.site, operation: `${config.pagination.operation} (paginated)`, status: 'SKIP', detail: 'auth/page' }
+    }
+    const msg = error instanceof Error ? error.message : String(error)
+    return { site: config.site, operation: `${config.pagination.operation} (paginated)`, status: 'FAIL', detail: msg }
   }
 }
 
@@ -83,6 +140,16 @@ async function main(): Promise<void> {
 
     const icon = result.status === 'PASS' ? '✓' : result.status === 'SKIP' ? '○' : '✗'
     console.log(`${icon} ${config.site}/${result.operation}: ${result.status}${result.detail ? ` (${result.detail})` : ''}`)
+
+    // Run pagination test if smoke passed and config has pagination
+    if (result.status === 'PASS' && config.pagination) {
+      const pagResult = await runPagination(config, browser)
+      if (pagResult) {
+        results.push(pagResult)
+        const pagIcon = pagResult.status === 'PASS' ? '✓' : pagResult.status === 'SKIP' ? '○' : '✗'
+        console.log(`${pagIcon} ${config.site}/${pagResult.operation}: ${pagResult.status}${pagResult.detail ? ` (${pagResult.detail})` : ''}`)
+      }
+    }
   }
 
   await browser.close()

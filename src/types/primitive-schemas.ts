@@ -119,15 +119,6 @@ export const authPrimitiveSchema = {
       },
       additionalProperties: false,
     },
-    {
-      type: 'object',
-      required: ['type', 'strategies'],
-      properties: {
-        type: { const: 'fallback' },
-        strategies: { type: 'array', items: { $ref: '#' }, minItems: 1 },
-      },
-      additionalProperties: false,
-    },
   ],
 } as const
 

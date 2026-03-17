@@ -42,10 +42,6 @@ export const xOpenWebServerSchema = {
   additionalProperties: false,
 } as const
 
-const requestEncodingSchema = {
-  enum: ['json', 'form'],
-} as const
-
 const buildMetaSchema = {
   type: 'object',
   properties: {
@@ -65,7 +61,6 @@ export const xOpenWebOperationSchema = {
   properties: {
     risk_tier: riskTierSchema,
     build: buildMetaSchema,
-    request_encoding: requestEncodingSchema,
     transport: transportSchema,
     csrf: csrfWithScopeSchema,
     pagination: paginationPrimitiveSchema,

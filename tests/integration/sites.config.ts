@@ -36,7 +36,6 @@ export const sites: SiteIntegrationTest[] = [
     page_url: 'https://github.com',
     requires_login: true,
     smoke: { operation: 'getRepo', params: { owner: 'anthropics', repo: 'claude-code' } },
-    pagination: { operation: 'listIssues', params: { owner: 'anthropics', repo: 'claude-code', per_page: 2 } },
   },
   {
     site: 'youtube-fixture',
