@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
-import { executeOperation } from './executor.js'
+import { executeOperation } from '../../src/runtime/executor.js'
 
 const TOKEN_CACHE_DIR = mkdtempSync(join(tmpdir(), 'openweb-test-tokens-'))
 

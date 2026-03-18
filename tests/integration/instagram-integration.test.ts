@@ -3,8 +3,8 @@ import { mkdtempSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
-import { executeOperation } from './executor.js'
-import type { PermissionsConfig } from '../lib/permissions.js'
+import { executeOperation } from '../../src/runtime/executor.js'
+import type { PermissionsConfig } from '../../src/lib/permissions.js'
 
 const ALL_ALLOW: PermissionsConfig = {
   defaults: { read: 'allow', write: 'allow', delete: 'allow', transact: 'allow' },

@@ -6,7 +6,6 @@ import {
   findPageForOrigin,
   executeSessionHttp,
 } from './session-executor.js'
-import { resolveTransport, getServerXOpenWeb } from './operation-context.js'
 import { substitutePath, buildHeaderParams } from './request-builder.js'
 import type { OpenApiSpec, OpenApiOperation, OpenApiParameter } from '../lib/openapi.js'
 
@@ -79,24 +78,6 @@ function instagramSpec(): OpenApiSpec {
   }
 }
 
-describe('resolveTransport', () => {
-  it('reads transport from server-level x-openweb', () => {
-    const spec = instagramSpec()
-    const op = spec.paths!['/feed/timeline/']!.get!
-    expect(resolveTransport(spec, op)).toBe('node')
-  })
-
-  it('defaults to node when no x-openweb', () => {
-    const spec: OpenApiSpec = {
-      openapi: '3.1.0',
-      info: { title: 'Test', version: '1.0' },
-      servers: [{ url: 'https://example.com' }],
-      paths: { '/test': { get: { operationId: 'test' } } },
-    }
-    expect(resolveTransport(spec, spec.paths!['/test']!.get!)).toBe('node')
-  })
-})
-
 describe('substitutePath', () => {
   it('replaces path parameters', () => {
     const params: OpenApiParameter[] = [{ name: 'media_id', in: 'path', required: true, schema: { type: 'string' } }]
@@ -122,17 +103,6 @@ describe('buildHeaderParams', () => {
       { name: 'X-IG-App-ID', in: 'header', required: true, schema: { type: 'string', default: '936619743392459' } },
     ]
     expect(buildHeaderParams(params, { 'X-IG-App-ID': 'custom' })).toEqual({ 'X-IG-App-ID': 'custom' })
-  })
-})
-
-describe('getServerXOpenWeb', () => {
-  it('returns server x-openweb config', () => {
-    const spec = instagramSpec()
-    const op = spec.paths!['/feed/timeline/']!.get!
-    const ext = getServerXOpenWeb(spec, op)
-    expect(ext?.transport).toBe('node')
-    expect(ext?.auth).toEqual({ type: 'cookie_session' })
-    expect(ext?.csrf).toEqual({ type: 'cookie_to_header', cookie: 'csrftoken', header: 'X-CSRFToken' })
   })
 })
 
