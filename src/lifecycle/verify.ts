@@ -99,7 +99,7 @@ export async function verifySite(
   // Batch-record failures to knowledge base (single write, no race)
   const failedOps = operations.filter((op) => op.status !== 'PASS')
   if (failedOps.length > 0) {
-    recordFailures(failedOps.map((op) => ({
+    await recordFailures(failedOps.map((op) => ({
       site,
       operationId: op.operationId,
       failureClass: op.driftType ?? 'unknown',

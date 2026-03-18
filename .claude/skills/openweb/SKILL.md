@@ -339,7 +339,7 @@ Set concrete discovery goals based on that. Examples:
 These are YOUR goals, not a rigid checklist. Every site is different.
 
 **Step 1 — Record + Browse**
-1. `openweb capture start`          # start recording FIRST
+1. `openweb capture start --cdp-endpoint http://localhost:9222`  # start recording FIRST
 2. `playwright-cli goto <url>`      # then navigate (traffic is being recorded)
 3. `playwright-cli snapshot`        # see page structure
 4. Browse systematically based on your goals:
@@ -352,7 +352,7 @@ These are YOUR goals, not a rigid checklist. Every site is different.
 5. `openweb capture stop`           # stop recording
 
 **Step 2 — Compile + Review**
-1. `openweb compile ./capture --url <site-url>`
+1. `openweb compile <site-url>`
 2. Read openapi.yaml — are the important APIs captured?
 3. Remove noise (analytics, tracking, irrelevant endpoints)
 4. Missing key APIs → repeat Step 1 with more targeted browsing

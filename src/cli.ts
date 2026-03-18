@@ -188,8 +188,14 @@ await yargs(argv)
         .positional('site', { type: 'string', describe: 'Site to verify (omit with --all for all sites)' })
         .option('all', { type: 'boolean', default: false, describe: 'Verify all sites' })
         .option('report', {
-          describe: 'Output drift report (json or markdown)',
+          describe: 'Output drift report (json or markdown). Only valid with --all.',
           coerce: (val: string | boolean) => val === true ? 'json' : val,
+        })
+        .check((argv) => {
+          if (argv.report && !argv.all) {
+            throw new Error('--report requires --all')
+          }
+          return true
         }),
     async (args) => {
       await withErrorHandling(async () => {
