@@ -3,8 +3,8 @@ import path from 'node:path'
 import { readFile, writeFile, readdir, mkdir, cp, rm, realpath } from 'node:fs/promises'
 import { realpathSync } from 'node:fs'
 
-import type { Manifest } from '../types/manifest.js'
 import { resolveSiteRoot } from '../lib/openapi.js'
+import { loadManifest } from '../lib/manifest.js'
 
 const REGISTRY_ROOT = path.join(os.homedir(), '.openweb', 'registry')
 const MAX_VERSIONS = 5
@@ -67,15 +67,6 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
-async function loadManifestFrom(dir: string): Promise<Manifest | undefined> {
-  try {
-    const raw = await readFile(path.join(dir, 'manifest.json'), 'utf8')
-    return JSON.parse(raw) as Manifest
-  } catch {
-    return undefined
-  }
-}
-
 async function mkdirSecure(dir: string): Promise<void> {
   await mkdir(dir, { recursive: true, mode: 0o700 })
 }
@@ -126,7 +117,7 @@ export async function setCurrentVersion(site: string, version: string): Promise<
  */
 export async function archiveSite(site: string, siteRoot?: string): Promise<string> {
   const source = siteRoot ?? (await resolveSiteRoot(site, { skipRegistry: true }))
-  const manifest = await loadManifestFrom(source)
+  const manifest = await loadManifest(source)
   const version = manifest?.version ?? '1.0.0'
   validatePathComponent(version, 'version')
 
@@ -154,38 +145,6 @@ export function bumpMinor(version: string): string {
   const major = parts[0] ?? '1'
   const minor = Number(parts[1] ?? '0') + 1
   return `${major}.${minor}.0`
-}
-
-/**
- * Archive with a version bump (for drift scenarios).
- * Bumps minor version, copies to registry, then updates the registry copy's manifest.
- * Idempotent: won't bump if the same version already exists in registry.
- */
-async function archiveWithBump(site: string, siteRoot?: string): Promise<string> {
-  const source = siteRoot ?? (await resolveSiteRoot(site, { skipRegistry: true }))
-  const manifest = await loadManifestFrom(source)
-  if (!manifest) return archiveSite(site, source)
-
-  const newVersion = bumpMinor(manifest.version)
-  validatePathComponent(newVersion, 'version')
-
-  // Idempotent: if this version already exists, skip
-  const existing = await listVersions(site)
-  if (existing.includes(newVersion)) return newVersion
-
-  // Copy to registry first, then update the copy's manifest (not source)
-  const dest = registryVersionPath(site, newVersion)
-  await mkdirSecure(dest)
-  await cp(source, dest, { recursive: true, force: true })
-
-  // Update manifest in the registry copy only
-  const updated = { ...manifest, version: newVersion }
-  await writeFileSecure(path.join(dest, 'manifest.json'), `${JSON.stringify(updated, null, 2)}\n`)
-
-  await setCurrentVersion(site, newVersion)
-  await pruneSite(site, MAX_VERSIONS)
-
-  return newVersion
 }
 
 /**
@@ -241,19 +200,6 @@ export async function listRegisteredSites(): Promise<Array<{ site: string; versi
   }
 
   return results.sort((a, b) => a.site.localeCompare(b.site))
-}
-
-/**
- * Get the path to the current active version of a registered site.
- * Returns undefined if the site is not in the registry.
- */
-async function getRegistryCurrentPath(site: string): Promise<string | undefined> {
-  if (!SAFE_NAME.test(site)) return undefined
-  const current = await getCurrentVersion(site)
-  if (!current) return undefined
-  const versionPath = registryVersionPath(site, current)
-  if (!(await pathExists(path.join(versionPath, 'openapi.yaml')))) return undefined
-  return versionPath
 }
 
 // ── Semver comparison ──────────────────────────────

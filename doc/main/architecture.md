@@ -153,10 +153,6 @@ openweb verify --all --report                  # verify with drift report
 openweb registry list                          # list registered site versions
 openweb registry install <site>                # archive fixture to registry
 openweb registry rollback <site>               # revert to previous version
-openweb knowledge patterns                     # list known auth/extraction patterns
-openweb knowledge failures                     # list recorded verify failures
-openweb knowledge heuristics                   # show probe success rates
-openweb knowledge add-pattern --category auth --signal '...' --action '...' --source '...'
 ```
 
 ---
