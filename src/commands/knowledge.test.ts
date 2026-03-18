@@ -93,7 +93,7 @@ describe('knowledge commands', () => {
       let callCount = 0
       vi.mocked(readFile).mockImplementation(async () => {
         callCount++
-        if (callCount === 1) throw new Error('ENOENT')
+        if (callCount === 1) throw Object.assign(new Error('ENOENT: no such file'), { code: 'ENOENT' })
         // After seeding, return the seeded patterns
         const seeded = SEED_PATTERNS.map((sp, i) => ({
           id: `pat-seed-${i}`,
@@ -211,6 +211,46 @@ describe('knowledge commands', () => {
       expect(stderrOutput).toContain('Invalid category')
       expect(stderrOutput).toContain('invalid')
       exitSpy.mockRestore()
+    })
+
+    it('seeds before adding on fresh machine', async () => {
+      // First readFile call (seedIfEmpty → loadPatterns) returns ENOENT → triggers seed
+      // Second readFile call (addPattern → loadPatterns) returns the seeded patterns
+      let callCount = 0
+      vi.mocked(readFile).mockImplementation(async () => {
+        callCount++
+        if (callCount === 1) throw Object.assign(new Error('ENOENT: no such file'), { code: 'ENOENT' })
+        // After seeding, return the seeded patterns
+        const seeded = SEED_PATTERNS.map((sp, i) => ({
+          id: `pat-seed-${i}`,
+          category: sp.category,
+          signal: sp.signal,
+          action: sp.action,
+          source: sp.source,
+          addedAt: '2025-01-01T00:00:00Z',
+        }))
+        return JSON.stringify(seeded)
+      })
+
+      await knowledgeAddPatternCommand({
+        category: 'auth',
+        signal: 'new signal',
+        action: 'new action',
+        source: 'test',
+      })
+
+      // writeFile called twice: once for seed, once for addPattern
+      expect(writeFile).toHaveBeenCalledTimes(2)
+      // First write: seed patterns (25 entries)
+      const seedWrite = vi.mocked(writeFile).mock.calls[0]![1] as string
+      const seedPatterns = JSON.parse(seedWrite.trim())
+      expect(seedPatterns).toHaveLength(SEED_PATTERNS.length)
+      // Second write: seeded + new pattern (26 entries)
+      const addWrite = vi.mocked(writeFile).mock.calls[1]![1] as string
+      const allPatterns = JSON.parse(addWrite.trim())
+      expect(allPatterns).toHaveLength(SEED_PATTERNS.length + 1)
+      expect(output).toContain('Added pattern')
+      expect(output).toContain('new signal')
     })
   })
 })

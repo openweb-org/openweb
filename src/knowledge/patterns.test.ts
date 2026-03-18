@@ -21,9 +21,15 @@ describe('patterns knowledge base', () => {
   })
 
   it('loadPatterns returns empty array when file does not exist', async () => {
-    vi.mocked(readFile).mockRejectedValue(new Error('ENOENT'))
+    const enoent = Object.assign(new Error('ENOENT: no such file'), { code: 'ENOENT' })
+    vi.mocked(readFile).mockRejectedValue(enoent)
     const result = await loadPatterns()
     expect(result).toEqual([])
+  })
+
+  it('loadPatterns rethrows non-ENOENT errors', async () => {
+    vi.mocked(readFile).mockRejectedValue(new SyntaxError('Unexpected token'))
+    await expect(loadPatterns()).rejects.toThrow('Unexpected token')
   })
 
   it('loadPatterns parses JSON file', async () => {

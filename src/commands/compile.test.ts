@@ -1,7 +1,21 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { compileCommand, generateReviewHints, formatSummary } from './compile.js'
+import { compileCommand, generateReviewHints, formatSummary, compileSite } from './compile.js'
 import type { CompileSummary } from './compile.js'
+
+vi.mock('../compiler/recorder.js', () => ({
+  runScriptedRecording: vi.fn(),
+  loadRecordedSamples: vi.fn(),
+  loadCaptureData: vi.fn(),
+  cleanupRecordingDir: vi.fn(),
+}))
+
+vi.mock('../compiler/generator.js', () => ({
+  generatePackage: vi.fn(),
+}))
+
+const { runScriptedRecording, loadRecordedSamples, loadCaptureData, cleanupRecordingDir } = await import('../compiler/recorder.js')
+const { generatePackage } = await import('../compiler/generator.js')
 
 describe('compileCommand', () => {
   it('rejects interactive mode in MVP scaffold', async () => {
@@ -15,6 +29,69 @@ describe('compileCommand', () => {
         code: 'EXECUTION_FAILED',
       },
     })
+  })
+})
+
+describe('compileSite integration — summary population', () => {
+  it('populates summary with correct counts from pipeline', async () => {
+    const getSample = (path: string, method = 'GET') => ({
+      method,
+      host: 'api.example.com',
+      path,
+      url: `https://api.example.com${path}?q=test`,
+      query: { q: ['test'] },
+      status: 200,
+      contentType: 'application/json',
+      responseJson: { ok: true },
+    })
+
+    // 8 total samples: 5 GET on api.example.com, 1 POST with body, 2 noise on tracking.example.com
+    const allSamples = [
+      getSample('/api/users'),
+      getSample('/api/users'),
+      getSample('/api/posts'),
+      getSample('/api/posts'),
+      getSample('/api/posts'),
+      { ...getSample('/api/create', 'POST'), requestBody: '{"name":"test"}' },
+      { ...getSample('/track/event'), host: 'analytics.trackingco.net', url: 'https://analytics.trackingco.net/track/event' },
+      { ...getSample('/track/pixel'), host: 'analytics.trackingco.net', url: 'https://analytics.trackingco.net/track/pixel' },
+    ]
+
+    vi.mocked(runScriptedRecording).mockResolvedValue('/tmp/fake-recording')
+    vi.mocked(loadRecordedSamples).mockResolvedValue(allSamples)
+    vi.mocked(loadCaptureData).mockResolvedValue({
+      harEntries: [],
+      stateSnapshots: [],
+      domHtml: undefined,
+    })
+    vi.mocked(cleanupRecordingDir).mockResolvedValue(undefined)
+    vi.mocked(generatePackage).mockResolvedValue('/tmp/sites/example-fixture')
+
+    const result = await compileSite(
+      { url: 'https://api.example.com' },
+      { verifyReplay: false, emitSummary: false },
+    )
+
+    expect(result.summary).toBeDefined()
+    const summary = result.summary!
+
+    // totalSamples = all 8 raw samples
+    expect(summary.totalSamples).toBe(8)
+    // filterSamples removes tracking.example.com (different host from target URL domain)
+    expect(summary.filteredSamples).toBeLessThan(summary.totalSamples)
+    expect(summary.rejectedSamples).toBe(summary.totalSamples - summary.filteredSamples)
+    // POST with body → skipped mutation
+    expect(summary.skippedMutations).toBe(1)
+    // GET clusters produce operations (2 paths: /api/users, /api/posts)
+    expect(summary.operations).toBeGreaterThanOrEqual(2)
+    // verifyReplay: false → verifiedCount = 0
+    expect(summary.verifiedCount).toBe(0)
+    // No classify data → no auth primitive
+    expect(summary.primitives.auth).toBeUndefined()
+    // reviewHints should include "no auth" and "no operations verified"
+    expect(summary.reviewHints.some((h) => h.includes('No auth primitive'))).toBe(true)
+    expect(summary.reviewHints.some((h) => h.includes('No operations verified'))).toBe(true)
+    expect(summary.reviewHints.some((h) => h.includes('mutation'))).toBe(true)
   })
 })
 

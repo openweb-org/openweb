@@ -24,8 +24,9 @@ export async function loadPatterns(): Promise<PatternEntry[]> {
   try {
     const raw = await readFile(PATTERNS_FILE, 'utf8')
     return JSON.parse(raw) as PatternEntry[]
-  } catch {
-    return []
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+    throw error
   }
 }
 

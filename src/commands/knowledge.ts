@@ -120,6 +120,8 @@ export async function knowledgeAddPatternCommand(opts: {
     process.exit(1)
   }
 
+  await seedIfEmpty()
+
   const entry = await addPattern({
     category: opts.category as PatternCategory,
     signal: opts.signal,
