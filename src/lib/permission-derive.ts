@@ -1,6 +1,6 @@
 /**
  * Shared permission derivation from HTTP method + API path.
- * Used by both the compiler (generator) and the lifecycle (heal) modules.
+ * Used by the compiler (generator) module.
  */
 
 const TRANSACT_PATTERNS = /\/(checkout|purchase|payment|order|subscribe)\b/i
