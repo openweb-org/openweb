@@ -77,7 +77,7 @@ export function sortBySuccessRate(stats: ProbeHeuristic[]): ProbeHeuristic[] {
   })
 }
 
-function decayedScore(stat: ProbeHeuristic): number {
+export function decayedScore(stat: ProbeHeuristic): number {
   const ageMs = Date.now() - new Date(stat.lastUpdated).getTime()
   const ageDays = ageMs / (1000 * 60 * 60 * 24)
   if (ageDays <= STALENESS_DAYS) return stat.successRate
