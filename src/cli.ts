@@ -13,7 +13,6 @@ import { showCommand } from './commands/show.js'
 import { sitesCommand } from './commands/sites.js'
 import { testCommand } from './commands/test.js'
 import { browserStartCommand, browserStopCommand, browserRestartCommand, browserStatusCommand, loginCommand } from './commands/browser.js'
-import { knowledgePatternsCommand, knowledgeFailuresCommand, knowledgeHeuristicsCommand, knowledgeAddPatternCommand } from './commands/knowledge.js'
 import { OpenWebError, toOpenWebError, writeErrorToStderr } from './lib/errors.js'
 
 async function withErrorHandling(fn: () => Promise<void>): Promise<void> {
@@ -29,7 +28,7 @@ async function withErrorHandling(fn: () => Promise<void>): Promise<void> {
 const argv = hideBin(process.argv)
 const firstArg = argv[0] ?? ''
 
-const passthroughTopLevel = new Set(['sites', 'compile', 'capture', 'verify', 'registry', 'browser', 'login', 'knowledge', '--help', '-h', '--version', '-v'])
+const passthroughTopLevel = new Set(['sites', 'compile', 'capture', 'verify', 'registry', 'browser', 'login', '--help', '-h', '--version', '-v'])
 
 if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
   const [site, second, third, fourth] = argv
@@ -263,78 +262,6 @@ await yargs(argv)
         await loginCommand(String(args.site))
       })
     },
-  )
-  .command(
-    'knowledge',
-    'Query and manage the knowledge base',
-    (cmd) =>
-      cmd
-        .command(
-          'patterns',
-          'List known patterns',
-          (sub) =>
-            sub
-              .option('category', { type: 'string', describe: 'Filter by category (auth, api, pagination, extraction, discovery)' })
-              .option('signal', { type: 'string', describe: 'Filter by signal substring' }),
-          async (args) => {
-            await withErrorHandling(async () => {
-              await knowledgePatternsCommand({
-                category: args.category ? String(args.category) : undefined,
-                signal: args.signal ? String(args.signal) : undefined,
-              })
-            })
-          },
-        )
-        .command(
-          'failures',
-          'List recorded failures',
-          (sub) =>
-            sub
-              .option('site', { type: 'string', describe: 'Filter by site name' })
-              .option('class', { type: 'string', describe: 'Filter by failure class' }),
-          async (args) => {
-            await withErrorHandling(async () => {
-              await knowledgeFailuresCommand({
-                site: args.site ? String(args.site) : undefined,
-                class: args['class'] ? String(args['class']) : undefined,
-              })
-            })
-          },
-        )
-        .command(
-          'heuristics',
-          'List probe heuristics with decayed scores',
-          (sub) =>
-            sub.option('signal', { type: 'string', describe: 'Filter by signal type' }),
-          async (args) => {
-            await withErrorHandling(async () => {
-              await knowledgeHeuristicsCommand({
-                signal: args.signal ? String(args.signal) : undefined,
-              })
-            })
-          },
-        )
-        .command(
-          'add-pattern',
-          'Add a new pattern to the knowledge base',
-          (sub) =>
-            sub
-              .option('category', { type: 'string', demandOption: true, choices: ['auth', 'api', 'pagination', 'extraction', 'discovery'] as const, describe: 'Pattern category' })
-              .option('signal', { type: 'string', demandOption: true, describe: 'Signal to match' })
-              .option('action', { type: 'string', demandOption: true, describe: 'Action to take' })
-              .option('source', { type: 'string', demandOption: true, describe: 'Source reference' }),
-          async (args) => {
-            await withErrorHandling(async () => {
-              await knowledgeAddPatternCommand({
-                category: String(args.category),
-                signal: String(args.signal),
-                action: String(args.action),
-                source: String(args.source),
-              })
-            })
-          },
-        )
-        .demandCommand(1),
   )
   .demandCommand(1)
   .help()

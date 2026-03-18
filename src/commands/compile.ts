@@ -31,29 +31,11 @@ interface CompileSiteOptions {
   readonly emitSummary?: boolean
 }
 
-export interface CompileSummary {
-  readonly site: string
-  readonly totalSamples: number
-  readonly filteredSamples: number
-  readonly rejectedSamples: number
-  readonly operations: number
-  readonly skippedMutations: number
-  readonly verifiedCount: number
-  readonly primitives: {
-    readonly auth?: string
-    readonly csrf?: string
-    readonly signing?: string
-    readonly extractions?: number
-  }
-  readonly reviewHints: string[]
-}
-
 export interface CompileSiteResult {
   readonly site: string
   readonly outputRoot: string
   readonly operationCount: number
   readonly verifiedCount: number
-  readonly summary?: CompileSummary
 }
 
 function siteSlugFromUrl(urlString: string): string {
@@ -100,43 +82,6 @@ async function verifyOperation(operation: Omit<AnalyzedOperation, 'verified'>): 
   }
 }
 
-export function generateReviewHints(summary: Omit<CompileSummary, 'reviewHints'>): string[] {
-  const hints: string[] = []
-  if (summary.filteredSamples < 5) {
-    hints.push('Very few API samples captured. Consider recapturing with more browsing.')
-  }
-  if (summary.skippedMutations > 0) {
-    hints.push(`${summary.skippedMutations} mutation operation(s) skipped (request body inference not supported). Agent should identify these manually if needed.`)
-  }
-  if (!summary.primitives.auth) {
-    hints.push('No auth primitive detected. If this site requires login, the capture may be missing authenticated traffic.')
-  }
-  if (summary.verifiedCount === 0 && summary.operations > 0) {
-    hints.push('No operations verified. Check if the site requires auth or if endpoints have changed.')
-  }
-  if (summary.operations > 50) {
-    hints.push('Many operations generated. Review for noise — some may be tracking/analytics endpoints.')
-  }
-  return hints
-}
-
-export function formatSummary(summary: CompileSummary, outputRoot: string): string {
-  const lines = [
-    `── Compile Summary: ${summary.site} ──`,
-    `  Samples: ${summary.totalSamples} captured → ${summary.filteredSamples} after filter (${summary.rejectedSamples} rejected)`,
-    `  Operations: ${summary.operations} (${summary.verifiedCount} verified, ${summary.skippedMutations} mutations skipped)`,
-    `  Primitives: auth=${summary.primitives.auth ?? 'none'}, csrf=${summary.primitives.csrf ?? 'none'}, signing=${summary.primitives.signing ?? 'none'}${summary.primitives.extractions ? `, extractions=${summary.primitives.extractions}` : ''}`,
-  ]
-  if (summary.reviewHints.length > 0) {
-    lines.push('  Hints:')
-    for (const hint of summary.reviewHints) {
-      lines.push(`    ⚠ ${hint}`)
-    }
-  }
-  lines.push(`  Output: ${outputRoot}`)
-  return `${lines.join('\n')}\n`
-}
-
 export async function compileCommand(args: CompileArgs): Promise<void> {
   await compileSite(args, {
     emitSummary: true,
@@ -165,10 +110,8 @@ export async function compileSite(
   let filteredSamples: RecordedRequestSample[] = []
   let classifyResult: ReturnType<typeof classify> | undefined // mutable: probe may override
   const site = siteSlugFromUrl(args.url)
-  let totalSamples = 0
   try {
     const recordedSamples = await loadRecordedSamples(recordingDir)
-    totalSamples = recordedSamples.length
     filteredSamples = filterSamples(recordedSamples, { targetUrl: args.url })
 
     // Load full capture data for L2 classification
@@ -194,7 +137,6 @@ export async function compileSite(
   const MUTATION_METHODS = new Set(['post', 'put', 'patch', 'delete'])
   const clusters = clusterSamples(filteredSamples)
   const analyzedOperations: AnalyzedOperation[] = []
-  let skippedMutations = 0
 
   for (const cluster of clusters) {
     const annotation = annotateOperation(cluster.host, cluster.path, cluster.method)
@@ -207,7 +149,6 @@ export async function compileSite(
     if (MUTATION_METHODS.has(cluster.method.toLowerCase())) {
       const hasRequestBody = cluster.samples.some((s) => s.requestBody)
       if (hasRequestBody) {
-        skippedMutations++
         continue
       }
     }
@@ -279,27 +220,10 @@ export async function compileSite(
 
   const verifiedCount = analyzedOperations.filter((operation) => operation.verified).length
 
-  const primitives: CompileSummary['primitives'] = {
-    auth: classifyResult?.auth?.type,
-    csrf: classifyResult?.csrf?.type,
-    signing: classifyResult?.signing?.type,
-    extractions: classifyResult?.extractions?.length,
-  }
-
-  const summaryBase = {
-    site,
-    totalSamples,
-    filteredSamples: filteredSamples.length,
-    rejectedSamples: totalSamples - filteredSamples.length,
-    operations: analyzedOperations.length,
-    skippedMutations,
-    verifiedCount,
-    primitives,
-  }
-  const summary: CompileSummary = { ...summaryBase, reviewHints: generateReviewHints(summaryBase) }
-
   if (options.emitSummary) {
-    process.stdout.write(formatSummary(summary, outputRoot))
+    process.stdout.write(
+      `Compiled ${analyzedOperations.length} tool(s), verified ${verifiedCount}/${analyzedOperations.length}. Output: ${outputRoot}\n`,
+    )
   }
 
   return {
@@ -307,6 +231,5 @@ export async function compileSite(
     outputRoot,
     operationCount: analyzedOperations.length,
     verifiedCount,
-    summary,
   }
 }

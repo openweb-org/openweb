@@ -384,31 +384,14 @@ pnpm --silent dev registry rollback <site>         # Revert to previous version
 pnpm --silent dev registry show <site>             # Show version history
 ```
 
-### Knowledge Base
-
-```bash
-pnpm --silent dev knowledge patterns                          # List all patterns (auto-seeds on first run)
-pnpm --silent dev knowledge patterns --category auth          # Filter by category
-pnpm --silent dev knowledge patterns --signal csrf            # Filter by signal
-pnpm --silent dev knowledge failures                          # List recorded failures
-pnpm --silent dev knowledge failures --site uber              # Filter by site
-pnpm --silent dev knowledge failures --class auth_expired     # Filter by failure class
-pnpm --silent dev knowledge heuristics                        # List probe heuristics with decayed scores
-pnpm --silent dev knowledge heuristics --signal cookie        # Filter by signal type
-pnpm --silent dev knowledge add-pattern --category auth --signal "..." --action "..." --source "..."  # Add pattern
-```
-
 ## Using Knowledge
 
 Before compiling a new site:
 1. Read `references/archetypes.md` — find the site's category and expected auth/transport patterns
 2. Read relevant `references/site-notes/` if they exist — learn from similar sites
-3. Query `pnpm --silent dev knowledge patterns` for prior patterns that may apply
-4. Query `pnpm --silent dev knowledge failures --site <similar-site>` for known issues
 
 After successful compile:
-1. Record reusable patterns via `pnpm --silent dev knowledge add-pattern`
-2. If this is a new archetype pattern, consider updating `references/archetypes.md`
+1. If this is a new archetype pattern, consider updating `references/archetypes.md`
 
 ## Important Notes
 

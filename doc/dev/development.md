@@ -126,15 +126,6 @@ pnpm dev registry rollback catfact-fixture # Revert to previous version
 pnpm dev registry show catfact-fixture    # Show version history
 ```
 
-### Knowledge Base
-
-```bash
-pnpm dev knowledge patterns               # List known auth/extraction patterns (25 seed)
-pnpm dev knowledge failures               # List recorded verify failures (~/.openweb/knowledge/)
-pnpm dev knowledge heuristics             # Show probe success rates with staleness decay
-pnpm dev knowledge add-pattern --category auth --signal '...' --action '...' --source '...'
-```
-
 ---
 
 ## Development Cycle
