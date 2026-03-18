@@ -156,7 +156,7 @@ openweb registry rollback <site>               # revert to previous version
 openweb knowledge patterns                     # list known auth/extraction patterns
 openweb knowledge failures                     # list recorded verify failures
 openweb knowledge heuristics                   # show probe success rates
-openweb knowledge add-pattern '{...}'          # add a new pattern entry
+openweb knowledge add-pattern --category auth --signal '...' --action '...' --source '...'
 ```
 
 ---

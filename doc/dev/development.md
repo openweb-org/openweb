@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (423/423 pass)
+pnpm test           # Run tests (405/405 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -132,7 +132,7 @@ pnpm dev registry show catfact-fixture    # Show version history
 pnpm dev knowledge patterns               # List known auth/extraction patterns (25 seed)
 pnpm dev knowledge failures               # List recorded verify failures (~/.openweb/knowledge/)
 pnpm dev knowledge heuristics             # Show probe success rates with staleness decay
-pnpm dev knowledge add-pattern '{...}'    # Add a new pattern entry
+pnpm dev knowledge add-pattern --category auth --signal '...' --action '...' --source '...'
 ```
 
 ---
