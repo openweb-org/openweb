@@ -1,3 +1,23 @@
+## 2026-03-17: M18 — Agent-Driven Discovery — DONE
+
+**What changed:**
+- Deleted all hardcoded discovery intelligence: `src/discovery/` (7 source + 4 test files), `src/commands/discover.ts`, `src/lifecycle/heal.ts` + `heal.test.ts`, `tests/benchmark/discovery/` (benchmark runner + sites). Net deletion: -2831 lines across 21 files.
+- Cleaned CLI: removed `openweb discover` command registration and `--auto-heal` option from `openweb verify`. Simplified `verify.ts` by removing all heal imports, autoHeal code paths, and `printHealResult()`.
+- Updated SKILL.md: replaced `### Discover` and `--auto-heal` sections with agent-driven discovery workflow (Step 0: think like a user, Step 1: capture+browse with playwright-cli, Step 2: compile+review).
+- Updated architecture.md: removed Discovery component row, updated Lifecycle and CLI descriptions.
+- Updated development.md: removed discover commands, auto-heal commands, discover.ts from project structure, discovery/ directory, heal.ts from lifecycle.
+
+**Why:**
+- Discovery intelligence belongs in the agent (Claude/Codex reading the skill doc), not in hardcoded heuristics. The agent can reason about each site individually, adapt to any UI, and handle edge cases without code changes.
+
+**Key files:** `src/cli.ts`, `src/commands/verify.ts`, `.claude/skills/openweb/SKILL.md`, `doc/main/architecture.md`, `doc/dev/development.md`
+**Verification:** `pnpm build` clean, 382 tests pass (45 test files), all 51 sites unaffected
+**Commit:** 5f77d15, 68da7e1
+**Next:** Future considerations from design doc (annotate.ts, classify.ts agent delegation)
+**Blockers:** None
+
+---
+
 ## 2026-03-17: M17 — Operational Automation — DONE
 
 **What changed:**

@@ -97,22 +97,6 @@ pnpm dev compile https://api.example.com --probe
 pnpm dev compile https://api.example.com --probe --cdp-endpoint http://localhost:9222
 ```
 
-### Discover APIs
-
-```bash
-# Discover APIs from a website (passive capture only)
-pnpm dev discover https://example.com --cdp-endpoint http://localhost:9222
-
-# With active exploration (clicks nav links, tries search)
-pnpm dev discover https://example.com --explore --cdp-endpoint http://localhost:9222
-
-# Intent-driven discovery (page analysis + targeted exploration for missing intents)
-pnpm dev discover https://example.com --intent --cdp-endpoint http://localhost:9222
-
-# Combine both — intent-driven first, then blind exploration
-pnpm dev discover https://example.com --intent --explore --cdp-endpoint http://localhost:9222
-```
-
 ### Run Site Tests
 
 ```bash
@@ -131,14 +115,7 @@ pnpm dev verify --all
 # Drift report (JSON or markdown)
 pnpm dev verify --all --report
 pnpm dev verify --all --report markdown
-
-# Auto-heal: re-discover drifted sites, auto-accept read ops
-pnpm dev verify catfact-fixture --auto-heal
-pnpm dev verify --all --auto-heal
-pnpm dev verify --all --auto-heal --report
 ```
-
-Auto-heal re-discovers drifted sites, diffs old vs new spec by path+method, and auto-accepts read operation changes. Write/delete/transact changes are reported but not applied. Safety gates: `auth_expired` is skipped, CAPTCHA/login-wall aborts heal. Successful heals archive with a version bump.
 
 ### Registry (Version Management)
 
@@ -207,7 +184,6 @@ src/
 │   ├── show.ts               # Show site/operation info (--json, --example)
 │   ├── browser.ts            # Browser lifecycle (start/stop/restart/status/login)
 │   ├── compile.ts            # Compile site → skill package
-│   ├── discover.ts           # Discover APIs from URL
 │   ├── capture.ts            # CDP browser capture
 │   ├── test.ts               # Run site tests
 │   ├── sites.ts              # List available sites (--json)
@@ -217,11 +193,9 @@ src/
 ├── types/                    # Meta-spec type system
 ├── compiler/                 # Site compilation pipeline
 ├── capture/                  # Browser CDP recording
-├── discovery/                # API discovery: capture, intent analysis, exploration, handoff
-├── lifecycle/                # Drift detection, verification, registry, auto-heal
+├── lifecycle/                # Drift detection, verification, registry
 │   ├── fingerprint.ts        # Response shape fingerprinting
 │   ├── verify.ts             # Site verification engine
-│   ├── heal.ts               # Auto-heal: re-discover + diff + apply read ops
 │   └── registry.ts           # Version management + install/rollback
 ├── knowledge/                # Pattern library, probe heuristics, failure recording
 │   ├── patterns.ts           # 25 seed patterns from M3-M16 reviews
