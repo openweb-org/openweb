@@ -78,6 +78,16 @@ describe('knowledge commands', () => {
       expect(output).not.toContain('pat-3')
     })
 
+    it('filters by --signal', async () => {
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify(samplePatterns))
+
+      await knowledgePatternsCommand({ signal: 'cookie' })
+
+      expect(output).toContain('pat-1')
+      expect(output).toContain('pat-3')
+      expect(output).not.toContain('pat-2')
+    })
+
     it('seeds from SEED_PATTERNS when empty', async () => {
       // First call to loadPatterns returns empty (triggers seed), second call is the load after save
       let callCount = 0
@@ -131,6 +141,17 @@ describe('knowledge commands', () => {
       expect(output).toContain('uber')
       expect(output).not.toContain('github')
     })
+
+    it('filters by --class', async () => {
+      vi.mocked(readFile).mockResolvedValue(JSON.stringify(sampleFailures))
+
+      await knowledgeFailuresCommand({ class: 'auth_expired' })
+
+      expect(output).toContain('auth_expired')
+      expect(output).toContain('uber')
+      expect(output).not.toContain('rate_limit')
+      expect(output).not.toContain('selector_miss')
+    })
   })
 
   describe('knowledgeHeuristicsCommand', () => {
@@ -167,6 +188,29 @@ describe('knowledge commands', () => {
       expect(output).toContain('test action')
       expect(output).toContain('test source')
       expect(writeFile).toHaveBeenCalled()
+    })
+
+    it('rejects invalid category', async () => {
+      let stderrOutput = ''
+      vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+        stderrOutput += String(chunk)
+        return true
+      })
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('process.exit') })
+
+      await expect(
+        knowledgeAddPatternCommand({
+          category: 'invalid',
+          signal: 'test',
+          action: 'test',
+          source: 'test',
+        }),
+      ).rejects.toThrow('process.exit')
+
+      expect(exitSpy).toHaveBeenCalledWith(1)
+      expect(stderrOutput).toContain('Invalid category')
+      expect(stderrOutput).toContain('invalid')
+      exitSpy.mockRestore()
     })
   })
 })

@@ -319,7 +319,7 @@ await yargs(argv)
           'Add a new pattern to the knowledge base',
           (sub) =>
             sub
-              .option('category', { type: 'string', demandOption: true, describe: 'Pattern category' })
+              .option('category', { type: 'string', demandOption: true, choices: ['auth', 'api', 'pagination', 'extraction', 'discovery'] as const, describe: 'Pattern category' })
               .option('signal', { type: 'string', demandOption: true, describe: 'Signal to match' })
               .option('action', { type: 'string', demandOption: true, describe: 'Action to take' })
               .option('source', { type: 'string', demandOption: true, describe: 'Source reference' }),
