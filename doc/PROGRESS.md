@@ -1,3 +1,26 @@
+## 2026-03-18: M21 — Distribution Prep — DONE
+
+**What changed:**
+- `openweb init` command: seeds 51 fixtures from `src/fixtures/` to `~/.openweb/sites/` (idempotent, skip-if-exists)
+- `resolveSiteRoot()` priority reordered: `~/.openweb/sites/` → registry → `./src/fixtures/` (dev fallback). Removed unused `./sites/` search path
+- `listSites()` aggregates all search paths with dedup
+- CLI auto-exec: `openweb <site> <op> '{"json"}'` works without `exec` keyword (JSON arg detection). Old syntax still supported
+- Extracted `parseExecOptions()` helper to deduplicate exec/auto-exec flag parsing
+- `package.json`: added `files` (dist/ + src/fixtures/), `description`, `keywords`, `license`. Kept `private: true`
+- `dist/cli.js` has shebang, verified `npm link` works globally from /tmp
+- README.md (32 lines) for future npm page
+- SKILL.md updated with simplified exec syntax in all examples
+
+**Why:**
+- Prepare openweb for global installation via npm — binary = code, `~/.openweb/sites/` = data
+- Reduce agent token usage by eliminating the `exec` keyword in commands
+
+**Key files:** `src/commands/init.ts` (new), `src/cli.ts`, `src/lib/openapi.ts`, `package.json`, `.claude/skills/openweb/SKILL.md`, `README.md`
+**Verification:** `pnpm build` clean, `pnpm test` 359 pass, `npm link` + global exec from /tmp verified, init idempotency verified
+**Commit:** 59fa464
+**Next:** M22+ per roadmap
+**Blockers:** None
+
 ## 2026-03-18: M20 — Codebase Cleanup — DONE
 
 **What changed:**

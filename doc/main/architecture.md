@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-18 (commit: M20)
+> Last updated: 2026-03-18 (commit: M21)
 
 ## Mission
 
@@ -43,7 +43,7 @@ L1+L2 classification validated against 103 OpenTabs plugins.
                     ┌──────────────┐
                     │  CLI / Agent │
                     └──────┬───────┘
-                           │ openweb <site> exec <op> '{...}'
+                           │ openweb <site> <op> '{...}'
                            ▼
                     ┌──────────────┐
                     │   executor   │  Load spec → find operation → permission gate → resolve transport
@@ -89,8 +89,8 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | **Lifecycle** | Drift detection, verification, quarantine | `src/lifecycle/` | Fingerprint + verify + quarantine (M12) |
 | **Knowledge** | Agent reference docs for archetypes and site-specific notes | `.claude/skills/openweb/references/` | Reference docs (M19), CLI + CompileSummary removed (M20) |
 | **Registry** | Site version management, install, rollback | `src/lifecycle/registry.ts` | Internal registry (M12) |
-| **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M18: discovery moved to agent workflow; M20: knowledge CLI removed) |
-| **Skill packages** | Per-site instance specs | `src/fixtures/` | 51 verified sites |
+| **CLI** | Progressive navigation + exec + init + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M18: discovery moved to agent workflow; M20: knowledge CLI removed; M21: init, auto-exec, npm packaging) |
+| **Skill packages** | Per-site instance specs | `src/fixtures/` (dev), `~/.openweb/sites/` (installed) | 51 verified sites |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5), Draft-Curate-Verify + knowledge refs (M19) |
 
 ---
@@ -136,11 +136,13 @@ Auth, CSRF, and signing are resolved as a pipeline on every L2 request:
 ## CLI Interface
 
 ```bash
+openweb init                                   # seed default fixtures to ~/.openweb/sites/
 openweb sites [--json]                         # list compiled sites
 openweb <site> [--json]                        # list operations (tools)
 openweb <site> <op> [--json] [--example]       # show params + response schema
-openweb <site> exec <op> '{...}'               # execute operation (auto-detects managed browser)
-openweb <site> exec <op> '{...}' --output file # always write response to file
+openweb <site> <op> '{...}'                    # execute operation (auto-exec on JSON arg)
+openweb <site> exec <op> '{...}'               # execute (explicit exec keyword, still supported)
+openweb <site> <op> '{...}' --output file      # always write response to file
 openweb <site> test                            # run site test cases
 openweb browser start [--headless]             # managed Chrome lifecycle
 openweb browser stop / restart / status

@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-18 (commit: M20)
+> Last updated: 2026-03-18 (commit: M21)
 
 ## Prerequisites
 
@@ -56,17 +56,20 @@ pnpm dev instagram-fixture getTimeline
 pnpm dev instagram-fixture getTimeline --json   # Machine-readable JSON
 pnpm dev instagram-fixture getTimeline --example # Generate example params
 
-# Execute an operation (auto-detects managed browser)
+# Execute an operation (auto-exec: JSON arg triggers exec mode)
+pnpm dev instagram-fixture getTimeline '{}'
+
+# Execute with explicit exec keyword (still supported)
 pnpm dev instagram-fixture exec getTimeline '{}'
 
 # Execute with explicit CDP endpoint
-pnpm dev instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222
+pnpm dev instagram-fixture getTimeline '{}' --cdp-endpoint http://localhost:9222
 
 # Auto-spill: responses > --max-response (default 4096) written to temp file
-pnpm dev instagram-fixture exec getTimeline '{}' --max-response 8192
+pnpm dev instagram-fixture getTimeline '{}' --max-response 8192
 
 # Always write response to file
-pnpm dev instagram-fixture exec getTimeline '{}' --output file
+pnpm dev instagram-fixture getTimeline '{}' --output file
 ```
 
 ### Browser Management
@@ -169,7 +172,7 @@ pnpm dev login instagram-fixture
 pnpm dev browser restart
 
 # Execute an operation (auto-detects managed browser)
-pnpm dev instagram-fixture exec getTimeline '{}'
+pnpm dev instagram-fixture getTimeline '{}'
 ```
 
 ---
@@ -181,6 +184,7 @@ src/
 ├── cli.ts                    # Entry point, yargs routing
 ├── commands/                 # CLI commands
 │   ├── exec.ts               # Execute operation (auto-spill, --output file)
+│   ├── init.ts               # Seed fixtures to ~/.openweb/sites/
 │   ├── show.ts               # Show site/operation info (--json, --example)
 │   ├── browser.ts            # Browser lifecycle (start/stop/restart/status/login)
 │   ├── compile.ts            # Compile site → skill package
@@ -220,10 +224,11 @@ src/
 
 The runtime searches for skill packages in this order:
 
-1. `~/.openweb/registry/<site>/current` → `~/.openweb/registry/<site>/<version>/openapi.yaml` — Registry (versioned)
-2. `~/.openweb/sites/<site>/openapi.yaml` — User-installed sites
-3. `./sites/<site>/openapi.yaml` — Project-local sites
-4. `./src/fixtures/<site>/openapi.yaml` — Development fixtures
+1. `~/.openweb/sites/<site>/openapi.yaml` — User-installed sites (primary, seeded by `openweb init`)
+2. `./src/fixtures/<site>/openapi.yaml` — Development fixtures (dev fallback)
+3. `~/.openweb/registry/<site>/current` → `~/.openweb/registry/<site>/<version>/openapi.yaml` — Registry (versioned)
+
+`openweb init` copies bundled fixtures from `src/fixtures/` to `~/.openweb/sites/` (idempotent, skip-if-exists).
 
 Site names must match `/^[a-z0-9][a-z0-9_-]*$/`.
 
