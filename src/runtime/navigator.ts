@@ -1,5 +1,6 @@
 import path from 'node:path'
-import { access, readFile } from 'node:fs/promises'
+import { lstat, readFile } from 'node:fs/promises'
+import { realpathSync } from 'node:fs'
 import { getRequestBodyParameters, isArraySchema, type JsonSchema } from '../lib/openapi.js'
 import { findOperation, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import { loadManifest } from '../lib/manifest.js'
@@ -47,6 +48,23 @@ function getTransportLabel(transport: string, hasAdapter: boolean): string {
   return hasAdapter ? 'adapter (L3)' : transport
 }
 
+/** Read notes.md safely: reject symlinks, enforce path inside siteRoot, only ignore ENOENT. */
+export async function safeReadNotes(siteRoot: string): Promise<string | null> {
+  const notesPath = path.join(siteRoot, 'notes.md')
+
+  // Reject symlinks
+  const stat = await lstat(notesPath)
+  if (stat.isSymbolicLink()) return null
+
+  // Enforce resolved path stays inside siteRoot
+  const resolved = realpathSync(notesPath)
+  const canonicalRoot = realpathSync(siteRoot)
+  if (!resolved.startsWith(canonicalRoot + path.sep)) return null
+
+  const content = await readFile(notesPath, 'utf8')
+  return content.split('\n').find(l => l.trim().length > 0)?.trim() ?? null
+}
+
 export async function renderSite(site: string): Promise<string> {
   const spec = await loadOpenApi(site)
   const operations = listOperations(spec)
@@ -90,14 +108,14 @@ export async function renderSite(site: string): Promise<string> {
   lines.push(`Permissions:      ${permParts.join(' ')}`)
 
   // Per-site notes hint
-  const notesPath = path.join(siteRoot, 'notes.md')
   try {
-    const notesContent = await readFile(notesPath, 'utf8')
-    const firstLine = notesContent.split('\n').find(l => l.trim().length > 0)?.trim()
+    const firstLine = await safeReadNotes(siteRoot)
     if (firstLine) {
       lines.push(`Notes:            ${firstLine}`)
     }
-  } catch { /* no notes.md — skip */ }
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+  }
 
   lines.push('')
   lines.push('Operations:')
@@ -176,9 +194,10 @@ export async function renderSiteJson(site: string): Promise<string> {
   // Check for notes.md
   let hasNotes = false
   try {
-    await access(path.join(siteRoot, 'notes.md'))
-    hasNotes = true
-  } catch { /* no notes.md */ }
+    hasNotes = (await safeReadNotes(siteRoot)) !== null
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+  }
 
   const result = {
     name: manifest?.display_name ?? site,

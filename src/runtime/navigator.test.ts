@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { mkdtemp, writeFile, symlink, rm } from 'node:fs/promises'
+import path from 'node:path'
+import os from 'node:os'
 
-import { renderOperation, renderSite, renderSiteJson } from './navigator.js'
+import { renderOperation, renderSite, renderSiteJson, safeReadNotes } from './navigator.js'
 
 describe('navigator', () => {
   it('renders site with readiness metadata', async () => {
@@ -69,5 +72,29 @@ describe('navigator', () => {
 
     expect(withNotes.hasNotes).toBe(true)
     expect(withoutNotes.hasNotes).toBe(false)
+  })
+
+  it('rejects symlinked notes.md', async () => {
+    const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'notes-test-'))
+    try {
+      await symlink('/etc/hosts', path.join(tmpDir, 'notes.md'))
+      const result = await safeReadNotes(tmpDir)
+      expect(result).toBeNull()
+    } finally {
+      await rm(tmpDir, { recursive: true })
+    }
+  })
+
+  it('throws non-ENOENT errors from safeReadNotes', async () => {
+    // Pass a file (not a directory) as siteRoot — lstat on siteRoot/notes.md
+    // will fail with ENOTDIR, which is not ENOENT and should propagate
+    const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'notes-err-'))
+    const filePath = path.join(tmpDir, 'not-a-dir')
+    try {
+      await writeFile(filePath, 'data')
+      await expect(safeReadNotes(filePath)).rejects.toThrow()
+    } finally {
+      await rm(tmpDir, { recursive: true })
+    }
   })
 })

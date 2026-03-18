@@ -2,7 +2,7 @@
 
 Patterns extracted from 51 compiled sites (M0–M21). Read this before compiling a new site to set expectations for auth, transport, key pages, and common pitfalls.
 
-M22 coverage sweep: 144 sites surveyed → 51 A (has fixture), 29 B (L1 compilable), 41 C (L2 needs login), 13 D (needs new primitive), 8 E (needs L3 adapter), 2 F (not suitable). 84% reachable with current capabilities + L2 login.
+M22 coverage sweep: 144 sites surveyed across 15 archetypes → 51 A (has fixture), 46 B (L1 compilable, incl. api_key/bearer_token), 24 C (L2 needs browser login), 13 D (needs new primitive), 8 E (needs L3 adapter), 2 F (not suitable). 67% immediately compilable, 84% reachable with L2 login.
 
 ## Social Media (M22: 4/12 fixture coverage, 33%)
 
@@ -48,7 +48,7 @@ Expected Operations:
 
 ## Developer Tools (M22: 4/14 fixture coverage, 29%)
 
-Auth: api_key, bearer_token, cookie_session, or none
+Auth: cookie_session, none, or header-based key/token (modeled as OpenAPI parameters, not primitives)
 Transport: node
 Key pages: /repos, /issues, /pulls, /packages, /search
 Pagination: link_header (GitHub) or cursor
@@ -68,7 +68,7 @@ Expected Operations:
 
 ## Weather / Data APIs (M22: 5/10 fixture coverage, 50%)
 
-Auth: api_key or none
+Auth: none or header-based key (modeled as OpenAPI parameter)
 Transport: node
 Key pages: /api/*, /forecast, /current
 Usually: REST JSON, no CSRF, no signing
@@ -169,7 +169,7 @@ Expected Operations:
 
 ## Crypto / Finance (M22: 2/8 fixture coverage, 25%)
 
-Auth: none or api_key
+Auth: none or header-based key (modeled as OpenAPI parameter)
 Transport: node
 Key pages: /price, /market, /exchange
 Examples: CoinGecko, Exchange Rate
@@ -181,3 +181,73 @@ Expected Operations:
 - [ ] Market data / rankings (read, paginated)
 - [ ] Exchange rates (read)
 - [ ] Historical data (read, by range)
+
+## News (M22: 0/6 fixture coverage, 0%)
+
+Auth: none or header-based key (modeled as OpenAPI parameter)
+Transport: node
+Key pages: /articles, /feed, /search, /headlines
+Extraction: RSS or html_selector common; multi-page content may need aggregate extraction
+Examples: BBC, AP News, The Guardian, NewsAPI.org
+
+Expected Operations:
+- [ ] Headlines / feed (read, paginated)
+- [ ] Article detail (read, by ID or URL)
+- [ ] Search articles (read)
+
+## Email (M22: 0/2 fixture coverage, 0%)
+
+Auth: oauth2 (PKCE) or sessionStorage_msal
+Transport: node
+Key pages: /inbox, /messages, /compose, /contacts
+Gap: OAuth2 PKCE primitive needed for Gmail; MSAL pattern available for Outlook
+Examples: Gmail, Outlook
+
+Expected Operations:
+- [ ] List inbox / messages (read, paginated)
+- [ ] Read message (read, by ID)
+- [ ] Send message (write)
+- [ ] Search messages (read)
+
+## Cloud / Storage (M22: 0/4 fixture coverage, 0%)
+
+Auth: bearer_token (modeled as OpenAPI parameter) or sessionStorage_msal
+Transport: node
+Key pages: /files, /folders, /shared, /search
+Gap: OAuth2 PKCE needed for Google Drive
+Examples: Dropbox, OneDrive, Box
+
+Expected Operations:
+- [ ] List files / folders (read, paginated)
+- [ ] File metadata (read, by ID)
+- [ ] Upload file (write)
+- [ ] Download file (read)
+- [ ] Search files (read)
+
+## Travel (M22: 0/4 fixture coverage, 0%)
+
+Auth: cookie_session or proprietary
+Transport: adapter (L3) for most; heavy anti-bot
+Key pages: /search, /listing, /booking, /account
+Most travel sites need L3 adapters due to anti-bot, dynamic API versioning, and complex search flows
+Examples: Booking.com, Airbnb, Expedia
+
+Expected Operations:
+- [ ] Search listings (read, paginated)
+- [ ] Listing detail (read, by ID)
+- [ ] Price / availability (read)
+- [ ] Book / reserve (transact — deny by default)
+
+## Food Delivery (M22: 0/3 fixture coverage, 0%)
+
+Auth: cookie_session or proprietary
+Transport: node or adapter (L3)
+Key pages: /restaurants, /menu, /cart, /orders
+GraphQL persisted queries common (DoorDash, Uber Eats)
+Examples: DoorDash, Uber Eats, Grubhub
+
+Expected Operations:
+- [ ] Search restaurants (read, paginated)
+- [ ] Restaurant menu (read, by ID)
+- [ ] Add to cart (write)
+- [ ] Place order (transact — deny by default)
