@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-17 (commit: M18)
+> Last updated: 2026-03-18 (commit: M19)
 
 ## Mission
 
@@ -87,11 +87,11 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | L1 emit + L2 classify + probe (M15) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM), dynamic globals detection | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17) |
 | **Lifecycle** | Drift detection, verification, quarantine | `src/lifecycle/` | Fingerprint + verify + quarantine (M12) |
-| **Knowledge** | Pattern library, probe heuristics, failure recording | `src/knowledge/` | Patterns + heuristics + failures (M17) |
+| **Knowledge** | Pattern library, probe heuristics, failure recording, agent reference docs | `src/knowledge/`, `.claude/skills/openweb/references/` | Patterns + heuristics + failures (M17), reference docs + CLI + CompileSummary (M19) |
 | **Registry** | Site version management, install, rollback | `src/lifecycle/registry.ts` | Internal registry (M12) |
-| **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M18: discovery moved to agent workflow) |
+| **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry + knowledge | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M18: discovery moved to agent workflow; M19: knowledge commands) |
 | **Skill packages** | Per-site instance specs | `src/fixtures/` | 51 verified sites |
-| **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5) |
+| **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5), Draft-Curate-Verify + knowledge refs (M19) |
 
 ---
 
@@ -153,6 +153,10 @@ openweb verify --all --report                  # verify with drift report
 openweb registry list                          # list registered site versions
 openweb registry install <site>                # archive fixture to registry
 openweb registry rollback <site>               # revert to previous version
+openweb knowledge patterns                     # list known auth/extraction patterns
+openweb knowledge failures                     # list recorded verify failures
+openweb knowledge heuristics                   # show probe success rates
+openweb knowledge add-pattern '{...}'          # add a new pattern entry
 ```
 
 ---

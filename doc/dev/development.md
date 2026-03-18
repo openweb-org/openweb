@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-17 (commit: M18)
+> Last updated: 2026-03-18 (commit: M19)
 
 ## Prerequisites
 
@@ -126,6 +126,15 @@ pnpm dev registry rollback catfact-fixture # Revert to previous version
 pnpm dev registry show catfact-fixture    # Show version history
 ```
 
+### Knowledge Base
+
+```bash
+pnpm dev knowledge patterns               # List known auth/extraction patterns (25 seed)
+pnpm dev knowledge failures               # List recorded verify failures (~/.openweb/knowledge/)
+pnpm dev knowledge heuristics             # Show probe success rates with staleness decay
+pnpm dev knowledge add-pattern '{...}'    # Add a new pattern entry
+```
+
 ---
 
 ## Development Cycle
@@ -188,7 +197,8 @@ src/
 │   ├── test.ts               # Run site tests
 │   ├── sites.ts              # List available sites (--json)
 │   ├── verify.ts             # Verify sites and detect drift
-│   └── registry.ts           # Registry management (install/rollback)
+│   ├── registry.ts           # Registry management (install/rollback)
+│   └── knowledge.ts          # Knowledge base queries (patterns/failures/heuristics/add-pattern)
 ├── runtime/                  # Operation execution (3 modes + L3)
 ├── types/                    # Meta-spec type system
 ├── compiler/                 # Site compilation pipeline
@@ -199,10 +209,18 @@ src/
 │   └── registry.ts           # Version management + install/rollback
 ├── knowledge/                # Pattern library, probe heuristics, failure recording
 │   ├── patterns.ts           # 25 seed patterns from M3-M16 reviews
-│   ├── heuristics.ts         # Probe success rate tracking + staleness decay (30d)
+│   ├── heuristics.ts         # Probe success rate tracking + staleness decay (30d), decayedScore() exported
 │   └── failures.ts           # Auto-records verify DRIFT/FAIL to ~/.openweb/knowledge/
 ├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, manifest, permissions)
 └── fixtures/                 # 51 verified site packages
+
+.claude/skills/openweb/
+├── SKILL.md                  # Agent skill (Draft→Curate→Verify workflow)
+└── references/               # Agent knowledge docs (M19)
+    ├── archetypes.md         # Site archetype patterns
+    ├── auth-patterns.md      # Auth primitive selection guide
+    ├── compile-review.md     # Compile output review checklist
+    └── troubleshooting.md    # Common failure modes and fixes
 ```
 
 -> See: [doc/main/README.md](../main/README.md) — full code structure with per-file annotations
