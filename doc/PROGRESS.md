@@ -12,7 +12,8 @@
 
 **Key files:** `src/cli.ts`, `src/commands/verify.ts`, `.claude/skills/openweb/SKILL.md`, `doc/main/architecture.md`, `doc/dev/development.md`
 **Verification:** `pnpm build` clean, 382 tests pass (45 test files), all 51 sites unaffected
-**Commit:** 5f77d15, 68da7e1
+**Commit:** 5f77d15..c958a41
+**Codex reviews:** R1 (2 LOW: stale M17 tags, stale heal comment), R2 (1 HIGH: SKILL.md CLI commands, 1 MEDIUM: await recordFailures, 2 LOW: --report validation, benchmark wording) — all fixed
 **Next:** Future considerations from design doc (annotate.ts, classify.ts agent delegation)
 **Blockers:** None
 
