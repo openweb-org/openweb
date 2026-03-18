@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-18 (commit: M21)
+> Last updated: 2026-03-18 (commit: M22)
 
 ## Mission
 
@@ -26,10 +26,10 @@ Let any agent access the web easily, fast, and cheap.
 
 **Design principle**: Structure is the default, code is the exception.
 
-L1+L2 covers ~93% of sites (validated against 103 OpenTabs plugins).
-Only ~7% need L3 code adapters.
+L1+L2 covers ~90% of sites (M22 sweep: 121/144 reachable with current primitives + L2 login).
+Only ~5.6% need L3 code adapters, ~9% need new primitives.
 
-L1+L2 classification validated against 103 OpenTabs plugins.
+M22 coverage sweep validated against 144 sites across 15 archetypes.
 
 ---
 

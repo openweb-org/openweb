@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-18 (commit: M21)
+> Last updated: 2026-03-18 (commit: M22)
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (359 pass)
+pnpm test           # Run tests (362 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -47,9 +47,9 @@ pnpm lint           # Biome lint check
 pnpm dev sites
 pnpm dev sites --json                          # Machine-readable JSON
 
-# List operations for a site
+# List operations for a site (shows Notes hint if notes.md exists)
 pnpm dev instagram-fixture
-pnpm dev instagram-fixture --json              # Machine-readable JSON
+pnpm dev instagram-fixture --json              # Machine-readable JSON (includes hasNotes)
 
 # Show operation details (params + response schema)
 pnpm dev instagram-fixture getTimeline

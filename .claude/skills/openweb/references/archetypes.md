@@ -1,8 +1,10 @@
 # Site Archetypes
 
-Patterns extracted from 51 compiled sites (M0–M18). Read this before compiling a new site to set expectations for auth, transport, key pages, and common pitfalls.
+Patterns extracted from 51 compiled sites (M0–M21). Read this before compiling a new site to set expectations for auth, transport, key pages, and common pitfalls.
 
-## Social Media
+M22 coverage sweep: 144 sites surveyed → 51 A (has fixture), 29 B (L1 compilable), 41 C (L2 needs login), 13 D (needs new primitive), 8 E (needs L3 adapter), 2 F (not suitable). 84% reachable with current capabilities + L2 login.
+
+## Social Media (M22: 4/12 fixture coverage, 33%)
 
 Auth: cookie_session (+ cookie_to_header CSRF, exchange_chain for OAuth)
 Transport: node or page (depends on TLS fingerprinting)
@@ -25,7 +27,7 @@ Expected Operations:
 - [ ] Search users or posts (read)
 - [ ] Direct messages / inbox (read)
 
-## Messaging
+## Messaging (M22: 3/9 fixture coverage, 33%)
 
 Auth: cookie_session, webpack_module_walk, or browser state (L3)
 Transport: page or adapter (L3)
@@ -44,7 +46,7 @@ Expected Operations:
 - [ ] List contacts / friends (read)
 - [ ] Search messages (read)
 
-## Developer Tools
+## Developer Tools (M22: 4/14 fixture coverage, 29%)
 
 Auth: api_key, bearer_token, cookie_session, or none
 Transport: node
@@ -64,7 +66,7 @@ Expected Operations:
 - [ ] Search (read)
 - [ ] User / org profile (read)
 
-## Weather / Data APIs
+## Weather / Data APIs (M22: 5/10 fixture coverage, 50%)
 
 Auth: api_key or none
 Transport: node
@@ -79,7 +81,7 @@ Expected Operations:
 - [ ] Forecast / historical (read, by range)
 - [ ] Lookup by coordinates or ID (read)
 
-## E-commerce
+## E-commerce (M22: 1/8 fixture coverage, 13%)
 
 Auth: cookie_session + csrf_token
 Transport: node (with SSR extraction)
@@ -97,7 +99,7 @@ Expected Operations:
 - [ ] View cart (read)
 - [ ] Checkout (transact — deny by default)
 
-## Content Platforms
+## Content Platforms (M22: 4/15 fixture coverage, 27%)
 
 Auth: exchange_chain, cookie_session, or sessionStorage_msal
 Transport: node
@@ -117,7 +119,7 @@ Expected Operations:
 - [ ] User / channel profile (read)
 - [ ] Comment / reply (write)
 
-## Productivity / Enterprise
+## Productivity / Enterprise (M22: 2/13 fixture coverage, 15%)
 
 Auth: sessionStorage_msal, cookie_session, or exchange_chain
 Transport: node
@@ -136,7 +138,7 @@ Expected Operations:
 - [ ] Search (read)
 - [ ] Dashboard / overview (read)
 
-## Prediction / Fun APIs
+## Prediction / Fun APIs (M22: 12/14 fixture coverage, 86%)
 
 Auth: none
 Transport: node
@@ -150,7 +152,7 @@ Expected Operations:
 - [ ] Query / predict (read, single call)
 - [ ] Random result (read)
 
-## Reference / Lookup APIs
+## Reference / Lookup APIs (M22: 15/23 fixture coverage, 65%)
 
 Auth: none
 Transport: node
@@ -165,7 +167,7 @@ Expected Operations:
 - [ ] Detail by ID or name (read)
 - [ ] Random entry (read, if supported)
 
-## Crypto / Finance
+## Crypto / Finance (M22: 2/8 fixture coverage, 25%)
 
 Auth: none or api_key
 Transport: node

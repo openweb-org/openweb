@@ -1,3 +1,22 @@
+## 2026-03-18: M22 — Coverage Sweep + Per-Site Notes — DONE
+
+**What changed:**
+- Phase 1: Per-site notes infrastructure — `renderSite()` shows `notes.md` first-line hint, `renderSiteJson()` includes `hasNotes` boolean. 5 L2 sites seeded with notes.md (Instagram, GitHub, YouTube, Discord, X)
+- Phase 1: Archetype checklists — all 9 archetypes in `references/archetypes.md` now have Expected Operations checklists with checkbox format
+- Phase 2: Coverage sweep — 144 sites surveyed across 15 archetypes. 51 A (existing), 29 B (L1 compilable), 41 C (L2 needs login), 13 D (needs new primitive), 8 E (needs L3 adapter), 2 F (not suitable)
+- Phase 2: Gap analysis — 5 primitive gaps identified (custom signing, OAuth2 PKCE, WebSocket/SSE, multi-page extraction, Google Batch RPC). 8 L3 adapter sites documented
+- Phase 3: Per-archetype coverage % added to archetypes.md. Architecture.md updated with M22 coverage data (replacing 103 OpenTabs estimate)
+- 3 new navigator tests for notes display + hasNotes JSON
+
+**Why:**
+- Quantify real coverage capability before expanding site count. Gap analysis drives M23+ primitive priorities. Notes infrastructure captures non-code agent knowledge per site.
+
+**Key files:** `src/runtime/navigator.ts`, `src/runtime/navigator.test.ts`, `.claude/skills/openweb/references/archetypes.md`, `doc/todo/v2_m22/coverage-report.md`, `doc/todo/v2_m22/gap-analysis.md`, 5 `notes.md` files
+**Verification:** `pnpm build` clean, `pnpm test` 362 pass (42 test files), manual verify notes display for instagram/open-meteo
+**Commit:** ad587b6..HEAD
+**Next:** M23+ per roadmap — OAuth2 PKCE highest priority primitive gap
+**Blockers:** None
+
 ## 2026-03-18: M21 — Distribution Prep — DONE
 
 **What changed:**
