@@ -19,9 +19,9 @@ pnpm --silent dev <site> --json                            # JSON: {name, operat
 pnpm --silent dev <site> <operation>                       # Show operation params + response shape
 pnpm --silent dev <site> <operation> --json                # JSON: {id, method, path, permission, parameters}
 pnpm --silent dev <site> <operation> --example             # Generate example params JSON
-pnpm --silent dev <site> exec <op> '<json>'                # Execute (auto-detects managed browser)
-pnpm --silent dev <site> exec <op> '<json>' --cdp-endpoint http://localhost:9222  # Explicit CDP
-pnpm --silent dev <site> exec <op> '<json>' --output file  # Always write response to file
+pnpm --silent dev <site> <op> '<json>'                     # Execute (auto-detects managed browser)
+pnpm --silent dev <site> <op> '<json>' --cdp-endpoint http://localhost:9222  # Explicit CDP
+pnpm --silent dev <site> <op> '<json>' --output file       # Always write response to file
 ```
 
 ## References Directory
@@ -115,7 +115,7 @@ pnpm --silent dev <site> <operation> --example
 ### Step 4: Execute
 
 ```bash
-pnpm --silent dev <site> exec <operation> '<json-params>'
+pnpm --silent dev <site> <operation> '<json-params>'
 ```
 
 - **stdout** = JSON result (success)
@@ -226,7 +226,7 @@ User: "What's the weather in Berlin?"
 ```bash
 pnpm --silent dev open-meteo-fixture                    # Check: Requires browser: no
 pnpm --silent dev open-meteo-fixture get_forecast       # Check params: latitude, longitude required
-pnpm --silent dev open-meteo-fixture exec get_forecast '{"latitude": 52.52, "longitude": 13.41, "hourly": ["temperature_2m"]}'
+pnpm --silent dev open-meteo-fixture get_forecast '{"latitude": 52.52, "longitude": 13.41, "hourly": ["temperature_2m"]}'
 ```
 
 No browser needed since it doesn't require auth.
@@ -239,7 +239,7 @@ User: "Show my Instagram feed"
 pnpm --silent dev browser start                          # Start managed Chrome with auth
 pnpm --silent dev instagram-fixture                      # Check: Requires browser: yes, Requires login: yes
 pnpm --silent dev instagram-fixture getTimeline          # Check params
-pnpm --silent dev instagram-fixture exec getTimeline '{}'  # Auto-detects managed browser
+pnpm --silent dev instagram-fixture getTimeline '{}'  # Auto-detects managed browser
 ```
 
 ### Example 3: Path parameters
@@ -248,7 +248,7 @@ User: "List 5 issues from facebook/react"
 
 ```bash
 pnpm --silent dev github-fixture listIssues             # Shows: owner (path), repo (path), per_page (query)
-pnpm --silent dev github-fixture exec listIssues '{"owner": "facebook", "repo": "react", "per_page": 5}'
+pnpm --silent dev github-fixture listIssues '{"owner": "facebook", "repo": "react", "per_page": 5}'
 ```
 
 Path parameters (like `owner` and `repo`) go in the same JSON object as query parameters.
@@ -259,7 +259,7 @@ User: "Get my Discord profile"
 
 ```bash
 pnpm --silent dev discord-fixture getMe                 # No params needed
-pnpm --silent dev discord-fixture exec getMe '{}'
+pnpm --silent dev discord-fixture getMe '{}'
 ```
 
 ### Example 5: Error recovery
@@ -286,7 +286,7 @@ User: "Show the top Hacker News stories"
 ```bash
 pnpm --silent dev hackernews-fixture                  # Check: Requires browser: yes, Requires login: no
 pnpm --silent dev hackernews-fixture getTopStories    # No params; returns array<{ title, score, author }>
-pnpm --silent dev hackernews-fixture exec getTopStories '{}'
+pnpm --silent dev hackernews-fixture getTopStories '{}'
 ```
 
 ### Example 7: MSAL-backed auth
@@ -294,7 +294,7 @@ pnpm --silent dev hackernews-fixture exec getTopStories '{}'
 User: "Get my Microsoft Word profile"
 
 ```bash
-pnpm --silent dev microsoft-word-fixture exec getProfile '{}'
+pnpm --silent dev microsoft-word-fixture getProfile '{}'
 ```
 
 The runtime reads Word's MSAL token cache from browser storage and injects a Graph bearer token automatically.

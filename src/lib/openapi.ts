@@ -85,7 +85,6 @@ async function pathExists(targetPath: string): Promise<boolean> {
 function candidateSiteRoots(site: string): string[] {
   return [
     path.join(os.homedir(), '.openweb', 'sites', site),
-    path.join(process.cwd(), 'sites', site),
     path.join(process.cwd(), 'src', 'fixtures', site),
   ]
 }
@@ -110,7 +109,15 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
     })
   }
 
-  // Check registry current version first (inlined to avoid circular dep with lifecycle/registry)
+  // 1. Check ~/.openweb/sites/ and ./src/fixtures/ (dev fallback)
+  const roots = candidateSiteRoots(site)
+  for (const root of roots) {
+    if (await pathExists(path.join(root, 'openapi.yaml'))) {
+      return root
+    }
+  }
+
+  // 2. Check registry (versioned sites)
   if (!opts?.skipRegistry) {
     const registryCurrentFile = path.join(os.homedir(), '.openweb', 'registry', site, 'current')
     try {
@@ -122,14 +129,6 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
         }
       }
     } catch { /* no registry entry — fall through */ }
-  }
-
-  const roots = candidateSiteRoots(site)
-
-  for (const root of roots) {
-    if (await pathExists(path.join(root, 'openapi.yaml'))) {
-      return root
-    }
   }
 
   throw new OpenWebError({
@@ -144,10 +143,9 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
 
 export async function listSites(): Promise<string[]> {
   const roots = [
-    path.join(os.homedir(), '.openweb', 'registry'),
     path.join(os.homedir(), '.openweb', 'sites'),
-    path.join(process.cwd(), 'sites'),
     path.join(process.cwd(), 'src', 'fixtures'),
+    path.join(os.homedir(), '.openweb', 'registry'),
   ]
 
   const names = new Set<string>()

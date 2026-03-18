@@ -13,7 +13,64 @@ import { showCommand } from './commands/show.js'
 import { sitesCommand } from './commands/sites.js'
 import { testCommand } from './commands/test.js'
 import { browserStartCommand, browserStopCommand, browserRestartCommand, browserStatusCommand, loginCommand } from './commands/browser.js'
+import { initCommand } from './commands/init.js'
 import { OpenWebError, toOpenWebError, writeErrorToStderr } from './lib/errors.js'
+
+function isJsonString(s: string): boolean {
+  try { JSON.parse(s); return true } catch { return false }
+}
+
+interface ExecOptions {
+  cdpEndpoint?: string
+  maxResponse?: number
+  output?: 'file'
+}
+
+function parseExecOptions(args: string[]): ExecOptions {
+  const cdpIdx = args.indexOf('--cdp-endpoint')
+  const cdpEndpoint = cdpIdx >= 0 ? args[cdpIdx + 1] : undefined
+  if (cdpIdx >= 0 && !cdpEndpoint) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'INVALID_PARAMS',
+      message: '--cdp-endpoint requires a value.',
+      action: 'Example: --cdp-endpoint http://localhost:9222',
+      retriable: false,
+      failureClass: 'fatal',
+    })
+  }
+  const maxResponseIdx = args.indexOf('--max-response')
+  const maxResponseRaw = maxResponseIdx >= 0 ? args[maxResponseIdx + 1] : undefined
+  if (maxResponseIdx >= 0 && !maxResponseRaw) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'INVALID_PARAMS',
+      message: '--max-response requires a value.',
+      action: 'Example: --max-response 8192',
+      retriable: false,
+      failureClass: 'fatal',
+    })
+  }
+  let maxResponse: number | undefined
+  if (maxResponseRaw !== undefined) {
+    const parsed = Number(maxResponseRaw)
+    if (!Number.isInteger(parsed) || parsed < 2) {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'INVALID_PARAMS',
+        message: '--max-response must be an integer of at least 2 bytes.',
+        action: 'Example: --max-response 8192',
+        retriable: false,
+        failureClass: 'fatal',
+      })
+    }
+    maxResponse = parsed
+  }
+  const outputIdx = args.indexOf('--output')
+  const outputRaw = outputIdx >= 0 ? args[outputIdx + 1] : undefined
+  const output = outputRaw === 'file' ? 'file' as const : undefined
+  return { cdpEndpoint, maxResponse, output }
+}
 
 async function withErrorHandling(fn: () => Promise<void>): Promise<void> {
   try {
@@ -28,7 +85,7 @@ async function withErrorHandling(fn: () => Promise<void>): Promise<void> {
 const argv = hideBin(process.argv)
 const firstArg = argv[0] ?? ''
 
-const passthroughTopLevel = new Set(['sites', 'compile', 'capture', 'verify', 'registry', 'browser', 'login', '--help', '-h', '--version', '-v'])
+const passthroughTopLevel = new Set(['sites', 'compile', 'capture', 'verify', 'registry', 'browser', 'login', 'init', '--help', '-h', '--version', '-v'])
 
 if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
   const [site, second, third, fourth] = argv
@@ -56,55 +113,24 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
           failureClass: 'fatal',
         })
       }
-      const cdpIdx = argv.indexOf('--cdp-endpoint')
-      const cdpEndpoint = cdpIdx >= 0 ? argv[cdpIdx + 1] : undefined
-      if (cdpIdx >= 0 && !cdpEndpoint) {
-        throw new OpenWebError({
-          error: 'execution_failed',
-          code: 'INVALID_PARAMS',
-          message: '--cdp-endpoint requires a value.',
-          action: 'Example: --cdp-endpoint http://localhost:9222',
-          retriable: false,
-          failureClass: 'fatal',
-        })
-      }
-      const maxResponseIdx = argv.indexOf('--max-response')
-      const maxResponseRaw = maxResponseIdx >= 0 ? argv[maxResponseIdx + 1] : undefined
-      if (maxResponseIdx >= 0 && !maxResponseRaw) {
-        throw new OpenWebError({
-          error: 'execution_failed',
-          code: 'INVALID_PARAMS',
-          message: '--max-response requires a value.',
-          action: 'Example: --max-response 8192',
-          retriable: false,
-          failureClass: 'fatal',
-        })
-      }
-      let maxResponse: number | undefined
-      if (maxResponseRaw !== undefined) {
-        const parsedMaxResponse = Number(maxResponseRaw)
-        if (!Number.isInteger(parsedMaxResponse) || parsedMaxResponse < 2) {
-          throw new OpenWebError({
-            error: 'execution_failed',
-            code: 'INVALID_PARAMS',
-            message: '--max-response must be an integer of at least 2 bytes.',
-            action: 'Example: --max-response 8192',
-            retriable: false,
-            failureClass: 'fatal',
-          })
-        }
-        maxResponse = parsedMaxResponse
-      }
-      const outputIdx = argv.indexOf('--output')
-      const outputRaw = outputIdx >= 0 ? argv[outputIdx + 1] : undefined
-      const output = outputRaw === 'file' ? 'file' as const : undefined
+      const opts = parseExecOptions(argv)
       const paramsJson = fourth && !fourth.startsWith('--') ? fourth : undefined
-      await execCommand(site, third, paramsJson, { cdpEndpoint, maxResponse, output })
+      await execCommand(site, third, paramsJson, opts)
       return
     }
 
     if (second === 'test') {
       await testCommand(site)
+      return
+    }
+
+    // Auto-exec: openweb <site> <op> '{"json"}' → exec mode
+    const isAutoExec = second && second !== 'exec' && !second.startsWith('-')
+      && third && !third.startsWith('-') && isJsonString(third)
+
+    if (isAutoExec) {
+      const opts = parseExecOptions(argv)
+      await execCommand(site, second, third, opts)
       return
     }
 
@@ -263,6 +289,11 @@ await yargs(argv)
       })
     },
   )
+  .command('init', 'Initialize ~/.openweb/sites/ with default fixtures', {}, async () => {
+    await withErrorHandling(async () => {
+      await initCommand()
+    })
+  })
   .demandCommand(1)
   .help()
   .parseAsync()

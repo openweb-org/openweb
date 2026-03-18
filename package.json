@@ -2,10 +2,17 @@
   "name": "openweb",
   "version": "0.1.0",
   "private": true,
+  "description": "Let any agent access the web — 51 sites, 17 auth primitives, one CLI",
   "type": "module",
   "bin": {
     "openweb": "dist/cli.js"
   },
+  "files": [
+    "dist/",
+    "src/fixtures/"
+  ],
+  "keywords": ["agent", "web", "api", "browser", "automation"],
+  "license": "MIT",
   "scripts": {
     "build": "tsup src/cli.ts --format esm --dts --clean && node scripts/build-adapters.js",
     "dev": "tsx src/cli.ts",
