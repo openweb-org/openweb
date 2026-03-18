@@ -6,26 +6,14 @@ import { cp, mkdir, readdir, access, rename, rm } from 'node:fs/promises'
 
 const SITES_ROOT = path.join(os.homedir(), '.openweb', 'sites')
 
-/** Verify resolved path stays inside SITES_ROOT. Rejects symlink escapes. */
-function safeSitesPath(siteName: string): string {
-  const resolved = path.resolve(SITES_ROOT, siteName)
-  const resolvedRoot = path.resolve(SITES_ROOT)
-  if (!resolved.startsWith(resolvedRoot + path.sep)) {
+/** Verify resolved path stays inside canonical SITES_ROOT. Rejects symlink escapes. */
+function safeSitesPath(canonicalRoot: string, siteName: string): string {
+  // Build child from already-canonicalized root — no symlink on parent can fool us
+  const resolved = path.join(canonicalRoot, siteName)
+  if (!resolved.startsWith(canonicalRoot + path.sep)) {
     throw new Error(`Path escapes sites root: ${resolved}`)
   }
-  try {
-    const real = realpathSync(resolved)
-    const realRoot = realpathSync(resolvedRoot)
-    if (!real.startsWith(realRoot + path.sep) && real !== realRoot) {
-      throw new Error(`Symlink escapes sites root: ${real}`)
-    }
-    return real
-  } catch (err) {
-    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
-      return resolved
-    }
-    throw err
-  }
+  return resolved
 }
 
 export async function initCommand(): Promise<void> {
@@ -49,6 +37,8 @@ export async function initCommand(): Promise<void> {
   }
 
   await mkdir(SITES_ROOT, { recursive: true })
+  // Canonicalize after mkdir so symlinks in the parent chain are resolved
+  const canonicalRoot = realpathSync(SITES_ROOT)
 
   const entries = await readdir(resolvedSeed, { withFileTypes: true })
   const dirs = entries.filter((e) => e.isDirectory())
@@ -62,7 +52,7 @@ export async function initCommand(): Promise<void> {
   let skipped = 0
 
   for (const dir of dirs) {
-    const dest = safeSitesPath(dir.name)
+    const dest = safeSitesPath(canonicalRoot, dir.name)
 
     // Skip only when dest has a valid openapi.yaml (not just any directory)
     try {
@@ -76,6 +66,8 @@ export async function initCommand(): Promise<void> {
     try {
       await rm(tmpDest, { recursive: true, force: true })
       await cp(path.join(resolvedSeed, dir.name), tmpDest, { recursive: true })
+      // Remove incomplete dest (no openapi.yaml) before rename to avoid ENOTEMPTY
+      await rm(dest, { recursive: true, force: true })
       await rename(tmpDest, dest)
       copied++
     } catch (err) {

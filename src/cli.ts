@@ -17,8 +17,7 @@ import { initCommand } from './commands/init.js'
 import { OpenWebError, toOpenWebError, writeErrorToStderr } from './lib/errors.js'
 
 function isJsonObject(s: string): boolean {
-  const trimmed = s.trimStart()
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return false
+  if (!s.trimStart().startsWith('{')) return false
   try { JSON.parse(s); return true } catch { return false }
 }
 
