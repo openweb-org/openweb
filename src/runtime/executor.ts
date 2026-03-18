@@ -23,16 +23,12 @@ import { validateSSRF } from '../lib/ssrf.js'
 import { fetchWithRedirects } from './redirect.js'
 import { connectWithRetry } from '../capture/connection.js'
 import {
-  buildHeaderParams,
-  buildJsonRequestBody,
   createNeedsPageError,
   executeSessionHttp,
   findPageForOrigin,
-  getServerXOpenWeb,
-  resolveAllParameters,
-  resolveTransport,
-  substitutePath,
 } from './session-executor.js'
+import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
+import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 import { loadAdapter, executeAdapter } from './adapter-executor.js'
 import { executeExtraction } from './extraction-executor.js'

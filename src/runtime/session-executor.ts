@@ -218,8 +218,3 @@ export async function executeSessionHttp(
   response.headers.forEach((value, key) => { responseHeaders[key] = value })
   return { status: response.status, body, responseHeaders }
 }
-
-// Re-export extracted modules for backward compat with existing imports
-export { getServerXOpenWeb, resolveTransport } from './operation-context.js'
-export { substitutePath, buildHeaderParams, buildJsonRequestBody, resolveAllParameters } from './request-builder.js'
-export { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'

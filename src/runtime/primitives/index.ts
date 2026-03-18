@@ -16,11 +16,11 @@ import { getResolver } from './registry.js'
 import type { BrowserHandle, ResolvedInjections } from './types.js'
 
 /** Auth resolution result — extends ResolvedInjections with optional query params */
-export interface AuthResult extends ResolvedInjections {
+interface AuthResult extends ResolvedInjections {
   readonly queryParams?: Readonly<Record<string, string>>
 }
 
-export interface PrimitiveDeps {
+interface PrimitiveDeps {
   readonly fetchImpl?: typeof fetch
   readonly ssrfValidator?: (url: string) => Promise<void>
   readonly authHeaders?: Record<string, string>

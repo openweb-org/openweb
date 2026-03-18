@@ -3,7 +3,8 @@ import { findOperation, listOperations, loadOpenApi, resolveSiteRoot } from '../
 import { loadManifest } from '../lib/manifest.js'
 import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 import type { PermissionCategory } from '../types/extensions.js'
-import { getServerXOpenWeb, resolveAllParameters, resolveTransport } from './session-executor.js'
+import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
+import { resolveAllParameters } from './request-builder.js'
 
 function formatParamType(type: string | string[] | undefined): string {
   if (!type) {

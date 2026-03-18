@@ -4,12 +4,10 @@ import { OpenWebError } from '../lib/errors.js'
 import {
   createNeedsPageError,
   findPageForOrigin,
-  resolveTransport,
-  substitutePath,
-  buildHeaderParams,
-  getServerXOpenWeb,
   executeSessionHttp,
 } from './session-executor.js'
+import { resolveTransport, getServerXOpenWeb } from './operation-context.js'
+import { substitutePath, buildHeaderParams } from './request-builder.js'
 import type { OpenApiSpec, OpenApiOperation, OpenApiParameter } from '../lib/openapi.js'
 
 function instagramSpec(): OpenApiSpec {

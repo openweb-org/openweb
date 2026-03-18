@@ -161,7 +161,7 @@ export function bumpMinor(version: string): string {
  * Bumps minor version, copies to registry, then updates the registry copy's manifest.
  * Idempotent: won't bump if the same version already exists in registry.
  */
-export async function archiveWithBump(site: string, siteRoot?: string): Promise<string> {
+async function archiveWithBump(site: string, siteRoot?: string): Promise<string> {
   const source = siteRoot ?? (await resolveSiteRoot(site, { skipRegistry: true }))
   const manifest = await loadManifestFrom(source)
   if (!manifest) return archiveSite(site, source)
@@ -212,7 +212,7 @@ export async function rollbackSite(site: string): Promise<string> {
 /**
  * Prune old versions, keeping the most recent `keep` versions.
  */
-export async function pruneSite(site: string, keep: number = MAX_VERSIONS): Promise<void> {
+async function pruneSite(site: string, keep: number = MAX_VERSIONS): Promise<void> {
   const versions = await listVersions(site)
   if (versions.length <= keep) return
 
@@ -247,7 +247,7 @@ export async function listRegisteredSites(): Promise<Array<{ site: string; versi
  * Get the path to the current active version of a registered site.
  * Returns undefined if the site is not in the registry.
  */
-export async function getRegistryCurrentPath(site: string): Promise<string | undefined> {
+async function getRegistryCurrentPath(site: string): Promise<string | undefined> {
   if (!SAFE_NAME.test(site)) return undefined
   const current = await getCurrentVersion(site)
   if (!current) return undefined

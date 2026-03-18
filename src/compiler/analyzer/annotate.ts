@@ -1,6 +1,6 @@
 import type { ParameterDescriptor } from '../types.js'
 
-export interface Annotation {
+interface Annotation {
   readonly operationId: string
   readonly summary: string
 }

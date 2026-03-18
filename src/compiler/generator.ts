@@ -235,7 +235,7 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
         extractionXOpenWeb.extraction = {
           type: 'ssr_next_data',
           page_url: '/',
-          path: 'props.pageProps.TODO',
+          path: '',  // Agent fills during curation
         }
       } else {
         extractionXOpenWeb.extraction = {

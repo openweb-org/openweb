@@ -1,6 +1,6 @@
 import { listSites, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import { loadManifest } from '../lib/manifest.js'
-import { getServerXOpenWeb, resolveTransport } from '../runtime/session-executor.js'
+import { getServerXOpenWeb, resolveTransport } from '../runtime/operation-context.js'
 import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 import type { PermissionCategory } from '../types/extensions.js'
 

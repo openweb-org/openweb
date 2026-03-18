@@ -5,18 +5,13 @@ import { getRequestBodyParameters, validateParams, type OpenApiOperation, type O
 import { validateSSRF } from '../lib/ssrf.js'
 import type { BrowserHandle } from './primitives/types.js'
 import {
-  buildJsonRequestBody,
   createNeedsPageError,
   findPageForOrigin,
-  getServerXOpenWeb,
-  resolveAllParameters,
-  resolveAuth,
-  resolveCsrf,
-  resolveSigning,
-  substitutePath,
-  buildHeaderParams,
   type SessionHttpDependencies,
 } from './session-executor.js'
+import { getServerXOpenWeb } from './operation-context.js'
+import { buildJsonRequestBody, resolveAllParameters, substitutePath, buildHeaderParams } from './request-builder.js'
+import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
