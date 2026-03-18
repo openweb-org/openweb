@@ -16,7 +16,9 @@ import { browserStartCommand, browserStopCommand, browserRestartCommand, browser
 import { initCommand } from './commands/init.js'
 import { OpenWebError, toOpenWebError, writeErrorToStderr } from './lib/errors.js'
 
-function isJsonString(s: string): boolean {
+function isJsonObject(s: string): boolean {
+  const trimmed = s.trimStart()
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return false
   try { JSON.parse(s); return true } catch { return false }
 }
 
@@ -125,8 +127,11 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
     }
 
     // Auto-exec: openweb <site> <op> '{"json"}' → exec mode
-    const isAutoExec = second && second !== 'exec' && !second.startsWith('-')
-      && third && !third.startsWith('-') && isJsonString(third)
+    // Only trigger on JSON objects/arrays, and not when show-mode flags are present
+    const hasShowFlags = argv.includes('--json') || argv.includes('--example') || argv.includes('--full') || argv.includes('-f')
+    const isAutoExec = !hasShowFlags
+      && second && second !== 'exec' && !second.startsWith('-')
+      && third && !third.startsWith('-') && isJsonObject(third)
 
     if (isAutoExec) {
       const opts = parseExecOptions(argv)

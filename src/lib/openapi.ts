@@ -82,13 +82,6 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
-function candidateSiteRoots(site: string): string[] {
-  return [
-    path.join(os.homedir(), '.openweb', 'sites', site),
-    path.join(process.cwd(), 'src', 'fixtures', site),
-  ]
-}
-
 /** Site names must be lowercase alphanumeric with hyphens/underscores. */
 const SAFE_SITE_NAME = /^[a-z0-9][a-z0-9_-]*$/
 
@@ -109,15 +102,13 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
     })
   }
 
-  // 1. Check ~/.openweb/sites/ and ./src/fixtures/ (dev fallback)
-  const roots = candidateSiteRoots(site)
-  for (const root of roots) {
-    if (await pathExists(path.join(root, 'openapi.yaml'))) {
-      return root
-    }
+  // 1. ~/.openweb/sites/ — user-installed (primary)
+  const userSite = path.join(os.homedir(), '.openweb', 'sites', site)
+  if (await pathExists(path.join(userSite, 'openapi.yaml'))) {
+    return userSite
   }
 
-  // 2. Check registry (versioned sites)
+  // 2. Registry (versioned sites)
   if (!opts?.skipRegistry) {
     const registryCurrentFile = path.join(os.homedir(), '.openweb', 'registry', site, 'current')
     try {
@@ -129,6 +120,12 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
         }
       }
     } catch { /* no registry entry — fall through */ }
+  }
+
+  // 3. ./src/fixtures/ — dev fallback
+  const devFixture = path.join(process.cwd(), 'src', 'fixtures', site)
+  if (await pathExists(path.join(devFixture, 'openapi.yaml'))) {
+    return devFixture
   }
 
   throw new OpenWebError({
