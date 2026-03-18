@@ -1,3 +1,24 @@
+## 2026-03-18: M20 — Codebase Cleanup — DONE
+
+**What changed:**
+- Phase 1: Deleted knowledge CLI (`knowledge.ts`, `patterns.ts`, `seed-patterns.ts` + tests), removed yargs registration from `cli.ts`, deleted `CompileSummary` interface + `generateReviewHints()` + `formatSummary()` from `compile.ts`, restored one-line compile output
+- Phase 2: Unified 3 duplicate implementations — redirect (`executor.ts` private → `redirect.ts`), permission derivation (`executor.ts`/`sites.ts`/`navigator.ts` private → `lib/permission-derive.ts`), manifest loading (`navigator.ts` private → `lib/manifest.ts`). Deleted `generator.ts` pass-through wrapper. Fixed transact path detection bug in executor, sites, and navigator (was missing before unification)
+- Phase 3: Deleted `session-executor.ts` re-export shim, updated 5 consumers to direct imports. Deleted `src/types/index.ts` barrel (zero importers). Fixed `generator.ts` TODO placeholder. Un-exported dead symbols (`archiveWithBump`, `pruneSite`, `getRegistryCurrentPath`, `Annotation`, `AuthResult`, `PrimitiveDeps`)
+- Phase 4: Moved `parseResponseBody` tests to `response-parser.test.ts`. Moved integration tests to `tests/integration/`. Removed duplicate `resolveTransport`/`getServerXOpenWeb` tests from `session-executor.test.ts`
+- Codex R1: Deleted dead `archiveWithBump()` and `getRegistryCurrentPath()` from `registry.ts`, replaced private `loadManifestFrom()` with shared `lib/manifest.ts`, removed stale knowledge CLI commands from architecture.md
+
+**Why:**
+- Net deletion milestone: remove M19 over-engineering, eliminate duplicate implementations, enforce single source of truth for redirect/permission/manifest logic. `references/` is the single knowledge source — CLI was redundant.
+
+**Key files:** `src/cli.ts`, `src/runtime/executor.ts`, `src/runtime/navigator.ts`, `src/commands/sites.ts`, `src/commands/compile.ts`, `src/lifecycle/registry.ts`, `src/runtime/session-executor.ts`
+**Verification:** `pnpm build` clean, 359 tests pass (42 test files), all 51 sites unaffected
+**Commit:** ab7c7e1..e2b13c8 (5 commits)
+**Codex reviews:** R1 (0 CRITICAL, 0 HIGH, 2 MEDIUM, 2 LOW — LOW fixed)
+**Next:** M21+ per roadmap
+**Blockers:** None
+
+---
+
 ## 2026-03-17: M18 — Agent-Driven Discovery — DONE
 
 **What changed:**

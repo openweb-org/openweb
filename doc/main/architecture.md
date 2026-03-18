@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-18 (commit: M19)
+> Last updated: 2026-03-18 (commit: M20)
 
 ## Mission
 
@@ -168,7 +168,7 @@ Operations carry a `permission` category that gates execution:
 | `delete` | DELETE | `prompt` |
 | `transact` | checkout/purchase/payment paths | `deny` |
 
-When `x-openweb.permission` is absent, the runtime derives permission from HTTP method (fail-closed).
+When `x-openweb.permission` is absent, the runtime derives permission from HTTP method + API path (fail-closed). Paths matching `/checkout|purchase|payment|order|subscribe/` are auto-escalated to `transact`.
 Policy is configurable per-site in `~/.openweb/permissions.yaml`.
 `prompt` policy returns a structured error for the agent to relay to the user.
 

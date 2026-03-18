@@ -41,7 +41,7 @@ executeOperation(site, operationId, params, deps)
        └── node?
              ├── auth needed? → token cache hit? → executeCachedFetch()
              │                  cache miss      → executeSessionHttp() → write cache
-             └── no auth → fetchWithValidatedRedirects()
+             └── no auth → fetchWithRedirects()
 ```
 
 **Transport Resolution Hierarchy:**
@@ -174,7 +174,7 @@ fetch(url, { method, headers, body })
   └── Parse JSON response
 ```
 
--> See: `src/runtime/executor.ts` — `fetchWithValidatedRedirects()`
+-> See: `src/runtime/redirect.ts` — `fetchWithRedirects()`
 
 ---
 

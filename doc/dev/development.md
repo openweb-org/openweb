@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-18 (commit: M19)
+> Last updated: 2026-03-18 (commit: M20)
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup → dist/ + compile adapters)
-pnpm test           # Run tests (405/405 pass)
+pnpm test           # Run tests (359 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -188,8 +188,7 @@ src/
 │   ├── test.ts               # Run site tests
 │   ├── sites.ts              # List available sites (--json)
 │   ├── verify.ts             # Verify sites and detect drift
-│   ├── registry.ts           # Registry management (install/rollback)
-│   └── knowledge.ts          # Knowledge base queries (patterns/failures/heuristics/add-pattern)
+│   └── registry.ts           # Registry management (install/rollback)
 ├── runtime/                  # Operation execution (3 modes + L3)
 ├── types/                    # Meta-spec type system
 ├── compiler/                 # Site compilation pipeline
@@ -198,8 +197,7 @@ src/
 │   ├── fingerprint.ts        # Response shape fingerprinting
 │   ├── verify.ts             # Site verification engine
 │   └── registry.ts           # Version management + install/rollback
-├── knowledge/                # Pattern library, probe heuristics, failure recording
-│   ├── patterns.ts           # 25 seed patterns from M3-M16 reviews
+├── knowledge/                # Runtime knowledge data (heuristics, failure recording)
 │   ├── heuristics.ts         # Probe success rate tracking + staleness decay (30d), decayedScore() exported
 │   └── failures.ts           # Auto-records verify DRIFT/FAIL to ~/.openweb/knowledge/
 ├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, manifest, permissions)
@@ -250,10 +248,18 @@ src/fixtures/instagram-fixture/
 ## Test Structure
 
 ```
-src/
-├── types/validator.test.ts           # Schema validation tests
-├── runtime/primitives/primitives.test.ts  # L2 primitive unit tests
-└── fixtures/*/tests/*.test.json       # Per-site integration tests
+src/                                          # Unit tests (pnpm test)
+├── types/validator.test.ts
+├── runtime/primitives/primitives.test.ts
+├── lib/response-parser.test.ts
+└── ...
+
+tests/integration/                            # Integration tests (separate from pnpm test)
+├── phase2-fixtures.test.ts
+├── instagram-integration.test.ts
+└── runner.ts                                 # Live site runner (requires CDP)
+
+src/fixtures/*/tests/*.test.json              # Per-site fixture tests
 ```
 
 Test JSON format:
