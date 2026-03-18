@@ -24,6 +24,17 @@ pnpm --silent dev <site> exec <op> '<json>' --cdp-endpoint http://localhost:9222
 pnpm --silent dev <site> exec <op> '<json>' --output file  # Always write response to file
 ```
 
+## References Directory
+
+Deep knowledge docs are in `references/` (relative to this SKILL.md). Load them on demand:
+
+| File | When to read |
+|------|-------------|
+| `references/archetypes.md` | Before compiling a new site — find the site's category and expected patterns |
+| `references/auth-patterns.md` | When debugging auth issues or reviewing compile output's auth detection |
+| `references/compile-review.md` | After `openweb compile` — learn how to review the draft output effectively |
+| `references/troubleshooting.md` | When hitting errors — common failures and their solutions |
+
 ## Browser Management
 
 For sites that require authentication, Chrome must be running with CDP. Use the managed browser:
@@ -351,11 +362,13 @@ These are YOUR goals, not a rigid checklist. Every site is different.
    - Avoid logout, delete account, billing, irreversible actions
 5. `openweb capture stop`           # stop recording
 
-**Step 2 — Compile + Review**
-1. `openweb compile <site-url>`
-2. Read openapi.yaml — are the important APIs captured?
-3. Remove noise (analytics, tracking, irrelevant endpoints)
-4. Missing key APIs → repeat Step 1 with more targeted browsing
+**Step 2 — Compile + Review (Draft → Curate → Verify)**
+
+Compile output is a **draft**, not the final spec. Follow this three-phase model:
+
+1. **Draft**: `openweb compile <site-url>` — runs offline, produces draft spec with auto-detected auth, filtered samples, generated operation names. Review the compile summary for primitives, sample counts, and hints.
+2. **Curate**: Read the generated openapi.yaml. Rename operations for clarity. Remove noise (analytics, tracking). Confirm auth/CSRF/signing. If key APIs are missing, repeat Step 1 with more targeted browsing.
+3. **Verify**: `openweb verify <site>` — confirms the spec works against the live site. A spec is **Ready** when curated + verified.
 
 **When you hit problems:**
 - Login page / CAPTCHA → stop, tell user to login in their browser
@@ -370,6 +383,32 @@ pnpm --silent dev registry install <site>          # Archive fixture to registry
 pnpm --silent dev registry rollback <site>         # Revert to previous version
 pnpm --silent dev registry show <site>             # Show version history
 ```
+
+### Knowledge Base
+
+```bash
+pnpm --silent dev knowledge patterns                          # List all patterns (auto-seeds on first run)
+pnpm --silent dev knowledge patterns --category auth          # Filter by category
+pnpm --silent dev knowledge patterns --signal csrf            # Filter by signal
+pnpm --silent dev knowledge failures                          # List recorded failures
+pnpm --silent dev knowledge failures --site uber              # Filter by site
+pnpm --silent dev knowledge failures --class auth_expired     # Filter by failure class
+pnpm --silent dev knowledge heuristics                        # List probe heuristics with decayed scores
+pnpm --silent dev knowledge heuristics --signal cookie        # Filter by signal type
+pnpm --silent dev knowledge add-pattern --category auth --signal "..." --action "..." --source "..."  # Add pattern
+```
+
+## Using Knowledge
+
+Before compiling a new site:
+1. Read `references/archetypes.md` — find the site's category and expected auth/transport patterns
+2. Read relevant `references/site-notes/` if they exist — learn from similar sites
+3. Query `pnpm --silent dev knowledge patterns` for prior patterns that may apply
+4. Query `pnpm --silent dev knowledge failures --site <similar-site>` for known issues
+
+After successful compile:
+1. Record reusable patterns via `pnpm --silent dev knowledge add-pattern`
+2. If this is a new archetype pattern, consider updating `references/archetypes.md`
 
 ## Important Notes
 
