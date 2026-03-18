@@ -315,23 +315,52 @@ pnpm --silent dev verify <site>                   # Verify single site — PASS/
 pnpm --silent dev verify --all                     # Verify all sites sequentially
 pnpm --silent dev verify --all --report            # JSON drift report
 pnpm --silent dev verify --all --report markdown   # Markdown drift report
-pnpm --silent dev verify <site> --auto-heal        # Auto-heal drifted read operations
-pnpm --silent dev verify --all --auto-heal         # Batch auto-heal all sites
-pnpm --silent dev verify --all --auto-heal --report # Auto-heal with report
 ```
 
-`--auto-heal` re-discovers drifted sites, diffs old vs new spec by path+method, and auto-accepts read operation changes. Write/delete/transact changes are reported but not applied. Skips `auth_expired` sites and aborts on CAPTCHA/login-wall.
+### Discovering New Sites
 
-### Discover (API Discovery)
+Prerequisites:
+- Managed Chrome running: `openweb browser start`
+- playwright-cli available
 
-```bash
-pnpm --silent dev discover <url>                   # Passive capture only
-pnpm --silent dev discover <url> --explore         # Blind active exploration
-pnpm --silent dev discover <url> --intent          # Intent-driven (page analysis + targeted exploration)
-pnpm --silent dev discover <url> --intent --explore # Both strategies combined
-```
+Workflow:
 
-When `--intent` discovers a CAPTCHA, 2FA page, or login wall, it returns a `human_handoff` result with the required action (e.g., complete CAPTCHA in browser, then `openweb browser restart`).
+**Step 0 — Think before you browse**
+Before touching the browser, think like a normal user of this website:
+- What is this site? (social? e-commerce? tool? content platform?)
+- What would a real user do here?
+- What information do they want? What actions do they take?
+
+Set concrete discovery goals based on that. Examples:
+- Instagram → view timeline, search users, view profile, check stories
+- Taobao → search products, view product detail, check cart, view orders
+- Gmail → inbox list, read email, search emails, view contacts
+
+These are YOUR goals, not a rigid checklist. Every site is different.
+
+**Step 1 — Record + Browse**
+1. `openweb capture start`          # start recording FIRST
+2. `playwright-cli goto <url>`      # then navigate (traffic is being recorded)
+3. `playwright-cli snapshot`        # see page structure
+4. Browse systematically based on your goals:
+   - Click navigation to find key feature pages
+   - Try a search
+   - Open a detail page
+   - Check profile/settings
+   - Look at notifications
+   - Avoid logout, delete account, billing, irreversible actions
+5. `openweb capture stop`           # stop recording
+
+**Step 2 — Compile + Review**
+1. `openweb compile ./capture --url <site-url>`
+2. Read openapi.yaml — are the important APIs captured?
+3. Remove noise (analytics, tracking, irrelevant endpoints)
+4. Missing key APIs → repeat Step 1 with more targeted browsing
+
+**When you hit problems:**
+- Login page / CAPTCHA → stop, tell user to login in their browser
+- SPA slow to load → wait for snapshot to show full content
+- Write operations → during discovery, identify mutation endpoints from UI without executing
 
 ### Registry (Version Management)
 

@@ -86,11 +86,10 @@ L1+L2 classification validated against 103 OpenTabs plugins.
 | **Runtime** | Reads skill packages, resolves primitives, executes requests | `src/runtime/` | L1 + L2 + L3 + extraction + token cache (M14) |
 | **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | L1 emit + L2 classify + probe (M15) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM), dynamic globals detection | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17) |
-| **Discovery** | Agent-driven API discovery pipeline | `src/discovery/` | Interactive capture + active exploration (M11), intent-driven discovery + human_handoff (M16) |
-| **Lifecycle** | Drift detection, verification, quarantine, auto-heal | `src/lifecycle/` | Fingerprint + verify + quarantine (M12), self-heal (M17) |
+| **Lifecycle** | Drift detection, verification, quarantine | `src/lifecycle/` | Fingerprint + verify + quarantine (M12) |
 | **Knowledge** | Pattern library, probe heuristics, failure recording | `src/knowledge/` | Patterns + heuristics + failures (M17) |
 | **Registry** | Site version management, install, rollback | `src/lifecycle/registry.ts` | Internal registry (M12) |
-| **CLI** | Progressive navigation + exec + browser + capture + compile + discover + verify + registry + auto-heal | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M16: --intent; M17: --auto-heal) |
+| **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M18: discovery moved to agent workflow) |
 | **Skill packages** | Per-site instance specs | `src/fixtures/` | 51 verified sites |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5) |
 
@@ -148,14 +147,9 @@ openweb browser stop / restart / status
 openweb login <site>                           # open site in default browser for auth
 openweb capture start --cdp-endpoint ...       # record browser session
 openweb compile <url> [--probe]                  # generate skill package (--probe validates heuristics)
-openweb discover <url>                         # discover APIs and generate fixture
-openweb discover <url> --intent                # intent-driven discovery (page analysis + targeted exploration)
-openweb discover <url> --explore               # blind active exploration (click nav, search)
 openweb verify <site>                          # verify site and detect drift
-openweb verify <site> --auto-heal              # verify and auto-heal drifted read operations
 openweb verify --all                           # batch verify all sites
-openweb verify --all --auto-heal               # batch verify and auto-heal all sites
-openweb verify --all --auto-heal --report      # auto-heal with drift/heal report
+openweb verify --all --report                  # verify with drift report
 openweb registry list                          # list registered site versions
 openweb registry install <site>                # archive fixture to registry
 openweb registry rollback <site>               # revert to previous version
