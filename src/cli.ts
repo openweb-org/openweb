@@ -6,7 +6,6 @@ import { hideBin } from 'yargs/helpers'
 
 import { captureStartCommand, captureStopCommand } from './commands/capture.js'
 import { compileCommand } from './commands/compile.js'
-import { discoverCommand } from './commands/discover.js'
 import { verifyCommand } from './commands/verify.js'
 import { registryCommand, type RegistryAction } from './commands/registry.js'
 import { execCommand } from './commands/exec.js'
@@ -29,7 +28,7 @@ async function withErrorHandling(fn: () => Promise<void>): Promise<void> {
 const argv = hideBin(process.argv)
 const firstArg = argv[0] ?? ''
 
-const passthroughTopLevel = new Set(['sites', 'compile', 'capture', 'discover', 'verify', 'registry', 'browser', 'login', '--help', '-h', '--version', '-v'])
+const passthroughTopLevel = new Set(['sites', 'compile', 'capture', 'verify', 'registry', 'browser', 'login', '--help', '-h', '--version', '-v'])
 
 if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
   const [site, second, third, fourth] = argv
@@ -182,41 +181,12 @@ await yargs(argv)
         .demandCommand(1),
   )
   .command(
-    'discover <url>',
-    'Discover API endpoints from a website and generate a fixture',
-    (cmd) =>
-      cmd
-        .positional('url', { type: 'string', demandOption: true, describe: 'Target site URL' })
-        .option('cdp-endpoint', {
-          type: 'string',
-          default: 'http://localhost:9222',
-          describe: 'Chrome DevTools Protocol endpoint',
-        })
-        .option('explore', { type: 'boolean', default: false, describe: 'Enable active exploration (clicks nav links, fills search)' })
-        .option('intent', { type: 'boolean', default: false, describe: 'Enable intent-driven discovery (page analysis + targeted exploration)' })
-        .option('output', { type: 'string', describe: 'Output directory for generated fixture' })
-        .option('duration', { type: 'number', default: 8000, describe: 'Capture duration in ms' }),
-    async (args) => {
-      await withErrorHandling(async () => {
-        await discoverCommand({
-          url: String(args.url),
-          cdpEndpoint: String(args['cdp-endpoint']),
-          explore: Boolean(args.explore),
-          intent: Boolean(args.intent),
-          output: args.output ? String(args.output) : undefined,
-          duration: Number(args.duration),
-        })
-      })
-    },
-  )
-  .command(
     'verify [site]',
     'Verify site(s) and detect drift',
     (cmd) =>
       cmd
         .positional('site', { type: 'string', describe: 'Site to verify (omit with --all for all sites)' })
         .option('all', { type: 'boolean', default: false, describe: 'Verify all sites' })
-        .option('auto-heal', { type: 'boolean', default: false, describe: 'Auto-heal drifted read operations' })
         .option('report', {
           describe: 'Output drift report (json or markdown)',
           coerce: (val: string | boolean) => val === true ? 'json' : val,
@@ -226,7 +196,6 @@ await yargs(argv)
         await verifyCommand({
           site: args.site ? String(args.site) : undefined,
           all: Boolean(args.all),
-          autoHeal: Boolean(args['auto-heal']),
           report: args.report as boolean | string | undefined,
         })
       })
