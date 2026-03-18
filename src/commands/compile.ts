@@ -15,7 +15,8 @@ import { cleanupRecordingDir, loadCaptureData, loadRecordedSamples, runScriptedR
 import { probeOperations, mergeProbeResults } from '../compiler/prober.js'
 import { connectWithRetry } from '../capture/connection.js'
 import type { AnalyzedOperation, ParameterDescriptor, RecordedRequestSample } from '../compiler/types.js'
-import { fetchWithValidatedRedirects } from '../runtime/executor.js'
+import { fetchWithRedirects } from '../runtime/redirect.js'
+import { validateSSRF } from '../lib/ssrf.js'
 
 interface CompileArgs {
   readonly url: string
@@ -66,8 +67,9 @@ async function verifyOperation(operation: Omit<AnalyzedOperation, 'verified'>): 
       operation.exampleInput,
     )
 
-    const response = await fetchWithValidatedRedirects(url, operation.method.toUpperCase(), {
+    const response = await fetchWithRedirects(url, operation.method.toUpperCase(), { Accept: 'application/json' }, undefined, {
       fetchImpl: fetch,
+      ssrfValidator: validateSSRF,
     })
 
     if (!response.ok) {

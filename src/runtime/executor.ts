@@ -20,6 +20,7 @@ import {
 } from '../lib/openapi.js'
 import { loadManifest } from '../lib/manifest.js'
 import { validateSSRF } from '../lib/ssrf.js'
+import { fetchWithRedirects } from './redirect.js'
 import { connectWithRetry } from '../capture/connection.js'
 import {
   buildHeaderParams,
@@ -35,19 +36,8 @@ import {
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 import { loadAdapter, executeAdapter } from './adapter-executor.js'
 import { executeExtraction } from './extraction-executor.js'
+import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types/extensions.js'
-
-const MAX_REDIRECTS = 5
-const SENSITIVE_HEADERS = ['cookie', 'authorization', 'x-csrftoken', 'x-csrf-token']
-
-/** Derive permission category from HTTP method when x-openweb.permission is absent */
-function derivePermissionFromMethod(method: string): PermissionCategory {
-  switch (method.toLowerCase()) {
-    case 'delete': return 'delete'
-    case 'post': case 'put': case 'patch': return 'write'
-    default: return 'read'
-  }
-}
 
 export interface ExecuteDependencies {
   readonly fetchImpl?: typeof fetch
@@ -67,85 +57,6 @@ export interface ExecuteResult {
   readonly body: unknown
   readonly responseSchemaValid: boolean
   readonly responseHeaders: Readonly<Record<string, string>>
-}
-
-function isRedirect(statusCode: number): boolean {
-  return statusCode >= 300 && statusCode < 400
-}
-
-export async function fetchWithValidatedRedirects(
-  inputUrl: string,
-  method: string,
-  deps: ExecuteDependencies,
-  requestInit: RequestInit = {},
-): Promise<Response> {
-  const fetchImpl = deps.fetchImpl ?? fetch
-  const ssrfValidator = deps.ssrfValidator ?? validateSSRF
-
-  let current = inputUrl
-  let currentMethod = method
-  let currentBody = requestInit.body
-  const currentHeaders = {
-    Accept: 'application/json',
-    ...((requestInit.headers as Record<string, string> | undefined) ?? {}),
-  }
-
-  for (let attempt = 0; attempt <= MAX_REDIRECTS; attempt += 1) {
-    await ssrfValidator(current)
-
-    const response = await fetchImpl(current, {
-      ...requestInit,
-      method: currentMethod,
-      headers: currentHeaders,
-      body: currentMethod !== 'GET' && currentMethod !== 'HEAD' ? currentBody : undefined,
-      redirect: 'manual',
-    })
-
-    if (!isRedirect(response.status)) {
-      return response
-    }
-
-    const location = response.headers.get('location')
-    if (!location) {
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: 'Redirect response missing Location header.',
-        action: 'Retry or inspect upstream endpoint behavior.',
-        retriable: true,
-        failureClass: 'retriable',
-      })
-    }
-
-    current = new URL(location, current).toString()
-
-    // 301/302/303: rewrite to GET and drop body (matches native fetch behavior)
-    // Only 307/308 preserve the original method
-    if (response.status === 301 || response.status === 302 || response.status === 303) {
-      currentMethod = 'GET'
-      currentBody = undefined
-    }
-
-    // CR-01: Strip sensitive headers on cross-origin redirect
-    const nextOrigin = new URL(current).origin
-    const originalOrigin = new URL(inputUrl).origin
-    if (nextOrigin !== originalOrigin) {
-      for (const name of SENSITIVE_HEADERS) {
-        for (const key of Object.keys(currentHeaders)) {
-          if (key.toLowerCase() === name) delete currentHeaders[key]
-        }
-      }
-    }
-  }
-
-  throw new OpenWebError({
-    error: 'execution_failed',
-    code: 'EXECUTION_FAILED',
-    message: `Too many redirects (>${MAX_REDIRECTS})`,
-    action: 'Retry later or inspect endpoint redirects.',
-    retriable: true,
-    failureClass: 'retriable',
-  })
 }
 
 export async function executeOperation(
@@ -170,7 +81,7 @@ export async function executeOperation(
   // Permission gate: check before executing
   // Derive permission from x-openweb.permission or HTTP method (fail-closed)
   const opExt = operationRef.operation['x-openweb'] as XOpenWebOperation | undefined
-  const category: PermissionCategory = opExt?.permission ?? derivePermissionFromMethod(operationRef.method)
+  const category: PermissionCategory = opExt?.permission ?? derivePermissionFromMethod(operationRef.method, operationRef.path) as PermissionCategory
   const permConfig = deps.permissionsConfig ?? loadPermissions()
   const policy = checkPermission(permConfig, site, category)
   if (policy === 'deny') {
@@ -323,9 +234,9 @@ export async function executeOperation(
       if (jsonBody) {
         requestHeaders['Content-Type'] = 'application/json'
       }
-      const response = await fetchWithValidatedRedirects(url, upperMethod, deps, {
-        headers: requestHeaders,
-        body: jsonBody,
+      const response = await fetchWithRedirects(url, upperMethod, { Accept: 'application/json', ...requestHeaders }, jsonBody, {
+        fetchImpl: deps.fetchImpl ?? fetch,
+        ssrfValidator: deps.ssrfValidator ?? validateSSRF,
       })
 
       if (!response.ok) {
@@ -436,9 +347,9 @@ async function executeCachedFetch(
     : undefined
   if (jsonBody) requestHeaders['Content-Type'] = 'application/json'
 
-  const response = await fetchWithValidatedRedirects(url, upperMethod, deps, {
-    headers: requestHeaders,
-    body: jsonBody,
+  const response = await fetchWithRedirects(url, upperMethod, { Accept: 'application/json', ...requestHeaders }, jsonBody, {
+    fetchImpl: deps.fetchImpl ?? fetch,
+    ssrfValidator: deps.ssrfValidator ?? validateSSRF,
   })
 
   if (!response.ok) {

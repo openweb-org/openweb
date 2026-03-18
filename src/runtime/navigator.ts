@@ -1,20 +1,9 @@
-import { readFile } from 'node:fs/promises'
-import path from 'node:path'
-
 import { getRequestBodyParameters, isArraySchema, type JsonSchema } from '../lib/openapi.js'
 import { findOperation, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
+import { loadManifest } from '../lib/manifest.js'
+import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 import type { PermissionCategory } from '../types/extensions.js'
-import type { Manifest } from '../types/manifest.js'
 import { getServerXOpenWeb, resolveAllParameters, resolveTransport } from './session-executor.js'
-
-/** Derive permission from HTTP method when x-openweb.permission is absent */
-function derivePermission(method: string): PermissionCategory {
-  switch (method.toLowerCase()) {
-    case 'delete': return 'delete'
-    case 'post': case 'put': case 'patch': return 'write'
-    default: return 'read'
-  }
-}
 
 function formatParamType(type: string | string[] | undefined): string {
   if (!type) {
@@ -51,16 +40,6 @@ function summarizeSchema(schema: unknown): string {
   return `{ ${keys.slice(0, 5).join(', ')}${keys.length > 5 ? ', ...' : ''} }`
 }
 
-async function loadManifest(site: string): Promise<Manifest | undefined> {
-  try {
-    const siteRoot = await resolveSiteRoot(site)
-    const raw = await readFile(path.join(siteRoot, 'manifest.json'), 'utf8')
-    return JSON.parse(raw) as Manifest
-  } catch {
-    return undefined
-  }
-}
-
 function getTransportLabel(transport: string, hasAdapter: boolean): string {
   return hasAdapter ? 'adapter (L3)' : transport
 }
@@ -68,7 +47,8 @@ function getTransportLabel(transport: string, hasAdapter: boolean): string {
 export async function renderSite(site: string): Promise<string> {
   const spec = await loadOpenApi(site)
   const operations = listOperations(spec)
-  const manifest = await loadManifest(site)
+  const siteRoot = await resolveSiteRoot(site)
+  const manifest = await loadManifest(siteRoot)
 
   if (operations.length === 0) {
     return 'No tools found.'
@@ -100,7 +80,7 @@ export async function renderSite(site: string): Promise<string> {
   const permissionCounts: Record<string, number> = {}
   for (const entry of operations) {
     const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
-    const perm = (opExt?.permission as PermissionCategory | undefined) ?? derivePermission(entry.method)
+    const perm = (opExt?.permission as PermissionCategory | undefined) ?? derivePermissionFromMethod(entry.method, entry.path) as PermissionCategory
     permissionCounts[perm] = (permissionCounts[perm] ?? 0) + 1
   }
   const permParts = Object.entries(permissionCounts).map(([perm, count]) => `${perm}:${count}`)
@@ -163,7 +143,7 @@ export async function renderOperation(site: string, operationId: string, full: b
   lines.push(`Transport: ${transportLabel}`)
 
   // Operation-level metadata
-  const effectivePerm = (opExt?.permission as string | undefined) ?? derivePermission(method)
+  const effectivePerm = (opExt?.permission as string | undefined) ?? derivePermissionFromMethod(method, opPath)
   lines.push(`Permission: ${effectivePerm}`)
 
   if (full) {
@@ -177,7 +157,8 @@ export async function renderOperation(site: string, operationId: string, full: b
 export async function renderSiteJson(site: string): Promise<string> {
   const spec = await loadOpenApi(site)
   const operations = listOperations(spec)
-  const manifest = await loadManifest(site)
+  const siteRoot = await resolveSiteRoot(site)
+  const manifest = await loadManifest(siteRoot)
 
   const result = {
     name: manifest?.display_name ?? site,
@@ -187,7 +168,7 @@ export async function renderSiteJson(site: string): Promise<string> {
         id: entry.operation.operationId,
         method: entry.method.toUpperCase(),
         path: entry.path,
-        permission: (opExt?.permission as string | undefined) ?? derivePermission(entry.method),
+        permission: (opExt?.permission as string | undefined) ?? derivePermissionFromMethod(entry.method, entry.path),
         summary: entry.operation.summary ?? '',
       }
     }),
@@ -207,7 +188,7 @@ export async function renderOperationJson(site: string, operationId: string): Pr
     id: operationId,
     method: method.toUpperCase(),
     path: opPath,
-    permission: (opExt?.permission as string | undefined) ?? derivePermission(method),
+    permission: (opExt?.permission as string | undefined) ?? derivePermissionFromMethod(method, opPath),
     parameters: [...allParams, ...bodyParams].map((p) => ({
       name: p.name,
       in: p.in,

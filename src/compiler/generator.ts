@@ -83,10 +83,6 @@ function responseContainsResultsLatLon(schema: JsonSchema): boolean {
   return Boolean(results.items.properties.latitude && results.items.properties.longitude)
 }
 
-function derivePermission(method: string, path: string): string {
-  return derivePermissionFromMethod(method, path)
-}
-
 function buildDependencies(operations: AnalyzedOperation[]): Record<string, string> {
   const providers = operations.filter((operation) => responseContainsResultsLatLon(operation.responseSchema))
   if (providers.length !== 1) {
@@ -151,7 +147,7 @@ export async function generatePackage(input: GeneratePackageInput): Promise<stri
     const stableId = hash16(`${operation.operationId}:${signatureSeed(operation)}`)
     const signatureId = hash16(signatureSeed(operation))
 
-    const permission = derivePermission(operation.method, operation.path)
+    const permission = derivePermissionFromMethod(operation.method, operation.path)
     const signals = deriveSignals(input.classify, operation.verified)
 
     const buildMeta: Record<string, unknown> = {

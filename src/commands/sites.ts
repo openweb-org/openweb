@@ -1,15 +1,8 @@
 import { listSites, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import { loadManifest } from '../lib/manifest.js'
 import { getServerXOpenWeb, resolveTransport } from '../runtime/session-executor.js'
+import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 import type { PermissionCategory } from '../types/extensions.js'
-
-function derivePermission(method: string): PermissionCategory {
-  switch (method.toLowerCase()) {
-    case 'delete': return 'delete'
-    case 'post': case 'put': case 'patch': return 'write'
-    default: return 'read'
-  }
-}
 
 export interface SitesOptions {
   readonly json?: boolean
@@ -39,7 +32,7 @@ export async function sitesCommand(options: SitesOptions = {}): Promise<void> {
         let maxPerm: PermissionCategory = 'read'
         for (const entry of operations) {
           const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
-          const perm = (opExt?.permission as PermissionCategory | undefined) ?? derivePermission(entry.method)
+          const perm = (opExt?.permission as PermissionCategory | undefined) ?? derivePermissionFromMethod(entry.method, entry.path) as PermissionCategory
           if (perm === 'transact') { maxPerm = 'transact'; break }
           if (perm === 'delete' && maxPerm !== 'transact') maxPerm = 'delete'
           if (perm === 'write' && maxPerm === 'read') maxPerm = 'write'
