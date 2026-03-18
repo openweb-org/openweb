@@ -16,6 +16,15 @@ Examples: Instagram, Reddit, Bluesky, X
 **Bluesky**: localStorage_jwt auth. Node transport. Cursor pagination.
 **X (Twitter)**: browser_fetch transport (TLS fingerprint). cookie_to_header CSRF on ALL methods (including GET). Static bearer as const header.
 
+Expected Operations:
+- [ ] Feed / timeline (read, paginated)
+- [ ] User profile (read, by ID or username)
+- [ ] Post / create content (write)
+- [ ] Like / react (write)
+- [ ] Comment (write)
+- [ ] Search users or posts (read)
+- [ ] Direct messages / inbox (read)
+
 ## Messaging
 
 Auth: cookie_session, webpack_module_walk, or browser state (L3)
@@ -27,6 +36,13 @@ Examples: Discord, Telegram, WhatsApp
 **Discord**: webpack_module_walk token extraction. browser_fetch transport. Token lives in webpack module cache.
 **Telegram**: L3 adapter. teact getGlobal() dynamic discovery via webpack walk. State read from global store.
 **WhatsApp**: L3 adapter. Meta `__d`/`__w`/`require` module system. State read from internal modules.
+
+Expected Operations:
+- [ ] List conversations (read, paginated)
+- [ ] Read messages in conversation (read, paginated)
+- [ ] Send message (write)
+- [ ] List contacts / friends (read)
+- [ ] Search messages (read)
 
 ## Developer Tools
 
@@ -40,6 +56,14 @@ Examples: GitHub, npm, StackOverflow
 **npm**: No auth. Node transport. Package search + metadata.
 **StackOverflow**: No auth. Node transport. Search with answers.
 
+Expected Operations:
+- [ ] List repos / projects (read, paginated)
+- [ ] Repo / project detail (read, by ID or name)
+- [ ] List issues / items (read, paginated)
+- [ ] Create issue / item (write)
+- [ ] Search (read)
+- [ ] User / org profile (read)
+
 ## Weather / Data APIs
 
 Auth: api_key or none
@@ -49,6 +73,11 @@ Usually: REST JSON, no CSRF, no signing
 Examples: Open-Meteo, IP API, Exchange Rate, Sunrise Sunset, World Time
 
 **Open-Meteo**: No auth. Query params for latitude/longitude/hourly fields. JSON response.
+
+Expected Operations:
+- [ ] Current data (read, by location or params)
+- [ ] Forecast / historical (read, by range)
+- [ ] Lookup by coordinates or ID (read)
 
 ## E-commerce
 
@@ -60,6 +89,13 @@ Extraction: ssr_next_data or script_json common
 Examples: Walmart
 
 **Walmart**: ssr_next_data extraction (Next.js `__NEXT_DATA__`). Page extraction transport.
+
+Expected Operations:
+- [ ] Search products (read)
+- [ ] Product detail (read, by ID)
+- [ ] Add to cart (write)
+- [ ] View cart (read)
+- [ ] Checkout (transact — deny by default)
 
 ## Content Platforms
 
@@ -74,6 +110,13 @@ Examples: YouTube, Hacker News, Wikipedia, ChatGPT
 **ChatGPT**: exchange_chain (GET session endpoint) + Cloudflare User-Agent binding.
 **Wikipedia**: No auth. Node transport. Search + page summary.
 
+Expected Operations:
+- [ ] Feed / homepage (read, paginated)
+- [ ] Content detail (read, by ID or URL)
+- [ ] Search content (read)
+- [ ] User / channel profile (read)
+- [ ] Comment / reply (write)
+
 ## Productivity / Enterprise
 
 Auth: sessionStorage_msal, cookie_session, or exchange_chain
@@ -85,6 +128,14 @@ Examples: Microsoft Word, New Relic
 **Microsoft Word**: sessionStorage_msal auth (MSAL token cache from browser storage). Graph API bearer token.
 **New Relic**: cookie_session. GraphQL cursor pagination for dashboards.
 
+Expected Operations:
+- [ ] List documents / items (read, paginated)
+- [ ] Document / item detail (read, by ID)
+- [ ] Create document / item (write)
+- [ ] Update document / item (write)
+- [ ] Search (read)
+- [ ] Dashboard / overview (read)
+
 ## Prediction / Fun APIs
 
 Auth: none
@@ -94,6 +145,10 @@ Usually: simple GET with query params, JSON response, no pagination
 Examples: Agify, Genderize, Nationalize, Cat Facts, Chuck Norris, Advice Slip, Kanye Rest, Official Joke, Useless Facts, Affirmations, Random Fox, Bored API
 
 These are the simplest archetype — no auth, no CSRF, no signing, single-operation fixtures.
+
+Expected Operations:
+- [ ] Query / predict (read, single call)
+- [ ] Random result (read)
 
 ## Reference / Lookup APIs
 
@@ -105,6 +160,11 @@ Examples: PokeAPI, REST Countries, Open Library, DuckDuckGo, Dog CEO, HTTPBin, C
 
 These are public APIs with richer schemas — multiple operations, path parameters, varied response shapes.
 
+Expected Operations:
+- [ ] Search / list (read, paginated or filtered)
+- [ ] Detail by ID or name (read)
+- [ ] Random entry (read, if supported)
+
 ## Crypto / Finance
 
 Auth: none or api_key
@@ -113,3 +173,9 @@ Key pages: /price, /market, /exchange
 Examples: CoinGecko, Exchange Rate
 
 **CoinGecko**: No auth for basic endpoints. Price queries by coin ID + currency.
+
+Expected Operations:
+- [ ] Price query (read, by asset + currency)
+- [ ] Market data / rankings (read, paginated)
+- [ ] Exchange rates (read)
+- [ ] Historical data (read, by range)

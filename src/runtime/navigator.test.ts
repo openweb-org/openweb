@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { renderOperation, renderSite } from './navigator.js'
+import { renderOperation, renderSite, renderSiteJson } from './navigator.js'
 
 describe('navigator', () => {
   it('renders site with readiness metadata', async () => {
@@ -50,5 +50,24 @@ describe('navigator', () => {
 
     expect(siteOutput).toContain('Transport:        adapter (L3)')
     expect(opOutput).toContain('Transport: adapter (L3)')
+  })
+
+  it('shows notes hint when notes.md exists', async () => {
+    const output = await renderSite('instagram-fixture')
+    expect(output).toContain('Notes:')
+    expect(output).toContain('Cookie expiry fast')
+  })
+
+  it('omits notes hint when no notes.md', async () => {
+    const output = await renderSite('open-meteo-fixture')
+    expect(output).not.toContain('Notes:')
+  })
+
+  it('includes hasNotes in JSON output', async () => {
+    const withNotes = JSON.parse(await renderSiteJson('instagram-fixture'))
+    const withoutNotes = JSON.parse(await renderSiteJson('open-meteo-fixture'))
+
+    expect(withNotes.hasNotes).toBe(true)
+    expect(withoutNotes.hasNotes).toBe(false)
   })
 })

@@ -1,3 +1,5 @@
+import path from 'node:path'
+import { access, readFile } from 'node:fs/promises'
 import { getRequestBodyParameters, isArraySchema, type JsonSchema } from '../lib/openapi.js'
 import { findOperation, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import { loadManifest } from '../lib/manifest.js'
@@ -87,6 +89,16 @@ export async function renderSite(site: string): Promise<string> {
   const permParts = Object.entries(permissionCounts).map(([perm, count]) => `${perm}:${count}`)
   lines.push(`Permissions:      ${permParts.join(' ')}`)
 
+  // Per-site notes hint
+  const notesPath = path.join(siteRoot, 'notes.md')
+  try {
+    const notesContent = await readFile(notesPath, 'utf8')
+    const firstLine = notesContent.split('\n').find(l => l.trim().length > 0)?.trim()
+    if (firstLine) {
+      lines.push(`Notes:            ${firstLine}`)
+    }
+  } catch { /* no notes.md — skip */ }
+
   lines.push('')
   lines.push('Operations:')
 
@@ -161,8 +173,16 @@ export async function renderSiteJson(site: string): Promise<string> {
   const siteRoot = await resolveSiteRoot(site)
   const manifest = await loadManifest(siteRoot)
 
+  // Check for notes.md
+  let hasNotes = false
+  try {
+    await access(path.join(siteRoot, 'notes.md'))
+    hasNotes = true
+  } catch { /* no notes.md */ }
+
   const result = {
     name: manifest?.display_name ?? site,
+    hasNotes,
     operations: operations.map((entry) => {
       const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
       return {
