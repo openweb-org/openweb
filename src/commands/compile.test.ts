@@ -77,13 +77,13 @@ describe('compileSite integration — summary population', () => {
 
     // totalSamples = all 8 raw samples
     expect(summary.totalSamples).toBe(8)
-    // filterSamples removes tracking.example.com (different host from target URL domain)
-    expect(summary.filteredSamples).toBeLessThan(summary.totalSamples)
-    expect(summary.rejectedSamples).toBe(summary.totalSamples - summary.filteredSamples)
+    // filterSamples keeps 6 on api.example.com, rejects 2 on analytics.trackingco.net
+    expect(summary.filteredSamples).toBe(6)
+    expect(summary.rejectedSamples).toBe(2)
     // POST with body → skipped mutation
     expect(summary.skippedMutations).toBe(1)
-    // GET clusters produce operations (2 paths: /api/users, /api/posts)
-    expect(summary.operations).toBeGreaterThanOrEqual(2)
+    // 2 GET clusters (/api/users, /api/posts) → 2 operations
+    expect(summary.operations).toBe(2)
     // verifyReplay: false → verifiedCount = 0
     expect(summary.verifiedCount).toBe(0)
     // No classify data → no auth primitive
