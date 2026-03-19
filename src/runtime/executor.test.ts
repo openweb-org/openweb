@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { OpenWebError } from '../lib/errors.js'
+import type { PermissionsConfig } from '../lib/permissions.js'
 import { executeOperation } from './executor.js'
 
 describe('executeOperation', () => {
@@ -80,5 +81,59 @@ describe('executeOperation', () => {
     await expect(
       executeOperation('open-meteo-fixture', 'search_location', { name: 'Berlin' }, { fetchImpl: fetchMock }),
     ).rejects.toBeInstanceOf(OpenWebError)
+  })
+})
+
+describe('permission gate', () => {
+  const defaultPermissions: PermissionsConfig = {
+    defaults: { read: 'allow', write: 'prompt', delete: 'prompt', transact: 'deny' },
+  }
+
+  it('blocks write operations with permission_required on default config', async () => {
+    await expect(
+      executeOperation('jsonplaceholder-fixture', 'createPost', { title: 'x', body: 'y', userId: 1 }, {
+        permissionsConfig: defaultPermissions,
+      }),
+    ).rejects.toMatchObject({
+      payload: {
+        failureClass: 'permission_required',
+        message: expect.stringContaining('write'),
+      },
+    })
+  })
+
+  it('allows write operations when site override permits', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ id: 101, title: 'x', body: 'y', userId: 1 }), {
+        status: 201,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const result = await executeOperation('jsonplaceholder-fixture', 'createPost', { title: 'x', body: 'y', userId: 1 }, {
+      fetchImpl: fetchMock,
+      permissionsConfig: {
+        defaults: defaultPermissions.defaults,
+        sites: { 'jsonplaceholder-fixture': { write: 'allow' } },
+      },
+    })
+
+    expect(result.status).toBe(201)
+  })
+
+  it('allows read operations on default config', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify([{ userId: 1, id: 1, title: 'a', body: 'b' }]), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const result = await executeOperation('jsonplaceholder-fixture', 'listPosts', { _limit: 1 }, {
+      fetchImpl: fetchMock,
+      permissionsConfig: defaultPermissions,
+    })
+
+    expect(result.status).toBe(200)
   })
 })

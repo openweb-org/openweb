@@ -104,7 +104,7 @@ export async function executeOperation(
           error: 'execution_failed',
           code: 'EXECUTION_FAILED',
           message: 'No browser context available.',
-          action: 'Open Chrome with --remote-debugging-port=9222.',
+          action: 'Run: openweb browser start',
           retriable: true,
           failureClass: 'needs_browser',
         })
@@ -241,7 +241,9 @@ export async function executeOperation(
           error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
           code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
           message: `HTTP ${response.status}`,
-          action: `Check parameters with: openweb ${site} ${operationId}`,
+          action: httpFailure.failureClass === 'needs_login'
+            ? 'Run: openweb login <site>, then: openweb browser restart'
+            : `Check parameters with: openweb ${site} ${operationId}`,
           retriable: httpFailure.retriable,
           failureClass: httpFailure.failureClass,
         })

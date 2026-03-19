@@ -118,7 +118,7 @@ export async function executeSessionHttp(
     throw new OpenWebError({
       error: 'execution_failed', code: 'EXECUTION_FAILED',
       message: 'No browser context available. Is Chrome open with the site loaded?',
-      action: 'Open Chrome with --remote-debugging-port=9222 and navigate to the site.',
+      action: 'Run: openweb browser start',
       retriable: true, failureClass: 'needs_browser',
     })
   }
@@ -205,7 +205,7 @@ export async function executeSessionHttp(
       code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
       message: `HTTP ${response.status}`,
       action: httpFailure.failureClass === 'needs_login'
-        ? 'Log in to the site in Chrome and retry.'
+        ? 'Run: openweb login <site>, then: openweb browser restart'
         : 'Check parameters and endpoint availability.',
       retriable: httpFailure.retriable, failureClass: httpFailure.failureClass,
     })

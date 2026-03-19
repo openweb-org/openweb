@@ -56,7 +56,7 @@ export class OpenWebError extends Error {
     return new OpenWebError({
       error: 'execution_failed', code: 'EXECUTION_FAILED',
       message: 'No browser context available.',
-      action: 'Open Chrome with --remote-debugging-port=9222.',
+      action: 'Run: openweb browser start',
       retriable: true, failureClass: 'needs_browser',
     })
   }
@@ -74,7 +74,7 @@ export class OpenWebError extends Error {
     return new OpenWebError({
       error: 'auth', code: 'AUTH_FAILED',
       message: 'Authentication required.',
-      action: 'Log in to the site in Chrome and retry.',
+      action: 'Run: openweb login <site>, then: openweb browser restart',
       retriable: true, failureClass: 'needs_login',
     })
   }
@@ -95,7 +95,7 @@ export class OpenWebError extends Error {
       code: failure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
       message: `HTTP ${status}`,
       action: failure.failureClass === 'needs_login'
-        ? 'Log in to the site in Chrome and retry.'
+        ? 'Run: openweb login <site>, then: openweb browser restart'
         : 'Check parameters and endpoint availability.',
       retriable: failure.retriable,
       failureClass: failure.failureClass,
