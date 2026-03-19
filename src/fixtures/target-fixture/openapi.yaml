@@ -7,9 +7,12 @@ info:
 servers:
   - url: https://redsky.target.com
     x-openweb:
-      transport: node
+      transport: page
       auth:
-        type: cookie_session
+        type: page_global
+        expression: '__CONFIG__.defaultServicesApiKey'
+        inject:
+          query: key
 paths:
   /redsky_aggregations/v1/web/plp_search_v2:
     get:
@@ -27,22 +30,19 @@ paths:
           required: true
           schema:
             type: string
+          description: Search keyword.
         - name: count
           in: query
           required: false
           schema:
             type: integer
+          description: Number of results.
         - name: offset
           in: query
           required: false
           schema:
             type: integer
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Target API key
+          description: Result offset for pagination.
       responses:
         '200':
           description: Success.

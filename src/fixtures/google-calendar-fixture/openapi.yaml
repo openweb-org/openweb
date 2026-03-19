@@ -9,16 +9,12 @@ servers:
     x-openweb:
       transport: page
       auth:
-        type: page_global
-        expression: gapi.auth.getToken().access_token
-        inject:
-          header: Authorization
-          prefix: 'Bearer '
+        type: cookie_session
 paths:
   /users/me/calendarList:
     get:
       operationId: listCalendars
-      summary: List user's calendars
+      summary: List user's calendars via gapi.client
       x-openweb:
         permission: read
         build:

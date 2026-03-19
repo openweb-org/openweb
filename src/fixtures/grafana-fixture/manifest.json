@@ -3,7 +3,8 @@
   "display_name": "Grafana",
   "version": "1.0.0",
   "spec_version": "2.0",
-  "site_url": "https://grafana.com",
+  "compiled_at": "2026-03-19T00:00:00Z",
+  "site_url": "https://grafana.net",
   "requires_auth": false,
   "dependencies": {},
   "stats": {

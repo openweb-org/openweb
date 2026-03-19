@@ -3,6 +3,7 @@
   "display_name": "Terraform Cloud",
   "version": "1.0.0",
   "spec_version": "2.0",
+  "compiled_at": "2026-03-19T00:00:00Z",
   "site_url": "https://app.terraform.io",
   "requires_auth": false,
   "dependencies": {},

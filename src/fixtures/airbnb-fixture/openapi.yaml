@@ -10,11 +10,37 @@ servers:
       transport: node
       auth:
         type: cookie_session
+components:
+  parameters:
+    X-Airbnb-API-Key:
+      name: X-Airbnb-API-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        default: d306zoyjsyarp7ifhu67rjxn52tv0t20
+      description: Airbnb client API key (constant).
+    X-Airbnb-GraphQL-Platform:
+      name: X-Airbnb-GraphQL-Platform
+      in: header
+      required: true
+      schema:
+        type: string
+        default: web
+      description: GraphQL platform identifier.
+    X-CSRF-Without-Token:
+      name: X-CSRF-Without-Token
+      in: header
+      required: true
+      schema:
+        type: string
+        default: '1'
+      description: CSRF bypass header.
 paths:
-  /StaysSearch:
+  /{operationName}/{hash}:
     get:
-      operationId: searchListings
-      summary: Search stays/listings
+      operationId: graphqlQuery
+      summary: Execute a persisted GraphQL query
       x-openweb:
         permission: read
         build:
@@ -22,12 +48,33 @@ paths:
           tool_version: 1
           verified: false
       parameters:
-        - name: X-Airbnb-API-Key
-          in: header
+        - $ref: '#/components/parameters/X-Airbnb-API-Key'
+        - $ref: '#/components/parameters/X-Airbnb-GraphQL-Platform'
+        - $ref: '#/components/parameters/X-CSRF-Without-Token'
+        - name: operationName
+          in: path
           required: true
           schema:
             type: string
-            default: d306zoyjsyarp7ifhu67rjxn52tv0t20
+          description: GraphQL operation name.
+        - name: hash
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Persisted query sha256 hash.
+        - name: variables
+          in: query
+          required: false
+          schema:
+            type: string
+          description: JSON-encoded variables.
+        - name: extensions
+          in: query
+          required: false
+          schema:
+            type: string
+          description: JSON-encoded extensions with persistedQuery hash.
       responses:
         '200':
           description: Success.
@@ -35,3 +82,6 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  data:
+                    type: object

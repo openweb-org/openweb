@@ -5,13 +5,13 @@ info:
   x-openweb:
     spec_version: '2.0'
 servers:
-  - url: https://www.costco.com
+  - url: https://ecom-api.costco.com
     x-openweb:
-      transport: node
+      transport: page
       auth:
         type: cookie_session
 paths:
-  /api/product/v1/products/graphql:
+  /ebusiness/product/v1/products/graphql:
     post:
       operationId: searchProducts
       summary: Search products via GraphQL
