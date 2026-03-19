@@ -90,7 +90,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 | **Knowledge** | Agent reference docs for archetypes and site-specific notes | `.claude/skills/openweb/references/` | Reference docs (M19), CLI + CompileSummary removed (M20) |
 | **Registry** | Site version management, install, rollback | `src/lifecycle/registry.ts` | Internal registry (M12) |
 | **CLI** | Progressive navigation + exec + init + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M18: discovery moved to agent workflow; M20: knowledge CLI removed; M21: init, auto-exec, npm packaging) |
-| **Skill packages** | Per-site instance specs | `src/fixtures/` (dev), `~/.openweb/sites/` (installed) | 51 verified sites |
+| **Skill packages** | Per-site instance specs | `src/fixtures/` (dev), `~/.openweb/sites/` (installed) | 135 sites (17 A-class verified + 35 B-class + 48 C-class stubs + 34 public API + 1 open-meteo) |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5), Draft-Curate-Verify + knowledge refs (M19) |
 
 ---

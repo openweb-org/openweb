@@ -1,3 +1,22 @@
+## 2026-03-19: M23 — 105 Sites Full Compile + Auth + Read Ops — DONE
+
+**What changed:**
+- Phase 1: Verified all 17 A-class existing fixtures (healthy schemas, operations listed)
+- Phase 2: Documented 5 D/E-class gaps (TikTok: custom_signing; Gemini/Minimax/Netflix/OnlyFans: L3 adapter)
+- Phase 3: Created 35 B-class fixtures — public API / api_key / bearer_token pattern, modeled as regular OpenAPI parameters, `requires_auth: false`, `transport: node`
+- Phase 4: Created 48 C-class fixture stubs with auth primitives (cookie_session, localStorage_jwt, sessionStorage_msal, page_global, sapisidhash) and proper transport (node/page)
+- Phase 5: SKILL.md updated from 51 → 135 sites
+- Codex review R1: Fixed auth patterns for costco (server URL + transport), google-calendar (cookie_session via gapi.client), airbnb (persisted-query URL pattern + headers), target (page_global API key extraction). Fixed grafana site_url/server URL. Added compiled_at to all 83 new manifests.
+
+**Why:**
+- Scale from 17 verified to 100+ fixture stubs covering all 105 OpenTabs plugins. B-class stubs model the public API alternative (no browser auth needed). C-class stubs encode the correct auth primitives for future login-and-verify.
+
+**Key files:** 83 new `src/fixtures/<name>-fixture/` directories (openapi.yaml + manifest.json each), `doc/todo/v2_m23/` (verify_results.md, needs_login.md, gaps.md), `.claude/skills/openweb/SKILL.md`
+**Verification:** `pnpm build` clean, `pnpm test` 364/364 pass (42 test files), `pnpm dev sites` = 135 sites, 1 codex review round resolved
+**Commit:** 2b38ea9..1c94002
+**Next:** M24 — Human Handoff + Permission System Review
+**Blockers:** None
+
 ## 2026-03-18: M22 — Coverage Sweep + Per-Site Notes — DONE
 
 **What changed:**

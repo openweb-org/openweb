@@ -205,7 +205,7 @@ src/
 │   ├── heuristics.ts         # Probe success rate tracking + staleness decay (30d), decayedScore() exported
 │   └── failures.ts           # Auto-records verify DRIFT/FAIL to ~/.openweb/knowledge/
 ├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, manifest, permissions)
-└── fixtures/                 # 51 verified site packages
+└── fixtures/                 # 135 site packages (17 A-class + 35 B-class + 48 C-class + 34 public API + 1 open-meteo)
 
 .claude/skills/openweb/
 ├── SKILL.md                  # Agent skill (Draft→Curate→Verify workflow)
