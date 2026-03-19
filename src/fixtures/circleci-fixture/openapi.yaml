@@ -1,0 +1,118 @@
+openapi: '3.1.0'
+info:
+  title: CircleCI
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://circleci.com/api/v2
+paths:
+  /pipeline:
+    get:
+      operationId: listPipelines
+      summary: List pipelines for the authenticated user
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: cci0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Circle-Token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: CircleCI personal API token.
+        - name: org-slug
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Organization slug (e.g. gh/orgname).
+        - name: page-token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination token for next page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_page_token:
+                    type:
+                      - string
+                      - 'null'
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, state, number]
+                      properties:
+                        id:
+                          type: string
+                        state:
+                          type: string
+                        number:
+                          type: integer
+                        created_at:
+                          type: string
+  /pipeline/{pipeline-id}:
+    get:
+      operationId: getPipeline
+      summary: Get a specific pipeline by ID
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: cci0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Circle-Token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: CircleCI personal API token.
+        - name: pipeline-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pipeline UUID.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, state, number]
+                properties:
+                  id:
+                    type: string
+                  state:
+                    type: string
+                  number:
+                    type: integer
+                  created_at:
+                    type: string
+                  trigger:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      received_at:
+                        type: string

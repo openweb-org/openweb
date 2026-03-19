@@ -1,0 +1,112 @@
+openapi: '3.1.0'
+info:
+  title: Asana
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://app.asana.com/api/1.0
+paths:
+  /tasks:
+    get:
+      operationId: getTasks
+      summary: List tasks in a project
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: as0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Bearer token for Asana API.
+        - name: project
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Project GID to list tasks from.
+        - name: opt_fields
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated list of fields to include.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [gid, name, resource_type]
+                      properties:
+                        gid:
+                          type: string
+                        name:
+                          type: string
+                        resource_type:
+                          type: string
+  /tasks/{task_gid}:
+    get:
+      operationId: getTask
+      summary: Get a single task by GID
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: as0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Bearer token for Asana API.
+        - name: task_gid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Task GID.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [gid, name, resource_type]
+                    properties:
+                      gid:
+                        type: string
+                      name:
+                        type: string
+                      resource_type:
+                        type: string
+                      completed:
+                        type: boolean
+                      notes:
+                        type: string

@@ -1,0 +1,116 @@
+openapi: '3.1.0'
+info:
+  title: Netlify
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.netlify.com/api/v1
+paths:
+  /sites:
+    get:
+      operationId: listSites
+      summary: List sites accessible by the user
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: nl0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}'
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of sites per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, name, url]
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    url:
+                      type: string
+                    custom_domain:
+                      type:
+                        - string
+                        - 'null'
+                    ssl_url:
+                      type: string
+  /sites/{site_id}:
+    get:
+      operationId: getSite
+      summary: Get a specific site
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: nl0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}'
+        - name: site_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Site ID or custom domain.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, url]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  url:
+                    type: string
+                  custom_domain:
+                    type:
+                      - string
+                      - 'null'
+                  ssl_url:
+                    type: string
+                  created_at:
+                    type: string

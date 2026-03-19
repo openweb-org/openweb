@@ -1,0 +1,38 @@
+openapi: '3.1.0'
+info:
+  title: Facebook API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.facebook.com
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
+      csrf:
+        type: cookie_to_header
+        cookie: c_user
+        header: X-FB-LSD
+paths:
+  /api/graphql/:
+    post:
+      operationId: getProfile
+      summary: Get authenticated user's profile via GraphQL
+      x-openweb:
+        permission: read
+        build:
+          stable_id: fb000001
+          tool_version: 1
+          verified: false
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object

@@ -1,0 +1,132 @@
+openapi: '3.1.0'
+info:
+  title: Terraform Cloud
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://app.terraform.io/api/v2
+paths:
+  /organizations:
+    get:
+      operationId: listOrganizations
+      summary: List all organizations the user has access to
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: tfc0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}'
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.api+json
+          description: Must be application/vnd.api+json.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: string
+                        attributes:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            email:
+                              type: string
+  /organizations/{organization_name}/workspaces:
+    get:
+      operationId: listWorkspaces
+      summary: List workspaces in an organization
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: tfc0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: organization_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The name of the organization.
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}'
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.api+json
+          description: Must be application/vnd.api+json.
+        - name: page[number]
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Page number for pagination.
+        - name: page[size]
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Number of results per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: string
+                        attributes:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            terraform-version:
+                              type: string
+                            created-at:
+                              type: string

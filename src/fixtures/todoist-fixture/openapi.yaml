@@ -1,0 +1,136 @@
+openapi: '3.1.0'
+info:
+  title: Todoist
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.todoist.com/rest/v2
+paths:
+  /tasks:
+    get:
+      operationId: listTasks
+      summary: List active tasks
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: tod0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}'
+        - name: project_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter tasks by project ID.
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter expression (e.g. "today", "overdue").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    content:
+                      type: string
+                    description:
+                      type: string
+                    project_id:
+                      type: string
+                    is_completed:
+                      type: boolean
+                    priority:
+                      type: integer
+                    due:
+                      type:
+                        - object
+                        - 'null'
+                      properties:
+                        date:
+                          type: string
+                        string:
+                          type: string
+                        recurring:
+                          type: boolean
+  /tasks/{task_id}:
+    get:
+      operationId: getTask
+      summary: Get a task by its ID
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: tod0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The task ID.
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  content:
+                    type: string
+                  description:
+                    type: string
+                  project_id:
+                    type: string
+                  is_completed:
+                    type: boolean
+                  priority:
+                    type: integer
+                  due:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      date:
+                        type: string
+                      string:
+                        type: string
+                      recurring:
+                        type: boolean
+                  labels:
+                    type: array
+                    items:
+                      type: string

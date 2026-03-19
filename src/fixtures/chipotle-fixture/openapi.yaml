@@ -1,0 +1,37 @@
+openapi: '3.1.0'
+info:
+  title: Chipotle API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://services.chipotle.com
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
+paths:
+  /restaurant/v3/restaurant/{restaurantId}/online-menu:
+    get:
+      operationId: getMenu
+      summary: Get restaurant menu
+      x-openweb:
+        permission: read
+        build:
+          stable_id: cp0a1b2c
+          tool_version: 1
+          verified: false
+      parameters:
+        - name: restaurantId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Restaurant ID.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

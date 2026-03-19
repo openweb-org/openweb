@@ -1,0 +1,145 @@
+openapi: '3.1.0'
+info:
+  title: Best Buy
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.bestbuy.com/v1
+paths:
+  /products:
+    get:
+      operationId: searchProducts
+      summary: Search for products by keyword
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: bb0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: apiKey
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Best Buy API key.
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            default: json
+          description: Response format.
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search keyword.
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Number of results per page.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Page number.
+        - name: show
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Fields to return in the response.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  from:
+                    type: integer
+                  to:
+                    type: integer
+                  total:
+                    type: integer
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        sku:
+                          type: integer
+                        name:
+                          type: string
+                        regularPrice:
+                          type: number
+                        salePrice:
+                          type: number
+                        url:
+                          type: string
+  /products/{sku}.json:
+    get:
+      operationId: getProduct
+      summary: Get product details by SKU
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: bb0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Product SKU identifier.
+        - name: apiKey
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Best Buy API key.
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            default: json
+          description: Response format.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sku:
+                    type: integer
+                  name:
+                    type: string
+                  regularPrice:
+                    type: number
+                  salePrice:
+                    type: number
+                  url:
+                    type: string
+                  description:
+                    type: string
+                  manufacturer:
+                    type: string

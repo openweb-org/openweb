@@ -1,0 +1,30 @@
+openapi: '3.1.0'
+info:
+  title: Panda Express API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.pandaexpress.com
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
+paths:
+  /api/users/recentorders:
+    get:
+      operationId: getRecentOrders
+      summary: Get recent orders
+      x-openweb:
+        permission: read
+        build:
+          stable_id: pe0a1b2c
+          tool_version: 1
+          verified: false
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

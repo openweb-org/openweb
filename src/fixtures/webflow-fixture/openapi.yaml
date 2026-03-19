@@ -1,0 +1,103 @@
+openapi: '3.1.0'
+info:
+  title: Webflow
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.webflow.com/v2
+paths:
+  /sites:
+    get:
+      operationId: listSites
+      summary: List sites for the authenticated user
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: wf0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sites:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, displayName, shortName]
+                      properties:
+                        id:
+                          type: string
+                        displayName:
+                          type: string
+                        shortName:
+                          type: string
+                        previewUrl:
+                          type: string
+                        createdOn:
+                          type: string
+  /sites/{site_id}:
+    get:
+      operationId: getSite
+      summary: Get details for a specific site
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: wf0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}'
+        - name: site_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Site identifier.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, displayName, shortName]
+                properties:
+                  id:
+                    type: string
+                  displayName:
+                    type: string
+                  shortName:
+                    type: string
+                  previewUrl:
+                    type: string
+                  createdOn:
+                    type: string
+                  lastPublished:
+                    type:
+                      - string
+                      - 'null'

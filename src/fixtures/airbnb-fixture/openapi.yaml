@@ -1,0 +1,37 @@
+openapi: '3.1.0'
+info:
+  title: Airbnb API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.airbnb.com/api/v3
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
+paths:
+  /StaysSearch:
+    get:
+      operationId: searchListings
+      summary: Search stays/listings
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ab0001a1
+          tool_version: 1
+          verified: false
+      parameters:
+        - name: X-Airbnb-API-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            default: d306zoyjsyarp7ifhu67rjxn52tv0t20
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

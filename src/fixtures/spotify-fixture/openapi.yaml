@@ -1,0 +1,43 @@
+openapi: '3.1.0'
+info:
+  title: Spotify API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://api.spotify.com/v1
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+paths:
+  /me/playlists:
+    get:
+      operationId: getPlaylists
+      summary: Get user's playlists
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sp000001
+          tool_version: 1
+          verified: false
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of playlists to return.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Index of the first playlist to return.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

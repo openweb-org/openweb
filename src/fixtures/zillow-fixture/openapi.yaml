@@ -1,0 +1,30 @@
+openapi: '3.1.0'
+info:
+  title: Zillow API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.zillow.com
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
+paths:
+  /async-create-search-page-state:
+    put:
+      operationId: searchListings
+      summary: Search property listings by region
+      x-openweb:
+        permission: read
+        build:
+          stable_id: zl0001a1
+          tool_version: 1
+          verified: false
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

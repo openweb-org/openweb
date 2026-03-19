@@ -1,0 +1,142 @@
+openapi: '3.1.0'
+info:
+  title: Vercel
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.vercel.com
+paths:
+  /v9/projects:
+    get:
+      operationId: listProjects
+      summary: List projects for the authenticated user
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: vc0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of projects to return.
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Timestamp to paginate from (continuation token).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        framework:
+                          type:
+                            - string
+                            - 'null'
+                        updatedAt:
+                          type: integer
+                  pagination:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      next:
+                        type:
+                          - string
+                          - 'null'
+  /v6/deployments:
+    get:
+      operationId: listDeployments
+      summary: List deployments
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: vc0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}'
+        - name: projectId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter deployments by project ID.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of deployments to return.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deployments:
+                    type: array
+                    items:
+                      type: object
+                      required: [uid, name, state, url]
+                      properties:
+                        uid:
+                          type: string
+                        name:
+                          type: string
+                        state:
+                          type: string
+                        url:
+                          type: string
+                        created:
+                          type: integer
+                  pagination:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      next:
+                        type:
+                          - string
+                          - 'null'

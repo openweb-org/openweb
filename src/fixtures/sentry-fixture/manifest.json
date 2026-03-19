@@ -1,0 +1,10 @@
+{
+  "name": "sentry-fixture",
+  "display_name": "Sentry",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://sentry.io",
+  "requires_auth": false,
+  "dependencies": {},
+  "stats": { "operation_count": 2, "l1_count": 2, "l2_count": 0, "l3_count": 0 }
+}

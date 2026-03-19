@@ -1,0 +1,111 @@
+openapi: '3.1.0'
+info:
+  title: MongoDB Atlas
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://cloud.mongodb.com/api/atlas/v2
+paths:
+  /groups:
+    get:
+      operationId: listProjects
+      summary: List all projects the caller has access to
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: mdb0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Digest authentication header using public/private API key pair. Format: Digest ...'
+        - name: itemsPerPage
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Number of items to return per page.
+        - name: pageNum
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Page number to return.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        orgId:
+                          type: string
+                        clusterCount:
+                          type: integer
+                        created:
+                          type: string
+                  totalCount:
+                    type: integer
+  /groups/{groupId}:
+    get:
+      operationId: getProject
+      summary: Get a project by its ID
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: mdb0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique project identifier.
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Digest authentication header using public/private API key pair. Format: Digest ...'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  orgId:
+                    type: string
+                  clusterCount:
+                    type: integer
+                  created:
+                    type: string

@@ -1,0 +1,35 @@
+openapi: '3.1.0'
+info:
+  title: Priceline API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.priceline.com
+    x-openweb:
+      transport: node
+      auth:
+        type: localStorage_jwt
+        key: okta-token-storage
+        path: accessToken.accessToken
+        inject:
+          header: Authorization
+          prefix: 'Bearer '
+paths:
+  /pws/v0/pcln-graph/:
+    post:
+      operationId: graphqlQuery
+      summary: Execute a GraphQL query
+      x-openweb:
+        permission: read
+        build:
+          stable_id: pl0001a1
+          tool_version: 1
+          verified: false
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

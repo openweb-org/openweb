@@ -1,0 +1,136 @@
+openapi: '3.1.0'
+info:
+  title: eBay
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.ebay.com
+paths:
+  /buy/browse/v1/item_summary/search:
+    get:
+      operationId: searchItems
+      summary: Search for items on eBay
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: eb0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: OAuth token in the format "Bearer {oauth_token}".
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query string.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of items to return.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Number of items to skip.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+                  itemSummaries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        itemId:
+                          type: string
+                        title:
+                          type: string
+                        price:
+                          type: object
+                          properties:
+                            value:
+                              type: string
+                            currency:
+                              type: string
+                        itemWebUrl:
+                          type: string
+  /buy/browse/v1/item/{item_id}:
+    get:
+      operationId: getItem
+      summary: Get details for a specific item
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: eb0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: OAuth token in the format "Bearer {oauth_token}".
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: eBay item identifier.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  itemId:
+                    type: string
+                  title:
+                    type: string
+                  price:
+                    type: object
+                    properties:
+                      value:
+                        type: string
+                      currency:
+                        type: string
+                  description:
+                    type: string
+                  itemWebUrl:
+                    type: string
+                  seller:
+                    type: object
+                    properties:
+                      username:
+                        type: string
+                      feedbackPercentage:
+                        type: string

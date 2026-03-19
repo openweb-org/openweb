@@ -1,0 +1,31 @@
+openapi: '3.1.0'
+info:
+  title: AWS Console API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://console.aws.amazon.com
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
+paths:
+  /ec2/api/regions:
+    get:
+      operationId: getRegions
+      summary: Get available AWS regions
+      x-openweb:
+        permission: read
+        build:
+          stable_id: aws00001
+          tool_version: 1
+          verified: false
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

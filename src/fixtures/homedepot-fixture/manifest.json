@@ -1,0 +1,15 @@
+{
+  "name": "homedepot-fixture",
+  "display_name": "Home Depot",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.homedepot.com",
+  "requires_auth": true,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 1,
+    "l1_count": 1,
+    "l2_count": 1,
+    "l3_count": 0
+  }
+}

@@ -1,0 +1,38 @@
+openapi: '3.1.0'
+info:
+  title: Twitch API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://gql.twitch.tv
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
+paths:
+  /gql:
+    post:
+      operationId: graphqlQuery
+      summary: Execute a GraphQL query against Twitch's API
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tw000001
+          tool_version: 1
+          verified: false
+      parameters:
+        - name: Client-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            default: kimne78kx3ncx6brgo4mv6wki5h1ko
+          description: Twitch client identifier (constant).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

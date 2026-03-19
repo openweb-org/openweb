@@ -1,0 +1,31 @@
+openapi: '3.1.0'
+info:
+  title: Slack API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://slack.com/api
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
+paths:
+  /conversations.list:
+    post:
+      operationId: listChannels
+      summary: List channels in workspace
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sl000001
+          tool_version: 1
+          verified: false
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

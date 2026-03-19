@@ -1,0 +1,120 @@
+openapi: '3.1.0'
+info:
+  title: Grafana
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://grafana.example.com/api
+paths:
+  /search:
+    get:
+      operationId: searchDashboards
+      summary: Search dashboards and folders
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: grf0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {api_key}'
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search query string.
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 'Type to search for: dash-folder or dash-db.'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of results to return.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    uid:
+                      type: string
+                    title:
+                      type: string
+                    uri:
+                      type: string
+                    type:
+                      type: string
+  /dashboards/uid/{uid}:
+    get:
+      operationId: getDashboard
+      summary: Get a dashboard by UID
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: grf0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: uid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Dashboard UID.
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {api_key}'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dashboard:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      uid:
+                        type: string
+                      title:
+                        type: string
+                      version:
+                        type: integer
+                  meta:
+                    type: object
+                    properties:
+                      slug:
+                        type: string
+                      url:
+                        type: string

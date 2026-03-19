@@ -1,0 +1,152 @@
+openapi: '3.1.0'
+info:
+  title: Yelp
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api.yelp.com/v3
+paths:
+  /businesses/search:
+    get:
+      operationId: searchBusinesses
+      summary: Search for businesses by term and location
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: yp0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: API key in the format "Bearer {api_key}".
+        - name: term
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search term (e.g. food, restaurants).
+        - name: location
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Location to search near.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of results to return.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Number of results to skip.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  businesses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        rating:
+                          type: number
+                        location:
+                          type: object
+                          properties:
+                            address1:
+                              type: string
+                            city:
+                              type: string
+                            state:
+                              type: string
+                            zip_code:
+                              type: string
+                        url:
+                          type: string
+  /businesses/{id}:
+    get:
+      operationId: getBusiness
+      summary: Get details for a specific business
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: yp0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: API key in the format "Bearer {api_key}".
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Yelp business identifier.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  rating:
+                    type: number
+                  review_count:
+                    type: integer
+                  phone:
+                    type: string
+                  location:
+                    type: object
+                    properties:
+                      address1:
+                        type: string
+                      city:
+                        type: string
+                      state:
+                        type: string
+                      zip_code:
+                        type: string
+                  url:
+                    type: string
+                  hours:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        is_open_now:
+                          type: boolean

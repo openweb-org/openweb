@@ -1,0 +1,144 @@
+openapi: '3.1.0'
+info:
+  title: Docker Hub
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://hub.docker.com/v2
+paths:
+  /search/repositories:
+    get:
+      operationId: searchRepos
+      summary: Search for Docker repositories
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: dh0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}. Optional for public repos.'
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query string.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+          description: Results per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [repo_name, short_description]
+                      properties:
+                        repo_name:
+                          type: string
+                        short_description:
+                          type: string
+                        star_count:
+                          type: integer
+                        pull_count:
+                          type: integer
+                        is_official:
+                          type: boolean
+  /repositories/{namespace}/{repository}/tags:
+    get:
+      operationId: listTags
+      summary: List tags for a Docker repository
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: dh0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {token}. Optional for public repos.'
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Repository namespace (user or organization).
+        - name: repository
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Repository name.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Results per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, last_updated]
+                      properties:
+                        name:
+                          type: string
+                        full_size:
+                          type: integer
+                        last_updated:
+                          type: string

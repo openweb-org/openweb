@@ -1,0 +1,30 @@
+openapi: '3.1.0'
+info:
+  title: ClickHouse Cloud API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://control-plane.clickhouse.cloud
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
+paths:
+  /v1/organizations:
+    get:
+      operationId: listOrganizations
+      summary: List organizations
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ch0001a1
+          tool_version: 1
+          verified: false
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

@@ -1,0 +1,123 @@
+openapi: '3.1.0'
+info:
+  title: CockroachDB Cloud
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://cockroachlabs.cloud/api/v1
+paths:
+  /clusters:
+    get:
+      operationId: listClusters
+      summary: List all clusters owned by the caller
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: crdb0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {api_key} (service account API key)'
+        - name: pagination.limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of results per page.
+        - name: pagination.page
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Page token for pagination.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clusters:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        plan:
+                          type: string
+                        state:
+                          type: string
+                        cloud_provider:
+                          type: string
+                  pagination:
+                    type: object
+                    properties:
+                      next:
+                        type: string
+  /clusters/{cluster_id}:
+    get:
+      operationId: getCluster
+      summary: Get details of a specific cluster
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: crdb0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: cluster_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique cluster identifier.
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Bearer token for authentication. Format: Bearer {api_key} (service account API key)'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  plan:
+                    type: string
+                  state:
+                    type: string
+                  cloud_provider:
+                    type: string
+                  regions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        node_count:
+                          type: integer

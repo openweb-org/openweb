@@ -1,0 +1,34 @@
+openapi: '3.1.0'
+info:
+  title: Tinder API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://api.gotinder.com
+    x-openweb:
+      transport: node
+      auth:
+        type: localStorage_jwt
+        key: TinderWeb/APIToken
+        inject:
+          header: X-Auth-Token
+paths:
+  /v2/profile:
+    get:
+      operationId: getProfile
+      summary: Get authenticated user's profile
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tn000001
+          tool_version: 1
+          verified: false
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

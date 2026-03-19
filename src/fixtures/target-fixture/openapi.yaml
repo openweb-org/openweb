@@ -1,0 +1,52 @@
+openapi: '3.1.0'
+info:
+  title: Target API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://redsky.target.com
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
+paths:
+  /redsky_aggregations/v1/web/plp_search_v2:
+    get:
+      operationId: searchProducts
+      summary: Search products
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tg0001a1
+          tool_version: 1
+          verified: false
+      parameters:
+        - name: keyword
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target API key
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

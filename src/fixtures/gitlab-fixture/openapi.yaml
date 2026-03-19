@@ -1,0 +1,133 @@
+openapi: '3.1.0'
+info:
+  title: GitLab
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://gitlab.com/api/v4
+paths:
+  /projects:
+    get:
+      operationId: listProjects
+      summary: List projects visible to the authenticated user
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: gl0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: PRIVATE-TOKEN
+          in: header
+          required: true
+          schema:
+            type: string
+          description: GitLab personal access token.
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search term to filter projects.
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of results per page.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+        - name: order_by
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [id, name, path, created_at, updated_at, last_activity_at]
+          description: Order projects by field.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, name, path_with_namespace, web_url]
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    path_with_namespace:
+                      type: string
+                    description:
+                      type:
+                        - string
+                        - 'null'
+                    web_url:
+                      type: string
+                    default_branch:
+                      type: string
+  /projects/{id}:
+    get:
+      operationId: getProject
+      summary: Get a single project by ID
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: gl0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: PRIVATE-TOKEN
+          in: header
+          required: true
+          schema:
+            type: string
+          description: GitLab personal access token.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Project ID.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, path_with_namespace, web_url]
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  path_with_namespace:
+                    type: string
+                  description:
+                    type:
+                      - string
+                      - 'null'
+                  web_url:
+                    type: string
+                  default_branch:
+                    type: string
+                  visibility:
+                    type: string

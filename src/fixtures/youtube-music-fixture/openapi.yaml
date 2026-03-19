@@ -1,0 +1,39 @@
+openapi: '3.1.0'
+info:
+  title: YouTube Music API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://music.youtube.com/youtubei/v1
+    x-openweb:
+      transport: page
+      auth:
+        type: page_global
+        expression: 'ytcfg.data_.INNERTUBE_API_KEY'
+        inject:
+          query: key
+      signing:
+        type: sapisidhash
+        cookie: SAPISID
+        origin: https://music.youtube.com
+        inject:
+          header: Authorization
+paths:
+  /browse:
+    post:
+      operationId: getPlaylists
+      summary: Browse music library content
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ym0a1b2c
+          tool_version: 1
+          verified: false
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
