@@ -2,9 +2,11 @@
 
 Patterns extracted from 51 compiled sites (M0–M21). Read this before compiling a new site to set expectations for auth, transport, key pages, and common pitfalls.
 
-M22 coverage sweep: 144 sites surveyed across 15 archetypes → 51 A (has fixture), 46 B (L1 compilable, incl. api_key/bearer_token), 24 C (L2 needs browser login), 13 D (needs new primitive), 8 E (needs L3 adapter), 2 F (not suitable). 67% immediately compilable, 84% reachable with L2 login.
+M22 coverage sweep (redo): 105 OpenTabs plugins classified → 17 A (has fixture), 35 B (L1 compilable, api_key/bearer_token), 48 C (L2 needs browser login), 1 D (needs new primitive), 4 E (needs L3 adapter), 0 F. 49.5% immediately compilable (A+B), 95.2% reachable with existing primitives (A+B+C).
 
-## Social Media (M22: 4/12 fixture coverage, 33%)
+Note: 34 of our 51 fixtures are for sites NOT in the OpenTabs 105 set (fun/reference/weather APIs). Those archetypes are well-covered but not listed in OpenTabs plugins.
+
+## Social Media (M22: 4/10 OpenTabs plugins, 40%)
 
 Auth: cookie_session (+ cookie_to_header CSRF, exchange_chain for OAuth)
 Transport: node or page (depends on TLS fingerprinting)
@@ -27,7 +29,7 @@ Expected Operations:
 - [ ] Search users or posts (read)
 - [ ] Direct messages / inbox (read)
 
-## Messaging (M22: 3/9 fixture coverage, 33%)
+## Messaging (M22: 3/6 OpenTabs plugins, 50%)
 
 Auth: cookie_session, webpack_module_walk, or browser state (L3)
 Transport: page or adapter (L3)
@@ -46,7 +48,7 @@ Expected Operations:
 - [ ] List contacts / friends (read)
 - [ ] Search messages (read)
 
-## Developer Tools (M22: 4/14 fixture coverage, 29%)
+## Developer Tools (M22: 4/26 OpenTabs plugins, 15% fixture | 85% compilable)
 
 Auth: cookie_session, none, or header-based key/token (modeled as OpenAPI parameters, not primitives)
 Transport: node
@@ -66,7 +68,7 @@ Expected Operations:
 - [ ] Search (read)
 - [ ] User / org profile (read)
 
-## Weather / Data APIs (M22: 5/10 fixture coverage, 50%)
+## Weather / Data APIs (not in OpenTabs 105; 5 fixtures from external APIs)
 
 Auth: none or header-based key (modeled as OpenAPI parameter)
 Transport: node
@@ -81,7 +83,7 @@ Expected Operations:
 - [ ] Forecast / historical (read, by range)
 - [ ] Lookup by coordinates or ID (read)
 
-## E-commerce (M22: 1/8 fixture coverage, 13%)
+## E-commerce (M22: 1/9 OpenTabs plugins, 11%)
 
 Auth: cookie_session + csrf_token
 Transport: node (with SSR extraction)
@@ -99,7 +101,7 @@ Expected Operations:
 - [ ] View cart (read)
 - [ ] Checkout (transact — deny by default)
 
-## Content Platforms (M22: 4/15 fixture coverage, 27%)
+## Content Platforms (M22: 4/15 OpenTabs plugins, 27%)
 
 Auth: exchange_chain, cookie_session, or sessionStorage_msal
 Transport: node
@@ -119,7 +121,7 @@ Expected Operations:
 - [ ] User / channel profile (read)
 - [ ] Comment / reply (write)
 
-## Productivity / Enterprise (M22: 2/13 fixture coverage, 15%)
+## Productivity / Enterprise (M22: 1/17 OpenTabs plugins, 6% fixture | 76% compilable)
 
 Auth: sessionStorage_msal, cookie_session, or exchange_chain
 Transport: node
@@ -130,6 +132,8 @@ Examples: Microsoft Word, New Relic
 **Microsoft Word**: sessionStorage_msal auth (MSAL token cache from browser storage). Graph API bearer token.
 **New Relic**: cookie_session. GraphQL cursor pagination for dashboards.
 
+Note: In the 105-plugin classification, New Relic is grouped under DevTools. Microsoft Word is the sole Productivity fixture. 12 B-category plugins (jira, confluence, notion, figma, linear, airtable, asana, clickup, todoist, shortcut, calendly, zendesk) are immediately compilable.
+
 Expected Operations:
 - [ ] List documents / items (read, paginated)
 - [ ] Document / item detail (read, by ID)
@@ -138,7 +142,7 @@ Expected Operations:
 - [ ] Search (read)
 - [ ] Dashboard / overview (read)
 
-## Prediction / Fun APIs (M22: 12/14 fixture coverage, 86%)
+## Prediction / Fun APIs (not in OpenTabs 105; 12 fixtures from external APIs)
 
 Auth: none
 Transport: node
@@ -152,7 +156,7 @@ Expected Operations:
 - [ ] Query / predict (read, single call)
 - [ ] Random result (read)
 
-## Reference / Lookup APIs (M22: 15/23 fixture coverage, 65%)
+## Reference / Lookup APIs (M22: 0/2 OpenTabs plugins; 15 fixtures from external APIs)
 
 Auth: none
 Transport: node
@@ -167,7 +171,7 @@ Expected Operations:
 - [ ] Detail by ID or name (read)
 - [ ] Random entry (read, if supported)
 
-## Crypto / Finance (M22: 2/8 fixture coverage, 25%)
+## Crypto / Finance (M22: 0/4 OpenTabs plugins, 0%; 2 fixtures from external APIs)
 
 Auth: none or header-based key (modeled as OpenAPI parameter)
 Transport: node
@@ -182,7 +186,7 @@ Expected Operations:
 - [ ] Exchange rates (read)
 - [ ] Historical data (read, by range)
 
-## News (M22: 0/6 fixture coverage, 0%)
+## News (not in OpenTabs 105; 0 fixtures)
 
 Auth: none or header-based key (modeled as OpenAPI parameter)
 Transport: node
@@ -195,7 +199,7 @@ Expected Operations:
 - [ ] Article detail (read, by ID or URL)
 - [ ] Search articles (read)
 
-## Email (M22: 0/2 fixture coverage, 0%)
+## Email (not in OpenTabs 105; 0 fixtures)
 
 Auth: oauth2 (PKCE) or sessionStorage_msal
 Transport: node
@@ -209,7 +213,7 @@ Expected Operations:
 - [ ] Send message (write)
 - [ ] Search messages (read)
 
-## Cloud / Storage (M22: 0/4 fixture coverage, 0%)
+## Cloud / Storage (M22: 0/4 OpenTabs plugins, 0%)
 
 Auth: bearer_token (modeled as OpenAPI parameter) or sessionStorage_msal
 Transport: node
@@ -224,13 +228,13 @@ Expected Operations:
 - [ ] Download file (read)
 - [ ] Search files (read)
 
-## Travel (M22: 0/4 fixture coverage, 0%)
+## Travel (M22: 0/6 OpenTabs plugins, 0%)
 
-Auth: cookie_session or proprietary
-Transport: adapter (L3) for most; heavy anti-bot
+Auth: cookie_session (all 6 plugins use browser session)
+Transport: node (REST/GraphQL via cookies)
 Key pages: /search, /listing, /booking, /account
-Most travel sites need L3 adapters due to anti-bot, dynamic API versioning, and complex search flows
-Examples: Booking.com, Airbnb, Expedia
+Anti-bot: varies (Airbnb heavy, others moderate)
+Examples: Airbnb, Booking.com, Expedia, Priceline, TripAdvisor, Uber
 
 Expected Operations:
 - [ ] Search listings (read, paginated)
@@ -238,13 +242,13 @@ Expected Operations:
 - [ ] Price / availability (read)
 - [ ] Book / reserve (transact — deny by default)
 
-## Food Delivery (M22: 0/3 fixture coverage, 0%)
+## Food Delivery (M22: 0/6 OpenTabs plugins, 0%)
 
-Auth: cookie_session or proprietary
-Transport: node or adapter (L3)
+Auth: cookie_session (all 6 plugins use browser session)
+Transport: node or page
 Key pages: /restaurants, /menu, /cart, /orders
-GraphQL persisted queries common (DoorDash, Uber Eats)
-Examples: DoorDash, Uber Eats, Grubhub
+GraphQL persisted queries common (Instacart)
+Examples: Chipotle, Dominos, DoorDash, Instacart, Panda Express, Starbucks
 
 Expected Operations:
 - [ ] Search restaurants (read, paginated)
