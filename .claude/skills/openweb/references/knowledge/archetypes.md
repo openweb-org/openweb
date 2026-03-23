@@ -97,7 +97,7 @@ Extraction: ssr_next_data or script_json common
 Examples: Walmart
 
 **Walmart**: ssr_next_data extraction (Next.js `__NEXT_DATA__`). Node transport — direct HTTP fetch returns full SSR payload. CDP browser blocked by PerimeterX bot detection (even non-headless). Use node-based SSR extraction (no browser needed). Search, product detail, and pricing all available via `__NEXT_DATA__` paths. Search results use flat pricing (`priceInfo.linePrice`), PDP uses nested pricing (`priceInfo.currentPrice.price`).
-**Best Buy**: SSR HTML + internal REST API `/api/3.0/priceBlocks?skus=...` for pricing. No auth for public prices.
+**Best Buy**: Page transport (browser_fetch) required — Akamai bot protection blocks all direct HTTP and headless PDP navigation (HTTP/2 protocol errors). Three internal REST APIs work via same-origin fetch: `/suggest/v1/fragment/suggest/www?query=` (search by keyword, returns SKU IDs + categories), `/suggest/v1/fragment/products/www?skuids=` (product name/image/rating/reviews), `/api/3.0/priceBlocks?skus=` (full pricing with current/regular/savings). No auth for public data, but session cookies (SID, CTT) must be present. Compiler cannot handle this site — manual fixture creation required.
 **eBay**: SSR HTML extraction (DOMParser). Autocomplete uses JSONP (`/autosug`), not JSON. Session cookies + CSRF for user actions.
 **Yelp**: SSR HTML with `window.yelp.react_root_props` embedded JSON. Public autocomplete API at `/search_suggest/v2/prefetch?prefix=&loc=`. DataDome bot detection blocks CDP browser and direct HTTP fetch — currently blocked for fixture creation.
 

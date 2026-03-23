@@ -1,0 +1,268 @@
+openapi: '3.1.0'
+info:
+  title: Best Buy API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://www.bestbuy.com
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+paths:
+  /suggest/v1/fragment/suggest/www:
+    get:
+      operationId: searchProducts
+      summary: Search products by keyword — returns matching terms, categories, and top SKU IDs
+      x-openweb:
+        permission: read
+        build:
+          stable_id: bb0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "laptop", "headphones").
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 11
+          description: Max number of suggestion groups to return.
+        - name: searchVariant
+          in: query
+          required: false
+          schema:
+            type: string
+            default: B
+          description: Search variant identifier.
+        - name: x-client-id
+          in: header
+          required: true
+          schema:
+            type: string
+            default: Search-Web-View
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - suggestionResponse
+                properties:
+                  suggestionResponse:
+                    type: object
+                    required:
+                      - suggestions
+                      - count
+                    properties:
+                      spellCheck:
+                        type: object
+                        properties:
+                          correctedQuery:
+                            type: string
+                          correctlySpelled:
+                            type: boolean
+                          originalQuery:
+                            type: string
+                      count:
+                        type: integer
+                      queryResponseTime:
+                        type: integer
+                      suggestions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            term:
+                              type: string
+                            category:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    type: string
+                                  id:
+                                    type: string
+                            products:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  source:
+                                    type: string
+                                  type:
+                                    type: string
+                                  skuId:
+                                    type: string
+  /suggest/v1/fragment/products/www:
+    get:
+      operationId: getProductDetails
+      summary: Get product details by SKU IDs — name, image, rating, review count
+      x-openweb:
+        permission: read
+        build:
+          stable_id: bb0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: skuids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated SKU IDs (e.g. "12009400,6612975,6613878").
+        - name: x-client-id
+          in: header
+          required: true
+          schema:
+            type: string
+            default: Search-Web-View
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - count
+                  - products
+                properties:
+                  count:
+                    type: integer
+                  queryResponseTime:
+                    type: integer
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - skuid
+                        - skushortlabel
+                      properties:
+                        pdpUrl:
+                          type: string
+                          description: Relative URL to the product detail page.
+                        imageUrl:
+                          type: string
+                          description: Relative image path on pisces.bbystatic.com.
+                        altText:
+                          type: string
+                        skushortlabel:
+                          type: string
+                          description: Short product name.
+                        skuid:
+                          type: string
+                        customerrating_facet:
+                          type: string
+                          description: Average customer rating (e.g. "4.6").
+                        numberofreviews_facet:
+                          type: string
+                          description: Total number of reviews.
+  /api/3.0/priceBlocks:
+    get:
+      operationId: getProductPricing
+      summary: Get pricing for products by SKU — current/regular price, savings, availability
+      x-openweb:
+        permission: read
+        build:
+          stable_id: bb0003
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: skus
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated SKU IDs (e.g. "6614950,6612975").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - sku
+                  properties:
+                    sku:
+                      type: object
+                      required:
+                        - skuId
+                      properties:
+                        skuId:
+                          type: string
+                        condition:
+                          type: string
+                        productType:
+                          type: string
+                        brand:
+                          type: object
+                          properties:
+                            brand:
+                              type: string
+                        names:
+                          type: object
+                          properties:
+                            short:
+                              type: string
+                        price:
+                          type: object
+                          properties:
+                            currentPrice:
+                              type: number
+                            regularPrice:
+                              type: number
+                            pricingType:
+                              type: string
+                            savingsAmount:
+                              type: number
+                        buttonState:
+                          type: object
+                          properties:
+                            purchasable:
+                              type: boolean
+                            buttonState:
+                              type: string
+                            displayText:
+                              type: string
+                        url:
+                          type: string
+                          description: Relative product page URL.
+                        class:
+                          type: object
+                          properties:
+                            displayName:
+                              type: string
+                            id:
+                              type: string
+                        department:
+                          type: object
+                          properties:
+                            displayName:
+                              type: string
+                            id:
+                              type: string
+                        error:
+                          type: string
+                          description: Error message if SKU not found.
