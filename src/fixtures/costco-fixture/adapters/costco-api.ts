@@ -68,11 +68,12 @@ async function postJson(
       Referer: 'https://www.costco.com/',
       ...extraHeaders,
     },
-    data: body,
+    data: JSON.stringify(body as Record<string, unknown>),
   })
 
   if (!resp.ok()) {
-    throw new Error(`Costco API ${url}: HTTP ${resp.status()}`)
+    const text = await resp.text()
+    throw new Error(`Costco API ${url}: HTTP ${resp.status()} — ${text.substring(0, 300)}`)
   }
 
   return resp.json()
@@ -86,6 +87,7 @@ async function searchProducts(page: Page, params: Record<string, unknown>): Prom
   const offset = Number(params.offset ?? 0)
 
   const body = {
+    visitorId: '0',
     query,
     pageSize,
     offset,
@@ -95,9 +97,12 @@ async function searchProducts(page: Page, params: Record<string, unknown>): Prom
     warehouseId: '249-wh',
     shipToPostal: '95050',
     shipToState: 'CA',
-    deliveryLocations: ['847_0-wm'],
+    deliveryLocations: [
+      '653-bd', '848-bd', '249-wh', '847_0-wm',
+    ],
     filterBy: [],
     pageCategories: [],
+    userInfo: { userId: '0' },
   }
 
   const resp = (await postJson(page, SEARCH_URL, body, {
@@ -142,6 +147,8 @@ async function getProductDetail(page: Page, params: Record<string, unknown>): Pr
   const query = PRODUCT_QUERY.replace('ITEM_NUMBERS', `"${itemNumber}"`)
   const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query }, {
     'client-identifier': PRODUCT_CLIENT_ID,
+    'costco.env': 'ecom',
+    'costco.service': 'restProduct',
   })) as Record<string, unknown>
 
   const data = resp.data as Record<string, unknown>
@@ -178,9 +185,9 @@ async function getProductDetail(page: Page, params: Record<string, unknown>): Pr
         : null,
       marketingStatement: desc.marketingStatement ?? null,
       promotionalStatement: desc.promotionalStatement ?? null,
-      brand: fieldData.mfName ?? attributes.Brand?.[0] ?? null,
-      rating: additionalData.rating ?? null,
-      numberOfRatings: additionalData.numberOfRating ?? null,
+      brand: attributes.Brand?.[0] ?? (fieldData.mfName !== 'DO NOT DELETE' ? fieldData.mfName : null) ?? null,
+      rating: additionalData.rating != null ? Number(additionalData.rating) : null,
+      numberOfRatings: additionalData.numberOfRating != null ? Number(additionalData.numberOfRating) : null,
       buyable: item.buyable === 1,
       attributes,
     },

@@ -19,7 +19,15 @@ Patterns for different site categories and what to expect during discovery.
 **Common patterns**:
 - Next.js sites (Walmart, etc.) → `ssr_next_data` extraction via `node` transport
 - Non-Next.js sites (Best Buy, etc.) → internal JSON APIs accessible via `page` (browser_fetch) transport
-- Bot detection varies: Akamai (Best Buy), custom (Walmart allows node SSR)
+- Bot detection varies: Akamai (Best Buy), custom (Walmart allows node SSR), PerimeterX (Costco, Target main site)
+- POST-based APIs are common (search, GraphQL product detail) → compiler skips these, requires L3 adapter
+- Separate API subdomains (`gdx-api.`, `ecom-api.`, `redsky.`) may require custom headers (`client-identifier`, service routing headers)
+- PerimeterX sites intercept `window.fetch/XHR` in `page.evaluate` — use `page.request.fetch()` to bypass page JS interception while keeping browser cookies
+- API subdomains may lack bot detection even when the main site has it — test `node` transport before assuming `page` is required
+
+**Target-specific**: API subdomain `redsky.target.com` works with `node` transport — no bot detection on API endpoints despite PerimeterX on `www.target.com`. Uses static API key (`key` param, embedded in frontend JS). Search API (`plp_search_v2`) returns HTTP 206 (Partial Content), not 200. Store availability via `fiats_v1` endpoint. Compiler auto-filters all Target API samples as noise — manual fixture creation required.
+
+**Costco-specific**: PerimeterX blocks injected fetch/XHR. Uses POST-based search API (`gdx-api.costco.com`) and GraphQL product API (`ecom-api.costco.com`). Requires `client-identifier`, `costco.env`, `costco.service` headers. No auth for public product data. Has `_next/static/` paths but NO `__NEXT_DATA__` (hybrid app, not classic Next.js SSR).
 
 ## Social Media
 

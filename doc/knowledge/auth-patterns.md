@@ -6,6 +6,7 @@ Patterns observed across sites for authentication, CSRF, and request signing.
 
 Sites where all target data is publicly accessible:
 - Google Search, DuckDuckGo, Wikipedia, CoinGecko, CatFact
+- Target (Redsky APIs use static API key, no auth cookies needed)
 - Tracking cookies (Cloudflare, GA) may trigger false-positive auth detection during compile
 
 ## Cookie Session
@@ -43,3 +44,5 @@ Some sites prefix JSON responses with garbage to prevent XSSI:
 - Walmart: `node` transport SSR extraction works
 - Best Buy: `page` transport browser_fetch works (Akamai accepts browser context)
 - Redfin: headless Chrome works without issues, page_global_data extraction from JSON-LD
+- Costco: PerimeterX present but does NOT block page loading or headless Chrome. Blocks `page.evaluate(fetch(...))` but `page.request.fetch()` bypasses it. Public product APIs work without auth — only need `client-identifier` header.
+- Target: PerimeterX on `www.target.com` but NOT on API subdomain `redsky.target.com`. Direct `node` transport works for all Redsky aggregation APIs. Static API key only.

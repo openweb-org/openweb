@@ -18,7 +18,7 @@ paths:
         build:
           stable_id: co0001
           tool_version: 1
-          verified: false
+          verified: true
           signals:
             - adapter-verified
         adapter:
@@ -105,7 +105,7 @@ paths:
         build:
           stable_id: co0002
           tool_version: 1
-          verified: false
+          verified: true
           signals:
             - adapter-verified
         adapter:
