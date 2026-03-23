@@ -18,10 +18,36 @@ def die(msg):
     print(f"error: {msg}", file=sys.stderr); sys.exit(1)
 
 def validate_types(data):
-    checks = {"parent": (str, type(None)), "depends": (list,), "state": (str,), "scope": (list,)}
+    checks = {
+        "parent": (str, type(None)),
+        "depends": (list,),
+        "state": (str,),
+        "scope": (list,),
+        "requireHumanReview": (bool,),
+    }
     for k, types in checks.items():
         if k in data and not isinstance(data[k], types):
             die(f"'{k}' must be {'/'.join(t.__name__ for t in types)}")
+    # acceptCriteria: str or list[str]
+    ac = data.get("acceptCriteria")
+    if ac is not None:
+        if isinstance(ac, str):
+            pass  # ok
+        elif isinstance(ac, list):
+            if not all(isinstance(x, str) for x in ac):
+                die("acceptCriteria list items must be strings")
+        else:
+            die("acceptCriteria must be str or list[str]")
+    # resources: str or list[str]
+    res = data.get("resources")
+    if res is not None:
+        if isinstance(res, str):
+            pass  # ok
+        elif isinstance(res, list):
+            if not all(isinstance(x, str) for x in res):
+                die("resources list items must be strings")
+        else:
+            die("resources must be str or list[str]")
 
 def validate_refs(tasks, tid, task):
     if task.get("parent") == tid or tid in task.get("depends", []):
@@ -77,6 +103,16 @@ def rollup(tasks, tid):
     elif not all_term and ps == "done":
         tasks[pid]["state"] = "running"; rollup(tasks, pid)
 
+def _ac_is_blank(ac):
+    """Check if acceptCriteria is effectively blank."""
+    if ac is None:
+        return True
+    if isinstance(ac, str):
+        return not ac.strip()
+    if isinstance(ac, list):
+        return len(ac) == 0 or all(not x.strip() for x in ac)
+    return True
+
 def cmd_set(tid, data):
     validate_types(data)
     tasks = load()
@@ -84,9 +120,12 @@ def cmd_set(tid, data):
     if tid in tasks:
         tasks[tid].update(data)
     else:
-        missing = {"title", "acceptCriteria"} - data.keys()
+        missing = {"title"} - data.keys()
         if missing: die(f"new task requires: {', '.join(sorted(missing))}")
         tasks[tid] = {"parent": None, "depends": [], "state": "ready", **data}
+    # Enforce non-empty acceptCriteria on leaf tasks
+    if not has_children(tasks, tid) and _ac_is_blank(tasks[tid].get("acceptCriteria")):
+        die("leaf task requires non-empty acceptCriteria")
     validate_refs(tasks, tid, tasks[tid])
     validate_state(tasks, tid, old_state, tasks[tid]["state"])
     check_cycles(tasks)
