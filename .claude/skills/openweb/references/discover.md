@@ -52,11 +52,22 @@ Then follow `compile.md` for the curate/review phase. During curation, check: do
 
 ### Step 4: Verify
 
+Two levels of verification:
+
+**4a. API-level**: Does the operation return 200 with data?
 ```bash
 pnpm --silent dev verify <site>
 ```
+AUTH_FAIL means login needed first. PASS means the API responds — but that's not enough.
 
-Confirm PASS on key operations. AUTH_FAIL means login needed first.
+**4b. Content-level**: Does the API data match what the user sees?
+
+Browse the site in the browser and compare:
+- Do a search on the website → compare the visible results with the API search response. Are the same items present? Are titles, prices, images consistent?
+- Open a detail page → compare visible info with the API detail response. Are key fields (name, description, price, reviews count) present and matching?
+- If the API returns less data than the page shows, there may be missing endpoints or the page uses SSR/DOM data not captured via API.
+
+This is the real verification — a 200 response with garbage data is not a working fixture.
 
 ### Step 5: Update Knowledge
 
