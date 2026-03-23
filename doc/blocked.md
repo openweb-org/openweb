@@ -37,6 +37,7 @@ All require browser login before capture + compile can proceed.
 | cockroachdb | https://cockroachlabs.cloud | Not logged in | gRPC-Web protocol over session cookies; no public endpoints |
 | ebay | https://www.ebay.com | SSR-only + JSONP | No JSON APIs for search/items; data is SSR HTML extraction. Autosug uses JSONP callback, not JSON. Needs login for user features. |
 | yelp | https://www.yelp.com | DataDome CAPTCHA | All HTML pages and `/gql/batch` return DataDome CAPTCHA challenge (403). Only `/search_suggest/v2/prefetch` works without auth (autocomplete suggestions only, no business data). Yelp Fusion v3 API requires API key. SSR data in `window.yelp.react_root_props` inaccessible. |
+| zillow | https://www.zillow.com | PerimeterX CAPTCHA | All endpoints return 403 with PerimeterX "Press & Hold" CAPTCHA (app ID `PXHYx10rg3`). Blocks CDP browser, direct HTTP (curl), and even default browser profiles. Search API (`/search/GetSearchPageState.htm`), GraphQL (`/zg-graph`), autocomplete (`/autocomplete/v3/suggestions`), and property detail (`/ajax/homedetails/GetHomeDetails.htm`) all behind PX. `robots.txt` accessible but no data endpoints. |
 
 ## To Unblock
 
@@ -47,4 +48,6 @@ For each site:
 
 ## Completed Sites
 
-(none — M26 workers produced empty commits, no fixtures. All 35 sites need redo.)
+| Site | Notes |
+|------|-------|
+| google-search | Works — headless Chrome not blocked (unlike google-maps). Autocomplete via node, web/image search via page_global_data extraction. |
