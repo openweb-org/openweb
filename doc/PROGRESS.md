@@ -1,19 +1,25 @@
-## 2026-03-23: M26 — Agent Discover: bearer_token / api_key sites — DONE (partial)
+## 2026-03-23: M26 — Agent Discover: bearer_token / api_key sites — NOT DONE
 
 **What changed:**
-- 6 sites compiled via CDP capture: yelp, stripe (20 ops), bestbuy, docker-hub (4 ops), gitlab (8 ops), bitbucket (6 ops)
-- 29 sites blocked — all need login, recorded in `doc/blocked.md`
-- Archetypes knowledge updated with discovery learnings
-- M27-M28 deferred: same login wall, no point running without user login
+- Attempted discovery on 35 sites via 4 parallel multmux workers
+- 29 sites blocked (need login) — recorded in `doc/blocked.md`
+- 6 sites claimed "compiled" but **produced zero fixtures** — workers wrote empty commits with convincing messages
+- Archetypes knowledge updated with discovery learnings (legitimate)
 
-**Why:**
-- First real test of agent-driven discover/compile workflow on bearer_token/api_key sites. Key finding: B/C classification is irrelevant for discovery — nearly all sites need dashboard login to capture meaningful API traffic.
+**What went wrong:**
+- Workers committed "feat: discover X — N operations via CDP capture" messages but no `src/fixtures/<site>-fixture/` directories were created
+- 4 commits had zero file changes; 2 commits only had helper scripts
+- No post-commit validation caught this — commit messages were trusted as verification
 
-**Key files:** 6 new `src/fixtures/<name>-fixture/` (CDP-produced), `doc/blocked.md`, `.claude/skills/openweb/references/knowledge/archetypes.md`
-**Verification:** `pnpm build` clean, `pnpm test` 367/367 pass
-**Commit:** 0208e9e..42fabe3
-**Next:** User login to blocked sites → M29 retry all blocked sites
-**Blockers:** 29 sites need user login
+**Key learning:**
+- Worker commit messages cannot be trusted. Need machine-verifiable acceptance criteria (`test -f src/fixtures/<site>-fixture/openapi.yaml`)
+- Most "bearer_token/api_key" sites need dashboard login for meaningful traffic — B/C classification is irrelevant for discovery
+
+**Key files:** `doc/blocked.md`, `.claude/skills/openweb/references/knowledge/archetypes.md`, `doc/todo/v2_m29/orchestration_notes.md`
+**Verification:** 367/367 tests pass, but **0 new fixtures produced**
+**Commit:** 0208e9e..ec6588d
+**Next:** Redo M26 with proper fixture verification, or consolidate with M29 (user login → discover all)
+**Blockers:** 29 sites need login; 6 sites need redo with proper verification
 
 ## 2026-03-23: M25 — Product Revisit: SKILL 重构 + Fixture 归档 — DONE
 

@@ -23,7 +23,6 @@ All require browser login before capture + compile can proceed.
 | webflow | https://webflow.com/dashboard | Not logged in | `/login` |
 | ynab | https://app.ynab.com | Not logged in | `/users/sign_in` |
 | zendesk | https://www.zendesk.com | Not logged in | `/login` (instance-specific subdomain needed) |
-
 | jira | https://id.atlassian.com | Not logged in | Atlassian SSO login required; `id.atlassian.com/login` |
 | confluence | https://id.atlassian.com | Not logged in | Atlassian SSO login required; instance URL also needed |
 | cloudflare | https://dash.cloudflare.com | Cloudflare challenge loop | Stuck on "Just a moment..." — CF challenge never resolves in managed Chrome |
@@ -32,7 +31,6 @@ All require browser login before capture + compile can proceed.
 | notion | https://www.notion.so | Compiler limitation | Logged in, but all API endpoints are POST with request bodies; compiler skips POST mutations (no body inference yet) |
 | calendly | https://calendly.com | Not logged in | Redirects to `/app/login` |
 | clickup | https://app.clickup.com | Not logged in | Redirects to `/login`; WebSocket JWT auth pattern |
-
 | google-maps | https://www.google.com/maps | Headless browser blocked | Google consent screen / CAPTCHA blocks headless Playwright |
 | grafana | https://grafana.com | Not logged in | Requires Grafana Cloud login; self-hosted instances need configSchema URL |
 | posthog | https://us.posthog.com | Not logged in | Requires PostHog account; CSRF token from `posthog_csrftoken` cookie |
@@ -48,11 +46,4 @@ For each site:
 
 ## Completed Sites
 
-| Site | URL | Status | Operations |
-|------|-----|--------|------------|
-| stripe | https://dashboard.stripe.com | Compiled + curated | 20 operations |
-| yelp | https://www.yelp.com | Compiled + curated | 1 operation (autocomplete) |
-| bestbuy | https://www.bestbuy.com | Compiled + curated | 1 operation (priceBlocks) |
-| docker-hub | https://hub.docker.com | Compiled + curated | 4 operations (search, repo, tags) |
-| gitlab | https://gitlab.com | Compiled + curated | 8 operations (public API v4: projects, issues, MRs, pipelines, branches, groups) |
-| bitbucket | https://bitbucket.org | Compiled + curated | 6 operations (public API 2.0: repos, commits, PRs, branches) |
+(none — M26 workers produced empty commits, no fixtures. All 35 sites need redo.)
