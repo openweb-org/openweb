@@ -11,7 +11,12 @@ How to add a new site to openweb when no fixture exists.
 
 - Read `knowledge/archetypes.md` — what type of site is this?
 - Read `knowledge/auth-patterns.md` — what auth do you expect?
-- Set concrete goals: 3–5 operations you want to capture (e.g., feed, search, profile, detail)
+- **Define target operations**: Think like a real user. What are the 3-5 core things you'd do on this site? These become your discovery goals and acceptance criteria. Examples:
+  - E-commerce → searchProducts, getProductDetails, getProductReviews
+  - Travel → searchFlights, getFlightDetails, getFlightStatus
+  - Real estate → searchHomes, getPropertyDetails, getPriceHistory
+  - Social → searchPosts, getPostDetails, getUserProfile
+- If the task has `acceptCriteria` with specific operations listed, those are your targets.
 
 ## Process
 
