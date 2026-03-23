@@ -1,0 +1,11 @@
+{
+  "operationId": "getDirections",
+  "params": {
+    "origin": "San Francisco, CA",
+    "destination": "Los Angeles, CA"
+  },
+  "expect": {
+    "status": 200,
+    "schema_valid": true
+  }
+}

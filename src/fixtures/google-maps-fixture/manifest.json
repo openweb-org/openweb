@@ -14,5 +14,10 @@
     "l1_count": 0,
     "l2_count": 0,
     "l3_count": 3
+  },
+  "last_verified": "2026-03-23T23:29:28.455Z",
+  "fingerprint": {
+    "response_shape_hash": "",
+    "last_validated": "2026-03-23T23:29:28.456Z"
   }
 }

@@ -1,0 +1,10 @@
+{
+  "operationId": "searchPlaces",
+  "params": {
+    "query": "coffee shops in San Francisco"
+  },
+  "expect": {
+    "status": 200,
+    "schema_valid": true
+  }
+}

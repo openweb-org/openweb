@@ -1,76 +1,22 @@
 /**
- * Google Maps L3 adapter — internal preview APIs via Playwright page.request.
+ * Google Maps L3 adapter — SPA navigation + DOM extraction / internal preview API.
  *
- * Search:     GET /search?tbm=map&q={query}&pb={viewport}
- * Place:      GET /maps/preview/place?q={name}&pb={placeId+viewport}
- * Directions: GET /maps/preview/directions?pb={origin+destination+options}
+ * Search:     Navigate to /maps/search/{query}/, extract from DOM
+ * Place:      GET /maps/preview/place via page.evaluate(fetch()) with pb param
+ * Directions: Navigate to /maps/dir/{origin}/{destination}/, extract from DOM
  *
- * All responses are JSON prefixed with )]}\n (XSS prevention).
- * Data is deeply nested arrays (protobuf-derived), not keyed objects.
+ * Search and directions use SPA navigation because their APIs require
+ * session-specific tokens that only the Maps SPA generates during navigation.
+ * Place details work via direct fetch with a minimal pb parameter.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright'
 
-const BASE = 'https://www.google.com'
+const MAPS_BASE = 'https://www.google.com/maps'
 
-/* ---------- pb param builders ---------- */
+/* ---------- helpers ---------- */
 
-function searchPb(limit: number): string {
-  // Viewport set to US-wide view, results limited by !7i{limit}
-  return [
-    '!4m12',
-    '!1m3!1d50000000!2d-98.5!3d39.5', // US center, wide zoom
-    '!2m3!1f0!2f0!3f0',
-    '!3m2!1i1024!2i768',
-    '!4f13.1',
-    `!7i${limit}`,
-    '!10b1',
-    '!12m25!1m5!18b1!30b1!31m1!1b1!34e1',
-    '!2m4!5m1!6e2!20e3!39b1',
-    '!10b1!12b1!13b1!16b1!17m1!3e1',
-    '!20m3!5e2!6b1!14b1',
-  ].join('')
-}
-
-function placePb(placeId: string): string {
-  return [
-    `!1m1!1s${placeId}`,
-    '!12m4!2m3!1i360!2i120!4i8',
-    '!13m57',
-    '!2m2!1i203!2i100',
-    '!3m2!2i4!5b1',
-    '!6m6!1m2!1i86!2i86!1m2!1i408!2i240',
-    '!7m33!1m3!1e1!2b0!3e3!1m3!1e2!2b1!3e2!1m3!1e2!2b0!3e3!1m3!1e8!2b0!3e3',
-    '!1m3!1e10!2b0!3e3!1m3!1e10!2b1!3e2!1m3!1e9!2b1!3e2!1m3!1e10!2b0!3e6',
-    '!20m4!2m3!1i200!2i200!3i200!32b1',
-    '!19m4!2m3!1i334!2i250!3i8!20b1',
-    '!20b1!23b1!25b1!26b1!30m1!2b1',
-  ].join('')
-}
-
-function directionsPb(origin: string, destination: string): string {
-  return [
-    `!1m2!1s${origin}!6e0`,
-    `!1m2!1s${destination}!6e0`,
-    '!3m12!1m3!1d50000000!2d-98.5!3d39.5',
-    '!2m3!1f0.0!2f0.0!3f0.0',
-    '!3m2!1i1024!2i768',
-    '!4f13.1',
-    '!6m55!1m5!18b1!30b1!31m1!1b1!34e1',
-    '!2m4!5m1!6e2!20e3!39b1',
-    '!6m26!49b1!63m0!66b1!74i150000!85b1!91b1',
-    '!114b1!149b1!178b1!206b1!209b1!212b1!216b1!222b1',
-  ].join('')
-}
-
-/* ---------- response parser ---------- */
-
-function parseMapResponse(text: string): unknown {
-  const clean = text.replace(/^\)\]\}'\n/, '')
-  return JSON.parse(clean)
-}
-
-/* ---------- safe array access ---------- */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 function dig(arr: unknown, ...indices: number[]): unknown {
   let cur = arr
@@ -81,110 +27,127 @@ function dig(arr: unknown, ...indices: number[]): unknown {
   return cur
 }
 
-/* ---------- operation handlers ---------- */
+async function ensureMapsPage(page: Page): Promise<void> {
+  if (!page.url().includes('google.com/maps')) {
+    await page.evaluate(() => {
+      window.location.href = 'https://www.google.com/maps'
+    })
+    await sleep(3000)
+    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {})
+  }
+}
+
+/* ---------- searchPlaces ---------- */
 
 async function searchPlaces(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const query = String(params.query ?? '')
-  const limit = Number(params.limit ?? 20)
   if (!query) throw new Error('query is required')
 
-  const url = new URL('/search', BASE)
-  url.searchParams.set('tbm', 'map')
-  url.searchParams.set('authuser', '0')
-  url.searchParams.set('hl', 'en')
-  url.searchParams.set('gl', 'us')
-  url.searchParams.set('pb', searchPb(limit))
-  url.searchParams.set('q', query)
+  await ensureMapsPage(page)
 
-  const resp = await page.request.fetch(url.toString(), {
-    headers: {
-      Accept: '*/*',
-      Referer: 'https://www.google.com/maps/',
-    },
+  // Navigate to search URL — Maps SPA handles the API call internally
+  const searchUrl = `${MAPS_BASE}/search/${encodeURIComponent(query)}/`
+  await page.evaluate((url: string) => {
+    window.location.href = url
+  }, searchUrl)
+  await sleep(5000)
+  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
+
+  // Wait for results to appear in DOM
+  await page.waitForSelector('a.hfpxzc', { timeout: 10000 }).catch(() => {})
+
+  // Extract place data from DOM
+  const places = await page.evaluate(() => {
+    const items = document.querySelectorAll('div[role="feed"] > div')
+    const results: Array<Record<string, unknown>> = []
+    items.forEach((item) => {
+      const link = item.querySelector('a.hfpxzc') as HTMLAnchorElement | null
+      if (!link) return
+
+      const name = link.getAttribute('aria-label')
+      const href = link.getAttribute('href') || ''
+
+      const placeIdMatch = href.match(/0x[0-9a-f]+:0x[0-9a-f]+/)
+      const placeId = placeIdMatch ? placeIdMatch[0] : null
+
+      const latLngMatch = href.match(/!3d([-\d.]+)!4d([-\d.]+)/)
+      const lat = latLngMatch ? parseFloat(latLngMatch[1]) : null
+      const lng = latLngMatch ? parseFloat(latLngMatch[2]) : null
+
+      const ratingEl = item.querySelector('.MW4etd')
+      const rating = ratingEl ? parseFloat(ratingEl.textContent || '') : null
+
+      const reviewEl = item.querySelector('.UY7F9')
+      const reviewText = reviewEl?.textContent || ''
+      const reviewCount = parseInt(reviewText.replace(/[^0-9]/g, '')) || null
+
+      // Extract address from the info spans
+      const spans = item.querySelectorAll('.W4Efsd span')
+      let address: string | null = null
+      spans.forEach((el) => {
+        const t = el.textContent || ''
+        if (t.length > 10 && !t.includes('·') && !t.startsWith('Open') && !t.startsWith('Closed')) {
+          address = t
+        }
+      })
+
+      // Price level
+      const text = item.textContent || ''
+      const priceMatch = text.match(/\$[\d]+-[\d]+|\$+/)
+      const priceLevel = priceMatch ? priceMatch[0] : null
+
+      // Type (first span in first W4Efsd)
+      const typeEl = item.querySelector('.W4Efsd .W4Efsd:first-child span:first-child')
+      const placeType = typeEl?.textContent || null
+
+      results.push({
+        placeId,
+        name,
+        address,
+        rating: Number.isNaN(rating as number) ? null : rating,
+        reviewCount,
+        priceLevel,
+        types: placeType ? [placeType] : [],
+        lat,
+        lng,
+      })
+    })
+    return results
   })
-
-  if (!resp.ok()) {
-    throw new Error(`Google Maps search: HTTP ${resp.status()}`)
-  }
-
-  const text = await resp.text()
-  // Response may be: {"c":0,"d":"...escaped json..."} (browser) or )]}\n[[...]] (direct fetch)
-  let data: unknown[]
-  if (text.startsWith('{')) {
-    const outer = JSON.parse(text) as { c: number; d: string }
-    const inner = outer.d.replace(/^\)\]\}'\n/, '')
-    data = JSON.parse(inner) as unknown[]
-  } else {
-    data = parseMapResponse(text) as unknown[]
-  }
-
-  // data[3] contains the array of results (each is a nested place array)
-  const resultArrays = (data[3] ?? []) as unknown[][]
-  const places = resultArrays.map((r) => {
-    if (!Array.isArray(r)) return null
-    // r[0] = place ID hex, r[1] = name
-    // r[2] = [[null, null, lat, lng], ...]
-    // r[3] = address parts
-    // r[7] = rating, r[8] = review count
-    const placeId = dig(r, 0) as string | null
-    const name = dig(r, 1) as string | null
-    const coords = dig(r, 2) as number[] | null
-    const lat = coords?.[2] ?? null
-    const lng = coords?.[3] ?? null
-    const address = dig(r, 3) as string | null
-    const rating = dig(r, 7) as number | null
-    const reviewCount = dig(r, 8) as number | null
-    const priceLevel = dig(r, 4, 2) as string | null
-    const types = dig(r, 9) as string[] | null
-
-    return {
-      placeId,
-      name,
-      address,
-      rating,
-      reviewCount,
-      priceLevel,
-      types: Array.isArray(types) ? types : [],
-      lat,
-      lng,
-    }
-  }).filter(Boolean)
 
   return { query, places }
 }
+
+/* ---------- getPlaceDetails ---------- */
 
 async function getPlaceDetails(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
   if (!placeId) throw new Error('placeId is required')
 
-  const url = new URL('/maps/preview/place', BASE)
-  url.searchParams.set('authuser', '0')
-  url.searchParams.set('hl', 'en')
-  url.searchParams.set('gl', 'us')
-  url.searchParams.set('pb', placePb(placeId))
-  if (query) url.searchParams.set('q', query)
+  await ensureMapsPage(page)
 
-  const resp = await page.request.fetch(url.toString(), {
-    headers: {
-      Accept: '*/*',
-      Referer: 'https://www.google.com/maps/',
+  // Minimal working pb parameter for place details
+  const pb = `!1m3!1s${placeId}!3m1!1d50000!4m2!3d37.8!4d-122.4!12m4!2m3!1i360!2i120!4i8!13m1!2m0`
+
+  const result = await page.evaluate(
+    async (args: { pb: string; q: string }) => {
+      const url = `/maps/preview/place?authuser=0&hl=en&gl=us&pb=${encodeURIComponent(args.pb)}&q=${encodeURIComponent(args.q)}`
+      const resp = await fetch(url, { credentials: 'include' })
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      return resp.text()
     },
-  })
+    { pb, q: query },
+  )
 
-  if (!resp.ok()) {
-    throw new Error(`Google Maps place: HTTP ${resp.status()}`)
-  }
-
-  const data = parseMapResponse(await resp.text()) as unknown[]
+  const data = JSON.parse(result.replace(/^\)\]\}'\n/, '')) as unknown[]
   const info = data[6] as unknown[]
   if (!Array.isArray(info)) {
     return { name: null, placeId, error: 'No place data found' }
   }
 
-  // Extract fields from the deeply nested array
   const name = dig(info, 11) as string | null
-  const address = dig(info, 18) as string | null ?? dig(info, 39) as string | null
+  const address = (dig(info, 18) as string | null) ?? (dig(info, 39) as string | null)
   const coords = dig(info, 9) as number[] | null
   const lat = coords?.[2] ?? null
   const lng = coords?.[3] ?? null
@@ -197,7 +160,7 @@ async function getPlaceDetails(page: Page, params: Record<string, unknown>): Pro
   const description = dig(info, 154, 0, 0) as string | null
   const hoursText = dig(info, 203, 1, 4, 0) as string | null
 
-  // Extract reviews
+  // Extract reviews from [6][31][1]
   const reviewsArr = dig(info, 31, 1) as unknown[][] | null
   const reviews: Array<{ text: string; authorUrl: string | null }> = []
   if (Array.isArray(reviewsArr)) {
@@ -211,7 +174,7 @@ async function getPlaceDetails(page: Page, params: Record<string, unknown>): Pro
 
   return {
     name,
-    placeId: dig(info, 10) as string | null ?? placeId,
+    placeId: (dig(info, 10) as string | null) ?? placeId,
     address,
     lat,
     lng,
@@ -227,75 +190,77 @@ async function getPlaceDetails(page: Page, params: Record<string, unknown>): Pro
   }
 }
 
+/* ---------- getDirections ---------- */
+
 async function getDirections(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const origin = String(params.origin ?? '')
   const destination = String(params.destination ?? '')
   if (!origin || !destination) throw new Error('origin and destination are required')
 
-  const url = new URL('/maps/preview/directions', BASE)
-  url.searchParams.set('authuser', '0')
-  url.searchParams.set('hl', 'en')
-  url.searchParams.set('gl', 'us')
-  url.searchParams.set('pb', directionsPb(origin, destination))
+  await ensureMapsPage(page)
 
-  const resp = await page.request.fetch(url.toString(), {
-    headers: {
-      Accept: '*/*',
-      Referer: 'https://www.google.com/maps/',
-    },
-  })
+  // Navigate to directions URL — Maps SPA loads route data during navigation
+  const dirUrl = `${MAPS_BASE}/dir/${encodeURIComponent(origin)}/${encodeURIComponent(destination)}/`
+  await page.evaluate((url: string) => {
+    window.location.href = url
+  }, dirUrl)
+  await sleep(8000)
+  await page.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => {})
 
-  if (!resp.ok()) {
-    throw new Error(`Google Maps directions: HTTP ${resp.status()}`)
-  }
+  // Extract route data from DOM
+  const routes = await page.evaluate(() => {
+    const results: Array<Record<string, unknown>> = []
 
-  const data = parseMapResponse(await resp.text()) as unknown[]
-  const routesData = data[0] as unknown[]
+    // Look for route sections — Google Maps uses different selectors
+    // Try the main trip sections
+    const sections = document.querySelectorAll('[data-trip-index], .MespJc')
+    sections.forEach((section) => {
+      const text = section.textContent || ''
 
-  // Origin/destination info at [0][0] and [0][1]
-  const originName = dig(routesData, 0, 0, 0, 0) as string | null ?? origin
-  const destName = dig(routesData, 1, 0, 0, 0) as string | null ?? destination
+      // Duration: match "N hr N min" or "N min" — use word boundary to avoid false matches
+      const durationMatch = text.match(/(\d+\s*hr\s*\d*\s*min|\d+\s*min)(?!\w)/)
+      // Distance: match "N miles" or "N mi" but NOT "N min" — require "miles" or "mi" followed by non-"n"
+      const distanceMatch = text.match(/([\d,.]+)\s*(miles|mi(?!n))/)
+      // Via route name
+      const viaMatch = text.match(/via\s+([\w\s\d-]+?)(?:\s*(?:Fastest|Details|$))/)
 
-  // Route options at [0][1][N]
-  const routeOptions = dig(routesData, 1) as unknown[][] | null
-  const routes: Array<{
-    name: string
-    distanceMeters: number
-    distanceText: string
-    durationSeconds: number
-    durationText: string
-    summary: string | null
-  }> = []
-
-  if (Array.isArray(routeOptions)) {
-    for (const route of routeOptions) {
-      if (!Array.isArray(route)) continue
-      const routeInfo = route[0] as unknown[]
-      if (!Array.isArray(routeInfo)) continue
-
-      const name = dig(routeInfo, 1) as string | null
-      const distanceMeters = dig(routeInfo, 2, 0) as number | null
-      const distanceText = dig(routeInfo, 2, 1) as string | null
-      const durationSeconds = dig(routeInfo, 3, 0) as number | null
-      const durationText = dig(routeInfo, 3, 1) as string | null
-
-      if (name && distanceText && durationText) {
-        // Look for summary text
-        const summary = dig(route, 22, 8, 0, 0) as string | null
-
-        routes.push({
-          name,
-          distanceMeters: distanceMeters ?? 0,
-          distanceText,
-          durationSeconds: durationSeconds ?? 0,
-          durationText,
-          summary,
+      if (durationMatch) {
+        results.push({
+          name: viaMatch?.[1]?.trim() || 'Route',
+          distanceText: distanceMatch ? `${distanceMatch[1]} ${distanceMatch[2]}` : '',
+          durationText: durationMatch[0].trim(),
+          summary: text.includes('fastest') || text.includes('Fastest') ? 'Fastest route' : null,
         })
       }
-    }
-  }
+    })
 
-  return { origin: originName, destination: destName, routes }
+    // Fallback: parse the entire directions panel
+    if (results.length === 0) {
+      const panel = document.querySelector('#section-directions-trip-0, [role="main"]')
+      if (panel) {
+        const text = panel.textContent || ''
+        // Find all route-like patterns
+        const routeBlocks = text.split(/(?=via\s)/)
+        for (const block of routeBlocks) {
+          const via = block.match(/via\s+([\w\s\d-]+)/)?.[1]?.trim()
+          const duration = block.match(/(\d+\s*hr\s*\d*\s*min|\d+\s*min)(?!\w)/)?.[0]
+          const distance = block.match(/([\d,.]+)\s*(miles|mi(?!n))/)?.[0]
+          if (via && duration) {
+            results.push({
+              name: via,
+              distanceText: distance || '',
+              durationText: duration,
+              summary: null,
+            })
+          }
+        }
+      }
+    }
+
+    return results
+  })
+
+  return { origin, destination, routes }
 }
 
 /* ---------- adapter export ---------- */
@@ -308,22 +273,19 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
 
 const adapter: CodeAdapter = {
   name: 'google-maps-api',
-  description: 'Google Maps — place search, details with reviews, driving directions via internal preview APIs',
+  description: 'Google Maps — place search, details with reviews, driving directions via SPA navigation + internal APIs',
 
   async init(page: Page): Promise<boolean> {
-    const url = page.url()
-    return url.includes('google.com')
+    return page.url().includes('google.com')
   },
 
   async isAuthenticated(): Promise<boolean> {
-    return true // Public Maps APIs, no auth required
+    return true
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
     const handler = OPERATIONS[operation]
-    if (!handler) {
-      throw new Error(`Unknown operation: ${operation}`)
-    }
+    if (!handler) throw new Error(`Unknown operation: ${operation}`)
     return handler(page, { ...params })
   },
 }
