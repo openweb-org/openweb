@@ -60,12 +60,13 @@ pnpm --silent dev verify <site>
 ```
 AUTH_FAIL means login needed first. PASS means the API responds — but that's not enough.
 
-**4b. Content-level**: Does the API data match what the user sees?
+**4b. Content-level**: Does the API data match what the user sees, and does it fulfill the target intents?
 
 Browse the site in the browser and compare:
 - Do a search on the website → compare the visible results with the API search response. Are the same items present? Are titles, prices, images consistent?
 - Open a detail page → compare visible info with the API detail response. Are key fields (name, description, price, reviews count) present and matching?
 - If the API returns less data than the page shows, there may be missing endpoints or the page uses SSR/DOM data not captured via API.
+- **Check against target intents**: Does each target operation from acceptCriteria actually return useful, actionable data? "search products by keyword" means a user could act on the results — not just get IDs or empty shells.
 
 This is the real verification — a 200 response with garbage data is not a working fixture.
 
