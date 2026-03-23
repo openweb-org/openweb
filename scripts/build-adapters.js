@@ -28,7 +28,7 @@ for (const fixture of fixtures) {
     const input = path.join(adapterDir, tsFile)
     const output = path.join(adapterDir, tsFile.replace(/\.ts$/, '.js'))
     try {
-      execSync(`npx esbuild "${input}" --outfile="${output}" --format=esm --platform=node --target=es2022`, {
+      execSync(`npx esbuild "${input}" --bundle --outfile="${output}" --format=esm --platform=node --target=es2022 --external:playwright`, {
         stdio: 'pipe',
       })
       compiled++

@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://api.spotify.com/v1
     x-openweb:
-      transport: page
+      transport: node
       auth:
         type: cookie_session
 paths:

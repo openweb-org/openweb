@@ -26,7 +26,13 @@ export async function resolveWebpackModuleWalk(
 ): Promise<ResolvedInjections & { queryParams?: Record<string, string> }> {
   validateConfig(config)
 
-  const result = await handle.page.evaluate(
+  const MAX_RETRIES = 3
+  const RETRY_DELAY_MS = 800
+
+  let result: { status: 'cache_empty' } | { status: 'token_missing' } | { status: 'ok'; token: string } = { status: 'cache_empty' }
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    result = await handle.page.evaluate(
     (args: { chunkGlobal: string; moduleTest: string; call: string }) => {
       const wp = (window as Record<string, unknown>)[args.chunkGlobal] as
         | Array<unknown>
@@ -71,6 +77,12 @@ export async function resolveWebpackModuleWalk(
     },
     { chunkGlobal: config.chunk_global, moduleTest: config.module_test, call: config.call },
   )
+
+    if (result.status !== 'cache_empty') break
+    if (attempt < MAX_RETRIES - 1) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+    }
+  }
 
   if (result.status === 'cache_empty') {
     throw new OpenWebError({

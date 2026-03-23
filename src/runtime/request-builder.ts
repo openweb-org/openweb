@@ -94,6 +94,8 @@ export function buildJsonRequestBody(operation: OpenApiOperation, params: Record
     const value = params[param.name]
     if (value !== undefined) {
       body[param.name] = value
+    } else if (param.schema?.type === 'object') {
+      body[param.name] = {}
     }
   }
 
