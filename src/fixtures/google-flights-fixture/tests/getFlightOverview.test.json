@@ -1,0 +1,12 @@
+{
+  "operation_id": "getFlightOverview",
+  "cases": [
+    {
+      "input": { "tfs": "CBwQARodagwIAhIIL20vMGZ2eWdyDQgDEgkvbS8wMl8yODYaHWoNCAMSCS9tLzAyXzI4NnIMCAISCC9tLzBmdnlnQAFIAXABggELCP___________wGYAQE", "tfu": "KgIIAw" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

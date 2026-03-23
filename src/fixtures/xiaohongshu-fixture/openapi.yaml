@@ -1,0 +1,297 @@
+openapi: '3.1.0'
+info:
+  title: Xiaohongshu API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://www.xiaohongshu.com
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+paths:
+  /internal/searchNotes:
+    get:
+      operationId: searchNotes
+      summary: Search notes/posts by keyword — returns titles, authors, covers, like counts
+      x-openweb:
+        permission: read
+        build:
+          stable_id: xhs0001
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: searchNotes
+      parameters:
+        - name: keyword
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "咖啡", "旅行", "穿搭").
+      responses:
+        '200':
+          description: List of matching notes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - notes
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  notes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        noteId:
+                          type: string
+                          description: Note ID (use with getNoteDetail).
+                        xsecToken:
+                          type: string
+                          description: Security token for accessing this note.
+                        type:
+                          type: string
+                          description: Content type (normal for image post, video for video).
+                          enum:
+                            - normal
+                            - video
+                        displayTitle:
+                          type: string
+                          description: Note title.
+                        user:
+                          type: object
+                          properties:
+                            userId:
+                              type: string
+                            nickname:
+                              type: string
+                            avatar:
+                              type: string
+                        likedCount:
+                          type:
+                            - string
+                            - 'null'
+                          description: Number of likes (string format, e.g. "25697").
+                        cover:
+                          type:
+                            - object
+                            - 'null'
+                          properties:
+                            url:
+                              type: string
+                            width:
+                              type: integer
+                            height:
+                              type: integer
+  /internal/getNoteDetail:
+    get:
+      operationId: getNoteDetail
+      summary: Get note detail with comments — full content, author, interaction stats, top comments
+      x-openweb:
+        permission: read
+        build:
+          stable_id: xhs0002
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: getNoteDetail
+      parameters:
+        - name: noteId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Note ID (from searchNotes).
+        - name: xsecToken
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Security token (from searchNotes). Improves reliability.
+      responses:
+        '200':
+          description: Note detail with comments.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  note:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      noteId:
+                        type: string
+                      title:
+                        type: string
+                      desc:
+                        type: string
+                        description: Note description/body with hashtags.
+                      type:
+                        type: string
+                      time:
+                        type: integer
+                        description: Publish timestamp (ms).
+                      lastUpdateTime:
+                        type: integer
+                      user:
+                        type: object
+                        properties:
+                          userId:
+                            type: string
+                          nickname:
+                            type: string
+                          avatar:
+                            type: string
+                      interactInfo:
+                        type: object
+                        properties:
+                          likedCount:
+                            type: string
+                          collectedCount:
+                            type: string
+                          commentCount:
+                            type: string
+                          shareCount:
+                            type: string
+                      tagList:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            type:
+                              type: string
+                      imageCount:
+                        type: integer
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        content:
+                          type: string
+                        likeCount:
+                          type:
+                            - string
+                            - integer
+                        createTime:
+                          type: integer
+                          description: Comment timestamp (ms).
+                        ipLocation:
+                          type: string
+                        subCommentCount:
+                          type:
+                            - string
+                            - integer
+                        user:
+                          type: object
+                          properties:
+                            userId:
+                              type: string
+                            nickname:
+                              type: string
+                            avatar:
+                              type: string
+  /internal/getUserProfile:
+    get:
+      operationId: getUserProfile
+      summary: Get user profile — nickname, bio, follower counts, location tags
+      x-openweb:
+        permission: read
+        build:
+          stable_id: xhs0003
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: getUserProfile
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User ID (from searchNotes or getNoteDetail).
+      responses:
+        '200':
+          description: User profile info.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type:
+                      - string
+                      - 'null'
+                    description: Red ID (public user identifier).
+                  nickname:
+                    type:
+                      - string
+                      - 'null'
+                  desc:
+                    type:
+                      - string
+                      - 'null'
+                    description: User bio/description.
+                  gender:
+                    type:
+                      - integer
+                      - 'null'
+                    description: "Gender (0: unknown, 1: male, 2: female)."
+                  avatar:
+                    type:
+                      - string
+                      - 'null'
+                  avatarLarge:
+                    type:
+                      - string
+                      - 'null'
+                  ipLocation:
+                    type:
+                      - string
+                      - 'null'
+                  interactions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          description: "Interaction type: follows, fans, interaction."
+                        name:
+                          type: string
+                          description: Display name (Chinese).
+                        count:
+                          type: string
+                  tags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        tagType:
+                          type: string
+                          description: "Tag type: info, location, college."

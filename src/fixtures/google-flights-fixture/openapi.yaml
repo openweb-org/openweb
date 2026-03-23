@@ -1,0 +1,335 @@
+openapi: '3.1.0'
+info:
+  title: Google Flights
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://www.google.com
+    x-openweb:
+      transport: page
+paths:
+  /travel/flights/search:
+    get:
+      operationId: searchFlights
+      summary: Extract flight search results from an open Google Flights search page — airline, times, duration, stops, price
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gf0001
+          tool_version: 1
+          verified: true
+          signals:
+            - dom-match
+        extraction:
+          type: page_global_data
+          page_url: /travel/flights/search
+          expression: >-
+            (() => {
+              const flights = [];
+              const items = document.querySelectorAll('li.pIav2d');
+              for (const li of items) {
+                const text = li.textContent || '';
+                if (!text.includes('$')) continue;
+                const timeMatch = text.match(/(\d+:\d+\s[AP]M)\d+:\d+\s[AP]M[\s\u00A0]+on[\s\u00A0]+.+?[\s\u00A0]+\u2013[\s\u00A0]+(\d+:\d+\s[AP]M)/);
+                if (!timeMatch) continue;
+                const airlineSpan = [...li.querySelectorAll('span')].find(s => {
+                  const t = s.textContent.trim();
+                  return t.length > 2 && t.length < 30 && !t.match(/\d/) && !t.includes('Airport') && !t.includes('Nonstop') && !t.includes('stop') && !t.includes('emissions') && !t.includes('trip') && !t.includes('Select') && !t.includes('Departure') && !t.includes('Return');
+                });
+                const airline = airlineSpan ? airlineSpan.textContent.trim() : '';
+                const durationMatch = text.match(/(\d+\shr(?:\s\d+\smin)?|\d+\smin)/);
+                const routeMatch = text.match(/([A-Z]{3})[A-Za-z\s\u00A0-]+\u2013([A-Z]{3})/);
+                const stopsText = text.match(/(Nonstop|\d+\sstops?)/i);
+                const priceMatch = text.match(/\$(\d[\d,]*)/);
+                const co2Match = text.match(/(\d+)\skg\sCO2/);
+                const emMatch = text.match(/(-?\d+)%\semissions/);
+                flights.push({
+                  departureTime: timeMatch[1],
+                  arrivalTime: timeMatch[2],
+                  airline,
+                  duration: durationMatch ? durationMatch[1] : '',
+                  origin: routeMatch ? routeMatch[1] : '',
+                  destination: routeMatch ? routeMatch[2] : '',
+                  stops: stopsText ? stopsText[1] : '',
+                  price: priceMatch ? parseInt(priceMatch[1].replace(',', '')) : null,
+                  co2Kg: co2Match ? parseInt(co2Match[1]) : null,
+                  emissionsPct: emMatch ? parseInt(emMatch[1]) : null
+                });
+              }
+              const origin = document.querySelector('input[aria-label*="Where from"]')?.value || '';
+              const dest = document.querySelector('input[aria-label*="Where to"]')?.value || '';
+              const rc = document.body.innerText.match(/(\d+) results? returned/);
+              return {
+                origin,
+                destination: dest,
+                resultCount: rc ? parseInt(rc[1]) : flights.length,
+                flights
+              };
+            })()
+      parameters:
+        - name: tfs
+          in: query
+          required: true
+          schema:
+            type: string
+          description: >-
+            Encoded flight search parameters (origin, destination, dates).
+            Navigate to the Google Flights search page with this parameter set.
+        - name: tfu
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Additional flight UI parameters.
+      responses:
+        '200':
+          description: Flight search results extracted from the page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - origin
+                  - destination
+                  - flights
+                properties:
+                  origin:
+                    type: string
+                    description: Departure city/airport name.
+                  destination:
+                    type: string
+                    description: Arrival city/airport name.
+                  resultCount:
+                    type: integer
+                    description: Total number of flight results.
+                  flights:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        departureTime:
+                          type: string
+                          description: Departure time (e.g. "5:52 PM").
+                        arrivalTime:
+                          type: string
+                          description: Arrival time (e.g. "7:30 PM").
+                        airline:
+                          type: string
+                          description: Airline name.
+                        duration:
+                          type: string
+                          description: Flight duration (e.g. "1 hr 38 min").
+                        origin:
+                          type: string
+                          description: Origin airport code (e.g. "RDU").
+                        destination:
+                          type: string
+                          description: Destination airport code (e.g. "LGA").
+                        stops:
+                          type: string
+                          description: Stop info ("Nonstop" or "1 stop").
+                        price:
+                          type: integer
+                          nullable: true
+                          description: Price in USD.
+                        co2Kg:
+                          type: integer
+                          nullable: true
+                          description: CO2 emissions in kg.
+                        emissionsPct:
+                          type: integer
+                          nullable: true
+                          description: Emissions percentage vs typical.
+  /travel/flights:
+    get:
+      operationId: getFlightOverview
+      summary: Extract flight overview and cheapest fares from a Google Flights route page — cheapest options, fastest flight, frequency
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gf0002
+          tool_version: 1
+          verified: false
+          signals:
+            - dom-match
+        extraction:
+          type: page_global_data
+          page_url: /travel/flights
+          expression: >-
+            (() => {
+              const cards = [];
+              const cardEls = document.querySelectorAll('[class*="card"], [class*="Card"]');
+              const text = document.body.innerText;
+              const priceBlocks = text.match(/Cheapest[\s\S]*?\$\d[\d,]*/g) || [];
+              for (const block of priceBlocks) {
+                const priceMatch = block.match(/\$(\d[\d,]*)/);
+                const airlineMatch = block.match(/\n([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)\n/);
+                const stopsMatch = block.match(/(Nonstop|\d+ stops?)/i);
+                const durationMatch = block.match(/(\d+ hr(?: \d+ min)?)/);
+                const dateMatch = block.match(/([A-Z][a-z]{2}, [A-Z][a-z]{2} \d+\s*[–—]\s*[A-Z][a-z]{2}, [A-Z][a-z]{2} \d+)/);
+                cards.push({
+                  price: priceMatch ? parseInt(priceMatch[1].replace(',', '')) : null,
+                  airline: airlineMatch ? airlineMatch[1] : '',
+                  stops: stopsMatch ? stopsMatch[1] : '',
+                  duration: durationMatch ? durationMatch[1] : '',
+                  dates: dateMatch ? dateMatch[1] : ''
+                });
+              }
+              const fastestMatch = text.match(/Fastest flight\s*(\d+ hr(?: \d+ min)?)/);
+              const nonstopMatch = text.match(/Nonstop flights\s*(Every day|[A-Z][a-z]+)/);
+              const origin = document.querySelector('input[aria-label*="Where from"]')?.value || '';
+              const dest = document.querySelector('input[aria-label*="Where to"]')?.value || '';
+              return {
+                origin,
+                destination: dest,
+                cheapestOptions: cards,
+                fastestFlight: fastestMatch ? fastestMatch[1] : '',
+                nonstopFrequency: nonstopMatch ? nonstopMatch[1] : ''
+              };
+            })()
+      parameters:
+        - name: tfs
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Encoded flight route parameters (origin, destination).
+        - name: tfu
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Additional flight UI parameters.
+      responses:
+        '200':
+          description: Flight overview with cheapest options for a route.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  origin:
+                    type: string
+                  destination:
+                    type: string
+                  cheapestOptions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        price:
+                          type: integer
+                          nullable: true
+                        airline:
+                          type: string
+                        stops:
+                          type: string
+                        duration:
+                          type: string
+                        dates:
+                          type: string
+                  fastestFlight:
+                    type: string
+                    description: Duration of the fastest nonstop.
+                  nonstopFrequency:
+                    type: string
+                    description: How often nonstop flights operate.
+  /travel/flights/booking:
+    get:
+      operationId: getFlightBookingDetails
+      summary: Extract flight booking/itinerary details from a Google Flights detail page — legs, baggage, booking links
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gf0003
+          tool_version: 1
+          verified: false
+          signals:
+            - dom-match
+        extraction:
+          type: page_global_data
+          page_url: /travel/flights
+          expression: >-
+            (() => {
+              const text = document.body.innerText;
+              const totalPriceMatch = text.match(/\$(\d[\d,]*)\s*(?:Lowest total price|round trip)/);
+              const legs = [];
+              const legMatches = text.matchAll(/([A-Z][a-z]{2}, [A-Z][a-z]{2} \d+)\s*(\d+:\d+ [AP]M)\s*[–—]\s*(\d+:\d+ [AP]M)\s*([A-Za-z\s]+?)(?:Operated by ([^\n]+?))?\s*(\d+ hr(?: \d+ min)?)\s*([A-Z]{3})[–—]([A-Z]{3})\s*(Nonstop|\d+ stops?)/g);
+              for (const m of legMatches) {
+                legs.push({
+                  date: m[1],
+                  departureTime: m[2],
+                  arrivalTime: m[3],
+                  airline: m[4]?.trim() || '',
+                  operatedBy: m[5]?.trim() || '',
+                  duration: m[6],
+                  origin: m[7],
+                  destination: m[8],
+                  stops: m[9]
+                });
+              }
+              const bagPolicies = [];
+              const bagMatches = text.matchAll(/(free carry-on|carry-on bag available for a fee|checked bag[^.]*?\$\d+|checked bag available for a fee)/gi);
+              for (const m of bagMatches) {
+                bagPolicies.push(m[0]);
+              }
+              const bookingMatch = text.match(/Book with ([^\n]+)/);
+              return {
+                totalPrice: totalPriceMatch ? parseInt(totalPriceMatch[1].replace(',', '')) : null,
+                legs,
+                bagPolicies,
+                bookWith: bookingMatch ? bookingMatch[1].trim() : ''
+              };
+            })()
+      parameters:
+        - name: tfs
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Encoded itinerary parameters.
+      responses:
+        '200':
+          description: Booking details for a specific flight itinerary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalPrice:
+                    type: integer
+                    nullable: true
+                    description: Total round-trip price in USD.
+                  legs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                        departureTime:
+                          type: string
+                        arrivalTime:
+                          type: string
+                        airline:
+                          type: string
+                        operatedBy:
+                          type: string
+                        duration:
+                          type: string
+                        origin:
+                          type: string
+                        destination:
+                          type: string
+                        stops:
+                          type: string
+                  bagPolicies:
+                    type: array
+                    items:
+                      type: string
+                    description: Baggage policy summaries.
+                  bookWith:
+                    type: string
+                    description: Airlines to book with.

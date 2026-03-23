@@ -1,0 +1,12 @@
+{
+  "operation_id": "searchNotes",
+  "cases": [
+    {
+      "input": { "keyword": "咖啡" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
