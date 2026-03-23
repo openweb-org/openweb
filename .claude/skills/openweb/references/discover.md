@@ -18,6 +18,14 @@ How to add a new site to openweb when no fixture exists.
   - Social → search posts/notes by keyword; get post detail with comments; get user profile
 - If the task has `acceptCriteria` with specific operations listed, those are your targets.
 
+## Critical Rule: Browser First, No Direct HTTP
+
+**NEVER use curl, fetch, wget, or any direct HTTP request to probe a site during discovery.** Not even to "check if it works" or "see what the response looks like."
+
+Why: Bot detection systems (PerimeterX, DataDome, Akamai) track IP reputation across all requests. A single curl request registers as non-browser traffic and raises the IP's risk score. Multiple probes escalate to an IP-level block that poisons subsequent browser sessions too — even a real user in a real browser on the same IP will be trapped in unsolvable CAPTCHAs.
+
+**Always start with the managed browser.** If the browser hits a CAPTCHA, that's the time to decide whether to solve it or declare the site blocked. Do not attempt to gather information via direct HTTP first.
+
 ## Process
 
 ### Step 1: Plan

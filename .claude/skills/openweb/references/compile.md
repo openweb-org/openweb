@@ -77,3 +77,38 @@ A spec is **Ready** when curated + verified with PASS.
 - **Auth not detected**: User wasn't logged in, or unsupported auth pattern.
 - **CSRF not detected**: Token embedded in JavaScript (not cookie/meta tag) — identify manually.
 - **Operations missing**: Key pages not visited during capture — recapture with targeted browsing.
+
+## Transport Degradation Ladder
+
+When deciding the transport for a compiled fixture, start at the highest (safest) level and only downgrade after confirming the lower level actually works. **Never skip levels.**
+
+### Level 1: `page` (browser fetch via same-origin)
+
+Default starting point. All captured traffic originates from a browser session, so `page` transport is always safe — it inherits cookies, TLS fingerprint, and bot detection clearance.
+
+Stay here if:
+- Site uses bot detection (PerimeterX, DataDome, Akamai, Cloudflare)
+- Site requires cookie_session auth
+- Site requires CSRF tokens from cookies or DOM
+
+### Level 2: `node` with extraction (SSR)
+
+Downgrade to node **only after confirming** that direct HTTP fetch returns the same SSR data the browser sees. Confirm by:
+1. Opening the page in the browser (already done during capture)
+2. Running `compile --probe` which tests node fetch against the captured URL
+3. Checking that the probe response contains the expected data (e.g., `__NEXT_DATA__` with actual listings, not empty/error state)
+
+If the probe returns a CAPTCHA page, bot detection block, or empty data → stay at `page`.
+
+### Level 3: `node` without extraction (direct API)
+
+Only for public APIs with no bot detection. Confirm by:
+1. The `--probe` flag during compile shows the endpoint responds with 200 + valid JSON
+2. No cookies or browser state are needed
+3. The API domain is different from the site domain (e.g., `api.example.com` vs `www.example.com`) — separate API domains are less likely to have page-level bot detection
+
+### Anti-pattern: probing with curl/fetch before capture
+
+**NEVER** test endpoints with curl, wget, fetch, or any direct HTTP tool during discovery. This poisons IP reputation with bot detection systems and can block even real browser sessions on the same IP. See `discover.md` "Browser First" rule.
+
+The `--probe` flag in the compile step is the **only** safe way to test node transport — it runs after capture is complete and uses controlled, minimal requests.

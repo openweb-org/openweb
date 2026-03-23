@@ -88,6 +88,12 @@ Known failure patterns and fixes, extracted from M3–M18 experience and M26 dis
 **Cause**: E-commerce sites (Walmart, Amazon) use bot detection (PerimeterX, DataDome) that fingerprints CDP-connected browsers. Both headless and non-headless modes are detected — the CDP protocol itself is the signal.
 **Fix**: For Next.js sites, use node-based SSR extraction instead of browser extraction. Direct HTTP `fetch()` from Node.js is not blocked — it returns full SSR HTML with `__NEXT_DATA__` embedded. Set `transport: node` + `extraction.type: ssr_next_data` in the fixture. The runtime will fetch the page via HTTP and parse `__NEXT_DATA__` without a browser. For non-Next.js sites blocked by bot detection, there is currently no workaround.
 
+### IP poisoning from direct HTTP probes during discovery
+**Cause**: Using curl/fetch/wget to probe a site's endpoints before browser capture. Bot detection systems (PerimeterX, DataDome) track IP reputation. Non-browser HTTP requests have fundamentally different TLS fingerprints (JA3/JA4) and HTTP/2 settings — even with a correct User-Agent, the TLS handshake exposes the client as non-browser. Each probe raises the IP's risk score. After enough probes, the IP is flagged and ALL requests from it — including real browser sessions — trigger unsolvable CAPTCHAs.
+**Symptoms**: PerimeterX "Press & Hold" CAPTCHA that never resolves, even in a real browser with a real user interaction. Affects managed browser AND user's default browser on the same network.
+**Fix**: No immediate fix once IP is poisoned. Wait 15–60 minutes for PX risk score to decay, or switch to a different IP (VPN, mobile hotspot). **Prevention**: Never use curl/fetch to probe during discovery. Always use the browser first. See `discover.md` "Browser First" rule.
+**Observed on**: Zillow (PerimeterX app ID `PXHYx10rg3`). Five-layer detection: TLS fingerprint → HTTP/2 fingerprint → JS challenge → behavioral analysis → IP reputation.
+
 ### Could not connect to CDP
 **Cause**: Managed browser not running.
 **Fix**: `openweb browser start` → retry.
