@@ -1,3 +1,41 @@
+## 2026-03-23: M26 — Agent Discover: bearer_token / api_key sites — DONE (partial)
+
+**What changed:**
+- 6 sites compiled via CDP capture: yelp, stripe (20 ops), bestbuy, docker-hub (4 ops), gitlab (8 ops), bitbucket (6 ops)
+- 29 sites blocked — all need login, recorded in `doc/blocked.md`
+- Archetypes knowledge updated with discovery learnings
+- M27-M28 deferred: same login wall, no point running without user login
+
+**Why:**
+- First real test of agent-driven discover/compile workflow on bearer_token/api_key sites. Key finding: B/C classification is irrelevant for discovery — nearly all sites need dashboard login to capture meaningful API traffic.
+
+**Key files:** 6 new `src/fixtures/<name>-fixture/` (CDP-produced), `doc/blocked.md`, `.claude/skills/openweb/references/knowledge/archetypes.md`
+**Verification:** `pnpm build` clean, `pnpm test` 367/367 pass
+**Commit:** 0208e9e..42fabe3
+**Next:** User login to blocked sites → M29 retry all blocked sites
+**Blockers:** 29 sites need user login
+
+## 2026-03-23: M25 — Product Revisit: SKILL 重构 + Fixture 归档 — DONE
+
+**What changed:**
+- Double-design (Claude + Codex): independent designs, cross-review, 4-round align → final design at `doc/todo/v2_m25/final/design.md`
+- SKILL.md rewritten as 73-line router (was 405 lines) — routes to references/ by intent
+- Created `references/discover.md`, `references/compile.md`, `references/update-knowledge.md`, `references/cli.md`
+- Moved `auth-patterns.md` and `archetypes.md` into `references/knowledge/`
+- Updated `references/troubleshooting.md` with knowledge update routing
+- Archived 83 M23 hand-written fixtures to `src/_archive/fixtures/` (84 dirs)
+- Fixed 5 adapter bugs: telegram, whatsapp (import paths), discord (webpack cache), linear (GraphQL params), spotify (page transport)
+- Task graph created: 92 tasks across M25-M29 in `doc/todo/tasks.json`
+
+**Why:**
+- M23 fixtures were hand-written (skipped CDP capture), modeled wrong APIs. Product revisit: OpenTabs = validation, not reference. SKILL.md was 405 lines loaded every invocation — restructured as router + on-demand references.
+
+**Key files:** `.claude/skills/openweb/SKILL.md`, `.claude/skills/openweb/references/` (6 files + knowledge/), `src/_archive/fixtures/` (84 dirs), `doc/todo/v2_m25/` (design artifacts), `doc/todo/tasks.json`, `scripts/update-tasks.py`
+**Verification:** `pnpm build` clean, `pnpm test` 367/367 pass, SKILL.md 73 lines
+**Commit:** cf301bd..6286beb (5 impl commits) + 60d4c3e (design)
+**Next:** M26 agent discover
+**Blockers:** None
+
 ## 2026-03-19: M24 — Human Handoff + Permission System Review — DONE
 
 **What changed:**
