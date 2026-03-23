@@ -86,6 +86,7 @@ This is the real verification — a 200 response with garbage data is not a work
 
 Multiple workers can share one Chrome browser on the same CDP port. Rules:
 - **Open a new tab** for your site. Do NOT close other tabs or navigate existing tabs to a different URL.
-- If `capture start` is already running (started by another worker), skip it — your traffic is already being recorded. Just browse your site.
+- Capture is **per-tab** (bound to a Playwright `Page` object) — it only records traffic from your tab, not the whole browser.
+- If `capture start` is already running (started by another worker), skip it — your traffic is already being recorded. Just browse your site in a new tab.
 - `compile` filters traffic by site URL, so concurrent captures on different sites don't interfere.
 - Only need separate CDP ports if you need isolated browser profiles (rare).
