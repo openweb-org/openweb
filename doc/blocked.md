@@ -36,6 +36,7 @@ All require browser login before capture + compile can proceed.
 | posthog | https://us.posthog.com | Not logged in | Requires PostHog account; CSRF token from `posthog_csrftoken` cookie |
 | cockroachdb | https://cockroachlabs.cloud | Not logged in | gRPC-Web protocol over session cookies; no public endpoints |
 | ebay | https://www.ebay.com | SSR-only + JSONP | No JSON APIs for search/items; data is SSR HTML extraction. Autosug uses JSONP callback, not JSON. Needs login for user features. |
+| yelp | https://www.yelp.com | DataDome CAPTCHA | All HTML pages and `/gql/batch` return DataDome CAPTCHA challenge (403). Only `/search_suggest/v2/prefetch` works without auth (autocomplete suggestions only, no business data). Yelp Fusion v3 API requires API key. SSR data in `window.yelp.react_root_props` inaccessible. |
 
 ## To Unblock
 
