@@ -4,13 +4,13 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.target.com",
-  "description": "Target product search, product detail, and store availability via Redsky aggregation APIs — page transport (PerimeterX)",
+  "description": "Target product search, product detail, and store availability via Redsky aggregation APIs — node transport",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
     "operation_count": 3,
-    "l1_count": 0,
-    "l2_count": 3,
+    "l1_count": 3,
+    "l2_count": 0,
     "l3_count": 0
   }
 }

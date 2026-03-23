@@ -1,0 +1,241 @@
+openapi: '3.1.0'
+info:
+  title: Google Maps Internal API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.google.com
+    x-openweb:
+      transport: page
+paths:
+  /internal/searchPlaces:
+    get:
+      operationId: searchPlaces
+      summary: Search places by query — returns names, addresses, ratings, types, coordinates
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0001
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: searchPlaces
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (e.g. "coffee shops in San Francisco", "restaurants near Times Square").
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of results to return.
+      responses:
+        '200':
+          description: Search results with place listings.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - places
+                properties:
+                  query:
+                    type: string
+                  places:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        placeId:
+                          type: string
+                          description: Google Maps place ID (hex format, use with getPlaceDetails).
+                        name:
+                          type: string
+                        address:
+                          type: string
+                        rating:
+                          type:
+                            - number
+                            - 'null'
+                        reviewCount:
+                          type:
+                            - integer
+                            - 'null'
+                        priceLevel:
+                          type:
+                            - string
+                            - 'null'
+                          description: Price range (e.g. "$10–20").
+                        types:
+                          type: array
+                          items:
+                            type: string
+                          description: Place categories (e.g. "coffee_shop", "restaurant").
+                        lat:
+                          type: number
+                        lng:
+                          type: number
+  /internal/getPlaceDetails:
+    get:
+      operationId: getPlaceDetails
+      summary: Get place details — name, address, rating, reviews, hours, website, phone, description
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0002
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: getPlaceDetails
+      parameters:
+        - name: placeId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Place ID from searchPlaces (hex format "0x...:0x...").
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Place name (helps Maps resolve the place).
+      responses:
+        '200':
+          description: Full place details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  placeId:
+                    type: string
+                  address:
+                    type: string
+                  lat:
+                    type: number
+                  lng:
+                    type: number
+                  rating:
+                    type:
+                      - number
+                      - 'null'
+                  reviewCount:
+                    type:
+                      - integer
+                      - 'null'
+                  priceLevel:
+                    type:
+                      - string
+                      - 'null'
+                  website:
+                    type:
+                      - string
+                      - 'null'
+                  phone:
+                    type:
+                      - string
+                      - 'null'
+                  placeType:
+                    type:
+                      - string
+                      - 'null'
+                  description:
+                    type:
+                      - string
+                      - 'null'
+                  hours:
+                    type:
+                      - string
+                      - 'null'
+                    description: Current open/close status text.
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        authorUrl:
+                          type:
+                            - string
+                            - 'null'
+  /internal/getDirections:
+    get:
+      operationId: getDirections
+      summary: Get driving directions between two locations — routes, distances, durations
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0003
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: getDirections
+      parameters:
+        - name: origin
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Starting location (address or place name).
+        - name: destination
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Ending location (address or place name).
+      responses:
+        '200':
+          description: Directions with route options.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - routes
+                properties:
+                  origin:
+                    type: string
+                  destination:
+                    type: string
+                  routes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Route name (e.g. "I-5 S").
+                        distanceMeters:
+                          type: integer
+                        distanceText:
+                          type: string
+                          description: Human-readable distance (e.g. "383 miles").
+                        durationSeconds:
+                          type: integer
+                        durationText:
+                          type: string
+                          description: Human-readable duration (e.g. "5 hr 53 min").
+                        summary:
+                          type:
+                            - string
+                            - 'null'
+                          description: Route summary text.

@@ -8,9 +8,7 @@ info:
 servers:
   - url: https://redsky.target.com
     x-openweb:
-      transport: page
-      auth:
-        type: cookie_session
+      transport: node
 paths:
   /redsky_aggregations/v1/web/plp_search_v2:
     get:
@@ -68,10 +66,11 @@ paths:
           description: Store ID for local pricing.
         - name: visitor_id
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: Visitor tracking ID from browser session.
+            default: '0000000000000000000000000000000000'
+          description: Visitor tracking ID (optional, any value works).
         - name: default_purchasability_filter
           in: query
           required: false
@@ -109,8 +108,8 @@ paths:
             type: string
           description: Page path context (e.g. "/s/headphones").
       responses:
-        '200':
-          description: Search results with product listings, facets, and metadata.
+        '206':
+          description: Search results with product listings, facets, and metadata (206 Partial Content).
           content:
             application/json:
               schema:
@@ -268,10 +267,11 @@ paths:
             default: WEB
         - name: visitor_id
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: Visitor tracking ID.
+            default: '0000000000000000000000000000000000'
+          description: Visitor tracking ID (optional).
         - name: page
           in: query
           required: false
@@ -457,10 +457,11 @@ paths:
           description: API key.
         - name: visitor_id
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: Visitor tracking ID.
+            default: '0000000000000000000000000000000000'
+          description: Visitor tracking ID (optional).
         - name: channel
           in: query
           required: true

@@ -1,0 +1,256 @@
+openapi: '3.1.0'
+info:
+  title: Uber API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: true
+servers:
+  - url: https://www.ubereats.com
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+paths:
+  /internal/searchRestaurants:
+    get:
+      operationId: searchRestaurants
+      summary: Search Uber Eats restaurants by keyword — names, ratings, images, delivery times
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ub0001
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: uber-api
+          operation: searchRestaurants
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "pizza", "sushi", "thai").
+      responses:
+        '200':
+          description: List of matching restaurants.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - restaurants
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  totalResults:
+                    type:
+                      - string
+                      - 'null'
+                    description: Human-readable total results string (e.g. "379 results").
+                  restaurants:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        storeUuid:
+                          type: string
+                          description: Uber Eats store UUID.
+                        name:
+                          type: string
+                          description: Restaurant name.
+                        rating:
+                          type:
+                            - string
+                            - 'null'
+                          description: Average rating (e.g. "4.5").
+                        ratingCount:
+                          type:
+                            - string
+                            - 'null'
+                          description: Rating count text (e.g. "Rated 4.5 out of 5 stars based on more than 900 reviews.").
+                        imageUrl:
+                          type:
+                            - string
+                            - 'null'
+                          description: Restaurant cover image URL.
+                        deliveryTime:
+                          type:
+                            - string
+                            - 'null'
+                          description: Estimated delivery time (e.g. "49 min").
+                        deliveryFee:
+                          type:
+                            - string
+                            - 'null'
+                          description: Delivery fee text (e.g. "$0 Delivery Fee").
+                        actionUrl:
+                          type:
+                            - string
+                            - 'null'
+                          description: Relative URL to store page.
+  /internal/getRideHistory:
+    get:
+      operationId: getRideHistory
+      summary: Get Uber ride history — destinations, dates, fares, trip UUIDs
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ub0002
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: uber-api
+          operation: getRideHistory
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of rides to return (max 20).
+        - name: nextPageToken
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination token from previous response.
+      responses:
+        '200':
+          description: Ride history.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - rides
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  nextPageToken:
+                    type:
+                      - string
+                      - 'null'
+                    description: Token for next page of results.
+                  rides:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                          description: Trip UUID.
+                        title:
+                          type: string
+                          description: Destination name or address.
+                        subtitle:
+                          type: string
+                          description: Date and time (e.g. "Mar 22 • 6:25 PM").
+                        fare:
+                          type: string
+                          description: Fare amount or cancellation note (e.g. "$7.95", "$0.00 • Canceled").
+                        detailsUrl:
+                          type:
+                            - string
+                            - 'null'
+                          description: URL to trip receipt/details page.
+                        mapImageUrl:
+                          type:
+                            - string
+                            - 'null'
+                          description: Static map image URL showing the route.
+  /internal/getEatsOrderHistory:
+    get:
+      operationId: getEatsOrderHistory
+      summary: Get Uber Eats past orders — stores, items, prices, timestamps
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ub0003
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: uber-api
+          operation: getEatsOrderHistory
+      parameters:
+        - name: lastWorkflowUUID
+          in: query
+          required: false
+          schema:
+            type: string
+            default: ''
+          description: Pagination cursor from previous response (empty for first page).
+      responses:
+        '200':
+          description: Past Eats orders.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - orders
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  hasMore:
+                    type: boolean
+                  nextCursor:
+                    type:
+                      - string
+                      - 'null'
+                    description: Cursor for next page.
+                  orders:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                          description: Order UUID.
+                        storeName:
+                          type:
+                            - string
+                            - 'null'
+                          description: Restaurant name.
+                        storeUuid:
+                          type:
+                            - string
+                            - 'null'
+                          description: Store UUID.
+                        completedAt:
+                          type:
+                            - string
+                            - 'null'
+                          description: ISO timestamp when order was completed.
+                        isCancelled:
+                          type: boolean
+                        isCompleted:
+                          type: boolean
+                        totalPrice:
+                          type:
+                            - integer
+                            - 'null'
+                          description: Total in cents.
+                        items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              title:
+                                type: string
+                              price:
+                                type: integer
+                                description: Price in cents.
+                              quantity:
+                                type: integer
