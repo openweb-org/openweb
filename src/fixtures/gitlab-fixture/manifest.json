@@ -1,0 +1,16 @@
+{
+  "name": "gitlab-fixture",
+  "display_name": "GitLab",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://gitlab.com",
+  "description": "GitLab REST API v4 — cookie_session auth + meta_tag CSRF + link_header pagination",
+  "requires_auth": true,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 8,
+    "l1_count": 8,
+    "l2_count": 0,
+    "l3_count": 0
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "operation_id": "listProjectIssues",
+  "cases": [
+    {
+      "input": {
+        "projectId": 278964,
+        "state": "opened",
+        "per_page": 5
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
