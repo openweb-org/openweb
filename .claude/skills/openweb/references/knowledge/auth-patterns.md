@@ -109,6 +109,22 @@ Guide to authentication primitives detected by `classify.ts`. Organized by primi
 **Pitfalls**:
 - Requires both the SAPISID cookie AND the correct origin to compute the hash.
 
+## custom_signing (X-Bogus / VM-based)
+
+**Detection**: Query parameters like `X-Bogus`, `X-Gnarly`, `msToken` that change on every request and don't match any cookie or localStorage value.
+
+**Common signals**:
+- Parameters computed by obfuscated client-side JavaScript (often VM-based bytecode interpreters)
+- Values change per-request, not per-session
+- Cannot be reproduced outside the browser context
+- Often paired with cookie_session auth
+
+**Examples**: TikTok (X-Bogus + X-Gnarly + msToken on every API request)
+
+**Pitfalls**:
+- Standard compile cannot handle — requires browser_fetch transport (L3 adapter) to execute API calls from within the browser where the signing JS runs.
+- Sites using custom_signing often also serve content via SSR rather than API calls, requiring page.evaluate() extraction.
+
 ## No Auth Detected
 
 If classify.ts detects no auth primitive:

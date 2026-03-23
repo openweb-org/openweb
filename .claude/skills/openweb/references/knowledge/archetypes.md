@@ -19,6 +19,7 @@ Examples: Instagram, Reddit, Bluesky, X
 **Reddit**: cookie_session → exchange_chain (shreddit/token → bearer JWT → oauth.reddit.com).
 **Bluesky**: localStorage_jwt auth. Node transport. Cursor pagination.
 **X (Twitter)**: browser_fetch transport (TLS fingerprint). cookie_to_header CSRF on ALL methods (including GET). Static bearer as const header.
+**TikTok**: BLOCKED. cookie_session auth. X-Bogus/X-Gnarly custom signing (client-side VM-based anti-bot) on ALL API requests. Core content (search, video detail, user profile) served via SSR `__UNIVERSAL_DATA_FOR_REHYDRATION__` (not API calls). Needs L3 adapter: browser_fetch transport + page.evaluate() SSR extraction. msToken dynamic signing also present.
 
 Expected Operations:
 - [ ] Feed / timeline (read, paginated)
@@ -256,6 +257,8 @@ Transport: node (REST/GraphQL via cookies)
 Key pages: /search, /listing, /booking, /account
 Anti-bot: varies (Airbnb heavy, others moderate)
 Examples: Airbnb, Booking.com, Expedia, Priceline, TripAdvisor, Uber
+
+**Google Flights**: page_global_data extraction from SPA. No separate REST API — data delivered via internal `FlightsFrontendService` RPC calls (`GetShoppingResults`, `GetBookingResults`, `GetCalendarPicker`, `GetExploreDestinations`) triggered automatically by page JavaScript. Search parameters encoded in URL `tfs` param (protobuf-encoded base64). Flight results rendered in `li.pIav2d` elements with text containing times, airline, route, price, CO2. Text uses `\u00A0` (NBSP) and `\u2013` (en-dash) — regex must account for these. Headless browsers blocked by Google bot detection; must use managed (non-headless) browser for capture. Auto-compiler cannot handle this site — manual fixture required.
 
 Expected Operations:
 - [ ] Search listings (read, paginated)
