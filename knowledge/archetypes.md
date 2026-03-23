@@ -1,3 +1,12 @@
+# Site Archetypes
+
+## Multi-Domain Platform (e.g., Uber)
+- Single brand but separate domains/API surfaces per product: Eats REST (`ubereats.com/_p/api/*`), Rides GraphQL (`riders.uber.com/graphql`)
+- Shared cookie auth across subdomains — `page.evaluate(fetch(..., {credentials: 'include'}))` carries cookies
+- CSRF token is a static placeholder (`x-csrf-token: x`), not derived from cookies
+- Fare estimation requires deep UI interaction (non-standard React components) — can't be triggered via direct API without knowing the GraphQL operation name
+- Adapter must handle multiple domains: navigate browser to the correct domain before calling each API
+
 # E-commerce Archetypes
 
 ## Next.js SSR (e.g., Walmart)
