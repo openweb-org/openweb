@@ -1,0 +1,219 @@
+openapi: '3.1.0'
+info:
+  title: Google Search
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://www.google.com
+    x-openweb:
+      transport: page
+paths:
+  /complete/search:
+    get:
+      operationId: searchSuggestions
+      summary: Get autocomplete suggestions for a search query prefix
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: gs0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query prefix (e.g. "best lapt").
+        - name: client
+          in: query
+          required: true
+          schema:
+            type: string
+            const: chrome
+          description: Client identifier — must be "chrome" for JSON response.
+        - name: hl
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en
+          description: Language code (e.g. "en", "fr", "de").
+      responses:
+        '200':
+          description: Autocomplete suggestions as JSON array.
+          content:
+            application/json:
+              schema:
+                type: array
+                prefixItems:
+                  - type: string
+                    description: The query prefix that was sent.
+                  - type: array
+                    items:
+                      type: string
+                    description: List of suggested completions.
+  /search:
+    get:
+      operationId: searchWeb
+      summary: Extract organic web search results from an open Google search page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0002
+          tool_version: 1
+          verified: true
+          signals:
+            - dom-match
+        extraction:
+          type: page_global_data
+          page_url: /search
+          expression: >-
+            (() => {
+              const items = [];
+              const containers = document.querySelectorAll('div.tF2Cxc, div.Ww4FFb');
+              for (const div of containers) {
+                const h3 = div.querySelector('h3');
+                const link = div.querySelector('a[href]');
+                const snippet = div.querySelector('.VwiC3b, [data-sncf], .lEBKkf');
+                const cite = div.querySelector('cite');
+                if (h3 && link) {
+                  items.push({
+                    title: h3.textContent?.trim() || '',
+                    link: link.getAttribute('href') || '',
+                    displayUrl: cite?.textContent?.trim() || '',
+                    snippet: snippet?.textContent?.trim() || ''
+                  });
+                }
+              }
+              return {
+                query: (document.querySelector('textarea[name=q]') || document.querySelector('input[name=q]'))?.value || '',
+                resultCount: items.length,
+                results: items
+              };
+            })()
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query — must match the query on the open Google search page.
+      responses:
+        '200':
+          description: Organic web search results extracted from the page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - query
+                  - results
+                properties:
+                  query:
+                    type: string
+                    description: The search query shown on the page.
+                  resultCount:
+                    type: integer
+                    description: Number of organic results extracted.
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                          description: Result title (from h3).
+                        link:
+                          type: string
+                          description: Result URL.
+                        displayUrl:
+                          type: string
+                          description: Display URL shown under the title.
+                        snippet:
+                          type: string
+                          description: Result description/snippet text.
+  /search/images:
+    get:
+      operationId: searchImages
+      summary: Extract image search results from an open Google Images page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0003
+          tool_version: 1
+          verified: true
+          signals:
+            - dom-match
+        extraction:
+          type: page_global_data
+          page_url: /search
+          expression: >-
+            (() => {
+              const items = [];
+              const containers = document.querySelectorAll('[data-lpage]');
+              for (const div of containers) {
+                const img = div.querySelector('img');
+                const sourceUrl = div.getAttribute('data-lpage') || '';
+                const alt = img?.getAttribute('alt') || '';
+                if (sourceUrl) {
+                  items.push({
+                    sourceUrl,
+                    alt,
+                    width: img?.naturalWidth || 0,
+                    height: img?.naturalHeight || 0
+                  });
+                }
+              }
+              return {
+                query: (document.querySelector('textarea[name=q]') || document.querySelector('input[name=q]'))?.value || '',
+                resultCount: items.length,
+                results: items
+              };
+            })()
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query — must match the query on the open Google Images page (navigate with udm=2).
+      responses:
+        '200':
+          description: Image search results extracted from the page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - query
+                  - results
+                properties:
+                  query:
+                    type: string
+                    description: The search query shown on the page.
+                  resultCount:
+                    type: integer
+                    description: Number of image results extracted.
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        sourceUrl:
+                          type: string
+                          description: URL of the page hosting the image.
+                        alt:
+                          type: string
+                          description: Alt text / caption of the image.
+                        width:
+                          type: integer
+                          description: Thumbnail natural width in pixels.
+                        height:
+                          type: integer
+                          description: Thumbnail natural height in pixels.

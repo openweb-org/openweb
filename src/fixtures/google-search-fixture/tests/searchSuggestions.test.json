@@ -1,0 +1,12 @@
+{
+  "operation_id": "searchSuggestions",
+  "cases": [
+    {
+      "input": { "q": "best laptop", "client": "chrome" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
