@@ -33,3 +33,6 @@ For each site:
 | Site | URL | Status | Operations |
 |------|-----|--------|------------|
 | stripe | https://dashboard.stripe.com | Compiled + curated | 20 operations |
+| yelp | https://www.yelp.com | Compiled + curated | 1 operation (autocomplete) |
+| bestbuy | https://www.bestbuy.com | Compiled + curated | 1 operation (priceBlocks) |
+| docker-hub | https://hub.docker.com | Compiled + curated | 4 operations (search, repo, tags) |

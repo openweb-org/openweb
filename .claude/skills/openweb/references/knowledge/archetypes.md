@@ -58,6 +58,10 @@ Examples: GitHub, npm, StackOverflow
 
 **GitHub**: cookie_session + meta_tag CSRF. link_header pagination. Also has unauthenticated public API (github-public-fixture).
 **npm**: No auth. Node transport. Package search + metadata.
+**Docker Hub**: Public search API (`/api/search/v3/catalog/search`) + v2 repository API (`/v2/repositories/`). JWT bearer for user-specific actions (obtained from `/auth/profile`). Public endpoints work without auth.
+**Grafana**: cookie_session. Relative API paths (`/api/*`). Self-hosted instances use configSchema URL.
+**PostHog**: cookie_session + cookie_to_header CSRF (`posthog_csrftoken`). Team/org IDs from page global `window.POSTHOG_APP_CONTEXT`.
+**CockroachDB**: cookie_session over gRPC-Web (`/console.ManagementConsole/*`). Binary protobuf encoding, not JSON.
 **StackOverflow**: No auth. Node transport. Search with answers.
 
 Expected Operations:
@@ -93,6 +97,9 @@ Extraction: ssr_next_data or script_json common
 Examples: Walmart
 
 **Walmart**: ssr_next_data extraction (Next.js `__NEXT_DATA__`). Page extraction transport.
+**Best Buy**: SSR HTML + internal REST API `/api/3.0/priceBlocks?skus=...` for pricing. No auth for public prices.
+**eBay**: SSR HTML extraction (DOMParser). Autocomplete uses JSONP (`/autosug`), not JSON. Session cookies + CSRF for user actions.
+**Yelp**: SSR HTML with `window.yelp.react_root_props` embedded JSON. Public autocomplete API at `/search_suggest/v2/prefetch?prefix=&loc=`.
 
 Expected Operations:
 - [ ] Search products (read)
@@ -113,6 +120,7 @@ Examples: YouTube, Hacker News, Wikipedia, ChatGPT
 **Hacker News**: html_selector extraction. No auth. Node transport.
 **ChatGPT**: exchange_chain (GET session endpoint) + Cloudflare User-Agent binding.
 **Wikipedia**: No auth. Node transport. Search + page summary.
+**Google Maps**: Internal protobuf-encoded `pb` parameter API (`/search?tbm=map&pb=...`). fetchFromPage transport. SAPISIDHASH signing for auth. Headless browsers blocked by consent screen/CAPTCHA.
 
 Expected Operations:
 - [ ] Feed / homepage (read, paginated)
