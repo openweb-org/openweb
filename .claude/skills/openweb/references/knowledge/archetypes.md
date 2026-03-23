@@ -96,10 +96,10 @@ Write ops: add-to-cart, checkout — identify but assign `transact` permission
 Extraction: ssr_next_data or script_json common
 Examples: Walmart
 
-**Walmart**: ssr_next_data extraction (Next.js `__NEXT_DATA__`). Page extraction transport.
+**Walmart**: ssr_next_data extraction (Next.js `__NEXT_DATA__`). Node transport — direct HTTP fetch returns full SSR payload. CDP browser blocked by PerimeterX bot detection (even non-headless). Use node-based SSR extraction (no browser needed). Search, product detail, and pricing all available via `__NEXT_DATA__` paths. Search results use flat pricing (`priceInfo.linePrice`), PDP uses nested pricing (`priceInfo.currentPrice.price`).
 **Best Buy**: SSR HTML + internal REST API `/api/3.0/priceBlocks?skus=...` for pricing. No auth for public prices.
 **eBay**: SSR HTML extraction (DOMParser). Autocomplete uses JSONP (`/autosug`), not JSON. Session cookies + CSRF for user actions.
-**Yelp**: SSR HTML with `window.yelp.react_root_props` embedded JSON. Public autocomplete API at `/search_suggest/v2/prefetch?prefix=&loc=`.
+**Yelp**: SSR HTML with `window.yelp.react_root_props` embedded JSON. Public autocomplete API at `/search_suggest/v2/prefetch?prefix=&loc=`. DataDome bot detection blocks CDP browser and direct HTTP fetch — currently blocked for fixture creation.
 
 Expected Operations:
 - [ ] Search products (read)

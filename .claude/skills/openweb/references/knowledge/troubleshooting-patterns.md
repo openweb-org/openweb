@@ -78,7 +78,15 @@ Known failure patterns and fixes, extracted from M3–M18 experience and M26 dis
 **Cause**: API schema drift — field names change between versions.
 **Fix**: Regenerate schema from fresh response. Compare with existing spec and update.
 
+### Persistent DRIFT on dynamic endpoints (search results)
+**Cause**: Search and recommendation endpoints return different products on each call. Different products have different field structures (some have `similarItems`, others don't), so the response shape fingerprint changes every time.
+**Fix**: This is expected behavior, not a bug. Clear the stored fingerprint before the definitive verify run. The first verify after clearing will PASS (no stored hash to compare against). Subsequent verifies will show DRIFT — this is informational. Schema validation (status + schema_valid) is the authoritative check; fingerprint DRIFT on dynamic endpoints should not block acceptance.
+
 ## Browser / CDP Failures
+
+### Bot detection blocks CDP browser (even non-headless)
+**Cause**: E-commerce sites (Walmart, Amazon) use bot detection (PerimeterX, DataDome) that fingerprints CDP-connected browsers. Both headless and non-headless modes are detected — the CDP protocol itself is the signal.
+**Fix**: For Next.js sites, use node-based SSR extraction instead of browser extraction. Direct HTTP `fetch()` from Node.js is not blocked — it returns full SSR HTML with `__NEXT_DATA__` embedded. Set `transport: node` + `extraction.type: ssr_next_data` in the fixture. The runtime will fetch the page via HTTP and parse `__NEXT_DATA__` without a browser. For non-Next.js sites blocked by bot detection, there is currently no workaround.
 
 ### Could not connect to CDP
 **Cause**: Managed browser not running.
