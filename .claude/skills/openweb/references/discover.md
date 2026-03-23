@@ -82,7 +82,10 @@ This is the real verification — a 200 response with garbage data is not a work
 
 → Read `update-knowledge.md` — evaluate what you learned, write to `knowledge/` if novel.
 
-## Limitations
+## Multi-Worker Browser Sharing
 
-- Browser/capture orchestration is singleton — one capture session at a time
-- Multiple workers need separate CDP ports (`--port 9223`, etc.)
+Multiple workers can share one Chrome browser on the same CDP port. Rules:
+- **Open a new tab** for your site. Do NOT close other tabs or navigate existing tabs to a different URL.
+- If `capture start` is already running (started by another worker), skip it — your traffic is already being recorded. Just browse your site.
+- `compile` filters traffic by site URL, so concurrent captures on different sites don't interfere.
+- Only need separate CDP ports if you need isolated browser profiles (rare).
