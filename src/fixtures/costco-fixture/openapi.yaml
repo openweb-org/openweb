@@ -1,0 +1,185 @@
+openapi: '3.1.0'
+info:
+  title: Costco API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.costco.com
+    x-openweb:
+      transport: page
+paths:
+  /internal/searchProducts:
+    get:
+      operationId: searchProducts
+      summary: Search Costco products by keyword — returns titles, brands, categories, images
+      x-openweb:
+        permission: read
+        build:
+          stable_id: co0001
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: searchProducts
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "laptop", "coffee", "headphones").
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 24
+          description: Number of results per page (max 24).
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset.
+      responses:
+        '200':
+          description: Search results with product listings.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - products
+                  - totalCount
+                properties:
+                  query:
+                    type: string
+                  totalCount:
+                    type: integer
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        itemNumber:
+                          type: string
+                          description: Costco item number (use with getProductDetail).
+                        title:
+                          type: string
+                          description: Product name.
+                        brands:
+                          type: array
+                          items:
+                            type: string
+                          description: Brand names.
+                        categories:
+                          type: array
+                          items:
+                            type: string
+                          description: Category hierarchy (e.g. "Computers > Laptops").
+                        imageUrl:
+                          type:
+                            - string
+                            - 'null'
+                          description: Primary product image URL.
+                        pills:
+                          type: array
+                          items:
+                            type: string
+                          description: Badge labels (e.g. "Online Only", "Instant Savings").
+                        marketingStatement:
+                          type:
+                            - string
+                            - 'null'
+                          description: Promotional text (e.g. "$150 OFF").
+  /internal/getProductDetail:
+    get:
+      operationId: getProductDetail
+      summary: Get Costco product details — price, description, attributes, ratings
+      x-openweb:
+        permission: read
+        build:
+          stable_id: co0002
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: getProductDetail
+      parameters:
+        - name: itemNumber
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Costco item number (from searchProducts).
+      responses:
+        '200':
+          description: Product details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      itemNumber:
+                        type: string
+                      title:
+                        type: string
+                        description: Short product description.
+                      longDescription:
+                        type:
+                          - string
+                          - 'null'
+                        description: Full HTML product description.
+                      price:
+                        type:
+                          - number
+                          - 'null'
+                        description: Current price in USD.
+                      listPrice:
+                        type:
+                          - number
+                          - 'null'
+                        description: Original list price (null if no discount).
+                      marketingStatement:
+                        type:
+                          - string
+                          - 'null'
+                        description: Discount/promotion text.
+                      promotionalStatement:
+                        type:
+                          - string
+                          - 'null'
+                      brand:
+                        type:
+                          - string
+                          - 'null'
+                      rating:
+                        type:
+                          - number
+                          - 'null'
+                        description: Average review rating.
+                      numberOfRatings:
+                        type:
+                          - integer
+                          - 'null'
+                        description: Total number of reviews.
+                      buyable:
+                        type: boolean
+                      attributes:
+                        type: object
+                        additionalProperties:
+                          type: array
+                          items:
+                            type: string
+                        description: Product attributes keyed by name (e.g. "Color", "Features").

@@ -1,0 +1,19 @@
+{
+  "name": "costco-fixture",
+  "display_name": "Costco",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.costco.com",
+  "description": "Costco product search and detail via POST-based APIs (search + GraphQL)",
+  "requires_auth": false,
+  "dependencies": {
+    "searchProducts → getProductDetail": "itemNumber dependency"
+  },
+  "stats": {
+    "operation_count": 2,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 2
+  },
+  "quarantined": false
+}

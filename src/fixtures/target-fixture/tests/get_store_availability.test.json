@@ -1,0 +1,21 @@
+{
+  "operation_id": "getStoreAvailability",
+  "cases": [
+    {
+      "input": {
+        "tcin": "91938794",
+        "nearby": "95125",
+        "radius": "50",
+        "limit": "20",
+        "include_only_available_stores": "false",
+        "requested_quantity": "1",
+        "key": "9f36aeafbe60771e321a7cc95a78140772ab3e96",
+        "channel": "WEB"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

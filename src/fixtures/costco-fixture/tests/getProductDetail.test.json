@@ -1,0 +1,12 @@
+{
+  "operation_id": "getProductDetail",
+  "cases": [
+    {
+      "input": { "itemNumber": "100978861" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

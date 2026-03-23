@@ -1,0 +1,24 @@
+{
+  "operation_id": "searchProducts",
+  "cases": [
+    {
+      "input": {
+        "keyword": "headphones",
+        "count": "24",
+        "offset": "0",
+        "key": "9f36aeafbe60771e321a7cc95a78140772ab3e96",
+        "channel": "WEB",
+        "default_purchasability_filter": "true",
+        "include_sponsored": "true",
+        "new_search": "true",
+        "spellcheck": "true",
+        "platform": "desktop",
+        "page": "/s/headphones"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

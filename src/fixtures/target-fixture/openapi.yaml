@@ -1,0 +1,539 @@
+openapi: '3.1.0'
+info:
+  title: Target
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://redsky.target.com
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+paths:
+  /redsky_aggregations/v1/web/plp_search_v2:
+    get:
+      operationId: searchProducts
+      summary: Search Target products by keyword — returns product listings with price, rating, images
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tgt0001
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: keyword
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "headphones", "laptop").
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 24
+          description: Number of results per page (max 24).
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset.
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            default: 9f36aeafbe60771e321a7cc95a78140772ab3e96
+          description: API key (static, embedded in frontend).
+        - name: channel
+          in: query
+          required: true
+          schema:
+            type: string
+            default: WEB
+          description: Channel identifier.
+        - name: pricing_store_id
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '2281'
+          description: Store ID for local pricing.
+        - name: visitor_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Visitor tracking ID from browser session.
+        - name: default_purchasability_filter
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'true'
+        - name: include_sponsored
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'true'
+        - name: new_search
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'true'
+        - name: spellcheck
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'true'
+        - name: platform
+          in: query
+          required: false
+          schema:
+            type: string
+            default: desktop
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Page path context (e.g. "/s/headphones").
+      responses:
+        '200':
+          description: Search results with product listings, facets, and metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      search:
+                        type: object
+                        properties:
+                          search_response:
+                            type: object
+                            properties:
+                              metadata:
+                                type: object
+                                properties:
+                                  count:
+                                    type: integer
+                                  current_page:
+                                    type: integer
+                                  keyword:
+                                    type: string
+                                  offset:
+                                    type: integer
+                                  sort_by:
+                                    type: string
+                                  total_pages:
+                                    type: integer
+                                  total_results:
+                                    type: integer
+                              facet_list:
+                                type: array
+                                items:
+                                  type: object
+                              sort_options:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                    value:
+                                      type: string
+                          products:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                tcin:
+                                  type: string
+                                  description: Target item ID.
+                                item:
+                                  type: object
+                                  properties:
+                                    product_description:
+                                      type: object
+                                      properties:
+                                        title:
+                                          type: string
+                                        bullet_descriptions:
+                                          type: array
+                                          items:
+                                            type: string
+                                    enrichment:
+                                      type: object
+                                      properties:
+                                        buy_url:
+                                          type: string
+                                        images:
+                                          type: object
+                                          properties:
+                                            primary_image_url:
+                                              type: string
+                                price:
+                                  type: object
+                                  properties:
+                                    current_retail:
+                                      type: number
+                                    formatted_current_price:
+                                      type: string
+                                    formatted_current_price_type:
+                                      type: string
+                                    reg_retail:
+                                      type: number
+                                    save_dollar:
+                                      type: number
+                                    save_percent:
+                                      type: number
+                                ratings_and_reviews:
+                                  type: object
+                                  properties:
+                                    statistics:
+                                      type: object
+                                      properties:
+                                        rating:
+                                          type: object
+                                          properties:
+                                            average:
+                                              type: number
+                                            count:
+                                              type: integer
+
+  /redsky_aggregations/v1/web/pdp_client_v1:
+    get:
+      operationId: getProductDetail
+      summary: Get full product detail by TCIN — description, price, ratings, images, variants
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tgt0002
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: tcin
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target item ID (e.g. "92750139").
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            default: 9f36aeafbe60771e321a7cc95a78140772ab3e96
+          description: API key.
+        - name: store_id
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '2281'
+          description: Store ID for pricing context.
+        - name: pricing_store_id
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '2281'
+          description: Store ID for pricing.
+        - name: has_pricing_store_id
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'true'
+        - name: channel
+          in: query
+          required: true
+          schema:
+            type: string
+            default: WEB
+        - name: visitor_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Visitor tracking ID.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Page path context (e.g. "/p/A-92750139").
+      responses:
+        '200':
+          description: Full product details including description, price, ratings, images, and variants.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      product:
+                        type: object
+                        properties:
+                          tcin:
+                            type: string
+                          item:
+                            type: object
+                            properties:
+                              product_description:
+                                type: object
+                                properties:
+                                  title:
+                                    type: string
+                                  downstream_description:
+                                    type: string
+                                  bullet_descriptions:
+                                    type: array
+                                    items:
+                                      type: string
+                              enrichment:
+                                type: object
+                                properties:
+                                  buy_url:
+                                    type: string
+                                  images:
+                                    type: object
+                                    properties:
+                                      primary_image_url:
+                                        type: string
+                                      alternate_image_urls:
+                                        type: array
+                                        items:
+                                          type: string
+                                  brand_info:
+                                    type: object
+                                    properties:
+                                      brand_name:
+                                        type: string
+                          price:
+                            type: object
+                            properties:
+                              formatted_current_price:
+                                type: string
+                              formatted_current_price_type:
+                                type: string
+                              current_retail_min:
+                                type: number
+                              reg_retail_max:
+                                type: number
+                              price_handle:
+                                type: string
+                          ratings_and_reviews:
+                            type: object
+                            properties:
+                              statistics:
+                                type: object
+                                properties:
+                                  rating:
+                                    type: object
+                                    properties:
+                                      average:
+                                        type: number
+                                      count:
+                                        type: integer
+                                      distribution:
+                                        type: object
+                                        properties:
+                                          rating1:
+                                            type: integer
+                                          rating2:
+                                            type: integer
+                                          rating3:
+                                            type: integer
+                                          rating4:
+                                            type: integer
+                                          rating5:
+                                            type: integer
+                          children:
+                            type: array
+                            description: Product variants (colors, sizes).
+                            items:
+                              type: object
+                              properties:
+                                tcin:
+                                  type: string
+                                item:
+                                  type: object
+                                  properties:
+                                    product_description:
+                                      type: object
+                                      properties:
+                                        title:
+                                          type: string
+                                    enrichment:
+                                      type: object
+                                      properties:
+                                        images:
+                                          type: object
+                                          properties:
+                                            primary_image_url:
+                                              type: string
+                                price:
+                                  type: object
+                                  properties:
+                                    formatted_current_price:
+                                      type: string
+
+  /redsky_aggregations/v1/web/fiats_v1:
+    get:
+      operationId: getStoreAvailability
+      summary: Get store availability for a product — stock levels, pickup times, nearby stores
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tgt0003
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: tcin
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target item ID (e.g. "91938794").
+        - name: nearby
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Zip code for nearby store lookup (e.g. "95125").
+        - name: radius
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '50'
+          description: Search radius in miles.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '20'
+          description: Max number of stores to return.
+        - name: include_only_available_stores
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'false'
+          description: Filter to only in-stock stores.
+        - name: requested_quantity
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '1'
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            default: 9f36aeafbe60771e321a7cc95a78140772ab3e96
+          description: API key.
+        - name: visitor_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Visitor tracking ID.
+        - name: channel
+          in: query
+          required: true
+          schema:
+            type: string
+            default: WEB
+      responses:
+        '200':
+          description: Store availability with stock levels, pickup options, and store details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      fulfillment_fiats:
+                        type: object
+                        properties:
+                          product_id:
+                            type: string
+                          locations:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                location_id:
+                                  type: string
+                                location_available_to_promise_quantity:
+                                  type: integer
+                                  description: Number of units in stock.
+                                distance:
+                                  type: number
+                                  description: Distance in miles from the requested zip.
+                                order_pickup:
+                                  type: object
+                                  properties:
+                                    pickup_date:
+                                      type: string
+                                    guest_pick_sla:
+                                      type: integer
+                                      description: Pickup SLA in minutes.
+                                    availability_status:
+                                      type: string
+                                      description: IN_STOCK, OUT_OF_STOCK, etc.
+                                in_store_only:
+                                  type: object
+                                  properties:
+                                    availability_status:
+                                      type: string
+                                curbside:
+                                  type: object
+                                  properties:
+                                    pickup_date:
+                                      type: string
+                                    availability_status:
+                                      type: string
+                                store:
+                                  type: object
+                                  properties:
+                                    store_id:
+                                      type: string
+                                    location_name:
+                                      type: string
+                                    mailing_address:
+                                      type: object
+                                      properties:
+                                        address_line1:
+                                          type: string
+                                        city:
+                                          type: string
+                                        state:
+                                          type: string
+                                        postal_code:
+                                          type: string
