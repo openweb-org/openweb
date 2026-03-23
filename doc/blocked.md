@@ -16,6 +16,10 @@ All require browser login before capture + compile can proceed.
 | terraform-cloud | https://app.terraform.io | Not logged in | `/login` |
 
 | google-maps | https://www.google.com/maps | Headless browser blocked | Google consent screen / CAPTCHA blocks headless Playwright |
+| grafana | https://grafana.com | Not logged in | Requires Grafana Cloud login; self-hosted instances need configSchema URL |
+| posthog | https://us.posthog.com | Not logged in | Requires PostHog account; CSRF token from `posthog_csrftoken` cookie |
+| cockroachdb | https://cockroachlabs.cloud | Not logged in | gRPC-Web protocol over session cookies; no public endpoints |
+| ebay | https://www.ebay.com | SSR-only + JSONP | No JSON APIs for search/items; data is SSR HTML extraction. Autosug uses JSONP callback, not JSON. Needs login for user features. |
 
 ## To Unblock
 
