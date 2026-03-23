@@ -1,0 +1,403 @@
+openapi: '3.1.0'
+info:
+  title: Redfin
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://www.redfin.com
+    x-openweb:
+      transport: page
+paths:
+  /city/{regionId}/{state}/{city}:
+    get:
+      operationId: searchHomes
+      summary: Extract home listings from an open Redfin search page — address, price, beds, baths, sqft, URL
+      x-openweb:
+        permission: read
+        build:
+          stable_id: rf0001
+          tool_version: 1
+          verified: true
+          signals:
+            - dom-match
+        extraction:
+          type: page_global_data
+          expression: >-
+            (() => {
+              const listings = [];
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              for (const s of scripts) {
+                try {
+                  const data = JSON.parse(s.textContent);
+                  if (!Array.isArray(data) || data.length !== 2) continue;
+                  const residence = data[0];
+                  const product = data[1];
+                  if (!product || product['@type'] !== 'Product') continue;
+                  const addr = residence.address || {};
+                  const geo = residence.geo || {};
+                  const floor = residence.floorSize || {};
+                  const offer = product.offers || {};
+                  listings.push({
+                    name: residence.name || '',
+                    url: residence.url || product.url || '',
+                    streetAddress: addr.streetAddress || '',
+                    city: addr.addressLocality || '',
+                    state: addr.addressRegion || '',
+                    zip: addr.postalCode || '',
+                    latitude: geo.latitude || null,
+                    longitude: geo.longitude || null,
+                    rooms: residence.numberOfRooms || null,
+                    sqft: floor.value || null,
+                    price: Number(offer.price) || null,
+                    currency: offer.priceCurrency || 'USD',
+                    propertyType: residence['@type'] || ''
+                  });
+                } catch {}
+              }
+              const meta = document.querySelector('meta[name="description"]');
+              const description = meta ? meta.getAttribute('content') : '';
+              return { resultCount: listings.length, description, listings };
+            })()
+      parameters:
+        - name: regionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Redfin region ID (e.g. "16163" for Seattle). The search page must already be open.
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Two-letter state code (e.g. "WA").
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+          description: City name (e.g. "Seattle").
+      responses:
+        '200':
+          description: Home listings extracted from the Redfin search page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - resultCount
+                  - listings
+                properties:
+                  resultCount:
+                    type: integer
+                    description: Number of listings extracted from the page.
+                  description:
+                    type: string
+                    description: Page meta description with search summary.
+                  listings:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - name
+                        - url
+                        - price
+                      properties:
+                        name:
+                          type: string
+                          description: Full address of the property.
+                        url:
+                          type: string
+                          description: Redfin URL for the property detail page.
+                        streetAddress:
+                          type: string
+                        city:
+                          type: string
+                        state:
+                          type: string
+                        zip:
+                          type: string
+                        latitude:
+                          type: number
+                        longitude:
+                          type: number
+                        rooms:
+                          type: integer
+                          description: Number of rooms.
+                        sqft:
+                          type: integer
+                          description: Floor area in square feet.
+                        price:
+                          type: number
+                          description: Listing price in USD.
+                        currency:
+                          type: string
+                        propertyType:
+                          type: string
+                          description: Schema.org type (SingleFamilyResidence, Accommodation, etc.).
+  /{state}/{city}/{address}/home/{propertyId}:
+    get:
+      operationId: getPropertyDetails
+      summary: Extract property details from an open Redfin listing page — description, beds, baths, sqft, price, year built, amenities, images
+      x-openweb:
+        permission: read
+        build:
+          stable_id: rf0002
+          tool_version: 1
+          verified: true
+          signals:
+            - dom-match
+        extraction:
+          type: page_global_data
+          expression: >-
+            (() => {
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              for (const s of scripts) {
+                try {
+                  const data = JSON.parse(s.textContent);
+                  if (!data['@type'] || !Array.isArray(data['@type'])) continue;
+                  if (!data['@type'].includes('RealEstateListing')) continue;
+                  const entity = data.mainEntity || {};
+                  const addr = entity.address || {};
+                  const geo = entity.geo || {};
+                  const floor = entity.floorSize || {};
+                  const offer = data.offers || {};
+                  const amenities = (entity.amenityFeature || []).map(a => a.name || '');
+                  const images = (entity.image || []).map(img => typeof img === 'string' ? img : img.url || '');
+                  return {
+                    name: data.name || '',
+                    description: (data.description || '').replace(/&[a-z]+;/g, ' ').trim(),
+                    url: data.url || '',
+                    datePosted: data.datePosted || '',
+                    streetAddress: addr.streetAddress || '',
+                    city: addr.addressLocality || '',
+                    state: addr.addressRegion || '',
+                    zip: addr.postalCode || '',
+                    latitude: geo.latitude || null,
+                    longitude: geo.longitude || null,
+                    bedrooms: entity.numberOfBedrooms || null,
+                    bathrooms: entity.numberOfBathroomsTotal || null,
+                    sqft: floor.value || null,
+                    yearBuilt: entity.yearBuilt || null,
+                    propertyType: entity.accommodationCategory || entity['@type'] || '',
+                    price: Number(offer.price) || null,
+                    currency: offer.priceCurrency || 'USD',
+                    availability: offer.availability || '',
+                    amenities,
+                    imageCount: images.length,
+                    primaryImage: images[0] || ''
+                  };
+                } catch {}
+              }
+              return null;
+            })()
+      parameters:
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Two-letter state code (e.g. "WA").
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+          description: City name (e.g. "Seattle").
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+          description: URL-formatted address (e.g. "3412-NW-56th-St-98107").
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Redfin property ID (e.g. "200910046"). The property page must already be open.
+      responses:
+        '200':
+          description: Property details extracted from the Redfin listing page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - name
+                  - price
+                properties:
+                  name:
+                    type: string
+                    description: Property address (short form).
+                  description:
+                    type: string
+                    description: Full listing description.
+                  url:
+                    type: string
+                  datePosted:
+                    type: string
+                    description: ISO timestamp when the listing was posted.
+                  streetAddress:
+                    type: string
+                  city:
+                    type: string
+                  state:
+                    type: string
+                  zip:
+                    type: string
+                  latitude:
+                    type: number
+                  longitude:
+                    type: number
+                  bedrooms:
+                    type: integer
+                  bathrooms:
+                    type: integer
+                  sqft:
+                    type: integer
+                    description: Floor area in square feet.
+                  yearBuilt:
+                    type: integer
+                  propertyType:
+                    type: string
+                    description: Property category (Townhouse, House, Condo, etc.).
+                  price:
+                    type: number
+                    description: Listing price in USD.
+                  currency:
+                    type: string
+                  availability:
+                    type: string
+                  amenities:
+                    type: array
+                    items:
+                      type: string
+                    description: Property amenity features.
+                  imageCount:
+                    type: integer
+                    description: Number of listing photos.
+                  primaryImage:
+                    type: string
+                    description: URL of the primary listing photo.
+  /{state}/{city}/{address}/home/{propertyId}/estimate:
+    get:
+      operationId: getRedfinEstimate
+      summary: Extract the Redfin Estimate (automated valuation) from an open property detail page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: rf0003
+          tool_version: 1
+          verified: true
+          signals:
+            - dom-match
+        extraction:
+          type: page_global_data
+          expression: >-
+            (() => {
+              const section = document.querySelector('[data-rf-test-id="avm-section-expandable-preview"], .RedfinEstimateSection__Section, .avmInfo');
+              if (!section) return { estimate: null, message: 'No Redfin Estimate section found on this page.' };
+              const text = section.innerText || '';
+              const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+              const titleLine = lines.find(l => /Redfin Estimate for/i.test(l)) || '';
+              const address = titleLine.replace(/Redfin Estimate for\s*/i, '').trim();
+              const priceMatch = text.match(/Redfin Estimate[^\n]*\n\s*(\$[\d,]+)/);
+              const estimatePrice = priceMatch ? priceMatch[1] : null;
+              const compText = text.match(/uses (\d+) recent nearby sales, priced between (\$[\w.,]+\s+to\s+\$[\w.,]+)/);
+              const compCount = compText ? Number(compText[1]) : null;
+              const compRange = compText ? compText[2].replace(/\.$/, '').trim() : null;
+              const comparables = [];
+              const soldBlocks = text.split(/SOLD [A-Z]{3} \d{1,2}, \d{4}/);
+              for (let i = 1; i < soldBlocks.length && i <= 6; i++) {
+                const block = soldBlocks[i];
+                const priceM = block.match(/\$([\d,]+)/);
+                const bedsM = block.match(/(\d+)\s*beds?/);
+                const bathsM = block.match(/([\d.]+)\s*baths?/);
+                const sqftM = block.match(/([\d,]+)\s*sq\s*ft/);
+                const addrM = block.match(/\d+[^$\n]+(?:Ave|St|Dr|Rd|Blvd|Ct|Ln|Way|Pl|Cir)[^,\n]*,\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}/);
+                comparables.push({
+                  soldPrice: priceM ? '$' + priceM[1] : null,
+                  beds: bedsM ? Number(bedsM[1]) : null,
+                  baths: bathsM ? Number(bathsM[1]) : null,
+                  sqft: sqftM ? Number(sqftM[1].replace(/,/g, '')) : null,
+                  address: addrM ? addrM[0].trim() : null
+                });
+              }
+              return {
+                address,
+                estimatePrice,
+                comparableCount: compCount,
+                comparablePriceRange: compRange,
+                comparables
+              };
+            })()
+      parameters:
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Two-letter state code (e.g. "WA").
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+          description: City name (e.g. "Seattle").
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+          description: URL-formatted address (e.g. "3412-NW-56th-St-98107").
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Redfin property ID (e.g. "200910046"). The property page must already be open.
+      responses:
+        '200':
+          description: Redfin Estimate data extracted from the property detail page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  address:
+                    type: string
+                    description: Property address from the estimate section.
+                  estimatePrice:
+                    type: string
+                    description: The Redfin Estimate price (e.g. "$850,024").
+                  comparableCount:
+                    type: integer
+                    description: Number of comparable sales used.
+                  comparablePriceRange:
+                    type: string
+                    description: Price range of comparable sales (e.g. "$735K to $1.1M").
+                  comparables:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        soldPrice:
+                          type: string
+                          description: Price the comparable sold for.
+                        beds:
+                          type: integer
+                        baths:
+                          type: number
+                        sqft:
+                          type: integer
+                        address:
+                          type:
+                            - string
+                            - 'null'
+                    description: Nearby comparable sales used for the estimate.
+                  message:
+                    type: string
+                    description: Present when estimate is unavailable.
