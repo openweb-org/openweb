@@ -93,3 +93,7 @@ Common failures and solutions, extracted from M3–M18 experience and seed patte
 ### Selector with special characters fails
 **Cause**: Unescaped colons, brackets in CSS selectors.
 **Fix**: Use `CSS.escape()` for DOM-derived id/name values.
+
+## After Troubleshooting
+
+→ Read `update-knowledge.md` — if you learned something novel during debugging, write it to `knowledge/`.
