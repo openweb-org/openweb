@@ -88,7 +88,9 @@ paths:
                         imageUrl:
                           type: string
                         url:
-                          type: string
+                          type:
+                            - string
+                            - 'null'
   /dp/{asin}:
     get:
       operationId: getProductDetail
@@ -229,4 +231,6 @@ paths:
                         verified:
                           type: string
                         helpful:
-                          type: string
+                          type:
+                            - string
+                            - 'null'
