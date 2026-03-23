@@ -1,7 +1,7 @@
 openapi: '3.1.0'
 info:
-  title: Walmart SSR Data
-  version: '1.0'
+  title: Walmart
+  version: '2.0'
   x-openweb:
     spec_version: '2.0'
 servers:
@@ -9,36 +9,192 @@ servers:
     x-openweb:
       transport: node
 paths:
-  /:
+  /search:
     get:
-      operationId: getFooterModules
-      summary: Extract Walmart footer modules from Next.js SSR state
+      operationId: searchProducts
+      summary: Search Walmart products by keyword
       x-openweb:
         permission: read
         build:
-          stable_id: wm0001
+          stable_id: wm0002
           tool_version: 1
           verified: true
           signals:
             - next_data
         extraction:
           type: ssr_next_data
-          page_url: /
-          path: props.pageProps.bootstrapData.footer.data.contentLayout.modules
+          path: props.pageProps.initialData.searchResult
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword
       responses:
         '200':
-          description: Success.
+          description: Search results with product listings.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    module:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  count:
+                    type: integer
+                  itemStacks:
+                    type: array
+                    items:
                       type: object
                       properties:
-                        type:
+                        title:
                           type: string
-                        name:
-                          type: string
+                        count:
+                          type: integer
+                        items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              usItemId:
+                                type: string
+                              canonicalUrl:
+                                type: string
+                              averageRating:
+                                type:
+                                  - number
+                                  - 'null'
+                              priceInfo:
+                                type: object
+                                properties:
+                                  linePrice:
+                                    type: string
+                                  wasPrice:
+                                    type: string
+                                  savings:
+                                    type: string
+  /ip/{slug}/{itemId}:
+    get:
+      operationId: getProductDetail
+      summary: Get Walmart product detail page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: wm0003
+          tool_version: 1
+          verified: true
+          signals:
+            - next_data
+        extraction:
+          type: ssr_next_data
+          path: props.pageProps.initialData.data.product
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Product URL slug (any non-empty string works)
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Walmart item ID
+      responses:
+        '200':
+          description: Full product details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  brand:
+                    type: string
+                  shortDescription:
+                    type: string
+                  averageRating:
+                    type: number
+                  numberOfReviews:
+                    type: integer
+                  canonicalUrl:
+                    type: string
+                  priceInfo:
+                    type: object
+                    properties:
+                      currentPrice:
+                        type: object
+                        properties:
+                          price:
+                            type: number
+                          priceString:
+                            type: string
+                      wasPrice:
+                        type: object
+                        properties:
+                          price:
+                            type: number
+                          priceString:
+                            type: string
+                  imageInfo:
+                    type: object
+  /ip/{itemId}:
+    get:
+      operationId: getProductPricing
+      summary: Get Walmart product pricing details
+      x-openweb:
+        permission: read
+        build:
+          stable_id: wm0004
+          tool_version: 1
+          verified: true
+          signals:
+            - next_data
+        extraction:
+          type: ssr_next_data
+          path: props.pageProps.initialData.data.product.priceInfo
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Walmart item ID
+      responses:
+        '200':
+          description: Product pricing information.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currentPrice:
+                    type: object
+                    properties:
+                      price:
+                        type: number
+                      priceString:
+                        type: string
+                      currencyUnit:
+                        type: string
+                  wasPrice:
+                    type: object
+                    properties:
+                      price:
+                        type: number
+                      priceString:
+                        type: string
+                  savingsAmount:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                      priceString:
+                        type: string
+                  isPriceReduced:
+                    type: boolean

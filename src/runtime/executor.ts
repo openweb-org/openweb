@@ -32,6 +32,7 @@ import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitu
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 import { loadAdapter, executeAdapter } from './adapter-executor.js'
 import { executeExtraction } from './extraction-executor.js'
+import { executeNodeSsr } from './node-ssr-executor.js'
 import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types/extensions.js'
 
@@ -131,15 +132,38 @@ export async function executeOperation(
       }
     }
   } else if (opExt?.extraction) {
-    const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
-    try {
-      const result = await executeExtraction(browser, spec, operationRef.operation)
+    const extraction = opExt.extraction as import('../types/primitives.js').ExtractionPrimitive
+    const serverExt = getServerXOpenWeb(spec, operationRef.operation)
+    const needsBrowser = !!(serverExt?.auth || serverExt?.csrf || serverExt?.signing)
+
+    if (!needsBrowser && transport === 'node' && extraction.type === 'ssr_next_data') {
+      // Node-based SSR: fetch HTML page and parse __NEXT_DATA__ — no browser needed
+      const serverUrl = getServerUrl(spec, operationRef.operation)
+      const allParams = resolveAllParameters(spec, operationRef.operation)
+      const inputParams = validateParams(
+        [...allParams, ...getRequestBodyParameters(operationRef.operation)],
+        params,
+      )
+      const resolvedPath = substitutePath(operationRef.path, allParams, inputParams)
+      const url = buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
+      const result = await executeNodeSsr(url, extraction, {
+        fetchImpl: deps.fetchImpl,
+        ssrfValidator: deps.ssrfValidator,
+      })
       status = result.status
       body = result.body
       responseHeaders = { ...result.responseHeaders }
-    } finally {
-      if (!deps.browser) {
-        browser.close().catch(() => {})
+    } else {
+      const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
+      try {
+        const result = await executeExtraction(browser, spec, operationRef.operation)
+        status = result.status
+        body = result.body
+        responseHeaders = { ...result.responseHeaders }
+      } finally {
+        if (!deps.browser) {
+          browser.close().catch(() => {})
+        }
       }
     }
   } else if (transport === 'page') {

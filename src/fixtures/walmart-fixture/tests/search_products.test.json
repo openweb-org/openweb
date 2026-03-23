@@ -1,0 +1,12 @@
+{
+  "operation_id": "searchProducts",
+  "cases": [
+    {
+      "input": { "q": "laptop" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
