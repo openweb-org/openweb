@@ -142,7 +142,17 @@ Examples: Microsoft Word, New Relic
 
 **Stripe**: page_global auth (PRELOADED object contains session_api_key, merchant.id, csrf_token). Dashboard proxies Stripe API through same-origin `/v1/*` endpoints. Also has `/ajax/*` namespace for internal dashboard endpoints. Compile from dashboard traffic generates heavy noise (~80 internal ops per ~20 useful API ops) — curation step must filter `/ajax/*`, `/conversations/`, `/_extraction/`, `/v3/` paths.
 
-Note: In the 105-plugin classification, New Relic is grouped under DevTools. Microsoft Word is the sole Productivity fixture. 12 B-category plugins (jira, confluence, notion, figma, linear, airtable, asana, clickup, todoist, shortcut, calendly, zendesk) are immediately compilable.
+**Linear**: cookie_session (HttpOnly, SameSite=Strict). GraphQL at `client-api.linear.app/graphql`. SPA renders login at root URL without redirect — check `isLoggedInUser` in GraphQL telemetry to confirm auth status. Auth context from localStorage `ApplicationStore` (userId, orgId, clientId). Custom headers: `useraccount`, `user`, `organization`, `linear-client-id`.
+**Asana**: cookie_session (HttpOnly `auth_token`). REST API at `/api/1.0`. Write operations need `X-Allow-Asana-Client: 1` header.
+**CircleCI**: cookie_session (HttpOnly). REST API at `/api/v2`. Next.js SSR — auth detected via `__NEXT_DATA__` presence.
+**MongoDB Atlas**: cookie_session + meta_tag CSRF (`X-CSRF-Token` from `PARAMS.csrfToken` page global). Context IDs from `PARAMS.appUser.id`, `currentGroup.id`.
+**Twilio**: Unique: fetches credentials from `/console/api/v2/projects/info` → HTTP Basic Auth with accountSid:authToken. POST/PUT use `application/x-www-form-urlencoded`.
+**Webflow**: cookie_session + meta_tag CSRF (`_csrf` meta → `X-CSRF-Token`). REST API at `/api`.
+**YNAB**: session token from `<meta name="session-token">`. Dual API: Catalog RPC (`/api/v1/catalog`) with `operation_name` + `request_data`, and REST (`/api/v2`). Write operations need `server_knowledge` sync.
+**Zendesk**: cookie_session + CSRF from `<meta name="csrf-token">` or `_zendesk_csrf` cookie. REST API at `/api/v2`. Instance-specific subdomain (e.g., `company.zendesk.com`).
+**Amplitude**: cookie_session (`onenav_jwt_prod`). GraphQL at relative `/t/graphql/org/{orgId}`. Org context from URL pattern and `intercomSettings.org_id` page global.
+
+Note: In the 105-plugin classification, New Relic is grouped under DevTools. Microsoft Word is the sole Productivity fixture. 12 B-category plugins (jira, confluence, notion, figma, linear, airtable, asana, clickup, todoist, shortcut, calendly, zendesk) are immediately compilable once logged in.
 
 Expected Operations:
 - [ ] List documents / items (read, paginated)

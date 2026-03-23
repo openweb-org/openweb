@@ -14,6 +14,15 @@ All require browser login before capture + compile can proceed.
 | supabase | https://supabase.com/dashboard | Not logged in | `/sign-in` |
 | shortcut | https://app.shortcut.com | Not logged in | `/login` |
 | terraform-cloud | https://app.terraform.io | Not logged in | `/login` |
+| amplitude | https://app.amplitude.com | Not logged in | `/login` |
+| asana | https://app.asana.com | Not logged in | `/-/login` |
+| circleci | https://app.circleci.com | Not logged in | `/login` |
+| linear | https://linear.app | Not logged in | SPA renders login at root (no redirect); GraphQL shows `isLoggedInUser: false` |
+| mongodb-atlas | https://cloud.mongodb.com | Not logged in | `account.mongodb.com/account/login` |
+| twilio | https://www.twilio.com/console | Not logged in | `/login` |
+| webflow | https://webflow.com/dashboard | Not logged in | `/login` |
+| ynab | https://app.ynab.com | Not logged in | `/users/sign_in` |
+| zendesk | https://www.zendesk.com | Not logged in | `/login` (instance-specific subdomain needed) |
 
 | google-maps | https://www.google.com/maps | Headless browser blocked | Google consent screen / CAPTCHA blocks headless Playwright |
 | grafana | https://grafana.com | Not logged in | Requires Grafana Cloud login; self-hosted instances need configSchema URL |
