@@ -1,3 +1,22 @@
+## 2026-03-19: M24 — Human Handoff + Permission System Review — DONE
+
+**What changed:**
+- Gap analysis: reviewed 10 potential gaps in permission/handoff system — 0 critical, 0 high, 3 medium, 1 low
+- Fixed `needs_browser` error action: now suggests `openweb browser start` instead of raw Chrome flags
+- Fixed `needs_login` error action: now suggests `openweb login <site>` instead of vague "log in"
+- Fixed no-auth 401/403 path: shows login-relevant action instead of "Check parameters"
+- Added 3 permission gate integration tests (write blocked, site override, read allowed)
+- Roadmap updated with M24 results
+
+**Why:**
+- Ensure the permission system (read/write/delete/transact) has no bypass paths before expanding to more sites. Single chokepoint architecture (`executeOperation()`) confirmed sound.
+
+**Key files:** `src/runtime/executor.ts`, `src/runtime/executor.test.ts`, `doc/todo/v2_m24/` (gap-analysis.md, design.md)
+**Verification:** `pnpm build` clean, `pnpm test` 367/367 pass, 0 critical gaps
+**Commit:** c86bb9d..dad1240
+**Next:** M23 fixture fixes (5 real bugs), then M25 — Full Coverage
+**Blockers:** None
+
 ## 2026-03-19: M23 — 105 Sites Full Compile + Auth + Read Ops — DONE
 
 **What changed:**
@@ -7,15 +26,18 @@
 - Phase 4: Created 48 C-class fixture stubs with auth primitives (cookie_session, localStorage_jwt, sessionStorage_msal, page_global, sapisidhash) and proper transport (node/page)
 - Phase 5: SKILL.md updated from 51 → 135 sites
 - Codex review R1: Fixed auth patterns for costco (server URL + transport), google-calendar (cookie_session via gapi.client), airbnb (persisted-query URL pattern + headers), target (page_global API key extraction). Fixed grafana site_url/server URL. Added compiled_at to all 83 new manifests.
+- **Redo — batch verify**: Ran headless Chrome + CDP verification on all 135 sites. Actual results: 46 PASS, 41 AUTH_FAIL, 47 ERROR
+- **Fix plan**: Of 47 ERROR sites, 35 are not real bugs (placeholder params → reclassify as AUTH_FAIL). 5 truly fixable: telegram/whatsapp (adapter import paths), discord (webpack cache timing), linear (GraphQL param generation), spotify (page transport). 4 transient (instagram 500, expedia 429, grafana 530, yelp 400)
+- **Status**: Fix plan documented, 5 fixture fixes pending execution
 
 **Why:**
 - Scale from 17 verified to 100+ fixture stubs covering all 105 OpenTabs plugins. B-class stubs model the public API alternative (no browser auth needed). C-class stubs encode the correct auth primitives for future login-and-verify.
 
-**Key files:** 83 new `src/fixtures/<name>-fixture/` directories (openapi.yaml + manifest.json each), `doc/todo/v2_m23/` (verify_results.md, needs_login.md, gaps.md), `.claude/skills/openweb/SKILL.md`
+**Key files:** 83 new `src/fixtures/<name>-fixture/` directories (openapi.yaml + manifest.json each), `doc/todo/v2_m23/` (verify_results.md, verify_results_actual.md, fix_plan.md, needs_login.md, gaps.md), `.claude/skills/openweb/SKILL.md`
 **Verification:** `pnpm build` clean, `pnpm test` 364/364 pass (42 test files), `pnpm dev sites` = 135 sites, 1 codex review round resolved
-**Commit:** 2b38ea9..1c94002
-**Next:** M24 — Human Handoff + Permission System Review
-**Blockers:** None
+**Commit:** 2b38ea9..f8cdc25
+**Next:** Execute 5 fixture fixes (telegram, whatsapp, discord, linear, spotify), then M25
+**Blockers:** 5 fixture fixes pending
 
 ## 2026-03-18: M22 — Coverage Sweep + Per-Site Notes — DONE
 
