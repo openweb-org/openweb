@@ -70,6 +70,7 @@ A spec is **Ready** when curated + verified with PASS.
 - **Tracking cookies as auth**: Cloudflare, GA, Meta pixel cookies trigger cookie_session. Use `--probe` to catch.
 - **Analytics as operations**: `/collect`, `/beacon`, `/pixel` — filter should catch most.
 - **CDN endpoints**: `/static/`, `/_next/`, `/assets/` — should be filtered.
+- **Dashboard internal endpoints**: SaaS dashboards (e.g. Stripe) generate heavy noise from internal `/ajax/*`, `/conversations/`, `/_extraction/` namespaces. Compile captures these alongside the real API — manual curation must filter ~80% of operations for typical dashboard sites.
 
 ## Common False Negatives
 

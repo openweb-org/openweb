@@ -6,5 +6,7 @@ node_modules/
 dist/
 coverage/
 .DS_Store
+# Capture data (may contain session tokens/cookies)
+capture/
 # Built adapter .js files (source is .ts, compiled by scripts/build-adapters.js)
 src/fixtures/*/adapters/*.js

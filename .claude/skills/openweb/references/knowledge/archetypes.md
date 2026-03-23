@@ -132,6 +132,8 @@ Examples: Microsoft Word, New Relic
 **Microsoft Word**: sessionStorage_msal auth (MSAL token cache from browser storage). Graph API bearer token.
 **New Relic**: cookie_session. GraphQL cursor pagination for dashboards.
 
+**Stripe**: page_global auth (PRELOADED object contains session_api_key, merchant.id, csrf_token). Dashboard proxies Stripe API through same-origin `/v1/*` endpoints. Also has `/ajax/*` namespace for internal dashboard endpoints. Compile from dashboard traffic generates heavy noise (~80 internal ops per ~20 useful API ops) — curation step must filter `/ajax/*`, `/conversations/`, `/_extraction/`, `/v3/` paths.
+
 Note: In the 105-plugin classification, New Relic is grouped under DevTools. Microsoft Word is the sole Productivity fixture. 12 B-category plugins (jira, confluence, notion, figma, linear, airtable, asana, clickup, todoist, shortcut, calendly, zendesk) are immediately compilable.
 
 Expected Operations:
