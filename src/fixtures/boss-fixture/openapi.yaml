@@ -1,0 +1,646 @@
+openapi: '3.1.0'
+info:
+  title: Boss直聘
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.zhipin.com
+    x-openweb:
+      transport: page
+      auth:
+        type: none
+paths:
+  /web/geek/job:
+    get:
+      operationId: searchJobs
+      summary: Search jobs by keyword and city — returns job cards with title, salary, company, location
+      x-openweb:
+        permission: read
+        build:
+          stable_id: boss0001
+          signature_id: boss0001s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: boss-web
+          operation: searchJobs
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Job search keyword (e.g. "Java", "产品经理", "数据分析").
+        - name: city
+          in: query
+          required: true
+          schema:
+            type: string
+          description: City code from getCities (e.g. "101010100" for Beijing, "101020100" for Shanghai).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+      responses:
+        '200':
+          description: Job search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalCount:
+                    type: integer
+                    description: Total matching jobs.
+                  jobs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        jobName:
+                          type: string
+                        salaryDesc:
+                          type: string
+                          description: Salary range (e.g. "15-25K").
+                        company:
+                          type: string
+                        area:
+                          type: string
+                        experience:
+                          type: string
+                        degree:
+                          type: string
+                        tags:
+                          type: array
+                          items:
+                            type: string
+                        jobLink:
+                          type: string
+                          description: Relative URL for job detail.
+                        companyLink:
+                          type: string
+                        companySize:
+                          type: string
+                        companyStage:
+                          type: string
+                        industry:
+                          type: string
+                        bossName:
+                          type: string
+                        bossTitle:
+                          type: string
+
+  /job_detail/{jobId}:
+    get:
+      operationId: getJobDetail
+      summary: Get full job posting — title, salary, description, requirements, company info
+      x-openweb:
+        permission: read
+        build:
+          stable_id: boss0002
+          signature_id: boss0002s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: boss-web
+          operation: getJobDetail
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Job ID from searchJobs result jobLink (e.g. the path segment from /job_detail/xxx.html).
+      responses:
+        '200':
+          description: Full job posting details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobName:
+                    type: string
+                  salaryDesc:
+                    type: string
+                  experience:
+                    type: string
+                  degree:
+                    type: string
+                  city:
+                    type: string
+                  area:
+                    type: string
+                  jobDescription:
+                    type: string
+                    description: Full job description HTML.
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  company:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      industry:
+                        type: string
+                      stage:
+                        type: string
+                      size:
+                        type: string
+                      link:
+                        type: string
+                  boss:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      title:
+                        type: string
+                  address:
+                    type: string
+
+  /gongsi/{companyId}:
+    get:
+      operationId: getCompanyProfile
+      summary: Get company profile — name, industry, size, stage, description, jobs
+      x-openweb:
+        permission: read
+        build:
+          stable_id: boss0003
+          signature_id: boss0003s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: boss-web
+          operation: getCompanyProfile
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Company ID from job detail companyLink (e.g. "v-_eCFU5ERlU~.html").
+      responses:
+        '200':
+          description: Company profile data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  industry:
+                    type: string
+                  stage:
+                    type: string
+                  size:
+                    type: string
+                  description:
+                    type: string
+                  address:
+                    type: string
+                  jobs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        jobName:
+                          type: string
+                        salaryDesc:
+                          type: string
+                        area:
+                          type: string
+                        experience:
+                          type: string
+                        link:
+                          type: string
+
+  /wapi/zpCommon/data/city.json:
+    get:
+      operationId: getCities
+      summary: Get full city list — hot cities and all cities with district codes for job search
+      x-openweb:
+        permission: read
+        build:
+          stable_id: boss0004
+          signature_id: boss0004s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: boss-web
+          operation: getCities
+      responses:
+        '200':
+          description: City list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  message:
+                    type: string
+                  zpData:
+                    type: object
+                    properties:
+                      hotCityList:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                              description: City code for API queries.
+                            name:
+                              type: string
+                      cityList:
+                        type: array
+                        description: Province-grouped city hierarchy.
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                            subLevelModelList:
+                              type: array
+                              description: Cities within the province.
+
+  /wapi/zpCommon/data/industry.json:
+    get:
+      operationId: getIndustries
+      summary: Get industry categories — 15 top-level industries with sub-categories
+      x-openweb:
+        permission: read
+        build:
+          stable_id: boss0005
+          signature_id: boss0005s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: boss-web
+          operation: getIndustries
+      responses:
+        '200':
+          description: Industry list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  message:
+                    type: string
+                  zpData:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: integer
+                          description: Industry code.
+                        name:
+                          type: string
+                        subLevelModelList:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              code:
+                                type: integer
+                              name:
+                                type: string
+
+  /wapi/zpCommon/data/getCityShowPosition:
+    get:
+      operationId: getPositionCategories
+      summary: Get job position categories — hierarchical position types (backend dev, frontend, PM, etc.)
+      x-openweb:
+        permission: read
+        build:
+          stable_id: boss0006
+          signature_id: boss0006s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: boss-web
+          operation: getPositionCategories
+      responses:
+        '200':
+          description: Position category hierarchy.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  message:
+                    type: string
+                  zpData:
+                    type: object
+                    properties:
+                      position:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                              description: Category name (e.g. "互联网/AI", "金融").
+                            subLevelModelList:
+                              type: array
+                              description: Sub-categories with specific positions.
+
+  /wapi/zpgeek/pc/all/filter/conditions.json:
+    get:
+      operationId: getFilterConditions
+      summary: Get search filter options — salary ranges, experience levels, education, job types, company stages
+      x-openweb:
+        permission: read
+        build:
+          stable_id: boss0007
+          signature_id: boss0007s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: boss-web
+          operation: getFilterConditions
+      responses:
+        '200':
+          description: Filter condition lists.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  message:
+                    type: string
+                  zpData:
+                    type: object
+                    properties:
+                      salaryList:
+                        type: array
+                        description: Salary range options (3K以下, 3-5K, 5-10K, ...).
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                            lowSalary:
+                              type: integer
+                            highSalary:
+                              type: integer
+                      experienceList:
+                        type: array
+                        description: Experience level options (在校生, 应届生, 1-3年, ...).
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                      degreeList:
+                        type: array
+                        description: Education level options (大专, 本科, 硕士, ...).
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                      stageList:
+                        type: array
+                        description: Company funding stage options (天使轮, A轮, ...).
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                      scaleList:
+                        type: array
+                        description: Company size options (0-20人, 20-99人, ...).
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                      jobTypeList:
+                        type: array
+                        description: Job type options (全职, 兼职).
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                      payTypeList:
+                        type: array
+                        description: Pay frequency (日结, 周结, 月结).
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+
+  /wapi/zpgeek/businessDistrict.json:
+    get:
+      operationId: getBusinessDistricts
+      summary: Get business districts for a city — neighborhood-level areas for location filtering
+      x-openweb:
+        permission: read
+        build:
+          stable_id: boss0008
+          signature_id: boss0008s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: boss-web
+          operation: getBusinessDistricts
+      parameters:
+        - name: cityCode
+          in: query
+          required: true
+          schema:
+            type: string
+          description: City code from getCities (e.g. "101010100").
+      responses:
+        '200':
+          description: Business district hierarchy.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  message:
+                    type: string
+                  zpData:
+                    type: object
+                    properties:
+                      businessDistrict:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                          name:
+                            type: string
+                          subLevelModelList:
+                            type: array
+                            description: Districts with sub-areas.
+
+  /wapi/zpCommon/data/getSubwayByCity:
+    get:
+      operationId: getSubwayStations
+      summary: Get subway lines and stations for a city — for commute-based job filtering
+      x-openweb:
+        permission: read
+        build:
+          stable_id: boss0009
+          signature_id: boss0009s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: boss-web
+          operation: getSubwayStations
+      parameters:
+        - name: cityCode
+          in: query
+          required: true
+          schema:
+            type: string
+          description: City code from getCities (e.g. "101010100").
+      responses:
+        '200':
+          description: Subway lines and stations.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  message:
+                    type: string
+                  zpData:
+                    type: object
+                    properties:
+                      subwayList:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                              description: Line name (e.g. "1号线", "2号线").
+                            subLevelModelList:
+                              type: array
+                              description: Stations on this line.
+                              items:
+                                type: object
+                                properties:
+                                  code:
+                                    type: integer
+                                  name:
+                                    type: string
+
+  /wapi/zpCommon/data/cityGroup.json:
+    get:
+      operationId: getCityGroups
+      summary: Get cities grouped alphabetically — for city selection UI
+      x-openweb:
+        permission: read
+        build:
+          stable_id: boss0010
+          signature_id: boss0010s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: boss-web
+          operation: getCityGroups
+      responses:
+        '200':
+          description: Alphabetically grouped city list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  message:
+                    type: string
+                  zpData:
+                    type: object
+                    properties:
+                      cityGroup:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            firstChar:
+                              type: string
+                              description: First letter (A-Z).
+                            cityList:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  code:
+                                    type: integer
+                                  name:
+                                    type: string
+                                  cityCode:
+                                    type: string
+                                  regionCode:
+                                    type: integer

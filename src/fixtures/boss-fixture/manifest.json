@@ -1,0 +1,30 @@
+{
+  "name": "boss-fixture",
+  "display_name": "Boss直聘 (BOSS Zhipin)",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.zhipin.com",
+  "description": "China job search — search jobs, job details, company profiles, salary filters, city/industry/position reference data via page-based extraction and API",
+  "requires_auth": false,
+  "dependencies": {
+    "getCities → searchJobs": "getCities returns city codes used by searchJobs",
+    "getPositionCategories → searchJobs": "getPositionCategories shows position types used as search keywords",
+    "getFilterConditions → searchJobs": "getFilterConditions returns salary/experience/degree filters for search",
+    "searchJobs → getJobDetail": "searchJobs returns jobLink used by getJobDetail",
+    "getJobDetail → getCompanyProfile": "getJobDetail returns companyLink used by getCompanyProfile",
+    "getCities → getBusinessDistricts": "getCities returns cityCode used by getBusinessDistricts",
+    "getCities → getSubwayStations": "getCities returns cityCode used by getSubwayStations"
+  },
+  "stats": {
+    "operation_count": 10,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 10
+  },
+  "last_verified": "2026-03-24T19:00:00.000Z",
+  "quarantined": true,
+  "fingerprint": {
+    "response_shape_hash": "searchJobs:pending,getJobDetail:pending,getCompanyProfile:pending,getCities:pending,getIndustries:pending,getPositionCategories:pending,getFilterConditions:pending,getBusinessDistricts:pending,getSubwayStations:pending,getCityGroups:pending",
+    "last_validated": "2026-03-24T19:00:00.000Z"
+  }
+}
