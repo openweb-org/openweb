@@ -26,6 +26,27 @@ Review the generated `openapi.yaml`:
 - **Confirm** auth/CSRF/signing detection matches expectations
 - **Check** against `knowledge/archetypes.md` expectations for this site type
 
+#### Extraction Complexity Rule
+
+If an operation's extraction logic (the `expression` in openapi.yaml) exceeds ~5 lines, **extract it into an adapter file**:
+
+```
+src/fixtures/<site>-fixture/
+├── openapi.yaml          ← references adapter, no inline JS
+├── adapters/<site>.ts    ← complex DOM parsing logic lives here
+```
+
+In openapi.yaml, replace the inline expression with an adapter reference:
+```yaml
+x-openweb:
+  adapter: ./adapters/<site>.ts
+```
+
+**Inline is OK for:** simple `ssr_next_data`, `page_global`, short `html_selector` (1-3 lines).
+**Adapter is required for:** multi-line DOM queries, regex parsing, complex data transformation.
+
+openapi.yaml should be readable as a spec, not a code dump.
+
 #### Per-Archetype Checklist
 
 **Social Media:**
