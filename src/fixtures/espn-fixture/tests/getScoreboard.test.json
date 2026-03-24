@@ -1,0 +1,15 @@
+{
+  "operation_id": "getScoreboard",
+  "cases": [
+    {
+      "input": {
+        "sport": "basketball",
+        "league": "nba"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "operation_id": "searchESPN",
+  "cases": [
+    {
+      "input": {
+        "query": "LeBron James",
+        "limit": 5
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,1447 @@
+openapi: '3.1.0'
+info:
+  title: ESPN
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://site.api.espn.com
+paths:
+  /apis/site/v2/sports/{sport}/{league}/scoreboard:
+    get:
+      operationId: getScoreboard
+      summary: Get live and recent scores for a sport/league
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: espn0001
+          signature_id: espn0001s
+          tool_version: 1
+      parameters:
+        - name: sport
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sport slug (e.g. "football", "basketball", "baseball", "hockey", "soccer").
+        - name: league
+          in: path
+          required: true
+          schema:
+            type: string
+          description: League slug (e.g. "nfl", "nba", "mlb", "nhl", "eng.1").
+        - name: dates
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Date filter in YYYYMMDD format (e.g. "20260120"). Defaults to today.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+          description: Maximum number of events to return.
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en
+          description: Language code.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [leagues, events]
+                properties:
+                  leagues:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, abbreviation]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        abbreviation:
+                          type: string
+                        slug:
+                          type: string
+                        season:
+                          type: object
+                          properties:
+                            year:
+                              type: integer
+                            type:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                type:
+                                  type: integer
+                                name:
+                                  type: string
+                                abbreviation:
+                                  type: string
+                            name:
+                              type: string
+                  season:
+                    type: object
+                    properties:
+                      type:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          type:
+                            type: integer
+                          name:
+                            type: string
+                          abbreviation:
+                            type: string
+                      year:
+                        type: integer
+                  week:
+                    type: object
+                    properties:
+                      number:
+                        type: integer
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, shortName, competitions]
+                      properties:
+                        id:
+                          type: string
+                        uid:
+                          type: string
+                        date:
+                          type: string
+                        name:
+                          type: string
+                        shortName:
+                          type: string
+                        status:
+                          type: object
+                          properties:
+                            clock:
+                              type: number
+                            displayClock:
+                              type: string
+                            period:
+                              type: integer
+                            type:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                name:
+                                  type: string
+                                state:
+                                  type: string
+                                completed:
+                                  type: boolean
+                                description:
+                                  type: string
+                                detail:
+                                  type: string
+                                shortDetail:
+                                  type: string
+                        competitions:
+                          type: array
+                          items:
+                            type: object
+                            required: [id, competitors]
+                            properties:
+                              id:
+                                type: string
+                              date:
+                                type: string
+                              competitors:
+                                type: array
+                                items:
+                                  type: object
+                                  required: [id, team, score]
+                                  properties:
+                                    id:
+                                      type: string
+                                    homeAway:
+                                      type: string
+                                    winner:
+                                      type: boolean
+                                    score:
+                                      type: string
+                                    team:
+                                      type: object
+                                      required: [id, name, abbreviation]
+                                      properties:
+                                        id:
+                                          type: string
+                                        name:
+                                          type: string
+                                        abbreviation:
+                                          type: string
+                                        displayName:
+                                          type: string
+                                        shortDisplayName:
+                                          type: string
+                                        logo:
+                                          type: string
+                                    records:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          name:
+                                            type: string
+                                          abbreviation:
+                                            type: string
+                                          type:
+                                            type: string
+                                          summary:
+                                            type: string
+                              venue:
+                                type: object
+                                properties:
+                                  fullName:
+                                    type: string
+                                  city:
+                                    type: string
+                                  state:
+                                    type: string
+                              broadcasts:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    market:
+                                      type: string
+                                    names:
+                                      type: array
+                                      items:
+                                        type: string
+  /apis/site/v2/sports/{sport}/{league}/summary:
+    get:
+      operationId: getGameSummary
+      summary: Get full game summary — boxscore, plays, leaders, stats
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: espn0002
+          signature_id: espn0002s
+          tool_version: 1
+      parameters:
+        - name: sport
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sport slug (e.g. "football", "basketball").
+        - name: league
+          in: path
+          required: true
+          schema:
+            type: string
+          description: League slug (e.g. "nfl", "nba").
+        - name: event
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Event/game ID (e.g. "401671793").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  boxscore:
+                    type: object
+                    properties:
+                      teams:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            team:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                displayName:
+                                  type: string
+                                abbreviation:
+                                  type: string
+                                logo:
+                                  type: string
+                            statistics:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    type: string
+                                  displayValue:
+                                    type: string
+                      players:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            team:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                displayName:
+                                  type: string
+                            statistics:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    type: string
+                                  keys:
+                                    type: array
+                                    items:
+                                      type: string
+                                  athletes:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        athlete:
+                                          type: object
+                                          properties:
+                                            id:
+                                              type: string
+                                            displayName:
+                                              type: string
+                                            position:
+                                              type: object
+                                              properties:
+                                                abbreviation:
+                                                  type: string
+                                        stats:
+                                          type: array
+                                          items:
+                                            type: string
+                  header:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      competitions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            date:
+                              type: string
+                            competitors:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  homeAway:
+                                    type: string
+                                  winner:
+                                    type: boolean
+                                  score:
+                                    type: string
+                                  team:
+                                    type: object
+                                    properties:
+                                      id:
+                                        type: string
+                                      displayName:
+                                        type: string
+                                      abbreviation:
+                                        type: string
+                                      logo:
+                                        type: string
+                            status:
+                              type: object
+                              properties:
+                                type:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                    state:
+                                      type: string
+                                    completed:
+                                      type: boolean
+                  leaders:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        displayName:
+                          type: string
+                        leaders:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              displayValue:
+                                type: string
+                              athlete:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  displayName:
+                                    type: string
+                                  team:
+                                    type: object
+                                    properties:
+                                      id:
+                                        type: string
+                  scoringPlays:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                        text:
+                          type: string
+                        team:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                        clock:
+                          type: object
+                          properties:
+                            displayValue:
+                              type: string
+                        homeScore:
+                          type: integer
+                        awayScore:
+                          type: integer
+  /apis/site/v2/sports/{sport}/{league}/news:
+    get:
+      operationId: getNews
+      summary: Get latest news articles for a sport/league
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: espn0003
+          signature_id: espn0003s
+          tool_version: 1
+      parameters:
+        - name: sport
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sport slug (e.g. "football", "basketball").
+        - name: league
+          in: path
+          required: true
+          schema:
+            type: string
+          description: League slug (e.g. "nfl", "nba").
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+          description: Number of articles to return.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [header, articles]
+                properties:
+                  header:
+                    type: string
+                  articles:
+                    type: array
+                    items:
+                      type: object
+                      required: [headline, published, links]
+                      properties:
+                        headline:
+                          type: string
+                        description:
+                          type: string
+                        published:
+                          type: string
+                        type:
+                          type: string
+                        premium:
+                          type: boolean
+                        images:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              url:
+                                type: string
+                              name:
+                                type: string
+                              caption:
+                                type: string
+                              width:
+                                type: integer
+                              height:
+                                type: integer
+                        links:
+                          type: object
+                          properties:
+                            web:
+                              type: object
+                              properties:
+                                href:
+                                  type: string
+                            mobile:
+                              type: object
+                              properties:
+                                href:
+                                  type: string
+                        categories:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              description:
+                                type: string
+                              type:
+                                type: string
+  /apis/site/v2/sports/{sport}/{league}/teams:
+    get:
+      operationId: getTeams
+      summary: Get all teams in a league
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: espn0004
+          signature_id: espn0004s
+          tool_version: 1
+      parameters:
+        - name: sport
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sport slug (e.g. "football", "basketball").
+        - name: league
+          in: path
+          required: true
+          schema:
+            type: string
+          description: League slug (e.g. "nfl", "nba").
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+          description: Maximum number of teams to return.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sports]
+                properties:
+                  sports:
+                    type: array
+                    items:
+                      type: object
+                      required: [leagues]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                        leagues:
+                          type: array
+                          items:
+                            type: object
+                            required: [teams]
+                            properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                              abbreviation:
+                                type: string
+                              teams:
+                                type: array
+                                items:
+                                  type: object
+                                  required: [team]
+                                  properties:
+                                    team:
+                                      type: object
+                                      required: [id, displayName, abbreviation]
+                                      properties:
+                                        id:
+                                          type: string
+                                        uid:
+                                          type: string
+                                        slug:
+                                          type: string
+                                        abbreviation:
+                                          type: string
+                                        displayName:
+                                          type: string
+                                        shortDisplayName:
+                                          type: string
+                                        name:
+                                          type: string
+                                        nickname:
+                                          type: string
+                                        location:
+                                          type: string
+                                        color:
+                                          type: string
+                                        alternateColor:
+                                          type: string
+                                        isActive:
+                                          type: boolean
+                                        logos:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              href:
+                                                type: string
+                                              width:
+                                                type: integer
+                                              height:
+                                                type: integer
+                                        links:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              href:
+                                                type: string
+                                              text:
+                                                type: string
+  /apis/site/v2/sports/{sport}/{league}/teams/{teamId}:
+    get:
+      operationId: getTeamDetail
+      summary: Get team details — record, roster, next event, stats leaders
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: espn0005
+          signature_id: espn0005s
+          tool_version: 1
+      parameters:
+        - name: sport
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sport slug (e.g. "football", "basketball").
+        - name: league
+          in: path
+          required: true
+          schema:
+            type: string
+          description: League slug (e.g. "nfl", "nba").
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Team ID (e.g. "6" for Dallas Cowboys). Find IDs via getTeams.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [team]
+                properties:
+                  team:
+                    type: object
+                    required: [id, displayName, abbreviation]
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                      abbreviation:
+                        type: string
+                      location:
+                        type: string
+                      name:
+                        type: string
+                      color:
+                        type: string
+                      logos:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            href:
+                              type: string
+                      record:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                description:
+                                  type: string
+                                type:
+                                  type: string
+                                summary:
+                                  type: string
+                      nextEvent:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            date:
+                              type: string
+                            name:
+                              type: string
+                            shortName:
+                              type: string
+                            competitions:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  competitors:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: string
+                                        homeAway:
+                                          type: string
+                                        team:
+                                          type: object
+                                          properties:
+                                            displayName:
+                                              type: string
+                                            abbreviation:
+                                              type: string
+                      standingSummary:
+                        type: string
+                      franchise:
+                        type: object
+                        properties:
+                          displayName:
+                            type: string
+                          venue:
+                            type: object
+                            properties:
+                              fullName:
+                                type: string
+                              city:
+                                type: string
+                              state:
+                                type: string
+  /apis/v2/sports/{sport}/{league}/standings:
+    get:
+      operationId: getStandings
+      summary: Get league standings by group/division
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: espn0006
+          signature_id: espn0006s
+          tool_version: 1
+      parameters:
+        - name: sport
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sport slug (e.g. "football", "basketball").
+        - name: league
+          in: path
+          required: true
+          schema:
+            type: string
+          description: League slug (e.g. "nfl", "nba").
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Season year (e.g. 2025). Defaults to current.
+        - name: seasontype
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Season type (1=preseason, 2=regular, 3=postseason). Defaults to regular.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [children]
+                properties:
+                  uid:
+                    type: string
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  abbreviation:
+                    type: string
+                  children:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uid:
+                          type: string
+                        name:
+                          type: string
+                        abbreviation:
+                          type: string
+                        standings:
+                          type: object
+                          properties:
+                            entries:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  team:
+                                    type: object
+                                    required: [id, displayName, abbreviation]
+                                    properties:
+                                      id:
+                                        type: string
+                                      displayName:
+                                        type: string
+                                      abbreviation:
+                                        type: string
+                                      logos:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            href:
+                                              type: string
+                                  stats:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                        displayName:
+                                          type: string
+                                        description:
+                                          type: string
+                                        abbreviation:
+                                          type: string
+                                        type:
+                                          type: string
+                                        value:
+                                          type: number
+                                        displayValue:
+                                          type: string
+  /apis/site/v2/sports/{sport}/{league}/athletes/{athleteId}:
+    get:
+      operationId: getAthlete
+      summary: Get athlete bio, stats, and career info
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: espn0007
+          signature_id: espn0007s
+          tool_version: 1
+      parameters:
+        - name: sport
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sport slug (e.g. "football", "basketball").
+        - name: league
+          in: path
+          required: true
+          schema:
+            type: string
+          description: League slug (e.g. "nfl", "nba").
+        - name: athleteId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Athlete ID (e.g. "1966" for LeBron James). Find IDs via search.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [athlete]
+                properties:
+                  athlete:
+                    type: object
+                    required: [id, displayName, position]
+                    properties:
+                      id:
+                        type: string
+                      uid:
+                        type: string
+                      displayName:
+                        type: string
+                      firstName:
+                        type: string
+                      lastName:
+                        type: string
+                      displayHeight:
+                        type: string
+                      displayWeight:
+                        type: string
+                      age:
+                        type: integer
+                      dateOfBirth:
+                        type: string
+                      birthPlace:
+                        type: object
+                        properties:
+                          city:
+                            type: string
+                          state:
+                            type: string
+                          country:
+                            type: string
+                      jersey:
+                        type: string
+                      position:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          displayName:
+                            type: string
+                          abbreviation:
+                            type: string
+                      team:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          displayName:
+                            type: string
+                          abbreviation:
+                            type: string
+                      experience:
+                        type: object
+                        properties:
+                          years:
+                            type: integer
+                      college:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                      headshot:
+                        type: object
+                        properties:
+                          href:
+                            type: string
+                      statistics:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            type:
+                              type: string
+                            labels:
+                              type: array
+                              items:
+                                type: string
+                            categories:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    type: string
+                                  displayName:
+                                    type: string
+  /apis/site/v2/sports/{sport}/{league}/teams/{teamId}/schedule:
+    get:
+      operationId: getTeamSchedule
+      summary: Get a team's game schedule for a season
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: espn0008
+          signature_id: espn0008s
+          tool_version: 1
+      parameters:
+        - name: sport
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sport slug (e.g. "football", "basketball").
+        - name: league
+          in: path
+          required: true
+          schema:
+            type: string
+          description: League slug (e.g. "nfl", "nba").
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Team ID (e.g. "6" for Dallas Cowboys).
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Season year (e.g. 2025). Defaults to current.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events]
+                properties:
+                  team:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                      abbreviation:
+                        type: string
+                  season:
+                    type: object
+                    properties:
+                      year:
+                        type: integer
+                      type:
+                        type: integer
+                      name:
+                        type: string
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, date, name]
+                      properties:
+                        id:
+                          type: string
+                        date:
+                          type: string
+                        name:
+                          type: string
+                        shortName:
+                          type: string
+                        seasonType:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            type:
+                              type: integer
+                            name:
+                              type: string
+                        week:
+                          type: object
+                          properties:
+                            number:
+                              type: integer
+                            text:
+                              type: string
+                        timeValid:
+                          type: boolean
+                        competitions:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              date:
+                                type: string
+                              competitors:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: string
+                                    homeAway:
+                                      type: string
+                                    winner:
+                                      type: boolean
+                                    score:
+                                      type: object
+                                      properties:
+                                        value:
+                                          type: number
+                                        displayValue:
+                                          type: string
+                                    team:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: string
+                                        displayName:
+                                          type: string
+                                        abbreviation:
+                                          type: string
+                                        logo:
+                                          type: string
+                              status:
+                                type: object
+                                properties:
+                                  type:
+                                    type: object
+                                    properties:
+                                      name:
+                                        type: string
+                                      completed:
+                                        type: boolean
+                  requestedSeason:
+                    type: object
+                    properties:
+                      year:
+                        type: integer
+                      type:
+                        type: integer
+                      name:
+                        type: string
+  /apis/site/v2/scoreboard/header:
+    get:
+      operationId: getScoreboardHeader
+      summary: Get compact scoreboard header with scores across all sports
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: espn0009
+          signature_id: espn0009s
+          tool_version: 1
+      parameters:
+        - name: sport
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by sport (e.g. "football", "basketball"). Omit for all sports.
+        - name: league
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by league (e.g. "nfl", "nba"). Omit for all leagues.
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en
+          description: Language code.
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
+            default: us
+          description: Region code.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sports]
+                properties:
+                  sports:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, leagues]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                        leagues:
+                          type: array
+                          items:
+                            type: object
+                            required: [id, name, abbreviation]
+                            properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                              abbreviation:
+                                type: string
+                              slug:
+                                type: string
+                              events:
+                                type: array
+                                items:
+                                  type: object
+                                  required: [id, name, shortName, date]
+                                  properties:
+                                    id:
+                                      type: string
+                                    date:
+                                      type: string
+                                    name:
+                                      type: string
+                                    shortName:
+                                      type: string
+                                    gamecastAvailable:
+                                      type: boolean
+                                    competitors:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          id:
+                                            type: string
+                                          homeAway:
+                                            type: string
+                                          winner:
+                                            type: boolean
+                                          displayName:
+                                            type: string
+                                          abbreviation:
+                                            type: string
+                                          score:
+                                            type: string
+                                          logo:
+                                            type: string
+                                    fullStatus:
+                                      type: object
+                                      properties:
+                                        clock:
+                                          type: number
+                                        displayClock:
+                                          type: string
+                                        period:
+                                          type: integer
+                                        type:
+                                          type: object
+                                          properties:
+                                            id:
+                                              type: string
+                                            name:
+                                              type: string
+                                            state:
+                                              type: string
+                                            completed:
+                                              type: boolean
+                                            description:
+                                              type: string
+                                            detail:
+                                              type: string
+                                            shortDetail:
+                                              type: string
+      servers:
+        - url: https://site.web.api.espn.com
+  /apis/search/v2:
+    get:
+      operationId: searchESPN
+      summary: Search for athletes, teams, articles, and videos
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: espn0010
+          signature_id: espn0010s
+          tool_version: 1
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (e.g. "Patrick Mahomes", "Lakers", "Super Bowl").
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per type.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Result page number.
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en
+          description: Language code.
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
+            default: us
+          description: Region code.
+        - name: platform
+          in: query
+          required: false
+          schema:
+            type: string
+            default: web
+          description: Platform identifier.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [totalFound, results]
+                properties:
+                  totalFound:
+                    type: integer
+                  resultTypes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        totalFound:
+                          type: integer
+                        type:
+                          type: string
+                        displayName:
+                          type: string
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        contents:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              uid:
+                                type: string
+                              type:
+                                type: string
+                              displayName:
+                                type: string
+                              subtitle:
+                                type: string
+                              link:
+                                type: object
+                                properties:
+                                  web:
+                                    type: string
+                                  app:
+                                    type: string
+                              image:
+                                type: object
+                                properties:
+                                  default:
+                                    type: string
+                              sport:
+                                type: object
+                                properties:
+                                  displayName:
+                                    type: string
+                                  slug:
+                                    type: string
+                              league:
+                                type: object
+                                properties:
+                                  displayName:
+                                    type: string
+                                  slug:
+                                    type: string
+      servers:
+        - url: https://site.web.api.espn.com
