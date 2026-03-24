@@ -1,3 +1,30 @@
+## 2026-03-24: M26 — Consumer Sites Discovery — 13/16 DONE
+
+**What changed:**
+- 13 consumer sites discovered via CDP capture with real fixtures:
+  - E-commerce: walmart (3 ops), bestbuy (3), costco (2), target (3), amazon (3)
+  - Travel: google-flights (3), uber (3)
+  - Real estate: redfin (3)
+  - Food: doordash (3)
+  - Search/Maps: google-search (3), google-maps (3)
+  - Social: xiaohongshu (3)
+  - DevTools: gitlab (8) — pre-existing from earlier
+- 3 sites blocked: yelp (DataDome), zillow (PerimeterX), tiktok (X-Bogus custom signing)
+- Per-fixture DOC.md + PROGRESS.md documentation system created (guide at doc/todo/site_doc/guide.md)
+- Navigator changed to read DOC.md instead of legacy notes.md; 6 old notes.md deleted
+- Extraction complexity rule added to compile.md: >5 lines inline JS → extract to adapters/*.ts
+- 3 fixtures refactored: google-flights, google-search, redfin — inline JS moved to adapters/
+- Orchestration improvements: independent verification catches empty commits, acceptCriteria with target intents
+
+**Why:**
+- M26 redefined from API sites to consumer sites (no free public API). These are openweb's core value proposition — sites where users need to reverse-engineer the web client's internal API.
+
+**Key files:** 13 new fixture dirs in src/fixtures/, doc/todo/site_doc/guide.md, skill/openweb/references/compile.md
+**Verification:** `pnpm build` clean (10 adapters), `pnpm test` 367/367 pass
+**Commit:** 72a09ac..eede864
+**Next:** Quality review of 13 fixtures, then decide M27 (API sites) vs M29 (reflect)
+**Blockers:** 3 blocked sites (bot detection)
+
 ## 2026-03-23: Doc Normalize — align docs with /init-all + /update-doc standards
 
 **What changed:**
