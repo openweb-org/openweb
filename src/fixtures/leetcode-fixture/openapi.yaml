@@ -1,0 +1,763 @@
+openapi: '3.1.0'
+info:
+  title: LeetCode API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://leetcode.com
+    x-openweb:
+      transport: page
+paths:
+  /problems/search:
+    get:
+      operationId: searchProblems
+      summary: Search problems by keyword — returns titles, difficulty, acceptance rate, tags
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: lc0001
+          signature_id: lc0001s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: leetcode-graphql
+          operation: searchProblems
+      parameters:
+        - name: keyword
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "binary search", "two sum", "dynamic programming").
+        - name: skip
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Number of results to skip (pagination offset).
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of results to return.
+      responses:
+        '200':
+          description: Search results with problems matching the keyword.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProblemSummary'
+                  totalLength:
+                    type: integer
+                  hasMore:
+                    type: boolean
+  /problems/list:
+    get:
+      operationId: getProblemList
+      summary: Browse paginated problem list with optional difficulty and topic filters
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: lc0002
+          signature_id: lc0002s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: leetcode-graphql
+          operation: getProblemList
+      parameters:
+        - name: skip
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Number of results to skip.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of results.
+        - name: difficulty
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [EASY, MEDIUM, HARD]
+          description: Filter by difficulty level.
+        - name: topicSlug
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by topic tag slug (e.g. "array", "dynamic-programming", "tree").
+      responses:
+        '200':
+          description: Paginated problem list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProblemSummary'
+                  totalLength:
+                    type: integer
+                  hasMore:
+                    type: boolean
+  /daily-challenge:
+    get:
+      operationId: getDailyChallenge
+      summary: Get today's daily coding challenge problem
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: lc0003
+          signature_id: lc0003s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: leetcode-graphql
+          operation: getDailyChallenge
+      parameters: []
+      responses:
+        '200':
+          description: Today's daily challenge.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    description: Challenge date (YYYY-MM-DD).
+                  link:
+                    type: string
+                    description: Problem URL path.
+                  question:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      questionFrontendId:
+                        type: string
+                      title:
+                        type: string
+                      titleSlug:
+                        type: string
+                      difficulty:
+                        type: string
+                      paidOnly:
+                        type: boolean
+                      acRate:
+                        type: number
+                      topicTags:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            slug:
+                              type: string
+  /user/{username}/profile:
+    get:
+      operationId: getUserProfile
+      summary: Get user public profile — name, bio, ranking, social links, skill tags
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: lc0004
+          signature_id: lc0004s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: leetcode-graphql
+          operation: getUserProfile
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: LeetCode username (e.g. "lee215", "votrubac").
+      responses:
+        '200':
+          description: User public profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  githubUrl:
+                    type: [string, 'null']
+                  twitterUrl:
+                    type: [string, 'null']
+                  linkedinUrl:
+                    type: [string, 'null']
+                  contestBadge:
+                    type: [object, 'null']
+                    properties:
+                      name:
+                        type: string
+                      icon:
+                        type: string
+                  profile:
+                    type: object
+                    properties:
+                      ranking:
+                        type: integer
+                      userAvatar:
+                        type: string
+                      realName:
+                        type: string
+                      aboutMe:
+                        type: string
+                      school:
+                        type: [string, 'null']
+                      company:
+                        type: [string, 'null']
+                      countryName:
+                        type: [string, 'null']
+                      skillTags:
+                        type: array
+                        items:
+                          type: string
+                      reputation:
+                        type: integer
+  /user/{username}/contest-ranking:
+    get:
+      operationId: getUserContestRanking
+      summary: Get user contest rating, global ranking, and contest history
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: lc0005
+          signature_id: lc0005s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: leetcode-graphql
+          operation: getUserContestRanking
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: LeetCode username.
+      responses:
+        '200':
+          description: User contest ranking and history.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userContestRanking:
+                    type: [object, 'null']
+                    properties:
+                      attendedContestsCount:
+                        type: integer
+                      rating:
+                        type: number
+                      globalRanking:
+                        type: integer
+                      totalParticipants:
+                        type: integer
+                      topPercentage:
+                        type: number
+                  userContestRankingHistory:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        attended:
+                          type: boolean
+                        problemsSolved:
+                          type: integer
+                        totalProblems:
+                          type: integer
+                        rating:
+                          type: number
+                        ranking:
+                          type: integer
+                        contest:
+                          type: object
+                          properties:
+                            title:
+                              type: string
+                            startTime:
+                              type: integer
+  /problems/{questionSlug}/submissions:
+    get:
+      operationId: getSubmissions
+      summary: Get submission history for a problem (requires login)
+      x-openweb:
+        permission: read
+        build:
+          verified: false
+          stable_id: lc0006
+          signature_id: lc0006s
+          tool_version: 1
+          signals:
+            - auth-required
+        adapter:
+          name: leetcode-graphql
+          operation: getSubmissions
+      parameters:
+        - name: questionSlug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Problem slug (e.g. "two-sum", "binary-search").
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of submissions to return.
+      responses:
+        '200':
+          description: Submission list (empty if not logged in).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lastKey:
+                    type: [string, 'null']
+                  hasNext:
+                    type: [boolean, 'null']
+                  submissions:
+                    type: [array, 'null']
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        statusDisplay:
+                          type: string
+                        lang:
+                          type: string
+                        langName:
+                          type: string
+                        runtime:
+                          type: string
+                        memory:
+                          type: string
+                        timestamp:
+                          type: string
+  /problems/{questionSlug}/solutions:
+    get:
+      operationId: getSolutionArticles
+      summary: Get community solution articles for a problem — title, author, summary, vote count
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: lc0007
+          signature_id: lc0007s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: leetcode-graphql
+          operation: getSolutionArticles
+      parameters:
+        - name: questionSlug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Problem slug (e.g. "two-sum").
+        - name: skip
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset.
+        - name: first
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 15
+          description: Number of articles to return.
+        - name: orderBy
+          in: query
+          required: false
+          schema:
+            type: string
+            default: HOT
+            enum: [HOT, NEWEST, OLDEST, MOST_VOTES]
+          description: Sort order for articles.
+      responses:
+        '200':
+          description: Solution articles for the problem.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalNum:
+                    type: integer
+                  articles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                        title:
+                          type: string
+                        slug:
+                          type: string
+                        summary:
+                          type: string
+                        author:
+                          type: object
+                          properties:
+                            realName:
+                              type: string
+                            userSlug:
+                              type: string
+                        createdAt:
+                          type: string
+                        hitCount:
+                          type: integer
+                        reactions:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                              reactionType:
+                                type: string
+  /contests/upcoming:
+    get:
+      operationId: getUpcomingContests
+      summary: Get upcoming weekly and biweekly contests
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: lc0008
+          signature_id: lc0008s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: leetcode-graphql
+          operation: getUpcomingContests
+      parameters: []
+      responses:
+        '200':
+          description: List of upcoming contests.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [contests]
+                properties:
+                  contests:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        titleSlug:
+                          type: string
+                        title:
+                          type: string
+                        startTime:
+                          type: integer
+                          description: Unix timestamp.
+                        duration:
+                          type: integer
+                          description: Duration in seconds.
+  /contests/history:
+    get:
+      operationId: getContestHistory
+      summary: Get past contest history with results
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: lc0009
+          signature_id: lc0009s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: leetcode-graphql
+          operation: getContestHistory
+      parameters:
+        - name: skip
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of contests to return.
+      responses:
+        '200':
+          description: Past contest list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalNum:
+                    type: integer
+                  contests:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        titleSlug:
+                          type: string
+                        title:
+                          type: string
+                        startTime:
+                          type: integer
+                        duration:
+                          type: integer
+                        totalQuestions:
+                          type: integer
+  /contests/{contestSlug}/questions:
+    get:
+      operationId: getContestQuestions
+      summary: Get questions for a specific contest
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: lc0010
+          signature_id: lc0010s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: leetcode-graphql
+          operation: getContestQuestions
+      parameters:
+        - name: contestSlug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Contest slug (e.g. "weekly-contest-438", "biweekly-contest-150").
+      responses:
+        '200':
+          description: Contest questions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [questions]
+                properties:
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        credit:
+                          type: integer
+                          description: Point value.
+                        title:
+                          type: string
+                        titleSlug:
+                          type: string
+                        questionId:
+                          type: string
+  /user/{username}/recent-submissions:
+    get:
+      operationId: getRecentSubmissions
+      summary: Get a user's recent accepted submissions
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: lc0011
+          signature_id: lc0011s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: leetcode-graphql
+          operation: getRecentSubmissions
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: LeetCode username.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 15
+          description: Number of submissions to return.
+      responses:
+        '200':
+          description: Recent accepted submissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [submissions]
+                properties:
+                  submissions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        titleSlug:
+                          type: string
+                        timestamp:
+                          type: string
+                          description: Unix timestamp as string.
+  /contests/{contestSlug}/ranking:
+    get:
+      operationId: getContestRanking
+      summary: Get contest leaderboard — ranks, scores, finish times
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: lc0012
+          signature_id: lc0012s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: leetcode-graphql
+          operation: getContestRanking
+      parameters:
+        - name: contestSlug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Contest slug (e.g. "weekly-contest-438").
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number (25 results per page).
+      responses:
+        '200':
+          description: Contest leaderboard page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userCount:
+                    type: integer
+                    description: Total participants.
+                  rankings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        username:
+                          type: string
+                        userSlug:
+                          type: string
+                        rank:
+                          type: integer
+                        score:
+                          type: integer
+                        finishTime:
+                          type: integer
+                          description: Unix timestamp of last submission.
+                        avatarUrl:
+                          type: string
+components:
+  schemas:
+    ProblemSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        questionFrontendId:
+          type: string
+          description: Display ID (e.g. "1" for Two Sum).
+        title:
+          type: string
+        titleSlug:
+          type: string
+        difficulty:
+          type: string
+          enum: [EASY, MEDIUM, HARD, Easy, Medium, Hard]
+        paidOnly:
+          type: boolean
+          description: True if problem requires LeetCode Premium.
+        acRate:
+          type: number
+          description: Acceptance rate (0-100).
+        topicTags:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              slug:
+                type: string

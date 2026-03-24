@@ -1,0 +1,9 @@
+{
+  "operation_id": "getContestHistory",
+  "cases": [
+    {
+      "input": { "limit": 5 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

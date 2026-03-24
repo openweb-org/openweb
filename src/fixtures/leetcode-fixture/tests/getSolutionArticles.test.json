@@ -1,0 +1,9 @@
+{
+  "operation_id": "getSolutionArticles",
+  "cases": [
+    {
+      "input": { "questionSlug": "two-sum", "first": 5 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}
