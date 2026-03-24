@@ -1,0 +1,9 @@
+{
+  "operation_id": "getTopStreams",
+  "cases": [
+    {
+      "input": { "limit": 8 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

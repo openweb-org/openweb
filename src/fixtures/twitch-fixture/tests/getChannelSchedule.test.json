@@ -1,0 +1,9 @@
+{
+  "operation_id": "getChannelSchedule",
+  "cases": [
+    {
+      "input": { "channelLogin": "shroud" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}
