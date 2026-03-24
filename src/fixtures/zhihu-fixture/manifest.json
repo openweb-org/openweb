@@ -1,0 +1,29 @@
+{
+  "name": "zhihu-fixture",
+  "display_name": "Zhihu (知乎)",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.zhihu.com",
+  "description": "Zhihu Q&A search, user profiles, topic feeds, trending — page transport with cookie session via L3 adapter",
+  "requires_auth": false,
+  "dependencies": {
+    "searchContent → getUserProfile": "searchContent returns author url_token used by getUserProfile",
+    "searchContent → getSimilarQuestions": "searchContent returns question IDs used by getSimilarQuestions",
+    "getUserProfile → getUserAnswers": "getUserProfile returns url_token used by getUserAnswers",
+    "getUserProfile → getUserActivities": "getUserProfile returns url_token used by getUserActivities",
+    "getTopicIntro → getTopicFeed": "getTopicIntro confirms topic_id used by getTopicFeed",
+    "getTopicIntro → getTopicChildren": "getTopicIntro confirms topic_id used by getTopicChildren"
+  },
+  "stats": {
+    "operation_count": 10,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 10
+  },
+  "last_verified": "2026-03-24T17:20:00.000Z",
+  "quarantined": true,
+  "fingerprint": {
+    "response_shape_hash": "searchContent:pending,getUserProfile:pending,getUserAnswers:pending,getHotSearch:pending,getTopicIntro:pending,getTopicFeed:pending,getSimilarQuestions:pending,getRecommendFeed:pending,getUserActivities:pending,getTopicChildren:pending",
+    "last_validated": "2026-03-24T17:20:00.000Z"
+  }
+}
