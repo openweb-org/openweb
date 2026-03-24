@@ -1,0 +1,12 @@
+{
+  "operation_id": "getPinComments",
+  "cases": [
+    {
+      "input": { "pinId": "1234567890" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,612 @@
+openapi: '3.1.0'
+info:
+  title: Pinterest API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.pinterest.com
+    x-openweb:
+      transport: page
+paths:
+  /search/pins:
+    get:
+      operationId: searchPins
+      summary: Search pins by keyword — images, titles, links, boards
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: pin0001
+          signature_id: pin0001s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: searchPins
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "minimalist interior design", "healthy recipes").
+        - name: bookmark
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination bookmark from previous response.
+      responses:
+        '200':
+          description: Pin search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pin'
+                  bookmark:
+                    type: string
+                    nullable: true
+  /search/boards:
+    get:
+      operationId: searchBoards
+      summary: Search boards by keyword — board names, pin counts, owners
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: pin0002
+          signature_id: pin0002s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: searchBoards
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "travel photography", "wedding ideas").
+        - name: bookmark
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination bookmark from previous response.
+      responses:
+        '200':
+          description: Board search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Board'
+                  bookmark:
+                    type: string
+                    nullable: true
+  /pin/{pinId}:
+    get:
+      operationId: getPinDetails
+      summary: Get full details for a pin — image, description, source, board, pinner
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: pin0003
+          signature_id: pin0003s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: getPinDetails
+      parameters:
+        - name: pinId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pinterest pin ID (numeric string, e.g. "1234567890").
+      responses:
+        '200':
+          description: Pin detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PinDetail'
+  /board/{boardId}:
+    get:
+      operationId: getBoardDetails
+      summary: Get board metadata — name, description, pin count, owner
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: pin0004
+          signature_id: pin0004s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: getBoardDetails
+      parameters:
+        - name: boardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pinterest board ID (numeric string) or slug ("username/board-name").
+        - name: slug
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Board slug as alternative to boardId (e.g. "/username/board-name/").
+      responses:
+        '200':
+          description: Board detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardDetail'
+  /board/{boardId}/pins:
+    get:
+      operationId: getBoardPins
+      summary: Get pins in a board — paginated list of pin images and metadata
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: pin0005
+          signature_id: pin0005s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: getBoardPins
+      parameters:
+        - name: boardId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pinterest board ID.
+        - name: bookmark
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination bookmark from previous response.
+      responses:
+        '200':
+          description: Board pins.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  boardId:
+                    type: string
+                  pins:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pin'
+  /user/{username}:
+    get:
+      operationId: getUserProfile
+      summary: Get user/pinner profile — name, bio, follower count, pin count
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: pin0006
+          signature_id: pin0006s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: getUserProfile
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pinterest username (e.g. "pinterest", "designmilk").
+      responses:
+        '200':
+          description: User profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+  /user/{username}/boards:
+    get:
+      operationId: getUserBoards
+      summary: Get boards for a user — board names, pin counts, thumbnails
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: pin0007
+          signature_id: pin0007s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: getUserBoards
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pinterest username.
+        - name: bookmark
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination bookmark from previous response.
+      responses:
+        '200':
+          description: User boards.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  boards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Board'
+  /pin/{pinId}/related:
+    get:
+      operationId: getRelatedPins
+      summary: Get related/similar pins — "more like this" recommendations
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: pin0008
+          signature_id: pin0008s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: getRelatedPins
+      parameters:
+        - name: pinId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pinterest pin ID to get recommendations for.
+        - name: bookmark
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination bookmark from previous response.
+      responses:
+        '200':
+          description: Related pins.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pinId:
+                    type: string
+                  modules:
+                    type: array
+                    items:
+                      type: object
+  /typeahead:
+    get:
+      operationId: getTypeahead
+      summary: Search autocomplete — keyword suggestions as you type
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: pin0009
+          signature_id: pin0009s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: getTypeahead
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Partial search query for autocomplete suggestions.
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 5
+          description: Number of suggestions to return.
+      responses:
+        '200':
+          description: Typeahead suggestions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        label:
+                          type: string
+                        query:
+                          type: string
+  /pin/{pinId}/comments:
+    get:
+      operationId: getPinComments
+      summary: Get comments on a pin — text, author, timestamp
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: pin0010
+          signature_id: pin0010s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: getPinComments
+      parameters:
+        - name: pinId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pinterest pin ID.
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of comments per page.
+        - name: bookmark
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination bookmark from previous response.
+      responses:
+        '200':
+          description: Pin comments.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pinId:
+                    type: string
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+                  bookmark:
+                    type: string
+                    nullable: true
+components:
+  schemas:
+    Pin:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        dominant_color:
+          type: string
+        images:
+          type: object
+        link:
+          type: string
+          description: Source URL the pin links to.
+        board:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+        pinner:
+          type: object
+          properties:
+            id:
+              type: string
+            username:
+              type: string
+            full_name:
+              type: string
+    PinDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        link:
+          type: string
+        images:
+          type: object
+        dominant_color:
+          type: string
+        board:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            url:
+              type: string
+        pinner:
+          type: object
+          properties:
+            id:
+              type: string
+            username:
+              type: string
+            full_name:
+              type: string
+            image_medium_url:
+              type: string
+        repin_count:
+          type: integer
+        comment_count:
+          type: integer
+        save_count:
+          type: integer
+        created_at:
+          type: string
+    Board:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+        pin_count:
+          type: integer
+        follower_count:
+          type: integer
+        owner:
+          type: object
+          properties:
+            id:
+              type: string
+            username:
+              type: string
+            full_name:
+              type: string
+        image_thumbnail_url:
+          type: string
+    BoardDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+        pin_count:
+          type: integer
+        follower_count:
+          type: integer
+        collaborator_count:
+          type: integer
+        owner:
+          type: object
+          properties:
+            id:
+              type: string
+            username:
+              type: string
+            full_name:
+              type: string
+            image_medium_url:
+              type: string
+        privacy:
+          type: string
+        created_at:
+          type: string
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        full_name:
+          type: string
+        about:
+          type: string
+        follower_count:
+          type: integer
+        following_count:
+          type: integer
+        pin_count:
+          type: integer
+        board_count:
+          type: integer
+        image_large_url:
+          type: string
+        website_url:
+          type: string
+        domain_verified:
+          type: boolean
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        created_at:
+          type: string
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            username:
+              type: string
+            full_name:
+              type: string
+            image_small_url:
+              type: string
