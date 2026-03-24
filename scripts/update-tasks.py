@@ -120,7 +120,7 @@ def cmd_set(tid, data):
     if tid in tasks:
         tasks[tid].update(data)
     else:
-        missing = {"title"} - data.keys()
+        missing = {"title", "description"} - data.keys()
         if missing: die(f"new task requires: {', '.join(sorted(missing))}")
         tasks[tid] = {"parent": None, "depends": [], "state": "ready", **data}
     # Enforce non-empty acceptCriteria on leaf tasks
