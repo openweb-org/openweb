@@ -1,0 +1,9 @@
+{
+  "operation_id": "getProductRatings",
+  "cases": [
+    {
+      "input": { "productId": "3251376", "retailerId": "57" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

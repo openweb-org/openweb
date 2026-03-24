@@ -1,0 +1,9 @@
+{
+  "operation_id": "getProductNutrition",
+  "cases": [
+    {
+      "input": { "productId": "3251376", "shopId": "277839" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}
