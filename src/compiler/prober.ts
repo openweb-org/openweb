@@ -4,7 +4,6 @@ import type { AnalyzedOperation } from './types.js'
 import type { ClassifyResult } from './analyzer/classify.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import { fetchWithRedirects } from '../runtime/redirect.js'
-import { recordProbeOutcome } from '../knowledge/heuristics.js'
 
 export interface ProbeResult {
   readonly operationId: string
@@ -71,7 +70,6 @@ async function probeOne(
     const response = await probeFetch(url, { Accept: 'application/json' }, options)
 
     if (response.ok) {
-      try { await recordProbeOutcome('node_no_auth', true) } catch { /* non-fatal */ }
       return [{
         operationId: operation.operationId,
         transport: 'node',
@@ -82,7 +80,6 @@ async function probeOne(
     }
 
     if (response.status === 401 || response.status === 403) {
-      try { await recordProbeOutcome('node_no_auth', false) } catch { /* non-fatal */ }
       // Needs auth — try step 2
     } else {
       // Other error (404, 500, etc.) — can't determine, skip
@@ -119,7 +116,6 @@ async function probeOne(
           )
 
           if (response.ok) {
-            try { await recordProbeOutcome('node_with_auth', true) } catch { /* non-fatal */ }
             return [{
               operationId: operation.operationId,
               transport: 'node',
@@ -135,10 +131,6 @@ async function probeOne(
     }
   }
 
-  // Only record node_with_auth failure if Step 2 was actually attempted (requestsMade > 1)
-  if (requestsMade > 1) {
-    try { await recordProbeOutcome('node_with_auth', false) } catch { /* non-fatal */ }
-  }
   return [null, requestsMade]
 }
 
