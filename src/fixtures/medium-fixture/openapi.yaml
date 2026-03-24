@@ -1,0 +1,522 @@
+openapi: '3.1.0'
+info:
+  title: Medium API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://medium.com
+    x-openweb:
+      transport: page
+paths:
+  /search:
+    get:
+      operationId: searchArticles
+      summary: Search articles by keyword — returns titles, subtitles, authors
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: md0001
+          signature_id: md0001s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: searchArticles
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "artificial intelligence", "web development").
+      responses:
+        '200':
+          description: Search results with matching articles.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  articles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SearchResult'
+                  totalResults:
+                    type: integer
+  /tag/{tagSlug}/feed:
+    get:
+      operationId: getTagFeed
+      summary: Get latest articles for a tag/topic — titles, authors, claps, reading time
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: md0002
+          signature_id: md0002s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: getTagFeed
+      parameters:
+        - name: tagSlug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tag slug (e.g. "programming", "artificial-intelligence", "data-science").
+      responses:
+        '200':
+          description: Latest posts for the tag.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tagSlug:
+                    type: string
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostSummary'
+                  pageInfo:
+                    $ref: '#/components/schemas/PageInfo'
+  /tag/{tagSlug}/curated-lists:
+    get:
+      operationId: getTagCuratedLists
+      summary: Get curated reading lists for a tag — staff-picked collections
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: md0003
+          signature_id: md0003s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: getTagCuratedLists
+      parameters:
+        - name: tagSlug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tag slug (e.g. "programming", "technology").
+      responses:
+        '200':
+          description: Curated reading lists for the tag.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tagSlug:
+                    type: string
+                  lists:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CuratedList'
+  /tag/{tagSlug}/writers:
+    get:
+      operationId: getTagWriters
+      summary: Get recommended writers and publications for a tag
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: md0004
+          signature_id: md0004s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: getTagWriters
+      parameters:
+        - name: tagSlug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tag slug.
+        - name: first
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of writers to return.
+        - name: after
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor.
+      responses:
+        '200':
+          description: Recommended writers for the tag.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tagSlug:
+                    type: string
+                  publishers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Publisher'
+                  pageInfo:
+                    $ref: '#/components/schemas/PageInfo'
+  /feed/recommended:
+    get:
+      operationId: getRecommendedFeed
+      summary: Get personalized recommended article feed — trending and top posts
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: md0005
+          signature_id: md0005s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: getRecommendedFeed
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of posts to return.
+      responses:
+        '200':
+          description: Recommended feed posts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostSummary'
+                  pagingInfo:
+                    type: object
+  /tags/recommended:
+    get:
+      operationId: getRecommendedTags
+      summary: Get recommended/trending topic tags
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: md0006
+          signature_id: md0006s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: getRecommendedTags
+      parameters: []
+      responses:
+        '200':
+          description: Recommended tags.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        displayTitle:
+                          type: string
+                        slug:
+                          type: string
+  /posts/batch:
+    get:
+      operationId: getPublicationPosts
+      summary: Get multiple posts by ID — for publication sections and curated collections
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: md0007
+          signature_id: md0007s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: getPublicationPosts
+      parameters:
+        - name: postIds
+          in: query
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+          description: Array of Medium post IDs.
+      responses:
+        '200':
+          description: Posts matching the given IDs.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostSummary'
+  /post/{postId}/claps:
+    get:
+      operationId: getPostClaps
+      summary: Get clap count for a specific post
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: md0008
+          signature_id: md0008s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: getPostClaps
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Medium post ID (hex string, e.g. "70d2a62246c0").
+      responses:
+        '200':
+          description: Post clap count.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  postId:
+                    type: string
+                  clapCount:
+                    type: integer
+  /writers/recommended:
+    get:
+      operationId: getRecommendedWriters
+      summary: Get recommended writers and publications to follow
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: md0009
+          signature_id: md0009s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: getRecommendedWriters
+      parameters: []
+      responses:
+        '200':
+          description: Recommended writers and publications.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  publishers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Publisher'
+  /user/{username}/profile:
+    get:
+      operationId: getUserProfile
+      summary: Get user/author profile — name, bio, followers
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: md0010
+          signature_id: md0010s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: getUserProfile
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Medium username (e.g. "Netflix_TechBlog", "towards-data-science").
+      responses:
+        '200':
+          description: User profile information.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  name:
+                    type: string
+                  bio:
+                    type: string
+                  followers:
+                    type: string
+                  imageUrl:
+                    type: string
+components:
+  schemas:
+    PostSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        mediumUrl:
+          type: string
+        isLocked:
+          type: boolean
+          description: True if behind Medium paywall.
+        clapCount:
+          type: integer
+        visibility:
+          type: string
+        readingTime:
+          type: number
+          description: Estimated reading time in minutes.
+        firstPublishedAt:
+          type: integer
+          description: Unix timestamp (ms).
+        latestPublishedAt:
+          type: integer
+        creator:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            username:
+              type: string
+            imageId:
+              type: string
+        collection:
+          type: [object, 'null']
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            slug:
+              type: string
+            domain:
+              type: [string, 'null']
+        extendedPreviewContent:
+          type: object
+          properties:
+            subtitle:
+              type: string
+            isFullContent:
+              type: boolean
+        postResponses:
+          type: object
+          properties:
+            count:
+              type: integer
+    SearchResult:
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        url:
+          type: string
+        author:
+          type: string
+        publishedAt:
+          type: string
+    CuratedList:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        creator:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            username:
+              type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              mediumUrl:
+                type: string
+    Publisher:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        bio:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+        username:
+          type: [string, 'null']
+        slug:
+          type: [string, 'null']
+        imageId:
+          type: [string, 'null']
+        followerCount:
+          type: [integer, 'null']
+    PageInfo:
+      type: object
+      properties:
+        hasNextPage:
+          type: boolean
+        endCursor:
+          type: [string, 'null']
