@@ -1,0 +1,791 @@
+openapi: '3.1.0'
+info:
+  title: Xueqiu API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://xueqiu.com
+    x-openweb:
+      transport: page
+  - url: https://stock.xueqiu.com
+    x-openweb:
+      transport: page
+paths:
+  /v5/stock/quote:
+    get:
+      operationId: getStockQuote
+      summary: Get real-time stock quote with price, volume, market cap, and extended details
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: xq0001
+          signature_id: xq0001s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: xueqiu-api
+          operation: getStockQuote
+      parameters:
+        - name: symbol
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Stock symbol with market prefix (e.g. "SH600519" for Shanghai, "SZ000001" for Shenzhen, "AAPL" for US).
+      responses:
+        '200':
+          description: Stock quote with market status and detailed price data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      market:
+                        $ref: '#/components/schemas/MarketStatus'
+                      quote:
+                        $ref: '#/components/schemas/StockQuote'
+                  error_code:
+                    type: integer
+                  error_description:
+                    type: string
+  /v5/stock/batch/quote:
+    get:
+      operationId: getMarketIndices
+      summary: Get batch quotes for multiple symbols — market indices, watchlist stocks
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: xq0002
+          signature_id: xq0002s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: xueqiu-api
+          operation: getMarketIndices
+      parameters:
+        - name: symbols
+          in: query
+          required: false
+          schema:
+            type: string
+            default: SH000001,SZ399001,SZ399006,SH000300,SH000016,SH000905
+          description: Comma-separated stock symbols. Defaults to major CN indices (SSE Composite, SZSE Component, ChiNext, CSI 300, SSE 50, CSI 500).
+      responses:
+        '200':
+          description: Batch quote results for all requested symbols.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            market:
+                              $ref: '#/components/schemas/MarketStatus'
+                            quote:
+                              $ref: '#/components/schemas/StockQuote'
+                  error_code:
+                    type: integer
+                  error_description:
+                    type: string
+  /v5/stock/chart/kline:
+    get:
+      operationId: getKlineChart
+      summary: Get K-line (candlestick) chart data — OHLCV with turnover rate
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: xq0003
+          signature_id: xq0003s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: xueqiu-api
+          operation: getKlineChart
+      parameters:
+        - name: symbol
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Stock symbol (e.g. "SH600519").
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            default: day
+            enum: [day, week, month, quarter, year, '120m', '60m', '30m', '15m', '5m', '1m']
+          description: K-line period.
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: -30
+          description: Number of data points. Negative = before begin timestamp.
+        - name: begin
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Timestamp in ms. Defaults to current time.
+      responses:
+        '200':
+          description: K-line data with OHLCV columns.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      symbol:
+                        type: string
+                      column:
+                        type: array
+                        items:
+                          type: string
+                        description: Column names — timestamp, volume, open, high, low, close, chg, percent, turnoverrate, amount.
+                      item:
+                        type: array
+                        items:
+                          type: array
+                          items: {}
+                  error_code:
+                    type: integer
+                  error_description:
+                    type: string
+  /query/v1/suggest_stock:
+    get:
+      operationId: suggestStock
+      summary: Typeahead stock search — returns matching symbols as user types
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: xq0004
+          signature_id: xq0004s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: xueqiu-api
+          operation: suggestStock
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query — stock name, ticker, or pinyin (e.g. "maotai", "茅台", "600519").
+      responses:
+        '200':
+          description: Matching stock suggestions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockSuggestion'
+                  message:
+                    type: string
+                  success:
+                    type: boolean
+                  meta:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      has_next_page:
+                        type: boolean
+  /statuses/hot/listV2:
+    get:
+      operationId: getHotPosts
+      summary: Get trending/hot posts from Xueqiu community — popular stock discussions
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: xq0005
+          signature_id: xq0005s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: xueqiu-api
+          operation: getHotPosts
+      parameters:
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of posts to return.
+        - name: max_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: -1
+          description: Pagination cursor — use next_max_id from previous response.
+      responses:
+        '200':
+          description: Hot posts with full status content and user info.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_max_id:
+                    type: integer
+                    description: Cursor for next page.
+                  next_id:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HotPostItem'
+  /query/v1/search/status:
+    get:
+      operationId: searchPosts
+      summary: Search user posts/discussions by keyword — full-text search with highlighting
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: xq0006
+          signature_id: xq0006s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: xueqiu-api
+          operation: searchPosts
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "茅台", "新能源", "AI芯片").
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Results per page.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            default: ''
+          description: Sort order (empty for relevance).
+      responses:
+        '200':
+          description: Matching posts with highlighted keywords.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  page:
+                    type: integer
+                  maxPage:
+                    type: integer
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostStatus'
+  /query/v1/search/user:
+    get:
+      operationId: searchUsers
+      summary: Search users by name or keyword — find investors, analysts, KOLs
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: xq0007
+          signature_id: xq0007s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: xueqiu-api
+          operation: searchUsers
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword — username, stock name, or topic.
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Results per page.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+      responses:
+        '200':
+          description: Matching users with profile info.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  page:
+                    type: integer
+                  maxPage:
+                    type: integer
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserProfile'
+  /v5/stock/finance/cn/income:
+    get:
+      operationId: getFinancialIncome
+      summary: Get income statement — revenue, net profit, operating profit for recent quarters
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: xq0008
+          signature_id: xq0008s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: xueqiu-api
+          operation: getFinancialIncome
+      parameters:
+        - name: symbol
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Stock symbol (e.g. "SH600519").
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 5
+          description: Number of reporting periods to return.
+      responses:
+        '200':
+          description: Income statement data for recent quarters.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      quote_name:
+                        type: string
+                      currency_name:
+                        type: string
+                      currency:
+                        type: string
+                      last_report_name:
+                        type: string
+                      list:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/IncomeStatement'
+                  error_code:
+                    type: integer
+                  error_description:
+                    type: string
+  /v5/stock/finance/cn/indicator:
+    get:
+      operationId: getFinancialIndicators
+      summary: Get financial indicators — ROE, EPS, P/E, P/B, dividend yield per quarter
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: xq0009
+          signature_id: xq0009s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: xueqiu-api
+          operation: getFinancialIndicators
+      parameters:
+        - name: symbol
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Stock symbol (e.g. "SH600519").
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 5
+          description: Number of reporting periods to return.
+      responses:
+        '200':
+          description: Financial indicator data for recent quarters.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      quote_name:
+                        type: string
+                      currency_name:
+                        type: string
+                      currency:
+                        type: string
+                      last_report_name:
+                        type: string
+                      list:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FinancialIndicator'
+                  error_code:
+                    type: integer
+                  error_description:
+                    type: string
+  /service/v5/stock/screener/quote/list:
+    get:
+      operationId: getStockScreener
+      summary: Stock screener — ranked list of stocks by percent change, market cap, volume
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: xq0010
+          signature_id: xq0010s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: xueqiu-api
+          operation: getStockScreener
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Results per page.
+        - name: order_by
+          in: query
+          required: false
+          schema:
+            type: string
+            default: percent
+            enum: [percent, market_capital, amount, turnoverrate, current]
+          description: Field to sort by.
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            default: desc
+            enum: [desc, asc]
+          description: Sort direction.
+        - name: market
+          in: query
+          required: false
+          schema:
+            type: string
+            default: CN
+          description: Market region (CN, US, HK).
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            default: sh_sz
+          description: Stock exchange filter (sh_sz for A-shares, hk for HK stocks).
+      responses:
+        '200':
+          description: Ranked stock list with quote summaries.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      list:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ScreenerStock'
+                  error_code:
+                    type: integer
+                  error_description:
+                    type: string
+components:
+  schemas:
+    MarketStatus:
+      type: object
+      properties:
+        status_id:
+          type: integer
+        region:
+          type: string
+        status:
+          type: string
+          description: Market status in Chinese (e.g. "交易中", "未开盘", "已收盘").
+        time_zone:
+          type: string
+    StockQuote:
+      type: object
+      properties:
+        symbol:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        exchange:
+          type: string
+        current:
+          type: number
+          description: Current price.
+        percent:
+          type: number
+          description: Percent change from last close.
+        chg:
+          type: number
+          description: Absolute price change.
+        open:
+          type: number
+        high:
+          type: number
+        low:
+          type: number
+        last_close:
+          type: number
+        volume:
+          type: integer
+        amount:
+          type: number
+          description: Trading amount in CNY.
+        market_capital:
+          type: number
+        float_market_capital:
+          type: number
+        turnover_rate:
+          type: number
+        pe_ttm:
+          type: number
+        pb:
+          type: number
+        timestamp:
+          type: integer
+          description: Quote timestamp in milliseconds.
+    StockSuggestion:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Symbol with market prefix (e.g. "SH600519").
+        query:
+          type: string
+          description: Stock name in Chinese.
+        stock_type:
+          type: integer
+        type:
+          type: integer
+    HotPostItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Hot list entry ID.
+        original_status:
+          $ref: '#/components/schemas/PostStatus'
+    PostStatus:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          description: Post content (HTML).
+        created_at:
+          type: integer
+          description: Timestamp in ms.
+        retweet_count:
+          type: integer
+        fav_count:
+          type: integer
+        like_count:
+          type: integer
+        source:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserProfile'
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        screen_name:
+          type: string
+        description:
+          type: string
+        followers_count:
+          type: integer
+        friends_count:
+          type: integer
+        gender:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        verified:
+          type: boolean
+        verified_description:
+          type: string
+        profile_image_url:
+          type: string
+        photo_domain:
+          type: string
+    IncomeStatement:
+      type: object
+      properties:
+        report_date:
+          type: integer
+          description: Report date timestamp in ms.
+        report_name:
+          type: string
+          description: Report period name (e.g. "2025三季报").
+        total_revenue:
+          type: array
+          description: "[value, yoy_growth_rate]"
+        net_profit:
+          type: array
+          description: "[value, yoy_growth_rate]"
+        net_profit_atsopc:
+          type: array
+          description: "[value, yoy_growth_rate] — net profit attributable to shareholders."
+        op:
+          type: array
+          description: "[value, yoy_growth_rate] — operating profit."
+    FinancialIndicator:
+      type: object
+      properties:
+        report_date:
+          type: integer
+        report_name:
+          type: string
+        avg_roe:
+          type: array
+          description: "[value, yoy_change] — average return on equity."
+        np_per_share:
+          type: array
+          description: "[value, yoy_change] — net asset per share."
+        basic_eps:
+          type: array
+          description: "[value, yoy_change] — basic earnings per share."
+        operate_cash_flow_ps:
+          type: array
+          description: "[value, yoy_change] — operating cash flow per share."
+        undistri_profit_ps:
+          type: array
+          description: "[value, yoy_change] — undistributed profit per share."
+    ScreenerStock:
+      type: object
+      properties:
+        symbol:
+          type: string
+        current:
+          type: number
+        percent:
+          type: number
+        market_capital:
+          type: number
+        float_market_capital:
+          type: number
+        pb_ttm:
+          type: number
+        pe_ttm:
+          type: number
+          nullable: true
+        roe_ttm:
+          type: number
+          nullable: true
+        dividend_yield:
+          type: number
+          nullable: true
+        total_percent:
+          type: number
+          description: YTD percent change.
+        amplitude:
+          type: number
