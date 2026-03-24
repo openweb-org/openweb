@@ -1,0 +1,16 @@
+{
+  "operation_id": "searchPOI",
+  "cases": [
+    {
+      "input": {
+        "key": "Shanghai",
+        "mode": "0",
+        "tripType": "OW"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "operation_id": "getFlightComfort",
+  "cases": [
+    {
+      "input": {
+        "FlightSegmentList": [
+          { "dCity": "NYC", "aCity": "SHA", "dDate": "2026-04-20", "flightNo": "MU588" }
+        ]
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

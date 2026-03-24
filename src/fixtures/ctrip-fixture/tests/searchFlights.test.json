@@ -1,0 +1,23 @@
+{
+  "operation_id": "searchFlights",
+  "cases": [
+    {
+      "input": {
+        "searchCriteria": {
+          "grade": 3,
+          "realGrade": 1,
+          "tripType": 1,
+          "journeyNo": 1,
+          "passengerInfoType": { "adultCount": 1, "childCount": 0, "infantCount": 0 },
+          "journeyInfoTypes": [{ "journeyNo": 1, "departDate": "2026-04-20", "departCode": "NYC", "arriveCode": "SHA", "departAirport": "", "arriveAirport": "" }]
+        },
+        "sortInfoType": { "direction": true, "orderBy": "Direct", "topList": [] },
+        "Head": { "Locale": "en-US", "Currency": "USD", "Group": "Trip", "Source": "ONLINE", "Version": "3" }
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,599 @@
+openapi: '3.1.0'
+info:
+  title: Trip.com / Ctrip
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://us.trip.com
+    x-openweb:
+      transport: page
+paths:
+  /restapi/soa2/27015/FlightListSearch:
+    post:
+      operationId: searchFlights
+      summary: Search flights by route and date — airlines, times, stops, prices
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0001
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - searchCriteria
+                - Head
+              properties:
+                mode:
+                  type: integer
+                  default: 0
+                searchCriteria:
+                  type: object
+                  required:
+                    - tripType
+                    - journeyInfoTypes
+                    - passengerInfoType
+                  properties:
+                    grade:
+                      type: integer
+                      default: 3
+                    realGrade:
+                      type: integer
+                      default: 1
+                    tripType:
+                      type: integer
+                      description: '1 = one-way, 2 = round-trip'
+                      default: 1
+                    journeyNo:
+                      type: integer
+                      default: 1
+                    passengerInfoType:
+                      type: object
+                      properties:
+                        adultCount:
+                          type: integer
+                          default: 1
+                        childCount:
+                          type: integer
+                          default: 0
+                        infantCount:
+                          type: integer
+                          default: 0
+                    journeyInfoTypes:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - departDate
+                          - departCode
+                          - arriveCode
+                        properties:
+                          journeyNo:
+                            type: integer
+                            default: 1
+                          departDate:
+                            type: string
+                            description: 'Departure date (YYYY-MM-DD).'
+                          departCode:
+                            type: string
+                            description: 'Departure city code (e.g., NYC, SHA, BJS).'
+                          arriveCode:
+                            type: string
+                            description: 'Arrival city code (e.g., SHA, LON, TYO).'
+                          departAirport:
+                            type: string
+                            default: ''
+                          arriveAirport:
+                            type: string
+                            default: ''
+                sortInfoType:
+                  type: object
+                  default:
+                    direction: true
+                    orderBy: Direct
+                    topList: []
+                Head:
+                  type: object
+                  required:
+                    - Locale
+                    - Currency
+                    - Group
+                    - Source
+                  properties:
+                    Locale:
+                      type: string
+                      default: en-US
+                    Currency:
+                      type: string
+                      default: USD
+                    Group:
+                      type: string
+                      default: Trip
+                    Source:
+                      type: string
+                      default: ONLINE
+                    Version:
+                      type: string
+                      default: '3'
+      responses:
+        '200':
+          description: Flight search results with itineraries, airlines, and prices.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      flightItineraryList:
+                        type: array
+                        items:
+                          type: object
+                      token:
+                        type: string
+                  status:
+                    type: integer
+  /restapi/soa2/14427/GetLowPriceInCalender:
+    post:
+      operationId: getFlightCalendarPrices
+      summary: Get lowest flight prices per day for a route — calendar view pricing
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0002
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - dCity
+                - aCity
+                - dDate
+              properties:
+                dCity:
+                  type: string
+                  description: 'Departure city code (e.g., NYC).'
+                aCity:
+                  type: string
+                  description: 'Arrival city code (e.g., SHA).'
+                dDate:
+                  type: string
+                  description: 'Reference date (YYYY-MM-DD).'
+                flightWayType:
+                  type: string
+                  default: OW
+                  description: 'OW = one-way, RT = round-trip.'
+                cabinClass:
+                  type: string
+                  default: Economy
+                transferType:
+                  type: string
+                  default: ANY
+                searchInfo:
+                  type: object
+                  default:
+                    travelerNum:
+                      adult: 1
+                      child: 0
+                      infant: 0
+                Head:
+                  type: object
+      responses:
+        '200':
+          description: Calendar of lowest prices per day.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      lowPriceList:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            date:
+                              type: string
+                            price:
+                              type: number
+                            currency:
+                              type: string
+  /restapi/soa2/14427/BatchGetFlightComfort:
+    post:
+      operationId: getFlightComfort
+      summary: Get comfort ratings for flight segments — seat, WiFi, entertainment
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0003
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - FlightSegmentList
+              properties:
+                FlightSegmentList:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - dCity
+                      - aCity
+                      - dDate
+                      - flightNo
+                    properties:
+                      dCity:
+                        type: string
+                        description: Departure city code.
+                      aCity:
+                        type: string
+                        description: Arrival city code.
+                      dDate:
+                        type: string
+                        description: Departure date (YYYY-MM-DD).
+                      flightNo:
+                        type: string
+                        description: 'Flight number (e.g., CX831).'
+                Head:
+                  type: object
+      responses:
+        '200':
+          description: Comfort data per flight segment.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  /restapi/soa2/27501/getGeneralInfo:
+    post:
+      operationId: getGeneralInfo
+      summary: Get general site info and announcements — config, promotions, notices
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0004
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                showMore:
+                  type: boolean
+                  default: true
+                Head:
+                  type: object
+                  properties:
+                    Locale:
+                      type: string
+                      default: en-US
+                    Currency:
+                      type: string
+                      default: USD
+                    Group:
+                      type: string
+                      default: Trip
+                    Source:
+                      type: string
+                      default: ONLINE
+                localTime:
+                  type: string
+                  description: 'Local date (YYYY-MM-DD).'
+      responses:
+        '200':
+          description: General site info.
+          content:
+            application/json:
+              schema:
+                type: object
+  /restapi/soa2/20400/getGsHotSearchForTripOnline:
+    post:
+      operationId: getHotDestinations
+      summary: Get trending travel destinations — popular cities and search terms
+      servers:
+        - url: https://www.trip.com
+          x-openweb:
+            transport: page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0005
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lang:
+                  type: string
+                  default: en
+                locale:
+                  type: string
+                  default: en-US
+                currency:
+                  type: string
+                  default: USD
+                viewDistrictId:
+                  type: string
+                  description: 'District to get recommendations for (e.g., "2" = Shanghai).'
+                dataType:
+                  type: string
+                  default: destinations
+                head:
+                  type: object
+                  properties:
+                    syscode:
+                      type: string
+                      default: '999'
+                    locale:
+                      type: string
+                      default: en-US
+      responses:
+        '200':
+          description: Trending destinations.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        word:
+                          type: string
+                          description: Destination name.
+                        type:
+                          type: string
+                        url:
+                          type: string
+                          description: Travel guide URL path.
+  /restapi/soa2/31699/searchListForWeb:
+    post:
+      operationId: searchTrains
+      summary: Search trains by departure and arrival stations — schedules, prices, seat types
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0006
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                head:
+                  type: object
+                  description: Request context with locale, currency, device info.
+      responses:
+        '200':
+          description: Train search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  /restapi/soa2/36040/loadStationList:
+    post:
+      operationId: getTrainStations
+      summary: Get list of train stations — names, codes, countries
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0007
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                head:
+                  type: object
+                  description: Request context.
+      responses:
+        '200':
+          description: List of train stations.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  /restapi/soa2/14427/poiSearch:
+    post:
+      operationId: searchPOI
+      summary: Search cities, airports, and POIs by keyword — autocomplete for flight/hotel search
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0008
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+              properties:
+                key:
+                  type: string
+                  description: Search keyword (city or airport name).
+                mode:
+                  type: string
+                  default: '0'
+                tripType:
+                  type: string
+                  default: OW
+                  description: 'OW = one-way, RT = round-trip.'
+                Head:
+                  type: object
+      responses:
+        '200':
+          description: Matching cities and airports.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      poiList:
+                        type: array
+                        items:
+                          type: object
+  /restapi/soa2/23044/getDestinationPageInfo.json:
+    post:
+      operationId: getDestinationInfo
+      summary: Get travel guide info for a destination — attractions, hotels, restaurants, tips
+      servers:
+        - url: https://www.trip.com
+          x-openweb:
+            transport: page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0009
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - districtId
+              properties:
+                districtId:
+                  type: string
+                  description: 'District/city ID (e.g., "2" = Shanghai).'
+                moduleList:
+                  type: array
+                  items:
+                    type: string
+                  description: >-
+                    Modules to load. Options include: hotDistrict, classicRecommendHotel,
+                    classicRecommendSight, classicRecommendRestaurant, toursAndTickets,
+                    localExperienceMoments, hotComment, relateDistrict, advertisement.
+                    Pass null for overview.
+                head:
+                  type: object
+      responses:
+        '200':
+          description: Destination guide data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+  /restapi/soa2/28181/json/getByScenesCode:
+    post:
+      operationId: searchAttractions
+      summary: Search attractions and things-to-do by city — tickets, tours, experiences
+      servers:
+        - url: https://www.trip.com
+          x-openweb:
+            transport: page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0010
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                baseInfo:
+                  type: object
+                  properties:
+                    channelId:
+                      type: integer
+                      default: 24
+                    locale:
+                      type: string
+                      default: en-US
+                    currency:
+                      type: string
+                      default: USD
+                sceneParams:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      sceneCode:
+                        type: string
+                        description: Scene code for the attractions list.
+                      filterList:
+                        type: array
+                        items:
+                          type: object
+                head:
+                  type: object
+      responses:
+        '200':
+          description: Attractions and tours listings.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object

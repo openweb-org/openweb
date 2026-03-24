@@ -1,0 +1,15 @@
+{
+  "operation_id": "getDestinationInfo",
+  "cases": [
+    {
+      "input": {
+        "districtId": "2",
+        "moduleList": ["classicRecommendSight"]
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

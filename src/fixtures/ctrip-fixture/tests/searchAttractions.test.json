@@ -1,0 +1,18 @@
+{
+  "operation_id": "searchAttractions",
+  "cases": [
+    {
+      "input": {
+        "baseInfo": {
+          "channelId": 24,
+          "locale": "en-US",
+          "currency": "USD"
+        }
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
