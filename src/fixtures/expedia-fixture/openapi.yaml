@@ -1,0 +1,595 @@
+openapi: '3.1.0'
+info:
+  title: Expedia
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.expedia.com
+    x-openweb:
+      transport: page
+paths:
+  /Hotel-Search:
+    get:
+      operationId: searchHotels
+      summary: Search hotels by destination — names, prices, ratings, review counts
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ex0001
+          signature_id: ex0001s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: expedia-web
+          operation: searchHotels
+      parameters:
+        - name: destination
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Destination search query (e.g. "New York", "Paris").
+        - name: regionId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Expedia region ID (e.g. "178293" for New York).
+        - name: latLong
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Latitude,longitude (e.g. "40.7128,-74.0060").
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-in date in YYYY-MM-DD format.
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-out date in YYYY-MM-DD format.
+        - name: rooms
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Number of rooms.
+        - name: adults
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 2
+          description: Number of adult guests.
+      responses:
+        '200':
+          description: List of hotels matching the search.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, hotels]
+                properties:
+                  count:
+                    type: integer
+                  hotels:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, url]
+                      properties:
+                        name:
+                          type: string
+                        url:
+                          type: string
+                        price:
+                          type: [string, 'null']
+                          description: Price per night or total (e.g. "$256").
+                        rating:
+                          type: [string, 'null']
+                          description: Review score out of 10 (e.g. "9.0").
+                        ratingText:
+                          type: [string, 'null']
+                        reviewCount:
+                          type: [string, 'null']
+                        neighborhood:
+                          type: [string, 'null']
+
+  /{slug}.Hotel-Information:
+    get:
+      operationId: getHotelDetail
+      summary: Get hotel details — name, star rating, review score, address, amenities from LD+JSON
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ex0002
+          signature_id: ex0002s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: expedia-web
+          operation: getHotelDetail
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Hotel URL slug (e.g. "New-York-Hotels-Hilton-Garden-Inn.h17432204").
+        - name: chkin
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-in date (YYYY-MM-DD).
+        - name: chkout
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-out date (YYYY-MM-DD).
+      responses:
+        '200':
+          description: Hotel detail from LD+JSON Hotel schema.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: [string, 'null']
+                  starRating:
+                    type: [string, 'null']
+                    description: Star rating (e.g. "3.0").
+                  rating:
+                    type: [string, 'null']
+                    description: Aggregate guest rating out of 10.
+                  reviewCount:
+                    type: [integer, 'null']
+                  address:
+                    type: [object, 'null']
+                    properties:
+                      street:
+                        type: [string, 'null']
+                      city:
+                        type: [string, 'null']
+                      region:
+                        type: [string, 'null']
+                      postalCode:
+                        type: [string, 'null']
+                      country:
+                        type: [string, 'null']
+                  amenities:
+                    type: array
+                    items:
+                      type: string
+                    description: Amenity names from LD+JSON.
+                  image:
+                    type: [string, 'null']
+                    description: Main hotel image URL on trvl-media.com.
+
+  /internal/getHotelReviews:
+    get:
+      operationId: getHotelReviews
+      summary: Get hotel review summary — overall score and featured reviews
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ex0003
+          signature_id: ex0003s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: expedia-web
+          operation: getHotelReviews
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Hotel URL slug — page must be on this hotel's page.
+      responses:
+        '200':
+          description: Review summary extracted from the hotel page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  score:
+                    type: [string, 'null']
+                    description: Overall score out of 10.
+                  reviewCount:
+                    type: [string, 'null']
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: [string, 'null']
+                        rating:
+                          type: [string, 'null']
+
+  /internal/getHotelRooms:
+    get:
+      operationId: getHotelRooms
+      summary: Get available room types — names, ratings, prices
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ex0004
+          signature_id: ex0004s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: expedia-web
+          operation: getHotelRooms
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Hotel URL slug — page must be on this hotel's page.
+      responses:
+        '200':
+          description: Room types and pricing.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, rooms]
+                properties:
+                  count:
+                    type: integer
+                  rooms:
+                    type: array
+                    items:
+                      type: object
+                      required: [name]
+                      properties:
+                        name:
+                          type: string
+                        rating:
+                          type: [string, 'null']
+                        reviewCount:
+                          type: [string, 'null']
+                        price:
+                          type: [string, 'null']
+                          description: Price for the stay.
+                        amenities:
+                          type: array
+                          items:
+                            type: string
+
+  /internal/getHotelPhotos:
+    get:
+      operationId: getHotelPhotos
+      summary: Get hotel photo gallery — image URLs from trvl-media.com CDN
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ex0005
+          signature_id: ex0005s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: expedia-web
+          operation: getHotelPhotos
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Hotel URL slug — page must be on this hotel's page.
+      responses:
+        '200':
+          description: Hotel photo URLs.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, photos]
+                properties:
+                  count:
+                    type: integer
+                  photos:
+                    type: array
+                    items:
+                      type: string
+                      description: Image URL on images.trvl-media.com.
+
+  /internal/getHotelLocation:
+    get:
+      operationId: getHotelLocation
+      summary: Get hotel location — address and nearby POIs with distances
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ex0006
+          signature_id: ex0006s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: expedia-web
+          operation: getHotelLocation
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Hotel URL slug — page must be on this hotel's page.
+      responses:
+        '200':
+          description: Location information.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  address:
+                    type: [string, 'null']
+                  pois:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        distance:
+                          type: [string, 'null']
+                        type:
+                          type: [string, 'null']
+
+  /internal/getHotelFAQ:
+    get:
+      operationId: getHotelFAQ
+      summary: Get hotel FAQ — from LD+JSON FAQPage or DOM
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ex0007
+          signature_id: ex0007s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: expedia-web
+          operation: getHotelFAQ
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Hotel URL slug — page must be on this hotel's page.
+      responses:
+        '200':
+          description: FAQ questions and answers.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, questions]
+                properties:
+                  count:
+                    type: integer
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        question:
+                          type: [string, 'null']
+                        answer:
+                          type: [string, 'null']
+
+  /things-to-do/search:
+    get:
+      operationId: searchActivities
+      summary: Search activities and things to do — tours, tickets, experiences
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ex0008
+          signature_id: ex0008s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: expedia-web
+          operation: searchActivities
+      parameters:
+        - name: location
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Location query (e.g. "New York", "Paris").
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Start date (YYYY-MM-DD).
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+          description: End date (YYYY-MM-DD).
+      responses:
+        '200':
+          description: Activities matching the search.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalCount:
+                    type: integer
+                  activities:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        duration:
+                          type: [string, 'null']
+                        rating:
+                          type: [string, 'null']
+                          description: Rating out of 10.
+                        price:
+                          type: [string, 'null']
+                        category:
+                          type: [string, 'null']
+
+  /carsearch:
+    get:
+      operationId: searchCarRentals
+      summary: Search car rentals — vehicle types, prices, passenger capacity
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ex0009
+          signature_id: ex0009s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: expedia-web
+          operation: searchCarRentals
+      parameters:
+        - name: locn
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Pickup location (e.g. "Los Angeles, CA").
+        - name: date1
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pickup date (MM/DD/YYYY).
+        - name: date2
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Return date (MM/DD/YYYY).
+        - name: time1
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pickup time (e.g. "1000AM").
+        - name: time2
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Return time (e.g. "1000AM").
+      responses:
+        '200':
+          description: Car rental results.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, cars]
+                properties:
+                  count:
+                    type: integer
+                  cars:
+                    type: array
+                    items:
+                      type: object
+                      required: [name]
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: [string, 'null']
+                        passengers:
+                          type: [string, 'null']
+                        price:
+                          type: [string, 'null']
+                          description: Total rental price.
+                        provider:
+                          type: [string, 'null']
+
+  /deals:
+    get:
+      operationId: getDeals
+      summary: Get travel deals — discounted hotels with member pricing
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ex0010
+          signature_id: ex0010s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: expedia-web
+          operation: getDeals
+      responses:
+        '200':
+          description: Current travel deals.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, deals]
+                properties:
+                  count:
+                    type: integer
+                  deals:
+                    type: array
+                    items:
+                      type: object
+                      required: [name]
+                      properties:
+                        name:
+                          type: string
+                        location:
+                          type: [string, 'null']
+                        rating:
+                          type: [string, 'null']
+                        price:
+                          type: [string, 'null']
+                          description: Discounted price.
+                        originalPrice:
+                          type: [string, 'null']
+                          description: Original price before discount.
