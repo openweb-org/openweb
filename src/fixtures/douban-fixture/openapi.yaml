@@ -1,0 +1,387 @@
+openapi: '3.1.0'
+info:
+  title: Douban API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.douban.com
+    x-openweb:
+      transport: page
+paths:
+  /search/movie:
+    get:
+      operationId: searchMovies
+      summary: Search movies by keyword — titles, ratings, metadata
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: db0001
+          signature_id: db0001s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: douban-dom
+          operation: searchMovies
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "肖申克的救赎", "Inception", "三体").
+      responses:
+        '200':
+          description: Movie search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                  totalResults:
+                    type: integer
+
+  /subject/{subjectId}:
+    get:
+      operationId: getMovieDetail
+      summary: Get movie detail — rating, cast, director, plot summary
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: db0002
+          signature_id: db0002s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: douban-dom
+          operation: getMovieDetail
+      parameters:
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Douban movie subject ID (e.g. "1292052" for The Shawshank Redemption).
+      responses:
+        '200':
+          description: Full movie detail.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /subject/{subjectId}/reviews:
+    get:
+      operationId: getMovieReviews
+      summary: Get user reviews for a movie — title, author, rating, content
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: db0003
+          signature_id: db0003s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: douban-dom
+          operation: getMovieReviews
+      parameters:
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Douban movie subject ID.
+      responses:
+        '200':
+          description: Movie reviews list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subjectId:
+                    type: string
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                  totalReviews:
+                    type: integer
+
+  /subject/{subjectId}/photos:
+    get:
+      operationId: getMoviePhotos
+      summary: Get movie photo gallery — stills, posters, behind the scenes
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: db0004
+          signature_id: db0004s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: douban-dom
+          operation: getMoviePhotos
+      parameters:
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Douban movie subject ID.
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            default: S
+          description: 'Photo type: S (stills), R (posters), W (wallpapers).'
+      responses:
+        '200':
+          description: Photo gallery for the movie.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subjectId:
+                    type: string
+                  photos:
+                    type: array
+                    items:
+                      type: object
+                  totalPhotos:
+                    type: integer
+
+  /top250:
+    get:
+      operationId: getTop250
+      summary: Get Douban Top 250 movies — ranked by user ratings
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: db0005
+          signature_id: db0005s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: douban-dom
+          operation: getTop250
+      parameters:
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset (0, 25, 50, ...). Each page returns 25 movies.
+      responses:
+        '200':
+          description: Top 250 movies page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  movies:
+                    type: array
+                    items:
+                      type: object
+                  start:
+                    type: integer
+                  pageSize:
+                    type: integer
+
+  /search/book:
+    get:
+      operationId: searchBooks
+      summary: Search books by keyword — titles, authors, ratings
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: db0006
+          signature_id: db0006s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: douban-dom
+          operation: searchBooks
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "三体", "哈利波特").
+      responses:
+        '200':
+          description: Book search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                  totalResults:
+                    type: integer
+
+  /book/subject/{subjectId}:
+    get:
+      operationId: getBookDetail
+      summary: Get book detail — rating, author, publisher, summary
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: db0007
+          signature_id: db0007s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: douban-dom
+          operation: getBookDetail
+      parameters:
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Douban book subject ID (e.g. "2567698" for Three-Body Problem).
+      responses:
+        '200':
+          description: Full book detail.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /book/subject/{subjectId}/reviews:
+    get:
+      operationId: getBookReviews
+      summary: Get user reviews for a book — title, author, rating, content
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: db0008
+          signature_id: db0008s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: douban-dom
+          operation: getBookReviews
+      parameters:
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Douban book subject ID.
+      responses:
+        '200':
+          description: Book reviews list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subjectId:
+                    type: string
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                  totalReviews:
+                    type: integer
+
+  /search/music:
+    get:
+      operationId: searchMusic
+      summary: Search music/albums by keyword — titles, artists, ratings
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: db0009
+          signature_id: db0009s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: douban-dom
+          operation: searchMusic
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "周杰伦", "Beatles").
+      responses:
+        '200':
+          description: Music search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                  totalResults:
+                    type: integer
+
+  /music/subject/{subjectId}:
+    get:
+      operationId: getMusicDetail
+      summary: Get album detail — rating, artist, tracklist, genre
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: db0010
+          signature_id: db0010s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: douban-dom
+          operation: getMusicDetail
+      parameters:
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Douban music subject ID (e.g. "1401853" for Jay Chou's "七里香").
+      responses:
+        '200':
+          description: Full album detail.
+          content:
+            application/json:
+              schema:
+                type: object
