@@ -1,0 +1,566 @@
+openapi: '3.1.0'
+info:
+  title: Home Depot
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.homedepot.com
+    x-openweb:
+      transport: page
+paths:
+  /s/{query}:
+    get:
+      operationId: searchProducts
+      summary: Search Home Depot products by keyword — names, prices, ratings, brands, images
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: hd0001
+          signature_id: hd0001s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: searchProducts
+      parameters:
+        - name: query
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "cordless drill", "ceiling fan", "paint").
+      responses:
+        '200':
+          description: Product search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, products]
+                properties:
+                  count:
+                    type: integer
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, url]
+                      properties:
+                        name:
+                          type: string
+                        url:
+                          type: string
+                        price:
+                          type: [string, 'null']
+                          description: Current price (e.g. "$329.00").
+                        wasPrice:
+                          type: [string, 'null']
+                          description: Original price before discount.
+                        savings:
+                          type: [string, 'null']
+                          description: Savings amount.
+                        rating:
+                          type: [string, 'null']
+                          description: Rating out of 5.
+                        reviewCount:
+                          type: [string, 'null']
+                        brand:
+                          type: [string, 'null']
+                        image:
+                          type: [string, 'null']
+                          description: Product thumbnail URL on thdstatic.com.
+
+  /p/{slug}/{itemId}:
+    get:
+      operationId: getProductDetail
+      summary: Get product details — name, brand, description, specs, pricing, rating from LD+JSON Product schema
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: hd0002
+          signature_id: hd0002s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getProductDetail
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Product URL slug (e.g. "DEWALT-20V-MAX-Cordless-1-2-in-Drill-Driver-Tool-Only-DCD771B").
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Home Depot item ID (e.g. "204279876").
+      responses:
+        '200':
+          description: Full product details from LD+JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: [string, 'null']
+                  brand:
+                    type: [string, 'null']
+                  description:
+                    type: [string, 'null']
+                  productId:
+                    type: [string, 'null']
+                  sku:
+                    type: [string, 'null']
+                  model:
+                    type: [string, 'null']
+                  gtin13:
+                    type: [string, 'null']
+                  color:
+                    type: [string, 'null']
+                  dimensions:
+                    type: [object, 'null']
+                    properties:
+                      depth:
+                        type: [string, 'null']
+                      height:
+                        type: [string, 'null']
+                      width:
+                        type: [string, 'null']
+                  weight:
+                    type: [string, 'null']
+                  rating:
+                    type: [string, 'null']
+                    description: Aggregate rating (e.g. "4.5").
+                  reviewCount:
+                    type: [integer, 'null']
+                  price:
+                    type: [number, 'null']
+                    description: Current price in USD.
+                  priceCurrency:
+                    type: [string, 'null']
+                  image:
+                    type: [string, 'null']
+                    description: Primary product image URL.
+                  url:
+                    type: [string, 'null']
+
+  /internal/getProductPricing:
+    get:
+      operationId: getProductPricing
+      summary: Get product pricing — current price, strikethrough price, return policy
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: hd0003
+          signature_id: hd0003s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getProductPricing
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Product URL slug — page must be on this product's page.
+      responses:
+        '200':
+          description: Product pricing from LD+JSON offers.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  price:
+                    type: [number, 'null']
+                    description: Current price in USD.
+                  priceCurrency:
+                    type: [string, 'null']
+                  priceValidUntil:
+                    type: [string, 'null']
+                    description: Price valid until date (e.g. "05/03/2026").
+                  strikethroughPrice:
+                    type: [number, 'null']
+                    description: Original price before discount.
+                  returnDays:
+                    type: [integer, 'null']
+                    description: Return window in days.
+
+  /internal/getProductReviews:
+    get:
+      operationId: getProductReviews
+      summary: Get product reviews — overall rating, individual reviews with author, headline, body
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: hd0004
+          signature_id: hd0004s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getProductReviews
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Product URL slug — page must be on this product's page.
+      responses:
+        '200':
+          description: Product reviews from LD+JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overallRating:
+                    type: [string, 'null']
+                    description: Aggregate rating out of 5 (e.g. "4.5").
+                  reviewCount:
+                    type: [integer, 'null']
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        rating:
+                          type: [integer, 'null']
+                          description: Rating 1-5.
+                        author:
+                          type: [string, 'null']
+                        headline:
+                          type: [string, 'null']
+                        body:
+                          type: [string, 'null']
+
+  /internal/getProductImages:
+    get:
+      operationId: getProductImages
+      summary: Get product image gallery — URLs from thdstatic.com CDN
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: hd0005
+          signature_id: hd0005s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getProductImages
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Product URL slug — page must be on this product's page.
+      responses:
+        '200':
+          description: Product image URLs.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, images]
+                properties:
+                  count:
+                    type: integer
+                  images:
+                    type: array
+                    items:
+                      type: string
+                      description: Image URL on images.thdstatic.com.
+
+  /internal/getProductSpecs:
+    get:
+      operationId: getProductSpecs
+      summary: Get product specifications — model, SKU, GTIN, dimensions, weight, color
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: hd0006
+          signature_id: hd0006s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getProductSpecs
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Product URL slug — page must be on this product's page.
+      responses:
+        '200':
+          description: Product specifications from LD+JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model:
+                    type: [string, 'null']
+                  sku:
+                    type: [string, 'null']
+                  gtin13:
+                    type: [string, 'null']
+                  color:
+                    type: [string, 'null']
+                  depth:
+                    type: [string, 'null']
+                  height:
+                    type: [string, 'null']
+                  width:
+                    type: [string, 'null']
+                  weight:
+                    type: [string, 'null']
+                  brand:
+                    type: [string, 'null']
+
+  /b/{category}/{navParam}:
+    get:
+      operationId: getDepartments
+      summary: Get department categories and subcategories
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: hd0007
+          signature_id: hd0007s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getDepartments
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Department name (e.g. "Tools", "Appliances", "Flooring").
+        - name: navParam
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Navigation parameter (e.g. "N-5yc1vZc1xy").
+      responses:
+        '200':
+          description: Department categories.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, departments]
+                properties:
+                  count:
+                    type: integer
+                  departments:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, url]
+                      properties:
+                        name:
+                          type: string
+                        url:
+                          type: string
+
+  /l/{city}/{state}/{locality}/{zip}/{storeId}:
+    get:
+      operationId: getStoreDetails
+      summary: Get store details — name, address, rating, phone from LD+JSON LocalBusiness
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: hd0008
+          signature_id: hd0008s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getStoreDetails
+      parameters:
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+          description: City name (e.g. "Sunnyvale").
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+          description: State abbreviation (e.g. "CA").
+        - name: locality
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Locality name (usually same as city).
+        - name: zip
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ZIP code (e.g. "94087").
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Store number (e.g. "4152").
+      responses:
+        '200':
+          description: Store details from LD+JSON LocalBusiness.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: [string, 'null']
+                    description: Store name (e.g. "The Home Depot #4152 Allison Park").
+                  address:
+                    type: [object, 'null']
+                    properties:
+                      street:
+                        type: [string, 'null']
+                      city:
+                        type: [string, 'null']
+                      region:
+                        type: [string, 'null']
+                      postalCode:
+                        type: [string, 'null']
+                  rating:
+                    type: [string, 'null']
+                    description: Store rating out of 5.
+                  reviewCount:
+                    type: [integer, 'null']
+                  phone:
+                    type: [string, 'null']
+
+  /internal/getStoreReviews:
+    get:
+      operationId: getStoreReviews
+      summary: Get store reviews — overall rating, individual reviews with author, title, body
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: hd0009
+          signature_id: hd0009s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getStoreReviews
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Store URL slug — page must be on this store's page.
+      responses:
+        '200':
+          description: Store reviews from LD+JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  storeName:
+                    type: [string, 'null']
+                  overallRating:
+                    type: [string, 'null']
+                  reviewCount:
+                    type: [integer, 'null']
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        author:
+                          type: [string, 'null']
+                        title:
+                          type: [string, 'null']
+                        body:
+                          type: [string, 'null']
+                        rating:
+                          type: [integer, 'null']
+
+  /internal/getStoreFAQ:
+    get:
+      operationId: getStoreFAQ
+      summary: Get store FAQ — common questions about the store
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: hd0010
+          signature_id: hd0010s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getStoreFAQ
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Store URL slug — page must be on this store's page.
+      responses:
+        '200':
+          description: Store FAQ from LD+JSON FAQPage.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, questions]
+                properties:
+                  count:
+                    type: integer
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        question:
+                          type: [string, 'null']
+                        answer:
+                          type: [string, 'null']
