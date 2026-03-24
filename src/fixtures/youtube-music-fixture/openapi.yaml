@@ -1,0 +1,471 @@
+openapi: '3.1.0'
+info:
+  title: YouTube Music API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://music.youtube.com
+    x-openweb:
+      transport: page
+paths:
+  /search:
+    post:
+      operationId: searchMusic
+      summary: Search for songs, albums, artists, playlists, and videos
+      x-openweb:
+        permission: read
+        adapter:
+          name: youtube-music-innertube
+          operation: searchMusic
+        build:
+          stable_id: ytm0001
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: Search query (song name, artist, album, etc.)
+            example:
+              query: Bohemian Rhapsody
+      responses:
+        '200':
+          description: Search results grouped by category (songs, albums, artists, etc.)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sections:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        items:
+                          type: array
+                          items:
+                            type: object
+
+  /album:
+    post:
+      operationId: getAlbum
+      summary: Get album details including track list
+      x-openweb:
+        permission: read
+        adapter:
+          name: youtube-music-innertube
+          operation: getAlbum
+        build:
+          stable_id: ytm0002
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - browseId
+              properties:
+                browseId:
+                  type: string
+                  description: 'Album browse ID (format: MPREb_...)'
+            example:
+              browseId: MPREb_9nqEki4ZDpp
+      responses:
+        '200':
+          description: Album metadata and track listing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  artist:
+                    type: string
+                  subtitle:
+                    type: string
+                  trackCount:
+                    type: integer
+                  tracks:
+                    type: array
+                    items:
+                      type: object
+
+  /playlist:
+    post:
+      operationId: getPlaylist
+      summary: Get playlist details and tracks
+      x-openweb:
+        permission: read
+        adapter:
+          name: youtube-music-innertube
+          operation: getPlaylist
+        build:
+          stable_id: ytm0003
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - playlistId
+              properties:
+                playlistId:
+                  type: string
+                  description: 'Playlist ID (VL prefix added automatically if missing)'
+            example:
+              playlistId: PLgzTt0k8mXzEk586ze4BjvDXR7c-TUSnx
+      responses:
+        '200':
+          description: Playlist metadata and track listing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  author:
+                    type: string
+                  trackCount:
+                    type: integer
+                  tracks:
+                    type: array
+                    items:
+                      type: object
+
+  /artist:
+    post:
+      operationId: getArtist
+      summary: Get artist page with top songs, albums, singles, and videos
+      x-openweb:
+        permission: read
+        adapter:
+          name: youtube-music-innertube
+          operation: getArtist
+        build:
+          stable_id: ytm0004
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - channelId
+              properties:
+                channelId:
+                  type: string
+                  description: Artist channel ID (UC... format)
+            example:
+              channelId: UCiMhD4jzUqG-IgPzUmmytRQ
+      responses:
+        '200':
+          description: Artist profile with sections (top songs, albums, singles, videos)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  subscribers:
+                    type: string
+                  sections:
+                    type: array
+                    items:
+                      type: object
+
+  /song:
+    post:
+      operationId: getSong
+      summary: Get song/video details (title, artist, duration, view count)
+      x-openweb:
+        permission: read
+        adapter:
+          name: youtube-music-innertube
+          operation: getSong
+        build:
+          stable_id: ytm0005
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+              properties:
+                videoId:
+                  type: string
+                  description: YouTube video ID
+            example:
+              videoId: fJ9rUzIMcZQ
+      responses:
+        '200':
+          description: Song metadata from the InnerTube player endpoint
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  videoId:
+                    type: string
+                  title:
+                    type: string
+                  author:
+                    type: string
+                  lengthSeconds:
+                    type: integer
+                  viewCount:
+                    type: integer
+
+  /up-next:
+    post:
+      operationId: getUpNext
+      summary: Get up-next queue and related tracks for a song
+      x-openweb:
+        permission: read
+        adapter:
+          name: youtube-music-innertube
+          operation: getUpNext
+        build:
+          stable_id: ytm0006
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+              properties:
+                videoId:
+                  type: string
+                  description: YouTube video ID for current song
+                playlistId:
+                  type: string
+                  description: Optional playlist ID for queue context
+            example:
+              videoId: fJ9rUzIMcZQ
+      responses:
+        '200':
+          description: Queue of upcoming tracks with lyrics/related browse IDs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currentVideoId:
+                    type: string
+                  trackCount:
+                    type: integer
+                  tracks:
+                    type: array
+                    items:
+                      type: object
+                  lyricsBrowseId:
+                    type: string
+                    nullable: true
+
+  /lyrics:
+    post:
+      operationId: getLyrics
+      summary: Get song lyrics (provide videoId or lyricsBrowseId)
+      x-openweb:
+        permission: read
+        adapter:
+          name: youtube-music-innertube
+          operation: getLyrics
+        build:
+          stable_id: ytm0007
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                videoId:
+                  type: string
+                  description: YouTube video ID (will auto-resolve lyrics browseId)
+                browseId:
+                  type: string
+                  description: Direct lyrics browse ID (MPLYt_... format)
+            example:
+              videoId: fJ9rUzIMcZQ
+      responses:
+        '200':
+          description: Song lyrics text and source attribution
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  available:
+                    type: boolean
+                  text:
+                    type: string
+                    nullable: true
+                  source:
+                    type: string
+                    nullable: true
+
+  /home:
+    post:
+      operationId: browseHome
+      summary: Browse YouTube Music home page recommendations
+      x-openweb:
+        permission: read
+        adapter:
+          name: youtube-music-innertube
+          operation: browseHome
+        build:
+          stable_id: ytm0008
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+            example: {}
+      responses:
+        '200':
+          description: Home page sections (quick picks, playlists, recommendations)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sections:
+                    type: array
+                    items:
+                      type: object
+
+  /search-suggestions:
+    post:
+      operationId: getSearchSuggestions
+      summary: Get search autocomplete suggestions
+      x-openweb:
+        permission: read
+        adapter:
+          name: youtube-music-innertube
+          operation: getSearchSuggestions
+        build:
+          stable_id: ytm0009
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - input
+              properties:
+                input:
+                  type: string
+                  description: Partial search query for autocomplete
+            example:
+              input: Taylor Sw
+      responses:
+        '200':
+          description: Search suggestions list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        type:
+                          type: string
+
+  /charts:
+    post:
+      operationId: browseCharts
+      summary: Browse music charts (top songs, trending, top artists)
+      x-openweb:
+        permission: read
+        adapter:
+          name: youtube-music-innertube
+          operation: browseCharts
+        build:
+          stable_id: ytm0010
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+            example: {}
+      responses:
+        '200':
+          description: Charts sections (top songs, video charts, genres, top artists)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sections:
+                    type: array
+                    items:
+                      type: object
