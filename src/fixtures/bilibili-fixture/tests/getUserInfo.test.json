@@ -1,0 +1,9 @@
+{
+  "operation_id": "getUserInfo",
+  "cases": [
+    {
+      "input": { "mid": 1 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

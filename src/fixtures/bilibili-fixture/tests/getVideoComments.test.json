@@ -1,0 +1,9 @@
+{
+  "operation_id": "getVideoComments",
+  "cases": [
+    {
+      "input": { "oid": 116261057075817 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

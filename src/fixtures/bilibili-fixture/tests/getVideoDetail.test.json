@@ -1,0 +1,9 @@
+{
+  "operation_id": "getVideoDetail",
+  "cases": [
+    {
+      "input": { "bvid": "BV1bXAJz8EYC" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}
