@@ -21,53 +21,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - dom-match
-        extraction:
-          type: page_global_data
-          page_url: /travel/flights/search
-          expression: >-
-            (() => {
-              const flights = [];
-              const items = document.querySelectorAll('li.pIav2d');
-              for (const li of items) {
-                const text = li.textContent || '';
-                if (!text.includes('$')) continue;
-                const timeMatch = text.match(/(\d+:\d+\s[AP]M)\d+:\d+\s[AP]M[\s\u00A0]+on[\s\u00A0]+.+?[\s\u00A0]+\u2013[\s\u00A0]+(\d+:\d+\s[AP]M)/);
-                if (!timeMatch) continue;
-                const airlineSpan = [...li.querySelectorAll('span')].find(s => {
-                  const t = s.textContent.trim();
-                  return t.length > 2 && t.length < 30 && !t.match(/\d/) && !t.includes('Airport') && !t.includes('Nonstop') && !t.includes('stop') && !t.includes('emissions') && !t.includes('trip') && !t.includes('Select') && !t.includes('Departure') && !t.includes('Return');
-                });
-                const airline = airlineSpan ? airlineSpan.textContent.trim() : '';
-                const durationMatch = text.match(/(\d+\shr(?:\s\d+\smin)?|\d+\smin)/);
-                const routeMatch = text.match(/([A-Z]{3})[A-Za-z\s\u00A0-]+\u2013([A-Z]{3})/);
-                const stopsText = text.match(/(Nonstop|\d+\sstops?)/i);
-                const priceMatch = text.match(/\$(\d[\d,]*)/);
-                const co2Match = text.match(/(\d+)\skg\sCO2/);
-                const emMatch = text.match(/(-?\d+)%\semissions/);
-                flights.push({
-                  departureTime: timeMatch[1],
-                  arrivalTime: timeMatch[2],
-                  airline,
-                  duration: durationMatch ? durationMatch[1] : '',
-                  origin: routeMatch ? routeMatch[1] : '',
-                  destination: routeMatch ? routeMatch[2] : '',
-                  stops: stopsText ? stopsText[1] : '',
-                  price: priceMatch ? parseInt(priceMatch[1].replace(',', '')) : null,
-                  co2Kg: co2Match ? parseInt(co2Match[1]) : null,
-                  emissionsPct: emMatch ? parseInt(emMatch[1]) : null
-                });
-              }
-              const origin = document.querySelector('input[aria-label*="Where from"]')?.value || '';
-              const dest = document.querySelector('input[aria-label*="Where to"]')?.value || '';
-              const rc = document.body.innerText.match(/(\d+) results? returned/);
-              return {
-                origin,
-                destination: dest,
-                resultCount: rc ? parseInt(rc[1]) : flights.length,
-                flights
-              };
-            })()
+            - adapter-verified
+        adapter:
+          name: google-flights
+          operation: searchFlights
       parameters:
         - name: tfs
           in: query
@@ -153,42 +110,10 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - dom-match
-        extraction:
-          type: page_global_data
-          page_url: /travel/flights
-          expression: >-
-            (() => {
-              const cards = [];
-              const cardEls = document.querySelectorAll('[class*="card"], [class*="Card"]');
-              const text = document.body.innerText;
-              const priceBlocks = text.match(/Cheapest[\s\S]*?\$\d[\d,]*/g) || [];
-              for (const block of priceBlocks) {
-                const priceMatch = block.match(/\$(\d[\d,]*)/);
-                const airlineMatch = block.match(/\n([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)\n/);
-                const stopsMatch = block.match(/(Nonstop|\d+ stops?)/i);
-                const durationMatch = block.match(/(\d+ hr(?: \d+ min)?)/);
-                const dateMatch = block.match(/([A-Z][a-z]{2}, [A-Z][a-z]{2} \d+\s*[–—]\s*[A-Z][a-z]{2}, [A-Z][a-z]{2} \d+)/);
-                cards.push({
-                  price: priceMatch ? parseInt(priceMatch[1].replace(',', '')) : null,
-                  airline: airlineMatch ? airlineMatch[1] : '',
-                  stops: stopsMatch ? stopsMatch[1] : '',
-                  duration: durationMatch ? durationMatch[1] : '',
-                  dates: dateMatch ? dateMatch[1] : ''
-                });
-              }
-              const fastestMatch = text.match(/Fastest flight\s*(\d+ hr(?: \d+ min)?)/);
-              const nonstopMatch = text.match(/Nonstop flights\s*(Every day|[A-Z][a-z]+)/);
-              const origin = document.querySelector('input[aria-label*="Where from"]')?.value || '';
-              const dest = document.querySelector('input[aria-label*="Where to"]')?.value || '';
-              return {
-                origin,
-                destination: dest,
-                cheapestOptions: cards,
-                fastestFlight: fastestMatch ? fastestMatch[1] : '',
-                nonstopFrequency: nonstopMatch ? nonstopMatch[1] : ''
-              };
-            })()
+            - adapter-verified
+        adapter:
+          name: google-flights
+          operation: getFlightOverview
       parameters:
         - name: tfs
           in: query
@@ -247,42 +172,10 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - dom-match
-        extraction:
-          type: page_global_data
-          page_url: /travel/flights
-          expression: >-
-            (() => {
-              const text = document.body.innerText;
-              const totalPriceMatch = text.match(/\$(\d[\d,]*)\s*(?:Lowest total price|round trip)/);
-              const legs = [];
-              const legMatches = text.matchAll(/([A-Z][a-z]{2}, [A-Z][a-z]{2} \d+)\s*(\d+:\d+ [AP]M)\s*[–—]\s*(\d+:\d+ [AP]M)\s*([A-Za-z\s]+?)(?:Operated by ([^\n]+?))?\s*(\d+ hr(?: \d+ min)?)\s*([A-Z]{3})[–—]([A-Z]{3})\s*(Nonstop|\d+ stops?)/g);
-              for (const m of legMatches) {
-                legs.push({
-                  date: m[1],
-                  departureTime: m[2],
-                  arrivalTime: m[3],
-                  airline: m[4]?.trim() || '',
-                  operatedBy: m[5]?.trim() || '',
-                  duration: m[6],
-                  origin: m[7],
-                  destination: m[8],
-                  stops: m[9]
-                });
-              }
-              const bagPolicies = [];
-              const bagMatches = text.matchAll(/(free carry-on|carry-on bag available for a fee|checked bag[^.]*?\$\d+|checked bag available for a fee)/gi);
-              for (const m of bagMatches) {
-                bagPolicies.push(m[0]);
-              }
-              const bookingMatch = text.match(/Book with ([^\n]+)/);
-              return {
-                totalPrice: totalPriceMatch ? parseInt(totalPriceMatch[1].replace(',', '')) : null,
-                legs,
-                bagPolicies,
-                bookWith: bookingMatch ? bookingMatch[1].trim() : ''
-              };
-            })()
+            - adapter-verified
+        adapter:
+          name: google-flights
+          operation: getFlightBookingDetails
       parameters:
         - name: tfs
           in: query
