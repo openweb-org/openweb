@@ -1,0 +1,672 @@
+openapi: '3.1.0'
+info:
+  title: Weibo API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: true
+servers:
+  - url: https://weibo.com
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+paths:
+  /ajax/side/hotSearch:
+    get:
+      operationId: getHotSearch
+      summary: Get current hot search ranking — top 50 trending topics with heat scores
+      x-openweb:
+        permission: read
+        build:
+          stable_id: weibo0001
+          signature_id: weibo0001s
+          tool_version: 1
+          verified: true
+        adapter:
+          name: weibo-web
+          operation: getHotSearch
+      parameters: []
+      responses:
+        '200':
+          description: Hot search ranking.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                properties:
+                  ok:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      hotgov:
+                        type: object
+                        description: Government-promoted top topic.
+                        properties:
+                          name:
+                            type: string
+                          word:
+                            type: string
+                          mid:
+                            type: string
+                          url:
+                            type: string
+                      hotgovs:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            word:
+                              type: string
+                            flag:
+                              type: integer
+                            icon_desc:
+                              type: string
+                      realtime:
+                        type: array
+                        description: Top 50 trending topics.
+                        items:
+                          type: object
+                          properties:
+                            word:
+                              type: string
+                              description: Topic keyword.
+                            note:
+                              type: string
+                              description: Display text.
+                            num:
+                              type: integer
+                              description: Heat score.
+                            rank:
+                              type: integer
+                            realpos:
+                              type: integer
+                            flag:
+                              type: integer
+                            icon_desc:
+                              type: string
+                              description: Label (新/热/沸/爆).
+                            word_scheme:
+                              type: string
+                              description: Hashtag format.
+                            topic_flag:
+                              type: integer
+                            label_name:
+                              type: string
+
+  /ajax/side/searchBand:
+    get:
+      operationId: getSearchBand
+      summary: Get trending search band — realtime hot topics sidebar
+      x-openweb:
+        permission: read
+        build:
+          stable_id: weibo0002
+          signature_id: weibo0002s
+          tool_version: 1
+          verified: true
+        adapter:
+          name: weibo-web
+          operation: getSearchBand
+      parameters: []
+      responses:
+        '200':
+          description: Search band data.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                properties:
+                  ok:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      hotgov:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          word:
+                            type: string
+                      realtime:
+                        type: array
+                        description: Trending topics (50 items).
+                        items:
+                          type: object
+                          properties:
+                            word:
+                              type: string
+                            note:
+                              type: string
+                            num:
+                              type: integer
+                            rank:
+                              type: integer
+                            realpos:
+                              type: integer
+                            icon_desc:
+                              type: string
+                            word_scheme:
+                              type: string
+
+  /ajax/feed/hottimeline:
+    get:
+      operationId: getHotTimeline
+      summary: Get hot/trending posts feed — popular posts across Weibo
+      x-openweb:
+        permission: read
+        build:
+          stable_id: weibo0003
+          signature_id: weibo0003s
+          tool_version: 1
+          verified: true
+        adapter:
+          name: weibo-web
+          operation: getHotTimeline
+      parameters:
+        - name: since_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor — since_id from previous response.
+        - name: max_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor — max_id from previous response.
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of posts to return.
+        - name: group_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Feed group/category ID.
+      responses:
+        '200':
+          description: Hot timeline posts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: integer
+                  statuses:
+                    type: array
+                    description: List of hot posts.
+                    items:
+                      $ref: '#/components/schemas/WeiboPost'
+                  total_number:
+                    type: integer
+                  since_id:
+                    type: string
+                  max_id:
+                    type: string
+
+  /ajax/statuses/show:
+    get:
+      operationId: getPostDetail
+      summary: Get post detail — full content, author, reposts/comments/likes counts, images
+      x-openweb:
+        permission: read
+        build:
+          stable_id: weibo0004
+          signature_id: weibo0004s
+          tool_version: 1
+          verified: true
+        adapter:
+          name: weibo-web
+          operation: getPostDetail
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Post ID (mid).
+        - name: isGetLongText
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: Include full long text content.
+      responses:
+        '200':
+          description: Post detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeiboPost'
+
+  /ajax/statuses/buildComments:
+    get:
+      operationId: getPostComments
+      summary: Get comments on a post — paginated with max_id cursor
+      x-openweb:
+        permission: read
+        build:
+          stable_id: weibo0005
+          signature_id: weibo0005s
+          tool_version: 1
+          verified: true
+        adapter:
+          name: weibo-web
+          operation: getPostComments
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Post ID (mid) to get comments for.
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of comments per page.
+        - name: max_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor from previous response.
+        - name: flow
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Sort order (0=hot, 1=time).
+      responses:
+        '200':
+          description: Comments list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        mid:
+                          type: string
+                        created_at:
+                          type: string
+                        text:
+                          type: string
+                          description: Comment HTML content.
+                        source:
+                          type: string
+                        user:
+                          $ref: '#/components/schemas/WeiboUser'
+                        like_count:
+                          type: integer
+                        reply_count:
+                          type: integer
+                  total_number:
+                    type: integer
+                  max_id:
+                    type: string
+
+  /ajax/profile/info:
+    get:
+      operationId: getUserProfile
+      summary: Get user profile — name, bio, followers/following counts, verification
+      x-openweb:
+        permission: read
+        build:
+          stable_id: weibo0006
+          signature_id: weibo0006s
+          tool_version: 1
+          verified: true
+        adapter:
+          name: weibo-web
+          operation: getUserProfile
+      parameters:
+        - name: uid
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User ID (numeric).
+      responses:
+        '200':
+          description: User profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                properties:
+                  ok:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/WeiboUser'
+                      tabList:
+                        type: array
+                        items:
+                          type: object
+
+  /ajax/profile/detail:
+    get:
+      operationId: getUserDetail
+      summary: Get user extended detail — birthday, registration date, IP location, education
+      x-openweb:
+        permission: read
+        build:
+          stable_id: weibo0007
+          signature_id: weibo0007s
+          tool_version: 1
+          verified: true
+        adapter:
+          name: weibo-web
+          operation: getUserDetail
+      parameters:
+        - name: uid
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User ID (numeric).
+      responses:
+        '200':
+          description: User detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                properties:
+                  ok:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      ip_location:
+                        type: string
+                      created_at:
+                        type: string
+                      birthday:
+                        type: string
+                      sunshine_credit:
+                        type: object
+                      education:
+                        type: object
+                      company:
+                        type: string
+
+  /ajax/statuses/mymblog:
+    get:
+      operationId: getUserTimeline
+      summary: Get user posts/timeline — paginated list of a user's posts
+      x-openweb:
+        permission: read
+        build:
+          stable_id: weibo0008
+          signature_id: weibo0008s
+          tool_version: 1
+          verified: true
+        adapter:
+          name: weibo-web
+          operation: getUserTimeline
+      parameters:
+        - name: uid
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User ID (numeric).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+        - name: feature
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Filter (0=all, 1=original, 2=images, 3=video, 4=music).
+        - name: since_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor.
+      responses:
+        '200':
+          description: User timeline.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                properties:
+                  ok:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      since_id:
+                        type: string
+                      list:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/WeiboPost'
+                      total:
+                        type: integer
+
+  /ajax/side/search:
+    get:
+      operationId: searchPosts
+      summary: Search posts by keyword — returns matching posts with author info
+      x-openweb:
+        permission: read
+        build:
+          stable_id: weibo0009
+          signature_id: weibo0009s
+          tool_version: 1
+          verified: true
+        adapter:
+          name: weibo-web
+          operation: searchPosts
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query keyword.
+      responses:
+        '200':
+          description: Search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: integer
+                  data:
+                    type: object
+
+  /ajax_Indexband/getIndexBand:
+    get:
+      operationId: getIndexBand
+      summary: Get index band — categorized trending topic lists from s.weibo.com
+      x-openweb:
+        permission: read
+        build:
+          stable_id: weibo0010
+          signature_id: weibo0010s
+          tool_version: 1
+          verified: true
+        adapter:
+          name: weibo-web
+          operation: getIndexBand
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Band type (0=default).
+      responses:
+        '200':
+          description: Index band data.
+          content:
+            application/json:
+              schema:
+                type: object
+
+components:
+  schemas:
+    WeiboUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        idstr:
+          type: string
+        screen_name:
+          type: string
+          description: Display name.
+        profile_image_url:
+          type: string
+        profile_url:
+          type: string
+        verified:
+          type: boolean
+        verified_type:
+          type: integer
+          description: Verification type (0=personal, 1=enterprise, etc.).
+        verified_reason:
+          type: string
+        description:
+          type: string
+          description: User bio.
+        location:
+          type: string
+        gender:
+          type: string
+          description: Gender (m/f).
+        followers_count:
+          type: integer
+        followers_count_str:
+          type: string
+        friends_count:
+          type: integer
+          description: Following count.
+        statuses_count:
+          type: integer
+          description: Total posts count.
+        avatar_large:
+          type: string
+        avatar_hd:
+          type: string
+        domain:
+          type: string
+        mbrank:
+          type: integer
+          description: VIP rank.
+        mbtype:
+          type: integer
+
+    WeiboPost:
+      type: object
+      properties:
+        id:
+          type: integer
+        idstr:
+          type: string
+        mid:
+          type: string
+          description: Post ID (used for detail/comment queries).
+        mblogid:
+          type: string
+        created_at:
+          type: string
+          description: Creation timestamp (e.g. "Fri Mar 20 00:59:20 +0800 2026").
+        text:
+          type: string
+          description: Post content (HTML).
+        text_raw:
+          type: string
+          description: Post content (plain text).
+        source:
+          type: string
+          description: Client source (e.g. "微博网页版").
+        user:
+          $ref: '#/components/schemas/WeiboUser'
+        reposts_count:
+          type: integer
+        comments_count:
+          type: integer
+        attitudes_count:
+          type: integer
+          description: Likes count.
+        isLongText:
+          type: boolean
+        pic_ids:
+          type: array
+          items:
+            type: string
+        pic_num:
+          type: integer
+        pic_infos:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              thumbnail:
+                type: object
+                properties:
+                  url:
+                    type: string
+                  width:
+                    type: integer
+                  height:
+                    type: integer
+              large:
+                type: object
+                properties:
+                  url:
+                    type: string
+                  width:
+                    type: integer
+                  height:
+                    type: integer
+        retweeted_status:
+          description: Reposted/quoted post (same structure).
+          type: object
