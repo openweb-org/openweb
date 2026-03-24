@@ -1,0 +1,255 @@
+openapi: '3.1.0'
+info:
+  title: JD Global
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://global.jd.com
+    x-openweb:
+      transport: page
+paths:
+  /internal/getRecommendations:
+    get:
+      operationId: getRecommendations
+      summary: Get homepage product recommendations — names, prices, ratings, shops
+      x-openweb:
+        permission: read
+        build:
+          stable_id: jd0001
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: jd-global-api
+          operation: getRecommendations
+      parameters: []
+      responses:
+        '200':
+          description: Product recommendations with full detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  count:
+                    type: integer
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        skuId:
+                          type: string
+                          description: JD product SKU ID.
+                        name:
+                          type: string
+                          description: Product name in Chinese.
+                        jdPrice:
+                          type: string
+                          description: JD listed price (CNY).
+                        originalPrice:
+                          type: string
+                          description: Original/suggested retail price (CNY).
+                        promotionalPrice:
+                          type: string
+                          description: Current promotional price (CNY).
+                        shopName:
+                          type: string
+                          description: Seller store name.
+                        shopId:
+                          type: integer
+                        commentCount:
+                          type: string
+                          description: Number of reviews (e.g. "20000").
+                        goodRate:
+                          type: string
+                          description: Positive review percentage (e.g. "98%").
+                        image:
+                          type: string
+                          description: Product image URL.
+                        categoryL1:
+                          type: integer
+                        categoryL2:
+                          type: integer
+                        categoryL3:
+                          type: integer
+                        brandId:
+                          type: string
+  /internal/getPromoBanners:
+    get:
+      operationId: getPromoBanners
+      summary: Get homepage promotional banners — images and links
+      x-openweb:
+        permission: read
+        build:
+          stable_id: jd0002
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: jd-global-api
+          operation: getPromoBanners
+      parameters: []
+      responses:
+        '200':
+          description: Promotional banner ads.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  banners:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        image:
+                          type: string
+                        link:
+                          type: string
+                        description:
+                          type: string
+  /internal/getSquarePromotions:
+    get:
+      operationId: getSquarePromotions
+      summary: Get square promotional modules — campaign banners and event links
+      x-openweb:
+        permission: read
+        build:
+          stable_id: jd0003
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: jd-global-api
+          operation: getSquarePromotions
+      parameters: []
+      responses:
+        '200':
+          description: Square promotional modules (left and right).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  left:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            image:
+                              type: string
+                            link:
+                              type: string
+                  right:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            image:
+                              type: string
+                            link:
+                              type: string
+  /internal/getNewsMessages:
+    get:
+      operationId: getNewsMessages
+      summary: Get site news and announcements — shipping updates, policy notices
+      x-openweb:
+        permission: read
+        build:
+          stable_id: jd0004
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: jd-global-api
+          operation: getNewsMessages
+      parameters: []
+      responses:
+        '200':
+          description: News and announcement messages.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        link:
+                          type: string
+                        description:
+                          type: string
+  /internal/getCategoryNavigation:
+    get:
+      operationId: getCategoryNavigation
+      summary: Get product category navigation — category names and links
+      x-openweb:
+        permission: read
+        build:
+          stable_id: jd0005
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: jd-global-api
+          operation: getCategoryNavigation
+      parameters: []
+      responses:
+        '200':
+          description: Category navigation tree.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        url:
+                          type: string
