@@ -1,0 +1,690 @@
+openapi: '3.1.0'
+info:
+  title: Indeed
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.indeed.com
+    x-openweb:
+      transport: page
+      auth:
+        type: none
+paths:
+  /jobs:
+    get:
+      operationId: searchJobs
+      summary: Search jobs by keyword and location — returns job cards with title, company, salary, snippet
+      x-openweb:
+        permission: read
+        build:
+          stable_id: indeed0001
+          signature_id: indeed0001s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: indeed-web
+          operation: searchJobs
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Job search query (e.g. "software engineer", "nurse", "data scientist").
+        - name: l
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Location (e.g. "San Francisco, CA", "Remote", "New York, NY").
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset (10 per page — 0, 10, 20, ...).
+      responses:
+        '200':
+          description: Job search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalJobCount:
+                    type: integer
+                    description: Total number of matching jobs.
+                  uniqueJobsCount:
+                    type: integer
+                  pageNum:
+                    type: integer
+                  jobs:
+                    type: array
+                    items:
+                      type: object
+                      required: [jobkey, title]
+                      properties:
+                        jobkey:
+                          type: string
+                          description: Unique job key (use with getJobDetail).
+                        title:
+                          type: string
+                        company:
+                          type: string
+                        companyRating:
+                          type: number
+                        companyReviewCount:
+                          type: integer
+                        location:
+                          type: string
+                        remoteLocation:
+                          type: boolean
+                        salary:
+                          description: Extracted salary info.
+                        snippet:
+                          type: string
+                          description: Job description preview snippet.
+                        pubDate:
+                          type: string
+                        formattedRelativeTime:
+                          type: string
+                        jobTypes:
+                          type: array
+                          items:
+                            type: string
+                        link:
+                          type: string
+                        indeedApplyEnabled:
+                          type: boolean
+                        urgentlyHiring:
+                          type: boolean
+                        newJob:
+                          type: boolean
+
+  /viewjob:
+    get:
+      operationId: getJobDetail
+      summary: Get full job posting — title, description, salary, benefits, company info from LD+JSON
+      x-openweb:
+        permission: read
+        build:
+          stable_id: indeed0002
+          signature_id: indeed0002s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: indeed-web
+          operation: getJobDetail
+      parameters:
+        - name: jk
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Job key from searchJobs results (e.g. "842fab27819c7858").
+      responses:
+        '200':
+          description: Full job posting details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobKey:
+                    type: string
+                  title:
+                    type: string
+                  description:
+                    type: string
+                    description: Full HTML job description.
+                  datePosted:
+                    type: string
+                  baseSalary:
+                    type: object
+                    properties:
+                      '@type':
+                        type: string
+                      currency:
+                        type: string
+                      value:
+                        type: object
+                        properties:
+                          minValue:
+                            type: number
+                          maxValue:
+                            type: number
+                          unitText:
+                            type: string
+                  employmentType:
+                    type: string
+                  hiringOrganization:
+                    type: object
+                    properties:
+                      '@type':
+                        type: string
+                      name:
+                        type: string
+                      sameAs:
+                        type: string
+                  jobLocation:
+                    description: Location object or string.
+                  salaryInfoModel:
+                    description: Indeed-specific salary model from _initialData.
+                  benefitsModel:
+                    description: Benefits information.
+                  hiringInsightsModel:
+                    description: Hiring insights (response rate, urgency).
+                  companyInfo:
+                    description: Company tab model with reviews, ratings.
+
+  /career/{title}/salaries:
+    get:
+      operationId: getSalary
+      summary: Get salary data for a job title — median, range, top cities, top companies, related titles
+      x-openweb:
+        permission: read
+        build:
+          stable_id: indeed0003
+          signature_id: indeed0003s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: indeed-web
+          operation: getSalary
+      parameters:
+        - name: title
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Job title (e.g. "software engineer", "data scientist", "nurse").
+        - name: location
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Location URL segment (e.g. "San-Francisco--CA"). Omit for national data.
+      responses:
+        '200':
+          description: Salary data from Next.js __NEXT_DATA__.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  titleInfo:
+                    type: object
+                    properties:
+                      normTitle:
+                        type: string
+                      displayTitle:
+                        type: string
+                      pluralDisplayTitle:
+                        type: string
+                  locationInfo:
+                    type: object
+                    properties:
+                      locationDetails:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          type:
+                            type: string
+                          code:
+                            type: string
+                      displayLocation:
+                        type: string
+                  nationalSalaryAggregate:
+                    type: object
+                    properties:
+                      location:
+                        type: object
+                      salaries:
+                        type: object
+                        description: Salary data by type (HOURLY, DAILY, WEEKLY, MONTHLY, YEARLY) with estimatedMedian, estimatedMin, estimatedMax, mean, std.
+                  localSalaryAggregate:
+                    description: Location-specific salary data (same structure as national, null if no location specified).
+                  topPaidCities:
+                    type: object
+                    properties:
+                      cities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            location:
+                              type: object
+                              properties:
+                                displayName:
+                                  type: string
+                                locationUrlSegment:
+                                  type: string
+                            salary:
+                              type: object
+                  topPayingCompanies:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        employerKey:
+                          type: string
+                        name:
+                          type: string
+                        reviewCount:
+                          type: integer
+                        salary:
+                          type: object
+                  relatedTitlesResponse:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      relatedTitles:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            title:
+                              type: string
+                            displayTitle:
+                              type: string
+                            salaryType:
+                              type: string
+                            salaryMean:
+                              type: number
+                  jobsCarouselData:
+                    description: Related job listings carousel data.
+
+  /cmp/{company}:
+    get:
+      operationId: getCompanyOverview
+      summary: Get company overview — ratings, about, salaries, jobs, locations, interviews
+      x-openweb:
+        permission: read
+        build:
+          stable_id: indeed0004
+          signature_id: indeed0004s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: indeed-web
+          operation: getCompanyOverview
+      parameters:
+        - name: company
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Company slug (e.g. "Google", "Amazon.com", "Meta").
+      responses:
+        '200':
+          description: Company overview data from _initialData.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  companyName:
+                    type: string
+                  about:
+                    description: About section (description, industry, size, revenue, etc.).
+                  ratings:
+                    description: Overall review rating breakdown.
+                  salaries:
+                    description: Salary summary section.
+                  jobs:
+                    description: Current job openings section.
+                  locations:
+                    description: Office locations section.
+                  interviews:
+                    description: Interview experience section.
+                  faq:
+                    description: FAQ section.
+                  similarCompanies:
+                    description: Similar companies section.
+                  header:
+                    description: Company page header data.
+                  ldJson:
+                    description: LD+JSON LocalBusiness structured data.
+
+  /cmp/{company}/reviews:
+    get:
+      operationId: getCompanyReviews
+      summary: Get company reviews — individual reviews with ratings, pros, cons, job title
+      x-openweb:
+        permission: read
+        build:
+          stable_id: indeed0005
+          signature_id: indeed0005s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: indeed-web
+          operation: getCompanyReviews
+      parameters:
+        - name: company
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Company slug (e.g. "Google", "Amazon.com").
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter query string (e.g. "fcountry=US&floc=Mountain+View%2C+CA").
+      responses:
+        '200':
+          description: Company reviews from DOM + optional filter API.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overallRating:
+                    type: string
+                  reviewCount:
+                    type: string
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        rating:
+                          type: string
+                        author:
+                          type: string
+                        date:
+                          type: string
+                        pros:
+                          type: string
+                        cons:
+                          type: string
+                        jobTitle:
+                          type: string
+                        location:
+                          type: string
+                  aggregateRating:
+                    description: Structured aggregate rating from LD+JSON.
+                  filterMetadata:
+                    type: object
+                    properties:
+                      jobTitleCount:
+                        type: integer
+                      locationCount:
+                        type: integer
+                      categoryCount:
+                        type: integer
+
+  /cmp/{company}/salaries:
+    get:
+      operationId: getCompanySalaries
+      summary: Get salaries at a specific company — job titles with salary data
+      x-openweb:
+        permission: read
+        build:
+          stable_id: indeed0006
+          signature_id: indeed0006s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: indeed-web
+          operation: getCompanySalaries
+      parameters:
+        - name: company
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Company slug (e.g. "Google", "Amazon.com").
+      responses:
+        '200':
+          description: Company salary data from DOM.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  companyName:
+                    type: string
+                  salaries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        jobTitle:
+                          type: string
+                        salary:
+                          type: string
+                        salaryCount:
+                          type: string
+
+  /cmp/{company}/reviews/filter:
+    get:
+      operationId: getReviewFilters
+      summary: Get review filter metadata — job titles, locations, categories for filtering reviews
+      x-openweb:
+        permission: read
+        build:
+          stable_id: indeed0007
+          signature_id: indeed0007s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: indeed-web
+          operation: getReviewFilters
+      parameters:
+        - name: company
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Company slug (e.g. "Google", "Amazon.com").
+      responses:
+        '200':
+          description: Review filter metadata from /cmp/_rpc/review-filter API.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  globalLocations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        count:
+                          type: integer
+                        countryName:
+                          type: string
+                        key:
+                          type: string
+                        value:
+                          type: string
+                  jobCategories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        count:
+                          type: integer
+                        displayText:
+                          type: string
+                        filterParameter:
+                          type: string
+                  jobTitles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        count:
+                          type: integer
+                        displayText:
+                          type: string
+                        filterParameter:
+                          type: string
+                  localLocations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        count:
+                          type: integer
+                        countryName:
+                          type: string
+                        key:
+                          type: string
+                        value:
+                          type: string
+                  locationHierarchy:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        count:
+                          type: integer
+                        countryName:
+                          type: string
+                        locations:
+                          type: array
+
+  /autocomplete/job-title:
+    get:
+      operationId: autocompleteJobTitle
+      summary: Autocomplete job title suggestions as you type
+      x-openweb:
+        permission: read
+        build:
+          stable_id: indeed0008
+          signature_id: indeed0008s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: indeed-web
+          operation: autocompleteJobTitle
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Partial job title query (e.g. "softw", "data sci").
+        - name: country
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Country code (e.g. "US", "GB", "CA").
+      responses:
+        '200':
+          description: Job title suggestions.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /autocomplete/location:
+    get:
+      operationId: autocompleteLocation
+      summary: Autocomplete location suggestions as you type
+      x-openweb:
+        permission: read
+        build:
+          stable_id: indeed0009
+          signature_id: indeed0009s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: indeed-web
+          operation: autocompleteLocation
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Partial location query (e.g. "San Fran", "New Y").
+        - name: country
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Country code (e.g. "US", "GB", "CA").
+      responses:
+        '200':
+          description: Location suggestions.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /browsejobs:
+    get:
+      operationId: browseJobCategories
+      summary: Browse job categories and popular searches
+      x-openweb:
+        permission: read
+        build:
+          stable_id: indeed0010
+          signature_id: indeed0010s
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: indeed-web
+          operation: browseJobCategories
+      responses:
+        '200':
+          description: Browse jobs page with alphabetical indexes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  sections:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        heading:
+                          type: string
+                        links:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              url:
+                                type: string

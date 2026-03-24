@@ -1,0 +1,29 @@
+{
+  "name": "indeed-fixture",
+  "display_name": "Indeed",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.indeed.com",
+  "description": "Job search, job details, salary data, company profiles, reviews, and autocomplete via Indeed page-based extraction",
+  "requires_auth": false,
+  "dependencies": {
+    "searchJobs → getJobDetail": "searchJobs returns jobkey used by getJobDetail",
+    "getCompanyOverview → getCompanyReviews": "getCompanyOverview shows company slug used by getCompanyReviews",
+    "getCompanyOverview → getCompanySalaries": "getCompanyOverview shows company slug used by getCompanySalaries",
+    "getCompanyReviews → getReviewFilters": "same company slug, getReviewFilters provides filter options for reviews",
+    "autocompleteJobTitle → getSalary": "autocompleteJobTitle returns normalized job titles used by getSalary",
+    "autocompleteLocation → searchJobs": "autocompleteLocation returns location strings used by searchJobs"
+  },
+  "stats": {
+    "operation_count": 10,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 10
+  },
+  "last_verified": "2026-03-24T17:00:00.000Z",
+  "quarantined": true,
+  "fingerprint": {
+    "response_shape_hash": "",
+    "last_validated": "2026-03-24T17:00:00.000Z"
+  }
+}
