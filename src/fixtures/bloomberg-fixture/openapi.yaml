@@ -1,0 +1,721 @@
+openapi: '3.1.0'
+info:
+  title: Bloomberg
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.bloomberg.com
+    x-openweb:
+      transport: page
+paths:
+  /:
+    get:
+      operationId: getTickerBar
+      summary: Get market ticker bar — top indices, bonds, commodities with live prices
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0001
+          signature_id: bb0001s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: ssr_next_data
+          path: props.pageProps.initialState.tickerBar
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, shortName, price, percentChange1Day]
+                  properties:
+                    id:
+                      type: string
+                      description: Bloomberg ticker ID (e.g. "SPX:IND", "CCMP:IND", "CL1:COM").
+                    name:
+                      type: string
+                    longName:
+                      type: [string, 'null']
+                    shortName:
+                      type: string
+                    percentChange1Day:
+                      type: number
+                      description: Daily percent change.
+                    price:
+                      type: number
+                    lastYield:
+                      type: [number, 'null']
+                      description: Yield for bonds, null for equities/commodities.
+                    realTimeTickerDescription:
+                      type: [string, 'null']
+  /news-headlines:
+    get:
+      operationId: getNewsHeadlines
+      summary: Get top financial news headlines from Bloomberg homepage
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0002
+          signature_id: bb0002s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          page_url: /
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return { items: [] };
+              const data = JSON.parse(el.textContent);
+              const modules = data.props?.pageProps?.initialState?.modulesById || {};
+              const seen = new Set();
+              const items = [];
+              for (const mod of Object.values(modules)) {
+                const stories = mod?.stories || mod?.items || mod?.data;
+                if (!Array.isArray(stories)) continue;
+                for (const s of stories) {
+                  if (!s.headline || seen.has(s.id)) continue;
+                  seen.add(s.id);
+                  items.push({
+                    id: s.id,
+                    headline: s.headline,
+                    abstract: s.abstract || null,
+                    url: s.url || null,
+                    publishedAt: s.publishedAt || null,
+                    updatedAt: s.updatedAt || null,
+                    byline: s.byline || null,
+                    brand: s.brand || s.brandLabel || null,
+                    type: s.type || null,
+                    imageUrl: s.thumbnailImage?.url || s.image?.url || null,
+                    topics: s.topics || [],
+                  });
+                }
+              }
+              return { count: items.length, items: items.slice(0, 50) };
+            })()
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, items]
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, headline]
+                      properties:
+                        id:
+                          type: string
+                        headline:
+                          type: string
+                        abstract:
+                          type: [string, 'null']
+                        url:
+                          type: [string, 'null']
+                        publishedAt:
+                          type: [string, 'null']
+                        updatedAt:
+                          type: [string, 'null']
+                        byline:
+                          type: [string, 'null']
+                        brand:
+                          type: [string, 'null']
+                        type:
+                          type: [string, 'null']
+                        imageUrl:
+                          type: [string, 'null']
+                        topics:
+                          type: array
+                          items:
+                            type: object
+  /quote/{ticker}:
+    get:
+      operationId: getQuote
+      summary: Get stock, index, or security quote with price, fundamentals, and key metrics
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0003
+          signature_id: bb0003s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: ssr_next_data
+          path: props.pageProps.quote
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bloomberg ticker (e.g. "AAPL:US", "SPX:IND", "MSFT:US", "INDU:IND").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, price, percentChange1Day]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  longName:
+                    type: [string, 'null']
+                  shortName:
+                    type: string
+                  price:
+                    type: string
+                    description: Current price as string.
+                  percentChange1Day:
+                    type: number
+                  priceChange1Day:
+                    type: number
+                  primaryExchange:
+                    type: [string, 'null']
+                  type:
+                    type: string
+                    description: Security type (EQT, IND, COM, etc.).
+                  mediaSecurityType:
+                    type: [string, 'null']
+                  issuedCurrency:
+                    type: [string, 'null']
+                  openPrice:
+                    type: [string, 'null']
+                  prevClose:
+                    type: [string, 'null']
+                  volume:
+                    type: [string, 'null']
+                  marketCap:
+                    type: [string, 'null']
+                  dayRange:
+                    type: [string, 'null']
+                  fiftyTwoWeekRange:
+                    type: [string, 'null']
+                  lowPrice:
+                    type: [string, 'null']
+                  highPrice:
+                    type: [string, 'null']
+                  lowPrice52Week:
+                    type: [string, 'null']
+                  highPrice52Week:
+                    type: [string, 'null']
+                  totalReturnYtd:
+                    type: [string, 'null']
+                  bicsSector:
+                    type: [string, 'null']
+                  priceEarningsRatio:
+                    type: [string, 'null']
+                  earningsPerShare:
+                    type: [string, 'null']
+                  dividend:
+                    type: [string, 'null']
+                  indicatedGrossDividendYield:
+                    type: [string, 'null']
+                  sharesOutstanding:
+                    type: [string, 'null']
+                  averageVolume30Day:
+                    type: [string, 'null']
+                  isOpen:
+                    type: boolean
+                  isAfterHours:
+                    type: boolean
+                  lastUpdate:
+                    type: [string, 'null']
+                  marketStatus:
+                    type: [string, 'null']
+  /quote/{ticker}/company:
+    get:
+      operationId: getCompanyProfile
+      summary: Get company profile — description, sector, employees, website, address
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0004
+          signature_id: bb0004s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          page_url: /quote/{ticker}
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return null;
+              const q = JSON.parse(el.textContent).props?.pageProps?.quote;
+              if (!q) return null;
+              return {
+                id: q.id,
+                name: q.longName || q.name,
+                type: q.mediaSecurityType,
+                subtype: q.mediaSecuritySubtype,
+                bicsSector: q.bicsSector,
+                companyDescription: q.companyDescription,
+                companyIsPrivate: q.companyIsPrivate,
+                foundedYear: q.foundedYear,
+                numberOfEmployees: q.numberOfEmployees,
+                companyWebsite: q.companyWebsite,
+                companyPhone: q.companyPhone,
+                companyAddress: q.companyAddress,
+                ultimateParentTicker: q.ultimateParentTicker,
+                primarySecurityTicker: q.primarySecurityTicker,
+              };
+            })()
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bloomberg ticker (e.g. "AAPL:US", "MSFT:US").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: [string, 'null']
+                  type:
+                    type: [string, 'null']
+                  subtype:
+                    type: [string, 'null']
+                  bicsSector:
+                    type: [string, 'null']
+                  companyDescription:
+                    type: [string, 'null']
+                  companyIsPrivate:
+                    type: [boolean, 'null']
+                  foundedYear:
+                    type: [string, 'null']
+                  numberOfEmployees:
+                    type: [string, 'null']
+                  companyWebsite:
+                    type: [string, 'null']
+                  companyPhone:
+                    type: [string, 'null']
+                  companyAddress:
+                    type: [string, 'null']
+                  ultimateParentTicker:
+                    type: [string, 'null']
+                  primarySecurityTicker:
+                    type: [string, 'null']
+  /quote/{ticker}/price-chart:
+    get:
+      operationId: getPriceChart
+      summary: Get historical bar chart data for a security (1 year and 5 year)
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0005
+          signature_id: bb0005s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: ssr_next_data
+          page_url: /quote/{ticker}
+          path: props.pageProps.barCharts
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bloomberg ticker (e.g. "AAPL:US", "SPX:IND").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  oneYear:
+                    type: array
+                    items:
+                      type: object
+                      required: [dateTime, value]
+                      properties:
+                        dateTime:
+                          type: string
+                          description: Date string (YYYY-MM-DD).
+                        value:
+                          type: number
+                  fiveYear:
+                    type: array
+                    items:
+                      type: object
+                      required: [dateTime, value]
+                      properties:
+                        dateTime:
+                          type: string
+                        value:
+                          type: number
+  /quote/{ticker}/price-movements:
+    get:
+      operationId: getPriceMovements
+      summary: Get price movement history — 1 day, 1 month, 6 months, YTD, 1 year, 5 years
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0006
+          signature_id: bb0006s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          page_url: /quote/{ticker}
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return null;
+              const q = JSON.parse(el.textContent).props?.pageProps?.quote;
+              if (!q) return null;
+              return {
+                id: q.id,
+                name: q.longName || q.name,
+                priceMovements1Day: q.priceMovements1Day,
+                priceMovements1Month: q.priceMovements1Month,
+                priceMovements6Months: q.priceMovements6Months,
+                priceMovementsYearToDate: q.priceMovementsYearToDate,
+                priceMovements1Year: q.priceMovements1Year,
+                priceMovements5Years: q.priceMovements5Years,
+              };
+            })()
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bloomberg ticker (e.g. "AAPL:US", "SPX:IND").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: [string, 'null']
+                  priceMovements1Day:
+                    type: [array, 'null']
+                    items:
+                      type: object
+                      properties:
+                        dateTime:
+                          type: string
+                        value:
+                          type: number
+                  priceMovements1Month:
+                    type: [array, 'null']
+                    items:
+                      type: object
+                      properties:
+                        dateTime:
+                          type: string
+                        value:
+                          type: number
+                  priceMovements6Months:
+                    type: [array, 'null']
+                    items:
+                      type: object
+                      properties:
+                        dateTime:
+                          type: string
+                        value:
+                          type: number
+                  priceMovementsYearToDate:
+                    type: [array, 'null']
+                    items:
+                      type: object
+                      properties:
+                        dateTime:
+                          type: string
+                        value:
+                          type: number
+                  priceMovements1Year:
+                    type: [array, 'null']
+                    items:
+                      type: object
+                      properties:
+                        dateTime:
+                          type: string
+                        value:
+                          type: number
+                  priceMovements5Years:
+                    type: [array, 'null']
+                    items:
+                      type: object
+                      properties:
+                        dateTime:
+                          type: string
+                        value:
+                          type: number
+  /quote/{ticker}/board-members:
+    get:
+      operationId: getBoardMembers
+      summary: Get board members and executives for a company
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0007
+          signature_id: bb0007s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: ssr_next_data
+          page_url: /quote/{ticker}
+          path: props.pageProps.boardMembersAndExecutives
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bloomberg ticker (e.g. "AAPL:US", "MSFT:US").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    title:
+                      type: string
+                    type:
+                      type: string
+  /quote/{ticker}/index-members:
+    get:
+      operationId: getIndexMembers
+      summary: Get component securities of an index
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0008
+          signature_id: bb0008s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: ssr_next_data
+          page_url: /quote/{ticker}
+          path: props.pageProps.indexMembers
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bloomberg index ticker (e.g. "SPX:IND", "INDU:IND").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    percentChange1Day:
+                      type: number
+                    price:
+                      type: number
+  /latest-news:
+    get:
+      operationId: getLatestNews
+      summary: Get the latest breaking news from Bloomberg
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0009
+          signature_id: bb0009s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          page_url: /
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return { items: [] };
+              const data = JSON.parse(el.textContent);
+              const modules = data.props?.pageProps?.initialState?.modulesById || {};
+              const latest = modules.latest || modules.news_now || modules.shadow_latest;
+              if (!latest) return { items: [] };
+              const stories = latest.stories || latest.items || latest.data || [];
+              return {
+                count: stories.length,
+                items: stories.slice(0, 30).map(s => ({
+                  id: s.id,
+                  headline: s.headline,
+                  abstract: s.abstract || null,
+                  url: s.url || null,
+                  publishedAt: s.publishedAt || null,
+                  byline: s.byline || null,
+                  brand: s.brand || null,
+                })),
+              };
+            })()
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, items]
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, headline]
+                      properties:
+                        id:
+                          type: string
+                        headline:
+                          type: string
+                        abstract:
+                          type: [string, 'null']
+                        url:
+                          type: [string, 'null']
+                        publishedAt:
+                          type: [string, 'null']
+                        byline:
+                          type: [string, 'null']
+                        brand:
+                          type: [string, 'null']
+  /search:
+    get:
+      operationId: searchBloomberg
+      summary: Search Bloomberg for news, quotes, and people by keyword
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0010
+          signature_id: bb0010s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return { items: [] };
+              const data = JSON.parse(el.textContent);
+              const pp = data.props?.pageProps || {};
+              const results = pp.results || pp.searchResults || pp.initialState?.searchResults || pp.initialState?.results;
+              if (results) return results;
+              const state = pp.initialState || {};
+              const modules = state.modulesById || {};
+              const items = [];
+              for (const mod of Object.values(modules)) {
+                const stories = mod?.stories || mod?.items;
+                if (!Array.isArray(stories)) continue;
+                for (const s of stories) {
+                  if (!s.headline) continue;
+                  items.push({
+                    id: s.id,
+                    headline: s.headline,
+                    abstract: s.abstract || null,
+                    url: s.url || null,
+                    publishedAt: s.publishedAt || null,
+                    type: s.type || null,
+                  });
+                }
+              }
+              return { count: items.length, items: items.slice(0, 30) };
+            })()
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (ticker, company name, topic).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        headline:
+                          type: string
+                        abstract:
+                          type: [string, 'null']
+                        url:
+                          type: [string, 'null']
+                        publishedAt:
+                          type: [string, 'null']
+                        type:
+                          type: [string, 'null']
