@@ -284,7 +284,7 @@ src/runtime/
 └── primitives/               # L2 primitive resolvers
     ├── registry.ts           # Primitive type registry
     ├── index.ts              # Primitive pipeline orchestration
-    └── (→ See: primitives.md)
+    └── (→ See: primitives/README.md)
 ```
 
 ---
@@ -292,7 +292,7 @@ src/runtime/
 ## Related Docs
 
 - [architecture.md](architecture.md) — System overview
-- [primitives.md](primitives.md) — L2 primitive resolvers
+- [primitives/](primitives/README.md) — L2 primitive resolvers
 - [adapters.md](adapters.md) — L3 adapter framework
 - [security.md](security.md) — SSRF protection, redirect safety
 - [meta-spec.md](meta-spec.md) — Type system driving execution

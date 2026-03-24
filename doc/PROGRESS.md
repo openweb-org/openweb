@@ -1,3 +1,25 @@
+## 2026-03-23: Doc Normalize — align docs with /init-all + /update-doc standards
+
+**What changed:**
+- Created `CLAUDE.md` (28 lines) + multi-agent symlinks (`AGENTS.md`, `GEMINI.md`, `.agents/`, `.codex/`)
+- Archived 26 completed milestones (`doc/todo/v2_m0`–`v2_m25` → `doc/archive/YYYYMMDD_v2_mN/`)
+- Relocated non-standard files: `blocked.md` → `todo/`, `mission.md` → `main/`, `ref/` → `archive/ref/`, `note.md` → `archive/`
+- Split `primitives.md` (410 lines) → `doc/main/primitives/` subdirectory (README.md + auth.md + signing.md)
+- Split `roadmap.md` (996 lines) → active-only (136 lines) + `archive/roadmap-completed.md`
+- Trimmed `adding-sites.md` (357→286) and `development.md` (340→205)
+- Moved skill to project root: `.claude/skills/openweb/` → `skill/openweb/` (symlink back for Claude Code)
+- Deleted stale `doc/knowledge/` (canonical knowledge lives in `skill/openweb/references/knowledge/`)
+- Updated all `-> See:` pointers, skill path refs in `architecture.md`, README.md timestamp
+
+**Why:**
+- Docs had drifted from `/init-all` and `/update-doc` standards: no CLAUDE.md, completed milestones in todo/, oversized files, duplicated knowledge, no multi-agent symlinks
+
+**Key files:** `CLAUDE.md`, `doc/main/primitives/`, `doc/todo/roadmap.md`, `doc/archive/`, `skill/openweb/`, `doc/main/architecture.md`, `doc/main/README.md`
+**Verification:** All SOTA doc files ≤300 lines, no stale `primitives.md` or `.claude/skills/openweb` refs in active docs, all symlinks resolve
+**Commit:** (this commit)
+**Next:** M26 redo or M29 (user login → discover all)
+**Blockers:** None
+
 ## 2026-03-23: M26 — Agent Discover: bearer_token / api_key sites — NOT DONE
 
 **What changed:**

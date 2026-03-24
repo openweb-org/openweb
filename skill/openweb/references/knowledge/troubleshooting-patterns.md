@@ -45,8 +45,8 @@ Known failure patterns and fixes, extracted from M3–M18 experience and M26 dis
 ## Compile Failures
 
 ### No filtered samples after analyzer filtering
-**Cause**: All captured traffic was filtered as noise (tracking, CDN, infrastructure).
-**Fix**: Browse more pages to capture real API traffic. Check that target URL matches the site's API domain.
+**Cause**: All captured traffic was filtered as noise (tracking, CDN, infrastructure). Also happens when a site uses protobuf-encoded parameters (like Google Maps' `pb` parameter) or map tiles that the analyzer doesn't recognize as API traffic.
+**Fix**: Browse more pages to capture real API traffic. Check that target URL matches the site's API domain. For sites with unusual API formats (protobuf, binary, non-standard encoding), manual fixture creation may be required — the compiler cannot handle all patterns.
 
 ### No operations produced from clusters
 **Cause**: All endpoints were mutations with request bodies (skipped by safety gate) or all samples filtered.

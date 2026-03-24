@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-03-16 (commit: `uncommitted`)
+> Last updated: 2026-03-23 (doc-normalize)
 
 ## Quick Start
 
@@ -25,7 +25,10 @@ doc/main/
 ├── architecture.md        # System overview, 3-layer model, execution modes
 │
 ├── runtime.md             # Execution pipeline: mode dispatch, parameter binding, redirects
-├── primitives.md          # L2 primitive resolvers: auth, CSRF, signing, pagination, extraction
+├── primitives/            # L2 primitive resolvers: auth, CSRF, signing, pagination, extraction
+│   ├── README.md          #   Overview, taxonomy, resolution pipeline
+│   ├── auth.md            #   Auth primitives (cookie_session, localStorage_jwt, etc.)
+│   └── signing.md         #   CSRF and signing primitives
 ├── adapters.md            # L3 adapter framework: CodeAdapter interface, loading, lifecycle
 │
 ├── meta-spec.md           # Type system: L2 types, x-openweb extensions, JSON Schema, validation
@@ -131,15 +134,15 @@ src/
 1. [architecture.md](architecture.md) — 3-layer model, execution modes, system overview
 2. [runtime.md](runtime.md) — How operations execute end-to-end
 3. [meta-spec.md](meta-spec.md) — The type system that drives everything
-4. [primitives.md](primitives.md) — How auth/CSRF/signing are resolved
+4. [primitives/](primitives/README.md) — How auth/CSRF/signing are resolved
 
 ### Working on specific areas?
 
 | Area | Start With |
 |------|------------|
-| Adding a new site | [primitives.md](primitives.md), [dev/adding-sites.md](../dev/adding-sites.md) |
+| Adding a new site | [primitives/](primitives/README.md), [dev/adding-sites.md](../dev/adding-sites.md) |
 | Runtime execution | [runtime.md](runtime.md), [security.md](security.md) |
-| L2 auth/CSRF/signing | [primitives.md](primitives.md) |
+| L2 auth/CSRF/signing | [primitives/](primitives/README.md) |
 | L3 adapters | [adapters.md](adapters.md) |
 | Type system & validation | [meta-spec.md](meta-spec.md) |
 | Compiler pipeline | [compiler.md](compiler.md), [browser-capture.md](browser-capture.md) |
@@ -156,7 +159,7 @@ src/
 | **3-Layer Model** | L1 structural spec, L2 interaction primitives, L3 code adapters | [architecture.md](architecture.md) |
 | **x-openweb** | OpenAPI extension carrying auth/CSRF/signing/pagination config | [meta-spec.md](meta-spec.md) |
 | **Execution Mode** | `direct_http`, `session_http`, `browser_fetch` — how requests reach the server | [runtime.md](runtime.md) |
-| **Primitive** | Declarative config unit for auth, CSRF, signing, pagination, extraction | [primitives.md](primitives.md) |
+| **Primitive** | Declarative config unit for auth, CSRF, signing, pagination, extraction | [primitives/](primitives/README.md) |
 | **CodeAdapter** | L3 escape hatch — arbitrary JS running in browser context | [adapters.md](adapters.md) |
 | **Skill Package** | Per-site artifact: openapi.yaml + manifest.json + adapters/ + tests/ | [compiler.md](compiler.md) |
 | **Capture Bundle** | Raw recording: traffic.har + websocket_frames.jsonl + state + DOM | [browser-capture.md](browser-capture.md) |

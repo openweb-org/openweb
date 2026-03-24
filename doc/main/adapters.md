@@ -172,5 +172,5 @@ src/fixtures/
 
 - [architecture.md](architecture.md) — Where L3 fits in the 3-layer model
 - [runtime.md](runtime.md) — How adapter execution is dispatched
-- [primitives.md](primitives.md) — L2 alternative when adapters aren't needed
+- [primitives/](primitives/README.md) — L2 alternative when adapters aren't needed
 - `src/types/adapter.ts` — CodeAdapter type definition

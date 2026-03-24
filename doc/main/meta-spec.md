@@ -258,7 +258,7 @@ src/types/
 ## Related Docs
 
 - [architecture.md](architecture.md) — Where meta-spec fits
-- [primitives.md](primitives.md) — How primitives are resolved at runtime
+- [primitives/](primitives/README.md) — How primitives are resolved at runtime
 - [adapters.md](adapters.md) — L3 CodeAdapter interface
 - [compiler.md](compiler.md) — How specs are generated
 - `src/types/primitives.ts` — Full L2 type definitions

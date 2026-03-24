@@ -37,7 +37,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 
 ```
                     ┌──────────────┐
-                    │ Agent Skill  │  .claude/skills/openweb/SKILL.md
+                    │ Agent Skill  │  skill/openweb/SKILL.md
                     └──────┬───────┘
                            │ natural language → CLI command
                     ┌──────────────┐
@@ -87,11 +87,11 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 | **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | L1 emit + L2 classify + probe (M15) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM), dynamic globals detection | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17) |
 | **Lifecycle** | Drift detection, verification, quarantine | `src/lifecycle/` | Fingerprint + verify + quarantine (M12) |
-| **Knowledge** | Agent reference docs for archetypes and site-specific notes | `.claude/skills/openweb/references/` | Reference docs (M19), CLI + CompileSummary removed (M20) |
+| **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skill/openweb/references/` | Reference docs (M19), CLI + CompileSummary removed (M20) |
 | **Registry** | Site version management, install, rollback | `src/lifecycle/registry.ts` | Internal registry (M12) |
 | **CLI** | Progressive navigation + exec + init + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M18: discovery moved to agent workflow; M20: knowledge CLI removed; M21: init, auto-exec, npm packaging) |
 | **Skill packages** | Per-site instance specs | `src/fixtures/` (dev), `~/.openweb/sites/` (installed) | 135 sites (17 A-class verified + 35 B-class + 48 C-class stubs + 34 public API + 1 open-meteo) |
-| **Agent skill** | CLI wrapper for Claude/Codex agents | `.claude/skills/openweb/SKILL.md` | Complete (M5), Draft-Curate-Verify + knowledge refs (M19) |
+| **Agent skill** | CLI wrapper for Claude/Codex agents | `skill/openweb/SKILL.md` | Complete (M5), Draft-Curate-Verify + knowledge refs (M19) |
 
 ---
 
@@ -129,7 +129,7 @@ Auth, CSRF, and signing are resolved as a pipeline on every L2 request:
 └────────────────────────────────────────────────────────┘
 ```
 
--> See: [primitives.md](primitives.md) — all 17 primitive types
+-> See: [primitives/](primitives/README.md) — all 17 primitive types
 
 ---
 
@@ -251,7 +251,7 @@ Token cache at `~/.openweb/tokens/<site>/` stores cookies + localStorage + sessi
 ## Related Docs
 
 - [runtime.md](runtime.md) — Execution pipeline details
-- [primitives.md](primitives.md) — L2 primitive resolvers
+- [primitives/](primitives/README.md) — L2 primitive resolvers
 - [adapters.md](adapters.md) — L3 adapter framework
 - [meta-spec.md](meta-spec.md) — Type system and validation
 - [compiler.md](compiler.md) — Compiler pipeline

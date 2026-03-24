@@ -122,7 +122,7 @@ Examples: YouTube, Hacker News, Wikipedia, ChatGPT
 **Hacker News**: html_selector extraction. No auth. Node transport.
 **ChatGPT**: exchange_chain (GET session endpoint) + Cloudflare User-Agent binding.
 **Wikipedia**: No auth. Node transport. Search + page summary.
-**Google Maps**: Internal protobuf-encoded `pb` parameter API (`/search?tbm=map&pb=...`). fetchFromPage transport. SAPISIDHASH signing for auth. Headless browsers blocked by consent screen/CAPTCHA.
+**Google Maps**: L3 adapter. Search and directions use SPA navigation + DOM extraction (APIs need session-specific tokens only generated during navigation). Place details work via direct `page.evaluate(fetch())` to `/maps/preview/place?pb=...`. Protobuf-like `pb` parameter with `!` delimiters. Responses are JSON prefixed with `)]}'`. No SAPISIDHASH needed for public data (unauthenticated). Compiler cannot handle — manual fixture. Place data at response[6] is 200+ element positional array.
 
 Expected Operations:
 - [ ] Feed / homepage (read, paginated)

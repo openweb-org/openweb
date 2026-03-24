@@ -29,15 +29,11 @@ None of the above work? Proprietary module system? Custom protocol?
   └── L3 adapter — write CodeAdapter
 ```
 
----
-
 ## Step 1: Create Fixture Directory
 
 ```bash
 mkdir -p src/fixtures/<site>-fixture/tests
 ```
-
----
 
 ## Step 2: Capture Traffic (Optional)
 
@@ -60,8 +56,6 @@ pnpm dev compile <site-url>
 ```
 
 Or write the spec by hand (recommended for precision).
-
----
 
 ## Step 3: Write openapi.yaml
 
@@ -162,8 +156,6 @@ paths:
           operation: getChats
 ```
 
----
-
 ## Step 4: Write manifest.json
 
 ```json
@@ -187,8 +179,6 @@ paths:
 }
 ```
 
----
-
 ## Step 5: Write Adapter (L3 Only)
 
 Create `adapters/<name>.ts`:
@@ -199,19 +189,9 @@ import type { CodeAdapter } from '../../../types/adapter.js';
 const adapter: CodeAdapter = {
   name: '<name>',
   description: '<what it does>',
-
-  async init(page) {
-    // Verify page state, return true if ready
-    return true;
-  },
-
-  async isAuthenticated(page) {
-    // Check if user is logged in
-    return true;
-  },
-
+  async init(page) { return true; },
+  async isAuthenticated(page) { return true; },
   async execute(page, operation, params) {
-    // Run the operation, return result
     switch (operation) {
       case 'getChats':
         return page.evaluate(() => { /* ... */ });
@@ -220,11 +200,8 @@ const adapter: CodeAdapter = {
     }
   },
 };
-
 export default adapter;
 ```
-
----
 
 ## Step 6: Write Tests
 
@@ -245,8 +222,6 @@ Create `tests/<operationId>.test.json`:
 }
 ```
 
----
-
 ## Step 7: Validate & Verify
 
 ```bash
@@ -266,8 +241,6 @@ pnpm --silent dev <site>-fixture test
 pnpm --silent dev verify <site>-fixture
 ```
 
----
-
 ## Step 8: Register (Optional)
 
 Archive verified fixtures to the internal registry for version management:
@@ -275,8 +248,6 @@ Archive verified fixtures to the internal registry for version management:
 ```bash
 pnpm --silent dev registry install <site>-fixture
 ```
-
----
 
 ## Checklist
 
@@ -289,69 +260,27 @@ pnpm --silent dev registry install <site>-fixture
 - [ ] Validated against benchmark suite (`tests/benchmark/`) if adding a new execution mode or auth pattern
 - [ ] Pitfalls documented in design docs (if applicable)
 
----
+## Current Fixtures (Key Examples)
 
-## Current Fixtures
+| Fixture | Layer | Auth | Key pattern |
+|---------|-------|------|-------------|
+| instagram-fixture | L2 | cookie_session + cookie_to_header CSRF | Classic cookie auth |
+| bluesky-fixture | L2 | localStorage_jwt | JWT from localStorage |
+| youtube-fixture | L2 | page_global + sapisidhash signing | Window global + signing |
+| github-fixture | L2 | cookie_session + meta_tag CSRF | SSR extraction |
+| reddit-fixture | L2 | cookie_session + exchange_chain | OAuth bearer |
+| discord-fixture | L2 | webpack_module_walk | Webpack module cache |
+| microsoft-word-fixture | L2 | sessionStorage_msal | MSAL cache |
+| chatgpt-fixture | L2 | exchange_chain (GET) | Next-auth session |
+| x-fixture | L2 | cookie_session + cookie_to_header | browser_fetch + static bearer |
+| whatsapp-fixture | L3 | adapter | Meta require() module |
+| telegram-fixture | L3 | adapter | teact global state |
 
-| Fixture | Layer | Auth | CSRF | Key pattern |
-|---------|-------|------|------|-------------|
-| open-meteo-fixture | L1 | — | — | Public API |
-| instagram-fixture | L2 | cookie_session | cookie_to_header | Classic cookie auth + CSRF |
-| bluesky-fixture | L2 | localStorage_jwt | — | JWT from localStorage |
-| youtube-fixture | L2 | page_global | — | Window global + SAPISIDHASH signing |
-| github-fixture | L2 | cookie_session | meta_tag | DOM meta tag CSRF + SSR extraction |
-| reddit-fixture | L2 | cookie_session + exchange_chain | — | Cookie auth + OAuth bearer via csrf cookie extraction |
-| walmart-fixture | L2 | — | — | Next.js `__NEXT_DATA__` extraction |
-| hackernews-fixture | L2 | — | — | DOM selector extraction |
-| microsoft-word-fixture | L2 | sessionStorage_msal | — | MSAL cache → Microsoft Graph |
-| discord-fixture | L2 | webpack_module_walk | — | Webpack module cache for auth token |
-| whatsapp-fixture | L3 | adapter | — | Meta require() module system |
-| telegram-fixture | L3 | adapter | — | teact global state |
-| newrelic-fixture | L2 | cookie_session | — | GraphQL cursor pagination (const body + items_path) |
-| chatgpt-fixture | L2 | exchange_chain (GET) | — | Next-auth session token + Cloudflare User-Agent |
-| x-fixture | L2 | cookie_session | cookie_to_header (all methods) | browser_fetch + static bearer + CSRF on GET |
-| stackoverflow-fixture | L1 | — | — | Public API |
-| coingecko-fixture | L1 | — | — | Public API |
-| wikipedia-fixture | L1 | — | — | Public API |
-| npm-fixture | L1 | — | — | Public API |
-| duckduckgo-fixture | L1 | — | — | Public API |
-| jsonplaceholder-fixture | L1 | — | — | Public API (CRUD) |
-| dogceo-fixture | L1 | — | — | Public API |
-| github-public-fixture | L1 | — | — | Public API (link_header pagination) |
-| restcountries-fixture | L1 | — | — | Public API |
-| ipapi-fixture | L1 | — | — | Public API |
-| agify-fixture | L1 | — | — | Public API (name → age prediction) |
-| boredapi-fixture | L1 | — | — | Public API (random activities) |
-| catfact-fixture | L1 | — | — | Public API (cat facts) |
-| exchangerate-fixture | L1 | — | — | Public API (currency rates) |
-| genderize-fixture | L1 | — | — | Public API (name → gender) |
-| httpbin-fixture | L1 | — | — | Public API (HTTP testing) |
-| nationalize-fixture | L1 | — | — | Public API (name → nationality) |
-| openlib-fixture | L1 | — | — | Public API (book search) |
-| pokeapi-fixture | L1 | — | — | Public API (Pokemon data) |
-| randomuser-fixture | L1 | — | — | Public API (random users) |
-| advice-fixture | L1 | — | — | Public API (advice slips) |
-| affirmations-fixture | L1 | — | — | Public API (affirmations) |
-| chucknorris-fixture | L1 | — | — | Public API (Chuck Norris jokes) |
-| cocktaildb-fixture | L1 | — | — | Public API (cocktail search) |
-| colorapi-fixture | L1 | — | — | Public API (color details) |
-| countryis-fixture | L1 | — | — | Public API (IP geolocation) |
-| dictionaryapi-fixture | L1 | — | — | Public API (word definitions) |
-| foxes-fixture | L1 | — | — | Public API (random fox images) |
-| kanye-fixture | L1 | — | — | Public API (Kanye quotes) |
-| official-joke-fixture | L1 | — | — | Public API (random jokes) |
-| publicholiday-fixture | L1 | — | — | Public API (public holidays) |
-| sunrise-sunset-fixture | L1 | — | — | Public API (sunrise/sunset) |
-| universities-fixture | L1 | — | — | Public API (university search) |
-| uselessfacts-fixture | L1 | — | — | Public API (random facts) |
-| worldtime-fixture | L1 | — | — | Public API (world time) |
-| zippopotam-fixture | L1 | — | — | Public API (ZIP code lookup) |
-
----
+Plus ~35 L1 public API fixtures (no auth needed). Run `pnpm dev sites` for the full list.
 
 ## Related Docs
 
-- [doc/main/primitives.md](../main/primitives.md) — Available L2 primitives
+- [doc/main/primitives/](../main/primitives/README.md) — Available L2 primitives
 - [doc/main/adapters.md](../main/adapters.md) — L3 CodeAdapter interface
 - [doc/main/meta-spec.md](../main/meta-spec.md) — x-openweb extension schema
 - [doc/main/browser-capture.md](../main/browser-capture.md) — Capture module
