@@ -1,0 +1,15 @@
+{
+    "operation_id": "searchAll",
+    "cases": [
+        {
+            "input": {
+                "term": "science",
+                "limit": 5
+            },
+            "assertions": {
+                "status": 200,
+                "response_schema_valid": true
+            }
+        }
+    ]
+}

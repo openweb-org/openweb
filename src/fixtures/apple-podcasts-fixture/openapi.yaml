@@ -1,0 +1,690 @@
+openapi: '3.1.0'
+info:
+  title: Apple Podcasts API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://amp-api.podcasts.apple.com
+    x-openweb:
+      transport: page
+paths:
+  /search/podcasts:
+    get:
+      operationId: searchPodcasts
+      summary: Search podcasts by keyword — show names, artists, artwork, genres
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: apod0001
+          signature_id: apod0001s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: apple-podcasts-api
+          operation: searchPodcasts
+      parameters:
+        - name: term
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "true crime", "technology", "comedy podcast").
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+          description: Number of results to return (max 25).
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Offset for pagination.
+      responses:
+        '200':
+          description: Podcast search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  term:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Podcast'
+                  next:
+                    type: string
+                    nullable: true
+  /search/episodes:
+    get:
+      operationId: searchEpisodes
+      summary: Search episodes by keyword — episode names, durations, show names
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: apod0002
+          signature_id: apod0002s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: apple-podcasts-api
+          operation: searchEpisodes
+      parameters:
+        - name: term
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "artificial intelligence", "interview with").
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+          description: Number of results to return (max 25).
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Offset for pagination.
+      responses:
+        '200':
+          description: Episode search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  term:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Episode'
+                  next:
+                    type: string
+                    nullable: true
+  /podcasts/{podcastId}:
+    get:
+      operationId: getPodcastDetails
+      summary: Get podcast show details — name, artist, description, artwork, feed URL, genre
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: apod0003
+          signature_id: apod0003s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: apple-podcasts-api
+          operation: getPodcastDetails
+      parameters:
+        - name: podcastId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Apple Podcasts show ID (numeric string, e.g. "917918570" for Serial).
+      responses:
+        '200':
+          description: Podcast detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PodcastDetail'
+  /podcasts/{podcastId}/episodes:
+    get:
+      operationId: getPodcastEpisodes
+      summary: Get episodes for a podcast — paginated list with audio URLs and durations
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: apod0004
+          signature_id: apod0004s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: apple-podcasts-api
+          operation: getPodcastEpisodes
+      parameters:
+        - name: podcastId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Apple Podcasts show ID.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of episodes per page.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Offset for pagination.
+      responses:
+        '200':
+          description: Episode list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  podcastId:
+                    type: string
+                  episodes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Episode'
+                  next:
+                    type: string
+                    nullable: true
+  /podcast-episodes/{episodeId}:
+    get:
+      operationId: getEpisodeDetails
+      summary: Get episode details — name, description, duration, audio URL, release date
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: apod0005
+          signature_id: apod0005s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: apple-podcasts-api
+          operation: getEpisodeDetails
+      parameters:
+        - name: episodeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Apple Podcasts episode ID (numeric string, e.g. "1000756119476").
+      responses:
+        '200':
+          description: Episode detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EpisodeDetail'
+  /podcasts/{podcastId}/reviews:
+    get:
+      operationId: getPodcastReviews
+      summary: Get podcast ratings and reviews — star rating, title, review text, author
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: apod0006
+          signature_id: apod0006s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: apple-podcasts-api
+          operation: getPodcastReviews
+      parameters:
+        - name: podcastId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Apple Podcasts show ID.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of reviews per page.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Offset for pagination.
+      responses:
+        '200':
+          description: Podcast reviews.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  podcastId:
+                    type: string
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                  next:
+                    type: string
+                    nullable: true
+  /charts/podcasts:
+    get:
+      operationId: getTopPodcasts
+      summary: Get top podcast charts — ranked list of trending/popular shows
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: apod0007
+          signature_id: apod0007s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: apple-podcasts-api
+          operation: getTopPodcasts
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Number of chart entries (max 200).
+        - name: genre
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Genre ID to filter charts (e.g. "1303" for Comedy, "1318" for Technology).
+      responses:
+        '200':
+          description: Top podcasts chart.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chartName:
+                    type: string
+                  genre:
+                    type: string
+                    nullable: true
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Podcast'
+  /charts/episodes:
+    get:
+      operationId: getTopEpisodes
+      summary: Get top episode charts — ranked list of trending/popular episodes
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: apod0008
+          signature_id: apod0008s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: apple-podcasts-api
+          operation: getTopEpisodes
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Number of chart entries (max 200).
+        - name: genre
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Genre ID to filter charts.
+      responses:
+        '200':
+          description: Top episodes chart.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chartName:
+                    type: string
+                  genre:
+                    type: string
+                    nullable: true
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Episode'
+  /charts/genre/{genreId}:
+    get:
+      operationId: getGenreCharts
+      summary: Get top podcasts by genre — Comedy (1303), Tech (1318), News (1489), etc.
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: apod0009
+          signature_id: apod0009s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: apple-podcasts-api
+          operation: getGenreCharts
+      parameters:
+        - name: genreId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Apple genre ID (e.g. "1303"=Comedy, "1318"=Technology, "1301"=Arts, "1489"=News).
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Number of chart entries.
+      responses:
+        '200':
+          description: Genre-filtered podcast chart.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  genreId:
+                    type: string
+                  chartName:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Podcast'
+  /search/all:
+    get:
+      operationId: searchAll
+      summary: Combined search — grouped results with shows, episodes, and top results sections
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: apod0010
+          signature_id: apod0010s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: apple-podcasts-api
+          operation: searchAll
+      parameters:
+        - name: term
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Results per group.
+      responses:
+        '200':
+          description: Grouped search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  term:
+                    type: string
+                  groups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SearchGroup'
+components:
+  schemas:
+    Podcast:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        attributes:
+          type: object
+          properties:
+            name:
+              type: string
+            artistName:
+              type: string
+            artwork:
+              $ref: '#/components/schemas/Artwork'
+            description:
+              type: object
+              properties:
+                standard:
+                  type: string
+                short:
+                  type: string
+            genreNames:
+              type: array
+              items:
+                type: string
+            trackCount:
+              type: integer
+            releaseDateTime:
+              type: string
+            url:
+              type: string
+            contentRating:
+              type: string
+    PodcastDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        attributes:
+          type: object
+          properties:
+            name:
+              type: string
+            artistName:
+              type: string
+            artwork:
+              $ref: '#/components/schemas/Artwork'
+            editorialArtwork:
+              type: object
+            description:
+              type: object
+              properties:
+                standard:
+                  type: string
+                short:
+                  type: string
+            genreNames:
+              type: array
+              items:
+                type: string
+            trackCount:
+              type: integer
+            releaseDateTime:
+              type: string
+            releaseFrequency:
+              type: string
+            feedUrl:
+              type: string
+            websiteUrl:
+              type: string
+            url:
+              type: string
+            copyright:
+              type: string
+            contentRating:
+              type: string
+            languageTag:
+              type: string
+            completed:
+              type: boolean
+            subscribable:
+              type: boolean
+        relationships:
+          type: object
+          properties:
+            artists:
+              type: object
+    Episode:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        attributes:
+          type: object
+          properties:
+            name:
+              type: string
+            artistName:
+              type: string
+            artwork:
+              $ref: '#/components/schemas/Artwork'
+            description:
+              type: object
+              properties:
+                standard:
+                  type: string
+                short:
+                  type: string
+            durationInMilliseconds:
+              type: integer
+            releaseDateTime:
+              type: string
+            assetUrl:
+              type: string
+            contentRating:
+              type: string
+            url:
+              type: string
+            guid:
+              type: string
+            seasonNumber:
+              type: integer
+    EpisodeDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        attributes:
+          type: object
+          properties:
+            name:
+              type: string
+            itunesTitle:
+              type: string
+            artistName:
+              type: string
+            artwork:
+              $ref: '#/components/schemas/Artwork'
+            description:
+              type: object
+              properties:
+                standard:
+                  type: string
+                short:
+                  type: string
+            durationInMilliseconds:
+              type: integer
+            releaseDateTime:
+              type: string
+            assetUrl:
+              type: string
+            contentRating:
+              type: string
+            contentAdvisory:
+              type: string
+            copyright:
+              type: string
+            url:
+              type: string
+            websiteUrl:
+              type: string
+            guid:
+              type: string
+            seasonNumber:
+              type: integer
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        attributes:
+          type: object
+          properties:
+            rating:
+              type: integer
+              description: Star rating from 1 to 5.
+            title:
+              type: string
+            review:
+              type: string
+            userName:
+              type: string
+            date:
+              type: string
+    SearchGroup:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Group label (e.g. "Top Results", "Shows", "Episodes").
+        groupId:
+          type: string
+        content:
+          type: object
+          description: Keyed by resource type, each containing data array.
+    Artwork:
+      type: object
+      properties:
+        width:
+          type: integer
+        height:
+          type: integer
+        url:
+          type: string
+          description: Template URL with {w}x{h} placeholders for dimensions.
+        bgColor:
+          type: string
+        textColor1:
+          type: string

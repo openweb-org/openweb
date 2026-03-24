@@ -1,0 +1,14 @@
+{
+    "operation_id": "getEpisodeDetails",
+    "cases": [
+        {
+            "input": {
+                "episodeId": "1000756119476"
+            },
+            "assertions": {
+                "status": 200,
+                "response_schema_valid": true
+            }
+        }
+    ]
+}

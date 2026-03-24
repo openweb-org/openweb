@@ -1,0 +1,14 @@
+{
+    "operation_id": "getPodcastDetails",
+    "cases": [
+        {
+            "input": {
+                "podcastId": "917918570"
+            },
+            "assertions": {
+                "status": 200,
+                "response_schema_valid": true
+            }
+        }
+    ]
+}
