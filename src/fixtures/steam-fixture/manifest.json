@@ -1,0 +1,22 @@
+{
+  "name": "steam-fixture",
+  "display_name": "Steam Store",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://store.steampowered.com",
+  "description": "Game search, details, pricing, reviews, news, player counts, and achievements via Steam public APIs",
+  "requires_auth": false,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 10,
+    "l1_count": 10,
+    "l2_count": 0,
+    "l3_count": 0
+  },
+  "last_verified": "2026-03-24T18:51:49.532Z",
+  "quarantined": false,
+  "fingerprint": {
+    "response_shape_hash": "getAppDetails:2c70cab222f18d7f,getAppNews:e542e15c01900ee5,getAppNewsV1:aada8e7e97f04bb1,getAppReviews:96a2757909ed3ba8,getCurrentPlayers:ec6f4c5ee1e868fc,getFeatured:cd0d2397dbf35774,getFeaturedCategories:08069164b0de03b7,getGlobalAchievements:b72759ccad86c53a,getPackageDetails:c50898eac027803e,searchGames:758dc8b0181c01aa",
+    "last_validated": "2026-03-24T18:51:49.533Z"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "operation_id": "getPackageDetails",
+  "cases": [
+    {
+      "input": { "packageids": "354231" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

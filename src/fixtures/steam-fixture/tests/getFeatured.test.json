@@ -1,0 +1,12 @@
+{
+  "operation_id": "getFeatured",
+  "cases": [
+    {
+      "input": { "cc": "US" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

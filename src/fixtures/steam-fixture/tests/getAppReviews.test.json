@@ -1,0 +1,12 @@
+{
+  "operation_id": "getAppReviews",
+  "cases": [
+    {
+      "input": { "appid": 730, "json": 1, "num_per_page": 5 },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

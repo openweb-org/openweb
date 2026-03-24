@@ -1,0 +1,12 @@
+{
+  "operation_id": "getAppDetails",
+  "cases": [
+    {
+      "input": { "appids": "730" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

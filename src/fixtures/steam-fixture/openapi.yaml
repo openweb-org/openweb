@@ -1,0 +1,791 @@
+openapi: '3.1.0'
+info:
+  title: Steam Store
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://store.steampowered.com
+  - url: https://api.steampowered.com
+paths:
+  /api/appdetails:
+    get:
+      operationId: getAppDetails
+      summary: Get full details for a game by app ID (price, description, requirements, screenshots)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: stm0001
+          signature_id: stm0001s
+          tool_version: 1
+      parameters:
+        - name: appids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated Steam app IDs (e.g. "730" or "730,1245620").
+        - name: cc
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Country code for pricing (e.g. "US", "GB", "DE").
+        - name: l
+          in: query
+          required: false
+          schema:
+            type: string
+            default: english
+          description: Language for descriptions (e.g. "english", "spanish").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  required: [success]
+                  properties:
+                    success:
+                      type: boolean
+                    data:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        name:
+                          type: string
+                        steam_appid:
+                          type: integer
+                        is_free:
+                          type: boolean
+                        short_description:
+                          type: string
+                        header_image:
+                          type: string
+                        developers:
+                          type: array
+                          items:
+                            type: string
+                        publishers:
+                          type: array
+                          items:
+                            type: string
+                        price_overview:
+                          type: object
+                          properties:
+                            currency:
+                              type: string
+                            initial:
+                              type: integer
+                            final:
+                              type: integer
+                            discount_percent:
+                              type: integer
+                            final_formatted:
+                              type: string
+                        platforms:
+                          type: object
+                          properties:
+                            windows:
+                              type: boolean
+                            mac:
+                              type: boolean
+                            linux:
+                              type: boolean
+                        categories:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              description:
+                                type: string
+                        genres:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              description:
+                                type: string
+                        release_date:
+                          type: object
+                          properties:
+                            coming_soon:
+                              type: boolean
+                            date:
+                              type: string
+                        metacritic:
+                          type: object
+                          properties:
+                            score:
+                              type: integer
+                            url:
+                              type: string
+                        recommendations:
+                          type: object
+                          properties:
+                            total:
+                              type: integer
+
+  /api/storesearch/:
+    get:
+      operationId: searchGames
+      summary: Search Steam store by keyword
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: stm0002
+          signature_id: stm0002s
+          tool_version: 1
+      parameters:
+        - name: term
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (e.g. "elden ring").
+        - name: l
+          in: query
+          required: false
+          schema:
+            type: string
+            default: english
+          description: Language.
+        - name: cc
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Country code for pricing.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total, items]
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        name:
+                          type: string
+                        id:
+                          type: integer
+                        price:
+                          type: object
+                          properties:
+                            currency:
+                              type: string
+                            initial:
+                              type: integer
+                            final:
+                              type: integer
+                        tiny_image:
+                          type: string
+                        metascore:
+                          type: string
+                        platforms:
+                          type: object
+                          properties:
+                            windows:
+                              type: boolean
+                            mac:
+                              type: boolean
+                            linux:
+                              type: boolean
+
+  /appreviews/{appid}:
+    get:
+      operationId: getAppReviews
+      summary: Get user reviews for a game
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: stm0003
+          signature_id: stm0003s
+          tool_version: 1
+      parameters:
+        - name: appid
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Steam app ID (e.g. 730).
+        - name: json
+          in: query
+          required: true
+          schema:
+            type: integer
+            default: 1
+          description: Set to 1 for JSON response.
+        - name: num_per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of reviews per page.
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            default: recent
+          description: Filter type (recent, updated, all).
+        - name: language
+          in: query
+          required: false
+          schema:
+            type: string
+            default: english
+          description: Language filter.
+        - name: review_type
+          in: query
+          required: false
+          schema:
+            type: string
+            default: all
+          description: Review type (positive, negative, all).
+        - name: purchase_type
+          in: query
+          required: false
+          schema:
+            type: string
+            default: all
+          description: Purchase type (steam, non_steam_purchase, all).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, query_summary, reviews]
+                properties:
+                  success:
+                    type: integer
+                  query_summary:
+                    type: object
+                    properties:
+                      num_reviews:
+                        type: integer
+                      review_score:
+                        type: integer
+                      review_score_desc:
+                        type: string
+                      total_positive:
+                        type: integer
+                      total_negative:
+                        type: integer
+                      total_reviews:
+                        type: integer
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        recommendationid:
+                          type: string
+                        author:
+                          type: object
+                          properties:
+                            steamid:
+                              type: string
+                            num_games_owned:
+                              type: integer
+                            num_reviews:
+                              type: integer
+                            playtime_forever:
+                              type: integer
+                        language:
+                          type: string
+                        review:
+                          type: string
+                        voted_up:
+                          type: boolean
+                        votes_up:
+                          type: integer
+                        votes_funny:
+                          type: integer
+                        timestamp_created:
+                          type: integer
+                        timestamp_updated:
+                          type: integer
+
+  /api/featured/:
+    get:
+      operationId: getFeatured
+      summary: Get featured games on the Steam homepage
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: stm0004
+          signature_id: stm0004s
+          tool_version: 1
+      parameters:
+        - name: cc
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Country code for pricing.
+        - name: l
+          in: query
+          required: false
+          schema:
+            type: string
+            default: english
+          description: Language.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  large_capsules:
+                    type: array
+                    items:
+                      type: object
+                  featured_win:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        discounted:
+                          type: boolean
+                        discount_percent:
+                          type: integer
+                        original_price:
+                          type: [integer, 'null']
+                        final_price:
+                          type: [integer, 'null']
+                        currency:
+                          type: string
+                        large_capsule_image:
+                          type: string
+                        header_image:
+                          type: string
+                  featured_mac:
+                    type: array
+                  featured_linux:
+                    type: array
+
+  /api/featuredcategories/:
+    get:
+      operationId: getFeaturedCategories
+      summary: Get featured category lists (specials, top sellers, new releases, etc.)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: stm0005
+          signature_id: stm0005s
+          tool_version: 1
+      parameters:
+        - name: cc
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Country code for pricing.
+        - name: l
+          in: query
+          required: false
+          schema:
+            type: string
+            default: english
+          description: Language.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  specials:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            name:
+                              type: string
+                            discounted:
+                              type: boolean
+                            discount_percent:
+                              type: integer
+                            original_price:
+                              type: integer
+                            final_price:
+                              type: integer
+                            currency:
+                              type: string
+                            header_image:
+                              type: string
+                  coming_soon:
+                    type: object
+                  top_sellers:
+                    type: object
+                  new_releases:
+                    type: object
+
+  /api/packagedetails:
+    get:
+      operationId: getPackageDetails
+      summary: Get details for a Steam package/bundle
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: stm0006
+          signature_id: stm0006s
+          tool_version: 1
+      parameters:
+        - name: packageids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated package IDs (e.g. "354231").
+        - name: cc
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Country code for pricing.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  required: [success]
+                  properties:
+                    success:
+                      type: boolean
+                    data:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        page_image:
+                          type: string
+                        apps:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                        price:
+                          type: object
+                          properties:
+                            currency:
+                              type: string
+                            initial:
+                              type: integer
+                            final:
+                              type: integer
+                            discount_percent:
+                              type: integer
+                        platforms:
+                          type: object
+                          properties:
+                            windows:
+                              type: boolean
+                            mac:
+                              type: boolean
+                            linux:
+                              type: boolean
+
+  /ISteamNews/GetNewsForApp/v2/:
+    get:
+      operationId: getAppNews
+      summary: Get news articles for a game
+      servers:
+        - url: https://api.steampowered.com
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: stm0007
+          signature_id: stm0007s
+          tool_version: 1
+      parameters:
+        - name: appid
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Steam app ID (e.g. 730).
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of news items to return.
+        - name: maxlength
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 300
+          description: Max length of each news item body (0 for full).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [appnews]
+                properties:
+                  appnews:
+                    type: object
+                    required: [appid, newsitems]
+                    properties:
+                      appid:
+                        type: integer
+                      newsitems:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            gid:
+                              type: string
+                            title:
+                              type: string
+                            url:
+                              type: string
+                            author:
+                              type: string
+                            contents:
+                              type: string
+                            date:
+                              type: integer
+                            feedname:
+                              type: string
+
+  /ISteamUserStats/GetNumberOfCurrentPlayers/v1/:
+    get:
+      operationId: getCurrentPlayers
+      summary: Get number of current online players for a game
+      servers:
+        - url: https://api.steampowered.com
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: stm0008
+          signature_id: stm0008s
+          tool_version: 1
+      parameters:
+        - name: appid
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Steam app ID (e.g. 730).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [response]
+                properties:
+                  response:
+                    type: object
+                    required: [player_count, result]
+                    properties:
+                      player_count:
+                        type: integer
+                      result:
+                        type: integer
+
+  /ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/:
+    get:
+      operationId: getGlobalAchievements
+      summary: Get global achievement unlock percentages for a game
+      servers:
+        - url: https://api.steampowered.com
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: stm0009
+          signature_id: stm0009s
+          tool_version: 1
+      parameters:
+        - name: gameid
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Steam app ID (e.g. 730).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [achievementpercentages]
+                properties:
+                  achievementpercentages:
+                    type: object
+                    required: [achievements]
+                    properties:
+                      achievements:
+                        type: array
+                        items:
+                          type: object
+                          required: [name, percent]
+                          properties:
+                            name:
+                              type: string
+                            percent:
+                              type: [number, string]
+
+  /ISteamNews/GetNewsForApp/v1/:
+    get:
+      operationId: getAppNewsV1
+      summary: Get news articles for a game (v1 — wraps items in newsitem sub-object)
+      servers:
+        - url: https://api.steampowered.com
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: stm0010
+          signature_id: stm0010s
+          tool_version: 1
+      parameters:
+        - name: appid
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Steam app ID (e.g. 730).
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of news items to return.
+        - name: maxlength
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 300
+          description: Max length of each news item body (0 for full).
+        - name: feeds
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated feed names to filter (e.g. "steam_community_announcements").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [appnews]
+                properties:
+                  appnews:
+                    type: object
+                    required: [appid, newsitems]
+                    properties:
+                      appid:
+                        type: integer
+                      newsitems:
+                        type: object
+                        properties:
+                          newsitem:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                gid:
+                                  type: string
+                                title:
+                                  type: string
+                                url:
+                                  type: string
+                                author:
+                                  type: string
+                                contents:
+                                  type: string
+                                date:
+                                  type: integer
+                                feedname:
+                                  type: string
+                                tags:
+                                  type: object
+                                  properties:
+                                    tag:
+                                      type: array
+                                      items:
+                                        type: string
