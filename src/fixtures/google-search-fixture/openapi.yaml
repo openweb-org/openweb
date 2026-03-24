@@ -69,34 +69,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - dom-match
-        extraction:
-          type: page_global_data
-          page_url: /search
-          expression: >-
-            (() => {
-              const items = [];
-              const containers = document.querySelectorAll('div.tF2Cxc, div.Ww4FFb');
-              for (const div of containers) {
-                const h3 = div.querySelector('h3');
-                const link = div.querySelector('a[href]');
-                const snippet = div.querySelector('.VwiC3b, [data-sncf], .lEBKkf');
-                const cite = div.querySelector('cite');
-                if (h3 && link) {
-                  items.push({
-                    title: h3.textContent?.trim() || '',
-                    link: link.getAttribute('href') || '',
-                    displayUrl: cite?.textContent?.trim() || '',
-                    snippet: snippet?.textContent?.trim() || ''
-                  });
-                }
-              }
-              return {
-                query: (document.querySelector('textarea[name=q]') || document.querySelector('input[name=q]'))?.value || '',
-                resultCount: items.length,
-                results: items
-              };
-            })()
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: searchWeb
       parameters:
         - name: q
           in: query
@@ -149,33 +125,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - dom-match
-        extraction:
-          type: page_global_data
-          page_url: /search
-          expression: >-
-            (() => {
-              const items = [];
-              const containers = document.querySelectorAll('[data-lpage]');
-              for (const div of containers) {
-                const img = div.querySelector('img');
-                const sourceUrl = div.getAttribute('data-lpage') || '';
-                const alt = img?.getAttribute('alt') || '';
-                if (sourceUrl) {
-                  items.push({
-                    sourceUrl,
-                    alt,
-                    width: img?.naturalWidth || 0,
-                    height: img?.naturalHeight || 0
-                  });
-                }
-              }
-              return {
-                query: (document.querySelector('textarea[name=q]') || document.querySelector('input[name=q]'))?.value || '',
-                resultCount: items.length,
-                results: items
-              };
-            })()
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: searchImages
       parameters:
         - name: q
           in: query
