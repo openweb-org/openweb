@@ -1,0 +1,15 @@
+{
+  "operation_id": "getStockQuotes",
+  "cases": [
+    {
+      "input": {
+        "instruments": "https://api.robinhood.com/instruments/450dfc6d-5510-4d40-abfb-f633b7d9be3e/",
+        "include_inactive": "true"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

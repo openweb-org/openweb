@@ -1,0 +1,14 @@
+{
+  "operation_id": "getCryptoQuote",
+  "cases": [
+    {
+      "input": {
+        "pair_id": "3d961844-d360-45fc-989b-f6fca761d511"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

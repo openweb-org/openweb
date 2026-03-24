@@ -1,0 +1,16 @@
+{
+  "operation_id": "getDiscoveryLists",
+  "cases": [
+    {
+      "input": {
+        "object_id": "450dfc6d-5510-4d40-abfb-f633b7d9be3e",
+        "object_type": "instrument",
+        "owner_type": "robinhood"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

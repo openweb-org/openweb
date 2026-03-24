@@ -1,0 +1,738 @@
+openapi: '3.1.0'
+info:
+  title: Robinhood
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://api.robinhood.com
+paths:
+  /instruments/:
+    get:
+      operationId: getInstruments
+      summary: Look up stock instruments by IDs (returns symbol, name, tradability, market)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0001
+          signature_id: rh0001s
+          tool_version: 1
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated instrument UUIDs (e.g. "450dfc6d-5510-4d40-abfb-f633b7d9be3e").
+        - name: active_instruments_only
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'false'
+          description: Filter to active instruments only.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results]
+                properties:
+                  next:
+                    type: ['string', 'null']
+                  previous:
+                    type: ['string', 'null']
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, symbol, name, simple_name, state, type, tradeable, country, list_date]
+                      properties:
+                        id:
+                          type: string
+                        symbol:
+                          type: string
+                        name:
+                          type: string
+                        simple_name:
+                          type: string
+                        state:
+                          type: string
+                        market:
+                          type: string
+                        type:
+                          type: string
+                        tradeable:
+                          type: boolean
+                        tradability:
+                          type: string
+                        country:
+                          type: string
+                        list_date:
+                          type: string
+
+  /marketdata/quotes/:
+    get:
+      operationId: getStockQuotes
+      summary: Get real-time stock quotes (bid, ask, last trade price, previous close)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0002
+          signature_id: rh0002s
+          tool_version: 1
+      parameters:
+        - name: instruments
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated instrument URLs (e.g. "https://api.robinhood.com/instruments/{id}/").
+        - name: include_inactive
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'true'
+          description: Include inactive instruments.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [symbol, instrument_id, last_trade_price, previous_close, ask_price, bid_price, updated_at]
+                      properties:
+                        symbol:
+                          type: string
+                        instrument_id:
+                          type: string
+                        last_trade_price:
+                          type: string
+                        last_extended_hours_trade_price:
+                          type: string
+                        previous_close:
+                          type: string
+                        adjusted_previous_close:
+                          type: string
+                        previous_close_date:
+                          type: string
+                        ask_price:
+                          type: string
+                        ask_size:
+                          type: integer
+                        bid_price:
+                          type: string
+                        bid_size:
+                          type: integer
+                        trading_halted:
+                          type: boolean
+                        has_traded:
+                          type: boolean
+                        updated_at:
+                          type: string
+                        state:
+                          type: string
+
+  /marketdata/fundamentals/{instrument_id}/:
+    get:
+      operationId: getStockFundamentals
+      summary: Get stock fundamentals (market cap, PE ratio, dividend yield, 52-week range, company info)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0003
+          signature_id: rh0003s
+          tool_version: 1
+      parameters:
+        - name: instrument_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Instrument UUID (e.g. "450dfc6d-5510-4d40-abfb-f633b7d9be3e").
+        - name: bounds
+          in: query
+          required: false
+          schema:
+            type: string
+            default: trading
+          description: Price bounds context (e.g. "trading").
+        - name: include_inactive
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'true'
+          description: Include inactive data.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [open, high, low, volume, market_cap, pe_ratio, description, instrument]
+                properties:
+                  open:
+                    type: string
+                  high:
+                    type: string
+                  low:
+                    type: string
+                  volume:
+                    type: string
+                  market_date:
+                    type: string
+                  average_volume:
+                    type: string
+                  average_volume_2_weeks:
+                    type: string
+                  average_volume_30_days:
+                    type: string
+                  high_52_weeks:
+                    type: string
+                  low_52_weeks:
+                    type: string
+                  dividend_yield:
+                    type: string
+                  market_cap:
+                    type: string
+                  pb_ratio:
+                    type: string
+                  pe_ratio:
+                    type: string
+                  shares_outstanding:
+                    type: string
+                  float:
+                    type: string
+                  description:
+                    type: string
+                  instrument:
+                    type: string
+                  ceo:
+                    type: string
+                  headquarters_city:
+                    type: string
+                  headquarters_state:
+                    type: string
+                  sector:
+                    type: string
+                  industry:
+                    type: string
+                  num_employees:
+                    type: integer
+                  year_founded:
+                    type: integer
+
+  /marketdata/earnings/:
+    get:
+      operationId: getStockEarnings
+      summary: Get earnings history (EPS estimates vs actuals, report dates, earnings calls)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0004
+          signature_id: rh0004s
+          tool_version: 1
+      parameters:
+        - name: instrument
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Instrument URL (e.g. "https://api.robinhood.com/instruments/{id}/").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [symbol, year, quarter, eps, report]
+                      properties:
+                        symbol:
+                          type: string
+                        instrument:
+                          type: string
+                        year:
+                          type: integer
+                        quarter:
+                          type: integer
+                        eps:
+                          type: object
+                          required: [estimate, actual]
+                          properties:
+                            estimate:
+                              type: string
+                            actual:
+                              type: ['string', 'null']
+                        report:
+                          type: object
+                          required: [date, timing, verified]
+                          properties:
+                            date:
+                              type: string
+                            timing:
+                              type: string
+                            verified:
+                              type: boolean
+                        call:
+                          type: ['object', 'null']
+                          properties:
+                            datetime:
+                              type: string
+                            broadcast_url:
+                              type: ['string', 'null']
+                            replay_url:
+                              type: string
+
+  /discovery/ratings/{instrument_id}/:
+    get:
+      operationId: getAnalystRatings
+      summary: Get analyst ratings summary and individual ratings (buy/hold/sell) for a stock
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0005
+          signature_id: rh0005s
+          tool_version: 1
+      parameters:
+        - name: instrument_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Instrument UUID (e.g. "450dfc6d-5510-4d40-abfb-f633b7d9be3e").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [summary, ratings, instrument_id, ratings_published_at]
+                properties:
+                  summary:
+                    type: object
+                    required: [num_buy_ratings, num_hold_ratings, num_sell_ratings]
+                    properties:
+                      num_buy_ratings:
+                        type: integer
+                      num_hold_ratings:
+                        type: integer
+                      num_sell_ratings:
+                        type: integer
+                  ratings:
+                    type: array
+                    items:
+                      type: object
+                      required: [published_at, type, text]
+                      properties:
+                        published_at:
+                          type: string
+                        type:
+                          type: string
+                        text:
+                          type: string
+                  instrument_id:
+                    type: string
+                  ratings_published_at:
+                    type: string
+
+  /feed/midlands/instrument/{instrument_id}/:
+    get:
+      operationId: getStockNews
+      summary: Get news articles for a stock instrument
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0006
+          signature_id: rh0006s
+          tool_version: 1
+      parameters:
+        - name: instrument_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Instrument UUID (e.g. "450dfc6d-5510-4d40-abfb-f633b7d9be3e").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [title, uuid, url, source, date, preview_text, symbol]
+                  properties:
+                    title:
+                      type: string
+                    uuid:
+                      type: string
+                    url:
+                      type: string
+                    source:
+                      type: string
+                    date:
+                      type: string
+                    image:
+                      type: string
+                    preview_text:
+                      type: string
+                    symbol:
+                      type: string
+                    related_instruments:
+                      type: array
+                      items:
+                        type: string
+      servers:
+        - url: https://dora.robinhood.com
+
+  /marketdata/forex/quotes/{pair_id}/:
+    get:
+      operationId: getCryptoQuote
+      summary: Get real-time crypto price quote (bid, ask, mark, open, high, low, volume)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0007
+          signature_id: rh0007s
+          tool_version: 1
+      parameters:
+        - name: pair_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Currency pair UUID (e.g. "3d961844-d360-45fc-989b-f6fca761d511" for BTC).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [symbol, id, ask_price, bid_price, mark_price, high_price, low_price, open_price, volume, updated_at]
+                properties:
+                  symbol:
+                    type: string
+                  id:
+                    type: string
+                  ask_price:
+                    type: string
+                  bid_price:
+                    type: string
+                  mark_price:
+                    type: string
+                  high_price:
+                    type: string
+                  low_price:
+                    type: string
+                  open_price:
+                    type: string
+                  volume:
+                    type: string
+                  updated_at:
+                    type: string
+
+  /marketdata/forex/fundamentals/{pair_id}/:
+    get:
+      operationId: getCryptoFundamentals
+      summary: Get crypto fundamentals (market cap, circulating supply, 52-week range, description)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0008
+          signature_id: rh0008s
+          tool_version: 1
+      parameters:
+        - name: pair_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Currency pair UUID (e.g. "3d961844-d360-45fc-989b-f6fca761d511" for BTC).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [symbol, currency_pair_id, description, market_cap, circulating_supply, high_52_weeks, low_52_weeks, volume, updated_at]
+                properties:
+                  symbol:
+                    type: string
+                  currency_pair_id:
+                    type: string
+                  description:
+                    type: string
+                  market_cap:
+                    type: integer
+                  circulating_supply:
+                    type: number
+                  high_52_weeks:
+                    type: string
+                  low_52_weeks:
+                    type: string
+                  volume:
+                    type: number
+                  updated_at:
+                    type: string
+
+  /marketdata/forex/historicals/{pair_id}/:
+    get:
+      operationId: getCryptoHistoricals
+      summary: Get crypto historical OHLCV price data (candlestick chart data)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0009
+          signature_id: rh0009s
+          tool_version: 1
+      parameters:
+        - name: pair_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Currency pair UUID (e.g. "3d961844-d360-45fc-989b-f6fca761d511" for BTC).
+        - name: interval
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [15second, 5minute, 10minute, hour, day, week]
+          description: Data point interval.
+        - name: span
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [hour, day, week, month, 3month, year, 5year, all]
+          description: Time span for historical data.
+        - name: bounds
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '24_7'
+          description: Trading bounds (e.g. "24_7" for crypto).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data_points, symbol, id, interval, span, bounds]
+                properties:
+                  symbol:
+                    type: string
+                  id:
+                    type: string
+                  interval:
+                    type: string
+                  span:
+                    type: string
+                  bounds:
+                    type: string
+                  open_price:
+                    type: ['string', 'null']
+                  open_time:
+                    type: ['string', 'null']
+                  previous_close_price:
+                    type: ['string', 'null']
+                  previous_close_time:
+                    type: ['string', 'null']
+                  data_points:
+                    type: array
+                    items:
+                      type: object
+                      required: [begins_at, open_price, close_price, high_price, low_price, volume]
+                      properties:
+                        begins_at:
+                          type: string
+                        open_price:
+                          type: string
+                        close_price:
+                          type: string
+                        high_price:
+                          type: string
+                        low_price:
+                          type: string
+                        volume:
+                          type: integer
+                        session:
+                          type: string
+                        interpolated:
+                          type: boolean
+
+  /markets/{mic}/hours/{date}/:
+    get:
+      operationId: getMarketHours
+      summary: Get market hours for a specific exchange and date (open/close times, extended hours)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0010
+          signature_id: rh0010s
+          tool_version: 1
+      parameters:
+        - name: mic
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Market Identifier Code (e.g. "XASE" for NYSE American, "XNYS" for NYSE).
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Date in YYYY-MM-DD format (e.g. "2026-03-24").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [date, is_open, opens_at, closes_at, extended_opens_at, extended_closes_at]
+                properties:
+                  date:
+                    type: string
+                  is_open:
+                    type: boolean
+                  opens_at:
+                    type: string
+                  closes_at:
+                    type: string
+                  extended_opens_at:
+                    type: string
+                  extended_closes_at:
+                    type: string
+                  all_day_opens_at:
+                    type: string
+                  all_day_closes_at:
+                    type: string
+                  previous_open_hours:
+                    type: string
+                  next_open_hours:
+                    type: string
+                  fx_opens_at:
+                    type: string
+                  fx_closes_at:
+                    type: string
+                  fx_is_open:
+                    type: boolean
+
+  /discovery/lists/:
+    get:
+      operationId: getDiscoveryLists
+      summary: Get curated stock lists/collections (e.g. popular, technology, crypto)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0011
+          signature_id: rh0011s
+          tool_version: 1
+      parameters:
+        - name: object_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Object UUID to look up lists for.
+        - name: object_type
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Object type (e.g. "instrument").
+        - name: owner_type
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Owner type (e.g. "robinhood").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results]
+                properties:
+                  next:
+                    type: ['string', 'null']
+                  previous:
+                    type: ['string', 'null']
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, display_name, display_description, owner_type, item_count]
+                      properties:
+                        id:
+                          type: string
+                        display_name:
+                          type: string
+                        display_description:
+                          type: string
+                        owner_type:
+                          type: string
+                        item_count:
+                          type: integer
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                        background_color:
+                          type: string
+                        foreground_color:
+                          type: string
