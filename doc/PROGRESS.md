@@ -1,3 +1,24 @@
+## 2026-03-24: Post-M26 Cleanup — fixtures, knowledge, roadmap
+
+**What changed:**
+- Deleted 29 trivial public API fixtures (catfact, chucknorris, etc.) — no user value, direct curl works
+- Deleted `src/knowledge/` (failures.ts, heuristics.ts) — superseded by `skill/openweb/references/knowledge/` markdown files
+- 3 fixtures refactored: google-flights, google-search, redfin inline JS → adapter files (extraction complexity rule)
+- Navigator reads DOC.md instead of legacy notes.md; 6 old notes.md deleted
+- Per-fixture DOC.md + PROGRESS.md documentation system (guide at doc/todo/site_doc/guide.md)
+- New M27 defined: 30 consumer sites batch 2 (healthcare, automotive, jobs, travel, China sites)
+- M29 orchestration reflection written (doc/todo/v2_m29/summary.md)
+- Roadmap renumbered: M27→M31 shifted for new consumer sites milestone
+
+**Why:**
+- Trim dead weight (trivial fixtures, code-based knowledge). Focus fixtures on real consumer value. Document learnings before they fade.
+
+**Key files:** doc/todo/roadmap.md, doc/todo/v2_m27/sites.md, doc/todo/v2_m29/summary.md, doc/dev/development.md
+**Verification:** `pnpm build` clean (10 adapters), `pnpm test` 356/356 pass
+**Commit:** 548dea1..c31741f
+**Next:** M27 consumer sites batch 2, or quality review of M26 fixtures
+**Blockers:** None
+
 ## 2026-03-24: M26 — Consumer Sites Discovery — 13/16 DONE
 
 **What changed:**

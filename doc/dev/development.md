@@ -74,11 +74,11 @@ pnpm dev compile https://api.example.com --probe --cdp-endpoint http://localhost
 
 ```bash
 pnpm dev instagram-fixture test
-pnpm dev verify catfact-fixture                   # Single site
+pnpm dev verify walmart-fixture                   # Single site
 pnpm dev verify --all --report markdown           # Batch verify
 pnpm dev registry list                            # List registered
-pnpm dev registry install catfact-fixture         # Archive
-pnpm dev registry rollback catfact-fixture        # Revert
+pnpm dev registry install walmart-fixture         # Archive
+pnpm dev registry rollback walmart-fixture        # Revert
 ```
 
 ## Development Cycle
