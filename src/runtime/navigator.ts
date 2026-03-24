@@ -48,20 +48,20 @@ function getTransportLabel(transport: string, hasAdapter: boolean): string {
   return hasAdapter ? 'adapter (L3)' : transport
 }
 
-/** Read notes.md safely: reject symlinks, enforce path inside siteRoot, only ignore ENOENT. */
+/** Read DOC.md safely: reject symlinks, enforce path inside siteRoot, only ignore ENOENT. */
 export async function safeReadNotes(siteRoot: string): Promise<string | null> {
-  const notesPath = path.join(siteRoot, 'notes.md')
+  const docPath = path.join(siteRoot, 'DOC.md')
 
   // Reject symlinks
-  const stat = await lstat(notesPath)
+  const stat = await lstat(docPath)
   if (stat.isSymbolicLink()) return null
 
   // Enforce resolved path stays inside siteRoot
-  const resolved = realpathSync(notesPath)
+  const resolved = realpathSync(docPath)
   const canonicalRoot = realpathSync(siteRoot)
   if (!resolved.startsWith(canonicalRoot + path.sep)) return null
 
-  const content = await readFile(notesPath, 'utf8')
+  const content = await readFile(docPath, 'utf8')
   return content.split('\n').find(l => l.trim().length > 0)?.trim() ?? null
 }
 
@@ -191,7 +191,7 @@ export async function renderSiteJson(site: string): Promise<string> {
   const siteRoot = await resolveSiteRoot(site)
   const manifest = await loadManifest(siteRoot)
 
-  // Check for notes.md
+  // Check for DOC.md
   let hasNotes = false
   try {
     hasNotes = (await safeReadNotes(siteRoot)) !== null
