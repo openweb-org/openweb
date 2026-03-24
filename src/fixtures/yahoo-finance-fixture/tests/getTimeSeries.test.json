@@ -1,0 +1,17 @@
+{
+  "operation_id": "getTimeSeries",
+  "cases": [
+    {
+      "input": {
+        "symbol": "AAPL",
+        "type": "annualTotalRevenue,annualNetIncome",
+        "period1": 1577836800,
+        "period2": 1774368000
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

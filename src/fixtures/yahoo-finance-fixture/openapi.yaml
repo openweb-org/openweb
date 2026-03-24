@@ -1,0 +1,1056 @@
+openapi: '3.1.0'
+info:
+  title: Yahoo Finance
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://query1.finance.yahoo.com
+paths:
+  /v1/finance/search:
+    get:
+      operationId: searchTickers
+      summary: Search for tickers, companies, ETFs, indices by keyword
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: yf0001
+          signature_id: yf0001s
+          tool_version: 1
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query string (e.g. "AAPL", "Apple", "tech ETF").
+        - name: quotesCount
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 6
+          description: Number of quote results to return.
+        - name: newsCount
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 4
+          description: Number of news results to return.
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en-US
+          description: Language code.
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Region code.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, quotes, news]
+                properties:
+                  count:
+                    type: integer
+                  quotes:
+                    type: array
+                    items:
+                      type: object
+                      required: [symbol, shortname, quoteType, exchange]
+                      properties:
+                        symbol:
+                          type: string
+                        shortname:
+                          type: string
+                        longname:
+                          type: string
+                        quoteType:
+                          type: string
+                        exchange:
+                          type: string
+                        exchDisp:
+                          type: string
+                        sector:
+                          type: string
+                        industry:
+                          type: string
+                        logoUrl:
+                          type: string
+                        isYahooFinance:
+                          type: boolean
+                  news:
+                    type: array
+                    items:
+                      type: object
+                      required: [uuid, title, publisher, link]
+                      properties:
+                        uuid:
+                          type: string
+                        title:
+                          type: string
+                        publisher:
+                          type: string
+                        link:
+                          type: string
+                        providerPublishTime:
+                          type: integer
+                        relatedTickers:
+                          type: array
+                          items:
+                            type: string
+  /v8/finance/chart/{symbol}:
+    get:
+      operationId: getChart
+      summary: Get historical OHLCV chart data for a symbol
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: yf0003
+          signature_id: yf0003s
+          tool_version: 1
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Ticker symbol (e.g. "AAPL").
+        - name: interval
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 1d
+          description: Data interval (1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo).
+        - name: period1
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Start date as Unix timestamp.
+        - name: period2
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: End date as Unix timestamp.
+        - name: range
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Predefined range (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max). Alternative to period1/period2.
+        - name: events
+          in: query
+          required: false
+          schema:
+            type: string
+            default: div,splits,capitalGains
+          description: Comma-separated event types to include.
+        - name: includePrePost
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'false'
+          description: Include pre/post market data.
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en-US
+          description: Language code.
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Region code.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [chart]
+                properties:
+                  chart:
+                    type: object
+                    required: [result, error]
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          type: object
+                          required: [meta, indicators]
+                          properties:
+                            meta:
+                              type: object
+                              required: [currency, symbol, regularMarketPrice]
+                              properties:
+                                currency:
+                                  type: string
+                                symbol:
+                                  type: string
+                                exchangeName:
+                                  type: string
+                                fullExchangeName:
+                                  type: string
+                                regularMarketPrice:
+                                  type: number
+                                previousClose:
+                                  type: number
+                                chartPreviousClose:
+                                  type: number
+                                dataGranularity:
+                                  type: string
+                                range:
+                                  type: string
+                                validRanges:
+                                  type: array
+                                  items:
+                                    type: string
+                            timestamp:
+                              type: array
+                              items:
+                                type: integer
+                            indicators:
+                              type: object
+                              required: [quote]
+                              properties:
+                                quote:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      open:
+                                        type: array
+                                        items:
+                                          type: [number, 'null']
+                                      high:
+                                        type: array
+                                        items:
+                                          type: [number, 'null']
+                                      low:
+                                        type: array
+                                        items:
+                                          type: [number, 'null']
+                                      close:
+                                        type: array
+                                        items:
+                                          type: [number, 'null']
+                                      volume:
+                                        type: array
+                                        items:
+                                          type: [integer, 'null']
+                                adjclose:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      adjclose:
+                                        type: array
+                                        items:
+                                          type: [number, 'null']
+                      error:
+                        type: ['null', string]
+  /v7/finance/spark:
+    get:
+      operationId: getSparkline
+      summary: Get sparkline (mini chart) data for multiple symbols
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: yf0004
+          signature_id: yf0004s
+          tool_version: 1
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated ticker symbols.
+        - name: range
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 1d
+          description: Time range (1d, 5d, 1mo, 3mo, 6mo, 1y, 5y).
+        - name: interval
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 5m
+          description: Data interval.
+        - name: indicators
+          in: query
+          required: false
+          schema:
+            type: string
+            default: close
+          description: Indicators to include.
+        - name: includeTimestamps
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'true'
+          description: Whether to include timestamps.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [spark]
+                properties:
+                  spark:
+                    type: object
+                    required: [result, error]
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          type: object
+                          required: [symbol, response]
+                          properties:
+                            symbol:
+                              type: string
+                            response:
+                              type: array
+                              items:
+                                type: object
+                                required: [meta, indicators]
+                                properties:
+                                  meta:
+                                    type: object
+                                    required: [currency, symbol, regularMarketPrice]
+                                    properties:
+                                      currency:
+                                        type: string
+                                      symbol:
+                                        type: string
+                                      regularMarketPrice:
+                                        type: number
+                                      previousClose:
+                                        type: number
+                                      chartPreviousClose:
+                                        type: number
+                                  timestamp:
+                                    type: array
+                                    items:
+                                      type: integer
+                                  indicators:
+                                    type: object
+                                    required: [quote]
+                                    properties:
+                                      quote:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            close:
+                                              type: array
+                                              items:
+                                                type: number
+                      error:
+                        type: ['null', string]
+  /v1/finance/screener/predefined/saved:
+    get:
+      operationId: getScreener
+      summary: Get predefined stock screener results (most active, gainers, losers)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: yf0005
+          signature_id: yf0005s
+          tool_version: 1
+      parameters:
+        - name: scrIds
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Screener ID (e.g. "most_actives", "day_gainers", "day_losers").
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+          description: Number of results to return.
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Result offset for pagination.
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated fields to return.
+        - name: formatted
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'true'
+          description: Whether to return formatted values.
+        - name: sortField
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Field to sort by.
+        - name: sortType
+          in: query
+          required: false
+          schema:
+            type: string
+            default: DESC
+          description: Sort direction (ASC or DESC).
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en-US
+          description: Language code.
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Region code.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [finance]
+                properties:
+                  finance:
+                    type: object
+                    required: [result]
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            description:
+                              type: string
+                            canonicalName:
+                              type: string
+                            count:
+                              type: integer
+                            quotes:
+                              type: array
+                              items:
+                                type: object
+                                required: [symbol]
+                                properties:
+                                  symbol:
+                                    type: string
+                                  shortName:
+                                    type: string
+                                  regularMarketPrice:
+                                    type: object
+                                    properties:
+                                      raw:
+                                        type: number
+                                      fmt:
+                                        type: string
+                                  regularMarketChange:
+                                    type: object
+                                    properties:
+                                      raw:
+                                        type: number
+                                      fmt:
+                                        type: string
+                                  regularMarketChangePercent:
+                                    type: object
+                                    properties:
+                                      raw:
+                                        type: number
+                                      fmt:
+                                        type: string
+                                  regularMarketVolume:
+                                    type: object
+                                    properties:
+                                      raw:
+                                        type: integer
+                                      fmt:
+                                        type: string
+                                      longFmt:
+                                        type: string
+                                  marketCap:
+                                    type: object
+                                    properties:
+                                      raw:
+                                        type: integer
+                                      fmt:
+                                        type: string
+  /v2/ratings/top/{symbol}:
+    get:
+      operationId: getRatings
+      summary: Get top analyst ratings for a symbol
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: yf0006
+          signature_id: yf0006s
+          tool_version: 1
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Ticker symbol (e.g. "AAPL").
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en-US
+          description: Language code.
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Region code.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dir:
+                    type: object
+                    properties:
+                      analyst:
+                        type: string
+                      ticker:
+                        type: string
+                      rating_current:
+                        type: [string, 'null']
+                      rating_sentiment:
+                        type: [integer, 'null']
+                      pt_current:
+                        type: [integer, 'null']
+                      adjusted_pt_current:
+                        type: [integer, 'null']
+                      announcement_date:
+                        type: [string, 'null']
+                  mm:
+                    type: object
+                    properties:
+                      analyst:
+                        type: string
+                      ticker:
+                        type: string
+                      rating_current:
+                        type: [string, 'null']
+                      pt_current:
+                        type: [integer, 'null']
+                  pt:
+                    type: object
+                    properties:
+                      analyst:
+                        type: string
+                      ticker:
+                        type: string
+                      rating_current:
+                        type: [string, 'null']
+                      pt_current:
+                        type: [integer, 'null']
+                  fin_score:
+                    type: object
+                    properties:
+                      analyst:
+                        type: string
+                      ticker:
+                        type: string
+                      rating_current:
+                        type: [string, 'null']
+                      pt_current:
+                        type: [integer, 'null']
+  /ws/insights/v3/finance/insights:
+    get:
+      operationId: getInsights
+      summary: Get company insights — technicals, valuation, recommendations, SEC filings
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: yf0007
+          signature_id: yf0007s
+          tool_version: 1
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Ticker symbol (e.g. "AAPL").
+        - name: reportsCount
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 4
+          description: Number of research reports to return.
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en-US
+          description: Language code.
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Region code.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [finance]
+                properties:
+                  finance:
+                    type: object
+                    required: [result, error]
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          type: object
+                          required: [symbol, instrumentInfo, companySnapshot, recommendation]
+                          properties:
+                            symbol:
+                              type: string
+                            instrumentInfo:
+                              type: object
+                              properties:
+                                technicalEvents:
+                                  type: object
+                                  properties:
+                                    shortTermOutlook:
+                                      type: object
+                                      properties:
+                                        direction:
+                                          type: string
+                                        score:
+                                          type: integer
+                                        scoreDescription:
+                                          type: string
+                                    intermediateTermOutlook:
+                                      type: object
+                                      properties:
+                                        direction:
+                                          type: string
+                                        score:
+                                          type: integer
+                                        scoreDescription:
+                                          type: string
+                                    longTermOutlook:
+                                      type: object
+                                      properties:
+                                        direction:
+                                          type: string
+                                        score:
+                                          type: integer
+                                        scoreDescription:
+                                          type: string
+                                keyTechnicals:
+                                  type: object
+                                  properties:
+                                    support:
+                                      type: number
+                                    resistance:
+                                      type: number
+                                    stopLoss:
+                                      type: number
+                                valuation:
+                                  type: object
+                                  properties:
+                                    description:
+                                      type: string
+                                    discount:
+                                      type: string
+                                    relativeValue:
+                                      type: string
+                            companySnapshot:
+                              type: object
+                              properties:
+                                sectorInfo:
+                                  type: string
+                                company:
+                                  type: object
+                                  properties:
+                                    innovativeness:
+                                      type: number
+                                    hiring:
+                                      type: number
+                                    sustainability:
+                                      type: number
+                                    insiderSentiments:
+                                      type: number
+                                    earningsReports:
+                                      type: number
+                                    dividends:
+                                      type: number
+                            recommendation:
+                              type: object
+                              properties:
+                                targetPrice:
+                                  type: integer
+                                provider:
+                                  type: string
+                                rating:
+                                  type: string
+                            sigDevs:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  headline:
+                                    type: string
+                                  date:
+                                    type: string
+                            secReports:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  type:
+                                    type: string
+                                  title:
+                                    type: string
+                                  formType:
+                                    type: string
+                                  filingDate:
+                                    type: integer
+                      error:
+                        type: ['null', string]
+      servers:
+        - url: https://query2.finance.yahoo.com
+  /ws/fundamentals-timeseries/v1/finance/timeseries/{symbol}:
+    get:
+      operationId: getTimeSeries
+      summary: Get financial fundamentals time series (revenue, earnings, etc.)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: yf0008
+          signature_id: yf0008s
+          tool_version: 1
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Ticker symbol (e.g. "AAPL").
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated metric types (e.g. "annualTotalRevenue,annualNetIncome,annualBasicEPS").
+        - name: period1
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Start date as Unix timestamp.
+        - name: period2
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: End date as Unix timestamp.
+        - name: padTimeSeries
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'true'
+          description: Pad missing time series data.
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en-US
+          description: Language code.
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Region code.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [timeseries]
+                properties:
+                  timeseries:
+                    type: object
+                    required: [result, error]
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          type: object
+                          required: [meta]
+                          properties:
+                            meta:
+                              type: object
+                              required: [symbol, type]
+                              properties:
+                                symbol:
+                                  type: array
+                                  items:
+                                    type: string
+                                type:
+                                  type: array
+                                  items:
+                                    type: string
+                            timestamp:
+                              type: array
+                              items:
+                                type: integer
+                      error:
+                        type: ['null', string]
+      servers:
+        - url: https://query2.finance.yahoo.com
+  /ws/screeners/v1/finance/calendar-events:
+    get:
+      operationId: getCalendarEvents
+      summary: Get upcoming earnings, dividends, splits calendar events
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: yf0009
+          signature_id: yf0009s
+          tool_version: 1
+      parameters:
+        - name: countPerDay
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of events per day.
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en-US
+          description: Language code.
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Region code.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  finance:
+                    type: object
+                    properties:
+                      result:
+                        type: object
+                        properties:
+                          ipoEvents:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                timestamp:
+                                  type: integer
+                                timestampString:
+                                  type: string
+                                count:
+                                  type: integer
+                                records:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      ticker:
+                                        type: string
+                                      companyShortName:
+                                        type: string
+                                      exchangeShortName:
+                                        type: string
+                                      startDateTime:
+                                        type: integer
+                                      dealType:
+                                        type: string
+                          earnings:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                timestamp:
+                                  type: integer
+                                timestampString:
+                                  type: string
+                                count:
+                                  type: integer
+                                records:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      ticker:
+                                        type: string
+                                      companyShortName:
+                                        type: string
+                          splits:
+                            type: array
+                            items:
+                              type: object
+      servers:
+        - url: https://query2.finance.yahoo.com
+  /v1/finance/quoteType/:
+    get:
+      operationId: getQuoteType
+      summary: Get quote type metadata (equity, ETF, index, crypto, etc.)
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: true
+          stable_id: yf0010
+          signature_id: yf0010s
+          tool_version: 1
+      parameters:
+        - name: symbol
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Ticker symbol (e.g. "AAPL").
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en-US
+          description: Language code.
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
+            default: US
+          description: Region code.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [quoteType]
+                properties:
+                  quoteType:
+                    type: object
+                    required: [result, error]
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          type: object
+                          required: [symbol, quoteType, exchange, shortName]
+                          properties:
+                            symbol:
+                              type: string
+                            quoteType:
+                              type: string
+                            exchange:
+                              type: string
+                            shortName:
+                              type: string
+                            longName:
+                              type: string
+                            exchangeTimezoneName:
+                              type: string
+                            market:
+                              type: string
+                      error:
+                        type: ['null', string]
+      servers:
+        - url: https://query2.finance.yahoo.com

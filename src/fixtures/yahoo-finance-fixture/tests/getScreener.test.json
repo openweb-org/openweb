@@ -1,0 +1,15 @@
+{
+  "operation_id": "getScreener",
+  "cases": [
+    {
+      "input": {
+        "scrIds": "most_actives",
+        "count": 5
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

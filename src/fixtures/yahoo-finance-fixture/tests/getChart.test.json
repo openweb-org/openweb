@@ -1,0 +1,16 @@
+{
+  "operation_id": "getChart",
+  "cases": [
+    {
+      "input": {
+        "symbol": "AAPL",
+        "range": "5d",
+        "interval": "1d"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

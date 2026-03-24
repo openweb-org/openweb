@@ -1,0 +1,14 @@
+{
+  "operation_id": "getSparkline",
+  "cases": [
+    {
+      "input": {
+        "symbols": "AAPL,MSFT"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "yahoo-finance-fixture",
+  "display_name": "Yahoo Finance",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://finance.yahoo.com",
+  "description": "Stock quotes, charts, financials, screeners, and market insights via Yahoo Finance APIs",
+  "requires_auth": false,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 9,
+    "l1_count": 9,
+    "l2_count": 0,
+    "l3_count": 0
+  },
+  "last_verified": "2026-03-24T16:06:24.581Z",
+  "quarantined": false,
+  "fingerprint": {
+    "response_shape_hash": "getCalendarEvents:78c6de6ee1825276,getChart:447ee6dcda6587c5,getInsights:2a7ecfac429c9463,getQuoteType:9b089cdc062fb19c,getRatings:5596778821db5a10,getScreener:658b43a6b703b938,getSparkline:eb9db571568c417b,getTimeSeries:e43b20d274899a2c,searchTickers:1b86826490508115",
+    "last_validated": "2026-03-24T16:06:24.582Z"
+  }
+}
