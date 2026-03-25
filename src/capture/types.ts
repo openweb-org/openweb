@@ -3,7 +3,16 @@
 // ── WebSocket frame (JSONL rows) ────────────────────────────────
 
 export type WsFrame =
-  | { readonly connectionId: string; readonly timestamp: string; readonly type: 'open'; readonly url: string }
+  | {
+      readonly connectionId: string
+      readonly timestamp: string
+      readonly type: 'open'
+      readonly url: string
+      readonly requestHeaders?: ReadonlyArray<{ readonly name: string; readonly value: string }>
+      readonly responseStatus?: number
+      readonly responseHeaders?: ReadonlyArray<{ readonly name: string; readonly value: string }>
+      readonly subprotocol?: string
+    }
   | {
       readonly connectionId: string
       readonly timestamp: string
