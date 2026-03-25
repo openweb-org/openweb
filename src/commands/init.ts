@@ -17,23 +17,26 @@ function safeSitesPath(canonicalRoot: string, siteName: string): string {
 }
 
 export async function initCommand(): Promise<void> {
-  // Seed source: src/sites/ relative to dist/cli.js (or src/cli.ts in dev)
+  // Seed source: prefer dist/sites/ (bundled), fall back to src/sites/ (dev)
   const thisDir = path.dirname(fileURLToPath(import.meta.url))
-  const seedSource = path.resolve(thisDir, '..', 'src', 'sites')
+  const pkgRoot = path.resolve(thisDir, '..', '..')
+  const candidates = [
+    path.join(pkgRoot, 'dist', 'sites'),
+    path.join(pkgRoot, 'src', 'sites'),
+  ]
 
-  let resolvedSeed = seedSource
-  try {
-    await access(resolvedSeed)
-  } catch {
-    // Dev mode: src/commands/init.ts → src/sites/
-    const altSeed = path.resolve(thisDir, '..', 'sites')
+  let resolvedSeed: string | undefined
+  for (const candidate of candidates) {
     try {
-      await access(altSeed)
-      resolvedSeed = altSeed
-    } catch {
-      console.error(`Seed sites not found at ${seedSource}`)
-      process.exit(1)
-    }
+      await access(candidate)
+      resolvedSeed = candidate
+      break
+    } catch { /* try next */ }
+  }
+
+  if (!resolvedSeed) {
+    console.error(`Seed sites not found (checked ${candidates.join(', ')})`)
+    process.exit(1)
   }
 
   await mkdir(SITES_ROOT, { recursive: true })
@@ -76,7 +79,7 @@ export async function initCommand(): Promise<void> {
     }
   }
 
-  console.log(`Initialized ${copied + skipped} sites in ${SITES_ROOT}`)
+  console.log(`Localized ${copied + skipped} sites to ${SITES_ROOT}`)
   if (copied > 0) console.log(`  Copied: ${copied}`)
   if (skipped > 0) console.log(`  Skipped (already exist): ${skipped}`)
 }

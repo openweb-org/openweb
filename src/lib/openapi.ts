@@ -1,5 +1,6 @@
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { access, readdir, readFile } from 'node:fs/promises'
 
 import { parse } from 'yaml'
@@ -85,6 +86,12 @@ async function pathExists(targetPath: string): Promise<boolean> {
 /** Site names must be lowercase alphanumeric with hyphens/underscores. */
 const SAFE_SITE_NAME = /^[a-z0-9][a-z0-9_-]*$/
 
+/** Package root — two levels up from dist/lib/openapi.js (or src/lib/openapi.ts in dev). */
+const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+
+/** Bundled sites shipped inside the npm package. */
+const BUNDLED_SITES = path.join(PKG_ROOT, 'dist', 'sites')
+
 export interface ResolveSiteOptions {
   /** Skip registry lookup — use when installing to avoid self-copy. */
   readonly skipRegistry?: boolean
@@ -122,7 +129,13 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
     } catch { /* no registry entry — fall through */ }
   }
 
-  // 3. ./src/sites/ — dev fallback
+  // 3. Bundled sites shipped with the package (dist/sites/)
+  const bundledSite = path.join(BUNDLED_SITES, site)
+  if (await pathExists(path.join(bundledSite, 'openapi.yaml'))) {
+    return bundledSite
+  }
+
+  // 4. ./src/sites/ — dev fallback
   const devSite = path.join(process.cwd(), 'src', 'sites', site)
   if (await pathExists(path.join(devSite, 'openapi.yaml'))) {
     return devSite
@@ -141,8 +154,9 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
 export async function listSites(): Promise<string[]> {
   const roots = [
     path.join(os.homedir(), '.openweb', 'sites'),
-    path.join(process.cwd(), 'src', 'sites'),
     path.join(os.homedir(), '.openweb', 'registry'),
+    BUNDLED_SITES,
+    path.join(process.cwd(), 'src', 'sites'),
   ]
 
   const names = new Set<string>()
