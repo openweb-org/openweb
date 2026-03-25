@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Page } from 'playwright'
+import type { Browser, BrowserContext, Page } from 'playwright-core'
 
 import { OpenWebError } from '../lib/errors.js'
 import type { OpenApiOperation, OpenApiSpec } from '../lib/openapi.js'

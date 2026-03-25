@@ -1,7 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 
-import type { Browser } from 'playwright'
+import type { Browser } from 'playwright-core'
 import Ajv from 'ajv'
 
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'

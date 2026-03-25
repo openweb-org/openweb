@@ -9,7 +9,7 @@
  * - API interception (/cmp/_rpc/review-filter)
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page, Response as PwResponse } from 'playwright'
+import type { Page, Response as PwResponse } from 'playwright-core'
 
 const SITE = 'https://www.indeed.com'
 

@@ -6,7 +6,7 @@
  * and music across movie.douban.com, book.douban.com, music.douban.com.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 /* ---------- helpers ---------- */
 

@@ -6,7 +6,7 @@
  * search results from data-testid property cards, reviews/rooms/facilities from DOM.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 /* ---------- Search operations ---------- */
 

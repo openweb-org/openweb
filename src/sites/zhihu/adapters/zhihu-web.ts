@@ -6,7 +6,7 @@
  * cookies automatically.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const SITE_BASE = 'https://www.zhihu.com'
 

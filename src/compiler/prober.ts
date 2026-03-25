@@ -1,4 +1,4 @@
-import type { Browser } from 'playwright'
+import type { Browser } from 'playwright-core'
 
 import type { AnalyzedOperation } from './types.js'
 import type { ClassifyResult } from './analyzer/classify.js'

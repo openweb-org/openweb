@@ -9,7 +9,7 @@
  * while inheriting browser cookies.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const SEARCH_URL = 'https://gdx-api.costco.com/catalog/search/api/v1/search'
 const PRODUCT_GRAPHQL_URL = 'https://ecom-api.costco.com/ebusiness/product/v1/products/graphql'

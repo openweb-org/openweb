@@ -8,7 +8,7 @@
  * Auth is via cookie_session (credentials: 'include' in browser fetch).
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const GRAPHQL_URL = 'https://www.instacart.com/graphql'
 

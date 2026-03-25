@@ -6,7 +6,7 @@
  * data-stid lodging cards, activities/cars/deals from DOM.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 /* ---------- Hotel Search ---------- */
 

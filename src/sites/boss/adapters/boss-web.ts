@@ -9,7 +9,7 @@
  * Job search and detail pages require a human-established browser session to bypass bot detection.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const SITE = 'https://www.zhipin.com'
 

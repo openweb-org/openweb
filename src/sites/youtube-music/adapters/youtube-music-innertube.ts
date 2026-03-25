@@ -6,7 +6,7 @@
  * without auth. API key extracted from ytcfg page global.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const API_BASE = '/youtubei/v1'
 

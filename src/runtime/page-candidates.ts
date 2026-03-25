@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from 'playwright'
+import type { BrowserContext, Page } from 'playwright-core'
 
 export async function listCandidatePages(context: BrowserContext): Promise<Page[]> {
   const candidates: Page[] = []

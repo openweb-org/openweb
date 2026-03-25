@@ -11,7 +11,7 @@ importers:
       ajv:
         specifier: ^8.17.1
         version: 8.18.0
-      playwright:
+      playwright-core:
         specifier: ^1.52.0
         version: 1.58.2
       yaml:
@@ -30,6 +30,9 @@ importers:
       '@types/yargs':
         specifier: ^17.0.33
         version: 17.0.35
+      playwright:
+        specifier: ^1.52.0
+        version: 1.58.2
       tsup:
         specifier: ^8.5.0
         version: 8.5.1(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2)

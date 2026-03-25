@@ -9,7 +9,7 @@
  * For other endpoints, we navigate to the relevant page and intercept the API calls.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page, Response as PwResponse } from 'playwright'
+import type { Page, Response as PwResponse } from 'playwright-core'
 
 const API_BASE = 'https://api.bilibili.com'
 

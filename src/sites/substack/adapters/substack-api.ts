@@ -7,7 +7,7 @@
  * All read operations work without auth.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const BASE_URL = 'https://substack.com'
 

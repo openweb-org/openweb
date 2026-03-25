@@ -9,7 +9,7 @@
  * structured data from the page's embedded JSON.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const SITE = 'https://weibo.com'
 

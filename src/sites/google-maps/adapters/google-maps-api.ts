@@ -10,7 +10,7 @@
  * Place details work via direct fetch with a minimal pb parameter.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const MAPS_BASE = 'https://www.google.com/maps'
 

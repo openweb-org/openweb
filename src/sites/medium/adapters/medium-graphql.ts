@@ -6,7 +6,7 @@
  * without auth. Search results are extracted from the rendered DOM.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const GRAPHQL_URL = 'https://medium.com/_/graphql'
 

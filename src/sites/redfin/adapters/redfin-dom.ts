@@ -7,7 +7,7 @@
  * - Redfin Estimate from the AVM section DOM text
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 /* ---------- operation handlers ---------- */
 

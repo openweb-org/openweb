@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 import { executeAdapter, clearAdapterCache } from './adapter-executor.js'
 import type { CodeAdapter } from '../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 function mockPage(): Page {
   return {

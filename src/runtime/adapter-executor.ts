@@ -2,7 +2,7 @@ import { pathToFileURL } from 'node:url'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 import { OpenWebError } from '../lib/errors.js'
 import type { CodeAdapter } from '../types/adapter.js'

@@ -6,7 +6,7 @@
  * in the browser context. All read operations work without user login.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const AMP_API = 'https://amp-api.podcasts.apple.com'
 const CATALOG = `${AMP_API}/v1/catalog/us`

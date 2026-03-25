@@ -6,7 +6,7 @@
  * Submissions require login (cookie_session).
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const GRAPHQL_URL = 'https://leetcode.com/graphql/'
 

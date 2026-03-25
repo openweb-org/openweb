@@ -8,7 +8,7 @@
  * Comments are loaded async by the page's own JS — we intercept the API response.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const BASE = 'https://www.xiaohongshu.com'
 

@@ -6,7 +6,7 @@
  * getFlightBookingDetails: Extract itinerary details from a booking detail page
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 /* ---------- searchFlights ---------- */
 

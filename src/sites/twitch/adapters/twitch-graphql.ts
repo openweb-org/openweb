@@ -6,7 +6,7 @@
  * Client-ID header is required (public anonymous key).
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const GQL_URL = 'https://gql.twitch.tv/gql'
 const CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'

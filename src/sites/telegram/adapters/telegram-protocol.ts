@@ -10,7 +10,7 @@
  */
 import { OpenWebError } from '../../../lib/errors.js'
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 /** Inlined in every page.evaluate — finds teact getGlobal by walking webpack modules */
 function findGetGlobal(): (() => Record<string, unknown>) | null {

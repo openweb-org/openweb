@@ -7,7 +7,7 @@
  * LD+JSON (LocalBusiness), and listings/reviews from DOM elements.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 /* ---------- Hotel operations ---------- */
 

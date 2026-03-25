@@ -6,7 +6,7 @@
  * cookies (xq_a_token) set on first visit — direct HTTP is blocked.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 /* ---------- constants ---------- */
 

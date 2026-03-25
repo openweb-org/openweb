@@ -6,7 +6,7 @@
  * csrftoken cookie). All read operations work without login for public data.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright'
+import type { Page } from 'playwright-core'
 
 const BASE_URL = 'https://www.pinterest.com'
 
