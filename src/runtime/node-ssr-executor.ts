@@ -100,7 +100,7 @@ export async function executeNodeSsr(
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: `Path "${extraction.path}" not found in __NEXT_DATA__.`,
-      action: 'Update the fixture extraction path to match the current page payload.',
+      action: 'Update the site package extraction path to match the current page payload.',
       retriable: false,
       failureClass: 'fatal',
     })

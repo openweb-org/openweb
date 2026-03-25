@@ -140,7 +140,7 @@ export async function executeExtraction(
         error: 'execution_failed',
         code: 'EXECUTION_FAILED',
         message: `Unsupported extraction primitive: ${extraction.type}`,
-        action: 'Implement the extraction resolver or update the fixture.',
+        action: 'Implement the extraction resolver or update the site package.',
         retriable: false,
         failureClass: 'fatal',
       })

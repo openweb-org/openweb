@@ -15,7 +15,7 @@ function preferTypeScriptAdapter(): boolean {
 }
 
 /**
- * Load a CodeAdapter from the fixture/skill package's adapters/ directory.
+ * Load a CodeAdapter from the site package's adapters/ directory.
  * Tries .js first (production builds), then .ts (dev mode under tsx).
  * Only suppresses file-not-found; surfaces real import errors.
  */

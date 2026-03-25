@@ -294,7 +294,7 @@ await yargs(argv)
       })
     },
   )
-  .command('init', 'Initialize ~/.openweb/sites/ with default fixtures', {}, async () => {
+  .command('init', 'Initialize ~/.openweb/sites/ with default site packages', {}, async () => {
     await withErrorHandling(async () => {
       await initCommand()
     })

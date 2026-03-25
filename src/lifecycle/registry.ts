@@ -113,8 +113,8 @@ export async function setCurrentVersion(site: string, version: string): Promise<
 }
 
 /**
- * Archive a site fixture to the registry.
- * Copies the entire fixture directory to registry/<site>/<version>/.
+ * Archive a site package to the registry.
+ * Copies the entire site package directory to registry/<site>/<version>/.
  * Returns the archived version string.
  */
 export async function archiveSite(site: string, siteRoot?: string): Promise<string> {
@@ -126,7 +126,7 @@ export async function archiveSite(site: string, siteRoot?: string): Promise<stri
   const dest = registryVersionPath(site, version)
   await mkdirSecure(dest)
 
-  // Copy entire fixture
+  // Copy entire site package
   await cp(source, dest, { recursive: true, force: true })
 
   // Set as current

@@ -38,7 +38,7 @@ export async function resolvePageGlobalData(
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: `Path "${config.path}" was not found in page global "${config.expression}".`,
-      action: 'Update the fixture path to match the current page data.',
+      action: 'Update the site package path to match the current page data.',
       retriable: false,
       failureClass: 'fatal',
     })

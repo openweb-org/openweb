@@ -30,7 +30,7 @@ export async function runSiteTests(site: string): Promise<{ passed: number; fail
       error: 'execution_failed',
       code: 'TOOL_NOT_FOUND',
       message: `No tests found for site: ${site}`,
-      action: 'Generate tests or use a site fixture that contains tests/*.test.json.',
+      action: 'Generate tests or use a site package that contains tests/*.test.json.',
       retriable: false,
       failureClass: 'fatal',
     })

@@ -47,7 +47,7 @@ export async function resolveSsrNextData(
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: `Path "${config.path}" was not found in __NEXT_DATA__.`,
-      action: 'Update the fixture path to match the current Next.js payload.',
+      action: 'Update the site package path to match the current Next.js payload.',
       retriable: false,
       failureClass: 'fatal',
     })
