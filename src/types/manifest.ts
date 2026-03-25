@@ -10,6 +10,7 @@ export interface ManifestStats {
   readonly l1_count: number
   readonly l2_count: number
   readonly l3_count: number
+  readonly ws_count: number
 }
 
 export interface Manifest {

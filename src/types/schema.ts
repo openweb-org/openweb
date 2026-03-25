@@ -117,6 +117,7 @@ export const manifestSchema = {
         l1_count: { type: 'integer', minimum: 0 },
         l2_count: { type: 'integer', minimum: 0 },
         l3_count: { type: 'integer', minimum: 0 },
+        ws_count: { type: 'integer', minimum: 0 },
       },
       additionalProperties: false,
     },

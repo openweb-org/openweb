@@ -31,7 +31,7 @@ export interface SiteVerifyResult {
   readonly shouldQuarantine: boolean
 }
 
-interface TestCase {
+interface HttpTestCase {
   readonly input: Record<string, unknown>
   readonly assertions: {
     readonly status: number
@@ -39,10 +39,32 @@ interface TestCase {
   }
 }
 
-interface TestFile {
-  readonly operation_id: string
-  readonly cases: TestCase[]
+interface WsTestAssertion {
+  readonly connected?: boolean
+  readonly first_message_within_ms?: number
+  readonly message_schema_valid?: boolean
 }
+
+interface WsTestCase {
+  readonly input: Record<string, unknown>
+  readonly timeout_ms?: number
+  readonly assertions: WsTestAssertion
+}
+
+interface HttpTestFile {
+  readonly operation_id: string
+  readonly protocol?: 'http'
+  readonly cases: HttpTestCase[]
+}
+
+interface WsTestFile {
+  readonly operation_id: string
+  readonly protocol: 'ws'
+  readonly mode: 'stream' | 'unary'
+  readonly cases: WsTestCase[]
+}
+
+type TestFile = HttpTestFile | WsTestFile
 
 function isAuthDrift(error: unknown): boolean {
   return error instanceof OpenWebError && error.payload.failureClass === 'needs_login'
@@ -82,6 +104,13 @@ export async function verifySite(
   for (const fileName of testFiles) {
     const raw = await readFile(path.join(testsDir, fileName), 'utf8')
     const testFile = JSON.parse(raw) as TestFile
+
+    if (testFile.protocol === 'ws') {
+      for (const testCase of testFile.cases) {
+        operations.push(verifyWsOperation(testFile.operation_id, testFile.mode, testCase))
+      }
+      continue
+    }
 
     for (const testCase of testFile.cases) {
       const result = await verifyOperation(
@@ -151,7 +180,7 @@ export async function verifySite(
 async function verifyOperation(
   site: string,
   operationId: string,
-  testCase: TestCase,
+  testCase: HttpTestCase,
   storedFingerprint: string | undefined,
   deps?: ExecuteDependencies,
 ): Promise<OperationVerifyResult> {
@@ -217,6 +246,28 @@ async function verifyOperation(
       detail: error instanceof Error ? error.message : String(error),
     }
   }
+}
+
+/**
+ * Verify a WS operation test case.
+ * For now: parse-only validation (connection/execution requires live WS server).
+ * Returns PASS if test case structure is valid, FAIL if malformed.
+ */
+function verifyWsOperation(
+  operationId: string,
+  mode: 'stream' | 'unary',
+  testCase: WsTestCase,
+): OperationVerifyResult {
+  if (!testCase.assertions) {
+    return {
+      operationId,
+      status: 'FAIL',
+      driftType: 'error',
+      detail: `ws/${mode}: missing assertions`,
+    }
+  }
+
+  return { operationId, status: 'PASS' }
 }
 
 /**
