@@ -371,7 +371,7 @@ async function getTopStreams(page: Page, params: Record<string, unknown>): Promi
     limit: 3,
     requestID: '',
     includeCostreaming: true,
-    context: { clientApp: 'twilight', location: 'home', referrerDomain: '', viewportHeight: 749, viewportWidth: 1512 },
+    context: { clientApp: 'twilight', location: 'home' },
     verbose: false,
   })) as Record<string, unknown>
 

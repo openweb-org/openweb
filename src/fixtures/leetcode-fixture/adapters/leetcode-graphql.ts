@@ -69,8 +69,8 @@ const SUBMISSION_LIST_QUERY = `query submissionList($offset: Int!, $limit: Int!,
   }
 }`
 
-const SOLUTION_ARTICLES_QUERY = `query ugcArticleSolutionArticles($questionSlug: String!, $orderBy: ArticleOrderByEnum, $skip: Int, $first: Int) {
-  ugcArticleSolutionArticles(questionSlug: $questionSlug, orderBy: $orderBy, skip: $skip, first: $first) {
+const SOLUTION_ARTICLES_QUERY = `query ugcArticleSolutionArticles($questionSlug: String!, $orderBy: ArticleOrderByEnum, $userInput: String, $tagSlugs: [String!], $skip: Int, $first: Int) {
+  ugcArticleSolutionArticles(questionSlug: $questionSlug, orderBy: $orderBy, userInput: $userInput, tagSlugs: $tagSlugs, skip: $skip, first: $first) {
     totalNum
     edges {
       node {
@@ -273,6 +273,8 @@ async function getSolutionArticles(page: Page, params: Record<string, unknown>):
     skip,
     first,
     orderBy,
+    userInput: '',
+    tagSlugs: [],
   })) as Record<string, unknown>
 
   const result = data.ugcArticleSolutionArticles as Record<string, unknown>
