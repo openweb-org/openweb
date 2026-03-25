@@ -1,32 +1,61 @@
 # openweb
 
-Let any agent access the web. 51 sites, 17 auth primitives, one command.
+Reverse-engineer any website into a typed API. One CLI for agents and humans.
 
 ## Quick Start
 
 ```bash
-npm install -g openweb
-openweb init                                          # Seed 51 sites to ~/.openweb/sites/
-openweb sites                                         # List all sites
-openweb open-meteo get_forecast '{"latitude":52.52,"longitude":13.41}'
+npm install -g @openweb-org/openweb
+
+openweb sites                                              # List available sites
+openweb open-meteo exec get_forecast '{"latitude":52.52,"longitude":13.41}'
+openweb init                                               # Optional: local editable copies
 ```
 
-## Authenticated Sites
+## Usage
 
 ```bash
-openweb browser start                 # Launch Chrome with your cookies
-openweb instagram getTimeline '{}'   # Uses cached auth
+# Execute any operation
+openweb <site> exec <operation> '{"param":"value"}'
+
+# See available operations for a site
+openweb <site> ops
+
+# Run with verbose output
+openweb <site> exec <operation> '{}' --verbose
 ```
 
-## As Claude Code Skill
+## Browser Setup
 
-This repo includes a Claude Code skill at `.claude/skills/openweb/SKILL.md`.
-The agent can use `/openweb` to access all 51 sites.
+Some sites require a browser session for authentication. This is separate from the default install — no browser is downloaded automatically.
+
+```bash
+# Install Playwright browsers (one-time)
+npx playwright install chromium
+
+# Start a browser session
+openweb browser start              # Headed (default)
+openweb browser start --headless   # Headless
+
+# Authenticated operations use the running browser
+openweb instagram exec getTimeline '{}'
+```
+
+## As a Claude Code Skill
+
+OpenWeb ships as a Claude Code skill. Add the skill and the agent can access any site via `/openweb`.
 
 ## Development
 
 ```bash
+git clone https://github.com/openweb-org/openweb.git
+cd openweb
 pnpm install && pnpm build
-pnpm --silent dev sites               # Dev mode (reads ./src/sites/)
-pnpm test                             # 359 tests
+pnpm test
+pnpm lint
+pnpm --silent dev sites            # Dev mode (reads src/sites/)
 ```
+
+## License
+
+[MIT](LICENSE)
