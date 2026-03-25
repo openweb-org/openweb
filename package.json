@@ -25,7 +25,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/cli.ts --format esm --dts --clean && node scripts/build-adapters.js",
+    "build": "tsup src/cli.ts --format esm --dts --clean && node scripts/build-adapters.js && node scripts/build-sites.js",
     "dev": "tsx src/cli.ts",
     "lint": "biome lint src scripts",
     "test": "vitest run",
