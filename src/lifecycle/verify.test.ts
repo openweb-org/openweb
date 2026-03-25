@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import { generateDriftReport, generateDriftReportMarkdown, hasNonPassResults, type SiteVerifyResult } from './verify.js'
+import { computeResponseFingerprint } from './fingerprint.js'
 
 const mockResults: SiteVerifyResult[] = [
   {
@@ -91,5 +92,73 @@ describe('hasNonPassResults', () => {
 
   it('returns false when all PASS', () => {
     expect(hasNonPassResults([mockResults[0]!])).toBe(false)
+  })
+})
+
+// ── Fingerprint comparison tests ───────────────────────
+
+describe('fingerprint comparison', () => {
+  it('same structure produces same fingerprint', () => {
+    const a = { users: [{ id: 1, name: 'Alice' }], count: 10 }
+    const b = { users: [{ id: 2, name: 'Bob' }], count: 20 }
+    expect(computeResponseFingerprint(a)).toBe(computeResponseFingerprint(b))
+  })
+
+  it('different structure produces different fingerprint', () => {
+    const a = { users: [{ id: 1, name: 'Alice' }] }
+    const b = { items: [{ sku: 'X', price: 9.99 }] }
+    expect(computeResponseFingerprint(a)).not.toBe(computeResponseFingerprint(b))
+  })
+
+  it('detects added fields as drift', () => {
+    const before = { id: 1, name: 'test' }
+    const after = { id: 1, name: 'test', email: 'x@y.z' }
+    expect(computeResponseFingerprint(before)).not.toBe(computeResponseFingerprint(after))
+  })
+
+  it('detects removed fields as drift', () => {
+    const before = { id: 1, name: 'test', email: 'x@y.z' }
+    const after = { id: 1, name: 'test' }
+    expect(computeResponseFingerprint(before)).not.toBe(computeResponseFingerprint(after))
+  })
+
+  it('detects type changes (string→number) as drift', () => {
+    const before = { value: 'hello' }
+    const after = { value: 42 }
+    expect(computeResponseFingerprint(before)).not.toBe(computeResponseFingerprint(after))
+  })
+
+  it('ignores value changes within same type', () => {
+    const a = { status: 'active', count: 100 }
+    const b = { status: 'inactive', count: 0 }
+    expect(computeResponseFingerprint(a)).toBe(computeResponseFingerprint(b))
+  })
+
+  it('detects array element shape changes', () => {
+    const before = { items: [{ id: 1 }] }
+    const after = { items: [{ id: 1, extra: true }] }
+    expect(computeResponseFingerprint(before)).not.toBe(computeResponseFingerprint(after))
+  })
+
+  it('null/undefined response has stable fingerprint', () => {
+    expect(computeResponseFingerprint(null)).toBe(computeResponseFingerprint(null))
+    expect(computeResponseFingerprint(undefined)).toBe(computeResponseFingerprint(undefined))
+  })
+
+  it('PASS when fingerprints match', () => {
+    const body = { data: [{ id: 1 }] }
+    const stored = computeResponseFingerprint(body)
+    const current = computeResponseFingerprint(body)
+    // Simulates the verify.ts comparison: stored === current → PASS
+    expect(stored).toBe(current)
+  })
+
+  it('DRIFT when fingerprints differ', () => {
+    const oldBody = { data: [{ id: 1 }] }
+    const newBody = { data: [{ id: 1, name: 'added' }] }
+    const stored = computeResponseFingerprint(oldBody)
+    const current = computeResponseFingerprint(newBody)
+    // Simulates the verify.ts comparison: stored !== current → DRIFT
+    expect(stored).not.toBe(current)
   })
 })
