@@ -1,4 +1,5 @@
 import type { Page, Response as PwResponse } from 'playwright-core'
+import { OpenWebError } from '../../../lib/errors.js'
 
 export const SITE = 'https://www.indeed.com'
 
@@ -39,7 +40,7 @@ export async function extractLdJson(page: Page, type: string): Promise<Record<st
 
 export async function getCompanyReviews(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const company = String(params.company ?? '')
-  if (!company) throw new Error('company is required')
+  if (!company) throw OpenWebError.missingParam('company')
   const filterParams = params.filter ? String(params.filter) : ''
 
   const url = filterParams

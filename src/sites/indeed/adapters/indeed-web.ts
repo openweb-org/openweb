@@ -10,6 +10,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page, Response as PwResponse } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import {
   SITE,
   navigateAndWait,
@@ -24,7 +25,7 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
   const q = String(params.q ?? '')
   const l = String(params.l ?? '')
   const start = Number(params.start ?? 0)
-  if (!q) throw new Error('q (query) is required')
+  if (!q) throw OpenWebError.missingParam('q')
 
   const url = new URL('/jobs', SITE)
   url.searchParams.set('q', q)
@@ -74,7 +75,7 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
 
 async function getJobDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const jk = String(params.jk ?? '')
-  if (!jk) throw new Error('jk (job key) is required')
+  if (!jk) throw OpenWebError.missingParam('jk')
 
   await navigateAndWait(page, `${SITE}/viewjob?jk=${encodeURIComponent(jk)}`)
 
@@ -119,7 +120,7 @@ async function getJobDetail(page: Page, params: Record<string, unknown>): Promis
 
 async function getSalary(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const title = String(params.title ?? '')
-  if (!title) throw new Error('title is required')
+  if (!title) throw OpenWebError.missingParam('title')
   const location = params.location ? String(params.location) : null
 
   const slug = title.toLowerCase().replace(/\s+/g, '-')
@@ -149,7 +150,7 @@ async function getSalary(page: Page, params: Record<string, unknown>): Promise<u
 
 async function getCompanyOverview(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const company = String(params.company ?? '')
-  if (!company) throw new Error('company is required')
+  if (!company) throw OpenWebError.missingParam('company')
 
   await navigateAndWait(page, `${SITE}/cmp/${encodeURIComponent(company)}`)
 
@@ -186,7 +187,7 @@ async function getCompanyOverview(page: Page, params: Record<string, unknown>): 
 
 async function getCompanySalaries(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const company = String(params.company ?? '')
-  if (!company) throw new Error('company is required')
+  if (!company) throw OpenWebError.missingParam('company')
 
   await navigateAndWait(page, `${SITE}/cmp/${encodeURIComponent(company)}/salaries`)
 
@@ -230,7 +231,7 @@ async function getCompanySalaries(page: Page, params: Record<string, unknown>): 
 
 async function getReviewFilters(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const company = String(params.company ?? '')
-  if (!company) throw new Error('company is required')
+  if (!company) throw OpenWebError.missingParam('company')
 
   // Navigate to reviews page and intercept the filter API
   const filterPromise = page.waitForResponse(
@@ -249,7 +250,7 @@ async function getReviewFilters(page: Page, params: Record<string, unknown>): Pr
 
 async function autocompleteJobTitle(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const q = String(params.q ?? '')
-  if (!q) throw new Error('q (query) is required')
+  if (!q) throw OpenWebError.missingParam('q')
   const country = String(params.country ?? 'US')
 
   return page.evaluate(
@@ -264,7 +265,7 @@ async function autocompleteJobTitle(page: Page, params: Record<string, unknown>)
 
 async function autocompleteLocation(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const q = String(params.q ?? '')
-  if (!q) throw new Error('q (query) is required')
+  if (!q) throw OpenWebError.missingParam('q')
   const country = String(params.country ?? 'US')
 
   return page.evaluate(
@@ -308,9 +309,13 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) throw new Error(`Unknown operation: ${operation}`)
-    return handler(page, { ...params })
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) throw OpenWebError.unknownOp(operation)
+      return await handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 

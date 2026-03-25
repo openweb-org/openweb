@@ -9,6 +9,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const BASE = 'https://www.xiaohongshu.com'
 
@@ -22,7 +23,7 @@ function asRecord(val: unknown): Record<string, unknown> {
 
 async function searchNotes(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const keyword = String(params.keyword ?? params.query ?? '')
-  if (!keyword) throw new Error('keyword is required')
+  if (!keyword) throw OpenWebError.missingParam('keyword')
 
   await page.goto(
     `${BASE}/search_result?keyword=${encodeURIComponent(keyword)}&source=web_search_result_notes`,
@@ -63,7 +64,7 @@ async function searchNotes(page: Page, params: Record<string, unknown>): Promise
 
 async function getNoteDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const noteId = String(params.noteId ?? params.note_id ?? '')
-  if (!noteId) throw new Error('noteId is required')
+  if (!noteId) throw OpenWebError.missingParam('noteId')
   const xsecToken = String(params.xsecToken ?? params.xsec_token ?? '')
 
   // Intercept comment API response
@@ -150,13 +151,13 @@ async function getNoteDetail(page: Page, params: Record<string, unknown>): Promi
 
 async function getUserProfile(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const userId = String(params.userId ?? params.user_id ?? '')
-  if (!userId) throw new Error('userId is required')
+  if (!userId) throw OpenWebError.missingParam('userId')
 
   await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
 
   // Check for CAPTCHA redirect
   if (page.url().includes('captcha') || page.url().includes('login')) {
-    throw new Error('CAPTCHA triggered — please solve it in the browser and retry')
+    throw OpenWebError.apiError('Xiaohongshu', 'CAPTCHA triggered — please solve it in the browser and retry')
   }
 
   await page.waitForTimeout(4000)
@@ -213,9 +214,13 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) throw new Error(`Unknown operation: ${operation}`)
-    return handler(page, { ...params })
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) throw OpenWebError.unknownOp(operation)
+      return handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 

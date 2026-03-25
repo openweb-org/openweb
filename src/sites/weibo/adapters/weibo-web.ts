@@ -9,6 +9,7 @@
  * structured data from the page's embedded JSON.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import type { Page } from 'playwright-core'
 
 const SITE = 'https://weibo.com'
@@ -62,7 +63,7 @@ async function getHotTimeline(page: Page, params: Record<string, unknown>): Prom
 
 async function getPostDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const id = String(params.id ?? '')
-  if (!id) throw new Error('id is required')
+  if (!id) throw OpenWebError.missingParam('id')
   const url = buildUrl(SITE, '/ajax/statuses/show', {
     id,
     locale: params.locale ?? 'en-US',
@@ -74,7 +75,7 @@ async function getPostDetail(page: Page, params: Record<string, unknown>): Promi
 
 async function getPostComments(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const id = String(params.id ?? '')
-  if (!id) throw new Error('id (post mid) is required')
+  if (!id) throw OpenWebError.missingParam('id')
   const url = buildUrl(SITE, '/ajax/statuses/buildComments', {
     id,
     is_reload: params.is_reload ?? 1,
@@ -90,7 +91,7 @@ async function getPostComments(page: Page, params: Record<string, unknown>): Pro
 
 async function getUserProfile(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const uid = String(params.uid ?? '')
-  if (!uid) throw new Error('uid is required')
+  if (!uid) throw OpenWebError.missingParam('uid')
   const url = buildUrl(SITE, '/ajax/profile/info', { uid })
   const data = await fetchJson(page, url) as Record<string, unknown>
   return data
@@ -98,7 +99,7 @@ async function getUserProfile(page: Page, params: Record<string, unknown>): Prom
 
 async function getUserDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const uid = String(params.uid ?? '')
-  if (!uid) throw new Error('uid is required')
+  if (!uid) throw OpenWebError.missingParam('uid')
   const url = buildUrl(SITE, '/ajax/profile/detail', { uid })
   const data = await fetchJson(page, url) as Record<string, unknown>
   return data
@@ -106,7 +107,7 @@ async function getUserDetail(page: Page, params: Record<string, unknown>): Promi
 
 async function getUserTimeline(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const uid = String(params.uid ?? '')
-  if (!uid) throw new Error('uid is required')
+  if (!uid) throw OpenWebError.missingParam('uid')
   const url = buildUrl(SITE, '/ajax/statuses/mymblog', {
     uid,
     page: params.page ?? 1,
@@ -119,7 +120,7 @@ async function getUserTimeline(page: Page, params: Record<string, unknown>): Pro
 
 async function searchPosts(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const q = String(params.q ?? '')
-  if (!q) throw new Error('q (search query) is required')
+  if (!q) throw OpenWebError.missingParam('q')
   const url = buildUrl(SITE, '/ajax/side/search', { q })
   const data = await fetchJson(page, url) as Record<string, unknown>
   return data
@@ -163,9 +164,13 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) throw new Error(`Unknown operation: ${operation}`)
-    return handler(page, { ...params })
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) throw OpenWebError.unknownOp(operation)
+      return handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 

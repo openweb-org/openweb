@@ -113,6 +113,33 @@ export class OpenWebError extends Error {
     })
   }
 
+  static unknownOp(operation: string): OpenWebError {
+    return new OpenWebError({
+      error: 'execution_failed', code: 'TOOL_NOT_FOUND',
+      message: `Unknown operation: ${operation}`,
+      action: 'Check the operation name.',
+      retriable: false, failureClass: 'fatal',
+    })
+  }
+
+  static missingParam(name: string): OpenWebError {
+    return new OpenWebError({
+      error: 'execution_failed', code: 'INVALID_PARAMS',
+      message: `Missing required parameter: ${name}`,
+      action: `Provide the '${name}' parameter.`,
+      retriable: false, failureClass: 'fatal',
+    })
+  }
+
+  static apiError(label: string, message: string): OpenWebError {
+    return new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: `${label}: ${message}`,
+      action: 'Check the query parameters.',
+      retriable: false, failureClass: 'fatal',
+    })
+  }
+
   static permissionRequired(site: string, operationId: string, category: string): OpenWebError {
     return new OpenWebError({
       error: 'execution_failed',

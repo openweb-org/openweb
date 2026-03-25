@@ -1,4 +1,5 @@
 import type { Page } from 'playwright-core'
+import { OpenWebError } from '../../../lib/errors.js'
 
 export const GQL_URL = 'https://gql.twitch.tv/gql'
 export const CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'
@@ -44,13 +45,13 @@ export async function gqlFetch(
   )
 
   if (result.status >= 400) {
-    throw new Error(`Twitch GQL ${operationName}: HTTP ${result.status}`)
+    throw OpenWebError.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
   if (json.errors) {
     const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Unknown GQL error'
-    throw new Error(`Twitch GQL ${operationName}: ${msg}`)
+    throw OpenWebError.apiError('GraphQL ' + operationName, msg)
   }
 
   return json.data

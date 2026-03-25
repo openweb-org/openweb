@@ -7,6 +7,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import {
   TOPIC_LATEST_STORIES_QUERY,
   TOPIC_CURATED_LISTS_QUERY,
@@ -47,14 +48,14 @@ async function graphqlFetch(
   )
 
   if (result.status >= 400) {
-    throw new Error(`GraphQL ${operationName}: HTTP ${result.status}`)
+    throw OpenWebError.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as Array<{ data?: unknown; errors?: unknown[] }>
   const first = json[0]
   if (first?.errors) {
     const msg = (first.errors[0] as Record<string, string>)?.message ?? 'Unknown GraphQL error'
-    throw new Error(`GraphQL ${operationName}: ${msg}`)
+    throw OpenWebError.apiError('GraphQL ' + operationName, msg)
   }
 
   return first?.data
@@ -192,7 +193,7 @@ async function getRecommendedTags(page: Page): Promise<unknown> {
 async function getPublicationPosts(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const postIds = params.postIds as string[] ?? []
   if (postIds.length === 0) {
-    throw new Error('postIds parameter is required (array of post IDs)')
+    throw OpenWebError.missingParam('postIds')
   }
 
   const posts: unknown[] = []
@@ -290,9 +291,13 @@ const adapter: CodeAdapter = {
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
     const handler = OPERATIONS[operation]
     if (!handler) {
-      throw new Error(`Unknown operation: ${operation}`)
+      throw OpenWebError.unknownOp(operation)
     }
-    return handler(page, { ...params })
+    try {
+      return await handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 

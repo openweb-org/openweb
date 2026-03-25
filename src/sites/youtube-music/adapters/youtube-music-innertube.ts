@@ -7,6 +7,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import {
   type Obj,
   runs,
@@ -61,13 +62,13 @@ async function innerTube(
   )
 
   if (result.status >= 400) {
-    throw new Error(`YouTube Music ${endpoint}: HTTP ${String(result.status)}`)
+    throw OpenWebError.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as Record<string, unknown>
   if (json.error) {
     const err = json.error as Record<string, unknown>
-    throw new Error(`YouTube Music ${endpoint}: ${String(err.message ?? 'Unknown error')}`)
+    throw OpenWebError.apiError('YouTube Music ' + endpoint, String(err.message ?? 'Unknown error'))
   }
   return json
 }
@@ -365,9 +366,13 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) throw new Error(`Unknown operation: ${operation}`)
-    return handler(page, { ...params })
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) throw OpenWebError.unknownOp(operation)
+      return await handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 

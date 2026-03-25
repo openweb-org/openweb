@@ -9,6 +9,7 @@
  * Job search and detail pages require a human-established browser session to bypass bot detection.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import type { Page } from 'playwright-core'
 
 const SITE = 'https://www.zhipin.com'
@@ -33,7 +34,7 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
   const query = String(params.query ?? '')
   const city = String(params.city ?? '101010100')
   const pageNum = Number(params.page ?? 1)
-  if (!query) throw new Error('query is required')
+  if (!query) throw OpenWebError.missingParam('query')
 
   const url = new URL('/web/geek/job', SITE)
   url.searchParams.set('query', query)
@@ -118,7 +119,7 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
 
 async function getJobDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const jobId = String(params.jobId ?? '')
-  if (!jobId) throw new Error('jobId is required')
+  if (!jobId) throw OpenWebError.missingParam('jobId')
 
   const url = jobId.startsWith('http') ? jobId :
     jobId.startsWith('/') ? `${SITE}${jobId}` :
@@ -193,7 +194,7 @@ async function getJobDetail(page: Page, params: Record<string, unknown>): Promis
 
 async function getCompanyProfile(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const companyId = String(params.companyId ?? '')
-  if (!companyId) throw new Error('companyId is required')
+  if (!companyId) throw OpenWebError.missingParam('companyId')
 
   const url = companyId.startsWith('http') ? companyId :
     companyId.startsWith('/') ? `${SITE}${companyId}` :
@@ -298,9 +299,13 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) throw new Error(`Unknown operation: ${operation}`)
-    return handler(page, { ...params })
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) throw OpenWebError.unknownOp(operation)
+      return handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 

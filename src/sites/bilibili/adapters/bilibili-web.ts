@@ -10,6 +10,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page, Response as PwResponse } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const API_BASE = 'https://api.bilibili.com'
 
@@ -65,7 +66,7 @@ async function fetchApiViaPage(
 
 async function searchVideos(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const keyword = String(params.keyword ?? '')
-  if (!keyword) throw new Error('keyword is required')
+  if (!keyword) throw OpenWebError.missingParam('keyword')
   const pg = Number(params.page ?? 1)
 
   // Navigate to search page — triggers the search API internally
@@ -89,7 +90,7 @@ async function searchVideos(page: Page, params: Record<string, unknown>): Promis
 
 async function getVideoDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const bvid = String(params.bvid ?? '')
-  if (!bvid) throw new Error('bvid is required')
+  if (!bvid) throw OpenWebError.missingParam('bvid')
 
   // Use direct page.evaluate fetch — more reliable than intercepting
   return fetchApiViaPage(page, '/x/web-interface/view', { bvid })
@@ -123,7 +124,7 @@ async function getRanking(page: Page, params: Record<string, unknown>): Promise<
 
 async function getVideoComments(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const oid = Number(params.oid)
-  if (!oid) throw new Error('oid is required')
+  if (!oid) throw OpenWebError.missingParam('oid')
   const type = Number(params.type ?? 1)
   const mode = Number(params.mode ?? 3)
 
@@ -150,7 +151,7 @@ async function getVideoComments(page: Page, params: Record<string, unknown>): Pr
 
 async function getUserInfo(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const mid = Number(params.mid)
-  if (!mid) throw new Error('mid is required')
+  if (!mid) throw OpenWebError.missingParam('mid')
 
   // Try non-wbi endpoint first
   const result = await fetchApiViaPage(page, '/x/space/acc/info', { mid })
@@ -166,21 +167,21 @@ async function getUserInfo(page: Page, params: Record<string, unknown>): Promise
 
 async function getUserFollowStats(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const vmid = Number(params.vmid ?? params.mid)
-  if (!vmid) throw new Error('vmid is required')
+  if (!vmid) throw OpenWebError.missingParam('vmid')
 
   return fetchApiViaPage(page, '/x/relation/stat', { vmid })
 }
 
 async function getUploaderStats(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const mid = Number(params.mid)
-  if (!mid) throw new Error('mid is required')
+  if (!mid) throw OpenWebError.missingParam('mid')
 
   return fetchApiViaPage(page, '/x/space/upstat', { mid })
 }
 
 async function getUserVideos(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const mid = Number(params.mid)
-  if (!mid) throw new Error('mid is required')
+  if (!mid) throw OpenWebError.missingParam('mid')
   const pn = Number(params.pn ?? 1)
   const ps = Number(params.ps ?? 30)
   const order = String(params.order ?? 'pubdate')
@@ -242,9 +243,13 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) throw new Error(`Unknown operation: ${operation}`)
-    return handler(page, { ...params })
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) throw OpenWebError.unknownOp(operation)
+      return handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 

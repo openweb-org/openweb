@@ -7,6 +7,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const GRAPHQL_URL = 'https://leetcode.com/graphql/'
 
@@ -143,13 +144,13 @@ async function graphqlFetch(
   )
 
   if (result.status >= 400) {
-    throw new Error(`GraphQL ${operationName}: HTTP ${result.status}`)
+    throw OpenWebError.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
   if (json.errors) {
     const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Unknown GraphQL error'
-    throw new Error(`GraphQL ${operationName}: ${msg}`)
+    throw OpenWebError.apiError(`GraphQL ${operationName}`, msg)
   }
 
   return json.data
@@ -334,7 +335,7 @@ async function getContestRanking(page: Page, params: Record<string, unknown>): P
   }, url)
 
   if (result.status >= 400) {
-    throw new Error(`Contest ranking: HTTP ${result.status}`)
+    throw OpenWebError.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as Record<string, unknown>
@@ -384,11 +385,15 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) {
-      throw new Error(`Unknown operation: ${operation}`)
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) {
+        throw OpenWebError.unknownOp(operation)
+      }
+      return await handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
     }
-    return handler(page, { ...params })
   },
 }
 

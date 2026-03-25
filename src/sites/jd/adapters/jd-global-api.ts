@@ -14,6 +14,7 @@
  */
 import type { CodeAdapter } from "../../../types/adapter.js";
 import type { Page } from "playwright-core";
+import { OpenWebError, toOpenWebError } from "../../../lib/errors.js";
 
 const JD_GLOBAL = "https://global.jd.com";
 
@@ -97,7 +98,7 @@ async function queryModule(
 		code: string;
 		data: Record<string, unknown>;
 	};
-	if (result.code !== "0") throw new Error(`API error: ${result.code}`);
+	if (result.code !== "0") throw OpenWebError.apiError("JD Global", `API error: ${result.code}`);
 	return result.data?.[moduleName];
 }
 
@@ -133,7 +134,7 @@ async function getRecommendations(
 		"12240015",
 		"recommend",
 	)) as { list: JdProduct[]; groupName: string };
-	if (!data?.list) throw new Error("No recommendation data returned");
+	if (!data?.list) throw OpenWebError.apiError("JD Global", "No recommendation data returned");
 
 	return {
 		title: data.groupName || "为你推荐",
@@ -178,7 +179,7 @@ async function getPromoBanners(
 		"05382124",
 		"banners",
 	)) as { list: JdBanner[]; groupName: string };
-	if (!data?.list) throw new Error("No banner data returned");
+	if (!data?.list) throw OpenWebError.apiError("JD Global", "No banner data returned");
 
 	return {
 		title: data.groupName || "首焦",
@@ -248,7 +249,7 @@ async function getNewsMessages(
 		"06784803",
 		"messages",
 	)) as { list: JdBanner[]; groupName: string };
-	if (!data?.list) throw new Error("No message data returned");
+	if (!data?.list) throw OpenWebError.apiError("JD Global", "No message data returned");
 
 	return {
 		title: data.groupName || "全球特讯",
@@ -341,9 +342,13 @@ const adapter: CodeAdapter = {
 		operation: string,
 		params: Readonly<Record<string, unknown>>,
 	): Promise<unknown> {
-		const handler = OPERATIONS[operation];
-		if (!handler) throw new Error(`Unknown operation: ${operation}`);
-		return handler(page, { ...params });
+		try {
+			const handler = OPERATIONS[operation];
+			if (!handler) throw OpenWebError.unknownOp(operation);
+			return handler(page, { ...params });
+		} catch (error) {
+			throw toOpenWebError(error);
+		}
 	},
 };
 

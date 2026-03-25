@@ -10,6 +10,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const SEARCH_URL = 'https://gdx-api.costco.com/catalog/search/api/v1/search'
 const PRODUCT_GRAPHQL_URL = 'https://ecom-api.costco.com/ebusiness/product/v1/products/graphql'
@@ -72,8 +73,7 @@ async function postJson(
   })
 
   if (!resp.ok()) {
-    const text = await resp.text()
-    throw new Error(`Costco API ${url}: HTTP ${resp.status()} — ${text.substring(0, 300)}`)
+    throw OpenWebError.httpError(resp.status())
   }
 
   return resp.json()
@@ -142,7 +142,7 @@ async function searchProducts(page: Page, params: Record<string, unknown>): Prom
 
 async function getProductDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const itemNumber = String(params.itemNumber ?? params.item_number ?? '')
-  if (!itemNumber) throw new Error('itemNumber is required')
+  if (!itemNumber) throw OpenWebError.missingParam('itemNumber')
 
   const query = PRODUCT_QUERY.replace('ITEM_NUMBERS', `"${itemNumber}"`)
   const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query }, {
@@ -215,11 +215,15 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) {
-      throw new Error(`Unknown operation: ${operation}`)
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) {
+        throw OpenWebError.unknownOp(operation)
+      }
+      return await handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
     }
-    return handler(page, { ...params })
   },
 }
 

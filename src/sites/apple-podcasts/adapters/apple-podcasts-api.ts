@@ -6,6 +6,7 @@
  * in the browser context. All read operations work without user login.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import type { Page } from 'playwright-core'
 
 const AMP_API = 'https://amp-api.podcasts.apple.com'
@@ -20,7 +21,7 @@ async function getToken(page: Page): Promise<string> {
       | undefined
     return mk?.getInstance()?.developerToken ?? ''
   })
-  if (!token) throw new Error('Apple Podcasts: MusicKit developer token not available')
+  if (!token) throw OpenWebError.apiError('Apple Podcasts', 'MusicKit developer token not available')
   return token
 }
 
@@ -48,7 +49,7 @@ async function ampGet(
   )
 
   if (result.status >= 400) {
-    throw new Error(`Apple Podcasts API ${path}: HTTP ${result.status}`)
+    throw OpenWebError.httpError(result.status)
   }
 
   return JSON.parse(result.text)
@@ -245,9 +246,13 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) throw new Error(`Unknown operation: ${operation}`)
-    return handler(page, { ...params })
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) throw OpenWebError.unknownOp(operation)
+      return handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 

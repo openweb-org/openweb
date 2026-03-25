@@ -6,6 +6,7 @@
  * and music across movie.douban.com, book.douban.com, music.douban.com.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import type { Page } from 'playwright-core'
 
 /* ---------- helpers ---------- */
@@ -336,9 +337,13 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) throw new Error(`Unknown operation: ${operation}`)
-    return handler(page, { ...params })
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) throw OpenWebError.unknownOp(operation)
+      return handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 

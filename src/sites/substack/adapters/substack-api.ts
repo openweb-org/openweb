@@ -8,6 +8,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const BASE_URL = 'https://substack.com'
 
@@ -37,7 +38,7 @@ async function apiFetch(
   )
 
   if (result.status >= 400) {
-    throw new Error(`Substack API: HTTP ${result.status} for ${url}`)
+    throw OpenWebError.httpError(result.status)
   }
 
   return JSON.parse(result.text)
@@ -239,11 +240,15 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) {
-      throw new Error(`Unknown operation: ${operation}`)
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) {
+        throw OpenWebError.unknownOp(operation)
+      }
+      return await handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
     }
-    return handler(page, { ...params })
   },
 }
 

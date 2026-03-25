@@ -7,6 +7,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const SITE_BASE = 'https://www.zhihu.com'
 
@@ -31,7 +32,7 @@ async function fetchApi(
 function resolvePath(template: string, params: Record<string, unknown>): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => {
     const val = params[key]
-    if (val === undefined || val === null) throw new Error(`Missing path param: ${key}`)
+    if (val === undefined || val === null) throw OpenWebError.missingParam(key)
     return encodeURIComponent(String(val))
   })
 }
@@ -40,7 +41,7 @@ function resolvePath(template: string, params: Record<string, unknown>): string 
 
 async function searchContent(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const q = String(params.q ?? '')
-  if (!q) throw new Error('q is required')
+  if (!q) throw OpenWebError.missingParam('q')
   return fetchApi(page, '/api/v4/search_v3', {
     q,
     t: params.t ?? 'general',
@@ -53,7 +54,7 @@ async function searchContent(page: Page, params: Record<string, unknown>): Promi
 
 async function getUserProfile(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const urlToken = String(params.url_token ?? '')
-  if (!urlToken) throw new Error('url_token is required')
+  if (!urlToken) throw OpenWebError.missingParam('url_token')
   const include = String(
     params.include ??
       'allow_message,is_followed,is_following,is_org,is_blocking,employments,answer_count,follower_count,articles_count,gender',
@@ -63,7 +64,7 @@ async function getUserProfile(page: Page, params: Record<string, unknown>): Prom
 
 async function getUserAnswers(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const urlToken = String(params.url_token ?? '')
-  if (!urlToken) throw new Error('url_token is required')
+  if (!urlToken) throw OpenWebError.missingParam('url_token')
   return fetchApi(page, `/api/v4/members/${encodeURIComponent(urlToken)}/answers`, {
     offset: params.offset ?? 0,
     limit: params.limit ?? 20,
@@ -79,7 +80,7 @@ async function getHotSearch(page: Page, _params: Record<string, unknown>): Promi
 
 async function getTopicIntro(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const topicId = params.topic_id
-  if (!topicId) throw new Error('topic_id is required')
+  if (!topicId) throw OpenWebError.missingParam('topic_id')
   return fetchApi(page, `/api/v4/topics/${topicId}/intro`, {
     include: params.include ?? 'content.meta.content.photos',
   })
@@ -87,13 +88,13 @@ async function getTopicIntro(page: Page, params: Record<string, unknown>): Promi
 
 async function getTopicFeed(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const topicId = params.topic_id
-  if (!topicId) throw new Error('topic_id is required')
+  if (!topicId) throw OpenWebError.missingParam('topic_id')
   return fetchApi(page, `/api/v5.1/topics/${topicId}/feeds/essence/v2`)
 }
 
 async function getSimilarQuestions(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const questionId = params.question_id
-  if (!questionId) throw new Error('question_id is required')
+  if (!questionId) throw OpenWebError.missingParam('question_id')
   return fetchApi(page, `/api/v4/questions/${questionId}/similar-questions`, {
     include: 'data[*].answer_count,author,follower_count',
     limit: params.limit ?? 5,
@@ -109,7 +110,7 @@ async function getRecommendFeed(page: Page, params: Record<string, unknown>): Pr
 
 async function getUserActivities(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const urlToken = String(params.url_token ?? '')
-  if (!urlToken) throw new Error('url_token is required')
+  if (!urlToken) throw OpenWebError.missingParam('url_token')
   return fetchApi(page, `/api/v3/moments/${encodeURIComponent(urlToken)}/activities`, {
     limit: params.limit ?? 5,
     desktop: params.desktop ?? 'true',
@@ -118,7 +119,7 @@ async function getUserActivities(page: Page, params: Record<string, unknown>): P
 
 async function getTopicChildren(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const topicId = params.topic_id
-  if (!topicId) throw new Error('topic_id is required')
+  if (!topicId) throw OpenWebError.missingParam('topic_id')
   return fetchApi(page, `/api/v3/topics/${topicId}/children`)
 }
 
@@ -152,9 +153,13 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) throw new Error(`Unknown operation: ${operation}`)
-    return handler(page, { ...params })
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) throw OpenWebError.unknownOp(operation)
+      return await handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 

@@ -7,6 +7,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const BASE_URL = 'https://www.pinterest.com'
 
@@ -38,7 +39,7 @@ async function resourceGet(
   )
 
   if (result.status >= 400) {
-    throw new Error(`Pinterest ${resource}: HTTP ${result.status}`)
+    throw OpenWebError.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as {
@@ -46,7 +47,7 @@ async function resourceGet(
   }
 
   if (json.resource_response?.error) {
-    throw new Error(`Pinterest ${resource}: ${JSON.stringify(json.resource_response.error)}`)
+    throw OpenWebError.apiError('Pinterest', JSON.stringify(json.resource_response.error))
   }
 
   return json.resource_response?.data
@@ -257,11 +258,15 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) {
-      throw new Error(`Unknown operation: ${operation}`)
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) {
+        throw OpenWebError.unknownOp(operation)
+      }
+      return await handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
     }
-    return handler(page, { ...params })
   },
 }
 

@@ -1,4 +1,5 @@
 import type { Page } from 'playwright-core'
+import { OpenWebError } from '../../../lib/errors.js'
 
 export const GRAPHQL_URL = 'https://www.instacart.com/graphql'
 
@@ -25,7 +26,7 @@ export async function graphqlGet(
   variables: Record<string, unknown>,
 ): Promise<unknown> {
   const hash = HASHES[operationName]
-  if (!hash) throw new Error(`No persisted query hash for: ${operationName}`)
+  if (!hash) throw OpenWebError.apiError(operationName, 'No persisted query hash')
 
   const params = new URLSearchParams({
     operationName,
@@ -44,13 +45,13 @@ export async function graphqlGet(
   )
 
   if (result.status >= 400) {
-    throw new Error(`GraphQL ${operationName}: HTTP ${result.status}`)
+    throw OpenWebError.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
   if (json.errors?.length) {
     const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Unknown GraphQL error'
-    throw new Error(`GraphQL ${operationName}: ${msg}`)
+    throw OpenWebError.apiError('GraphQL ' + operationName, msg)
   }
 
   return json.data

@@ -7,6 +7,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import { gqlFetch, getTopStreams } from './queries.js'
 
 /* ---------- operation handlers ---------- */
@@ -375,9 +376,13 @@ const adapter: CodeAdapter = {
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
     const handler = OPERATIONS[operation]
     if (!handler) {
-      throw new Error(`Unknown operation: ${operation}`)
+      throw OpenWebError.unknownOp(operation)
     }
-    return handler(page, { ...params })
+    try {
+      return await handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 

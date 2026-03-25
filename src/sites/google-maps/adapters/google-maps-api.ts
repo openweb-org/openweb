@@ -11,6 +11,7 @@
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const MAPS_BASE = 'https://www.google.com/maps'
 
@@ -41,7 +42,7 @@ async function ensureMapsPage(page: Page): Promise<void> {
 
 async function searchPlaces(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const query = String(params.query ?? '')
-  if (!query) throw new Error('query is required')
+  if (!query) throw OpenWebError.missingParam('query')
 
   await ensureMapsPage(page)
 
@@ -123,7 +124,7 @@ async function searchPlaces(page: Page, params: Record<string, unknown>): Promis
 async function getPlaceDetails(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
-  if (!placeId) throw new Error('placeId is required')
+  if (!placeId) throw OpenWebError.missingParam('placeId')
 
   await ensureMapsPage(page)
 
@@ -195,7 +196,7 @@ async function getPlaceDetails(page: Page, params: Record<string, unknown>): Pro
 async function getDirections(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const origin = String(params.origin ?? '')
   const destination = String(params.destination ?? '')
-  if (!origin || !destination) throw new Error('origin and destination are required')
+  if (!origin || !destination) throw OpenWebError.missingParam('origin and destination')
 
   await ensureMapsPage(page)
 
@@ -284,9 +285,13 @@ const adapter: CodeAdapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) throw new Error(`Unknown operation: ${operation}`)
-    return handler(page, { ...params })
+    try {
+      const handler = OPERATIONS[operation]
+      if (!handler) throw OpenWebError.unknownOp(operation)
+      return handler(page, { ...params })
+    } catch (error) {
+      throw toOpenWebError(error)
+    }
   },
 }
 
