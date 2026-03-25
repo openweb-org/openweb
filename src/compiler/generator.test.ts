@@ -5,7 +5,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 
 import type { AnalyzedOperation } from './types.js'
-import { generatePackage } from './generator.js'
+import { generatePackage } from './generator/index.js'
 
 function op(partial: Partial<AnalyzedOperation> & Pick<AnalyzedOperation, 'operationId' | 'host' | 'path'>): AnalyzedOperation {
   return {
