@@ -56,6 +56,123 @@ paths:
                   required:
                     - id
                     - name
+  /internal/chats/search:
+    get:
+      operationId: searchChats
+      summary: Search chats by name or phone number
+      x-openweb:
+        permission: read
+        build:
+          stable_id: wa0005
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: whatsapp-modules
+          operation: searchChats
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search term (matches chat name or ID)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Max results to return
+      responses:
+        '200':
+          description: Array of matching chat objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    isGroup:
+                      type: boolean
+                    unreadCount:
+                      type: integer
+                    timestamp:
+                      type:
+                        - integer
+                        - 'null'
+                  required:
+                    - id
+                    - name
+  /internal/chats/{chatId}:
+    get:
+      operationId: getChatById
+      summary: Get detailed info for a specific chat
+      x-openweb:
+        permission: read
+        build:
+          stable_id: wa0006
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: whatsapp-modules
+          operation: getChatById
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Chat ID (e.g. 13472225726@c.us)
+      responses:
+        '200':
+          description: Chat detail object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  isGroup:
+                    type: boolean
+                  unreadCount:
+                    type: integer
+                  timestamp:
+                    type:
+                      - integer
+                      - 'null'
+                  archived:
+                    type: boolean
+                  pinned:
+                    type: boolean
+                  muted:
+                    type: boolean
+                  lastMessage:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      body:
+                        type: string
+                      fromMe:
+                        type: boolean
+                      timestamp:
+                        type:
+                          - integer
+                          - 'null'
+                required:
+                  - id
+                  - name
   /internal/messages:
     get:
       operationId: getMessages
@@ -109,6 +226,51 @@ paths:
                   required:
                     - id
                     - body
+    post:
+      operationId: sendMessage
+      summary: Send a text message to a chat
+      x-openweb:
+        permission: write
+        build:
+          stable_id: wa0004
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: whatsapp-modules
+          operation: sendMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatId:
+                  type: string
+                  description: Chat ID (e.g. 13472225726@c.us)
+                message:
+                  type: string
+                  description: Message text to send
+              required:
+                - chatId
+                - message
+      responses:
+        '200':
+          description: Send result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  timestamp:
+                    type: integer
+                required:
+                  - success
+                  - timestamp
   /internal/contacts:
     get:
       operationId: getContacts
@@ -150,3 +312,46 @@ paths:
                   required:
                     - id
                     - name
+  /internal/chats/read:
+    post:
+      operationId: markAsRead
+      summary: Mark a chat as read or unread
+      x-openweb:
+        permission: write
+        build:
+          stable_id: wa0007
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: whatsapp-modules
+          operation: markAsRead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatId:
+                  type: string
+                  description: Chat ID to mark
+                read:
+                  type: boolean
+                  default: true
+                  description: True to mark read, false to mark unread
+              required:
+                - chatId
+      responses:
+        '200':
+          description: Result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success

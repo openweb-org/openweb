@@ -1,16 +1,16 @@
 {
   "name": "whatsapp",
   "display_name": "WhatsApp Web",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "spec_version": "2.0",
   "site_url": "https://web.whatsapp.com",
-  "description": "WhatsApp Web — L3 adapter via Meta require() module system",
+  "description": "WhatsApp Web — L3 adapter via Meta require() module system (read + write)",
   "requires_auth": true,
   "dependencies": {},
   "stats": {
-    "operation_count": 3,
+    "operation_count": 7,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 3
+    "l3_count": 7
   }
 }
