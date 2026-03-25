@@ -1,0 +1,14 @@
+{
+  "operation_id": "getCompanyProfile",
+  "cases": [
+    {
+      "input": {
+        "symbols": ["AAPL"]
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

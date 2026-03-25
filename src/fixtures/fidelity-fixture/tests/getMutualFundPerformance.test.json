@@ -1,0 +1,16 @@
+{
+  "operation_id": "getMutualFundPerformance",
+  "cases": [
+    {
+      "input": {
+        "cusip": "315911750",
+        "funduniverse": "RETAIL",
+        "documentId": "315911750"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

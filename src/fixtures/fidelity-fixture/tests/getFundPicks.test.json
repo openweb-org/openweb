@@ -1,0 +1,15 @@
+{
+  "operation_id": "getFundPicks",
+  "cases": [
+    {
+      "input": {
+        "mstarAssetClassCd": "DSTK",
+        "mstarCtgyCd": "LB"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "operation_id": "getResearchData",
+  "cases": [
+    {
+      "input": {
+        "method": "GET",
+        "apiTokenName": "analyticRatings",
+        "params": "?symbols=SPY"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

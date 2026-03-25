@@ -1,0 +1,15 @@
+{
+  "operation_id": "getNewsHeadlines",
+  "cases": [
+    {
+      "input": {
+        "symbol": "AAPL",
+        "count": 10
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
