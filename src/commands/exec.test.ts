@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { executeOperationMock } = vi.hoisted(() => ({
-  executeOperationMock: vi.fn(),
+const { dispatchOperationMock } = vi.hoisted(() => ({
+  dispatchOperationMock: vi.fn(),
 }))
 
 vi.mock('../runtime/executor.js', () => ({
-  executeOperation: executeOperationMock,
+  dispatchOperation: dispatchOperationMock,
 }))
 
 vi.mock('./browser.js', () => ({
@@ -16,7 +16,7 @@ import { execCommand } from './exec.js'
 
 describe('execCommand', () => {
   beforeEach(() => {
-    executeOperationMock.mockReset()
+    dispatchOperationMock.mockReset()
   })
 
   afterEach(() => {
@@ -24,7 +24,7 @@ describe('execCommand', () => {
   })
 
   it('writes the full JSON response when under max-response', async () => {
-    executeOperationMock.mockResolvedValue({
+    dispatchOperationMock.mockResolvedValue({
       body: { ok: true },
     })
     const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
@@ -35,7 +35,7 @@ describe('execCommand', () => {
   })
 
   it('auto-spills large responses to file and returns pointer', async () => {
-    executeOperationMock.mockResolvedValue({
+    dispatchOperationMock.mockResolvedValue({
       status: 200,
       body: { data: 'a'.repeat(10000) },
     })

@@ -74,13 +74,22 @@ const HTTP_METHODS: ReadonlyArray<HttpMethod> = [
   'head',
 ]
 
-async function pathExists(targetPath: string): Promise<boolean> {
+export async function pathExists(targetPath: string): Promise<boolean> {
   try {
     await access(targetPath)
     return true
   } catch {
     return false
   }
+}
+
+/** A site dir is valid if it contains manifest.json, openapi.yaml, or asyncapi.yaml. */
+async function hasSitePackage(dir: string): Promise<boolean> {
+  return (
+    await pathExists(path.join(dir, 'manifest.json')) ||
+    await pathExists(path.join(dir, 'openapi.yaml')) ||
+    await pathExists(path.join(dir, 'asyncapi.yaml'))
+  )
 }
 
 /** Site names must be lowercase alphanumeric with hyphens/underscores. */
@@ -111,7 +120,7 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
 
   // 1. ~/.openweb/sites/ — user-installed (primary)
   const userSite = path.join(os.homedir(), '.openweb', 'sites', site)
-  if (await pathExists(path.join(userSite, 'openapi.yaml'))) {
+  if (await hasSitePackage(userSite)) {
     return userSite
   }
 
@@ -122,7 +131,7 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
       const currentVersion = (await readFile(registryCurrentFile, 'utf8')).trim()
       if (/^\d+\.\d+\.\d+$/.test(currentVersion)) {
         const registryVersionPath = path.join(os.homedir(), '.openweb', 'registry', site, currentVersion)
-        if (await pathExists(path.join(registryVersionPath, 'openapi.yaml'))) {
+        if (await hasSitePackage(registryVersionPath)) {
           return registryVersionPath
         }
       }
@@ -131,13 +140,13 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
 
   // 3. Bundled sites shipped with the package (dist/sites/)
   const bundledSite = path.join(BUNDLED_SITES, site)
-  if (await pathExists(path.join(bundledSite, 'openapi.yaml'))) {
+  if (await hasSitePackage(bundledSite)) {
     return bundledSite
   }
 
   // 4. ./src/sites/ — dev fallback
   const devSite = path.join(process.cwd(), 'src', 'sites', site)
-  if (await pathExists(path.join(devSite, 'openapi.yaml'))) {
+  if (await hasSitePackage(devSite)) {
     return devSite
   }
 
@@ -176,8 +185,8 @@ export async function listSites(): Promise<string[]> {
           }
           continue
         }
-        const candidate = path.join(root, entry.name, 'openapi.yaml')
-        if (await pathExists(candidate)) {
+        const candidate = path.join(root, entry.name)
+        if (await hasSitePackage(candidate)) {
           names.add(entry.name)
         }
       }

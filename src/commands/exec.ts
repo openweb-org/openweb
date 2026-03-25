@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
 import { OpenWebError } from '../lib/errors.js'
-import { executeOperation } from '../runtime/executor.js'
+import { dispatchOperation } from '../runtime/executor.js'
 import { getManagedCdpEndpoint } from './browser.js'
 
 function parseParams(paramsJson: string | undefined): Record<string, unknown> {
@@ -58,7 +58,7 @@ export async function execCommand(
   // CDP auto-detect: managed browser → explicit flag
   const cdpEndpoint = options.cdpEndpoint ?? await getManagedCdpEndpoint()
 
-  const result = await executeOperation(site, tool, params, {
+  const result = await dispatchOperation(site, tool, params, {
     cdpEndpoint,
   })
 

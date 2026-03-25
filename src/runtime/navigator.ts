@@ -4,6 +4,7 @@ import { realpathSync } from 'node:fs'
 import { getRequestBodyParameters, isArraySchema, type JsonSchema } from '../lib/openapi.js'
 import { findOperation, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import { loadManifest } from '../lib/manifest.js'
+import { loadSitePackage, type OperationEntry } from '../lib/site-package.js'
 import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 import type { PermissionCategory } from '../types/extensions.js'
 import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
@@ -66,12 +67,11 @@ export async function safeReadNotes(siteRoot: string): Promise<string | null> {
 }
 
 export async function renderSite(site: string): Promise<string> {
-  const spec = await loadOpenApi(site)
-  const operations = listOperations(spec)
-  const siteRoot = await resolveSiteRoot(site)
-  const manifest = await loadManifest(siteRoot)
+  const pkg = await loadSitePackage(site)
+  const manifest = await loadManifest(pkg.root)
+  const allOps = Array.from(pkg.operations.values())
 
-  if (operations.length === 0) {
+  if (allOps.length === 0) {
     return 'No tools found.'
   }
 
@@ -79,19 +79,27 @@ export async function renderSite(site: string): Promise<string> {
 
   // Site header with readiness metadata
   const displayName = manifest?.display_name ?? site
-  lines.push(`${displayName} (${operations.length} operations)`)
+  lines.push(`${displayName} (${allOps.length} operations)`)
   lines.push('')
 
-  // Derive site-level transport from the first server
-  const firstOp = operations[0]
-  const serverExt = getServerXOpenWeb(spec, firstOp.operation)
-  const siteTransport = serverExt?.transport ?? 'node'
-  const hasAdapter = operations.some((entry) => {
-    const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
-    return !!opExt?.adapter
-  })
-  const requiresBrowser = siteTransport === 'page' || !!(serverExt?.auth || serverExt?.csrf || serverExt?.signing)
-  const requiresAuth = manifest?.requires_auth ?? !!serverExt?.auth
+  // Derive site-level transport from the first HTTP operation's server (if available)
+  const httpOps = pkg.openapi ? listOperations(pkg.openapi) : []
+  let siteTransport = 'node'
+  let requiresBrowser = false
+  let hasAdapter = false
+
+  if (httpOps.length > 0 && pkg.openapi) {
+    const firstOp = httpOps[0]
+    const serverExt = getServerXOpenWeb(pkg.openapi, firstOp.operation)
+    siteTransport = serverExt?.transport ?? 'node'
+    hasAdapter = httpOps.some((entry) => {
+      const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
+      return !!opExt?.adapter
+    })
+    requiresBrowser = siteTransport === 'page' || !!(serverExt?.auth || serverExt?.csrf || serverExt?.signing)
+  }
+
+  const requiresAuth = manifest?.requires_auth ?? false
 
   lines.push(`Transport:        ${getTransportLabel(siteTransport, hasAdapter)}`)
   lines.push(`Requires browser: ${requiresBrowser ? 'yes' : 'no'}`)
@@ -99,17 +107,15 @@ export async function renderSite(site: string): Promise<string> {
 
   // Permission summary
   const permissionCounts: Record<string, number> = {}
-  for (const entry of operations) {
-    const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
-    const perm = (opExt?.permission as PermissionCategory | undefined) ?? derivePermissionFromMethod(entry.method, entry.path) as PermissionCategory
-    permissionCounts[perm] = (permissionCounts[perm] ?? 0) + 1
+  for (const entry of allOps) {
+    permissionCounts[entry.permission] = (permissionCounts[entry.permission] ?? 0) + 1
   }
   const permParts = Object.entries(permissionCounts).map(([perm, count]) => `${perm}:${count}`)
   lines.push(`Permissions:      ${permParts.join(' ')}`)
 
   // Per-site notes hint
   try {
-    const firstLine = await safeReadNotes(siteRoot)
+    const firstLine = await safeReadNotes(pkg.root)
     if (firstLine) {
       lines.push(`Notes:            ${firstLine}`)
     }
@@ -120,17 +126,41 @@ export async function renderSite(site: string): Promise<string> {
   lines.push('')
   lines.push('Operations:')
 
-  // Operation list
-  for (const entry of operations) {
-    const id = entry.operation.operationId
-    const summary = entry.operation.summary ?? ''
-    lines.push(`  ${id.padEnd(22)} ${summary}`.trimEnd())
+  // Operation list with protocol indicator
+  for (const entry of allOps) {
+    const proto = entry.protocol === 'ws' ? '[ws] ' : ''
+    const summary = entry.summary ?? ''
+    lines.push(`  ${proto}${entry.operationId.padEnd(entry.protocol === 'ws' ? 17 : 22)} ${summary}`.trimEnd())
   }
 
   return lines.join('\n')
 }
 
 export async function renderOperation(site: string, operationId: string, full: boolean): Promise<string> {
+  const pkg = await loadSitePackage(site)
+  const entry = pkg.operations.get(operationId)
+
+  // WS operation rendering
+  if (entry?.protocol === 'ws') {
+    const wsEntry = entry as import('../lib/site-package.js').WsOperationEntry
+    const lines: string[] = []
+    lines.push(`WS ${wsEntry.action} (${wsEntry.pattern})`)
+    if (wsEntry.summary) {
+      lines.push(wsEntry.summary)
+    }
+    lines.push(`Transport: node`)
+    lines.push(`Permission: ${wsEntry.permission}`)
+    lines.push(`Protocol: ws`)
+
+    if (full && pkg.asyncapi?.operations?.[operationId]) {
+      lines.push('')
+      lines.push(JSON.stringify(pkg.asyncapi.operations[operationId], null, 2))
+    }
+
+    return lines.join('\n')
+  }
+
+  // HTTP operation rendering (existing logic)
   const spec = await loadOpenApi(site)
   const { method, path: opPath, operation } = findOperation(spec, operationId)
   const transport = resolveTransport(spec, operation)
@@ -186,15 +216,14 @@ export async function renderOperation(site: string, operationId: string, full: b
 }
 
 export async function renderSiteJson(site: string): Promise<string> {
-  const spec = await loadOpenApi(site)
-  const operations = listOperations(spec)
-  const siteRoot = await resolveSiteRoot(site)
-  const manifest = await loadManifest(siteRoot)
+  const pkg = await loadSitePackage(site)
+  const manifest = await loadManifest(pkg.root)
+  const allOps = Array.from(pkg.operations.values())
 
   // Check for DOC.md
   let hasNotes = false
   try {
-    hasNotes = (await safeReadNotes(siteRoot)) !== null
+    hasNotes = (await safeReadNotes(pkg.root)) !== null
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
   }
@@ -202,14 +231,23 @@ export async function renderSiteJson(site: string): Promise<string> {
   const result = {
     name: manifest?.display_name ?? site,
     hasNotes,
-    operations: operations.map((entry) => {
-      const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
+    operations: allOps.map((entry) => {
+      if (entry.protocol === 'ws') {
+        return {
+          id: entry.operationId,
+          protocol: 'ws' as const,
+          pattern: entry.pattern,
+          permission: entry.permission,
+          summary: entry.summary ?? '',
+        }
+      }
       return {
-        id: entry.operation.operationId,
+        id: entry.operationId,
+        protocol: 'http' as const,
         method: entry.method.toUpperCase(),
         path: entry.path,
-        permission: (opExt?.permission as string | undefined) ?? derivePermissionFromMethod(entry.method, entry.path),
-        summary: entry.operation.summary ?? '',
+        permission: entry.permission,
+        summary: entry.summary ?? '',
       }
     }),
   }
@@ -218,14 +256,30 @@ export async function renderSiteJson(site: string): Promise<string> {
 }
 
 export async function renderOperationJson(site: string, operationId: string): Promise<string> {
+  const pkg = await loadSitePackage(site)
+  const entry = pkg.operations.get(operationId)
+
+  if (entry?.protocol === 'ws') {
+    const wsEntry = entry as import('../lib/site-package.js').WsOperationEntry
+    return JSON.stringify({
+      id: operationId,
+      protocol: 'ws',
+      pattern: wsEntry.pattern,
+      permission: wsEntry.permission,
+      parameters: [],
+    })
+  }
+
+  // HTTP operation (existing logic)
   const spec = await loadOpenApi(site)
   const { method, path: opPath, operation } = findOperation(spec, operationId)
   const allParams = resolveAllParameters(spec, operation)
   const bodyParams = getRequestBodyParameters(operation)
   const opExt = operation['x-openweb'] as Record<string, unknown> | undefined
 
-  const result = {
+  return JSON.stringify({
     id: operationId,
+    protocol: 'http',
     method: method.toUpperCase(),
     path: opPath,
     permission: (opExt?.permission as string | undefined) ?? derivePermissionFromMethod(method, opPath),
@@ -236,9 +290,7 @@ export async function renderOperationJson(site: string, operationId: string): Pr
       type: formatParamType(p.schema?.type),
       default: p.schema?.default,
     })),
-  }
-
-  return JSON.stringify(result)
+  })
 }
 
 /** Generate example params JSON from schema defaults and parameter names */

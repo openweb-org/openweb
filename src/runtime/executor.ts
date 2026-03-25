@@ -590,3 +590,35 @@ export async function runSiteTests(site: string): Promise<{ passed: number; fail
 
   return { passed, failed }
 }
+
+// ── Unified Protocol Dispatch ───────────────────────
+
+/**
+ * Route an operation to the correct executor based on protocol.
+ * HTTP operations go through the existing executeOperation path.
+ * WS operations are detected and dispatched separately.
+ */
+export async function dispatchOperation(
+  site: string,
+  operationId: string,
+  params: Record<string, unknown>,
+  deps: ExecuteDependencies = {},
+): Promise<ExecuteResult> {
+  const { loadSitePackage, findOperationEntry } = await import('../lib/site-package.js')
+  const pkg = await loadSitePackage(site)
+  const entry = findOperationEntry(pkg, operationId)
+
+  if (entry.protocol === 'http') {
+    return executeOperation(site, operationId, params, deps)
+  }
+
+  // WS operations require connection + streaming — not available via unary exec
+  throw new OpenWebError({
+    error: 'execution_failed',
+    code: 'EXECUTION_FAILED',
+    message: `Operation ${operationId} is a WebSocket ${entry.protocol === 'ws' ? (entry as { pattern: string }).pattern : ''} operation`,
+    action: 'WS operations require a persistent connection. Use the streaming API or a dedicated WS client.',
+    retriable: false,
+    failureClass: 'fatal',
+  })
+}
