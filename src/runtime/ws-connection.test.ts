@@ -62,13 +62,12 @@ class MockWebSocket {
 /** Track created MockWebSocket instances */
 let lastMockWs: MockWebSocket | null = null
 
-function createMockCtor(): { new(url: string | URL, protocols?: string | string[]): WebSocket } {
-  return class extends MockWebSocket {
-    constructor(url: string | URL, protocols?: string | string[]) {
-      super(url, protocols)
-      lastMockWs = this
-    }
-  } as unknown as { new(url: string | URL, protocols?: string | string[]): WebSocket }
+function createMockFactory() {
+  return (url: string, _protocols?: string[], _headers?: Record<string, string>) => {
+    const ws = new MockWebSocket(url)
+    lastMockWs = ws
+    return ws as unknown as WebSocket
+  }
 }
 
 // ── Connection Manager Tests ──────────────────────
@@ -85,7 +84,7 @@ describe('WsConnectionManager', () => {
 
   const baseConfig: WsConnectionConfig = {
     url: 'wss://gateway.example.com/',
-    WebSocketCtor: createMockCtor(),
+    socketFactory: createMockFactory(),
   }
 
   describe('state machine transitions', () => {
@@ -411,7 +410,7 @@ describe('WsConnectionPool', () => {
 
   const config: WsConnectionConfig = {
     url: 'wss://gateway.example.com/',
-    WebSocketCtor: createMockCtor(),
+    socketFactory: createMockFactory(),
   }
 
   it('reuses connection for same key', () => {

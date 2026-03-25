@@ -33,5 +33,6 @@ export interface XOpenWebWsOperation {
     readonly field: string
     readonly source: 'echo' | 'sequence' | 'uuid'
   }
+  readonly event_match?: Readonly<Record<string, unknown>>
   readonly build?: XOpenWebBuildMeta
 }

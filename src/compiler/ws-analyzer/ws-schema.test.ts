@@ -96,15 +96,19 @@ describe('parameters extracted from varying subscribe fields', () => {
     expect(schema.parameterSchema!.required).toContain('symbol')
   })
 
-  it('does not extract parameters for non-subscribe patterns', () => {
+  it('extracts parameters for publish patterns', () => {
     const cluster = classified('publish', 'sent', [
       frame('sent', { action: 'log', msg: 'hello' }),
       frame('sent', { action: 'log', msg: 'world' }),
     ], 'log')
 
     const [schema] = inferWsSchemas([cluster])
-    expect(schema.parameterSchema).toBeUndefined()
-    expect(schema.messageTemplate).toBeUndefined()
+    // publish now gets template extraction (msg varies)
+    expect(schema.parameterSchema).toBeDefined()
+    expect(schema.messageTemplate).toBeDefined()
+    expect(schema.messageTemplate!.constants).toEqual({ action: 'log' })
+    expect(schema.messageTemplate!.bindings).toHaveLength(1)
+    expect(schema.messageTemplate!.bindings[0].path).toBe('msg')
   })
 
   it('does not extract parameters when all fields are constant', () => {

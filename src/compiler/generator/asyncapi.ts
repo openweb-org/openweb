@@ -103,6 +103,15 @@ export async function generateAsyncApi(input: GenerateAsyncApiInput): Promise<vo
     if (op.messageTemplate) {
       xOpenweb.subscribe_message = op.messageTemplate
     }
+    if (op.unsubscribeTemplate) {
+      xOpenweb.unsubscribe_message = op.unsubscribeTemplate
+    }
+    if (op.correlationConfig) {
+      xOpenweb.correlation = op.correlationConfig
+    }
+    if (op.eventMatch) {
+      xOpenweb.event_match = op.eventMatch
+    }
 
     operations[op.operationId] = {
       action,
@@ -111,20 +120,23 @@ export async function generateAsyncApi(input: GenerateAsyncApiInput): Promise<vo
       messages: [{ $ref: `#/channels/${channelName}/messages/${msgKey}` }],
     }
 
-    // Test record
+    // Test record — pattern-aware mode and assertions
+    const mode = op.pattern === 'request_reply' || op.pattern === 'publish' ? 'unary' : 'stream'
+    const assertions: Record<string, unknown> = { connected: true }
+    if (op.pattern !== 'publish') {
+      assertions.first_message_within_ms = 5000
+      assertions.message_schema_valid = true
+    }
+
     const testShape: Record<string, unknown> = {
       operation_id: op.operationId,
       protocol: 'ws',
-      mode: op.pattern === 'request_reply' ? 'unary' : 'stream',
+      mode,
       cases: [
         {
           input: {},
           timeout_ms: 10000,
-          assertions: {
-            connected: true,
-            first_message_within_ms: 5000,
-            message_schema_valid: true,
-          },
+          assertions,
         },
       ],
     }

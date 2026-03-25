@@ -7,6 +7,12 @@ import { OpenWebError } from '../lib/errors.js'
 import { computeResponseFingerprint } from './fingerprint.js'
 import { loadManifest, saveManifest } from '../lib/manifest.js'
 import type { Manifest } from '../types/manifest.js'
+import { loadAsyncApi, type AsyncApiSpec } from '../lib/asyncapi.js'
+import { WsConnectionPool } from '../runtime/ws-pool.js'
+import { openWsSession } from '../runtime/ws-runtime.js'
+import { executeWsOperation, streamWsOperation } from '../runtime/ws-executor.js'
+import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
+import { pathExists } from '../lib/openapi.js'
 
 export type DriftType = 'schema_drift' | 'auth_drift' | 'endpoint_removed' | 'error'
 
@@ -101,13 +107,34 @@ export async function verifySite(
 
   const operations: OperationVerifyResult[] = []
 
+  // Load asyncapi for WS verification
+  const hasAsyncApi = await pathExists(path.join(siteRoot, 'asyncapi.yaml'))
+  let asyncapi: AsyncApiSpec | undefined
+  let wsPool: WsConnectionPool | undefined
+  if (hasAsyncApi) {
+    try {
+      asyncapi = await loadAsyncApi(siteRoot)
+      wsPool = new WsConnectionPool()
+    } catch { /* asyncapi load failure — WS ops will FAIL individually */ }
+  }
+
   for (const fileName of testFiles) {
     const raw = await readFile(path.join(testsDir, fileName), 'utf8')
     const testFile = JSON.parse(raw) as TestFile
 
     if (testFile.protocol === 'ws') {
       for (const testCase of testFile.cases) {
-        operations.push(verifyWsOperation(testFile.operation_id, testFile.mode, testCase))
+        const result = await verifyWsOperation(
+          site,
+          testFile.operation_id,
+          testFile.mode,
+          testCase,
+          asyncapi,
+          wsPool,
+          storedFingerprints.get(testFile.operation_id),
+          deps,
+        )
+        operations.push(result)
       }
       continue
     }
@@ -123,6 +150,9 @@ export async function verifySite(
       operations.push(result)
     }
   }
+
+  // Clean up WS pool
+  wsPool?.destroyAll()
 
   // Determine overall status
   const hasDrift = operations.some((o) => o.status === 'DRIFT')
@@ -249,25 +279,107 @@ async function verifyOperation(
 }
 
 /**
- * Verify a WS operation test case.
- * For now: parse-only validation (connection/execution requires live WS server).
- * Returns PASS if test case structure is valid, FAIL if malformed.
+ * Verify a WS operation test case with live connection.
  */
-function verifyWsOperation(
+async function verifyWsOperation(
+  site: string,
   operationId: string,
   mode: 'stream' | 'unary',
   testCase: WsTestCase,
-): OperationVerifyResult {
+  asyncapi: AsyncApiSpec | undefined,
+  pool: WsConnectionPool | undefined,
+  storedFingerprint: string | undefined,
+  deps?: ExecuteDependencies,
+): Promise<OperationVerifyResult> {
   if (!testCase.assertions) {
-    return {
-      operationId,
-      status: 'FAIL',
-      driftType: 'error',
-      detail: `ws/${mode}: missing assertions`,
-    }
+    return { operationId, status: 'FAIL', driftType: 'error', detail: `ws/${mode}: missing assertions` }
   }
 
-  return { operationId, status: 'PASS' }
+  if (!asyncapi || !pool) {
+    return { operationId, status: 'FAIL', driftType: 'error', detail: 'no asyncapi spec available for WS verification' }
+  }
+
+  const timeoutMs = testCase.timeout_ms ?? 10_000
+
+  try {
+    const session = await openWsSession(site, asyncapi, testCase.input, pool, deps)
+    const { connection, router, poolKey } = session
+
+    // Validate 'connected' assertion
+    if (testCase.assertions.connected && connection.getState() !== 'READY') {
+      pool.release(poolKey, connection)
+      return { operationId, status: 'FAIL', driftType: 'error', detail: 'connection not ready' }
+    }
+
+    const op = asyncapi.operations?.[operationId]
+    const operation = op?.['x-openweb'] as XOpenWebWsOperation | undefined
+    if (!operation) {
+      pool.release(poolKey, connection)
+      return { operationId, status: 'FAIL', driftType: 'error', detail: `operation ${operationId} not found in asyncapi` }
+    }
+
+    let body: unknown
+
+    if (mode === 'unary') {
+      // publish: just validate connection, no response needed
+      if (operation.pattern === 'publish') {
+        if (operation.subscribe_message) {
+          const { resolveTemplate } = await import('../runtime/ws-executor.js')
+          const outgoing = resolveTemplate(operation.subscribe_message, testCase.input, connection.connectionState)
+          connection.send(outgoing)
+        }
+        pool.release(poolKey, connection)
+        return { operationId, status: 'PASS' }
+      }
+
+      // request_reply
+      const result = await executeWsOperation(connection, router, operation, testCase.input, { timeoutMs })
+      pool.release(poolKey, connection)
+      if (result.status === 'timeout') {
+        return { operationId, status: 'FAIL', driftType: 'error', detail: 'request timed out' }
+      }
+      body = result.body
+    } else {
+      // Stream: wait for first message within deadline
+      const deadline = testCase.assertions.first_message_within_ms ?? timeoutMs
+      const handle = streamWsOperation(connection, router, operation, testCase.input, operationId)
+      const first = await raceTimeout(handle.messages[Symbol.asyncIterator]().next(), deadline)
+      handle.close()
+      pool.release(poolKey, connection)
+
+      if (!first || first.done) {
+        return { operationId, status: 'FAIL', driftType: 'error', detail: `no message within ${deadline}ms` }
+      }
+      body = first.value
+    }
+
+    // Fingerprint comparison
+    const newFingerprint = computeResponseFingerprint(body)
+    if (storedFingerprint && storedFingerprint !== newFingerprint) {
+      return {
+        operationId,
+        status: 'DRIFT',
+        driftType: 'schema_drift',
+        detail: 'response shape changed',
+        newFingerprint,
+        oldFingerprint: storedFingerprint,
+      }
+    }
+
+    return { operationId, status: 'PASS', newFingerprint }
+  } catch (error) {
+    if (isAuthDrift(error)) {
+      return { operationId, status: 'FAIL', driftType: 'auth_drift', detail: 'WS auth failed' }
+    }
+    return { operationId, status: 'FAIL', driftType: 'error', detail: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+function raceTimeout<T>(promise: Promise<T>, ms: number): Promise<T | undefined> {
+  return Promise.race([
+    promise,
+    new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), ms)),
+  ])
 }
 
 /**

@@ -2,6 +2,8 @@ import { EventEmitter } from 'node:events'
 
 import type { WsAuthConfig, WsHeartbeat, WsMessageTemplate } from '../types/ws-primitives.js'
 import { getValueAtPath, setValueAtPath } from './value-path.js'
+import type { WsSocketFactory } from './ws-socket.js'
+import { defaultSocketFactory } from './ws-socket.js'
 
 // ── State Machine ─────────────────────────────────
 
@@ -44,8 +46,10 @@ export interface WsConnectionConfig {
   readonly auth?: WsAuthConfig
   readonly heartbeat?: WsHeartbeat
   readonly reconnect?: WsReconnectConfig
-  /** Injected WebSocket constructor (for testing) */
-  readonly WebSocketCtor?: { new(url: string | URL, protocols?: string | string[]): WebSocket }
+  /** Injected socket factory (for headers support and testing) */
+  readonly socketFactory?: WsSocketFactory
+  /** Auth payload to send during AUTHENTICATING state */
+  readonly authPayload?: Record<string, unknown>
 }
 
 // ── Events ────────────────────────────────────────
@@ -94,12 +98,12 @@ export class WsConnectionManager extends EventEmitter<WsConnectionEvents> {
   readonly params: Record<string, unknown> = {}
 
   private readonly config: WsConnectionConfig
-  private readonly WsCtor: { new(url: string | URL, protocols?: string | string[]): WebSocket }
+  private readonly factory: WsSocketFactory
 
   constructor(config: WsConnectionConfig) {
     super()
     this.config = config
-    this.WsCtor = config.WebSocketCtor ?? globalThis.WebSocket
+    this.factory = config.socketFactory ?? defaultSocketFactory
     this.heartbeatIntervalMs = config.heartbeat?.interval_ms
   }
 
@@ -150,10 +154,11 @@ export class WsConnectionManager extends EventEmitter<WsConnectionEvents> {
       }
     }
 
-    // If auth is ws_first_message, send auth message now
-    if (this.config.auth?.type === 'ws_first_message') {
-      // Auth message will be sent by the executor which has the token
-      // For now, transition directly — executor calls completeAuth()
+    // If authPayload is configured, send it now during AUTHENTICATING
+    if (this.config.authPayload) {
+      this.ws?.send(JSON.stringify(this.config.authPayload))
+      // Wait for ack/response to call completeAuth() externally
+      return
     }
 
     // If no auth needed, go straight to READY
@@ -176,7 +181,7 @@ export class WsConnectionManager extends EventEmitter<WsConnectionEvents> {
   // ── Internal ──────────────────────────────────
 
   private openSocket(): void {
-    const ws = new this.WsCtor(this.config.url, this.config.protocols)
+    const ws = this.factory(this.config.url, this.config.protocols, this.config.headers)
     this.ws = ws
 
     ws.addEventListener('open', () => {

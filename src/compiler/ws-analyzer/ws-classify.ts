@@ -17,7 +17,7 @@ const CV_THRESHOLD = 0.3
 const MIN_PERIODIC_FRAMES = 3
 
 /** ID-like field names for correlation detection. */
-const CORRELATION_FIELDS = new Set([
+export const CORRELATION_FIELDS = new Set([
   'id',
   'request_id',
   'req_id',

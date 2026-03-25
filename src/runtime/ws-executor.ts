@@ -2,7 +2,8 @@ import type { WsConnectionManager } from './ws-connection.js'
 import type { WsRouter, ClassifiedFrame } from './ws-router.js'
 import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
 import type { WsMessageTemplate } from '../types/ws-primitives.js'
-import { setValueAtPath } from './value-path.js'
+import { getValueAtPath, setValueAtPath } from './value-path.js'
+import { randomUUID } from 'node:crypto'
 
 // ── Types ────────────────────────────────────────
 
@@ -41,6 +42,33 @@ export function resolveTemplate(
   return result
 }
 
+// ── Correlation Helpers ──────────────────────────
+
+let sequenceCounter = 0
+
+function resolveCorrelationValue(
+  outgoing: Record<string, unknown>,
+  operation: XOpenWebWsOperation,
+): { value: unknown; outgoing: Record<string, unknown> } | undefined {
+  const corr = operation.correlation
+  if (!corr) return undefined
+
+  switch (corr.source) {
+    case 'echo': {
+      const value = getValueAtPath(outgoing, corr.field)
+      return { value, outgoing }
+    }
+    case 'uuid': {
+      const value = randomUUID()
+      return { value, outgoing: setValueAtPath(outgoing, corr.field, value) }
+    }
+    case 'sequence': {
+      const value = ++sequenceCounter
+      return { value, outgoing: setValueAtPath(outgoing, corr.field, value) }
+    }
+  }
+}
+
 // ── Request/Reply Executor ───────────────────────
 
 export function executeWsOperation(
@@ -57,7 +85,16 @@ export function executeWsOperation(
     return Promise.resolve({ status: 'error', body: 'No message template defined for operation' })
   }
 
-  const outgoing = resolveTemplate(template, params, connection.connectionState)
+  let outgoing = resolveTemplate(template, params, connection.connectionState)
+
+  // Resolve correlation: inject ID into outgoing and track expected value
+  const corr = resolveCorrelationValue(outgoing, operation)
+  const expectedCorrelation = corr?.value
+  if (corr) outgoing = corr.outgoing
+
+  if (!operation.correlation && operation.pattern === 'request_reply') {
+    process.stderr?.write?.(`warning: request_reply operation has no correlation config — using first-response matching\n`)
+  }
 
   return new Promise<WsExecuteResult>((resolve) => {
     let settled = false
@@ -73,6 +110,13 @@ export function executeWsOperation(
       if (settled) return
       const classified = router.classify(data)
       if (classified.category !== 'response') return
+
+      // Correlation value matching
+      if (expectedCorrelation !== undefined && operation.correlation) {
+        const actual = getValueAtPath(data, operation.correlation.field)
+        if (actual !== expectedCorrelation) return // not our response
+      }
+
       settled = true
       clearTimeout(timer)
       connection.removeListener('message', onMessage)
@@ -91,6 +135,7 @@ export function streamWsOperation(
   router: WsRouter,
   operation: XOpenWebWsOperation,
   params: Record<string, unknown>,
+  operationId?: string,
 ): WsStreamHandle {
   // Send subscription message if defined
   if (operation.subscribe_message) {
@@ -106,6 +151,12 @@ export function streamWsOperation(
     if (closed) return
     const classified = router.classify(data)
     if (classified.category !== 'event') return
+
+    // Strict routing: only accept events for this operation
+    if (operationId && classified.operationId && classified.operationId !== operationId) return
+    // If operation requires routing but frame has no operationId, drop it
+    if (operationId && !classified.operationId) return
+
     if (pendingResolve) {
       const resolve = pendingResolve
       pendingResolve = null
@@ -169,13 +220,14 @@ export function dispatchWsOperation(
   operation: XOpenWebWsOperation,
   params: Record<string, unknown>,
   config: WsExecutorConfig = {},
+  operationId?: string,
 ): Promise<WsExecuteResult> | WsStreamHandle {
   switch (operation.pattern) {
     case 'request_reply':
       return executeWsOperation(connection, router, operation, params, config)
     case 'subscribe':
     case 'stream':
-      return streamWsOperation(connection, router, operation, params)
+      return streamWsOperation(connection, router, operation, params, operationId)
     case 'publish': {
       if (operation.subscribe_message) {
         const outgoing = resolveTemplate(operation.subscribe_message, params, connection.connectionState)

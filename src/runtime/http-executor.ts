@@ -44,6 +44,10 @@ export interface ExecuteDependencies {
   readonly permissionsConfig?: import('../lib/permissions.js').PermissionsConfig
   /** Override token cache directory (used in tests to isolate cache) */
   readonly tokenCacheDir?: string
+  /** Max WS messages for stream/subscribe (CLI only). Default: 1 */
+  readonly wsCount?: number
+  /** WS timeout in ms (CLI only). Default: 10_000 */
+  readonly wsTimeoutMs?: number
 }
 
 export interface ExecuteResult {
@@ -327,13 +331,7 @@ export async function dispatchOperation(
     return executeOperation(site, operationId, params, deps)
   }
 
-  // WS operations require connection + streaming — not available via unary exec
-  throw new OpenWebError({
-    error: 'execution_failed',
-    code: 'EXECUTION_FAILED',
-    message: `Operation ${operationId} is a WebSocket ${entry.protocol === 'ws' ? (entry as { pattern: string }).pattern : ''} operation`,
-    action: 'WS operations require a persistent connection. Use the streaming API or a dedicated WS client.',
-    retriable: false,
-    failureClass: 'fatal',
-  })
+  // WS operations — delegate to WS CLI executor
+  const { executeWsFromCli } = await import('./ws-cli-executor.js')
+  return executeWsFromCli(site, operationId, params, deps)
 }

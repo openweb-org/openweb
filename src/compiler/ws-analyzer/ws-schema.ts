@@ -1,7 +1,7 @@
 import type { JsonSchema } from '../../lib/openapi.js'
 import type { WsPattern, WsMessageTemplate, WsBinding } from '../../types/ws-primitives.js'
 import { inferSchema } from '../analyzer/schema.js'
-import type { ClassifiedCluster } from './ws-classify.js'
+import { CORRELATION_FIELDS, type ClassifiedCluster } from './ws-classify.js'
 
 // ── Output types ──────────────────────────────────────────────
 
@@ -12,6 +12,9 @@ export interface WsOperationSchema {
   readonly payloadSchema: JsonSchema
   readonly parameterSchema?: JsonSchema
   readonly messageTemplate?: WsMessageTemplate
+  readonly correlationConfig?: { readonly field: string; readonly source: 'echo' | 'sequence' | 'uuid' }
+  readonly eventMatch?: Record<string, unknown>
+  readonly unsubscribeTemplate?: WsMessageTemplate
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -25,7 +28,7 @@ function generateOperationId(cluster: ClassifiedCluster): string {
 }
 
 /**
- * Analyze sent frames for subscribe patterns: separate constant vs varying fields.
+ * Analyze sent frames: separate constant vs varying fields.
  * Constant fields → template constants. Varying fields → parameter bindings.
  */
 function extractTemplateAndParameters(
@@ -74,10 +77,58 @@ function extractTemplateAndParameters(
   }
 }
 
+// ── Correlation Inference ─────────────────────────────────────
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function detectCorrelationField(
+  payloads: Record<string, unknown>[],
+): { field: string; source: 'echo' | 'sequence' | 'uuid' } | undefined {
+  for (const field of CORRELATION_FIELDS) {
+    const values = payloads.map((p) => p[field]).filter((v) => v !== undefined)
+    if (values.length === 0) continue
+    const distinct = new Set(values.map((v) => JSON.stringify(v)))
+    if (distinct.size !== values.length) continue // not unique per frame
+
+    // Determine source type
+    if (values.every((v) => typeof v === 'string' && UUID_RE.test(v))) {
+      return { field, source: 'uuid' }
+    }
+    if (values.every((v) => typeof v === 'number') && isIncrementing(values as number[])) {
+      return { field, source: 'sequence' }
+    }
+    return { field, source: 'echo' }
+  }
+  return undefined
+}
+
+function isIncrementing(nums: number[]): boolean {
+  if (nums.length < 2) return true
+  for (let i = 1; i < nums.length; i++) {
+    if (nums[i] <= nums[i - 1]) return false
+  }
+  return true
+}
+
+// ── Unsubscribe Pairing ──────────────────────────────────────
+
+function pairUnsubscribe(
+  sub: ClassifiedCluster,
+  allSent: ClassifiedCluster[],
+): ClassifiedCluster | undefined {
+  for (const other of allSent) {
+    if (other === sub || other.pattern !== 'publish') continue
+    const candDisc = String(other.discriminatorValue).toLowerCase()
+    if (candDisc.includes('unsub') || candDisc.includes('remove')) return other
+  }
+  return undefined
+}
+
 // ── Main entry ────────────────────────────────────────────────
 
 export function inferWsSchemas(clusters: ClassifiedCluster[]): WsOperationSchema[] {
   const results: WsOperationSchema[] = []
+  const sentClusters = clusters.filter((c) => c.direction === 'sent')
 
   for (const cluster of clusters) {
     if (cluster.frames.length === 0) continue
@@ -88,13 +139,49 @@ export function inferWsSchemas(clusters: ClassifiedCluster[]): WsOperationSchema
 
     let parameterSchema: JsonSchema | undefined
     let messageTemplate: WsMessageTemplate | undefined
+    let correlationConfig: WsOperationSchema['correlationConfig']
+    let eventMatch: Record<string, unknown> | undefined
+    let unsubscribeTemplate: WsMessageTemplate | undefined
 
-    // For subscribe patterns on sent clusters, extract parameters from varying fields
-    if (cluster.pattern === 'subscribe' && cluster.direction === 'sent') {
+    // Template extraction for sent executable patterns
+    if (cluster.direction === 'sent' &&
+        (cluster.pattern === 'subscribe' || cluster.pattern === 'publish' || cluster.pattern === 'request_reply')) {
       const extracted = extractTemplateAndParameters(payloads)
       if (extracted) {
         parameterSchema = extracted.parameterSchema
         messageTemplate = extracted.template
+      }
+    }
+
+    // Correlation inference for request_reply sent clusters
+    if (cluster.direction === 'sent' && cluster.pattern === 'request_reply') {
+      correlationConfig = detectCorrelationField(payloads)
+    }
+
+    // Event match inference for receive-side clusters
+    if (cluster.direction === 'received') {
+      eventMatch = {}
+      if (cluster.discriminatorField) {
+        eventMatch[cluster.discriminatorField] = cluster.discriminatorValue
+      }
+      if (cluster.subValue != null && cluster.subField) {
+        eventMatch[cluster.subField] = cluster.subValue
+      }
+      // Only emit if we have at least one match field
+      if (Object.keys(eventMatch).length === 0) {
+        eventMatch = undefined
+      }
+    }
+
+    // Unsubscribe pairing for subscribe sent clusters
+    if (cluster.direction === 'sent' && cluster.pattern === 'subscribe') {
+      const unsub = pairUnsubscribe(cluster, sentClusters)
+      if (unsub) {
+        const unsubPayloads = unsub.frames.map((f) => f.payload)
+        const extracted = extractTemplateAndParameters(unsubPayloads)
+        if (extracted) {
+          unsubscribeTemplate = extracted.template
+        }
       }
     }
 
@@ -105,6 +192,9 @@ export function inferWsSchemas(clusters: ClassifiedCluster[]): WsOperationSchema
       payloadSchema,
       parameterSchema,
       messageTemplate,
+      correlationConfig,
+      eventMatch,
+      unsubscribeTemplate,
     })
   }
 

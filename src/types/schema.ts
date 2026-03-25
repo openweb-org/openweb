@@ -174,6 +174,7 @@ export const xOpenWebWsOperationSchema = {
     subscribe_message: wsMessageTemplateSchema,
     unsubscribe_message: wsMessageTemplateSchema,
     correlation: wsCorrelationSchema,
+    event_match: { type: 'object' },
     build: buildMetaSchema,
   },
   additionalProperties: false,

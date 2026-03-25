@@ -4,7 +4,9 @@ import type { ParsedWsFrame, WsConnection } from './ws-load.js'
 // ── Output types ──────────────────────────────────────────────
 
 export interface WsMessageCluster {
+  readonly discriminatorField?: string
   readonly discriminatorValue: string | number
+  readonly subField?: string
   readonly subValue?: string | number
   readonly direction: 'sent' | 'received'
   readonly frames: ParsedWsFrame[]
@@ -205,7 +207,9 @@ function clusterFrames(
       }
       for (const [subValue, subFrames] of subGroups) {
         clusters.push({
+          discriminatorField: disc.field,
           discriminatorValue: discValue,
+          subField: disc.sub_field,
           subValue,
           direction,
           frames: subFrames,
@@ -214,6 +218,7 @@ function clusterFrames(
       }
     } else {
       clusters.push({
+        discriminatorField: disc.field,
         discriminatorValue: discValue,
         direction,
         frames: groupFrames,

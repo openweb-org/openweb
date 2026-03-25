@@ -33,6 +33,8 @@ export interface ExecOptions {
   readonly cdpEndpoint?: string
   readonly maxResponse?: number
   readonly output?: 'stdout' | 'file'
+  readonly wsCount?: number
+  readonly wsTimeoutMs?: number
 }
 
 /** Write spill file with unguessable name and exclusive create (0o600) */
@@ -60,6 +62,8 @@ export async function execCommand(
 
   const result = await dispatchOperation(site, tool, params, {
     cdpEndpoint,
+    wsCount: options.wsCount,
+    wsTimeoutMs: options.wsTimeoutMs,
   })
 
   const text = JSON.stringify(result.body)
