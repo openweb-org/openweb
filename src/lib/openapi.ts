@@ -122,10 +122,10 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
     } catch { /* no registry entry — fall through */ }
   }
 
-  // 3. ./src/fixtures/ — dev fallback
-  const devFixture = path.join(process.cwd(), 'src', 'fixtures', site)
-  if (await pathExists(path.join(devFixture, 'openapi.yaml'))) {
-    return devFixture
+  // 3. ./src/sites/ — dev fallback
+  const devSite = path.join(process.cwd(), 'src', 'sites', site)
+  if (await pathExists(path.join(devSite, 'openapi.yaml'))) {
+    return devSite
   }
 
   throw new OpenWebError({
@@ -141,7 +141,7 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
 export async function listSites(): Promise<string[]> {
   const roots = [
     path.join(os.homedir(), '.openweb', 'sites'),
-    path.join(process.cwd(), 'src', 'fixtures'),
+    path.join(process.cwd(), 'src', 'sites'),
     path.join(os.homedir(), '.openweb', 'registry'),
   ]
 
@@ -298,7 +298,7 @@ export function validateParams(
           error: 'execution_failed',
           code: 'INVALID_PARAMS',
           message: `Parameter ${param.name} is fixed and cannot be overridden`,
-          action: 'This parameter is a const field defined by the fixture. Remove it from your input.',
+          action: 'This parameter is a const field defined by the site. Remove it from your input.',
           retriable: false,
           failureClass: 'fatal',
         })

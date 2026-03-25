@@ -1,0 +1,23 @@
+{
+  "name": "google-maps",
+  "display_name": "Google Maps",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.google.com/maps",
+  "description": "Google Maps — place search, place details with reviews, driving directions via internal preview APIs",
+  "requires_auth": false,
+  "dependencies": {
+    "searchPlaces → getPlaceDetails": "placeId from search results"
+  },
+  "stats": {
+    "operation_count": 3,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 3
+  },
+  "last_verified": "2026-03-23T23:29:28.455Z",
+  "fingerprint": {
+    "response_shape_hash": "",
+    "last_validated": "2026-03-23T23:29:28.456Z"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "tiktok",
+  "display_name": "TikTok",
+  "version": "0.1.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.tiktok.com",
+  "description": "TikTok — BLOCKED. X-Bogus/X-Gnarly custom signing prevents API replay. Core content (search, video detail, user profile) served via SSR __UNIVERSAL_DATA_FOR_REHYDRATION__, not API. Needs L3 adapter with browser_fetch transport.",
+  "requires_auth": true,
+  "quarantined": true,
+  "blocked": true,
+  "blocked_reason": "X-Bogus/X-Gnarly custom signing (client-side computed anti-bot signatures) + SSR-only content delivery",
+  "dependencies": {},
+  "stats": {
+    "operation_count": 0,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 0
+  },
+  "target_operations": [
+    "searchVideos: search videos by keyword",
+    "getVideoDetail: get video detail/metadata",
+    "getUserProfile: get user profile"
+  ]
+}

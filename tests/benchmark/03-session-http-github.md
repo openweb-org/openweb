@@ -16,9 +16,9 @@ Uses `meta_tag` CSRF + `link_header` pagination.
 
 ## Expected Tool Calls
 
-1. `openweb github-fixture` — check readiness (session_http, Requires browser: yes)
-2. `openweb github-fixture listIssues` — inspect parameters (owner, repo, page, per_page)
-3. `openweb github-fixture exec listIssues '{"owner": "facebook", "repo": "react", "per_page": 5}' --cdp-endpoint http://localhost:9222` — execute
+1. `openweb github` — check readiness (session_http, Requires browser: yes)
+2. `openweb github listIssues` — inspect parameters (owner, repo, page, per_page)
+3. `openweb github exec listIssues '{"owner": "facebook", "repo": "react", "per_page": 5}' --cdp-endpoint http://localhost:9222` — execute
 
 ## Success Criteria
 

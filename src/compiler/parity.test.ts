@@ -186,7 +186,7 @@ describe('compiler parity', () => {
 
         const generatedSpec = await loadSpec(path.join(result.outputRoot, 'openapi.yaml'))
         const fixtureSpec = await loadSpec(
-          path.join(process.cwd(), 'src', 'fixtures', 'open-meteo-fixture', 'openapi.yaml'),
+          path.join(process.cwd(), 'src', 'sites', 'open-meteo', 'openapi.yaml'),
         )
 
         const generatedOperations = collectOperationShapes(generatedSpec)

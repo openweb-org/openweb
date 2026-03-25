@@ -6,12 +6,12 @@ Attempt to execute an operation that requires authentication without the browser
 
 ## Mode
 
-Any authenticated mode — test with `instagram-fixture` (session_http).
+Any authenticated mode — test with `instagram` (session_http).
 
 ## Scenario A: No CDP endpoint
 
 ```
-openweb instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:19999
+openweb instagram exec getTimeline '{}' --cdp-endpoint http://localhost:19999
 ```
 
 (Port 19999 should have nothing listening)

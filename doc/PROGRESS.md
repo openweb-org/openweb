@@ -40,7 +40,7 @@
 **Why:**
 - M26 redefined from API sites to consumer sites (no free public API). These are openweb's core value proposition — sites where users need to reverse-engineer the web client's internal API.
 
-**Key files:** 13 new fixture dirs in src/fixtures/, doc/todo/site_doc/guide.md, skill/openweb/references/compile.md
+**Key files:** 13 new fixture dirs in src/sites/, doc/todo/site_doc/guide.md, skill/openweb/references/compile.md
 **Verification:** `pnpm build` clean (10 adapters), `pnpm test` 367/367 pass
 **Commit:** 72a09ac..eede864
 **Next:** Quality review of 13 fixtures, then decide M27 (API sites) vs M29 (reflect)
@@ -77,12 +77,12 @@
 - Archetypes knowledge updated with discovery learnings (legitimate)
 
 **What went wrong:**
-- Workers committed "feat: discover X — N operations via CDP capture" messages but no `src/fixtures/<site>-fixture/` directories were created
+- Workers committed "feat: discover X — N operations via CDP capture" messages but no `src/sites/<site>-fixture/` directories were created
 - 4 commits had zero file changes; 2 commits only had helper scripts
 - No post-commit validation caught this — commit messages were trusted as verification
 
 **Key learning:**
-- Worker commit messages cannot be trusted. Need machine-verifiable acceptance criteria (`test -f src/fixtures/<site>-fixture/openapi.yaml`)
+- Worker commit messages cannot be trusted. Need machine-verifiable acceptance criteria (`test -f src/sites/<site>-fixture/openapi.yaml`)
 - Most "bearer_token/api_key" sites need dashboard login for meaningful traffic — B/C classification is irrelevant for discovery
 
 **Key files:** `doc/blocked.md`, `.claude/skills/openweb/references/knowledge/archetypes.md`, `doc/todo/v2_m29/orchestration_notes.md`
@@ -147,7 +147,7 @@
 **Why:**
 - Scale from 17 verified to 100+ fixture stubs covering all 105 OpenTabs plugins. B-class stubs model the public API alternative (no browser auth needed). C-class stubs encode the correct auth primitives for future login-and-verify.
 
-**Key files:** 83 new `src/fixtures/<name>-fixture/` directories (openapi.yaml + manifest.json each), `doc/todo/v2_m23/` (verify_results.md, verify_results_actual.md, fix_plan.md, needs_login.md, gaps.md), `.claude/skills/openweb/SKILL.md`
+**Key files:** 83 new `src/sites/<name>/` directories (openapi.yaml + manifest.json each), `doc/todo/v2_m23/` (verify_results.md, verify_results_actual.md, fix_plan.md, needs_login.md, gaps.md), `.claude/skills/openweb/SKILL.md`
 **Verification:** `pnpm build` clean, `pnpm test` 364/364 pass (42 test files), `pnpm dev sites` = 135 sites, 1 codex review round resolved
 **Commit:** 2b38ea9..f8cdc25
 **Next:** Execute 5 fixture fixes (telegram, whatsapp, discord, linear, spotify), then M25
@@ -175,12 +175,12 @@
 ## 2026-03-18: M21 — Distribution Prep — DONE
 
 **What changed:**
-- `openweb init` command: seeds 51 fixtures from `src/fixtures/` to `~/.openweb/sites/` (idempotent, skip-if-exists)
-- `resolveSiteRoot()` priority reordered: `~/.openweb/sites/` → registry → `./src/fixtures/` (dev fallback). Removed unused `./sites/` search path
+- `openweb init` command: seeds 51 fixtures from `src/sites/` to `~/.openweb/sites/` (idempotent, skip-if-exists)
+- `resolveSiteRoot()` priority reordered: `~/.openweb/sites/` → registry → `./src/sites/` (dev fallback). Removed unused `./sites/` search path
 - `listSites()` aggregates all search paths with dedup
 - CLI auto-exec: `openweb <site> <op> '{"json"}'` works without `exec` keyword (JSON arg detection). Old syntax still supported
 - Extracted `parseExecOptions()` helper to deduplicate exec/auto-exec flag parsing
-- `package.json`: added `files` (dist/ + src/fixtures/), `description`, `keywords`, `license`. Kept `private: true`
+- `package.json`: added `files` (dist/ + src/sites/), `description`, `keywords`, `license`. Kept `private: true`
 - `dist/cli.js` has shebang, verified `npm link` works globally from /tmp
 - README.md (32 lines) for future npm page
 - SKILL.md updated with simplified exec syntax in all examples
@@ -535,7 +535,7 @@
 - exchange_chain is now E2E verified with Reddit (cookie extraction + multi-step token exchange)
 - Site expansion limited to sites with verified login state in shared Chrome profile
 
-**Key files:** `src/lib/openapi.ts`, `src/runtime/paginator.ts`, `src/runtime/primitives/exchange-chain.ts`, `src/runtime/session-executor.ts`, `src/runtime/browser-fetch-executor.ts`, `src/fixtures/{chatgpt,x,reddit}-fixture/`
+**Key files:** `src/lib/openapi.ts`, `src/runtime/paginator.ts`, `src/runtime/primitives/exchange-chain.ts`, `src/runtime/session-executor.ts`, `src/runtime/browser-fetch-executor.ts`, `src/sites/{chatgpt,x,reddit}-fixture/`
 **Verification:** 246/246 tests pass, `pnpm build` clean, 15 sites CDP-verified
 **Commits:** 5 commits (Phase 1 + Reddit + ChatGPT + X + docs)
 **Next:** M8 — further expansion (Nuxt SSR, non-Google signing, more breadth sites)
@@ -560,7 +560,7 @@
 - M6 achieved its core goals: hardened runtime, proved 4 new pattern archetypes, established discovery gate discipline
 - Site count (13 vs aspirational 20) was limited by exchange_chain deferral and archetypes needing new primitives (Nuxt, non-Google signing) — these carry to M7
 
-**Key files:** all `src/runtime/`, `src/fixtures/newrelic-fixture/`, `doc/todo/v2_m6/`, `doc/todo/roadmap.md`
+**Key files:** all `src/runtime/`, `src/sites/newrelic/`, `doc/todo/v2_m6/`, `doc/todo/roadmap.md`
 **Verification:** 238/238 tests pass, `pnpm build` clean, 13 sites CDP-verified
 **Commits:** `fecc59c`..`5b7b193` (8 commits across Phase 1 + Phase 2A + Phase 2B + reviews + docs)
 **Next:** M7 — Meta-spec maturity (const body fields, items_path, exchange_chain cookie extraction) + expansion to ~20 sites
@@ -571,7 +571,7 @@
 ## 2026-03-16: M6 Phase 2 Tranche B — New Relic GraphQL cursor fixture + exchange_chain discovery
 
 **What changed:**
-- Added `newrelic-fixture` as site #13: first GraphQL POST fixture with `cookie_session` auth, cursor pagination via nested `data.actor.entitySearch.results.nextCursor` response path
+- Added `newrelic` as site #13: first GraphQL POST fixture with `cookie_session` auth, cursor pagination via nested `data.actor.entitySearch.results.nextCursor` response path
 - Extended cursor pagination runtime to support **dotted `request_param`** paths — `setValueAtPath()` in `value-path.ts` + paginator update to write cursor into nested objects (e.g., `variables.cursor` for GraphQL)
 - Ran exchange_chain discovery gate against Reddit and all logged-in sites in the Chrome profile; **result: FAIL / defer** — no site meets all gate criteria (Reddit needs cookie-to-body extraction not supported by the primitive, endpoint is undocumented, logged-out returns 200/400 not 401/403)
 
@@ -580,7 +580,7 @@
 - The nested `request_param` gap was a real blocker: without it, GraphQL cursor injection into `variables.cursor` required site-specific code
 - exchange_chain discovery prevents shipping a flaky fixture based on unstable live behavior
 
-**Key files:** `src/runtime/value-path.ts`, `src/runtime/paginator.ts`, `src/fixtures/newrelic-fixture/`, `doc/todo/v2_m6/exchange-chain-discovery-gate.md`
+**Key files:** `src/runtime/value-path.ts`, `src/runtime/paginator.ts`, `src/sites/newrelic/`, `doc/todo/v2_m6/exchange-chain-discovery-gate.md`
 **Verification:** `pnpm test` passed (236/236), `pnpm build` passed, real Chrome CDP verified (cold-start ✓, repeated ✓, 401 unauth ✓)
 **Commit:** (this session)
 **Next:** Code review, then M6 Phase 2 Tranche C or close-out depending on exchange_chain defer decision
@@ -593,16 +593,16 @@
 **What changed:**
 - Closed the Tranche A review gaps: `direct_http` now reuses the full path/query/header/body binding pipeline with defaults, both HTTP executors share the same redirect budget and explicit missing-`Location` error, `exchange_chain` supports `inject.query`, and `page_global_data` formally accepts `page_url`
 - Fixed stale fixture and benchmark metadata: the Reddit manifest now matches the current `cookie_session` fixture, benchmark 10 includes `--max-response 2048`, and duplicated candidate-page filtering moved into shared `src/runtime/page-candidates.ts`
-- Locked the next Tranche B batch in the implementation plan: `newrelic-fixture` is the GraphQL cursor target, while `exchange_chain` stays behind a discovery gate until a stable live flow is captured
+- Locked the next Tranche B batch in the implementation plan: `newrelic` is the GraphQL cursor target, while `exchange_chain` stays behind a discovery gate until a stable live flow is captured
 
 **Why:**
 - The Tranche A follow-up review found real contract drift between execution paths plus stale metadata left over from earlier fixture changes
 - Tranche B needed a concrete "build next" target; otherwise the milestone would stall on target churn and ambiguous `exchange_chain` candidates
 
-**Key files:** `src/runtime/executor.ts`, `src/runtime/session-executor.ts`, `src/runtime/primitives/exchange-chain.ts`, `src/runtime/page-candidates.ts`, `src/types/primitives.ts`, `src/fixtures/reddit-fixture/manifest.json`, `doc/todo/v2_m6/implement-plan.md`
+**Key files:** `src/runtime/executor.ts`, `src/runtime/session-executor.ts`, `src/runtime/primitives/exchange-chain.ts`, `src/runtime/page-candidates.ts`, `src/types/primitives.ts`, `src/sites/reddit/manifest.json`, `doc/todo/v2_m6/implement-plan.md`
 **Verification:** `pnpm test` passed (226/226), `pnpm build` passed
 **Commit:** `1847175`
-**Next:** Implement `newrelic-fixture` for the GraphQL cursor tranche; separately run `exchange_chain` target discovery before committing to an E2E site
+**Next:** Implement `newrelic` for the GraphQL cursor tranche; separately run `exchange_chain` target discovery before committing to an E2E site
 **Blockers:** None
 
 ---
@@ -610,7 +610,7 @@
 ## 2026-03-16: M6 Phase 2 Tranche A — extraction sites, MSAL auth, and agent-surface sync
 
 **What changed:**
-- Completed the first Phase 2 tranche with three new fixtures: `walmart-fixture` (`ssr_next_data`), `hackernews-fixture` (`html_selector`), and `microsoft-word-fixture` (`sessionStorage_msal`)
+- Completed the first Phase 2 tranche with three new fixtures: `walmart` (`ssr_next_data`), `hackernews` (`html_selector`), and `microsoft-word` (`sessionStorage_msal`)
 - Finished the missing runtime pieces behind that tranche: extraction dispatch now also supports `page_global_data`, extraction path matching requires the configured `page_url`, nested dot-path helpers are used by extraction and cursor pagination, and navigator response summaries now render array item shapes
 - Synced the local `openweb` skill and docs to the 12-site surface, including new benchmark task definitions for DOM extraction, Next.js SSR extraction, and MSAL-backed auth
 
@@ -618,7 +618,7 @@
 - Phase 2 needed to add genuinely new patterns rather than more copies of the existing 9 sites
 - The in-progress tranche already covered SSR extraction, DOM extraction, and MSAL auth, but it still had a runtime hole (`page_global_data` was declared but not executable) and an extraction matching bug that could silently run against the wrong same-origin page
 
-**Key files:** `src/runtime/extraction-executor.ts`, `src/runtime/paginator.ts`, `src/runtime/navigator.ts`, `src/runtime/primitives/page-expression.ts`, `src/runtime/primitives/page-global-data.ts`, `src/fixtures/walmart-fixture/`, `src/fixtures/hackernews-fixture/`, `src/fixtures/microsoft-word-fixture/`, `.claude/skills/openweb/SKILL.md`, `doc/main/runtime.md`, `tests/benchmark/`
+**Key files:** `src/runtime/extraction-executor.ts`, `src/runtime/paginator.ts`, `src/runtime/navigator.ts`, `src/runtime/primitives/page-expression.ts`, `src/runtime/primitives/page-global-data.ts`, `src/sites/walmart/`, `src/sites/hackernews/`, `src/sites/microsoft-word/`, `.claude/skills/openweb/SKILL.md`, `doc/main/runtime.md`, `tests/benchmark/`
 **Verification:** `pnpm build` passed, `pnpm test` passed (214/214), real Chrome CDP smoke passed for Hacker News/Walmart/Microsoft Word, repeated live execution passed for Hacker News/Walmart/Microsoft Word
 **Commit:** `93c9893`
 **Next:** Phase 2 Tranche B — pick a stable GraphQL cursor target and re-confirm the `exchange_chain` target before implementing the next site batch
@@ -637,7 +637,7 @@
 **Why:**
 - The Phase 1 review found three contract breaks that still leaked bad inputs to HTTP, misclassified expired-session redirects, or produced unparsable stdout in the agent-safe truncation path
 
-**Key files:** `src/lib/openapi.ts`, `src/runtime/session-executor.ts`, `src/runtime/primitives/exchange-chain.ts`, `src/commands/exec.ts`, `src/cli.ts`, `src/fixtures/reddit-fixture/openapi.yaml`, `src/lib/openapi.test.ts`, `src/runtime/primitives/primitives.test.ts`, `src/runtime/session-executor.test.ts`, `.claude/skills/openweb/SKILL.md`
+**Key files:** `src/lib/openapi.ts`, `src/runtime/session-executor.ts`, `src/runtime/primitives/exchange-chain.ts`, `src/commands/exec.ts`, `src/cli.ts`, `src/sites/reddit/openapi.yaml`, `src/lib/openapi.test.ts`, `src/runtime/primitives/primitives.test.ts`, `src/runtime/session-executor.test.ts`, `.claude/skills/openweb/SKILL.md`
 **Verification:** `pnpm test` passed (191/191), `pnpm build` passed
 **Commit:** `9319297`
 **Next:** M6 Phase 2 — pattern-driven expansion (Next.js SSR, DOM-only extraction, GraphQL cursor, MSAL/sessionStorage, exchange_chain E2E)
@@ -658,7 +658,7 @@
 - M5 dogfood exposed false-positive page selection, hidden body params, and ambiguous adapter/runtime failures that prevented reliable agent recovery
 - The goal of Phase 1 is to make the existing 9 verified sites mechanically reliable before adding more patterns in Phase 2
 
-**Key files:** `src/runtime/session-executor.ts`, `src/runtime/browser-fetch-executor.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/navigator.ts`, `src/lib/openapi.ts`, `src/lib/errors.ts`, `src/commands/exec.ts`, `src/cli.ts`, `src/fixtures/instagram-fixture/openapi.yaml`, `src/fixtures/youtube-fixture/openapi.yaml`, `.claude/skills/openweb/SKILL.md`, `tests/benchmark/`
+**Key files:** `src/runtime/session-executor.ts`, `src/runtime/browser-fetch-executor.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/navigator.ts`, `src/lib/openapi.ts`, `src/lib/errors.ts`, `src/commands/exec.ts`, `src/cli.ts`, `src/sites/instagram/openapi.yaml`, `src/sites/youtube/openapi.yaml`, `.claude/skills/openweb/SKILL.md`, `tests/benchmark/`
 **Verification:** `pnpm test` passed (183/183), `pnpm build` passed, real Chrome CDP smoke passed for Open-Meteo/Instagram/GitHub/YouTube/Discord/Telegram, benchmark error cases passed (`needs_browser`, `fatal`)
 **Commit:** `fecc59c`
 **Next:** M6 Phase 2 — pattern-driven expansion (Next.js SSR, DOM-only extraction, GraphQL cursor, MSAL/sessionStorage, exchange_chain E2E)
@@ -844,9 +844,9 @@
 - `src/runtime/browser-fetch-executor.ts` — browser_fetch mode
 - `src/runtime/adapter-executor.ts` — L3 adapter framework
 - `src/runtime/primitives/webpack-module-walk.ts` — webpack auth primitive (10th L2 handler)
-- `src/fixtures/discord-fixture/` — webpack_module_walk + browser_fetch (getMe, getGuilds, getChannelMessages)
-- `src/fixtures/whatsapp-fixture/` — L3 adapter + Meta require() (getChats, getMessages, getContacts)
-- `src/fixtures/telegram-fixture/` — L3 adapter + teact getGlobal() (getDialogs, getMe, getMessages)
+- `src/sites/discord/` — webpack_module_walk + browser_fetch (getMe, getGuilds, getChannelMessages)
+- `src/sites/whatsapp/` — L3 adapter + Meta require() (getChats, getMessages, getContacts)
+- `src/sites/telegram/` — L3 adapter + teact getGlobal() (getDialogs, getMe, getMessages)
 - `src/types/adapter.ts` — CodeAdapter interface (Page-typed)
 
 **Verification:** 167/167 tests pass, TypeScript strict build clean, all 3 sites verified with real Chrome CDP:
@@ -885,7 +885,7 @@
 - `src/runtime/token-cache.ts` — TTL-based auth token cache
 - `src/runtime/session-executor.ts` — signing pipeline, body construction, page selection
 - `src/compiler/analyzer/classify.ts` — 6 detectors (cookie_session, cookie_to_header, localStorage_jwt, meta_tag, sapisidhash, exchange_chain)
-- `src/fixtures/{bluesky,github,youtube,reddit}-fixture/` — 4 new site fixtures
+- `src/sites/{bluesky,github,youtube,reddit}-fixture/` — 4 new site fixtures
 
 **Verification:** 145/145 tests pass, TypeScript strict build clean, all 4 sites verified with real Chrome CDP:
 - GitHub: `getRepo` anthropics/claude-code ✅, `listIssues` ✅
@@ -956,7 +956,7 @@
 - `context.cookies()` scoping is a critical pitfall for any session_http implementation using a real user Chrome profile
 
 **Key files:** `src/runtime/primitives/cookie-session.ts`, `src/runtime/primitives/cookie-to-header.ts`, `src/runtime/session-executor.ts`, `src/commands/exec.ts`, `src/cli.ts`
-**Verification:** `openweb exec instagram-fixture getTimeline` → 200, real feed JSON. `getUserProfile` → 200, real user data. 84/84 tests pass.
+**Verification:** `openweb exec instagram getTimeline` → 200, real feed JSON. `getUserProfile` → 200, real user data. 84/84 tests pass.
 **Commit:** `b6733ca`
 **Next:** M3 — L2 breadth (5 diverse websites)
 **Blockers:** None
@@ -1007,7 +1007,7 @@
 - Schema accepted semantically impossible values (negative counts, empty chains)
 - Last remaining falsy guard in operation traversal
 
-**Key files:** `src/fixtures/instagram-fixture/openapi.yaml`, `src/types/schema.ts`, `src/types/primitive-schemas.ts`, `src/types/validator.ts`
+**Key files:** `src/sites/instagram/openapi.yaml`, `src/types/schema.ts`, `src/types/primitive-schemas.ts`, `src/types/validator.ts`
 **Verification:** 57/57 tests pass, lint clean
 **Commit:** see below
 **Next:** M2 — First L2 website end-to-end (Instagram)
@@ -1062,7 +1062,7 @@
 - `validateXOpenWebSpec()` validates all x-openweb extensions in an OpenAPI spec
 - `validateManifest()` validates manifest.json against schema
 - `CodeAdapter` interface + `AdapterCapability` types for L3
-- Instagram fixture (`src/fixtures/instagram-fixture/`) as L2 validation sample (cookie_session + cookie_to_header CSRF)
+- Instagram fixture (`src/sites/instagram/`) as L2 validation sample (cookie_session + cookie_to_header CSRF)
 - Code reviewed: fixed csrfWithScope allOf→oneOf composition, manifest type/schema drift, file split for 400-line limit
 
 **Why:**
@@ -1077,7 +1077,7 @@
 - `src/types/schema.ts` — composite schemas (server/operation/manifest)
 - `src/types/validator.ts` — AJV-based validation
 - `src/types/validator.test.ts` — 13 tests
-- `src/fixtures/instagram-fixture/` — L2 fixture
+- `src/sites/instagram/` — L2 fixture
 
 **Verification:** 51/51 tests pass, lint clean, tsc strict clean (0 errors in src/types/)
 **Commit:** `4ac0e7b..c3cf4ee`

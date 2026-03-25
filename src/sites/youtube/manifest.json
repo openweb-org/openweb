@@ -1,0 +1,16 @@
+{
+  "name": "youtube",
+  "display_name": "YouTube",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.youtube.com",
+  "description": "YouTube InnerTube API — page_global auth + sapisidhash signing",
+  "requires_auth": true,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 2,
+    "l1_count": 2,
+    "l2_count": 2,
+    "l3_count": 0
+  }
+}

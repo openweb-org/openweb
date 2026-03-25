@@ -29,7 +29,7 @@ describe('execCommand', () => {
     })
     const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
 
-    await execCommand('open-meteo-fixture', 'get_forecast', '{}')
+    await execCommand('open-meteo', 'get_forecast', '{}')
 
     expect(stdout).toHaveBeenCalledWith('{"ok":true}\n')
   })
@@ -41,7 +41,7 @@ describe('execCommand', () => {
     })
     const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
 
-    await execCommand('instagram-fixture', 'getTimeline', '{}', { maxResponse: 100 })
+    await execCommand('instagram', 'getTimeline', '{}', { maxResponse: 100 })
 
     const written = stdout.mock.calls[0]?.[0] as string
     const parsed = JSON.parse(written.trim()) as { status: number; output: string; size: number; truncated: boolean }

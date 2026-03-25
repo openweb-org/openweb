@@ -1,0 +1,16 @@
+{
+  "name": "medium",
+  "display_name": "Medium",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://medium.com",
+  "description": "Blogging platform — article search, tag feeds, curated lists, publications, user profiles via Medium GraphQL API",
+  "requires_auth": false,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 10,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 10
+  }
+}

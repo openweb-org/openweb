@@ -16,9 +16,9 @@ Uses `webpack_module_walk` auth to extract token from Discord's webpack bundles.
 
 ## Expected Tool Calls
 
-1. `openweb discord-fixture` — check readiness (browser_fetch, Requires browser: yes, Requires login: yes)
-2. `openweb discord-fixture getMe` — inspect operation (no params needed)
-3. `openweb discord-fixture exec getMe '{}' --cdp-endpoint http://localhost:9222` — execute
+1. `openweb discord` — check readiness (browser_fetch, Requires browser: yes, Requires login: yes)
+2. `openweb discord getMe` — inspect operation (no params needed)
+3. `openweb discord exec getMe '{}' --cdp-endpoint http://localhost:9222` — execute
 
 ## Success Criteria
 

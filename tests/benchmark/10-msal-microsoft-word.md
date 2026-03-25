@@ -17,9 +17,9 @@ Requires Chrome CDP, a matching Word tab, and an active Microsoft login.
 
 ## Expected Tool Calls
 
-1. `openweb microsoft-word-fixture` — check readiness (Requires browser: yes, Requires login: yes)
-2. `openweb microsoft-word-fixture getProfile` — inspect response shape
-3. `openweb microsoft-word-fixture exec getProfile '{}' --cdp-endpoint http://localhost:9222 --max-response 2048` — execute
+1. `openweb microsoft-word` — check readiness (Requires browser: yes, Requires login: yes)
+2. `openweb microsoft-word getProfile` — inspect response shape
+3. `openweb microsoft-word exec getProfile '{}' --cdp-endpoint http://localhost:9222 --max-response 2048` — execute
 
 ## Success Criteria
 

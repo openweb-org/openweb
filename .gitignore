@@ -9,6 +9,7 @@ coverage/
 # Capture data (may contain session tokens/cookies)
 capture/
 # Built adapter .js files (source is .ts, compiled by scripts/build-adapters.js)
-src/fixtures/*/adapters/*.js
+src/sites/*/adapters/*.js
 # Task progress state (local only)
 doc/todo/progress.json
+.multmux

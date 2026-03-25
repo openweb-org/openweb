@@ -6,7 +6,7 @@ import { parse } from 'yaml'
 
 import { validateManifest, validateXOpenWebSpec } from './validator.js'
 
-const FIXTURES_DIR = path.join(import.meta.dirname, '..', 'fixtures')
+const FIXTURES_DIR = path.join(import.meta.dirname, '..', 'sites')
 
 function loadFixture(name: string) {
   const dir = path.join(FIXTURES_DIR, name)
@@ -24,14 +24,14 @@ function loadFixture(name: string) {
 
 describe('validateXOpenWebSpec', () => {
   it('passes for L1-only spec (open-meteo, no server-level x-openweb primitives)', async () => {
-    const spec = await loadFixture('open-meteo-fixture').spec()
+    const spec = await loadFixture('open-meteo').spec()
     const result = validateXOpenWebSpec(spec)
     expect(result.valid).toBe(true)
     expect(result.errors).toHaveLength(0)
   })
 
   it('passes for L2 spec (instagram with cookie_session + cookie_to_header)', async () => {
-    const spec = await loadFixture('instagram-fixture').spec()
+    const spec = await loadFixture('instagram').spec()
     const result = validateXOpenWebSpec(spec)
     expect(result.valid).toBe(true)
     expect(result.errors).toHaveLength(0)
@@ -248,14 +248,14 @@ describe('validateXOpenWebSpec', () => {
 
 describe('validateManifest', () => {
   it('passes for open-meteo manifest', async () => {
-    const manifest = await loadFixture('open-meteo-fixture').manifest()
+    const manifest = await loadFixture('open-meteo').manifest()
     const result = validateManifest(manifest)
     expect(result.valid).toBe(true)
     expect(result.errors).toHaveLength(0)
   })
 
   it('passes for instagram manifest', async () => {
-    const manifest = await loadFixture('instagram-fixture').manifest()
+    const manifest = await loadFixture('instagram').manifest()
     const result = validateManifest(manifest)
     expect(result.valid).toBe(true)
     expect(result.errors).toHaveLength(0)

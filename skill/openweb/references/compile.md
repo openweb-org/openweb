@@ -31,7 +31,7 @@ Review the generated `openapi.yaml`:
 If an operation's extraction logic (the `expression` in openapi.yaml) exceeds ~5 lines, **extract it into an adapter file**:
 
 ```
-src/fixtures/<site>-fixture/
+src/sites/<site>/
 ├── openapi.yaml          ← references adapter, no inline JS
 ├── adapters/<site>.ts    ← complex DOM parsing logic lives here
 ```

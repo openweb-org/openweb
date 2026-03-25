@@ -83,7 +83,7 @@ describe('buildQueryUrl', () => {
 
 describe('getRequestBodyParameters', () => {
   it('reads required request body fields from fixture schemas', async () => {
-    const spec = await loadOpenApi('reddit-fixture')
+    const spec = await loadOpenApi('reddit')
     const operation = findOperation(spec, 'vote').operation
 
     const params = getRequestBodyParameters(operation)

@@ -16,9 +16,9 @@ Uses `page_global` auth (injects API key as query param) + `sapisidhash` signing
 
 ## Expected Tool Calls
 
-1. `openweb youtube-fixture` — check readiness (session_http, Requires browser: yes, Requires login: yes)
-2. `openweb youtube-fixture getVideoInfo` — inspect parameters
-3. `openweb youtube-fixture exec getVideoInfo '{"videoId":"dQw4w9WgXcQ"}' --cdp-endpoint http://localhost:9222` — execute
+1. `openweb youtube` — check readiness (session_http, Requires browser: yes, Requires login: yes)
+2. `openweb youtube getVideoInfo` — inspect parameters
+3. `openweb youtube exec getVideoInfo '{"videoId":"dQw4w9WgXcQ"}' --cdp-endpoint http://localhost:9222` — execute
 
 ## Success Criteria
 

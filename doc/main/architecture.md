@@ -90,7 +90,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 | **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skill/openweb/references/` | Reference docs (M19), CLI + CompileSummary removed (M20) |
 | **Registry** | Site version management, install, rollback | `src/lifecycle/registry.ts` | Internal registry (M12) |
 | **CLI** | Progressive navigation + exec + init + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M18: discovery moved to agent workflow; M20: knowledge CLI removed; M21: init, auto-exec, npm packaging) |
-| **Skill packages** | Per-site instance specs | `src/fixtures/` (dev), `~/.openweb/sites/` (installed) | 135 sites (17 A-class verified + 35 B-class + 48 C-class stubs + 34 public API + 1 open-meteo) |
+| **Skill packages** | Per-site instance specs | `src/sites/` (dev), `~/.openweb/sites/` (installed) | 135 sites (17 A-class verified + 35 B-class + 48 C-class stubs + 34 public API + 1 open-meteo) |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `skill/openweb/SKILL.md` | Complete (M5), Draft-Curate-Verify + knowledge refs (M19) |
 
 ---
@@ -136,7 +136,7 @@ Auth, CSRF, and signing are resolved as a pipeline on every L2 request:
 ## CLI Interface
 
 ```bash
-openweb init                                   # seed default fixtures to ~/.openweb/sites/
+openweb init                                   # seed default sites to ~/.openweb/sites/
 openweb sites [--json]                         # list compiled sites
 openweb <site> [--json]                        # list operations (tools)
 openweb <site> <op> [--json] [--example]       # show params + response schema
@@ -153,7 +153,7 @@ openweb verify <site>                          # verify site and detect drift
 openweb verify --all                           # batch verify all sites
 openweb verify --all --report                  # verify with drift report
 openweb registry list                          # list registered site versions
-openweb registry install <site>                # archive fixture to registry
+openweb registry install <site>                # archive site to registry
 openweb registry rollback <site>               # revert to previous version
 ```
 
@@ -257,4 +257,4 @@ Token cache at `~/.openweb/tokens/<site>/` stores cookies + localStorage + sessi
 - [compiler.md](compiler.md) — Compiler pipeline
 - [browser-capture.md](browser-capture.md) — CDP capture module
 - [security.md](security.md) — SSRF protection and error model
-- `src/fixtures/` — All verified site packages
+- `src/sites/` — All verified site packages

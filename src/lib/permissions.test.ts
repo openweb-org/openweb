@@ -38,12 +38,12 @@ defaults:
   delete: prompt
   transact: deny
 sites:
-  instagram-fixture:
+  instagram:
     write: deny
 `)
     const config = loadPermissions(path)
     expect(config.defaults.write).toBe('allow')
-    expect(config.sites?.['instagram-fixture']?.write).toBe('deny')
+    expect(config.sites?.['instagram']?.write).toBe('deny')
   })
 
   it('falls back to defaults on invalid config', () => {
@@ -55,7 +55,7 @@ sites:
   it('accepts config with only sites (no defaults key)', () => {
     const path = tmpConfig(`
 sites:
-  bank-fixture:
+  bank:
     read: deny
     write: deny
 `)
@@ -63,8 +63,8 @@ sites:
     // Should merge with built-in defaults
     expect(config.defaults.read).toBe('allow')
     expect(config.defaults.write).toBe('prompt')
-    expect(config.sites?.['bank-fixture']?.read).toBe('deny')
-    expect(config.sites?.['bank-fixture']?.write).toBe('deny')
+    expect(config.sites?.['bank']?.read).toBe('deny')
+    expect(config.sites?.['bank']?.write).toBe('deny')
   })
 
   it('ignores invalid policy values in defaults', () => {
@@ -91,7 +91,7 @@ describe('checkPermission', () => {
       transact: 'deny',
     },
     sites: {
-      'bank-fixture': {
+      'bank': {
         read: 'prompt',
         write: 'deny',
       },
@@ -105,11 +105,11 @@ describe('checkPermission', () => {
   })
 
   it('returns site-specific override when present', () => {
-    expect(checkPermission(config, 'bank-fixture', 'read')).toBe('prompt')
-    expect(checkPermission(config, 'bank-fixture', 'write')).toBe('deny')
+    expect(checkPermission(config, 'bank', 'read')).toBe('prompt')
+    expect(checkPermission(config, 'bank', 'write')).toBe('deny')
   })
 
   it('falls back to default when site has no override for category', () => {
-    expect(checkPermission(config, 'bank-fixture', 'transact')).toBe('deny')
+    expect(checkPermission(config, 'bank', 'transact')).toBe('deny')
   })
 })

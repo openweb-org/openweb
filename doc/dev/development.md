@@ -39,16 +39,16 @@ pnpm lint           # Biome lint check
 ```bash
 # List sites / show operations / show operation details
 pnpm dev sites
-pnpm dev instagram-fixture
-pnpm dev instagram-fixture getTimeline
-pnpm dev instagram-fixture getTimeline --json     # Machine-readable
-pnpm dev instagram-fixture getTimeline --example  # Generate example params
+pnpm dev instagram
+pnpm dev instagram getTimeline
+pnpm dev instagram getTimeline --json     # Machine-readable
+pnpm dev instagram getTimeline --example  # Generate example params
 
 # Execute (auto-exec: JSON arg triggers exec mode)
-pnpm dev instagram-fixture getTimeline '{}'
-pnpm dev instagram-fixture getTimeline '{}' --cdp-endpoint http://localhost:9222
-pnpm dev instagram-fixture getTimeline '{}' --max-response 8192  # Auto-spill
-pnpm dev instagram-fixture getTimeline '{}' --output file        # Always file
+pnpm dev instagram getTimeline '{}'
+pnpm dev instagram getTimeline '{}' --cdp-endpoint http://localhost:9222
+pnpm dev instagram getTimeline '{}' --max-response 8192  # Auto-spill
+pnpm dev instagram getTimeline '{}' --output file        # Always file
 ```
 
 ### Browser Management
@@ -59,7 +59,7 @@ pnpm dev browser start --headless                 # No window
 pnpm dev browser stop                             # Stop, preserve token cache
 pnpm dev browser restart                          # Re-copy profile + clear token cache
 pnpm dev browser status                           # Check if running
-pnpm dev login instagram-fixture                  # Open site in default browser
+pnpm dev login instagram                  # Open site in default browser
 ```
 
 ### Compile a Site
@@ -73,12 +73,12 @@ pnpm dev compile https://api.example.com --probe --cdp-endpoint http://localhost
 ### Run Site Tests / Verify / Registry
 
 ```bash
-pnpm dev instagram-fixture test
-pnpm dev verify walmart-fixture                   # Single site
+pnpm dev instagram test
+pnpm dev verify walmart                   # Single site
 pnpm dev verify --all --report markdown           # Batch verify
 pnpm dev registry list                            # List registered
-pnpm dev registry install walmart-fixture         # Archive
-pnpm dev registry rollback walmart-fixture        # Revert
+pnpm dev registry install walmart         # Archive
+pnpm dev registry rollback walmart        # Revert
 ```
 
 ## Development Cycle
@@ -93,7 +93,7 @@ Code change -> Build -> Test -> Verify with real site
 pnpm build
 ```
 
-tsup compiles TypeScript to `dist/` (ESM). Adapter `.ts` files in fixtures are compiled to `.js`.
+tsup compiles TypeScript to `dist/` (ESM). Adapter `.ts` files in sites are compiled to `.js`.
 
 ### 2. Test
 
@@ -107,9 +107,9 @@ pnpm test -- --watch                  # Watch mode
 
 ```bash
 pnpm dev browser start
-pnpm dev login instagram-fixture      # Log in in Chrome, then:
+pnpm dev login instagram      # Log in in Chrome, then:
 pnpm dev browser restart
-pnpm dev instagram-fixture getTimeline '{}'
+pnpm dev instagram getTimeline '{}'
 ```
 
 ## Project Structure
@@ -125,7 +125,7 @@ src/
 ├── lifecycle/                # Drift detection, verification, registry
 ├── knowledge/                # Heuristics + failure recording
 ├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, manifest, permissions)
-└── fixtures/                 # Site packages (17 A-class + 35 B-class + public API)
+└── sites/                    # Site packages (17 A-class + 35 B-class + public API)
 ```
 
 -> See: [doc/main/README.md](../main/README.md) -- full code structure with per-file annotations
@@ -133,15 +133,15 @@ src/
 ## Site Resolution
 
 1. `~/.openweb/sites/<site>/openapi.yaml` -- User-installed (primary, seeded by `openweb init`)
-2. `./src/fixtures/<site>/openapi.yaml` -- Development fixtures (dev fallback)
+2. `./src/sites/<site>/openapi.yaml` -- Development fixtures (dev fallback)
 3. `~/.openweb/registry/<site>/current` -> versioned -- Registry
 
-`openweb init` copies bundled fixtures to `~/.openweb/sites/` (idempotent). Site names: `/^[a-z0-9][a-z0-9_-]*$/`.
+`openweb init` copies bundled sites to `~/.openweb/sites/` (idempotent). Site names: `/^[a-z0-9][a-z0-9_-]*$/`.
 
 ## Fixture Layout
 
 ```
-src/fixtures/instagram-fixture/
+src/sites/instagram/
 ├── openapi.yaml          # OpenAPI spec with x-openweb extensions
 ├── manifest.json         # Package metadata
 ├── adapters/             # L3 code (WhatsApp, Telegram only)
@@ -153,7 +153,7 @@ src/fixtures/instagram-fixture/
 ```
 src/**/*.test.ts                      # Unit tests (pnpm test)
 tests/integration/                    # Integration tests (requires CDP)
-src/fixtures/*/tests/*.test.json      # Per-site fixture tests
+src/sites/*/tests/*.test.json      # Per-site tests
 ```
 
 Test JSON format:
@@ -197,9 +197,9 @@ Agent validation benchmarks in `tests/benchmark/` -- 10 tasks covering all execu
 | Auth fails on exec | Run `pnpm dev login <site>` then `pnpm dev browser restart` |
 | Permission denied | Update `~/.openweb/permissions.yaml` or confirm the operation |
 | SSRF validation error | Target URL must be HTTPS + public IP |
-| "Site not found" | Check `src/fixtures/` or `~/.openweb/sites/` |
+| "Site not found" | Check `src/sites/` or `~/.openweb/sites/` |
 
 ## Detailed Documentation
 
 - [doc/main/](../main/README.md) -- Architecture and component docs
-- [Adding Sites](adding-sites.md) -- How to add a new site fixture
+- [Adding Sites](adding-sites.md) -- How to add a new site

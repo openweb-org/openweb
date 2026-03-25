@@ -22,7 +22,7 @@ describe('executeOperation', () => {
     const ssrfMock = vi.fn(async () => {})
 
     const result = await executeOperation(
-      'open-meteo-fixture',
+      'open-meteo',
       'search_location',
       { name: 'Berlin', count: 1 },
       { fetchImpl: fetchMock, ssrfValidator: ssrfMock },
@@ -41,7 +41,7 @@ describe('executeOperation', () => {
     const fetchMock = vi.fn() as unknown as typeof fetch
 
     await expect(
-      executeOperation('open-meteo-fixture', 'get_forecast', { longitude: 13.41 }, { fetchImpl: fetchMock }),
+      executeOperation('open-meteo', 'get_forecast', { longitude: 13.41 }, { fetchImpl: fetchMock }),
     ).rejects.toMatchObject({
       payload: {
         code: 'INVALID_PARAMS',
@@ -60,7 +60,7 @@ describe('executeOperation', () => {
     const ssrfMock = vi.fn(async () => {})
 
     const result = await executeOperation(
-      'open-meteo-fixture',
+      'open-meteo',
       'search_location',
       { name: 'Berlin' },
       { fetchImpl: fetchMock, ssrfValidator: ssrfMock },
@@ -79,7 +79,7 @@ describe('executeOperation', () => {
     ) as unknown as typeof fetch
 
     await expect(
-      executeOperation('open-meteo-fixture', 'search_location', { name: 'Berlin' }, { fetchImpl: fetchMock }),
+      executeOperation('open-meteo', 'search_location', { name: 'Berlin' }, { fetchImpl: fetchMock }),
     ).rejects.toBeInstanceOf(OpenWebError)
   })
 })
@@ -91,7 +91,7 @@ describe('permission gate', () => {
 
   it('blocks write operations with permission_required on default config', async () => {
     await expect(
-      executeOperation('jsonplaceholder-fixture', 'createPost', { title: 'x', body: 'y', userId: 1 }, {
+      executeOperation('jsonplaceholder', 'createPost', { title: 'x', body: 'y', userId: 1 }, {
         permissionsConfig: defaultPermissions,
       }),
     ).rejects.toMatchObject({
@@ -110,11 +110,11 @@ describe('permission gate', () => {
       }),
     ) as unknown as typeof fetch
 
-    const result = await executeOperation('jsonplaceholder-fixture', 'createPost', { title: 'x', body: 'y', userId: 1 }, {
+    const result = await executeOperation('jsonplaceholder', 'createPost', { title: 'x', body: 'y', userId: 1 }, {
       fetchImpl: fetchMock,
       permissionsConfig: {
         defaults: defaultPermissions.defaults,
-        sites: { 'jsonplaceholder-fixture': { write: 'allow' } },
+        sites: { 'jsonplaceholder': { write: 'allow' } },
       },
     })
 
@@ -129,7 +129,7 @@ describe('permission gate', () => {
       }),
     ) as unknown as typeof fetch
 
-    const result = await executeOperation('jsonplaceholder-fixture', 'listPosts', { _limit: 1 }, {
+    const result = await executeOperation('jsonplaceholder', 'listPosts', { _limit: 1 }, {
       fetchImpl: fetchMock,
       permissionsConfig: defaultPermissions,
     })

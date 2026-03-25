@@ -1,0 +1,16 @@
+{
+  "name": "substack",
+  "display_name": "Substack",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://substack.com",
+  "description": "Newsletter platform — post search, publication search, author search, categories, leaderboard, publication archives, post details, comments, author profiles via Substack REST API",
+  "requires_auth": false,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 10,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 10
+  }
+}

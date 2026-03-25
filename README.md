@@ -8,14 +8,14 @@ Let any agent access the web. 51 sites, 17 auth primitives, one command.
 npm install -g openweb
 openweb init                                          # Seed 51 sites to ~/.openweb/sites/
 openweb sites                                         # List all sites
-openweb open-meteo-fixture get_forecast '{"latitude":52.52,"longitude":13.41}'
+openweb open-meteo get_forecast '{"latitude":52.52,"longitude":13.41}'
 ```
 
 ## Authenticated Sites
 
 ```bash
 openweb browser start                 # Launch Chrome with your cookies
-openweb instagram-fixture getTimeline '{}'   # Uses cached auth
+openweb instagram getTimeline '{}'   # Uses cached auth
 ```
 
 ## As Claude Code Skill
@@ -27,6 +27,6 @@ The agent can use `/openweb` to access all 51 sites.
 
 ```bash
 pnpm install && pnpm build
-pnpm --silent dev sites               # Dev mode (reads ./src/fixtures/)
+pnpm --silent dev sites               # Dev mode (reads ./src/sites/)
 pnpm test                             # 359 tests
 ```

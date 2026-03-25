@@ -1,11 +1,11 @@
 # Adding a New Site
 
-> How to create a new site fixture — from capture to verified skill package.
+> How to create a new site — from capture to verified skill package.
 > Last updated: 2026-03-17 (commit: M12)
 
 ## Decision Tree
 
-Before writing a fixture, determine the site's layer:
+Before writing a site, determine the site's layer:
 
 ```
 Does the site have a public REST/GraphQL API with API-key auth?
@@ -29,10 +29,10 @@ None of the above work? Proprietary module system? Custom protocol?
   └── L3 adapter — write CodeAdapter
 ```
 
-## Step 1: Create Fixture Directory
+## Step 1: Create Site Directory
 
 ```bash
-mkdir -p src/fixtures/<site>-fixture/tests
+mkdir -p src/sites/<site>/tests
 ```
 
 ## Step 2: Capture Traffic (Optional)
@@ -160,12 +160,12 @@ paths:
 
 ```json
 {
-  "name": "<site>-fixture",
+  "name": "<site>",
   "display_name": "<Site Name>",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://<domain.com>",
-  "description": "<what the fixture exposes>",
+  "description": "<what the site exposes>",
   "requires_auth": true,
   "dependencies": {
     "playwright": "^1.52.0"
@@ -232,21 +232,21 @@ pnpm build
 pnpm test
 
 # Verify with real browser
-pnpm --silent dev <site>-fixture exec <op> '{}' --cdp-endpoint http://localhost:9222
+pnpm --silent dev <site> exec <op> '{}' --cdp-endpoint http://localhost:9222
 
 # Run site tests
-pnpm --silent dev <site>-fixture test
+pnpm --silent dev <site> test
 
 # Verify drift detection
-pnpm --silent dev verify <site>-fixture
+pnpm --silent dev verify <site>
 ```
 
 ## Step 8: Register (Optional)
 
-Archive verified fixtures to the internal registry for version management:
+Archive verified sites to the internal registry for version management:
 
 ```bash
-pnpm --silent dev registry install <site>-fixture
+pnpm --silent dev registry install <site>
 ```
 
 ## Checklist
@@ -260,23 +260,23 @@ pnpm --silent dev registry install <site>-fixture
 - [ ] Validated against benchmark suite (`tests/benchmark/`) if adding a new execution mode or auth pattern
 - [ ] Pitfalls documented in design docs (if applicable)
 
-## Current Fixtures (Key Examples)
+## Current Sites (Key Examples)
 
-| Fixture | Layer | Auth | Key pattern |
+| Site | Layer | Auth | Key pattern |
 |---------|-------|------|-------------|
-| instagram-fixture | L2 | cookie_session + cookie_to_header CSRF | Classic cookie auth |
-| bluesky-fixture | L2 | localStorage_jwt | JWT from localStorage |
-| youtube-fixture | L2 | page_global + sapisidhash signing | Window global + signing |
-| github-fixture | L2 | cookie_session + meta_tag CSRF | SSR extraction |
-| reddit-fixture | L2 | cookie_session + exchange_chain | OAuth bearer |
-| discord-fixture | L2 | webpack_module_walk | Webpack module cache |
-| microsoft-word-fixture | L2 | sessionStorage_msal | MSAL cache |
-| chatgpt-fixture | L2 | exchange_chain (GET) | Next-auth session |
-| x-fixture | L2 | cookie_session + cookie_to_header | browser_fetch + static bearer |
-| whatsapp-fixture | L3 | adapter | Meta require() module |
-| telegram-fixture | L3 | adapter | teact global state |
+| instagram | L2 | cookie_session + cookie_to_header CSRF | Classic cookie auth |
+| bluesky | L2 | localStorage_jwt | JWT from localStorage |
+| youtube | L2 | page_global + sapisidhash signing | Window global + signing |
+| github | L2 | cookie_session + meta_tag CSRF | SSR extraction |
+| reddit | L2 | cookie_session + exchange_chain | OAuth bearer |
+| discord | L2 | webpack_module_walk | Webpack module cache |
+| microsoft-word | L2 | sessionStorage_msal | MSAL cache |
+| chatgpt | L2 | exchange_chain (GET) | Next-auth session |
+| x | L2 | cookie_session + cookie_to_header | browser_fetch + static bearer |
+| whatsapp | L3 | adapter | Meta require() module |
+| telegram | L3 | adapter | teact global state |
 
-Plus ~35 L1 public API fixtures (no auth needed). Run `pnpm dev sites` for the full list.
+Plus ~35 L1 public API sites (no auth needed). Run `pnpm dev sites` for the full list.
 
 ## Related Docs
 

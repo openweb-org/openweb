@@ -7,7 +7,7 @@ import { renderOperation, renderSite, renderSiteJson, safeReadNotes } from './na
 
 describe('navigator', () => {
   it('renders site with readiness metadata', async () => {
-    const output = await renderSite('open-meteo-fixture')
+    const output = await renderSite('open-meteo')
     expect(output).toContain('4 operations')
     expect(output).toContain('Transport:        node')
     expect(output).toContain('Requires browser: no')
@@ -20,7 +20,7 @@ describe('navigator', () => {
   })
 
   it('renders site with auth requirements', async () => {
-    const output = await renderSite('instagram-fixture')
+    const output = await renderSite('instagram')
     expect(output).toContain('Instagram')
     expect(output).toContain('Transport:        node')
     expect(output).toContain('Requires browser: yes')
@@ -28,28 +28,28 @@ describe('navigator', () => {
   })
 
   it('renders one operation with resolved transport', async () => {
-    const output = await renderOperation('open-meteo-fixture', 'get_forecast', false)
+    const output = await renderOperation('open-meteo', 'get_forecast', false)
     expect(output).toContain('GET /v1/forecast')
     expect(output).toContain('Transport: node')
     expect(output).toContain('Permission: read')
   })
 
   it('renders request body fields for JSON operations', async () => {
-    const output = await renderOperation('youtube-fixture', 'getVideoInfo', false)
+    const output = await renderOperation('youtube', 'getVideoInfo', false)
 
     expect(output).toContain('Body:')
     expect(output).toMatch(/videoId.*\[required\]/)
   })
 
   it('summarizes array responses with item fields', async () => {
-    const output = await renderOperation('hackernews-fixture', 'getTopStories', false)
+    const output = await renderOperation('hackernews', 'getTopStories', false)
 
     expect(output).toContain('Returns: array<{ title, score, author }>')
   })
 
   it('renders L3 adapter transport for adapter-backed sites and operations', async () => {
-    const siteOutput = await renderSite('telegram-fixture')
-    const opOutput = await renderOperation('telegram-fixture', 'getDialogs', false)
+    const siteOutput = await renderSite('telegram')
+    const opOutput = await renderOperation('telegram', 'getDialogs', false)
 
     expect(siteOutput).toContain('Transport:        adapter (L3)')
     expect(opOutput).toContain('Transport: adapter (L3)')
@@ -57,20 +57,20 @@ describe('navigator', () => {
 
   it('shows notes hint when DOC.md exists', async () => {
     // Create a temp fixture with DOC.md to test independently of ~/.openweb state
-    const result = await safeReadNotes(path.join(process.cwd(), 'src/fixtures/bestbuy-fixture'))
+    const result = await safeReadNotes(path.join(process.cwd(), 'src/sites/bestbuy'))
     expect(result).toBeTruthy()
     expect(result).toContain('Best Buy')
   })
 
   it('omits notes hint when no DOC.md', async () => {
-    const output = await renderSite('open-meteo-fixture')
+    const output = await renderSite('open-meteo')
     expect(output).not.toContain('Notes:')
   })
 
   it('includes hasNotes in JSON output', async () => {
     // Use safeReadNotes directly to avoid ~/.openweb resolution
-    const withNotes = await safeReadNotes(path.join(process.cwd(), 'src/fixtures/bestbuy-fixture'))
-    const withoutNotes = await safeReadNotes(path.join(process.cwd(), 'src/fixtures/open-meteo-fixture')).catch(() => null)
+    const withNotes = await safeReadNotes(path.join(process.cwd(), 'src/sites/bestbuy'))
+    const withoutNotes = await safeReadNotes(path.join(process.cwd(), 'src/sites/open-meteo')).catch(() => null)
 
     expect(withNotes).toBeTruthy()
     expect(withoutNotes).toBeNull()

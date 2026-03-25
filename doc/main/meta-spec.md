@@ -225,7 +225,7 @@ sites/<site>/
 
 ```json
 {
-  "name": "instagram-fixture",
+  "name": "instagram",
   "display_name": "Instagram",
   "version": "1.0.0",
   "spec_version": "2.0",

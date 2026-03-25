@@ -1,0 +1,16 @@
+{
+  "name": "x",
+  "display_name": "X (Twitter)",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://x.com",
+  "description": "X (Twitter) API — cookie_session + cookie_to_header CSRF (all methods) + static bearer signing",
+  "requires_auth": true,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 2,
+    "l1_count": 0,
+    "l2_count": 2,
+    "l3_count": 0
+  }
+}

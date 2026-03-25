@@ -1,0 +1,25 @@
+{
+  "name": "xiaohongshu",
+  "display_name": "Xiaohongshu (小红书)",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.xiaohongshu.com",
+  "description": "Xiaohongshu note search, detail with comments, and user profile — Vue SSR extraction via L3 adapter. getUserProfile may trigger CAPTCHA under rate limiting.",
+  "requires_auth": false,
+  "dependencies": {
+    "searchNotes → getNoteDetail": "searchNotes returns noteId and xsecToken used by getNoteDetail",
+    "searchNotes → getUserProfile": "searchNotes returns userId used by getUserProfile"
+  },
+  "stats": {
+    "operation_count": 3,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 3
+  },
+  "last_verified": "2026-03-23T23:40:38.262Z",
+  "fingerprint": {
+    "response_shape_hash": "getNoteDetail:18b244a83186a834,getUserProfile:2e39098be074caed,searchNotes:b8a08f372058b8da",
+    "last_validated": "2026-03-23T23:40:38.263Z"
+  },
+  "quarantined": false
+}

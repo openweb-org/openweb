@@ -15,9 +15,9 @@ Fetch the authenticated user's Instagram feed timeline.
 
 ## Expected Tool Calls
 
-1. `openweb instagram-fixture` — check readiness (Requires browser: yes, Requires login: yes)
-2. `openweb instagram-fixture getTimeline` — inspect parameters
-3. `openweb instagram-fixture exec getTimeline '{}' --cdp-endpoint http://localhost:9222` — execute
+1. `openweb instagram` — check readiness (Requires browser: yes, Requires login: yes)
+2. `openweb instagram getTimeline` — inspect parameters
+3. `openweb instagram exec getTimeline '{}' --cdp-endpoint http://localhost:9222` — execute
 
 ## Success Criteria
 

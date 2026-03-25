@@ -11,9 +11,9 @@ Get the weather forecast for Berlin (latitude 52.52, longitude 13.41) including 
 ## Expected Tool Calls
 
 1. `openweb sites` — list available sites
-2. `openweb open-meteo-fixture` — check site readiness (should show: Requires browser: no)
-3. `openweb open-meteo-fixture get_forecast` — inspect operation parameters
-4. `openweb open-meteo-fixture exec get_forecast '{"latitude": 52.52, "longitude": 13.41, "hourly": ["temperature_2m"]}'` — execute
+2. `openweb open-meteo` — check site readiness (should show: Requires browser: no)
+3. `openweb open-meteo get_forecast` — inspect operation parameters
+4. `openweb open-meteo exec get_forecast '{"latitude": 52.52, "longitude": 13.41, "hourly": ["temperature_2m"]}'` — execute
 
 ## Success Criteria
 

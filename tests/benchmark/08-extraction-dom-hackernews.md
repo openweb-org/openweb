@@ -16,9 +16,9 @@ Requires Chrome CDP and a matching Hacker News tab, but no login.
 
 ## Expected Tool Calls
 
-1. `openweb hackernews-fixture` — check readiness (Requires browser: yes, Requires login: no)
-2. `openweb hackernews-fixture getTopStories` — inspect response shape
-3. `openweb hackernews-fixture exec getTopStories '{}' --cdp-endpoint http://localhost:9222 --max-response 2048` — execute
+1. `openweb hackernews` — check readiness (Requires browser: yes, Requires login: no)
+2. `openweb hackernews getTopStories` — inspect response shape
+3. `openweb hackernews exec getTopStories '{}' --cdp-endpoint http://localhost:9222 --max-response 2048` — execute
 
 ## Success Criteria
 

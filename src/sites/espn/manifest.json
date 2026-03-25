@@ -1,0 +1,22 @@
+{
+  "name": "espn",
+  "display_name": "ESPN",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.espn.com",
+  "description": "Sports scores, stats, schedules, standings, news, and search via ESPN internal APIs",
+  "requires_auth": false,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 10,
+    "l1_count": 10,
+    "l2_count": 0,
+    "l3_count": 0
+  },
+  "last_verified": "2026-03-24T16:24:45.920Z",
+  "quarantined": true,
+  "fingerprint": {
+    "response_shape_hash": "getNews:ddf586d25ac6132e,getStandings:3c3f5d877d17ca1d,getTeamDetail:1839b44f3d729a9d,getTeams:978c0046adede087,getTeamSchedule:1e9c2cb08e84bdd6",
+    "last_validated": "2026-03-24T16:24:45.921Z"
+  }
+}

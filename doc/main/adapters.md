@@ -106,7 +106,7 @@ adapters/whatsapp.ts
 
 **Provides:** `{ type: 'protocol', description: 'Meta require() module system' }`
 
--> See: `src/fixtures/whatsapp-fixture/adapters/whatsapp.ts`
+-> See: `src/sites/whatsapp/adapters/whatsapp.ts`
 
 ### Telegram (teact global state)
 
@@ -121,7 +121,7 @@ adapters/telegram.ts
 
 **Provides:** `{ type: 'extraction', description: 'teact getGlobal() state' }`
 
--> See: `src/fixtures/telegram-fixture/adapters/telegram.ts`
+-> See: `src/sites/telegram/adapters/telegram.ts`
 
 ---
 
@@ -159,10 +159,10 @@ src/runtime/
 src/types/
 └── adapter.ts                # CodeAdapter interface, AdapterCapability type
 
-src/fixtures/
-├── whatsapp-fixture/
+src/sites/
+├── whatsapp/
 │   └── adapters/whatsapp.ts  # Meta require() adapter
-└── telegram-fixture/
+└── telegram/
     └── adapters/telegram.ts  # teact global state adapter
 ```
 

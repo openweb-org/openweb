@@ -8,19 +8,19 @@ import { execSync } from 'node:child_process'
 import { readdirSync, existsSync } from 'node:fs'
 import path from 'node:path'
 
-const fixturesDir = path.join(process.cwd(), 'src', 'fixtures')
+const sitesDir = path.join(process.cwd(), 'src', 'sites')
 
-if (!existsSync(fixturesDir)) {
-  console.log('No fixtures directory found, skipping adapter build.')
+if (!existsSync(sitesDir)) {
+  console.log('No sites directory found, skipping adapter build.')
   process.exit(0)
 }
 
-const fixtures = readdirSync(fixturesDir, { withFileTypes: true })
+const sites = readdirSync(sitesDir, { withFileTypes: true })
   .filter((d) => d.isDirectory())
 
 let compiled = 0
-for (const fixture of fixtures) {
-  const adapterDir = path.join(fixturesDir, fixture.name, 'adapters')
+for (const site of sites) {
+  const adapterDir = path.join(sitesDir, site.name, 'adapters')
   if (!existsSync(adapterDir)) continue
 
   const tsFiles = readdirSync(adapterDir).filter((f) => f.endsWith('.ts'))

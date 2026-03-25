@@ -110,19 +110,19 @@ src/
 │   ├── ssrf.ts                 #   SSRF validation (IPv4/v6, DNS, metadata)
 │   └── errors.ts               #   Structured error contract
 │
-└── fixtures/                   # Test site packages (12 sites)
-    ├── open-meteo-fixture/     #   L1 (no x-openweb)
-    ├── instagram-fixture/      #   L2 (cookie_session + cookie_to_header)
-    ├── bluesky-fixture/        #   L2 (localStorage_jwt)
-    ├── youtube-fixture/        #   L2 (page_global + sapisidhash)
-    ├── github-fixture/         #   L2 (meta_tag + script_json)
-    ├── reddit-fixture/         #   L2 (cookie_session)
-    ├── walmart-fixture/        #   L2 (ssr_next_data extraction)
-    ├── hackernews-fixture/     #   L2 (html_selector extraction)
-    ├── microsoft-word-fixture/ #   L2 (sessionStorage_msal auth)
-    ├── discord-fixture/        #   L2 (webpack_module_walk + browser_fetch)
-    ├── whatsapp-fixture/       #   L3 adapter (Meta require() module system)
-    └── telegram-fixture/       #   L3 adapter (teact global state)
+└── sites/                      # Site packages (12 sites)
+    ├── open-meteo/     #   L1 (no x-openweb)
+    ├── instagram/      #   L2 (cookie_session + cookie_to_header)
+    ├── bluesky/        #   L2 (localStorage_jwt)
+    ├── youtube/        #   L2 (page_global + sapisidhash)
+    ├── github/         #   L2 (meta_tag + script_json)
+    ├── reddit/         #   L2 (cookie_session)
+    ├── walmart/        #   L2 (ssr_next_data extraction)
+    ├── hackernews/     #   L2 (html_selector extraction)
+    ├── microsoft-word/ #   L2 (sessionStorage_msal auth)
+    ├── discord/        #   L2 (webpack_module_walk + browser_fetch)
+    ├── whatsapp/       #   L3 adapter (Meta require() module system)
+    └── telegram/       #   L3 adapter (teact global state)
 ```
 
 ---

@@ -17,21 +17,21 @@ function safeSitesPath(canonicalRoot: string, siteName: string): string {
 }
 
 export async function initCommand(): Promise<void> {
-  // Seed source: src/fixtures/ relative to dist/cli.js (or src/cli.ts in dev)
+  // Seed source: src/sites/ relative to dist/cli.js (or src/cli.ts in dev)
   const thisDir = path.dirname(fileURLToPath(import.meta.url))
-  const seedSource = path.resolve(thisDir, '..', 'src', 'fixtures')
+  const seedSource = path.resolve(thisDir, '..', 'src', 'sites')
 
   let resolvedSeed = seedSource
   try {
     await access(resolvedSeed)
   } catch {
-    // Dev mode: src/commands/init.ts → src/fixtures/
-    const altSeed = path.resolve(thisDir, '..', 'fixtures')
+    // Dev mode: src/commands/init.ts → src/sites/
+    const altSeed = path.resolve(thisDir, '..', 'sites')
     try {
       await access(altSeed)
       resolvedSeed = altSeed
     } catch {
-      console.error(`Seed fixtures not found at ${seedSource}`)
+      console.error(`Seed sites not found at ${seedSource}`)
       process.exit(1)
     }
   }
@@ -44,7 +44,7 @@ export async function initCommand(): Promise<void> {
   const dirs = entries.filter((e) => e.isDirectory())
 
   if (dirs.length === 0) {
-    console.error(`No fixture directories found in ${resolvedSeed}`)
+    console.error(`No site directories found in ${resolvedSeed}`)
     process.exit(1)
   }
 

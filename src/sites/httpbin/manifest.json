@@ -1,0 +1,14 @@
+{
+  "name": "httpbin",
+  "display_name": "httpbin",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://httpbin.org",
+  "requires_auth": false,
+  "stats": {
+    "operation_count": 4,
+    "l1_count": 4,
+    "l2_count": 0,
+    "l3_count": 0
+  }
+}

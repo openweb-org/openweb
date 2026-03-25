@@ -27,7 +27,7 @@ src/
   compiler/     # Capture → analyze → classify → emit
   capture/      # CDP browser recording
   types/        # Meta-spec type system
-  fixtures/     # Test site packages
+  sites/        # Site packages
   commands/     # CLI commands
   lib/          # Shared utilities (SSRF, errors, OpenAPI)
 skill/openweb/  # The shipped skill (references, knowledge)

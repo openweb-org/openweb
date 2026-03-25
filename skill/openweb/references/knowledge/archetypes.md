@@ -57,7 +57,7 @@ Key pages: /repos, /issues, /pulls, /packages, /search
 Pagination: link_header (GitHub) or cursor
 Examples: GitHub, npm, StackOverflow
 
-**GitHub**: cookie_session + meta_tag CSRF. link_header pagination. Also has unauthenticated public API (github-public-fixture).
+**GitHub**: cookie_session + meta_tag CSRF. link_header pagination. Also has unauthenticated public API (github-public).
 **npm**: No auth. Node transport. Package search + metadata.
 **Docker Hub**: Public search API (`/api/search/v3/catalog/search`) + v2 repository API (`/v2/repositories/`). JWT bearer for user-specific actions (obtained from `/auth/profile`). Public endpoints work without auth.
 **Grafana**: cookie_session. Relative API paths (`/api/*`). Self-hosted instances use configSchema URL.

@@ -1,0 +1,12 @@
+{
+  "name": "open-meteo",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://open-meteo.com",
+  "compiled_at": "2026-03-04T00:00:00Z",
+  "requires_auth": false,
+  "dependencies": {
+    "search_location.results[].latitude": "get_forecast.latitude",
+    "search_location.results[].longitude": "get_forecast.longitude"
+  }
+}

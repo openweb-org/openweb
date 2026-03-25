@@ -9,7 +9,7 @@
   },
   "files": [
     "dist/",
-    "src/fixtures/"
+    "src/sites/"
   ],
   "keywords": ["agent", "web", "api", "browser", "automation"],
   "license": "MIT",

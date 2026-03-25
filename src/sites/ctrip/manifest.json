@@ -1,0 +1,22 @@
+{
+  "name": "ctrip",
+  "display_name": "Trip.com / Ctrip",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://us.trip.com",
+  "description": "China #1 travel platform — flights, hotels, trains, attractions via Trip.com internal REST APIs",
+  "requires_auth": false,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 10,
+    "l1_count": 0,
+    "l2_count": 10,
+    "l3_count": 0
+  },
+  "last_verified": "2026-03-24T17:02:23.950Z",
+  "quarantined": false,
+  "fingerprint": {
+    "response_shape_hash": "getDestinationInfo:12a3130fdc31ada1,getFlightCalendarPrices:97526a8de09381fb,getFlightComfort:54e776de5f94f750,getGeneralInfo:a160216469b9bc7b,getHotDestinations:87d680a807b49670,getTrainStations:3bb3ec8c0d19a76e,searchAttractions:7a542432f407fa3a,searchFlights:f551d27d04d5cf57,searchPOI:1c9cc4a120e78611,searchTrains:3bb3ec8c0d19a76e",
+    "last_validated": "2026-03-24T17:02:23.951Z"
+  }
+}
