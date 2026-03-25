@@ -10,3 +10,5 @@ coverage/
 capture/
 # Built adapter .js files (source is .ts, compiled by scripts/build-adapters.js)
 src/fixtures/*/adapters/*.js
+# Task progress state (local only)
+doc/todo/progress.json
