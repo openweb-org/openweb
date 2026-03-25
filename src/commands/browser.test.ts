@@ -1,11 +1,20 @@
-import { describe, expect, it } from 'vitest'
-import { platform, homedir } from 'node:os'
-import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Test platform profile path detection and CDP auto-detect logic
 // (no real Chrome launch — that's manual E2E)
 
 describe('browser command helpers', () => {
+  const originalFetch = globalThis.fetch
+
+  beforeEach(() => {
+    // Mock fetch so tests don't depend on a real Chrome running on 9222
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('connection refused'))
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
   it('getDefaultProfilePath returns platform-appropriate path', async () => {
     // Dynamic import to test the module
     const mod = await import('./browser.js')
