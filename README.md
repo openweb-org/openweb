@@ -1,6 +1,6 @@
 # openweb
 
-Reverse-engineer any website into a typed API. One CLI for agents and humans.
+Agent-native way to access any website. Bridging agent CLI and human GUI through API.
 
 ## Quick Start
 
