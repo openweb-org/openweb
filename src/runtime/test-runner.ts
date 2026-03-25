@@ -9,7 +9,7 @@ interface TestCase {
   readonly input: Record<string, unknown>
   readonly assertions: {
     readonly status: number
-    readonly response_schema_valid: boolean
+    readonly response_schema_valid?: boolean
   }
 }
 
@@ -51,7 +51,8 @@ export async function runSiteTests(site: string): Promise<{ passed: number; fail
       try {
         const result = await executeOperation(site, testFile.operation_id, testCase.input)
         const statusPass = result.status === testCase.assertions.status
-        const schemaPass = result.responseSchemaValid === testCase.assertions.response_schema_valid
+        const schemaPass = testCase.assertions.response_schema_valid === undefined
+          || result.responseSchemaValid === testCase.assertions.response_schema_valid
 
         if (statusPass && schemaPass) {
           passed += 1

@@ -46,6 +46,7 @@ describe('differentiateParameters', () => {
     const daily = params.find((item) => item.name === 'daily')
 
     expect(latitude?.required).toBe(true)
+    expect(latitude?.location).toBe('query')
     expect(latitude?.schema).toEqual({ type: 'number' })
 
     expect(hourly?.required).toBe(false)

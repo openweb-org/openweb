@@ -64,6 +64,7 @@ export function differentiateParameters(endpoint: ClusteredEndpoint): ParameterD
       const flat = typedValues.flat()
       descriptors.push({
         name,
+        location: 'query',
         required,
         schema: {
           type: 'array',
@@ -78,6 +79,7 @@ export function differentiateParameters(endpoint: ClusteredEndpoint): ParameterD
 
     descriptors.push({
       name,
+      location: 'query',
       required,
       schema: inferPrimitiveSchema(primitiveValues),
       exampleValue: primitiveValues[0],

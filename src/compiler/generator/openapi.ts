@@ -159,7 +159,7 @@ export async function generateOpenApi(input: GenerateOpenApiInput): Promise<void
       },
       parameters: operation.parameters.map((parameter) => ({
         name: parameter.name,
-        in: 'query',
+        in: parameter.location,
         required: parameter.required,
         schema: parameter.schema,
         description: parameter.description,

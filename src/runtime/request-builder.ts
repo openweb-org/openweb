@@ -120,7 +120,10 @@ export function resolveAllParameters(spec: OpenApiSpec, operation: OpenApiOperat
       resolved = (resolved as Record<string, unknown>)?.[part]
     }
 
-    if (!resolved || typeof resolved !== 'object') return []
+    if (!resolved || typeof resolved !== 'object') {
+      process.stderr.write(`\u26A0 Unresolved $ref: ${ref} in operation parameters\n`)
+      return []
+    }
     return [resolved as OpenApiParameter]
   })
 }

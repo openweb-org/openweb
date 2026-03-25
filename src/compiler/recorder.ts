@@ -262,7 +262,8 @@ export async function loadCaptureData(recordingDir: string): Promise<CaptureData
           for (const tag of scriptJsonTags) {
             const idAttr = tag.id ? ` id="${tag.id}"` : ''
             const typeAttr = tag.type ? ` type="${tag.type}"` : ''
-            parts.push(`<script${idAttr}${typeAttr}>{}</script>`)
+            const placeholder = ' '.repeat(Math.max(tag.size, 10))
+            parts.push(`<script${idAttr}${typeAttr}>${placeholder}</script>`)
           }
         }
         parts.push('</head><body></body></html>')

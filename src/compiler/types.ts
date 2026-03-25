@@ -21,6 +21,7 @@ export interface ClusteredEndpoint {
 
 export interface ParameterDescriptor {
   readonly name: string
+  readonly location: 'query' | 'path' | 'header'
   readonly required: boolean
   readonly schema: JsonSchema
   readonly description?: string

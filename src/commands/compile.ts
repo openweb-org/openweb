@@ -67,7 +67,7 @@ async function verifyOperation(operation: Omit<AnalyzedOperation, 'verified'>): 
       operation.path,
       operation.parameters.map((parameter) => ({
         name: parameter.name,
-        in: 'query',
+        in: parameter.location,
         required: parameter.required,
         schema: parameter.schema,
       })),
@@ -154,6 +154,7 @@ export async function compileSite(
   const MUTATION_METHODS = new Set(['post', 'put', 'patch', 'delete'])
   const clusters = clusterSamples(filteredSamples)
   const analyzedOperations: AnalyzedOperation[] = []
+  const skippedMutations: Array<{ method: string; path: string }> = []
 
   for (const cluster of clusters) {
     const annotation = annotateOperation(cluster.host, cluster.path, cluster.method)
@@ -166,6 +167,7 @@ export async function compileSite(
     if (MUTATION_METHODS.has(cluster.method.toLowerCase())) {
       const hasRequestBody = cluster.samples.some((s) => s.requestBody)
       if (hasRequestBody) {
+        skippedMutations.push({ method: cluster.method, path: cluster.path })
         continue
       }
     }
@@ -190,6 +192,15 @@ export async function compileSite(
       ...operationBase,
       verified,
     })
+  }
+
+  if (skippedMutations.length > 0) {
+    process.stderr.write(
+      `\u26A0 Skipped ${skippedMutations.length} mutation(s) with request bodies (not yet supported):\n`,
+    )
+    for (const op of skippedMutations) {
+      process.stderr.write(`  ${op.method.toUpperCase()} ${op.path}\n`)
+    }
   }
 
   if (analyzedOperations.length === 0 && !classifyResult?.extractions && !hasWsOps) {
