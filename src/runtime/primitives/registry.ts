@@ -12,7 +12,7 @@ export interface ResolverContext {
   readonly deps: {
     readonly fetchImpl?: typeof fetch
     readonly ssrfValidator: (url: string) => Promise<void>
-    readonly authHeaders?: Record<string, string>
+    readonly authHeaders?: Readonly<Record<string, string>>
     readonly cookieString?: string
   }
 }
@@ -20,7 +20,7 @@ export interface ResolverContext {
 /** Unified resolver function signature */
 export type ResolverFn = (
   ctx: ResolverContext,
-  config: Record<string, unknown>,
+  config: Readonly<Record<string, unknown>>,
 ) => Promise<ResolverResult>
 
 const registry = new Map<string, ResolverFn>()

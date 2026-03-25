@@ -13,7 +13,7 @@ export type Transport = 'node' | 'page'
 export interface AdapterRef {
   readonly name: string
   readonly operation: string
-  readonly params?: { readonly [key: string]: unknown }
+  readonly params?: Readonly<Record<string, unknown>>
 }
 
 // Server-level x-openweb (on servers[] entries)

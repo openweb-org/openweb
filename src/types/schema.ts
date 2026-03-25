@@ -14,7 +14,7 @@ import {
   wsPatternSchema,
 } from './primitive-schemas.js'
 
-const adapterRefSchema = {
+export const adapterRefSchema = {
   type: 'object',
   required: ['name', 'operation'],
   properties: {
@@ -25,11 +25,11 @@ const adapterRefSchema = {
   additionalProperties: false,
 } as const
 
-const transportSchema = {
+export const transportSchema = {
   enum: ['node', 'page'],
 } as const
 
-const permissionSchema = {
+export const permissionSchema = {
   enum: ['read', 'write', 'delete', 'transact'],
 } as const
 
@@ -47,7 +47,7 @@ export const xOpenWebServerSchema = {
   additionalProperties: false,
 } as const
 
-const buildMetaSchema = {
+export const buildMetaSchema = {
   type: 'object',
   properties: {
     stable_id: { type: 'string' },
@@ -129,7 +129,7 @@ export const manifestSchema = {
 
 // ── WS Server-level x-openweb ─────────────────────
 
-const wsReconnectSchema = {
+export const wsReconnectSchema = {
   type: 'object',
   required: ['max_retries', 'backoff_ms'],
   properties: {
@@ -155,7 +155,7 @@ export const xOpenWebWsServerSchema = {
 
 // ── WS Operation-level x-openweb ──────────────────
 
-const wsCorrelationSchema = {
+export const wsCorrelationSchema = {
   type: 'object',
   required: ['field', 'source'],
   properties: {

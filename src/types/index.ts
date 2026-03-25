@@ -58,6 +58,12 @@ export {
 } from './primitive-schemas.js'
 
 export {
+  adapterRefSchema,
+  transportSchema,
+  permissionSchema,
+  buildMetaSchema,
+  wsReconnectSchema,
+  wsCorrelationSchema,
   xOpenWebServerSchema,
   xOpenWebOperationSchema,
   manifestSchema,

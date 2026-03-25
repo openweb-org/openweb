@@ -1,4 +1,4 @@
-import type { PermissionCategory } from './extensions.js'
+import type { PermissionCategory, Transport } from './extensions.js'
 import type {
   WsAuthConfig,
   WsDiscriminatorConfig,
@@ -11,7 +11,7 @@ import type { XOpenWebBuildMeta } from './extensions.js'
 // ── Server-level x-openweb (on AsyncAPI servers) ───
 
 export interface XOpenWebWsServer {
-  readonly transport: 'node' | 'page'
+  readonly transport: Transport
   readonly auth?: WsAuthConfig
   readonly heartbeat?: WsHeartbeat
   readonly discriminator: WsDiscriminatorConfig
