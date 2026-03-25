@@ -1,0 +1,22 @@
+{
+  "operation_id": "send_heartbeat",
+  "protocol": "ws",
+  "mode": "stream",
+  "requires_auth": true,
+  "cases": [
+    {
+      "name": "heartbeat_flow",
+      "description": "Send heartbeat (op 1) after receiving Hello, expect HeartbeatAck (op 11)",
+      "input": {},
+      "timeout_ms": 15000,
+      "assertions": {
+        "connected": true,
+        "first_message_within_ms": 10000,
+        "message_schema_valid": true,
+        "message_matches": {
+          "op": 11
+        }
+      }
+    }
+  ]
+}

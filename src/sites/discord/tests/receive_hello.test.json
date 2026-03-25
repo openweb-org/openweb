@@ -1,0 +1,22 @@
+{
+  "operation_id": "receive_hello",
+  "protocol": "ws",
+  "mode": "stream",
+  "requires_auth": true,
+  "cases": [
+    {
+      "name": "gateway_hello",
+      "description": "Connect to gateway and receive Hello (op 10) with heartbeat_interval",
+      "input": {},
+      "timeout_ms": 10000,
+      "assertions": {
+        "connected": true,
+        "first_message_within_ms": 5000,
+        "message_schema_valid": true,
+        "message_matches": {
+          "op": 10
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,528 @@
+asyncapi: '3.0.0'
+info:
+  title: Discord Gateway
+  version: '10'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-25T00:00:00Z'
+
+servers:
+  gateway:
+    host: gateway.discord.gg
+    pathname: /?v=10&encoding=json
+    protocol: wss
+    x-openweb:
+      transport: node
+      discriminator:
+        sent:
+          field: op
+        received:
+          field: op
+          sub_field: t
+          sub_field_on: 0
+      auth:
+        type: ws_first_message
+        discriminator:
+          op: 2
+        token_path: d.token
+        token_source: param
+      heartbeat:
+        send:
+          constants:
+            op: 1
+          bindings:
+            - path: d
+              source: state
+              key: sequence
+        ack_discriminator:
+          op: 11
+        interval_field: d.heartbeat_interval
+        max_missed: 3
+      reconnect:
+        max_retries: 5
+        backoff_ms: 1000
+
+channels:
+  gateway:
+    address: /?v=10&encoding=json
+    servers:
+      - $ref: '#/servers/gateway'
+    messages:
+      receive_hello:
+        $ref: '#/components/messages/Hello'
+      receive_heartbeat_ack:
+        $ref: '#/components/messages/HeartbeatAck'
+      receive_ready:
+        $ref: '#/components/messages/DispatchReady'
+      receive_message_create:
+        $ref: '#/components/messages/DispatchMessageCreate'
+      receive_guild_create:
+        $ref: '#/components/messages/DispatchGuildCreate'
+      receive_presence_update:
+        $ref: '#/components/messages/DispatchPresenceUpdate'
+      receive_typing_start:
+        $ref: '#/components/messages/DispatchTypingStart'
+      send_identify:
+        $ref: '#/components/messages/Identify'
+      send_heartbeat:
+        $ref: '#/components/messages/Heartbeat'
+      send_resume:
+        $ref: '#/components/messages/Resume'
+      send_update_presence:
+        $ref: '#/components/messages/UpdatePresence'
+      send_request_guild_members:
+        $ref: '#/components/messages/RequestGuildMembers'
+
+operations:
+  receive_hello:
+    action: receive
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/receive_hello'
+    x-openweb:
+      permission: read
+      pattern: stream
+      build:
+        stable_id: discord_hello
+
+  receive_heartbeat_ack:
+    action: receive
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/receive_heartbeat_ack'
+    x-openweb:
+      permission: read
+      pattern: stream
+      build:
+        stable_id: discord_heartbeat_ack
+
+  receive_ready:
+    action: receive
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/receive_ready'
+    x-openweb:
+      permission: read
+      pattern: stream
+      build:
+        stable_id: discord_ready
+
+  receive_message_create:
+    action: receive
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/receive_message_create'
+    x-openweb:
+      permission: read
+      pattern: stream
+      build:
+        stable_id: discord_msg_create
+
+  receive_guild_create:
+    action: receive
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/receive_guild_create'
+    x-openweb:
+      permission: read
+      pattern: stream
+      build:
+        stable_id: discord_guild_create
+
+  receive_presence_update:
+    action: receive
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/receive_presence_update'
+    x-openweb:
+      permission: read
+      pattern: stream
+      build:
+        stable_id: discord_presence
+
+  receive_typing_start:
+    action: receive
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/receive_typing_start'
+    x-openweb:
+      permission: read
+      pattern: stream
+      build:
+        stable_id: discord_typing
+
+  send_identify:
+    action: send
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/send_identify'
+    x-openweb:
+      permission: write
+      pattern: publish
+      build:
+        stable_id: discord_identify
+
+  send_heartbeat:
+    action: send
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/send_heartbeat'
+    x-openweb:
+      permission: write
+      pattern: publish
+      build:
+        stable_id: discord_heartbeat
+
+  send_resume:
+    action: send
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/send_resume'
+    x-openweb:
+      permission: write
+      pattern: publish
+      build:
+        stable_id: discord_resume
+
+  send_update_presence:
+    action: send
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/send_update_presence'
+    x-openweb:
+      permission: write
+      pattern: publish
+      build:
+        stable_id: discord_update_presence
+
+  send_request_guild_members:
+    action: send
+    channel:
+      $ref: '#/channels/gateway'
+    messages:
+      - $ref: '#/channels/gateway/messages/send_request_guild_members'
+    x-openweb:
+      permission: write
+      pattern: request_reply
+      correlation:
+        field: nonce
+        source: echo
+      build:
+        stable_id: discord_req_members
+
+components:
+  messages:
+    Hello:
+      payload:
+        $ref: '#/components/schemas/HelloPayload'
+    HeartbeatAck:
+      payload:
+        $ref: '#/components/schemas/HeartbeatAckPayload'
+    DispatchReady:
+      payload:
+        $ref: '#/components/schemas/DispatchReadyPayload'
+    DispatchMessageCreate:
+      payload:
+        $ref: '#/components/schemas/DispatchMessageCreatePayload'
+    DispatchGuildCreate:
+      payload:
+        $ref: '#/components/schemas/DispatchGuildCreatePayload'
+    DispatchPresenceUpdate:
+      payload:
+        $ref: '#/components/schemas/DispatchPresenceUpdatePayload'
+    DispatchTypingStart:
+      payload:
+        $ref: '#/components/schemas/DispatchTypingStartPayload'
+    Identify:
+      payload:
+        $ref: '#/components/schemas/IdentifyPayload'
+    Heartbeat:
+      payload:
+        $ref: '#/components/schemas/HeartbeatPayload'
+    Resume:
+      payload:
+        $ref: '#/components/schemas/ResumePayload'
+    UpdatePresence:
+      payload:
+        $ref: '#/components/schemas/UpdatePresencePayload'
+    RequestGuildMembers:
+      payload:
+        $ref: '#/components/schemas/RequestGuildMembersPayload'
+
+  schemas:
+    HelloPayload:
+      type: object
+      required: [op, d]
+      properties:
+        op:
+          const: 10
+        d:
+          type: object
+          required: [heartbeat_interval]
+          properties:
+            heartbeat_interval:
+              type: integer
+
+    HeartbeatAckPayload:
+      type: object
+      required: [op]
+      properties:
+        op:
+          const: 11
+
+    DispatchReadyPayload:
+      type: object
+      required: [op, t, s, d]
+      properties:
+        op:
+          const: 0
+        t:
+          const: READY
+        s:
+          type: integer
+        d:
+          type: object
+          required: [v, user, guilds, session_id, resume_gateway_url]
+          properties:
+            v:
+              type: integer
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                username:
+                  type: string
+                discriminator:
+                  type: string
+            guilds:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  unavailable:
+                    type: boolean
+            session_id:
+              type: string
+            resume_gateway_url:
+              type: string
+
+    DispatchMessageCreatePayload:
+      type: object
+      required: [op, t, s, d]
+      properties:
+        op:
+          const: 0
+        t:
+          const: MESSAGE_CREATE
+        s:
+          type: integer
+        d:
+          type: object
+          properties:
+            id:
+              type: string
+            channel_id:
+              type: string
+            content:
+              type: string
+            author:
+              type: object
+              properties:
+                id:
+                  type: string
+                username:
+                  type: string
+
+    DispatchGuildCreatePayload:
+      type: object
+      required: [op, t, s, d]
+      properties:
+        op:
+          const: 0
+        t:
+          const: GUILD_CREATE
+        s:
+          type: integer
+        d:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            owner_id:
+              type: string
+            member_count:
+              type: integer
+
+    DispatchPresenceUpdatePayload:
+      type: object
+      required: [op, t, s, d]
+      properties:
+        op:
+          const: 0
+        t:
+          const: PRESENCE_UPDATE
+        s:
+          type: integer
+        d:
+          type: object
+          properties:
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+            status:
+              type: string
+              enum: [online, idle, dnd, offline]
+            activities:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  type:
+                    type: integer
+
+    DispatchTypingStartPayload:
+      type: object
+      required: [op, t, s, d]
+      properties:
+        op:
+          const: 0
+        t:
+          const: TYPING_START
+        s:
+          type: integer
+        d:
+          type: object
+          required: [channel_id, user_id, timestamp]
+          properties:
+            channel_id:
+              type: string
+            user_id:
+              type: string
+            timestamp:
+              type: integer
+            guild_id:
+              type: string
+
+    IdentifyPayload:
+      type: object
+      required: [op, d]
+      properties:
+        op:
+          const: 2
+        d:
+          type: object
+          required: [token, intents, properties]
+          properties:
+            token:
+              type: string
+            intents:
+              type: integer
+            properties:
+              type: object
+              properties:
+                os:
+                  type: string
+                browser:
+                  type: string
+                device:
+                  type: string
+
+    HeartbeatPayload:
+      type: object
+      required: [op, d]
+      properties:
+        op:
+          const: 1
+        d:
+          type:
+            - integer
+            - 'null'
+
+    ResumePayload:
+      type: object
+      required: [op, d]
+      properties:
+        op:
+          const: 6
+        d:
+          type: object
+          required: [token, session_id, seq]
+          properties:
+            token:
+              type: string
+            session_id:
+              type: string
+            seq:
+              type: integer
+
+    UpdatePresencePayload:
+      type: object
+      required: [op, d]
+      properties:
+        op:
+          const: 3
+        d:
+          type: object
+          required: [since, activities, status, afk]
+          properties:
+            since:
+              type:
+                - integer
+                - 'null'
+            activities:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  type:
+                    type: integer
+            status:
+              type: string
+              enum: [online, dnd, idle, invisible, offline]
+            afk:
+              type: boolean
+
+    RequestGuildMembersPayload:
+      type: object
+      required: [op, d]
+      properties:
+        op:
+          const: 8
+        d:
+          type: object
+          required: [guild_id]
+          properties:
+            guild_id:
+              type: string
+            query:
+              type: string
+            limit:
+              type: integer
+            presences:
+              type: boolean
+            user_ids:
+              type: array
+              items:
+                type: string

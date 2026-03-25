@@ -1,0 +1,23 @@
+{
+  "operation_id": "receive_message_create",
+  "protocol": "ws",
+  "mode": "stream",
+  "requires_auth": true,
+  "cases": [
+    {
+      "name": "message_dispatch",
+      "description": "Receive MESSAGE_CREATE dispatch after identify + heartbeat handshake",
+      "input": {},
+      "timeout_ms": 30000,
+      "assertions": {
+        "connected": true,
+        "first_message_within_ms": 30000,
+        "message_schema_valid": true,
+        "message_matches": {
+          "op": 0,
+          "t": "MESSAGE_CREATE"
+        }
+      }
+    }
+  ]
+}
