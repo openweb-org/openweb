@@ -9,12 +9,9 @@ import { validateSSRF } from '../lib/ssrf.js'
 import { fetchWithRedirects } from './redirect.js'
 import { getValueAtPath } from './value-path.js'
 import type { ExtractionPrimitive } from '../types/primitives.js'
+import type { ExecutorResult } from './executor-result.js'
 
-export interface NodeSsrResult {
-  readonly status: number
-  readonly body: unknown
-  readonly responseHeaders: Readonly<Record<string, string>>
-}
+export type { ExecutorResult }
 
 const NEXT_DATA_START = '<script id="__NEXT_DATA__" type="application/json"'
 
@@ -62,7 +59,7 @@ export async function executeNodeSsr(
   url: string,
   extraction: Extract<ExtractionPrimitive, { type: 'ssr_next_data' }>,
   deps: { fetchImpl?: typeof fetch; ssrfValidator?: (url: string) => Promise<void> } = {},
-): Promise<NodeSsrResult> {
+): Promise<ExecutorResult> {
   const ssrfValidator = deps.ssrfValidator ?? validateSSRF
   await ssrfValidator(url)
 

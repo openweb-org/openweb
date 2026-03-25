@@ -8,14 +8,11 @@ import { resolvePageGlobalData } from './primitives/page-global-data.js'
 import { resolveScriptJson } from './primitives/script-json.js'
 import { resolveSsrNextData } from './primitives/ssr-next-data.js'
 import type { BrowserHandle } from './primitives/types.js'
+import type { ExecutorResult } from './executor-result.js'
 import { listCandidatePages } from './page-candidates.js'
 import { findPageForOrigin } from './session-executor.js'
 
-export interface ExtractionResult {
-  readonly status: number
-  readonly body: unknown
-  readonly responseHeaders: Readonly<Record<string, string>>
-}
+export type { ExecutorResult }
 
 function createExtractionNeedsPageError(targetPageUrl: string): OpenWebError {
   return new OpenWebError({
@@ -91,7 +88,7 @@ export async function executeExtraction(
   browser: Browser,
   spec: OpenApiSpec,
   operation: OpenApiOperation,
-): Promise<ExtractionResult> {
+): Promise<ExecutorResult> {
   const context = browser.contexts()[0]
   if (!context) {
     throw new OpenWebError({

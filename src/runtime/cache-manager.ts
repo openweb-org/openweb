@@ -1,5 +1,6 @@
 import type { Browser } from 'playwright-core'
 
+import { formatCookieString } from '../lib/cookies.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import {
@@ -15,6 +16,7 @@ import { readTokenCache, writeTokenCache, clearTokenCache, DEFAULT_TTL_SECONDS, 
 import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
 import type { ExecuteDependencies } from './http-executor.js'
+import type { ExecutorResult } from './executor-result.js'
 import type { XOpenWebServer } from '../types/extensions.js'
 import { logger } from '../lib/logger.js'
 
@@ -26,7 +28,7 @@ export async function executeCachedFetch(
   params: Record<string, unknown>,
   cached: CachedTokens,
   deps: ExecuteDependencies,
-): Promise<{ status: number; body: unknown; responseHeaders: Record<string, string> }> {
+): Promise<ExecutorResult> {
   const serverUrl = getServerUrl(spec, operationRef.operation)
   const allParams = resolveAllParameters(spec, operationRef.operation)
   const inputParams = validateParams(
@@ -38,7 +40,7 @@ export async function executeCachedFetch(
   const requestHeaders = buildHeaderParams(allParams, inputParams)
 
   // Inject cached cookies
-  const cookieStr = cached.cookies.map((c) => `${c.name}=${c.value}`).join('; ')
+  const cookieStr = formatCookieString(cached.cookies)
   if (cookieStr) requestHeaders.Cookie = cookieStr
 
   // Reconstruct auth headers from cached localStorage (localStorage_jwt)

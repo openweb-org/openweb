@@ -9,6 +9,7 @@ import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 import type { BrowserHandle } from './primitives/types.js'
 import { resolveAllParameters, substitutePath, buildHeaderParams, buildJsonRequestBody } from './request-builder.js'
 import { getServerXOpenWeb } from './operation-context.js'
+import type { ExecutorResult } from './executor-result.js'
 import { fetchWithRedirects } from './redirect.js'
 import { listCandidatePages } from './page-candidates.js'
 
@@ -78,11 +79,7 @@ export interface SessionHttpDependencies {
   readonly ssrfValidator?: (url: string) => Promise<void>
 }
 
-export interface SessionHttpResult {
-  readonly status: number
-  readonly body: unknown
-  readonly responseHeaders: Readonly<Record<string, string>>
-}
+export type { ExecutorResult }
 
 /**
  * Execute an operation via node transport with browser auth:
@@ -99,7 +96,7 @@ export async function executeSessionHttp(
   operation: OpenApiOperation,
   params: Record<string, unknown>,
   deps: SessionHttpDependencies = {},
-): Promise<SessionHttpResult> {
+): Promise<ExecutorResult> {
   const fetchImpl = deps.fetchImpl ?? fetch
   const ssrfValidator = deps.ssrfValidator ?? validateSSRF
   const serverExt = getServerXOpenWeb(spec, operation)

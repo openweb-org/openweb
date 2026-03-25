@@ -4,6 +4,7 @@ import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { getRequestBodyParameters, validateParams, type OpenApiOperation, type OpenApiSpec } from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { BrowserHandle } from './primitives/types.js'
+import type { ExecutorResult } from './executor-result.js'
 import {
   createNeedsPageError,
   findPageForOrigin,
@@ -15,11 +16,7 @@ import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
-export interface BrowserFetchResult {
-  readonly status: number
-  readonly body: unknown
-  readonly responseHeaders: Readonly<Record<string, string>>
-}
+export type { ExecutorResult }
 
 /**
  * Execute an operation in browser_fetch mode:
@@ -35,7 +32,7 @@ export async function executeBrowserFetch(
   operation: OpenApiOperation,
   params: Record<string, unknown>,
   deps: SessionHttpDependencies = {},
-): Promise<BrowserFetchResult> {
+): Promise<ExecutorResult> {
   const serverExt = getServerXOpenWeb(spec, operation)
   const serverUrl = operation.servers?.[0]?.url ?? spec.servers?.[0]?.url
   if (!serverUrl) {
