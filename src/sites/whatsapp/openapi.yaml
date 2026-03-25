@@ -130,7 +130,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Chat ID (e.g. 13472225726@c.us)
+          description: Chat ID (e.g. 1234567890@c.us)
       responses:
         '200':
           description: Chat detail object
@@ -194,7 +194,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Chat ID (e.g. 14124991582@c.us)
+          description: Chat ID (e.g. 1234567890@c.us)
         - name: limit
           in: query
           schema:
@@ -249,7 +249,7 @@ paths:
               properties:
                 chatId:
                   type: string
-                  description: Chat ID (e.g. 13472225726@c.us)
+                  description: Chat ID (e.g. 1234567890@c.us)
                 message:
                   type: string
                   description: Message text to send
