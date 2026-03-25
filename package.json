@@ -31,6 +31,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "tsx tests/integration/runner.ts",
+    "pack:check": "node scripts/pack-check.js",
     "prepublishOnly": "pnpm lint && pnpm test && pnpm build && pnpm pack:check"
   },
   "engines": {
