@@ -25,13 +25,16 @@ export async function resolveWsHttpHandshake(
   const resp = await fetchFn(config.endpoint, { method: config.method, headers })
 
   if (!resp.ok) {
+    const is5xx = resp.status >= 500
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: `WS handshake endpoint returned ${resp.status}: ${config.endpoint}`,
-      action: 'Verify the endpoint URL and authentication.',
-      retriable: true,
-      failureClass: 'fatal',
+      action: is5xx
+        ? 'Server error — retry after a delay.'
+        : 'Verify the endpoint URL and authentication.',
+      retriable: is5xx,
+      failureClass: is5xx ? 'retriable' : 'fatal',
     })
   }
 

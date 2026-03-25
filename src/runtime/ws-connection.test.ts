@@ -158,7 +158,7 @@ describe('WsConnectionManager', () => {
       }
 
       const conn = new WsConnectionManager(config)
-      conn.connectionState.sequence = 42
+      conn.setConnectionState({ sequence: 42 })
       conn.connect()
       lastMockWs!.simulateOpen()
       conn.completeAuth()
@@ -368,10 +368,10 @@ describe('WsRouter', () => {
     expect(result.operationId).toBe('message_create')
   })
 
-  it('classifies unknown discriminator values as event', () => {
+  it('classifies unknown discriminator values as unknown', () => {
     const router = new WsRouter(discordRouterConfig)
     const result = router.classify({ op: 7 }) // RESUME — not in routes
-    expect(result.category).toBe('event')
+    expect(result.category).toBe('unknown')
   })
 
   it('classifies response frames by correlation field', () => {

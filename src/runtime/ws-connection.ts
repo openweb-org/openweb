@@ -94,8 +94,8 @@ export class WsConnectionManager extends EventEmitter<WsConnectionEvents> {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private authTimeoutTimer: ReturnType<typeof setTimeout> | null = null
 
-  readonly connectionState: Record<string, unknown> = {}
-  readonly params: Record<string, unknown> = {}
+  private _connectionState: Record<string, unknown> = {}
+  private _params: Record<string, unknown> = {}
 
   private readonly config: WsConnectionConfig
   private readonly factory: WsSocketFactory
@@ -109,6 +109,22 @@ export class WsConnectionManager extends EventEmitter<WsConnectionEvents> {
 
   getState(): WsState {
     return this.state
+  }
+
+  get connectionState(): Readonly<Record<string, unknown>> {
+    return this._connectionState
+  }
+
+  get params(): Readonly<Record<string, unknown>> {
+    return this._params
+  }
+
+  setConnectionState(update: Record<string, unknown>): void {
+    Object.assign(this._connectionState, update)
+  }
+
+  setParams(update: Record<string, unknown>): void {
+    Object.assign(this._params, update)
   }
 
   private transition(event: string): boolean {
@@ -266,7 +282,7 @@ export class WsConnectionManager extends EventEmitter<WsConnectionEvents> {
 
     this.heartbeatTimer = setInterval(() => {
       if (this.state !== 'READY') return
-      const msg = resolveTemplate(hb.send, this.connectionState, this.params)
+      const msg = resolveTemplate(hb.send, this._connectionState, this._params)
       this.send(msg)
       this.missedAcks++
       if (this.missedAcks > maxMissed) {

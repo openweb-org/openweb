@@ -90,12 +90,6 @@ export class WsRouter {
       }
     }
 
-    // Fallback: if has a known discriminator field, treat as event
-    const discValue = getValueAtPath(payload, disc.field)
-    if (discValue !== undefined) {
-      return { category: 'event', payload }
-    }
-
     return { category: 'unknown', payload }
   }
 }
