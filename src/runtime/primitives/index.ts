@@ -10,6 +10,13 @@ import './meta-tag.js'
 import './api-response.js'
 import './sapisidhash.js'
 
+// Extraction primitives
+import './html-selector.js'
+import './page-expression.js'
+import './page-global-data.js'
+import './script-json.js'
+import './ssr-next-data.js'
+
 // WS auth primitives — self-register on import
 import './ws-upgrade-header.js'
 import './ws-first-message.js'
@@ -110,3 +117,14 @@ export type { ResolverFn, ResolverContext, ResolverResult } from './registry.js'
 export type { BrowserHandle, ResolvedInjections } from './types.js'
 export { registerWsResolver, getWsResolver, resolveWsAuth } from './ws-registry.js'
 export type { WsResolverFn, WsResolverContext, WsAuthResult } from './ws-registry.js'
+
+// Extraction primitives
+export type { HtmlSelectorConfig } from './html-selector.js'
+export { resolveHtmlSelector } from './html-selector.js'
+export { evaluatePageExpression } from './page-expression.js'
+export type { PageGlobalDataConfig } from './page-global-data.js'
+export { resolvePageGlobalData } from './page-global-data.js'
+export type { ScriptJsonConfig } from './script-json.js'
+export { resolveScriptJson } from './script-json.js'
+export type { SsrNextDataConfig } from './ssr-next-data.js'
+export { resolveSsrNextData } from './ssr-next-data.js'
