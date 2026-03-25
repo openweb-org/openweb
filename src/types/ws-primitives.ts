@@ -67,4 +67,4 @@ export interface WsHeartbeat {
 
 // ── Pattern ────────────────────────────────────────
 
-export type WsPattern = 'subscribe' | 'publish' | 'request_reply' | 'stream'
+export type WsPattern = 'heartbeat' | 'request_reply' | 'subscribe' | 'publish' | 'stream'
