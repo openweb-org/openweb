@@ -1,4 +1,4 @@
-import type { BrowserContext, CDPSession, Page } from 'playwright'
+import type { Browser, BrowserContext, CDPSession, Page } from 'playwright'
 
 import type { CaptureMetadata, DomExtraction, StateSnapshot } from './types.js'
 import { writeCaptureBundle } from './bundle.js'
@@ -48,9 +48,15 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
 
   let stopped = false
   let draining = false
-  let cdp: CDPSession | undefined
+
+  // Resource tracking for cleanup
+  let browserRef: Browser | undefined
+  let contextRef: BrowserContext | undefined
+  let onNewPageHandler: ((page: Page) => void) | undefined
+  const cdpSessions: CDPSession[] = []
   const harCaptures: HarCapture[] = []
-  let wsCapture: WsCapture | undefined
+  const wsCaptures: WsCapture[] = []
+  const pageListenerCleanups: Array<() => void> = []
 
   const stateSnapshots: StateSnapshot[] = []
   const domExtractions: DomExtraction[] = []
@@ -96,11 +102,11 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
     }
   }
 
-  function attachPageListeners(page: Page, context: BrowserContext): void {
-    page.on('framenavigated', (frame) => {
+  /** Attach framenavigated listener; returns cleanup function (Leak #2 fix) */
+  function attachPageListeners(page: Page, context: BrowserContext): () => void {
+    const handler = (frame: { url(): string }): void => {
       if (stopped || frame !== page.mainFrame()) return
       navigationCount++
-      // Capture URL and sequence at event time, not at snapshot time (H3 fix)
       const seq = snapshotSeq++
       const urlAtEvent = page.url()
       const task = (async () => {
@@ -111,15 +117,22 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
         }
         await takeSnapshots(page, context, 'navigation', seq, urlAtEvent)
       })().catch(() => {})
-      // Track for drain on stop
       pendingSnapshots.add(task)
       void task.then(() => pendingSnapshots.delete(task))
-    })
+    }
+    page.on('framenavigated', handler)
+    return () => page.removeListener('framenavigated', handler)
   }
 
   function detachAll(): void {
     for (const hc of harCaptures) hc.detach()
-    wsCapture?.detach()
+    for (const wc of wsCaptures) wc.detach()
+    // Leak #2: detach framenavigated listeners
+    for (const cleanup of pageListenerCleanups) cleanup()
+    // Leak #1: detach context.on('page') listener
+    if (onNewPageHandler && contextRef) {
+      contextRef.removeListener('page', onNewPageHandler)
+    }
   }
 
   /** Wait for all in-flight HAR responses and snapshots to settle */
@@ -134,18 +147,10 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
           new Promise((r) => setTimeout(r, timeoutMs)),
         ])
       }
-      // Wait for in-flight HAR response handlers
+      // Leak #4: await tracked HAR response promises instead of polling
       const remaining = Math.max(0, deadline - Date.now())
-      const hasPending = () => harCaptures.some((hc) => hc.pendingCount() > 0)
-      if (hasPending() && remaining > 0) {
-        await new Promise<void>((resolve) => {
-          const interval = setInterval(() => {
-            if (!hasPending() || Date.now() >= deadline) {
-              clearInterval(interval)
-              resolve()
-            }
-          }, 50)
-        })
+      if (remaining > 0) {
+        await Promise.allSettled(harCaptures.map((hc) => hc.drain(remaining)))
       }
     } finally {
       draining = false
@@ -165,7 +170,7 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
 
     const allEntries = harCaptures.flatMap((hc) => hc.entries)
     const harLog = buildHarLog(allEntries)
-    const wsFrames = wsCapture?.frames ?? []
+    const wsFrames = wsCaptures.flatMap((wc) => wc.frames)
 
     const wsConnectionIds = new Set<string>()
     for (const f of wsFrames) {
@@ -196,11 +201,19 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
     )
   }
 
+  /** Leak #3: detach all CDP sessions and disconnect browser */
   async function cleanup(): Promise<void> {
+    for (const session of cdpSessions) {
+      try {
+        await session.detach()
+      } catch {
+        /* already detached */
+      }
+    }
     try {
-      await cdp?.detach()
+      browserRef?.disconnect()
     } catch {
-      /* already detached */
+      /* already disconnected */
     }
   }
 
@@ -209,8 +222,10 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
     try {
       log(`connecting to ${opts.cdpEndpoint} ...`)
       const browser = await connectWithRetry(opts.cdpEndpoint, 3, abortController.signal)
+      browserRef = browser
       const context = browser.contexts()[0]
       if (!context) throw new Error('No browser context found. Open a page in Chrome first.')
+      contextRef = context
 
       // Use targetPage if provided, otherwise fall back to first page
       const page = opts.targetPage ?? context.pages()[0]
@@ -221,19 +236,37 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
       // Attach all capture sources
       const mainHar = attachHarCapture(page)
       harCaptures.push(mainHar)
-      cdp = await context.newCDPSession(page)
-      wsCapture = await attachWsCapture(cdp)
-      attachPageListeners(page, context)
+      const cdp = await context.newCDPSession(page)
+      cdpSessions.push(cdp)
+      const initialWs = await attachWsCapture(cdp)
+      wsCaptures.push(initialWs)
+      const initialCleanup = attachPageListeners(page, context)
+      pageListenerCleanups.push(initialCleanup)
 
       // Listen for new pages (tabs) — skip if isolating to target page
       if (!opts.isolateToTargetPage) {
-        context.on('page', (newPage) => {
+        // Leak #1 fix: store handler reference for detach
+        // Leak #5 fix: attach WS capture for new pages too
+        onNewPageHandler = (newPage: Page): void => {
           if (stopped) return
           log(`  new page detected: ${newPage.url()}`)
           const newHar = attachHarCapture(newPage)
           harCaptures.push(newHar)
-          attachPageListeners(newPage, context)
-        })
+          const cleanup = attachPageListeners(newPage, context)
+          pageListenerCleanups.push(cleanup)
+          // Attach WS capture for new page via CDP session
+          void (async () => {
+            try {
+              const newCdp = await context.newCDPSession(newPage)
+              cdpSessions.push(newCdp)
+              const newWs = await attachWsCapture(newCdp)
+              wsCaptures.push(newWs)
+            } catch {
+              // page may have closed before CDP session could be created
+            }
+          })()
+        }
+        context.on('page', onNewPageHandler)
       }
 
       // Signal that capture is ready — listeners are attached

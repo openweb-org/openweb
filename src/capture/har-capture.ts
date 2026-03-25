@@ -98,13 +98,15 @@ export interface HarCapture {
   readonly entries: HarEntry[]
   /** Number of in-flight requests (awaiting response) + async response handlers */
   readonly pendingCount: () => number
+  /** Resolves when all in-flight response handlers complete (or timeout) */
+  drain(timeoutMs?: number): Promise<void>
   detach(): void
 }
 
 export function attachHarCapture(page: Page): HarCapture {
   const entries: HarEntry[] = []
   const pendingRequests = new Map<Request, { startedDateTime: string; startTime: number }>()
-  let inFlightResponses = 0
+  const pendingResponses = new Set<Promise<void>>()
 
   const onRequest = (req: Request): void => {
     try {
@@ -122,8 +124,7 @@ export function attachHarCapture(page: Page): HarCapture {
     if (!pending) return
     pendingRequests.delete(req)
 
-    inFlightResponses++
-    void (async () => {
+    const task = (async () => {
       try {
         const url = new URL(req.url())
         const responseHeaders = await res.allHeaders()
@@ -163,10 +164,10 @@ export function attachHarCapture(page: Page): HarCapture {
         })
       } catch {
         // response processing failed — skip entry
-      } finally {
-        inFlightResponses--
       }
     })()
+    pendingResponses.add(task)
+    void task.then(() => pendingResponses.delete(task))
   }
 
   const onRequestFailed = (req: Request): void => {
@@ -179,7 +180,14 @@ export function attachHarCapture(page: Page): HarCapture {
 
   return {
     entries,
-    pendingCount: () => pendingRequests.size + inFlightResponses,
+    pendingCount: () => pendingRequests.size + pendingResponses.size,
+    drain(timeoutMs = 3000): Promise<void> {
+      if (pendingResponses.size === 0) return Promise.resolve()
+      return Promise.race([
+        Promise.allSettled([...pendingResponses]).then(() => {}),
+        new Promise<void>((r) => setTimeout(r, timeoutMs)),
+      ])
+    },
     detach() {
       page.removeListener('request', onRequest)
       page.removeListener('response', onResponse)
