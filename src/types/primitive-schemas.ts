@@ -262,3 +262,120 @@ export const extractionPrimitiveSchema = {
     },
   ],
 } as const
+
+// ── WS Binding ─────────────────────────────────────
+
+const wsBindingSchema = {
+  type: 'object',
+  required: ['path', 'source', 'key'],
+  properties: {
+    path: { type: 'string' },
+    source: { enum: ['param', 'auth', 'state'] },
+    key: { type: 'string' },
+  },
+  additionalProperties: false,
+} as const
+
+// ── WS Message Template ────────────────────────────
+
+export const wsMessageTemplateSchema = {
+  type: 'object',
+  required: ['constants', 'bindings'],
+  properties: {
+    constants: { type: 'object' },
+    bindings: { type: 'array', items: wsBindingSchema },
+  },
+  additionalProperties: false,
+} as const
+
+// ── WS Discriminator ───────────────────────────────
+
+const wsDiscriminatorSchema = {
+  type: 'object',
+  required: ['field'],
+  properties: {
+    field: { type: 'string' },
+    sub_field: { type: 'string' },
+    sub_field_on: { oneOf: [{ type: 'string' }, { type: 'number' }] },
+  },
+  additionalProperties: false,
+} as const
+
+export const wsDiscriminatorConfigSchema = {
+  type: 'object',
+  required: ['sent', 'received'],
+  properties: {
+    sent: { oneOf: [wsDiscriminatorSchema, { type: 'null' }] },
+    received: { oneOf: [wsDiscriminatorSchema, { type: 'null' }] },
+  },
+  additionalProperties: false,
+} as const
+
+// ── WS Heartbeat ───────────────────────────────────
+
+export const wsHeartbeatSchema = {
+  type: 'object',
+  required: ['send'],
+  properties: {
+    send: wsMessageTemplateSchema,
+    ack_discriminator: { type: 'object' },
+    interval_field: { type: 'string' },
+    interval_ms: { type: 'number', minimum: 0 },
+    max_missed: { type: 'integer', minimum: 1 },
+  },
+  additionalProperties: false,
+} as const
+
+// ── WS Auth Config (4 variants) ────────────────────
+
+export const wsAuthConfigSchema = {
+  oneOf: [
+    {
+      type: 'object',
+      required: ['type', 'discriminator', 'token_path', 'token_source'],
+      properties: {
+        type: { const: 'ws_first_message' },
+        discriminator: { type: 'object' },
+        token_path: { type: 'string' },
+        token_source: { enum: ['http_auth', 'param'] },
+      },
+      additionalProperties: false,
+    },
+    {
+      type: 'object',
+      required: ['type', 'inject'],
+      properties: {
+        type: { const: 'ws_upgrade_header' },
+        inject: injectSchema,
+      },
+      additionalProperties: false,
+    },
+    {
+      type: 'object',
+      required: ['type', 'param', 'token_source'],
+      properties: {
+        type: { const: 'ws_url_token' },
+        param: { type: 'string' },
+        token_source: { enum: ['http_auth', 'param'] },
+      },
+      additionalProperties: false,
+    },
+    {
+      type: 'object',
+      required: ['type', 'endpoint', 'method', 'url_path'],
+      properties: {
+        type: { const: 'ws_http_handshake' },
+        endpoint: { type: 'string' },
+        method: { enum: ['GET', 'POST'] },
+        url_path: { type: 'string' },
+      },
+      additionalProperties: false,
+    },
+  ],
+} as const
+
+// ── WS Pattern ─────────────────────────────────────
+
+export const wsPatternSchema = {
+  enum: ['subscribe', 'publish', 'request_reply', 'stream'],
+} as const

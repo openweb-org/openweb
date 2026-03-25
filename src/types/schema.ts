@@ -7,6 +7,11 @@ import {
   extractionPrimitiveSchema,
   paginationPrimitiveSchema,
   signingPrimitiveSchema,
+  wsAuthConfigSchema,
+  wsDiscriminatorConfigSchema,
+  wsHeartbeatSchema,
+  wsMessageTemplateSchema,
+  wsPatternSchema,
 } from './primitive-schemas.js'
 
 const adapterRefSchema = {
@@ -119,4 +124,79 @@ export const manifestSchema = {
     quarantined: { type: 'boolean' },
   },
   additionalProperties: false,
+} as const
+
+// ── WS Server-level x-openweb ─────────────────────
+
+const wsReconnectSchema = {
+  type: 'object',
+  required: ['max_retries', 'backoff_ms'],
+  properties: {
+    max_retries: { type: 'integer', minimum: 0 },
+    backoff_ms: { type: 'number', minimum: 0 },
+    resume_field: { type: 'string' },
+  },
+  additionalProperties: false,
+} as const
+
+export const xOpenWebWsServerSchema = {
+  type: 'object',
+  required: ['transport', 'discriminator'],
+  properties: {
+    transport: transportSchema,
+    auth: wsAuthConfigSchema,
+    heartbeat: wsHeartbeatSchema,
+    discriminator: wsDiscriminatorConfigSchema,
+    reconnect: wsReconnectSchema,
+  },
+  additionalProperties: false,
+} as const
+
+// ── WS Operation-level x-openweb ──────────────────
+
+const wsCorrelationSchema = {
+  type: 'object',
+  required: ['field', 'source'],
+  properties: {
+    field: { type: 'string' },
+    source: { enum: ['echo', 'sequence', 'uuid'] },
+  },
+  additionalProperties: false,
+} as const
+
+export const xOpenWebWsOperationSchema = {
+  type: 'object',
+  required: ['permission', 'pattern'],
+  properties: {
+    permission: permissionSchema,
+    pattern: wsPatternSchema,
+    subscribe_message: wsMessageTemplateSchema,
+    unsubscribe_message: wsMessageTemplateSchema,
+    correlation: wsCorrelationSchema,
+    build: buildMetaSchema,
+  },
+  additionalProperties: false,
+} as const
+
+// ── AsyncAPI 3.0 spec (structural validation) ─────
+
+export const asyncApiSpecSchema = {
+  type: 'object',
+  required: ['asyncapi', 'info'],
+  properties: {
+    asyncapi: { type: 'string', pattern: '^3\\.' },
+    info: {
+      type: 'object',
+      required: ['title', 'version'],
+      properties: {
+        title: { type: 'string' },
+        version: { type: 'string' },
+        'x-openweb': { type: 'object' },
+      },
+    },
+    servers: { type: 'object' },
+    channels: { type: 'object' },
+    operations: { type: 'object' },
+    components: { type: 'object' },
+  },
 } as const
