@@ -10,6 +10,12 @@ import './meta-tag.js'
 import './api-response.js'
 import './sapisidhash.js'
 
+// WS auth primitives — self-register on import
+import './ws-upgrade-header.js'
+import './ws-first-message.js'
+import './ws-url-token.js'
+import './ws-http-handshake.js'
+
 import { OpenWebError } from '../../lib/errors.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../../types/primitives.js'
 import { getResolver } from './registry.js'
@@ -101,3 +107,5 @@ export async function resolveSigning(
 export { registerResolver, getResolver } from './registry.js'
 export type { ResolverFn, ResolverContext, ResolverResult } from './registry.js'
 export type { BrowserHandle, ResolvedInjections } from './types.js'
+export { registerWsResolver, getWsResolver, resolveWsAuth } from './ws-registry.js'
+export type { WsResolverFn, WsResolverContext, WsAuthResult } from './ws-registry.js'
