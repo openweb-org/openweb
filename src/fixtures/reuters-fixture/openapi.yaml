@@ -1,0 +1,541 @@
+openapi: '3.1.0'
+info:
+  title: Reuters
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-03-24T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.reuters.com
+    x-openweb:
+      transport: page
+paths:
+  /:
+    get:
+      operationId: getTopNews
+      summary: Get top news headlines from Reuters homepage
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rt0001
+          signature_id: rt0001s
+          tool_version: 1
+          signals:
+            - fusion_content_cache
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const gc = window.Fusion?.globalContent;
+              if (!gc?.result?.articles) return { items: [] };
+              const articles = gc.result.articles;
+              return {
+                count: articles.length,
+                items: articles.slice(0, 30).map(a => ({
+                  id: a.id,
+                  title: a.title || a.headlines?.basic,
+                  description: a.description?.basic || null,
+                  url: a.canonical_url || null,
+                  publishedAt: a.display_date || a.published_time || null,
+                  updatedAt: a.last_updated_date || null,
+                  kicker: a.kicker?.name || null,
+                  authors: a.authors?.map(au => au.name) || [],
+                  thumbnail: a.thumbnail?.renditions?.original?.url || null,
+                })),
+              };
+            })()
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, items]
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, title]
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        description:
+                          type: [string, 'null']
+                        url:
+                          type: [string, 'null']
+                        publishedAt:
+                          type: [string, 'null']
+                        updatedAt:
+                          type: [string, 'null']
+                        kicker:
+                          type: [string, 'null']
+                        authors:
+                          type: array
+                          items:
+                            type: string
+                        thumbnail:
+                          type: [string, 'null']
+  /site-search/:
+    get:
+      operationId: searchArticles
+      summary: Search Reuters articles by keyword
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rt0002
+          signature_id: rt0002s
+          tool_version: 1
+          signals:
+            - pf_api
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const cc = window.Fusion?.contentCache;
+              if (!cc) return { items: [] };
+              const searchCache = cc['articles-by-search-v2'];
+              if (!searchCache) return { items: [] };
+              const entries = Object.values(searchCache);
+              for (const entry of entries) {
+                const result = entry?.data?.result;
+                if (result?.articles) {
+                  return {
+                    count: result.pagination?.total_size || result.articles.length,
+                    offset: result.pagination?.offset || 0,
+                    items: result.articles.map(a => ({
+                      id: a.id,
+                      title: a.title || a.headlines?.basic,
+                      description: a.description?.basic || null,
+                      url: a.canonical_url || null,
+                      publishedAt: a.display_date || a.published_time || null,
+                      kicker: a.kicker?.name || null,
+                      authors: a.authors?.map(au => au.name) || [],
+                      thumbnail: a.thumbnail?.renditions?.original?.url || null,
+                    })),
+                  };
+                }
+              }
+              return { items: [] };
+            })()
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (e.g. "tesla", "climate change", "fed interest rates").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  count:
+                    type: integer
+                  offset:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, title]
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        description:
+                          type: [string, 'null']
+                        url:
+                          type: [string, 'null']
+                        publishedAt:
+                          type: [string, 'null']
+                        kicker:
+                          type: [string, 'null']
+                        authors:
+                          type: array
+                          items:
+                            type: string
+                        thumbnail:
+                          type: [string, 'null']
+  /{section}/{subsection}/{slug}:
+    get:
+      operationId: getArticle
+      summary: Get full article — title, body paragraphs, authors, date
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rt0003
+          signature_id: rt0003s
+          tool_version: 1
+          signals:
+            - fusion_global_content
+        extraction:
+          type: page_global_data
+          adapter: ./adapters/reuters.ts
+          method: extractArticle
+      parameters:
+        - name: section
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Top-level section (world, business, technology, legal, sustainability).
+        - name: subsection
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Subsection within the section (e.g. "europe", "us", "asia-pacific").
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Article slug (e.g. "denmarks-left-wing-bloc-leads-election-2026-03-24").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, title]
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  description:
+                    type: [string, 'null']
+                  publishedAt:
+                    type: [string, 'null']
+                  updatedAt:
+                    type: [string, 'null']
+                  authors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                  kicker:
+                    type: [string, 'null']
+                  wordCount:
+                    type: [integer, 'null']
+                  readMinutes:
+                    type: [integer, 'null']
+                  body:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        content:
+                          type: [string, 'null']
+                  thumbnail:
+                    type: [string, 'null']
+                  canonicalUrl:
+                    type: [string, 'null']
+  /world/:
+    get:
+      operationId: getWorldNews
+      summary: Get world news headlines
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rt0004
+          signature_id: rt0004s
+          tool_version: 1
+          signals:
+            - fusion_global_content
+        extraction:
+          type: page_global_data
+          adapter: ./adapters/reuters.ts
+          method: extractSectionArticles
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleList'
+  /business/:
+    get:
+      operationId: getBusinessNews
+      summary: Get business news headlines
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rt0005
+          signature_id: rt0005s
+          tool_version: 1
+          signals:
+            - fusion_global_content
+        extraction:
+          type: page_global_data
+          adapter: ./adapters/reuters.ts
+          method: extractSectionArticles
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleList'
+  /technology/:
+    get:
+      operationId: getTechnologyNews
+      summary: Get technology news headlines
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rt0006
+          signature_id: rt0006s
+          tool_version: 1
+          signals:
+            - fusion_global_content
+        extraction:
+          type: page_global_data
+          adapter: ./adapters/reuters.ts
+          method: extractSectionArticles
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleList'
+  /legal/:
+    get:
+      operationId: getLegalNews
+      summary: Get legal news headlines
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rt0007
+          signature_id: rt0007s
+          tool_version: 1
+          signals:
+            - fusion_global_content
+        extraction:
+          type: page_global_data
+          adapter: ./adapters/reuters.ts
+          method: extractSectionArticles
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleList'
+  /markets/:
+    get:
+      operationId: getMarketData
+      summary: Get market overview — indices, commodities, currencies, and bonds
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rt0008
+          signature_id: rt0008s
+          tool_version: 1
+          signals:
+            - fusion_content_cache
+        extraction:
+          type: page_global_data
+          adapter: ./adapters/reuters.ts
+          method: extractMarketData
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  indices:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quote'
+                  commodities:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quote'
+                  currencies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quote'
+                  bonds:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quote'
+  /markets/companies/{ric}/:
+    get:
+      operationId: getCompanyProfile
+      summary: Get company profile — financials, description, sector, officers
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rt0009
+          signature_id: rt0009s
+          tool_version: 1
+          signals:
+            - fusion_global_content
+        extraction:
+          type: page_global_data
+          adapter: ./adapters/reuters.ts
+          method: extractCompanyProfile
+      parameters:
+        - name: ric
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Reuters Instrument Code (e.g. "AAPL.OQ", "MSFT.OQ", "GOOGL.OQ").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ric, name]
+                properties:
+                  ric:
+                    type: string
+                  name:
+                    type: string
+                  ticker:
+                    type: [string, 'null']
+                  ricType:
+                    type: [string, 'null']
+                  about:
+                    type: [string, 'null']
+                  website:
+                    type: [string, 'null']
+                  exchange:
+                    type: [string, 'null']
+                  sector:
+                    type: [string, 'null']
+                  industry:
+                    type: [string, 'null']
+                  employees:
+                    type: [integer, 'null']
+                  officers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        title:
+                          type: string
+  /markets/quote/{ric}/:
+    get:
+      operationId: getQuote
+      summary: Get live quote for any security — price, change, volume, market status
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rt0010
+          signature_id: rt0010s
+          tool_version: 1
+          signals:
+            - fusion_global_content
+        extraction:
+          type: page_global_data
+          adapter: ./adapters/reuters.ts
+          method: extractQuote
+      parameters:
+        - name: ric
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Reuters Instrument Code (e.g. ".SPX", ".DJI", "AAPL.OQ", "EURUSD=X").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+components:
+  schemas:
+    ArticleList:
+      type: object
+      required: [count, items]
+      properties:
+        count:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, title]
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              description:
+                type: [string, 'null']
+              url:
+                type: [string, 'null']
+              publishedAt:
+                type: [string, 'null']
+              kicker:
+                type: [string, 'null']
+              authors:
+                type: array
+                items:
+                  type: string
+              thumbnail:
+                type: [string, 'null']
+    Quote:
+      type: object
+      required: [ric, name]
+      properties:
+        ric:
+          type: string
+          description: Reuters Instrument Code.
+        name:
+          type: string
+        type:
+          type: [string, 'null']
+          description: Security type (Index, Equity, Commodity Future, Currency, Bond).
+        last:
+          type: [number, 'null']
+          description: Last traded price.
+        percentChange:
+          type: [number, 'null']
+          description: Percent change from previous close.
+        currency:
+          type: [string, 'null']
