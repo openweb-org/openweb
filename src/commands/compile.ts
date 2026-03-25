@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 
 import Ajv from 'ajv'
@@ -11,9 +12,15 @@ import { differentiateParameters } from '../compiler/analyzer/differentiate.js'
 import { filterSamples } from '../compiler/analyzer/filter.js'
 import { inferSchema } from '../compiler/analyzer/schema.js'
 import { generatePackage } from '../compiler/generator.js'
+import type { GeneratePackageInput } from '../compiler/generator.js'
 import { cleanupRecordingDir, loadCaptureData, loadRecordedSamples, runScriptedRecording } from '../compiler/recorder.js'
 import { probeOperations, mergeProbeResults } from '../compiler/prober.js'
 import { connectWithRetry } from '../capture/connection.js'
+import { loadWsCapture } from '../compiler/ws-analyzer/ws-load.js'
+import type { WsConnection } from '../compiler/ws-analyzer/ws-load.js'
+import { analyzeWsConnection } from '../compiler/ws-analyzer/ws-cluster.js'
+import { classifyClusters } from '../compiler/ws-analyzer/ws-classify.js'
+import { inferWsSchemas } from '../compiler/ws-analyzer/ws-schema.js'
 import type { AnalyzedOperation, ParameterDescriptor, RecordedRequestSample } from '../compiler/types.js'
 import { fetchWithRedirects } from '../runtime/redirect.js'
 import { validateSSRF } from '../lib/ssrf.js'
@@ -111,6 +118,7 @@ export async function compileSite(
   const recordingDir = await runScriptedRecording(scriptPath)
   let filteredSamples: RecordedRequestSample[] = []
   let classifyResult: ReturnType<typeof classify> | undefined // mutable: probe may override
+  let wsInput: GeneratePackageInput['ws'] | undefined
   const site = siteSlugFromUrl(args.url)
   try {
     const recordedSamples = await loadRecordedSamples(recordingDir)
@@ -121,11 +129,18 @@ export async function compileSite(
     if (captureData.harEntries.length > 0 || captureData.stateSnapshots.length > 0 || captureData.domHtml) {
       classifyResult = classify(captureData)
     }
+
+    // Load WS capture data if present
+    const wsFramesPath = path.join(recordingDir, 'websocket_frames.jsonl')
+    if (existsSync(wsFramesPath)) {
+      wsInput = compileWsFrames(await loadWsCapture(wsFramesPath))
+    }
   } finally {
     await cleanupRecordingDir(recordingDir)
   }
 
-  if (filteredSamples.length === 0 && !classifyResult?.extractions) {
+  const hasWsOps = wsInput && wsInput.operations.length > 0
+  if (filteredSamples.length === 0 && !classifyResult?.extractions && !hasWsOps) {
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
@@ -177,7 +192,7 @@ export async function compileSite(
     })
   }
 
-  if (analyzedOperations.length === 0 && !classifyResult?.extractions) {
+  if (analyzedOperations.length === 0 && !classifyResult?.extractions && !hasWsOps) {
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
@@ -218,20 +233,83 @@ export async function compileSite(
     operations: analyzedOperations,
     outputBaseDir: options.outputBaseDir,
     classify: classifyResult,
+    ws: wsInput,
   })
 
   const verifiedCount = analyzedOperations.filter((operation) => operation.verified).length
+  const wsOpCount = wsInput?.operations.length ?? 0
+  const totalOpCount = analyzedOperations.length + wsOpCount
 
   if (options.emitSummary) {
-    process.stdout.write(
-      `Compiled ${analyzedOperations.length} tool(s), verified ${verifiedCount}/${analyzedOperations.length}. Output: ${outputRoot}\n`,
-    )
+    const parts = [`Compiled ${analyzedOperations.length} HTTP tool(s), verified ${verifiedCount}/${analyzedOperations.length}`]
+    if (wsOpCount > 0) {
+      parts.push(`${wsOpCount} WS operation(s)`)
+    }
+    parts.push(`Output: ${outputRoot}`)
+    process.stdout.write(`${parts.join('. ')}.\n`)
   }
 
   return {
     site,
     outputRoot,
-    operationCount: analyzedOperations.length,
+    operationCount: totalOpCount,
     verifiedCount,
   }
+}
+
+// ── WS compiler pipeline ─────────────────────────────────────
+
+/** Minimum JSON-parseable text frames to compile a WS connection. */
+const MIN_WS_FRAMES = 10
+
+/** Executable WS patterns (heartbeat is control, not an operation). */
+const EXECUTABLE_PATTERNS = new Set(['subscribe', 'publish', 'request_reply', 'stream'])
+
+/**
+ * Run the WS compiler pipeline with confidence gates.
+ *
+ * Gates (all must pass per connection):
+ * 1. ≥ MIN_WS_FRAMES JSON-parseable text frames
+ * 2. Stable discriminator (score > 0 for at least one direction)
+ * 3. At least one executable operation pattern detected
+ *
+ * Returns undefined if no connections pass all gates.
+ */
+function compileWsFrames(
+  connections: WsConnection[],
+): GeneratePackageInput['ws'] | undefined {
+  if (connections.length === 0) return undefined
+
+  // Pick the richest connection that passes confidence gates
+  for (const conn of connections) {
+    // Gate 1: enough JSON frames
+    if (conn.frames.length < MIN_WS_FRAMES) continue
+
+    // Stage 2: cluster + discriminator detection
+    const analysis = analyzeWsConnection(conn)
+
+    // Gate 2: stable discriminator in at least one direction
+    if (!analysis.discriminator.sent && !analysis.discriminator.received) continue
+
+    // Stage 3: classify patterns
+    const classified = classifyClusters(analysis.clusters)
+
+    // Gate 3: at least one executable pattern
+    const executableClusters = classified.filter((c) => EXECUTABLE_PATTERNS.has(c.pattern))
+    if (executableClusters.length === 0) continue
+
+    // Stage 4: schema inference (only on executable clusters)
+    const wsOps = inferWsSchemas(executableClusters)
+
+    return {
+      serverUrl: conn.url,
+      serverExtensions: {
+        transport: 'node',
+        discriminator: analysis.discriminator,
+      },
+      operations: wsOps,
+    }
+  }
+
+  return undefined
 }
