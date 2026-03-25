@@ -21,7 +21,7 @@ export async function listCandidatePages(context: BrowserContext): Promise<Page[
 
       candidates.push(page)
     } catch {
-      // Ignore detached pages and invalid URLs.
+      // intentional: detached pages and about:blank URLs fail URL parse
     }
   }
 

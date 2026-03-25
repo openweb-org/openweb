@@ -50,6 +50,7 @@ export default {
         return typeof (window as Record<string, unknown>).require === 'function'
           && !!(window as Record<string, unknown>).require('WAWebChatCollection' as never)
       } catch {
+        // intentional: WA module not loaded in page context
         return false
       }
     })
@@ -62,6 +63,7 @@ export default {
         const col = req('WAWebChatCollection').ChatCollection as { getModelsArray?: () => unknown[] }
         return (col?.getModelsArray?.()?.length ?? 0) > 0
       } catch {
+        // intentional: WA module not available in page context
         return false
       }
     })

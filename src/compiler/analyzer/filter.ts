@@ -141,7 +141,7 @@ function buildAllowedDomains(options: FilterOptions): string[] {
         domains.push(baseDomain)
       }
     } catch {
-      // invalid URL — skip
+      // intentional: invalid targetUrl from user input — skip domain extraction
     }
   }
 

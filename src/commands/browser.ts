@@ -90,6 +90,7 @@ function isProcessAlive(pid: number): boolean {
     process.kill(pid, 0)
     return true
   } catch {
+    // intentional: process.kill(0) throws if PID doesn't exist
     return false
   }
 }
@@ -99,6 +100,7 @@ async function isCdpReady(port: number): Promise<boolean> {
     const response = await fetch(`http://localhost:${port}/json/version`)
     return response.ok
   } catch {
+    // intentional: connection refused means Chrome not yet ready
     return false
   }
 }
@@ -123,6 +125,7 @@ async function readPid(): Promise<number | null> {
     const pid = Number(raw.trim())
     return Number.isInteger(pid) && pid > 0 ? pid : null
   } catch {
+    // intentional: PID file missing means no managed browser
     return null
   }
 }
@@ -133,6 +136,7 @@ async function readPort(): Promise<number | null> {
     const port = Number(raw.trim())
     return Number.isInteger(port) && port > 0 ? port : null
   } catch {
+    // intentional: port file missing means no managed browser
     return null
   }
 }

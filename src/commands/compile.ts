@@ -87,6 +87,7 @@ async function verifyOperation(operation: Omit<AnalyzedOperation, 'verified'>): 
     const validator = new Ajv({ strict: false }).compile(operation.responseSchema)
     return Boolean(validator(body))
   } catch {
+    // intentional: verification probe failed (network, parse) — treat as unverified
     return false
   }
 }

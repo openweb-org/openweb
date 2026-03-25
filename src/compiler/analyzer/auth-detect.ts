@@ -116,6 +116,7 @@ export function detectLocalStorageJwt(
       try {
         parsed = JSON.parse(rawValue) as unknown
       } catch {
+        // intentional: non-JSON localStorage value — skip
         continue
       }
 
@@ -174,9 +175,9 @@ export function detectExchangeChain(
     try {
       responseData = JSON.parse(tokenEntry.response.content.text) as Record<string, unknown>
     } catch {
+      // intentional: non-JSON token response — skip endpoint
       continue
     }
-
     for (const bearerEntry of bearerEntries) {
       const authHeader = bearerEntry.request.headers.find(h => h.name.toLowerCase() === 'authorization')
       if (!authHeader) continue

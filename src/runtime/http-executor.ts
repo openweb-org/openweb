@@ -130,7 +130,7 @@ export async function executeOperation(
       status = 200
     } finally {
       if (!deps.browser) {
-        browser.close().catch(() => {})
+        browser.close().catch(() => {}) // intentional: cleanup — browser may already be closed
       }
     }
   } else if (opExt?.extraction) {
@@ -164,7 +164,7 @@ export async function executeOperation(
         responseHeaders = { ...result.responseHeaders }
       } finally {
         if (!deps.browser) {
-          browser.close().catch(() => {})
+          browser.close().catch(() => {}) // intentional: cleanup — browser may already be closed
         }
       }
     }
@@ -185,7 +185,7 @@ export async function executeOperation(
       responseHeaders = { ...result.responseHeaders }
     } finally {
       if (!deps.browser) {
-        browser.close().catch(() => {})
+        browser.close().catch(() => {}) // intentional: cleanup — browser may already be closed
       }
     }
   } else if (transport === 'node') {
@@ -237,7 +237,7 @@ export async function executeOperation(
           await writeBrowserCookiesToCache(browser, site, spec, deps.tokenCacheDir)
         } finally {
           if (!deps.browser) {
-            browser.close().catch(() => {})
+            browser.close().catch(() => {}) // intentional: cleanup — browser may already be closed
           }
         }
       }

@@ -18,7 +18,7 @@ import { OpenWebError, toOpenWebError, writeErrorToStderr } from './lib/errors.j
 
 function isJsonObject(s: string): boolean {
   if (!s.trimStart().startsWith('{')) return false
-  try { JSON.parse(s); return true } catch { return false }
+  try { JSON.parse(s); return true } catch { return false } // intentional: JSON validation check
 }
 
 interface ExecOptions {

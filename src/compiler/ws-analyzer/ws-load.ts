@@ -44,6 +44,7 @@ function tryParseJson(payload: string): Record<string, unknown> | null {
     }
     return null
   } catch {
+    // intentional: non-JSON payload — skip frame
     return null
   }
 }

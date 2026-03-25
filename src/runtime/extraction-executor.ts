@@ -43,7 +43,7 @@ async function findPageForTarget(
           return page
         }
       } catch {
-        // Ignore detached pages and invalid URLs.
+        // intentional: detached pages and about:blank URLs fail URL parse
       }
     }
 
@@ -51,7 +51,7 @@ async function findPageForTarget(
       return undefined
     }
   } catch {
-    // Fall through to origin-level matching.
+    // intentional: malformed targetUrl — fall through to origin-level matching
   }
 
   return findPageForOrigin(context, targetUrl)
@@ -66,6 +66,7 @@ function resolvePageUrl(serverUrl: string, extraction: ExtractionPrimitive): str
   try {
     return new URL(pageUrl, serverUrl).toString()
   } catch {
+    // intentional: relative URL resolution failed — use page_url as-is
     return pageUrl
   }
 }

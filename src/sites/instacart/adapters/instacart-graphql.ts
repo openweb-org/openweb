@@ -114,7 +114,7 @@ async function getSearchResults(page: Page, query: string): Promise<unknown[]> {
   page.on('response', handler)
   try {
     const searchUrl = `https://www.instacart.com/store/s?k=${encodeURIComponent(query)}`
-    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {}) // intentional: best-effort navigation
     await page.waitForTimeout(5000)
   } finally {
     page.off('response', handler)
@@ -170,7 +170,7 @@ async function getProductDetail(page: Page, params: Record<string, unknown>): Pr
   page.on('response', handler)
   try {
     const productUrl = `https://www.instacart.com/products/${productId}?retailerSlug=${retailerSlug}`
-    await page.goto(productUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+    await page.goto(productUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {}) // intentional: best-effort navigation
     await page.waitForTimeout(5000)
   } finally {
     page.off('response', handler)
@@ -225,7 +225,7 @@ async function getProductNutrition(page: Page, params: Record<string, unknown>):
   page.on('response', handler)
   try {
     const productUrl = `https://www.instacart.com/products/${productId}?retailerSlug=${retailerSlug}`
-    await page.goto(productUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+    await page.goto(productUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {}) // intentional: best-effort navigation
     await page.waitForTimeout(5000)
   } finally {
     page.off('response', handler)
@@ -327,7 +327,7 @@ async function getStoreCategories(page: Page, params: Record<string, unknown>): 
     page.on('response', handler)
     try {
       const retailerSlug = String(params.retailerSlug ?? 'publix')
-      await page.goto(`https://www.instacart.com/store/${retailerSlug}/storefront`, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+      await page.goto(`https://www.instacart.com/store/${retailerSlug}/storefront`, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {}) // intentional: best-effort navigation
       await page.waitForTimeout(5000)
     } finally {
       page.off('response', handler)

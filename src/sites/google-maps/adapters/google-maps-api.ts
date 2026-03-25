@@ -33,7 +33,7 @@ async function ensureMapsPage(page: Page): Promise<void> {
       window.location.href = 'https://www.google.com/maps'
     })
     await sleep(3000)
-    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {}) // intentional: best-effort wait
   }
 }
 
@@ -51,10 +51,10 @@ async function searchPlaces(page: Page, params: Record<string, unknown>): Promis
     window.location.href = url
   }, searchUrl)
   await sleep(5000)
-  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
+  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {}) // intentional: best-effort wait
 
   // Wait for results to appear in DOM
-  await page.waitForSelector('a.hfpxzc', { timeout: 10000 }).catch(() => {})
+  await page.waitForSelector('a.hfpxzc', { timeout: 10000 }).catch(() => {}) // intentional: best-effort wait
 
   // Extract place data from DOM
   const places = await page.evaluate(() => {
@@ -205,7 +205,7 @@ async function getDirections(page: Page, params: Record<string, unknown>): Promi
     window.location.href = url
   }, dirUrl)
   await sleep(8000)
-  await page.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => {})
+  await page.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => {}) // intentional: best-effort wait
 
   // Extract route data from DOM
   const routes = await page.evaluate(() => {

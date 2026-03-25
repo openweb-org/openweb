@@ -16,6 +16,7 @@ import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
 import type { ExecuteDependencies } from './http-executor.js'
 import type { XOpenWebServer } from '../types/extensions.js'
+import { logger } from '../lib/logger.js'
 
 /** Execute a request using cached cookies instead of browser extraction */
 export async function executeCachedFetch(
@@ -156,7 +157,7 @@ export async function writeBrowserCookiesToCache(
       const pages = context.pages()
       const page = pages.find((p) => {
         try { return new URL(p.url()).hostname.endsWith(origin) || origin.endsWith(new URL(p.url()).hostname) }
-        catch { return false }
+        catch { return false } // intentional: URL parse on detached/blank pages
       })
       if (page) {
         try {
@@ -168,7 +169,7 @@ export async function writeBrowserCookiesToCache(
             }
             return result
           })
-        } catch { /* page may be closed */ }
+        } catch { /* intentional: page may be closed during storage extraction */ }
         try {
           sessionStorage = await page.evaluate(() => {
             const result: Record<string, string> = {}
@@ -178,7 +179,7 @@ export async function writeBrowserCookiesToCache(
             }
             return result
           })
-        } catch { /* page may be closed */ }
+        } catch { /* intentional: page may be closed during storage extraction */ }
       }
     }
 
@@ -227,8 +228,8 @@ export async function writeBrowserCookiesToCache(
       ttlSeconds,
       jwtExp,
     }, baseDir)
-  } catch {
-    // Cache write failure is not critical — continue silently
+  } catch (err) {
+    logger.debug(`token cache write failed for ${site}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
 

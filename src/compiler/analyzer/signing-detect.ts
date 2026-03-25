@@ -12,7 +12,7 @@ export function detectSapisidhash(data: CaptureData): { origin: string } | undef
           const origin = new URL(entry.request.url).origin
           return { origin }
         } catch {
-          // URL parse failed — skip
+          // intentional: malformed URL in HAR entry — skip
         }
       }
     }

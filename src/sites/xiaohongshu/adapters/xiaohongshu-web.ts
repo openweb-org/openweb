@@ -70,7 +70,7 @@ async function getNoteDetail(page: Page, params: Record<string, unknown>): Promi
   const commentPromise = page.waitForResponse(
     (resp) => resp.url().includes('/api/sns/web/v2/comment/page') && resp.status() === 200,
     { timeout: 15000 },
-  ).catch(() => null)
+  ).catch(() => null) // intentional: comment API may not fire within timeout
 
   const tokenParam = xsecToken ? `&xsec_token=${encodeURIComponent(xsecToken)}` : ''
   await page.goto(
@@ -142,7 +142,7 @@ async function getNoteDetail(page: Page, params: Record<string, unknown>): Promi
             : null,
         }))
       }
-    } catch { /* comment parse failed, return note without comments */ }
+    } catch { /* intentional: comment parse failed — return note without comments */ }
   }
 
   return { note: noteData, comments }

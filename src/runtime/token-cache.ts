@@ -72,6 +72,7 @@ export function extractJwtExp(token: string): number | undefined {
     const exp = payload.exp
     return typeof exp === 'number' ? exp : undefined
   } catch {
+    // intentional: not a JWT — return undefined is the expected path
     return undefined
   }
 }
@@ -87,7 +88,7 @@ async function ensureSalt(tokenRoot: string): Promise<Buffer> {
         return await readFile(saltPath)
       }
     } catch {
-      // does not exist, create below
+      // intentional: salt file does not exist — will be created below
     }
     await mkdir(tokenRoot, { recursive: true, mode: 0o700 })
     const salt = randomBytes(SALT_BYTES)
@@ -206,7 +207,7 @@ export async function readTokenCache(site: string, baseDir?: string): Promise<Ca
       // vault.json missing → EMPTY state, return null silently
       if (isFileNotFoundError(err)) return null
       // decrypt failure / corrupt / malformed → clear and return null
-      await clearTokenCacheUnsafe(site, baseDir).catch(() => {})
+      await clearTokenCacheUnsafe(site, baseDir).catch(() => {}) // intentional: best-effort cleanup of corrupt vault
       return null
     }
   })

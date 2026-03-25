@@ -31,7 +31,7 @@ async function interceptApiResponse(
         try {
           const parsed = new URL(url)
           return parsed.pathname === urlPattern
-        } catch { return false }
+        } catch { return false } // intentional: malformed URL in network intercept
       }
       return url.includes(urlPattern)
     },

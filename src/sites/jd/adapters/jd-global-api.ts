@@ -27,7 +27,7 @@ async function ensureJdPage(page: Page): Promise<void> {
 		await sleep(5000);
 		await page
 			.waitForLoadState("networkidle", { timeout: 10000 })
-			.catch(() => {});
+			.catch(() => {}); // intentional: best-effort wait for network idle
 	}
 }
 

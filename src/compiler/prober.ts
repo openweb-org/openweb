@@ -3,6 +3,7 @@ import type { Browser } from 'playwright-core'
 import type { AnalyzedOperation } from './types.js'
 import type { ClassifyResult } from './analyzer/classify.js'
 import { validateSSRF } from '../lib/ssrf.js'
+import { logger } from '../lib/logger.js'
 import { fetchWithRedirects } from '../runtime/redirect.js'
 
 export interface ProbeResult {
@@ -102,7 +103,7 @@ async function probeOne(
               const urlHost = new URL(url).hostname
               const cookieDomain = c.domain.replace(/^\./, '')
               return urlHost === cookieDomain || urlHost.endsWith('.' + cookieDomain)
-            } catch { return false }
+            } catch { return false } // intentional: URL parse failure in cookie filter
           })
           .map((c) => `${c.name}=${c.value}`)
           .join('; ')
@@ -126,8 +127,8 @@ async function probeOne(
           }
         }
       }
-    } catch {
-      // Browser extraction failed — fall through
+    } catch (err) {
+      logger.debug(`browser cookie extraction failed for ${url}: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 

@@ -5,6 +5,7 @@ import { homedir } from 'node:os'
 import { parse } from 'yaml'
 
 import type { PermissionCategory } from '../types/extensions.js'
+import { logger } from './logger.js'
 
 export type Policy = 'allow' | 'prompt' | 'deny'
 
@@ -72,8 +73,13 @@ export function loadPermissions(configPath?: string): PermissionsConfig {
     const parsed = parse(raw) as unknown
     const config = parseConfig(parsed)
     if (config) return config
-  } catch {
-    // File missing or unreadable — use defaults
+    logger.warn(`permissions file ${filePath} has invalid structure — using defaults`)
+  } catch (err) {
+    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+      logger.debug(`permissions file not found: ${filePath}`)
+    } else {
+      logger.warn(`failed to read permissions file ${filePath}: ${err instanceof Error ? err.message : String(err)}`)
+    }
   }
   return DEFAULT_PERMISSIONS
 }

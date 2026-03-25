@@ -63,6 +63,7 @@ async function pathExists(p: string): Promise<boolean> {
     await access(p)
     return true
   } catch {
+    // intentional: existence check — ENOENT is expected
     return false
   }
 }
@@ -98,6 +99,7 @@ export async function getCurrentVersion(site: string): Promise<string | undefine
     validatePathComponent(version, 'version')
     return version
   } catch {
+    // intentional: current version file missing means no active version
     return undefined
   }
 }

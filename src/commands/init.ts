@@ -38,7 +38,7 @@ export async function initCommand(): Promise<void> {
       await access(candidate)
       resolvedSeed = candidate
       break
-    } catch { /* try next */ }
+    } catch { /* intentional: try next candidate directory */ }
   }
 
   if (!resolvedSeed) {
@@ -89,7 +89,7 @@ export async function initCommand(): Promise<void> {
       await rename(tmpDest, dest)
       copied++
     } catch (err) {
-      await rm(tmpDest, { recursive: true, force: true }).catch(() => {})
+      await rm(tmpDest, { recursive: true, force: true }).catch(() => {}) // intentional: best-effort cleanup on copy failure
       throw err
     }
   }

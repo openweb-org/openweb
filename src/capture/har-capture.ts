@@ -1,6 +1,7 @@
 import type { Page, Request, Response } from 'playwright'
 
 import type { HarEntry, HarLog } from './types.js'
+import { logger } from '../lib/logger.js'
 
 // ── Analytics / tracking domains to filter out ──────────────────
 
@@ -114,7 +115,7 @@ export function attachHarCapture(page: Page): HarCapture {
       if (isBlockedDomain(url.hostname) || STATIC_ASSET_RE.test(url.pathname)) return
       pendingRequests.set(req, { startedDateTime: new Date().toISOString(), startTime: Date.now() })
     } catch {
-      // invalid URL — skip
+      // intentional: invalid URL from browser — cannot be an API request
     }
   }
 
@@ -137,7 +138,7 @@ export function attachHarCapture(page: Page): HarCapture {
           const body = await res.body()
           bodyText = body.toString('utf8')
         } catch {
-          // body unavailable (e.g. streamed or aborted)
+          // intentional: body unavailable (streamed, aborted, or redirected)
         }
 
         const requestHeaders = await req.allHeaders()
@@ -162,8 +163,8 @@ export function attachHarCapture(page: Page): HarCapture {
             },
           },
         })
-      } catch {
-        // response processing failed — skip entry
+      } catch (err) {
+        logger.debug(`HAR response processing failed: ${err instanceof Error ? err.message : String(err)}`)
       }
     })()
     pendingResponses.add(task)

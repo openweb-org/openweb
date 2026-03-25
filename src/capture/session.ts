@@ -7,6 +7,7 @@ import { captureDomAndGlobals } from './dom-capture.js'
 import { attachHarCapture, buildHarLog, type HarCapture } from './har-capture.js'
 import { captureStateSnapshot } from './state-capture.js'
 import { attachWsCapture, type WsCapture } from './ws-capture.js'
+import { logger } from '../lib/logger.js'
 
 export interface CaptureSessionOptions {
   readonly cdpEndpoint: string
@@ -113,10 +114,10 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
         try {
           await page.waitForLoadState('domcontentloaded', { timeout: 10_000 })
         } catch {
-          // timeout — take snapshot anyway
+          // intentional: timeout — take snapshot with whatever DOM state is available
         }
         await takeSnapshots(page, context, 'navigation', seq, urlAtEvent)
-      })().catch(() => {})
+      })().catch(() => {}) // intentional: errors handled inside takeSnapshots — prevent unhandled rejection
       pendingSnapshots.add(task)
       void task.then(() => pendingSnapshots.delete(task))
     }
@@ -207,13 +208,13 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
       try {
         await session.detach()
       } catch {
-        /* already detached */
+        // intentional: already detached — safe to ignore
       }
     }
     try {
       browserRef?.disconnect()
     } catch {
-      /* already disconnected */
+      // intentional: already disconnected — safe to ignore
     }
   }
 
@@ -261,8 +262,8 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
               cdpSessions.push(newCdp)
               const newWs = await attachWsCapture(newCdp)
               wsCaptures.push(newWs)
-            } catch {
-              // page may have closed before CDP session could be created
+            } catch (err) {
+              logger.debug(`CDP session for new page failed: ${err instanceof Error ? err.message : String(err)}`)
             }
           })()
         }
@@ -302,7 +303,7 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
           detachAll()
           await writeBundle()
         } catch {
-          /* best effort */
+          // intentional: best-effort bundle write during error recovery
         }
         completionDfd.resolve()
       } else {

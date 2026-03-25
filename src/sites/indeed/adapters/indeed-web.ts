@@ -27,6 +27,7 @@ async function extractNextData(page: Page): Promise<Record<string, unknown> | nu
     try {
       return JSON.parse(el.textContent)
     } catch {
+      // intentional: malformed __NEXT_DATA__ JSON in page context
       return null
     }
   })

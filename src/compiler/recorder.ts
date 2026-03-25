@@ -4,6 +4,7 @@ import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 
 import { OpenWebError } from '../lib/errors.js'
+import { logger } from '../lib/logger.js'
 import type { RecordedRequestSample } from './types.js'
 import type { CaptureData } from './analyzer/classify.js'
 import type { HarEntry as CaptureHarEntry, StateSnapshot } from '../capture/types.js'
@@ -136,6 +137,7 @@ export async function loadRecordedSamples(recordingDir: string): Promise<Recorde
     try {
       responseJson = JSON.parse(responseText)
     } catch {
+      // intentional: non-JSON response body — not an API endpoint
       continue
     }
 
@@ -225,8 +227,8 @@ export async function loadCaptureData(recordingDir: string): Promise<CaptureData
         const raw = await readFile(path.join(snapshotDir, file), 'utf8')
         stateSnapshots.push(JSON.parse(raw) as StateSnapshot)
       }
-    } catch {
-      // No state snapshots — OK for L1 sites
+    } catch (err) {
+      logger.debug(`state snapshot load failed: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
@@ -269,8 +271,8 @@ export async function loadCaptureData(recordingDir: string): Promise<CaptureData
         parts.push('</head><body></body></html>')
         domHtml = parts.join('\n')
       }
-    } catch {
-      // No DOM capture — OK
+    } catch (err) {
+      logger.debug(`DOM capture load failed: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 

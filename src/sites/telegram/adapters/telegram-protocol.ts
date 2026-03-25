@@ -32,9 +32,9 @@ function findGetGlobal(): (() => Record<string, unknown>) | null {
           if (r && r.chats && r.users && r.currentUserId) {
             return (mod as Record<string, unknown>)[key] as () => Record<string, unknown>
           }
-        } catch { /* skip */ }
+        } catch { /* intentional: module function call may throw */ }
       }
-    } catch { /* skip */ }
+    } catch { /* intentional: module require may throw */ }
   }
   return null
 }

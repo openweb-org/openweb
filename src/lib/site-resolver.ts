@@ -4,12 +4,14 @@ import { fileURLToPath } from 'node:url'
 import { access, readdir, readFile } from 'node:fs/promises'
 
 import { OpenWebError } from './errors.js'
+import { logger } from './logger.js'
 
 export async function pathExists(targetPath: string): Promise<boolean> {
   try {
     await access(targetPath)
     return true
   } catch {
+    // intentional: existence check — ENOENT is expected
     return false
   }
 }
@@ -121,8 +123,8 @@ export async function listSites(): Promise<string[]> {
           names.add(entry.name)
         }
       }
-    } catch {
-      // Directory may not exist; ignore.
+    } catch (err) {
+      logger.debug(`site directory listing failed for ${root}: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
