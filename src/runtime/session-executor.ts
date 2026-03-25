@@ -192,7 +192,7 @@ export async function executeSessionHttp(
   }
 
   // 4. Resolve signing
-  if (serverExt?.signing) Object.assign(headers, (await resolveSigning(handle, serverExt.signing, serverUrl)).headers)
+  if (serverExt?.signing) Object.assign(headers, (await resolveSigning(handle, serverExt.signing, serverUrl, deps)).headers)
   if (cookieString) headers.Cookie = cookieString
 
   // 5. Fetch with redirects

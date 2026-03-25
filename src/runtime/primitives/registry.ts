@@ -9,9 +9,9 @@ export interface ResolverResult extends ResolvedInjections {
 export interface ResolverContext {
   readonly handle: BrowserHandle
   readonly serverUrl: string
-  readonly deps?: {
+  readonly deps: {
     readonly fetchImpl?: typeof fetch
-    readonly ssrfValidator?: (url: string) => Promise<void>
+    readonly ssrfValidator: (url: string) => Promise<void>
     readonly authHeaders?: Record<string, string>
     readonly cookieString?: string
   }

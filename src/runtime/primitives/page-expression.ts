@@ -45,6 +45,7 @@ export async function evaluatePageExpression(
     try {
       return new Function(`return ${expr}`)() as unknown
     } catch {
+      // intentional: expression evaluation failed in page context — return undefined
       return undefined
     }
   }, expression)

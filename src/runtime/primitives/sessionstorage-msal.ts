@@ -38,6 +38,7 @@ function parseJson(raw: string | undefined): unknown {
   try {
     return JSON.parse(raw) as unknown
   } catch {
+    // intentional: non-JSON storage value — return undefined
     return undefined
   }
 }

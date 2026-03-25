@@ -25,6 +25,7 @@ export async function resolveSsrNextData(
     try {
       return JSON.parse(raw) as unknown
     } catch {
+      // intentional: malformed __NEXT_DATA__ JSON in page context
       return null
     }
   })

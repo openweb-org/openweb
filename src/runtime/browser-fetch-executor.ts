@@ -148,7 +148,7 @@ export async function executeBrowserFetch(
 
   // Resolve signing
   if (serverExt?.signing) {
-    const signingResult = await resolveSigning(handle, serverExt.signing, serverUrl)
+    const signingResult = await resolveSigning(handle, serverExt.signing, serverUrl, deps)
     Object.assign(headers, signingResult.headers)
   }
 

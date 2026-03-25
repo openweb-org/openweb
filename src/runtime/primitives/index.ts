@@ -28,7 +28,7 @@ interface AuthResult extends ResolvedInjections {
 
 interface PrimitiveDeps {
   readonly fetchImpl?: typeof fetch
-  readonly ssrfValidator?: (url: string) => Promise<void>
+  readonly ssrfValidator: (url: string) => Promise<void>
   readonly authHeaders?: Record<string, string>
   readonly cookieString?: string
 }
@@ -38,7 +38,7 @@ export async function resolveAuth(
   handle: BrowserHandle,
   auth: AuthPrimitive,
   serverUrl: string,
-  deps?: PrimitiveDeps,
+  deps: PrimitiveDeps,
 ): Promise<AuthResult> {
   const resolver = getResolver(auth.type)
   if (!resolver) {
@@ -52,7 +52,7 @@ export async function resolveAuth(
     })
   }
   return resolver(
-    { handle, serverUrl, deps: { fetchImpl: deps?.fetchImpl, ssrfValidator: deps?.ssrfValidator } },
+    { handle, serverUrl, deps: { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator } },
     auth as unknown as Record<string, unknown>,
   )
 }
@@ -62,7 +62,7 @@ export async function resolveCsrf(
   handle: BrowserHandle,
   csrf: CsrfPrimitive,
   serverUrl: string,
-  deps?: PrimitiveDeps,
+  deps: PrimitiveDeps,
 ): Promise<ResolvedInjections> {
   const resolver = getResolver(csrf.type)
   if (!resolver) {
@@ -76,7 +76,7 @@ export async function resolveCsrf(
     })
   }
   return resolver(
-    { handle, serverUrl, deps: { fetchImpl: deps?.fetchImpl, authHeaders: deps?.authHeaders, cookieString: deps?.cookieString } },
+    { handle, serverUrl, deps: { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator, authHeaders: deps.authHeaders, cookieString: deps.cookieString } },
     csrf as unknown as Record<string, unknown>,
   )
 }
@@ -86,6 +86,7 @@ export async function resolveSigning(
   handle: BrowserHandle,
   signing: SigningPrimitive,
   serverUrl: string,
+  deps: PrimitiveDeps,
 ): Promise<ResolvedInjections> {
   const resolver = getResolver(signing.type)
   if (!resolver) {
@@ -99,7 +100,7 @@ export async function resolveSigning(
     })
   }
   return resolver(
-    { handle, serverUrl },
+    { handle, serverUrl, deps: { ssrfValidator: deps.ssrfValidator } },
     signing as unknown as Record<string, unknown>,
   )
 }

@@ -23,7 +23,7 @@ export interface ExchangeChainConfig {
 
 export interface ExchangeChainDeps {
   readonly fetchImpl?: typeof fetch
-  readonly ssrfValidator?: (url: string) => Promise<void>
+  readonly ssrfValidator: (url: string) => Promise<void>
 }
 
 /**
@@ -41,10 +41,9 @@ export async function resolveExchangeChain(
   handle: BrowserHandle,
   config: ExchangeChainConfig,
   _serverUrl: string,
-  deps: ExchangeChainDeps = {},
+  deps: ExchangeChainDeps,
 ): Promise<ResolvedInjections & { queryParams?: Readonly<Record<string, string>> }> {
-  const fetchImpl = deps.fetchImpl ?? fetch
-  const ssrfValidator = deps.ssrfValidator
+  const { fetchImpl = fetch, ssrfValidator } = deps
 
   // Execute steps sequentially, accumulating extracted values
   const extracted = new Map<string, string>()
@@ -55,9 +54,7 @@ export async function resolveExchangeChain(
     const stepUrl = substituteTemplates(step.call, extracted)
 
     // SSRF validation: validate each step URL before fetching
-    if (ssrfValidator) {
-      await ssrfValidator(stepUrl)
-    }
+    await ssrfValidator(stepUrl)
 
     // Only send cookies matching this step's origin (not all origins merged)
     const stepOrigin = new URL(stepUrl).origin
@@ -190,6 +187,6 @@ export async function resolveExchangeChain(
 import { registerResolver } from './registry.js'
 registerResolver('exchange_chain', async (ctx, config) =>
   resolveExchangeChain(ctx.handle, config as unknown as Parameters<typeof resolveExchangeChain>[1], ctx.serverUrl, {
-    fetchImpl: ctx.deps?.fetchImpl,
-    ssrfValidator: ctx.deps?.ssrfValidator,
+    fetchImpl: ctx.deps.fetchImpl,
+    ssrfValidator: ctx.deps.ssrfValidator,
   }))

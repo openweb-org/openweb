@@ -12,6 +12,8 @@ import { resolveScriptJson } from './script-json.js'
 import { resolveWebpackModuleWalk } from './webpack-module-walk.js'
 import type { BrowserHandle } from './types.js'
 
+const noopSsrf = async () => {}
+
 function mockHandle(cookies: Array<{ name: string; value: string }>): BrowserHandle {
   const fullCookies = cookies.map((c) => ({
     ...c,
@@ -362,7 +364,7 @@ describe('resolveExchangeChain', () => {
     const result = await resolveExchangeChain(handle, {
       steps: [{ call: 'https://www.reddit.com/svc/shreddit/token', extract: 'accessToken' }],
       inject: { header: 'Authorization', prefix: 'Bearer ' },
-    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock })
+    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf })
 
     expect(result.headers.Authorization).toBe('Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.test')
   })
@@ -385,7 +387,7 @@ describe('resolveExchangeChain', () => {
     const result = await resolveExchangeChain(handle, {
       steps: [{ call: 'https://example.com/token', extract: 'data.tokens.0.accessToken' }],
       inject: { query: 'access_token' },
-    }, 'https://example.com', { fetchImpl: fetchMock })
+    }, 'https://example.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf })
 
     expect(result.headers).toEqual({})
     expect(result.queryParams).toEqual({ access_token: 'query-token' })
@@ -407,7 +409,7 @@ describe('resolveExchangeChain', () => {
       resolveExchangeChain(handle, {
         steps: [{ call: 'https://www.reddit.com/svc/shreddit/token', extract: 'accessToken' }],
         inject: { header: 'Authorization', prefix: 'Bearer ' },
-      }, 'https://oauth.reddit.com', { fetchImpl: fetchMock }),
+      }, 'https://oauth.reddit.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf }),
     ).rejects.toMatchObject({
       payload: { code: 'AUTH_FAILED', failureClass: 'needs_login' },
     })
@@ -429,7 +431,7 @@ describe('resolveExchangeChain', () => {
       resolveExchangeChain(handle, {
         steps: [{ call: 'https://www.reddit.com/svc/shreddit/token', extract: 'accessToken' }],
         inject: { header: 'Authorization', prefix: 'Bearer ' },
-      }, 'https://oauth.reddit.com', { fetchImpl: fetchMock }),
+      }, 'https://oauth.reddit.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf }),
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED', failureClass: 'retriable' },
     })
@@ -454,7 +456,7 @@ describe('resolveExchangeChain', () => {
       resolveExchangeChain(handle, {
         steps: [{ call: 'https://www.reddit.com/svc/shreddit/token', extract: 'accessToken' }],
         inject: { header: 'Authorization', prefix: 'Bearer ' },
-      }, 'https://oauth.reddit.com', { fetchImpl: fetchMock }),
+      }, 'https://oauth.reddit.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf }),
     ).rejects.toMatchObject({
       payload: { code: 'AUTH_FAILED', failureClass: 'needs_login' },
     })
@@ -479,7 +481,7 @@ describe('resolveExchangeChain', () => {
       resolveExchangeChain(handle, {
         steps: [{ call: 'https://example.com/token', extract: 'accessToken' }],
         inject: { header: 'Authorization' },
-      }, 'https://example.com', { fetchImpl: fetchMock }),
+      }, 'https://example.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf }),
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED', failureClass: 'fatal' },
     })
@@ -508,7 +510,7 @@ describe('resolveExchangeChain', () => {
     await resolveExchangeChain(handle, {
       steps: [{ call: 'https://auth.example.com/token', extract: 'token' }],
       inject: { header: 'Authorization', prefix: 'Bearer ' },
-    }, 'https://api.example.com', { fetchImpl: fetchMock })
+    }, 'https://api.example.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf })
 
     const calledHeaders = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![1].headers as Record<string, string>
     expect(calledHeaders.Cookie).toBe('auth_cookie=auth123')
@@ -566,7 +568,7 @@ describe('resolveExchangeChain', () => {
         },
       ],
       inject: { header: 'X-CSRF-Token' },
-    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock })
+    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf })
 
     expect(result.headers['X-CSRF-Token']).toBe('csrf_abc123')
     // Cookie-only step should NOT make an HTTP request
@@ -595,7 +597,7 @@ describe('resolveExchangeChain', () => {
           },
         ],
         inject: { header: 'Authorization' },
-      }, 'https://example.com', { fetchImpl: fetchMock }),
+      }, 'https://example.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf }),
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED', failureClass: 'needs_login' },
     })
@@ -639,7 +641,7 @@ describe('resolveExchangeChain', () => {
         },
       ],
       inject: { header: 'Authorization', prefix: 'Bearer ' },
-    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock })
+    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf })
 
     expect(result.headers.Authorization).toBe('Bearer final_bearer')
     // Only the second step makes an HTTP request (cookie step skips fetch)
@@ -678,7 +680,7 @@ describe('resolveExchangeChain', () => {
         },
       ],
       inject: { header: 'Authorization', prefix: 'Bearer ' },
-    }, 'https://example.com', { fetchImpl: fetchMock })
+    }, 'https://example.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf })
 
     const secondCall = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[1]!
     const secondUrl = String(secondCall[0])
@@ -711,7 +713,7 @@ describe('resolveApiResponse', () => {
       endpoint: 'https://oauth.reddit.com/api/me.json',
       extract: 'data.modhash',
       inject: { header: 'X-Modhash' },
-    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock })
+    }, 'https://oauth.reddit.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf })
 
     expect(result.headers).toEqual({ 'X-Modhash': 'abc123modhash' })
   })
@@ -737,6 +739,7 @@ describe('resolveApiResponse', () => {
       inject: { header: 'X-CSRF' },
     }, 'https://example.com', {
       fetchImpl: fetchMock,
+      ssrfValidator: noopSsrf,
       authHeaders: { Authorization: 'Bearer test_token' },
     })
 
@@ -762,7 +765,7 @@ describe('resolveApiResponse', () => {
         endpoint: 'https://example.com/csrf',
         extract: 'token',
         inject: { header: 'X-CSRF' },
-      }, 'https://example.com', { fetchImpl: fetchMock }),
+      }, 'https://example.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf }),
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED', failureClass: 'fatal' },
     })
@@ -785,7 +788,7 @@ describe('resolveApiResponse', () => {
         endpoint: 'https://example.com/csrf',
         extract: 'token',
         inject: { header: 'X-CSRF' },
-      }, 'https://example.com', { fetchImpl: fetchMock }),
+      }, 'https://example.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf }),
     ).rejects.toMatchObject({
       payload: { code: 'EXECUTION_FAILED', failureClass: 'retriable' },
     })
