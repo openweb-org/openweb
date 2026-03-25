@@ -6,6 +6,7 @@ import {
   getCurrentVersion,
 } from '../lifecycle/registry.js'
 import { resolveSiteRoot } from '../lib/openapi.js'
+import { OpenWebError } from '../lib/errors.js'
 
 export type RegistryAction = 'list' | 'install' | 'rollback' | 'show'
 
@@ -20,20 +21,32 @@ export async function registryCommand(opts: RegistryCommandOptions): Promise<voi
       return registryList()
     case 'install':
       if (!opts.site) {
-        process.stderr.write('Usage: openweb registry install <site>\n')
-        process.exit(1)
+        throw new OpenWebError({
+          error: 'execution_failed', code: 'INVALID_PARAMS',
+          message: 'Missing site name.',
+          action: 'Usage: openweb registry install <site>',
+          retriable: false, failureClass: 'fatal',
+        })
       }
       return registryInstall(opts.site)
     case 'rollback':
       if (!opts.site) {
-        process.stderr.write('Usage: openweb registry rollback <site>\n')
-        process.exit(1)
+        throw new OpenWebError({
+          error: 'execution_failed', code: 'INVALID_PARAMS',
+          message: 'Missing site name.',
+          action: 'Usage: openweb registry rollback <site>',
+          retriable: false, failureClass: 'fatal',
+        })
       }
       return registryRollback(opts.site)
     case 'show':
       if (!opts.site) {
-        process.stderr.write('Usage: openweb registry show <site>\n')
-        process.exit(1)
+        throw new OpenWebError({
+          error: 'execution_failed', code: 'INVALID_PARAMS',
+          message: 'Missing site name.',
+          action: 'Usage: openweb registry show <site>',
+          retriable: false, failureClass: 'fatal',
+        })
       }
       return registryShow(opts.site)
   }
@@ -60,13 +73,8 @@ async function registryInstall(site: string): Promise<void> {
 }
 
 async function registryRollback(site: string): Promise<void> {
-  try {
-    const version = await rollbackSite(site)
-    process.stdout.write(`Rolled back ${site} to v${version}.\n`)
-  } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
-    process.exit(1)
-  }
+  const version = await rollbackSite(site)
+  process.stdout.write(`Rolled back ${site} to v${version}.\n`)
 }
 
 async function registryShow(site: string): Promise<void> {

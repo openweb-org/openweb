@@ -92,6 +92,10 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
     return
   }
 
-  process.stderr.write('Usage: openweb verify <site> or openweb verify --all\n')
-  process.exit(1)
+  throw new OpenWebError({
+    error: 'execution_failed', code: 'INVALID_PARAMS',
+    message: 'Missing site name or --all flag.',
+    action: 'Usage: openweb verify <site> or openweb verify --all',
+    retriable: false, failureClass: 'fatal',
+  })
 }

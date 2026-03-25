@@ -18,7 +18,7 @@ export async function captureStartCommand(opts: CaptureStartOptions): Promise<vo
   const session = createCaptureSession({
     cdpEndpoint: opts.cdpEndpoint,
     outputDir,
-    onLog: (msg) => console.log(msg),
+    onLog: (msg) => process.stdout.write(`${msg}\n`),
   })
 
   // Write PID file after session creation (not before, to avoid stale PID files)
@@ -26,7 +26,7 @@ export async function captureStartCommand(opts: CaptureStartOptions): Promise<vo
 
   // Graceful shutdown on SIGINT / SIGTERM
   const onSignal = (): void => {
-    console.log('\nstopping capture ...')
+    process.stderr.write('\nstopping capture ...\n')
     session.stop()
   }
   process.on('SIGINT', onSignal)
@@ -59,7 +59,7 @@ export async function captureStopCommand(): Promise<void> {
 
   try {
     process.kill(pid, 'SIGINT')
-    console.log(`Sent stop signal to capture process (PID ${String(pid)}).`)
+    process.stdout.write(`Sent stop signal to capture process (PID ${String(pid)}).\n`)
   } catch (err) {
     await rm(PID_FILE, { force: true })
     const message = err instanceof Error ? err.message : String(err)

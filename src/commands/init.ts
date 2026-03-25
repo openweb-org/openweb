@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url'
 import { realpathSync } from 'node:fs'
 import { cp, mkdir, readdir, access, rename, rm } from 'node:fs/promises'
 
+import { OpenWebError } from '../lib/errors.js'
+
 const SITES_ROOT = path.join(os.homedir(), '.openweb', 'sites')
 
 /** Verify resolved path stays inside canonical SITES_ROOT. Rejects symlink escapes. */
@@ -11,7 +13,12 @@ function safeSitesPath(canonicalRoot: string, siteName: string): string {
   // Build child from already-canonicalized root — no symlink on parent can fool us
   const resolved = path.join(canonicalRoot, siteName)
   if (!resolved.startsWith(canonicalRoot + path.sep)) {
-    throw new Error(`Path escapes sites root: ${resolved}`)
+    throw new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: `Path escapes sites root: ${resolved}`,
+      action: 'Use a valid site name that does not traverse directories.',
+      retriable: false, failureClass: 'fatal',
+    })
   }
   return resolved
 }
@@ -35,8 +42,12 @@ export async function initCommand(): Promise<void> {
   }
 
   if (!resolvedSeed) {
-    console.error(`Seed sites not found (checked ${candidates.join(', ')})`)
-    process.exit(1)
+    throw new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: `Seed sites not found (checked ${candidates.join(', ')})`,
+      action: 'Ensure the package is installed correctly.',
+      retriable: false, failureClass: 'fatal',
+    })
   }
 
   await mkdir(SITES_ROOT, { recursive: true })
@@ -47,8 +58,12 @@ export async function initCommand(): Promise<void> {
   const dirs = entries.filter((e) => e.isDirectory())
 
   if (dirs.length === 0) {
-    console.error(`No site directories found in ${resolvedSeed}`)
-    process.exit(1)
+    throw new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: `No site directories found in ${resolvedSeed}`,
+      action: 'Ensure the seed directory contains site subdirectories.',
+      retriable: false, failureClass: 'fatal',
+    })
   }
 
   let copied = 0
@@ -79,7 +94,7 @@ export async function initCommand(): Promise<void> {
     }
   }
 
-  console.log(`Localized ${copied + skipped} sites to ${SITES_ROOT}`)
-  if (copied > 0) console.log(`  Copied: ${copied}`)
-  if (skipped > 0) console.log(`  Skipped (already exist): ${skipped}`)
+  process.stdout.write(`Localized ${copied + skipped} sites to ${SITES_ROOT}\n`)
+  if (copied > 0) process.stdout.write(`  Copied: ${copied}\n`)
+  if (skipped > 0) process.stdout.write(`  Skipped (already exist): ${skipped}\n`)
 }

@@ -4,6 +4,8 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir, platform, tmpdir } from 'node:os'
 
+import { OpenWebError } from '../lib/errors.js'
+
 const OPENWEB_DIR = join(homedir(), '.openweb')
 const PID_FILE = join(OPENWEB_DIR, 'browser.pid')
 const PORT_FILE = join(OPENWEB_DIR, 'browser.port')
@@ -21,7 +23,12 @@ function getDefaultProfilePath(): string {
   if (os === 'win32') {
     return join(process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'), 'Google', 'Chrome', 'User Data', 'Default')
   }
-  throw new Error(`Unsupported platform: ${os}`)
+  throw new OpenWebError({
+    error: 'execution_failed', code: 'EXECUTION_FAILED',
+    message: `Unsupported platform: ${os}`,
+    action: 'Chrome profile path detection is only supported on macOS, Linux, and Windows.',
+    retriable: false, failureClass: 'fatal',
+  })
 }
 
 function getChromePath(): string {
@@ -35,7 +42,12 @@ function getChromePath(): string {
   if (os === 'win32') {
     return 'chrome.exe'
   }
-  throw new Error(`Unsupported platform: ${os}`)
+  throw new OpenWebError({
+    error: 'execution_failed', code: 'EXECUTION_FAILED',
+    message: `Unsupported platform: ${os}`,
+    action: 'Chrome binary detection is only supported on macOS, Linux, and Windows.',
+    retriable: false, failureClass: 'fatal',
+  })
 }
 
 /** Copy only auth-relevant files from Chrome profile (not cache/history) */
@@ -97,7 +109,12 @@ async function waitForCdp(port: number, timeoutMs = 10_000): Promise<void> {
     if (await isCdpReady(port)) return
     await new Promise((r) => setTimeout(r, 300))
   }
-  throw new Error(`CDP endpoint not ready after ${timeoutMs}ms`)
+  throw new OpenWebError({
+    error: 'execution_failed', code: 'EXECUTION_FAILED',
+    message: `CDP endpoint not ready after ${timeoutMs}ms`,
+    action: 'Ensure Chrome started correctly and the CDP port is accessible.',
+    retriable: true, failureClass: 'retriable',
+  })
 }
 
 async function readPid(): Promise<number | null> {
@@ -177,7 +194,12 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
   // Get and copy profile
   const profilePath = getDefaultProfilePath()
   if (!existsSync(profilePath)) {
-    throw new Error(`Chrome profile not found at ${profilePath}. Is Chrome installed?`)
+    throw new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: `Chrome profile not found at ${profilePath}. Is Chrome installed?`,
+      action: 'Install Chrome or verify the profile directory exists.',
+      retriable: false, failureClass: 'fatal',
+    })
   }
 
   // Use mkdtemp for an unpredictable temp directory
@@ -205,7 +227,12 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
   child.unref()
 
   if (!child.pid) {
-    throw new Error('Failed to start Chrome')
+    throw new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: 'Failed to start Chrome',
+      action: 'Check that Chrome is installed and the binary path is correct.',
+      retriable: true, failureClass: 'retriable',
+    })
   }
 
   // Save PID, port, and temp profile path
@@ -240,7 +267,12 @@ export async function browserStopCommand(): Promise<void> {
 export async function browserRestartCommand(options: { headless?: boolean; port?: number } = {}): Promise<void> {
   const stopped = await killManaged()
   if (!stopped) {
-    throw new Error('Cannot restart: previous Chrome process could not be verified and stopped. Resolve manually first.')
+    throw new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: 'Cannot restart: previous Chrome process could not be verified and stopped. Resolve manually first.',
+      action: 'Kill the existing Chrome process manually, then retry.',
+      retriable: false, failureClass: 'fatal',
+    })
   }
   await cleanTempProfile()
 
@@ -285,7 +317,12 @@ export async function loginCommand(site: string): Promise<void> {
   const url = manifest?.site_url
 
   if (!url) {
-    throw new Error(`No site_url in manifest for ${site}. Cannot determine login URL.`)
+    throw new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: `No site_url in manifest for ${site}. Cannot determine login URL.`,
+      action: 'Add a site_url field to the site manifest.',
+      retriable: false, failureClass: 'fatal',
+    })
   }
 
   // Validate URL scheme — only allow http/https to prevent command injection
@@ -293,10 +330,20 @@ export async function loginCommand(site: string): Promise<void> {
   try {
     parsed = new URL(url)
   } catch {
-    throw new Error(`Invalid URL in manifest for ${site}: ${url}`)
+    throw new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: `Invalid URL in manifest for ${site}: ${url}`,
+      action: 'Fix the site_url in the site manifest.',
+      retriable: false, failureClass: 'fatal',
+    })
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new Error(`Refusing to open non-HTTP URL: ${url}`)
+    throw new OpenWebError({
+      error: 'execution_failed', code: 'EXECUTION_FAILED',
+      message: `Refusing to open non-HTTP URL: ${url}`,
+      action: 'Only http:// and https:// URLs are allowed.',
+      retriable: false, failureClass: 'fatal',
+    })
   }
 
   // Open in default browser using execFile with argv (no shell)
@@ -330,5 +377,5 @@ export async function resolveCdpEndpoint(flagValue?: string): Promise<string> {
   // 2. Use explicit flag
   if (flagValue) return flagValue
 
-  throw new Error('No browser available. Run `openweb browser start` or pass --cdp-endpoint.')
+  throw OpenWebError.needsBrowser()
 }

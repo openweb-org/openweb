@@ -13,10 +13,18 @@ function parseParams(paramsJson: string | undefined): Record<string, unknown> {
   try {
     const parsed = JSON.parse(paramsJson) as unknown
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('Parameters must be a JSON object')
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'INVALID_PARAMS',
+        message: 'Invalid JSON parameters (Parameters must be a JSON object). Expected object string, e.g. {"latitude":52.52}',
+        action: 'Run `openweb <site> <tool>` to inspect parameters.',
+        retriable: false,
+        failureClass: 'fatal',
+      })
     }
     return parsed as Record<string, unknown>
   } catch (error) {
+    if (error instanceof OpenWebError) throw error
     const detail = error instanceof Error ? error.message : String(error)
     throw new OpenWebError({
       error: 'execution_failed',

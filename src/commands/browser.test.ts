@@ -21,7 +21,7 @@ describe('browser command helpers', () => {
 
     // We can't test the private function directly, but we can test resolveCdpEndpoint
     // which exercises the port file reading
-    await expect(mod.resolveCdpEndpoint(undefined)).rejects.toThrow('No browser available')
+    await expect(mod.resolveCdpEndpoint(undefined)).rejects.toThrow('No browser context available')
   })
 
   it('resolveCdpEndpoint uses explicit flag when no managed browser', async () => {
