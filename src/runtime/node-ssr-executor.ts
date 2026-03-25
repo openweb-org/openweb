@@ -5,6 +5,7 @@
  * `transport: node` and no auth/csrf — avoids needing a browser.
  */
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
+import { DEFAULT_USER_AGENT } from '../lib/config.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import { fetchWithRedirects } from './redirect.js'
 import { getValueAtPath } from './value-path.js'
@@ -67,7 +68,7 @@ export async function executeNodeSsr(
     url,
     'GET',
     {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      'User-Agent': DEFAULT_USER_AGENT,
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
     },

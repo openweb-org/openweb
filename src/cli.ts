@@ -13,6 +13,7 @@ import { showCommand } from './commands/show.js'
 import { sitesCommand } from './commands/sites.js'
 import { testCommand } from './commands/test.js'
 import { browserStartCommand, browserStopCommand, browserRestartCommand, browserStatusCommand, loginCommand } from './commands/browser.js'
+import { CDP_PORT, CDP_ENDPOINT } from './lib/config.js'
 import { initCommand } from './commands/init.js'
 import { OpenWebError, toOpenWebError, writeErrorToStderr } from './lib/errors.js'
 
@@ -35,7 +36,7 @@ function parseExecOptions(args: string[]): ExecOptions {
       error: 'execution_failed',
       code: 'INVALID_PARAMS',
       message: '--cdp-endpoint requires a value.',
-      action: 'Example: --cdp-endpoint http://localhost:9222',
+      action: `Example: --cdp-endpoint ${CDP_ENDPOINT}`,
       retriable: false,
       failureClass: 'fatal',
     })
@@ -165,7 +166,7 @@ await yargs(argv)
         .option('script', { type: 'string', describe: 'Playwright script file path' })
         .option('interactive', { type: 'boolean', default: false, describe: 'Use interactive recording mode' })
         .option('probe', { type: 'boolean', default: false, describe: 'Probe operations to validate classify heuristics (requires managed browser)' })
-        .option('cdp-endpoint', { type: 'string', default: 'http://localhost:9222', describe: 'CDP endpoint for --probe' }),
+        .option('cdp-endpoint', { type: 'string', default: CDP_ENDPOINT, describe: 'CDP endpoint for --probe' }),
     async (args) => {
       await withErrorHandling(async () => {
         await compileCommand({
@@ -191,7 +192,7 @@ await yargs(argv)
               .option('cdp-endpoint', {
                 type: 'string',
                 demandOption: true,
-                describe: 'Chrome DevTools Protocol endpoint (e.g. http://localhost:9222)',
+                describe: `Chrome DevTools Protocol endpoint (e.g. ${CDP_ENDPOINT})`,
               })
               .option('output', { type: 'string', describe: 'Output directory (default: ./capture)' }),
           async (args) => {
@@ -270,7 +271,7 @@ await yargs(argv)
           describe: 'Browser action',
         })
         .option('headless', { type: 'boolean', default: false, describe: 'Run headless' })
-        .option('port', { type: 'number', default: 9222, describe: 'CDP port' }),
+        .option('port', { type: 'number', default: Number(CDP_PORT), describe: 'CDP port' }),
     async (args) => {
       await withErrorHandling(async () => {
         const action = String(args.action)

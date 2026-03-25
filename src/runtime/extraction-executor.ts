@@ -95,7 +95,7 @@ export async function executeExtraction(
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: 'No browser context available. Is Chrome open with the site loaded?',
-      action: 'Open Chrome with --remote-debugging-port=9222 and navigate to the site.',
+      action: `Open Chrome with --remote-debugging-port=${process.env.OPENWEB_CDP_PORT ?? '9222'} and navigate to the site.`,
       retriable: true,
       failureClass: 'needs_browser',
     })

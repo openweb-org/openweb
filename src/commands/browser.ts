@@ -5,12 +5,13 @@ import { join } from 'node:path'
 import { homedir, platform, tmpdir } from 'node:os'
 
 import { OpenWebError } from '../lib/errors.js'
+import { CDP_PORT, TIMEOUT } from '../lib/config.js'
 
 const OPENWEB_DIR = join(homedir(), '.openweb')
 const PID_FILE = join(OPENWEB_DIR, 'browser.pid')
 const PORT_FILE = join(OPENWEB_DIR, 'browser.port')
 const PROFILE_DIR_FILE = join(OPENWEB_DIR, 'browser.profile')
-const DEFAULT_PORT = 9222
+const DEFAULT_PORT = Number(CDP_PORT)
 
 function getDefaultProfilePath(): string {
   const os = platform()
@@ -105,7 +106,7 @@ async function isCdpReady(port: number): Promise<boolean> {
   }
 }
 
-async function waitForCdp(port: number, timeoutMs = 10_000): Promise<void> {
+async function waitForCdp(port: number, timeoutMs = TIMEOUT.cdpReady): Promise<void> {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
     if (await isCdpReady(port)) return

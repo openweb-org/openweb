@@ -3,6 +3,7 @@ import type { WsRouter, ClassifiedFrame } from './ws-router.js'
 import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
 import type { WsMessageTemplate } from '../types/ws-primitives.js'
 import { getValueAtPath, setValueAtPath } from './value-path.js'
+import { TIMEOUT } from '../lib/config.js'
 import { randomUUID } from 'node:crypto'
 
 // ── Types ────────────────────────────────────────
@@ -18,7 +19,7 @@ export interface WsStreamHandle {
 }
 
 export interface WsExecutorConfig {
-  /** Timeout for request/reply in ms. Default: 10_000 */
+  /** Timeout for request/reply in ms. Default: TIMEOUT.ws */
   readonly timeoutMs?: number
 }
 
@@ -78,7 +79,7 @@ export function executeWsOperation(
   params: Record<string, unknown>,
   config: WsExecutorConfig = {},
 ): Promise<WsExecuteResult> {
-  const timeoutMs = config.timeoutMs ?? 10_000
+  const timeoutMs = config.timeoutMs ?? TIMEOUT.ws
 
   const template = operation.subscribe_message
   if (!template) {

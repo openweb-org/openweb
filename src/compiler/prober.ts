@@ -3,6 +3,7 @@ import type { Browser } from 'playwright-core'
 import type { AnalyzedOperation } from './types.js'
 import type { ClassifyResult } from './analyzer/classify.js'
 import { validateSSRF } from '../lib/ssrf.js'
+import { TIMEOUT } from '../lib/config.js'
 import { logger } from '../lib/logger.js'
 import { fetchWithRedirects } from '../runtime/redirect.js'
 
@@ -22,8 +23,8 @@ export interface ProbeOptions {
   readonly ssrfValidator?: (url: string) => Promise<void>
 }
 
-const PROBE_TIMEOUT = 5000
-const PROBE_DELAY = 500
+const PROBE_TIMEOUT = TIMEOUT.probe
+const PROBE_DELAY = TIMEOUT.probeDelay
 const MAX_OUTBOUND_REQUESTS = 30
 
 /** Fetch with per-hop SSRF validation, cross-origin header stripping, and timeout */

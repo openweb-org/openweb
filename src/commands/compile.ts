@@ -4,6 +4,7 @@ import path from 'node:path'
 import Ajv from 'ajv'
 
 import { OpenWebError } from '../lib/errors.js'
+import { CDP_ENDPOINT } from '../lib/config.js'
 import { buildQueryUrl } from '../lib/openapi.js'
 import { annotateOperation, annotateParameterDescriptions } from '../compiler/analyzer/annotate.js'
 import { clusterSamples } from '../compiler/analyzer/cluster.js'
@@ -217,7 +218,7 @@ export async function compileSite(
 
   // Probe: validate classify heuristics with real requests (opt-in)
   if (args.probe && classifyResult) {
-    const cdpEndpoint = args.cdpEndpoint ?? 'http://localhost:9222'
+    const cdpEndpoint = args.cdpEndpoint ?? CDP_ENDPOINT
     let browser
     try {
       browser = await connectWithRetry(cdpEndpoint, 1)

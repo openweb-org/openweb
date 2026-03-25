@@ -6,6 +6,7 @@ import { stringify } from 'yaml'
 
 import type { WsOperationSchema } from '../ws-analyzer/ws-schema.js'
 import type { XOpenWebWsServer } from '../../types/ws-extensions.js'
+import { TIMEOUT } from '../../lib/config.js'
 
 // ── Input types ──────────────────────────────────────────────
 
@@ -135,7 +136,7 @@ export async function generateAsyncApi(input: GenerateAsyncApiInput): Promise<vo
       cases: [
         {
           input: {},
-          timeout_ms: 10000,
+          timeout_ms: TIMEOUT.asyncapiDefault,
           assertions,
         },
       ],

@@ -1,4 +1,5 @@
 import { OpenWebError } from '../lib/errors.js'
+import { TIMEOUT } from '../lib/config.js'
 import { loadAsyncApi, type AsyncApiSpec } from '../lib/asyncapi.js'
 import { loadSitePackage, findOperationEntry, type WsOperationEntry } from '../lib/site-package.js'
 import { WsConnectionPool } from './ws-pool.js'
@@ -12,7 +13,7 @@ import type { ExecuteDependencies, ExecuteResult } from './http-executor.js'
 export interface WsExecOptions {
   /** Max messages for stream/subscribe. Default: 1 */
   readonly wsCount?: number
-  /** Timeout in ms. Default: 10_000 */
+  /** Timeout in ms. Default: TIMEOUT.ws */
   readonly wsTimeoutMs?: number
 }
 
@@ -55,7 +56,7 @@ export async function executeWsFromCli(
 
   const pool = new WsConnectionPool()
   const wsCount = deps?.wsCount ?? 1
-  const wsTimeoutMs = deps?.wsTimeoutMs ?? 10_000
+  const wsTimeoutMs = deps?.wsTimeoutMs ?? TIMEOUT.ws
 
   try {
     const session = await openWsSession(site, pkg.asyncapi, params, pool, deps)

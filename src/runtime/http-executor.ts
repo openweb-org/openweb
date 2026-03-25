@@ -32,12 +32,13 @@ import { executeNodeSsr } from './node-ssr-executor.js'
 import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 import { executeCachedFetch, writeBrowserCookiesToCache, readTokenCache, clearTokenCache, withTokenLock } from './cache-manager.js'
 import { logger } from '../lib/logger.js'
+import { CDP_ENDPOINT } from '../lib/config.js'
 import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types/extensions.js'
 
 export interface ExecuteDependencies {
   readonly fetchImpl?: typeof fetch
   readonly ssrfValidator?: (url: string) => Promise<void>
-  /** CDP endpoint for session_http mode. If omitted, defaults to http://localhost:9222 */
+  /** CDP endpoint for session_http mode. If omitted, uses OPENWEB_CDP_PORT env or 9222 */
   readonly cdpEndpoint?: string
   /** Pre-connected browser instance (used in tests to inject mocks) */
   readonly browser?: Browser
@@ -47,7 +48,7 @@ export interface ExecuteDependencies {
   readonly tokenCacheDir?: string
   /** Max WS messages for stream/subscribe (CLI only). Default: 1 */
   readonly wsCount?: number
-  /** WS timeout in ms (CLI only). Default: 10_000 */
+  /** WS timeout in ms (CLI only). Default: TIMEOUT.ws */
   readonly wsTimeoutMs?: number
 }
 
@@ -98,7 +99,7 @@ export async function executeOperation(
   const adapterRef = opExt?.adapter as AdapterRef | undefined
   if (adapterRef) {
     const siteRoot = await resolveSiteRoot(site)
-    const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
+    const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? CDP_ENDPOINT)
     try {
       const adapter = await loadAdapter(siteRoot, adapterRef.name)
       const context = browser.contexts()[0]
@@ -156,7 +157,7 @@ export async function executeOperation(
       body = result.body
       responseHeaders = { ...result.responseHeaders }
     } else {
-      const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
+      const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? CDP_ENDPOINT)
       try {
         const result = await executeExtraction(browser, spec, operationRef.operation)
         status = result.status
@@ -169,7 +170,7 @@ export async function executeOperation(
       }
     }
   } else if (transport === 'page') {
-    const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
+    const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? CDP_ENDPOINT)
     try {
       const result = await executeBrowserFetch(
         browser,
@@ -218,7 +219,7 @@ export async function executeOperation(
         body = cacheResult.body
         responseHeaders = cacheResult.responseHeaders
       } else {
-        const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
+        const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? CDP_ENDPOINT)
         try {
           const result = await executeSessionHttp(
             browser,

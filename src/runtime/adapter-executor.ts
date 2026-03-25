@@ -5,6 +5,7 @@ import path from 'node:path'
 import type { Page } from 'playwright-core'
 
 import { OpenWebError } from '../lib/errors.js'
+import { TIMEOUT } from '../lib/config.js'
 import type { CodeAdapter } from '../types/adapter.js'
 
 const adapterCache = new Map<string, CodeAdapter>()
@@ -109,7 +110,7 @@ export async function executeAdapter(
   let ready = await adapter.init(page)
   if (!ready) {
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(TIMEOUT.adapterRetry)
     ready = await adapter.init(page)
   }
 
