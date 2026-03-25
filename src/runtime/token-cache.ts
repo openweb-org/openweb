@@ -79,19 +79,21 @@ export function extractJwtExp(token: string): number | undefined {
 // --- Salt ---
 
 async function ensureSalt(tokenRoot: string): Promise<Buffer> {
-  const saltPath = join(tokenRoot, '.salt')
-  try {
-    const s = await stat(saltPath)
-    if (s.isFile()) {
-      return await readFile(saltPath)
+  return withLock(`__salt__${tokenRoot}`, async () => {
+    const saltPath = join(tokenRoot, '.salt')
+    try {
+      const s = await stat(saltPath)
+      if (s.isFile()) {
+        return await readFile(saltPath)
+      }
+    } catch {
+      // does not exist, create below
     }
-  } catch {
-    // does not exist, create below
-  }
-  await mkdir(tokenRoot, { recursive: true, mode: 0o700 })
-  const salt = randomBytes(SALT_BYTES)
-  await writeFile(saltPath, salt, { mode: 0o600 })
-  return salt
+    await mkdir(tokenRoot, { recursive: true, mode: 0o700 })
+    const salt = randomBytes(SALT_BYTES)
+    await writeFile(saltPath, salt, { mode: 0o600 })
+    return salt
+  })
 }
 
 // --- Key derivation with per-root cache ---
@@ -148,6 +150,32 @@ function decrypt(envelope: VaultEnvelope, key: Buffer): CachedTokens {
   return JSON.parse(decrypted.toString('utf8')) as CachedTokens
 }
 
+// --- Per-site mutex ---
+
+const locks = new Map<string, Promise<void>>()
+
+async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = locks.get(key) ?? Promise.resolve()
+  let release: () => void
+  const next = new Promise<void>(resolve => { release = resolve })
+  locks.set(key, next)
+  await prev
+  try {
+    return await fn()
+  } finally {
+    release!()
+    if (locks.get(key) === next) locks.delete(key)
+  }
+}
+
+/**
+ * Serialize a block of token cache operations for a site.
+ * Use this in http-executor to wrap the full read→try→fallback→write sequence.
+ */
+export async function withTokenLock<T>(site: string, fn: () => Promise<T>): Promise<T> {
+  return withLock(site, fn)
+}
+
 // --- Public API ---
 
 function tokenRoot(baseDir?: string): string {
@@ -159,27 +187,29 @@ function siteDir(site: string, baseDir?: string): string {
 }
 
 export async function readTokenCache(site: string, baseDir?: string): Promise<CachedTokens | null> {
-  const root = tokenRoot(baseDir)
-  const dir = siteDir(site, baseDir)
-  const vaultPath = join(dir, 'vault.json')
+  return withLock(site, async () => {
+    const root = tokenRoot(baseDir)
+    const dir = siteDir(site, baseDir)
+    const vaultPath = join(dir, 'vault.json')
 
-  try {
-    const raw = await readFile(vaultPath, 'utf8')
-    const envelope = JSON.parse(raw) as VaultEnvelope
-    const key = await deriveKey(root)
-    const tokens = decrypt(envelope, key)
-    if (isExpired(tokens)) {
-      await clearTokenCache(site, baseDir)
+    try {
+      const raw = await readFile(vaultPath, 'utf8')
+      const envelope = JSON.parse(raw) as VaultEnvelope
+      const key = await deriveKey(root)
+      const tokens = decrypt(envelope, key)
+      if (isExpired(tokens)) {
+        await clearTokenCacheUnsafe(site, baseDir)
+        return null
+      }
+      return tokens
+    } catch (err: unknown) {
+      // vault.json missing → EMPTY state, return null silently
+      if (isFileNotFoundError(err)) return null
+      // decrypt failure / corrupt / malformed → clear and return null
+      await clearTokenCacheUnsafe(site, baseDir).catch(() => {})
       return null
     }
-    return tokens
-  } catch (err: unknown) {
-    // vault.json missing → EMPTY state, return null silently
-    if (isFileNotFoundError(err)) return null
-    // decrypt failure / corrupt / malformed → clear and return null
-    await clearTokenCache(site, baseDir).catch(() => {})
-    return null
-  }
+  })
 }
 
 function isFileNotFoundError(err: unknown): boolean {
@@ -187,21 +217,28 @@ function isFileNotFoundError(err: unknown): boolean {
 }
 
 export async function writeTokenCache(site: string, tokens: CachedTokens, baseDir?: string): Promise<void> {
-  const root = tokenRoot(baseDir)
-  const dir = siteDir(site, baseDir)
-  await mkdir(dir, { recursive: true, mode: 0o700 })
+  return withLock(site, async () => {
+    const root = tokenRoot(baseDir)
+    const dir = siteDir(site, baseDir)
+    await mkdir(dir, { recursive: true, mode: 0o700 })
 
-  const key = await deriveKey(root)
-  const envelope = encrypt(tokens, key)
+    const key = await deriveKey(root)
+    const envelope = encrypt(tokens, key)
 
-  const tmpPath = join(dir, 'vault.json.tmp')
-  const vaultPath = join(dir, 'vault.json')
-  await writeFile(tmpPath, JSON.stringify(envelope, null, 2), { mode: 0o600 })
-  await rename(tmpPath, vaultPath)
+    const tmpPath = join(dir, 'vault.json.tmp')
+    const vaultPath = join(dir, 'vault.json')
+    await writeFile(tmpPath, JSON.stringify(envelope, null, 2), { mode: 0o600 })
+    await rename(tmpPath, vaultPath)
+  })
+}
+
+/** Internal clear — caller must hold the lock */
+async function clearTokenCacheUnsafe(site: string, baseDir?: string): Promise<void> {
+  await rm(siteDir(site, baseDir), { recursive: true, force: true })
 }
 
 export async function clearTokenCache(site: string, baseDir?: string): Promise<void> {
-  await rm(siteDir(site, baseDir), { recursive: true, force: true })
+  return withLock(site, () => clearTokenCacheUnsafe(site, baseDir))
 }
 
 export async function clearAllTokenCache(baseDir?: string): Promise<void> {
@@ -211,3 +248,8 @@ export async function clearAllTokenCache(baseDir?: string): Promise<void> {
 }
 
 export { DEFAULT_TTL_SECONDS }
+
+/** Exposed for testing — number of active site locks */
+export function _activeLockCount(): number {
+  return locks.size
+}

@@ -233,4 +233,4 @@ export async function writeBrowserCookiesToCache(
 }
 
 /** Read cached tokens, with re-export for http-executor convenience */
-export { readTokenCache, clearTokenCache } from './token-cache.js'
+export { readTokenCache, clearTokenCache, withTokenLock } from './token-cache.js'

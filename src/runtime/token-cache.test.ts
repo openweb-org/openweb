@@ -10,6 +10,7 @@ import {
   clearTokenCache,
   clearAllTokenCache,
   extractJwtExp,
+  _activeLockCount,
   type CachedTokens,
 } from './token-cache.js'
 
@@ -281,5 +282,87 @@ describe('extractJwtExp', () => {
     const payload = Buffer.from(JSON.stringify({ sub: 'user' })).toString('base64url')
     const token = `${header}.${payload}.signature`
     expect(extractJwtExp(token)).toBeUndefined()
+  })
+})
+
+describe('token cache race condition', () => {
+  const dirs: string[] = []
+
+  afterEach(() => {
+    for (const d of dirs) rmSync(d, { recursive: true, force: true })
+    dirs.length = 0
+  })
+
+  it('concurrent writes to the same site do not corrupt cache', async () => {
+    const dir = makeTempDir()
+    dirs.push(dir)
+
+    const writes = Array.from({ length: 20 }, (_, i) =>
+      writeTokenCache('race-site', sampleTokens({ localStorage: { idx: String(i) } }), dir),
+    )
+    await Promise.all(writes)
+
+    // After all concurrent writes, the cache must be readable (not corrupted)
+    const result = await readTokenCache('race-site', dir)
+    expect(result).not.toBeNull()
+    expect(result!.cookies[0]!.name).toBe('session')
+    // The value should be from one of the 20 writes (last writer wins)
+    const idx = Number(result!.localStorage.idx)
+    expect(idx).toBeGreaterThanOrEqual(0)
+    expect(idx).toBeLessThan(20)
+  })
+
+  it('concurrent reads and writes do not throw or corrupt', async () => {
+    const dir = makeTempDir()
+    dirs.push(dir)
+
+    // Seed the cache
+    await writeTokenCache('rw-site', sampleTokens(), dir)
+
+    const ops: Promise<unknown>[] = []
+    for (let i = 0; i < 10; i++) {
+      ops.push(readTokenCache('rw-site', dir))
+      ops.push(writeTokenCache('rw-site', sampleTokens({ localStorage: { v: String(i) } }), dir))
+    }
+    const results = await Promise.all(ops)
+
+    // All reads should return valid tokens or null (never throw)
+    for (let i = 0; i < results.length; i += 2) {
+      const read = results[i] as CachedTokens | null
+      if (read !== null) {
+        expect(read.cookies[0]!.name).toBe('session')
+      }
+    }
+
+    // Final state should be readable
+    const final = await readTokenCache('rw-site', dir)
+    expect(final).not.toBeNull()
+  })
+
+  it('different sites are not blocked by each other', async () => {
+    const dir = makeTempDir()
+    dirs.push(dir)
+
+    // Concurrent writes to different sites should all succeed independently
+    const sites = ['site-a', 'site-b', 'site-c']
+    const writes = sites.map((s) => writeTokenCache(s, sampleTokens({ localStorage: { site: s } }), dir))
+    await Promise.all(writes)
+
+    for (const s of sites) {
+      const result = await readTokenCache(s, dir)
+      expect(result).not.toBeNull()
+      expect(result!.localStorage.site).toBe(s)
+    }
+  })
+
+  it('locks are cleaned up after operations complete', async () => {
+    const dir = makeTempDir()
+    dirs.push(dir)
+
+    await writeTokenCache('cleanup-site', sampleTokens(), dir)
+    await readTokenCache('cleanup-site', dir)
+
+    // All locks should be released
+    expect(_activeLockCount()).toBe(0)
   })
 })

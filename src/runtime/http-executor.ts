@@ -30,7 +30,8 @@ import { loadAdapter, executeAdapter } from './adapter-executor.js'
 import { executeExtraction } from './extraction-executor.js'
 import { executeNodeSsr } from './node-ssr-executor.js'
 import { derivePermissionFromMethod } from '../lib/permission-derive.js'
-import { executeCachedFetch, writeBrowserCookiesToCache, readTokenCache, clearTokenCache } from './cache-manager.js'
+import { executeCachedFetch, writeBrowserCookiesToCache, readTokenCache, clearTokenCache, withTokenLock } from './cache-manager.js'
+import { logger } from '../lib/logger.js'
 import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types/extensions.js'
 
 export interface ExecuteDependencies {
@@ -70,7 +71,7 @@ export async function executeOperation(
     if (manifest?.quarantined) {
       process.stderr.write(`warning: site ${site} is quarantined — verification failed, results may be unreliable\n`)
     }
-  } catch { /* manifest missing or unreadable — not an error */ }
+  } catch { /* intentional: manifest missing or unreadable — non-blocking check */ }
 
   const spec = await loadOpenApi(site)
   const operationRef = findOperation(spec, operationId)
@@ -193,28 +194,30 @@ export async function executeOperation(
     const needsBrowser = !!(serverExt?.auth || serverExt?.csrf || serverExt?.signing)
 
     if (needsBrowser) {
-      // Token cache: try cached cookies first (avoids browser connection)
-      const cached = await readTokenCache(site, deps.tokenCacheDir)
-      let cacheHit = false
+      // Token cache: serialize read→try→fallback→write per site to prevent race conditions
+      const cacheResult = await withTokenLock(site, async () => {
+        const cached = await readTokenCache(site, deps.tokenCacheDir)
 
-      if (cached && (cached.cookies.length > 0 || Object.keys(cached.localStorage).length > 0)) {
-        try {
-          const result = await executeCachedFetch(spec, operationRef, serverExt, params, cached, deps)
-          status = result.status
-          body = result.body
-          responseHeaders = result.responseHeaders
-          cacheHit = true
-        } catch (err) {
-          // 401/403 means cache is stale — clear and fall through to browser
-          if (err instanceof OpenWebError && err.payload.failureClass === 'needs_login') {
-            await clearTokenCache(site, deps.tokenCacheDir)
-          } else {
-            throw err
+        if (cached && (cached.cookies.length > 0 || Object.keys(cached.localStorage).length > 0)) {
+          try {
+            return await executeCachedFetch(spec, operationRef, serverExt, params, cached, deps)
+          } catch (err) {
+            // 401/403 means cache is stale — clear and fall through to browser
+            if (err instanceof OpenWebError && err.payload.failureClass === 'needs_login') {
+              await clearTokenCache(site, deps.tokenCacheDir)
+            } else {
+              throw err
+            }
           }
         }
-      }
+        return null
+      })
 
-      if (!cacheHit) {
+      if (cacheResult) {
+        status = cacheResult.status
+        body = cacheResult.body
+        responseHeaders = cacheResult.responseHeaders
+      } else {
         const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? 'http://localhost:9222')
         try {
           const result = await executeSessionHttp(
