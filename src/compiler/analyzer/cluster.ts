@@ -1,27 +1,21 @@
 import type { ClusteredEndpoint, RecordedRequestSample } from '../types.js'
 
+function getOrCreate<K, V>(map: Map<K, V>, key: K, factory: () => V): V {
+  let value = map.get(key)
+  if (value === undefined) {
+    value = factory()
+    map.set(key, value)
+  }
+  return value
+}
+
 export function clusterSamples(samples: RecordedRequestSample[]): ClusteredEndpoint[] {
   const groups = new Map<string, Map<string, Map<string, RecordedRequestSample[]>>>()
 
   for (const sample of samples) {
-    if (!groups.has(sample.method)) {
-      groups.set(sample.method, new Map())
-    }
-    const byHost = groups.get(sample.method)
-    if (!byHost) {
-      continue
-    }
-    if (!byHost.has(sample.host)) {
-      byHost.set(sample.host, new Map())
-    }
-    const byPath = byHost.get(sample.host)
-    if (!byPath) {
-      continue
-    }
-    if (!byPath.has(sample.path)) {
-      byPath.set(sample.path, [])
-    }
-    byPath.get(sample.path)?.push(sample)
+    const byHost = getOrCreate(groups, sample.method, () => new Map())
+    const byPath = getOrCreate(byHost, sample.host, () => new Map())
+    getOrCreate(byPath, sample.path, () => []).push(sample)
   }
 
   const clustered: ClusteredEndpoint[] = []

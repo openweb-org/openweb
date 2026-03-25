@@ -59,6 +59,25 @@ export function detectCookieSession(data: CaptureData): boolean {
   return true
 }
 
+/** Recursively traverse an object's string leaves, returning the first match. */
+function traverseObjectForMatch<T>(
+  obj: unknown,
+  matcher: (value: string, path: string) => T | undefined,
+  path = '',
+): T | undefined {
+  if (typeof obj === 'string') {
+    const result = matcher(obj, path)
+    if (result) return result
+  }
+  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+    for (const [key, value] of Object.entries(obj)) {
+      const result = traverseObjectForMatch(value, matcher, path ? `${path}.${key}` : key)
+      if (result) return result
+    }
+  }
+  return undefined
+}
+
 /**
  * Recursively search a parsed object for a string value that appears in
  * one of the Authorization header values from HAR entries.
@@ -68,23 +87,15 @@ function findTokenInObject(
   authValues: string[],
   currentPath = '',
 ): { path: string; prefix: string } | undefined {
-  if (typeof obj === 'string' && obj.length > 20) {
+  return traverseObjectForMatch(obj, (value, path) => {
+    if (value.length <= 20) return undefined
     for (const authValue of authValues) {
-      if (authValue.includes(obj)) {
-        const prefix = authValue.slice(0, authValue.indexOf(obj))
-        return { path: currentPath, prefix }
+      if (authValue.includes(value)) {
+        return { path, prefix: authValue.slice(0, authValue.indexOf(value)) }
       }
     }
-  }
-
-  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-    for (const [key, value] of Object.entries(obj)) {
-      const result = findTokenInObject(value, authValues, currentPath ? `${currentPath}.${key}` : key)
-      if (result) return result
-    }
-  }
-
-  return undefined
+    return undefined
+  }, currentPath)
 }
 
 /**
@@ -137,14 +148,7 @@ export function detectLocalStorageJwt(
 
 /** Recursively search an object for a target string value, returning the dot-path. */
 function findValueInObject(obj: unknown, target: string, path = ''): string | undefined {
-  if (typeof obj === 'string' && obj === target) return path
-  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-    for (const [key, value] of Object.entries(obj)) {
-      const result = findValueInObject(value, target, path ? `${path}.${key}` : key)
-      if (result) return result
-    }
-  }
-  return undefined
+  return traverseObjectForMatch(obj, (value, p) => (value === target ? p : undefined), path)
 }
 
 /**

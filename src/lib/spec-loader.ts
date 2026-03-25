@@ -190,11 +190,11 @@ export function getSchemaTypes(schema: JsonSchema | undefined): string[] {
   return Array.isArray(schema.type) ? schema.type : [schema.type]
 }
 
-export function isObjectSchema(schema: JsonSchema | undefined): boolean {
+export function isObjectSchema(schema: JsonSchema | undefined): schema is JsonSchema {
   return getSchemaTypes(schema).includes('object')
 }
 
-export function isArraySchema(schema: JsonSchema | undefined): boolean {
+export function isArraySchema(schema: JsonSchema | undefined): schema is JsonSchema {
   return getSchemaTypes(schema).includes('array')
 }
 

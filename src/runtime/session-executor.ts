@@ -1,5 +1,6 @@
 import type { Browser, BrowserContext, Page } from 'playwright-core'
 
+import { formatCookieString } from '../lib/cookies.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { getRequestBodyParameters, validateParams, type OpenApiOperation, type OpenApiSpec } from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
@@ -7,7 +8,7 @@ import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { parseResponseBody } from '../lib/response-parser.js'
 import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 import type { BrowserHandle } from './primitives/types.js'
-import { resolveAllParameters, substitutePath, buildHeaderParams, buildJsonRequestBody } from './request-builder.js'
+import { resolveAllParameters, substitutePath, buildHeaderParams, buildJsonRequestBody, buildTargetUrl } from './request-builder.js'
 import { getServerXOpenWeb } from './operation-context.js'
 import type { ExecutorResult } from './executor-result.js'
 import { fetchWithRedirects } from './redirect.js'
@@ -136,17 +137,7 @@ export async function executeSessionHttp(
     { ...params, ...authResult?.queryParams },
   )
   const resolvedPath = substitutePath(operationPath, allParams, inputParams)
-  const baseUrl = new URL(serverUrl)
-  const target = new URL(baseUrl.pathname.replace(/\/$/, '') + resolvedPath, baseUrl.origin)
-  for (const param of allParams.filter((p) => p.in === 'query')) {
-    const value = inputParams[param.name]
-    if (value === undefined || value === null) continue
-    if (Array.isArray(value)) {
-      for (const item of value) target.searchParams.append(param.name, String(item))
-    } else {
-      target.searchParams.set(param.name, String(value))
-    }
-  }
+  const target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams)
 
   const upperMethod = method.toUpperCase()
   let jsonBody: string | undefined
@@ -156,7 +147,7 @@ export async function executeSessionHttp(
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    Referer: baseUrl.origin + '/',
+    Referer: target.origin + '/',
     ...buildHeaderParams(allParams, inputParams),
   }
   if (jsonBody) headers['Content-Type'] = 'application/json'
@@ -173,7 +164,7 @@ export async function executeSessionHttp(
   // D-14: node transport always sends browser cookies
   if (!cookieString) {
     const browserCookies = await context.cookies(serverUrl)
-    if (browserCookies.length > 0) cookieString = browserCookies.map((c) => `${c.name}=${c.value}`).join('; ')
+    if (browserCookies.length > 0) cookieString = formatCookieString(browserCookies)
   }
 
   // 3. Resolve CSRF

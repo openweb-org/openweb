@@ -6,7 +6,7 @@ import { stringify } from 'yaml'
 
 import type { AnalyzedOperation } from '../types.js'
 import type { ClassifyResult, ExtractionSignal } from '../analyzer/classify.js'
-import type { JsonSchema } from '../../lib/openapi.js'
+import { isObjectSchema, type JsonSchema } from '../../lib/openapi.js'
 import { derivePermissionFromMethod } from '../../lib/permission-derive.js'
 
 export interface GenerateOpenApiInput {
@@ -59,12 +59,12 @@ function hasRequiredParameter(operation: AnalyzedOperation, name: string): boole
   return operation.parameters.some((parameter) => parameter.name === name && parameter.required)
 }
 
-function isObjectSchema(schema: JsonSchema | undefined): schema is JsonSchema & { properties: Record<string, JsonSchema> } {
-  return Boolean(schema?.type === 'object' && schema.properties)
+function isObjectSchemaWithProperties(schema: JsonSchema | undefined): schema is JsonSchema & { properties: Record<string, JsonSchema> } {
+  return isObjectSchema(schema) && schema.properties !== undefined
 }
 
 function responseContainsResultsLatLon(schema: JsonSchema): boolean {
-  if (!isObjectSchema(schema)) {
+  if (!isObjectSchemaWithProperties(schema)) {
     return false
   }
 
@@ -72,7 +72,7 @@ function responseContainsResultsLatLon(schema: JsonSchema): boolean {
   if (!results || results.type !== 'array' || !results.items) {
     return false
   }
-  if (!isObjectSchema(results.items)) {
+  if (!isObjectSchemaWithProperties(results.items)) {
     return false
   }
 

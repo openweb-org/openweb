@@ -1,3 +1,4 @@
+import { formatCookieString } from '../../lib/cookies.js'
 import { OpenWebError, getHttpFailure } from '../../lib/errors.js'
 import { fetchWithRedirects } from '../redirect.js'
 import type { BrowserHandle, ResolvedInjections } from './types.js'
@@ -48,7 +49,7 @@ export async function resolveApiResponse(
     // Get cookies from browser context
     const cookies = await handle.context.cookies(config.endpoint)
     if (cookies.length > 0) {
-      headers.Cookie = cookies.map(c => `${c.name}=${c.value}`).join('; ')
+      headers.Cookie = formatCookieString(cookies)
     }
   }
 

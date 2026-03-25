@@ -11,7 +11,7 @@ import {
   type SessionHttpDependencies,
 } from './session-executor.js'
 import { getServerXOpenWeb } from './operation-context.js'
-import { buildJsonRequestBody, resolveAllParameters, substitutePath, buildHeaderParams } from './request-builder.js'
+import { buildJsonRequestBody, resolveAllParameters, substitutePath, buildHeaderParams, buildTargetUrl } from './request-builder.js'
 import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
@@ -78,21 +78,7 @@ export async function executeBrowserFetch(
   const headerParams = buildHeaderParams(allParams, inputParams)
 
   // Build URL
-  const baseUrl = new URL(serverUrl)
-  const fullPath = baseUrl.pathname.replace(/\/$/, '') + resolvedPath
-  const target = new URL(fullPath, baseUrl.origin)
-  const queryParams = allParams.filter((p) => p.in === 'query')
-  for (const param of queryParams) {
-    const value = inputParams[param.name]
-    if (value === undefined || value === null) continue
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        target.searchParams.append(param.name, String(item))
-      }
-    } else {
-      target.searchParams.set(param.name, String(value))
-    }
-  }
+  const target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams)
 
   // Build request body
   let jsonBody: string | undefined

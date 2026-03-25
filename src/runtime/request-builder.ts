@@ -127,3 +127,24 @@ export function resolveAllParameters(spec: OpenApiSpec, operation: OpenApiOperat
     return [resolved as OpenApiParameter]
   })
 }
+
+/** Build a URL from server base, resolved path, and query parameters. */
+export function buildTargetUrl(
+  serverUrl: string,
+  resolvedPath: string,
+  allParams: OpenApiParameter[],
+  inputParams: Record<string, unknown>,
+): URL {
+  const baseUrl = new URL(serverUrl)
+  const target = new URL(baseUrl.pathname.replace(/\/$/, '') + resolvedPath, baseUrl.origin)
+  for (const param of allParams.filter((p) => p.in === 'query')) {
+    const value = inputParams[param.name]
+    if (value === undefined || value === null) continue
+    if (Array.isArray(value)) {
+      for (const item of value) target.searchParams.append(param.name, String(item))
+    } else {
+      target.searchParams.set(param.name, String(value))
+    }
+  }
+  return target
+}

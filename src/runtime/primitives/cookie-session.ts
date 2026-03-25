@@ -1,3 +1,4 @@
+import { formatCookieString } from '../../lib/cookies.js'
 import type { BrowserHandle, ResolvedInjections } from './types.js'
 
 /**
@@ -10,7 +11,7 @@ export async function resolveCookieSession(handle: BrowserHandle, serverUrl: str
     return { headers: {} }
   }
 
-  const cookieString = cookies.map((c) => `${c.name}=${c.value}`).join('; ')
+  const cookieString = formatCookieString(cookies)
   return { headers: {}, cookieString }
 }
 
