@@ -43,7 +43,7 @@ const exchangeStepSchema = {
   oneOf: [exchangeCookieStepSchema, exchangeHttpStepSchema],
 } as const
 
-// ── Auth (7 variants) ──────────────────────────────
+// ── Auth (6 variants) ──────────────────────────────
 
 export const authPrimitiveSchema = {
   oneOf: [
@@ -377,5 +377,5 @@ export const wsAuthConfigSchema = {
 // ── WS Pattern ─────────────────────────────────────
 
 export const wsPatternSchema = {
-  enum: ['subscribe', 'publish', 'request_reply', 'stream'],
+  enum: ['heartbeat', 'subscribe', 'publish', 'request_reply', 'stream'],
 } as const

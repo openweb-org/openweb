@@ -111,7 +111,7 @@ export const manifestSchema = {
     },
     stats: {
       type: 'object',
-      required: ['operation_count', 'l1_count', 'l2_count', 'l3_count'],
+      required: ['operation_count', 'l1_count', 'l2_count', 'l3_count', 'ws_count'],
       properties: {
         operation_count: { type: 'integer', minimum: 0 },
         l1_count: { type: 'integer', minimum: 0 },

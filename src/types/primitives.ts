@@ -54,7 +54,6 @@ export type AuthPrimitive =
       readonly steps: readonly ExchangeStep[]
       readonly inject: Inject
     }
-  | { readonly type: 'fallback'; readonly strategies: readonly AuthPrimitive[] }
 
 // ── CSRF ────────────────────────────────────────────
 export type CsrfPrimitive =

@@ -11,7 +11,8 @@
     "operation_count": 3,
     "l1_count": 1,
     "l2_count": 2,
-    "l3_count": 0
+    "l3_count": 0,
+    "ws_count": 0
   },
   "last_verified": "2026-03-23T21:35:50.542Z",
   "quarantined": false,

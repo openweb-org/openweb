@@ -14,7 +14,8 @@
     "operation_count": 3,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 3
+    "l3_count": 3,
+    "ws_count": 0
   },
   "last_verified": "2026-03-23T23:40:38.262Z",
   "fingerprint": {
