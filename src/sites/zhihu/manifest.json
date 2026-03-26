@@ -11,20 +11,24 @@
     "searchContent → getSimilarQuestions": "searchContent returns question IDs used by getSimilarQuestions",
     "getUserProfile → getUserAnswers": "getUserProfile returns url_token used by getUserAnswers",
     "getUserProfile → getUserActivities": "getUserProfile returns url_token used by getUserActivities",
+    "getUserProfile → followUser": "getUserProfile returns url_token used by followUser",
     "getTopicIntro → getTopicFeed": "getTopicIntro confirms topic_id used by getTopicFeed",
-    "getTopicIntro → getTopicChildren": "getTopicIntro confirms topic_id used by getTopicChildren"
+    "getTopicIntro → getTopicChildren": "getTopicIntro confirms topic_id used by getTopicChildren",
+    "getTopicIntro → followTopic": "getTopicIntro confirms topic_id used by followTopic",
+    "searchContent → upvoteAnswer": "searchContent returns answer IDs used by upvoteAnswer",
+    "searchContent → followQuestion": "searchContent returns question IDs used by followQuestion"
   },
   "stats": {
-    "operation_count": 10,
+    "operation_count": 14,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 10,
+    "l3_count": 14,
     "ws_count": 0
   },
   "last_verified": "2026-03-24T17:20:00.000Z",
   "quarantined": true,
   "fingerprint": {
-    "response_shape_hash": "searchContent:pending,getUserProfile:pending,getUserAnswers:pending,getHotSearch:pending,getTopicIntro:pending,getTopicFeed:pending,getSimilarQuestions:pending,getRecommendFeed:pending,getUserActivities:pending,getTopicChildren:pending",
+    "response_shape_hash": "searchContent:pending,getUserProfile:pending,getUserAnswers:pending,getHotSearch:pending,getTopicIntro:pending,getTopicFeed:pending,getSimilarQuestions:pending,getRecommendFeed:pending,getUserActivities:pending,getTopicChildren:pending,upvoteAnswer:pending,followUser:pending,followQuestion:pending,followTopic:pending",
     "last_validated": "2026-03-24T17:20:00.000Z"
   }
 }

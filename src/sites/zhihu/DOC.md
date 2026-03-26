@@ -18,6 +18,10 @@ Zhihu is China's largest Q&A platform (comparable to Quora). Users ask questions
 | getRecommendFeed | Get homepage feed | GET | /api/v3/feed/topstory/recommend | Personalized recommendation feed |
 | getUserActivities | Get user's recent activity | GET | /api/v3/moments/{url_token}/activities | Answers, upvotes, follows timeline |
 | getTopicChildren | Get sub-topics | GET | /api/v3/topics/{topic_id}/children | Child topics under a parent |
+| upvoteAnswer | Upvote an answer | POST | /api/v4/answers/{answer_id}/voters | ✅ SAFE — reversible (send "neutral" to undo) |
+| followUser | Follow a user | POST | /api/v4/members/{url_token}/followers | ✅ SAFE — reversible (DELETE to unfollow) |
+| followQuestion | Follow a question | POST | /api/v4/questions/{question_id}/followers | ✅ SAFE — reversible (DELETE to unfollow) |
+| followTopic | Follow a topic | POST | /api/v4/topics/{topic_id}/followers | ✅ SAFE — reversible (DELETE to unfollow) |
 
 ## API Architecture
 

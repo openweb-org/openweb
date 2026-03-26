@@ -5915,3 +5915,162 @@ paths:
                 required:
                   - paging
                   - data
+  /api/v4/answers/{answer_id}/voters:
+    post:
+      operationId: upvoteAnswer
+      summary: Upvote an answer — toggleable, sends "up" or "neutral" to vote/unvote
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: zhihu0011
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: zhihu-web
+          operation: upvoteAnswer
+      parameters:
+        - name: answer_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Answer ID to upvote (numeric string).
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - up
+              - neutral
+            default: up
+          description: "Vote type: 'up' to upvote, 'neutral' to cancel vote."
+      responses:
+        "200":
+          description: Vote registered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  voting:
+                    type: integer
+                    description: "Current vote state: 1=upvoted, 0=neutral, -1=downvoted."
+                  voteup_count:
+                    type: integer
+                    description: Total upvote count after this action.
+                required:
+                  - success
+                  - voting
+                  - voteup_count
+  /api/v4/members/{url_token}/followers:
+    post:
+      operationId: followUser
+      summary: Follow a Zhihu user — returns updated follower count
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: zhihu0012
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: zhihu-web
+          operation: followUser
+      parameters:
+        - name: url_token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "User's url_token (e.g. 'excited-vczh')."
+      responses:
+        "200":
+          description: User followed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  follower_count:
+                    type: integer
+                    description: User's follower count after following.
+                required:
+                  - follower_count
+  /api/v4/questions/{question_id}/followers:
+    post:
+      operationId: followQuestion
+      summary: Follow a question — get notified of new answers
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: zhihu0013
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: zhihu-web
+          operation: followQuestion
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Question ID to follow.
+      responses:
+        "200":
+          description: Question followed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  is_following:
+                    type: boolean
+                required:
+                  - is_following
+  /api/v4/topics/{topic_id}/followers:
+    post:
+      operationId: followTopic
+      summary: Follow a topic — adds it to your followed topics list
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: zhihu0014
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        adapter:
+          name: zhihu-web
+          operation: followTopic
+      parameters:
+        - name: topic_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Topic ID to follow.
+      responses:
+        "200":
+          description: Topic followed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success

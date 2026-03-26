@@ -29,6 +29,26 @@ async function fetchApi(
   )
 }
 
+async function postApi(
+  page: Page,
+  apiPath: string,
+  body: Record<string, unknown> = {},
+): Promise<unknown> {
+  return page.evaluate(
+    async ({ path, body, base }) => {
+      const resp = await fetch(new URL(path, base).toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      })
+      if (resp.status === 204) return { success: true }
+      return resp.json()
+    },
+    { path: apiPath, body, base: SITE_BASE },
+  )
+}
+
 function resolvePath(template: string, params: Record<string, unknown>): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => {
     const val = params[key]
@@ -123,6 +143,33 @@ async function getTopicChildren(page: Page, params: Record<string, unknown>): Pr
   return fetchApi(page, `/api/v3/topics/${topicId}/children`)
 }
 
+/* ---------- write operation handlers ---------- */
+
+async function upvoteAnswer(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const answerId = String(params.answer_id ?? '')
+  if (!answerId) throw OpenWebError.missingParam('answer_id')
+  const type = String(params.type ?? 'up')
+  return postApi(page, `/api/v4/answers/${encodeURIComponent(answerId)}/voters`, { type })
+}
+
+async function followUser(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const urlToken = String(params.url_token ?? '')
+  if (!urlToken) throw OpenWebError.missingParam('url_token')
+  return postApi(page, `/api/v4/members/${encodeURIComponent(urlToken)}/followers`)
+}
+
+async function followQuestion(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const questionId = String(params.question_id ?? '')
+  if (!questionId) throw OpenWebError.missingParam('question_id')
+  return postApi(page, `/api/v4/questions/${encodeURIComponent(questionId)}/followers`)
+}
+
+async function followTopic(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const topicId = String(params.topic_id ?? '')
+  if (!topicId) throw OpenWebError.missingParam('topic_id')
+  return postApi(page, `/api/v4/topics/${encodeURIComponent(topicId)}/followers`)
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
@@ -136,6 +183,10 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getRecommendFeed,
   getUserActivities,
   getTopicChildren,
+  upvoteAnswer,
+  followUser,
+  followQuestion,
+  followTopic,
 }
 
 const adapter: CodeAdapter = {
