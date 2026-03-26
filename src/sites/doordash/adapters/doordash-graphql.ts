@@ -65,6 +65,31 @@ const STORE_MENU_QUERY = `query storepageFeed($storeId: ID!, $menuId: ID, $fulfi
   }
 }`
 
+const ADD_CART_ITEM_MUTATION = `mutation addCartItem($addCartItemInput: AddCartItemInput!, $fulfillmentContext: FulfillmentContextInput!, $cartContext: CartContextInput, $returnCartFromOrderService: Boolean) {
+  addCartItemV2(
+    addCartItemInput: $addCartItemInput
+    fulfillmentContext: $fulfillmentContext
+    cartContext: $cartContext
+    returnCartFromOrderService: $returnCartFromOrderService
+  ) {
+    id
+    subtotal
+    currencyCode
+    fulfillmentType
+    restaurant { id name slug }
+    orders {
+      id
+      orderItems {
+        id
+        quantity
+        singlePrice
+        priceDisplayString
+        item { id name imageUrl price }
+      }
+    }
+  }
+}`
+
 const ORDER_HISTORY_QUERY = `query getConsumerOrdersWithDetails($offset: Int!, $limit: Int!, $includeCancelled: Boolean) {
   getConsumerOrdersWithDetails(offset: $offset, limit: $limit, includeCancelled: $includeCancelled) {
     id orderUuid createdAt submittedAt cancelledAt fulfilledAt
@@ -180,17 +205,76 @@ async function getOrderHistory(page: Page, params: Record<string, unknown>): Pro
   return { orders: data.getConsumerOrdersWithDetails }
 }
 
+async function addToCart(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const storeId = String(params.storeId ?? params.store_id ?? '')
+  const itemId = String(params.itemId ?? params.item_id ?? '')
+  if (!storeId) throw OpenWebError.missingParam('storeId')
+  if (!itemId) throw OpenWebError.missingParam('itemId')
+
+  const quantity = Number(params.quantity ?? 1)
+  const specialInstructions = String(params.specialInstructions ?? '')
+
+  const variables = {
+    addCartItemInput: {
+      storeId,
+      itemId,
+      quantity,
+      specialInstructions,
+      substitutionPreference: 'substitute',
+      cartId: '',
+      isBundle: false,
+      bundleType: 'BUNDLE_TYPE_UNSPECIFIED',
+    },
+    fulfillmentContext: {
+      shouldUpdateFulfillment: false,
+      fulfillmentType: 'Delivery',
+    },
+    cartContext: { isBundle: false },
+    returnCartFromOrderService: false,
+  }
+
+  const data = (await graphqlFetch(page, 'addCartItem', ADD_CART_ITEM_MUTATION, variables)) as Record<string, unknown>
+  const cart = data.addCartItemV2 as Record<string, unknown> | undefined
+
+  // Extract cart items from response
+  const orders = (cart?.orders ?? []) as Array<Record<string, unknown>>
+  const items: unknown[] = []
+  for (const order of orders) {
+    for (const oi of (order.orderItems ?? []) as Array<Record<string, unknown>>) {
+      const item = oi.item as Record<string, unknown> | undefined
+      items.push({
+        id: item?.id,
+        name: item?.name,
+        quantity: oi.quantity,
+        price: oi.priceDisplayString,
+      })
+    }
+  }
+
+  const restaurant = cart?.restaurant as Record<string, string> | undefined
+
+  return {
+    success: !!cart?.id,
+    cartId: cart?.id,
+    subtotal: cart?.subtotal,
+    currencyCode: cart?.currencyCode,
+    restaurant: restaurant ? { id: restaurant.id, name: restaurant.name } : undefined,
+    items,
+  }
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
   searchRestaurants,
   getRestaurantMenu,
   getOrderHistory,
+  addToCart,
 }
 
 const adapter: CodeAdapter = {
   name: 'doordash-graphql',
-  description: 'DoorDash GraphQL API — restaurant search, menus, order history',
+  description: 'DoorDash GraphQL API — restaurant search, menus, order history, cart',
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()

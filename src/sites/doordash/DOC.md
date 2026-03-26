@@ -9,6 +9,7 @@ Food delivery marketplace. Archetype: Food Delivery / Marketplace.
 | searchRestaurants | search restaurants by keyword | POST /graphql/autocompleteFacetFeed | returns name, categories, image, storeId; includes grocery item suggestions (null categories) |
 | getRestaurantMenu | get store detail + full menu | POST /graphql/storepageFeed | storeHeader (name, rating, address, delivery time), menuBook (categories), itemLists (items with name/price/description/image) |
 | getOrderHistory | get past orders with details | POST /graphql/getConsumerOrdersWithDetails | order items, totals, store info, timestamps; requires auth |
+| addToCart | add menu item to cart | POST /graphql/addCartItem | mutation addCartItemV2; requires storeId + itemId from getRestaurantMenu; returns cartId, subtotal, items; NEVER checkout |
 
 ## API Architecture
 - **GraphQL** — all API traffic is POST with JSON body `{ operationName, variables, query }`
@@ -24,6 +25,7 @@ Food delivery marketplace. Archetype: Food Delivery / Marketplace.
 - Auth cookies: `dd_session_id`, `ddweb_token`
 - Additional cookies: `csrf_token`, `dd_cx_logged_in`, `authState`
 - No CSRF header injection needed for read operations (GraphQL POST works with just cookies)
+- Write operations (addToCart) also work with cookies only — no additional CSRF token required
 
 ## Transport
 - **page** (L3 adapter) — adapter uses `page.evaluate(fetch(..., { credentials: 'include' }))` to leverage browser cookies

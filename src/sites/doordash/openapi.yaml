@@ -285,6 +285,85 @@ paths:
                               type: integer
                             currency:
                               type: string
+  /internal/addToCart:
+    post:
+      operationId: addToCart
+      summary: Add a menu item to DoorDash cart — requires item ID from getRestaurantMenu
+      x-openweb:
+        permission: write
+        build:
+          stable_id: dd0004
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: doordash-graphql
+          operation: addToCart
+      parameters:
+        - name: storeId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: DoorDash store ID (from searchRestaurants or getRestaurantMenu).
+        - name: itemId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Menu item ID (from getRestaurantMenu items[].id).
+        - name: quantity
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Quantity to add (default 1).
+        - name: specialInstructions
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Special instructions for the item (e.g. "no onions").
+      responses:
+        '200':
+          description: Cart update result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  cartId:
+                    type: string
+                    description: Cart UUID.
+                  subtotal:
+                    type: integer
+                    description: Cart subtotal in cents.
+                  currencyCode:
+                    type: string
+                  restaurant:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        quantity:
+                          type: integer
+                        price:
+                          type: string
                         deliveryAddress:
                           type: object
                           properties:
