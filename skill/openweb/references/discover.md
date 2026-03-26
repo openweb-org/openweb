@@ -1,22 +1,21 @@
 # Discovery Process
 
-How to add a new site to openweb when no fixture exists.
+How to add a new site or expand an existing site's operation coverage.
 
 ## When to Use
 
-- User asks about a site with no fixture
-- Agent proactively expanding coverage
+- User asks about a site with no site package
+- Expanding coverage for an existing site (more operations, new protocols)
+- Site package is stale or has auth/transport issues
 
 ## Before You Start
 
 - Read `knowledge/archetypes.md` — what type of site is this?
+  Archetypes are heuristic starting points, not limiting checklists.
+  Define targets based on user needs and actual site capabilities.
 - Read `knowledge/auth-patterns.md` — what auth do you expect?
-- **Define target operations**: Think like a real user of this site. What are the 3-5 core things you'd do? Describe them as user intents, not operationId names — the actual API naming comes from what you discover during capture. Examples:
-  - E-commerce → search products by keyword; get product detail page; get product reviews
-  - Travel → search flights by route and date; get flight offer details/pricing
-  - Real estate → search homes by location/filters; get property details; get price/tax history
-  - Social → search posts/notes by keyword; get post detail with comments; get user profile
-- If the task has `acceptCriteria` with specific operations listed, those are your targets.
+- If the site already has a package, read its DOC.md and openapi.yaml
+  to understand current coverage before capturing more
 
 ## Critical Rule: Browser First, No Direct HTTP
 
@@ -28,59 +27,166 @@ Why: Bot detection systems (PerimeterX, DataDome, Akamai) track IP reputation ac
 
 ## Process
 
-### Step 1: Plan
+### Overview
 
-Think like a user of this site:
-- What pages have the data you want?
-- What actions would a real user take? (search, browse, click into detail, check status)
-- Map out which URLs to visit and what API traffic you expect to see.
-- Your target operations from "Before You Start" guide what pages to visit.
+```
+  ┌─────────────────────────────────────────────────────┐
+  │  Step 1: Frame target intents                       │
+  └──────────────┬──────────────────────────────────────┘
+                 ▼
+  ┌─────────────────────────────────────────────────────┐
+  │  Step 2: Capture  ◄──────────────────────┐          │
+  └──────────────┬───────────────────────────│──────────┘
+                 ▼                           │
+  ┌─────────────────────────────────────────────────────┐
+  │  Step 3: Inspect — verify intent coverage │          │
+  └──────────────┬───────────────────────────│──────────┘
+                 ▼                           │
+  ┌─────────────────────────────────────────────────────┐
+  │  Step 4: Fill gaps ──── missing intents? ┘          │
+  └──────────────┬──────────────────────────────────────┘
+                 ▼
+  ┌─────────────────────────────────────────────────────┐
+  │  Step 5: Compile + check compile-report             │
+  └──────────────┬──────────────────────────────────────┘
+                 ▼
+  ┌─────────────────────────────────────────────────────┐
+  │  Step 6: Gap review — map ops to intents  ◄──┐      │
+  │           check filtered.json                 │      │
+  └──────────────┬────────────────────────────────│─────┘
+                 │  gaps remain?                  │
+                 │  filtered → fix filter, recompile
+                 │  not captured → back to Step 2 ┘
+                 ▼
+  ┌─────────────────────────────────────────────────────┐
+  │  Step 7: Verify                                     │
+  └──────────────┬──────────────────────────────────────┘
+                 ▼
+  ┌─────────────────────────────────────────────────────┐
+  │  Step 8: Write artifacts (DOC.md, PROGRESS.md)      │
+  └─────────────────────────────────────────────────────┘
+```
+
+### Step 1: Frame the Target
+
+- Identify the site archetype (read the relevant section in archetypes)
+- Define 3–5 target intents described as **user actions**, not API names
+  (Based on user needs and actual site capabilities, not copied from archetype templates)
+- Create or update DOC.md with an initial overview and target-intent checklist
+  (Following the `references/site-doc.md` template)
+- If the task has `acceptCriteria` with specific operations listed, those are your targets
+
+**Examples of good target intents:**
+- E-commerce → search products by keyword; get product detail; get reviews
+- Travel → search flights by route and date; get pricing details
+- Social → search posts by keyword; get post detail with comments; get user profile
 
 ### Step 2: Capture
 
 ```bash
-pnpm --silent dev browser start                                    # ensure managed browser running
-pnpm --silent dev capture start --cdp-endpoint http://localhost:9222  # start recording
-# Browse systematically to trigger your target operations:
+openweb browser start
+openweb capture start --cdp-endpoint http://localhost:9222
+# Browse systematically to trigger target operations:
 #   - Do a search → triggers search API
 #   - Click into a result → triggers detail API
 #   - Scroll/paginate → triggers pagination
 #   - Check other features (reviews, status, profile)
 # Avoid: logout, delete account, billing, irreversible actions
-pnpm --silent dev capture stop                                     # stop recording
+openweb capture stop
 ```
 
-### Step 3: Compile
+### Step 3: Inspect What Was Recorded
+
+This is a first-class step — not just counting requests.
+
+- Check capture summary: how many requests? Which domains? Any WS frames?
+- **Map each target intent to recorded traffic:**
+  Did the target API fire? Was the data source found?
+- If SPA: check whether data comes from API calls or SSR-embedded data
+- Check whether the correct page/tab was recorded
+- Mark missing target intents in DOC.md
+
+### Step 4: Fill Gaps (iterate with Steps 2–3)
+
+If target operations are missing:
+- Read page DOM (`page.evaluate`) to look for SSR data (`__NEXT_DATA__`, embedded JSON)
+- Check whether data loads via fetch/XHR or is in the initial HTML
+- Try different user actions (different search terms, scroll for lazy loading, click different detail pages)
+- Check whether the site uses GraphQL (single endpoint, query in POST body)
+- If login is required: `openweb login <site>`, restart browser, re-capture
+- Re-capture with more targeted browsing
+
+**Repeat Steps 2–4 until every target intent has at least one credible data source**
+(API call, SSR data, or DOM data).
+
+### Step 5: Compile and Check Report
 
 ```bash
-pnpm --silent dev compile <site-url> [--capture-dir <dir>] [--probe]
+openweb compile <site-url> [--capture-dir <dir>] [--probe]
 ```
 
-Then follow `compile.md` for the curate/review phase. During curation, check: do the compiled operations cover your target intents? If key operations are missing, repeat Step 2 with more targeted browsing.
+After compile completes, check the compile-report:
+- Read `~/.openweb/compile/<site>/summary.txt` — is operationCount reasonable?
+- If a target intent is missing → read `filtered.json` to determine cause:
+  - **In rejected list** → filter false positive, no need to re-capture
+  - **Not present** → genuinely not recorded, go back to Step 2
 
-### Step 4: Verify
+Then follow `references/compile.md` for curation. During curation:
+- Map generated operations back to target intents in DOC.md
+- Update DOC.md with auth, transport, extraction, and known issues
+
+### Step 6: Gap Review
+
+Mark each target intent in DOC.md:
+- Covered by a compiled operation
+- Covered only via DOM/SSR extraction (needs adapter)
+- Still missing
+
+If important gaps remain → return to Step 2 for targeted browsing.
+
+### Step 7: Verify
 
 Two levels of verification:
 
-**4a. API-level**: Does the operation return 200 with data?
+**7a. API-level**: Does the operation return 200 with data?
 ```bash
-pnpm --silent dev verify <site>
+openweb verify <site>
 ```
 AUTH_FAIL means login needed first. PASS means the API responds — but that's not enough.
 
-**4b. Content-level**: Does the API data match what the user sees, and does it fulfill the target intents?
+**7b. Content-level**: Does the API data match what the user sees?
 
 Browse the site in the browser and compare:
-- Do a search on the website → compare the visible results with the API search response. Are the same items present? Are titles, prices, images consistent?
-- Open a detail page → compare visible info with the API detail response. Are key fields (name, description, price, reviews count) present and matching?
-- If the API returns less data than the page shows, there may be missing endpoints or the page uses SSR/DOM data not captured via API.
-- **Check against target intents**: Does each target operation from acceptCriteria actually return useful, actionable data? "search products by keyword" means a user could act on the results — not just get IDs or empty shells.
+- Do a search on the website → compare visible results with API response
+- Open a detail page → compare visible info with API detail response
+- If the API returns less data than the page shows, there may be missing endpoints or SSR data not captured via API
+- **Check against target intents**: Does each operation return useful, actionable data?
 
-This is the real verification — a 200 response with garbage data is not a working fixture.
+A 200 response with garbage data is not a working site package.
 
-### Step 5: Update Knowledge
+### Step 8: Write Artifacts
 
-→ Read `update-knowledge.md` — evaluate what you learned, write to `knowledge/` if novel.
+- Finalize DOC.md (per `references/site-doc.md`)
+- Append first PROGRESS.md entry
+- Update cross-site knowledge only when the experience generalizes
+  (per `references/update-knowledge.md`)
+
+## Incremental Discovery (Existing Sites)
+
+When expanding an existing site package, start from gap review:
+
+1. Read the site's DOC.md and openapi.yaml — what's already covered?
+2. Identify missing intents (user request or archetype comparison)
+3. Enter the loop at **Step 2** with targeted capture for the gaps
+4. After compile, merge new operations into the existing spec
+5. Update DOC.md and PROGRESS.md with the expansion
+
+## Outputs
+
+- Site package: `openapi.yaml` (+ `asyncapi.yaml` if WS traffic present)
+- `DOC.md` in site package directory
+- `PROGRESS.md` in site package directory
+- Knowledge updates (if pattern generalizes)
 
 ## Multi-Worker Browser Sharing
 
@@ -90,3 +196,11 @@ Multiple workers can share one Chrome browser on the same CDP port. Rules:
 - If `capture start` is already running (started by another worker), skip it — your traffic is already being recorded. Just browse your site in a new tab.
 - `compile` filters traffic by site URL, so concurrent captures on different sites don't interfere.
 - Only need separate CDP ports if you need isolated browser profiles (rare).
+
+## Related References
+
+- `references/compile.md` — correctness review after compile
+- `references/site-doc.md` — DOC.md / PROGRESS.md template
+- `references/update-knowledge.md` — when to write cross-site patterns
+- `references/knowledge/archetypes.md` — site type expectations
+- `references/knowledge/auth-patterns.md` — auth primitive detection
