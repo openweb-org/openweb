@@ -127,5 +127,5 @@ Is data in an API response (XHR/fetch)?
 
 - `references/compile.md` — extraction complexity rule, adapter extraction
 - `references/discover.md` — SSR/DOM inspection during capture
-- `knowledge/bot-detection-patterns.md` — when extraction is the only option
-- `knowledge/troubleshooting-patterns.md` — extraction failure patterns
+- `references/knowledge/bot-detection-patterns.md` — when extraction is the only option
+- `references/knowledge/troubleshooting-patterns.md` — extraction failure patterns

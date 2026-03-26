@@ -10,10 +10,10 @@ How to add a new site or expand an existing site's operation coverage.
 
 ## Before You Start
 
-- Read `knowledge/archetypes.md` — what type of site is this?
+- Read `references/knowledge/archetypes/index.md` — what type of site is this?
   Archetypes are heuristic starting points, not limiting checklists.
   Define targets based on user needs and actual site capabilities.
-- Read `knowledge/auth-patterns.md` — what auth do you expect?
+- Read `references/knowledge/auth-patterns.md` — what auth do you expect?
 - If the site already has a package, read its DOC.md and openapi.yaml
   to understand current coverage before capturing more
 
@@ -225,5 +225,5 @@ Multiple workers can share one Chrome browser on the same CDP port. Rules:
 - `references/compile.md` — correctness review after compile
 - `references/site-doc.md` — DOC.md / PROGRESS.md template
 - `references/update-knowledge.md` — when to write cross-site patterns
-- `references/knowledge/archetypes.md` — site type expectations
+- `references/knowledge/archetypes/index.md` — site type expectations
 - `references/knowledge/auth-patterns.md` — auth primitive detection

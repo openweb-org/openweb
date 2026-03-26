@@ -84,5 +84,5 @@ Can Node make the request without auth cookies?
 
 - `references/discover.md` — Browser First rule, capture strategy
 - `references/compile.md` — transport decision model
-- `knowledge/extraction-patterns.md` — extraction alternatives when APIs are blocked
-- `knowledge/troubleshooting-patterns.md` — bot detection failure patterns
+- `references/knowledge/extraction-patterns.md` — extraction alternatives when APIs are blocked
+- `references/knowledge/troubleshooting-patterns.md` — bot detection failure patterns

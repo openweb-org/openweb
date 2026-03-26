@@ -102,12 +102,12 @@ Append-only log. Same format as project-level `doc/PROGRESS.md`.
 
 ## Relationship to references/knowledge/
 
-- **knowledge/*.md** = general patterns that apply across many sites (auth patterns, archetypes, bot detection strategies)
+- **references/knowledge/*.md** = general patterns that apply across many sites (auth patterns, archetypes, bot detection strategies)
 - **DOC.md** = site-specific knowledge (this site's exact API, this site's auth flow, this site's quirks)
 
 If you learn something during discover/compile:
 - Site-specific → write to that site's DOC.md
-- General pattern → write to knowledge/ (per update-knowledge.md)
+- General pattern → write to references/knowledge/ (per update-knowledge.md)
 - Both → write to both
 
 ---
@@ -117,5 +117,5 @@ If you learn something during discover/compile:
 - [cli.md](cli.md) — CLI commands including `verify` and `compile`
 - [discover.md](discover.md) — Discovery workflow that produces initial DOC.md
 - [compile.md](compile.md) — Compilation workflow
-- [update-knowledge.md](update-knowledge.md) — When to write to knowledge/ vs DOC.md
+- [update-knowledge.md](update-knowledge.md) — When to write to references/knowledge/ vs DOC.md
 - [troubleshooting.md](troubleshooting.md) — Debugging site issues

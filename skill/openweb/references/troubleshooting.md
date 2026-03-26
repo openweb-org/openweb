@@ -6,15 +6,15 @@ Process guide for diagnosing and fixing openweb failures.
 
 | Symptom | Category | Look at |
 |---------|----------|---------|
-| 401, 403, token errors | Auth | `knowledge/troubleshooting-patterns.md` → Auth Failures |
-| No traffic captured, login redirect | Discovery / Capture | `knowledge/troubleshooting-patterns.md` → Discovery Failures |
-| No operations in compiled spec | Compile | `knowledge/troubleshooting-patterns.md` → Compile Failures |
-| verify fails, schema mismatch, 429 | Verify / Drift | `knowledge/troubleshooting-patterns.md` → Verify Failures |
-| CDP connection error, no tab | Browser | `knowledge/troubleshooting-patterns.md` → Browser Failures |
+| 401, 403, token errors | Auth | `references/knowledge/troubleshooting-patterns.md` → Auth Failures |
+| No traffic captured, login redirect | Discovery / Capture | `references/knowledge/troubleshooting-patterns.md` → Discovery Failures |
+| No operations in compiled spec | Compile | `references/knowledge/troubleshooting-patterns.md` → Compile Failures |
+| verify fails, schema mismatch, 429 | Verify / Drift | `references/knowledge/troubleshooting-patterns.md` → Verify Failures |
+| CDP connection error, no tab | Browser | `references/knowledge/troubleshooting-patterns.md` → Browser Failures |
 
 ## Step 2: Check known patterns
 
-Read `knowledge/troubleshooting-patterns.md` for the matching category. Most failures have a known cause/fix pattern.
+Read `references/knowledge/troubleshooting-patterns.md` for the matching category. Most failures have a known cause/fix pattern.
 
 ## Step 3: If not a known pattern — diagnose
 
@@ -34,7 +34,7 @@ pnpm build && pnpm test        # ensure no regressions
 
 ## Step 5: Update Knowledge
 
-→ Read `update-knowledge.md` — if you learned something novel during debugging, write it to `knowledge/`.
+→ Read `update-knowledge.md` — if you learned something novel during debugging, write it to `references/knowledge/`.
 
 ## Related References
 

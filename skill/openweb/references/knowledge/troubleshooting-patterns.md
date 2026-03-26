@@ -1,6 +1,6 @@
 # Troubleshooting Patterns
 
-Known failure patterns organized by category. Referenced from [troubleshooting.md](../references/troubleshooting.md).
+Known failure patterns organized by category. Referenced from [troubleshooting.md](../troubleshooting.md).
 
 ## Auth Failures
 
@@ -135,5 +135,5 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 - `references/troubleshooting.md` — process guide for diagnosing failures
 - `references/discover.md` — discovery workflow context
 - `references/compile.md` — compile review context
-- `knowledge/auth-patterns.md` — auth primitive detection details
-- `knowledge/ws-patterns.md` — WS connection/message patterns
+- `references/knowledge/auth-patterns.md` — auth primitive detection details
+- `references/knowledge/ws-patterns.md` — WS connection/message patterns

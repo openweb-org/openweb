@@ -131,4 +131,4 @@ The `x-ws-subscribe` extension holds the subscription template. The adapter send
 
 - `references/compile.md` — Track B: WS/AsyncAPI curation
 - `references/discover.md` — WS traffic inspection during capture
-- `knowledge/troubleshooting-patterns.md` — WS failure patterns
+- `references/knowledge/troubleshooting-patterns.md` — WS failure patterns

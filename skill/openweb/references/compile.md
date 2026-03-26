@@ -38,7 +38,7 @@ Review the generated `openapi.yaml`:
 - **Rename** operations for clarity (e.g., `get_api_v1_users` → `getUsers`)
 - **Remove** noise: analytics (`/collect`, `/track`), CDN (`/static/`, `/_next/`), tracking pixels
 - **Confirm** auth/CSRF/signing detection matches expectations
-- **Review** against the relevant archetype's expectations (see `knowledge/archetypes.md`)
+- **Review** against the relevant archetype's expectations (see `references/knowledge/archetypes/index.md`)
 - **Update** DOC.md with auth, transport, extraction, and known issues discovered during curation
 
 #### Extraction Complexity Rule
@@ -86,7 +86,7 @@ Review questions:
 
 #### B3. Per-Archetype WS Expectations
 
-See `knowledge/ws-patterns.md` for per-archetype WS checklists
+See `references/knowledge/ws-patterns.md` for per-archetype WS checklists
 (Messaging gateway, Crypto/Finance feeds, etc.)
 
 #### Hybrid Packages (HTTP + WS)
@@ -106,7 +106,7 @@ A spec is **Ready** when curated + verified with PASS.
 
 ### Step 6: Update Knowledge
 
-> Read `update-knowledge.md` — evaluate what you learned, write to `knowledge/` if novel.
+> Read `update-knowledge.md` — evaluate what you learned, write to `references/knowledge/` if novel.
 
 ## Execution Model Decision
 
@@ -156,6 +156,6 @@ The `--probe` flag in the compile step is the **only** safe way to test node tra
 - `references/discover.md` — coverage responsibility (target intents, gap review)
 - `references/site-doc.md` — DOC.md / PROGRESS.md template
 - `references/update-knowledge.md` — when to write cross-site patterns
-- `references/knowledge/archetypes.md` — per-archetype curation expectations
+- `references/knowledge/archetypes/index.md` — per-archetype curation expectations
 - `references/knowledge/auth-patterns.md` — auth primitive detection
 - `references/knowledge/ws-patterns.md` — WS connection/message patterns

@@ -16,7 +16,7 @@ After completing any workflow (discover, compile, troubleshoot) that taught you 
 Is this site-specific or general?
 
 - **Site-specific** (this site's exact API, auth flow, quirks) → write to the site's `DOC.md` (see [site-doc.md](site-doc.md))
-- **General pattern** (applies across many sites) → write to `knowledge/` (this guide)
+- **General pattern** (applies across many sites) → write to `references/knowledge/` (this guide)
 - **Both** → write to both, with the general version abstracted
 
 ### 2. Classify
@@ -25,15 +25,15 @@ Which knowledge file does it belong to? Search existing files before creating a 
 
 | File | Scope |
 |------|-------|
-| `knowledge/auth-patterns.md` | Auth, CSRF, signing, cookie/token patterns |
-| `knowledge/archetypes.md` | Site categories and expected behaviors |
-| `knowledge/ws-patterns.md` | WebSocket message types, connection patterns, curation |
-| `knowledge/bot-detection-patterns.md` | Detection systems, transport impact, capture strategy |
-| `knowledge/extraction-patterns.md` | SSR data, DOM, page globals, adapter extraction |
-| `knowledge/graphql-patterns.md` | Persisted queries, batching, introspection, schema |
-| `knowledge/troubleshooting-patterns.md` | Failure patterns organized by category |
+| `references/knowledge/auth-patterns.md` | Auth, CSRF, signing, cookie/token patterns |
+| `references/knowledge/archetypes/index.md` | Site categories and expected behaviors |
+| `references/knowledge/ws-patterns.md` | WebSocket message types, connection patterns, curation |
+| `references/knowledge/bot-detection-patterns.md` | Detection systems, transport impact, capture strategy |
+| `references/knowledge/extraction-patterns.md` | SSR data, DOM, page globals, adapter extraction |
+| `references/knowledge/graphql-patterns.md` | Persisted queries, batching, introspection, schema |
+| `references/knowledge/troubleshooting-patterns.md` | Failure patterns organized by category |
 
-Create a new file in `knowledge/` only if the pattern doesn't fit any existing file. Name it `<topic>-patterns.md`.
+Create a new file in `references/knowledge/` only if the pattern doesn't fit any existing file. Name it `<topic>-patterns.md`.
 
 ### 3. Write
 
@@ -65,12 +65,12 @@ Before saving, verify the knowledge is durable:
 After writing, check the file size:
 
 ```bash
-wc -l skill/openweb/knowledge/<file>.md
+wc -l skill/openweb/references/knowledge/<file>.md
 ```
 
 If a file exceeds 200 lines:
 1. Identify a coherent subtopic that can split out
-2. Create a new `knowledge/<subtopic>-patterns.md`
+2. Create a new `references/knowledge/<subtopic>-patterns.md`
 3. Move the relevant entries
 4. Update this guide's file listing (Step 2 table above)
 
@@ -80,7 +80,7 @@ If the learning changes the recommended process, update `references/discover.md`
 
 ## Related References
 
-- `references/site-doc.md` — site-specific documentation (DOC.md vs knowledge/)
+- `references/site-doc.md` — site-specific documentation (DOC.md vs references/knowledge/)
 - `references/discover.md` — discovery workflow that produces knowledge
 - `references/compile.md` — compile review that produces knowledge
 - `references/troubleshooting.md` — debugging that produces knowledge

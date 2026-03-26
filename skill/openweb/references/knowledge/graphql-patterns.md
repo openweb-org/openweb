@@ -110,4 +110,4 @@ GraphQL operations map to openapi.yaml with a single path and operation-level di
 
 - `references/compile.md` — compile review for GraphQL operations
 - `references/discover.md` — identifying GraphQL during capture inspection
-- `knowledge/auth-patterns.md` — CSRF detection for GraphQL endpoints
+- `references/knowledge/auth-patterns.md` — CSRF detection for GraphQL endpoints
