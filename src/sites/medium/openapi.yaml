@@ -394,6 +394,138 @@ paths:
                     type: string
                   imageUrl:
                     type: string
+  /post/{postId}/clap:
+    post:
+      operationId: clapArticle
+      summary: Clap (upvote) an article — reversible, requires auth
+      x-openweb:
+        permission: write
+        safety: safe
+        requires_auth: true
+        build:
+          verified: true
+          stable_id: md0011
+          signature_id: md0011s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: clapArticle
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Medium post ID (hex string, e.g. "959d1a85284e").
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                numClaps:
+                  type: integer
+                  default: 1
+                  description: Number of claps to add (1-50).
+      responses:
+        '200':
+          description: Clap result with updated counts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  postId:
+                    type: string
+                  clapCount:
+                    type: integer
+                    description: Total clap count on the post.
+                  viewerClapCount:
+                    type: integer
+                    description: Claps from the current user.
+  /user/{userId}/follow:
+    post:
+      operationId: followWriter
+      summary: Follow a writer/author — reversible, requires auth
+      x-openweb:
+        permission: write
+        safety: safe
+        requires_auth: true
+        build:
+          verified: true
+          stable_id: md0012
+          signature_id: md0012s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: followWriter
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Medium user ID (hex string, e.g. "3a38da70d8dc").
+      responses:
+        '200':
+          description: Follow result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                  name:
+                    type: string
+                  username:
+                    type: string
+                  isFollowing:
+                    type: boolean
+  /post/{postId}/save:
+    post:
+      operationId: saveArticle
+      summary: Save/bookmark an article to reading list — reversible, requires auth
+      x-openweb:
+        permission: write
+        safety: safe
+        requires_auth: true
+        build:
+          verified: true
+          stable_id: md0013
+          signature_id: md0013s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: saveArticle
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Medium post ID (hex string, e.g. "959d1a85284e").
+      responses:
+        '200':
+          description: Save result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  postId:
+                    type: string
+                  catalogItemId:
+                    type: string
+                  saved:
+                    type: boolean
 components:
   schemas:
     PostSummary:

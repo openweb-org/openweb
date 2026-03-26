@@ -244,3 +244,61 @@ export const RECOMMENDED_WRITERS_QUERY = `query WhoToFollowModuleQuery {
     __typename
   }
 }`
+
+/* ---------- GraphQL mutations ---------- */
+
+export const VIEWER_QUERY = `query ViewerQuery {
+  viewer {
+    id
+    __typename
+  }
+}`
+
+export const CLAP_MUTATION = `mutation ClapMutation($targetPostId: ID!, $userId: ID!, $numClaps: Int!) {
+  clap(targetPostId: $targetPostId, userId: $userId, numClaps: $numClaps) {
+    viewerEdge {
+      __typename
+      id
+      clapCount
+    }
+    __typename
+    id
+    clapCount
+  }
+}`
+
+export const FOLLOW_USER_MUTATION = `mutation FollowUserMutation($userId: ID!) {
+  followUser(targetUserId: $userId) {
+    id
+    name
+    username
+    viewerEdge {
+      id
+      isFollowing
+      __typename
+    }
+    __typename
+  }
+}`
+
+export const SAVE_ARTICLE_MUTATION = `mutation AddToPredefinedCatalog($type: PredefinedCatalogType!, $operation: PredefinedCatalogAddOperationInput!) {
+  addToPredefinedCatalog(type: $type, operation: $operation) {
+    __typename
+    ... on AddToPredefinedCatalogSucces {
+      version
+      insertedItem {
+        __typename
+        catalogItemId
+        catalogId
+        entity {
+          __typename
+          ... on Post {
+            id
+            __typename
+          }
+        }
+      }
+      __typename
+    }
+  }
+}`

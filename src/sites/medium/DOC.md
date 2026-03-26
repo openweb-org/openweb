@@ -1,7 +1,7 @@
 # Medium
 
 ## Overview
-Blogging and publishing platform. Search articles, browse topic feeds, discover curated lists, explore publications, and view user profiles via Medium's GraphQL API.
+Blogging and publishing platform. Search articles, browse topic feeds, discover curated lists, explore publications, view user profiles, clap articles, follow writers, and save bookmarks via Medium's GraphQL API.
 
 ## Operations
 | Operation | Intent | Method | Notes |
@@ -16,6 +16,9 @@ Blogging and publishing platform. Search articles, browse topic feeds, discover 
 | getPostClaps | get clap count for a post | GraphQL | single post engagement metric |
 | getRecommendedWriters | get recommended writers to follow | GraphQL | personalized writer suggestions |
 | getUserProfile | get user/author profile | DOM | navigates to profile page, extracts from rendered HTML |
+| clapArticle | clap (upvote) an article | GraphQL | ✅ SAFE write — reversible; requires auth |
+| followWriter | follow a writer/author | GraphQL | ✅ SAFE write — reversible; requires auth |
+| saveArticle | save/bookmark article to reading list | GraphQL | ✅ SAFE write — reversible; requires auth |
 
 ## API Architecture
 - **GraphQL-first**: Most data served through `medium.com/_/graphql` POST endpoint
@@ -25,10 +28,12 @@ Blogging and publishing platform. Search articles, browse topic feeds, discover 
 - No aggressive bot detection on GraphQL endpoint — browser context needed for cookies
 
 ## Auth
-- Most operations work without auth (`requires_auth: false`)
+- Read operations work without auth (`requires_auth: false`)
+- Write operations (clap, follow, save) require auth (`requires_auth: true`)
 - Logged-in users get personalized recommendations
-- No CSRF token required for GraphQL queries
+- No CSRF token required for GraphQL queries or mutations
 - Session tracked via `sid` and `uid` cookies
+- Viewer ID for clap mutations resolved automatically via `viewer` query
 
 ## Transport
 - `transport: page` — browser fetch for all operations
@@ -46,3 +51,5 @@ Blogging and publishing platform. Search articles, browse topic feeds, discover 
 - **Paywall content**: `isLocked: true` articles have limited preview content
 - **Rate limiting**: Medium may rate-limit heavy GraphQL usage
 - **Personalized feed**: `getRecommendedFeed` returns different results based on login state
+- **Clap requires viewer ID**: `clapArticle` auto-resolves the current user ID via a viewer query
+- **Medium GraphQL typos**: Schema contains `AddToPredefinedCatalogSucces` (missing 's') and `preprend` (misspelled) — adapter uses these exact spellings

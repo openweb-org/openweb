@@ -17,6 +17,10 @@ import {
   PUBLICATION_POSTS_QUERY,
   POST_CLAPS_QUERY,
   RECOMMENDED_WRITERS_QUERY,
+  VIEWER_QUERY,
+  CLAP_MUTATION,
+  FOLLOW_USER_MUTATION,
+  SAVE_ARTICLE_MUTATION,
 } from './queries.js'
 
 const GRAPHQL_URL = 'https://medium.com/_/graphql'
@@ -260,6 +264,71 @@ async function getUserProfile(page: Page, params: Record<string, unknown>): Prom
   return { username, ...profile }
 }
 
+/* ---------- write operation handlers ---------- */
+
+async function getViewerId(page: Page): Promise<string> {
+  const data = (await graphqlFetch(page, 'ViewerQuery', VIEWER_QUERY, {})) as Record<string, unknown>
+  const viewer = data.viewer as Record<string, unknown> | undefined
+  if (!viewer?.id) throw OpenWebError.apiError('ViewerQuery', 'Not authenticated — login required for write operations')
+  return String(viewer.id)
+}
+
+async function clapArticle(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const postId = String(params.postId ?? params.id ?? '')
+  if (!postId) throw OpenWebError.missingParam('postId')
+  const numClaps = Number(params.numClaps ?? 1)
+
+  const userId = await getViewerId(page)
+  const data = (await graphqlFetch(page, 'ClapMutation', CLAP_MUTATION, {
+    targetPostId: postId,
+    userId,
+    numClaps,
+  })) as Record<string, unknown>
+
+  const result = data.clap as Record<string, unknown>
+  return {
+    postId: result?.id,
+    clapCount: result?.clapCount,
+    viewerClapCount: (result?.viewerEdge as Record<string, unknown>)?.clapCount,
+  }
+}
+
+async function followWriter(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const userId = String(params.userId ?? params.id ?? '')
+  if (!userId) throw OpenWebError.missingParam('userId')
+
+  const data = (await graphqlFetch(page, 'FollowUserMutation', FOLLOW_USER_MUTATION, {
+    userId,
+  })) as Record<string, unknown>
+
+  const result = data.followUser as Record<string, unknown>
+  const viewerEdge = result?.viewerEdge as Record<string, unknown> | undefined
+  return {
+    userId: result?.id,
+    name: result?.name,
+    username: result?.username,
+    isFollowing: viewerEdge?.isFollowing,
+  }
+}
+
+async function saveArticle(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const postId = String(params.postId ?? params.id ?? '')
+  if (!postId) throw OpenWebError.missingParam('postId')
+
+  const data = (await graphqlFetch(page, 'AddToPredefinedCatalog', SAVE_ARTICLE_MUTATION, {
+    type: 'READING_LIST',
+    operation: { preprend: { type: 'POST', id: postId } },
+  })) as Record<string, unknown>
+
+  const result = data.addToPredefinedCatalog as Record<string, unknown>
+  const item = result?.insertedItem as Record<string, unknown> | undefined
+  return {
+    postId,
+    catalogItemId: item?.catalogItemId,
+    saved: result?.__typename === 'AddToPredefinedCatalogSucces',
+  }
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
@@ -273,6 +342,9 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getPostClaps,
   getRecommendedWriters,
   getUserProfile,
+  clapArticle,
+  followWriter,
+  saveArticle,
 }
 
 const adapter: CodeAdapter = {
