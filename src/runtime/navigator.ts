@@ -221,9 +221,11 @@ export async function renderSiteJson(site: string): Promise<string> {
   const pkg = await loadSitePackage(site)
   const manifest = await loadManifest(pkg.root)
   const allOps = Array.from(pkg.operations.values())
+  const notes = await safeReadNotes(pkg.root)
 
   const result = {
     name: manifest?.display_name ?? site,
+    hasNotes: notes !== null,
     operations: allOps.map((entry) => {
       if (entry.protocol === 'ws') {
         return {

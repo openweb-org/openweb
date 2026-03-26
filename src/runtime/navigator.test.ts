@@ -83,6 +83,12 @@ describe('navigator', () => {
     }
   })
 
+  it('includes hasNotes boolean in JSON output', async () => {
+    const output = await renderSiteJson('open-meteo')
+    const parsed = JSON.parse(output)
+    expect(typeof parsed.hasNotes).toBe('boolean')
+  })
+
   it('throws non-ENOENT errors from safeReadNotes', async () => {
     // Pass a file (not a directory) as siteRoot — lstat on siteRoot/DOC.md
     // will fail with ENOTDIR, which is not ENOENT and should propagate
