@@ -1,12 +1,12 @@
 openapi: '3.1.0'
 info:
-  title: JD Global
-  version: '1.0'
+  title: JD.com
+  version: '2.0'
   x-openweb:
     spec_version: '2.0'
-    requires_auth: false
+    requires_auth: optional
 servers:
-  - url: https://global.jd.com
+  - url: https://jd.com
     x-openweb:
       transport: page
 paths:
@@ -253,3 +253,266 @@ paths:
                           type: string
                         url:
                           type: string
+  /internal/searchProducts:
+    get:
+      operationId: searchProducts
+      summary: Search products by keyword — names, prices, ratings, shops
+      x-openweb:
+        permission: read
+        build:
+          stable_id: jd0006
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: jd-global-api
+          operation: searchProducts
+      parameters:
+        - name: keyword
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (Chinese or English).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number (30 results per page).
+      responses:
+        '200':
+          description: Search results with products.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keyword:
+                    type: string
+                  page:
+                    type: integer
+                  resultCount:
+                    type: integer
+                    description: Total number of matching products.
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        skuId:
+                          type: string
+                        name:
+                          type: string
+                        jdPrice:
+                          type: string
+                          description: Current price (CNY).
+                        originalPrice:
+                          type: string
+                          description: Original price (CNY).
+                        averageScore:
+                          type: string
+                          description: Average review score (1-5).
+                        goodRate:
+                          type: string
+                          description: Positive review percentage.
+                        commentCount:
+                          type: string
+                          description: Number of reviews.
+                        totalSales:
+                          type: string
+                          description: Sales volume (e.g. "400+").
+                        shopId:
+                          type: string
+                        shopName:
+                          type: string
+                        image:
+                          type: string
+                        isJdSelf:
+                          type: boolean
+                          description: Whether sold by JD directly.
+  /internal/getProductDetail:
+    get:
+      operationId: getProductDetail
+      summary: Get product detail by SKU ID — name, price, images, variants, reviews
+      x-openweb:
+        permission: read
+        build:
+          stable_id: jd0007
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: jd-global-api
+          operation: getProductDetail
+      parameters:
+        - name: skuId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JD product SKU ID.
+      responses:
+        '200':
+          description: Full product detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skuId:
+                    type: string
+                  name:
+                    type: string
+                  price:
+                    type: string
+                    description: Current price (CNY).
+                  shopId:
+                    type: string
+                  venderId:
+                    type: integer
+                  brand:
+                    type: integer
+                  brandName:
+                    type: string
+                  categories:
+                    type: array
+                    items:
+                      type: integer
+                    description: Category IDs [L1, L2, L3].
+                  images:
+                    type: array
+                    items:
+                      type: string
+                    description: Product image URLs.
+                  variants:
+                    type: array
+                    items:
+                      type: object
+                      description: SKU variants with color/size/storage options.
+                  reviewCount:
+                    type: integer
+                  goodRate:
+                    type: string
+                  inStock:
+                    type: boolean
+  /internal/getProductReviews:
+    get:
+      operationId: getProductReviews
+      summary: Get product reviews by SKU ID — review count, rate, and comments
+      x-openweb:
+        permission: read
+        build:
+          stable_id: jd0008
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: jd-global-api
+          operation: getProductReviews
+      parameters:
+        - name: skuId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JD product SKU ID.
+      responses:
+        '200':
+          description: Product reviews.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalCount:
+                    type: integer
+                    description: Total number of reviews.
+                  goodRate:
+                    type: string
+                    description: Positive review percentage.
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user:
+                          type: string
+                          description: Reviewer username (masked).
+                        content:
+                          type: string
+                          description: Review text.
+  /internal/getCart:
+    get:
+      operationId: getCart
+      summary: Get shopping cart contents — item names, prices, shops
+      x-openweb:
+        permission: read
+        build:
+          stable_id: jd0009
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: jd-global-api
+          operation: getCart
+      parameters: []
+      responses:
+        '200':
+          description: Shopping cart contents.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalCount:
+                    type: integer
+                    description: Number of items in cart.
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Product name.
+                        price:
+                          type: string
+                          description: Item price (CNY).
+                        shop:
+                          type: string
+                          description: Seller store name.
+  /internal/getHotSearchWords:
+    get:
+      operationId: getHotSearchWords
+      summary: Get trending search keywords — popular search terms on JD
+      x-openweb:
+        permission: read
+        build:
+          stable_id: jd0010
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: jd-global-api
+          operation: getHotSearchWords
+      parameters: []
+      responses:
+        '200':
+          description: Trending search keywords.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  words:
+                    type: array
+                    items:
+                      type: string
+                    description: List of trending search terms.
