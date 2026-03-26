@@ -2,9 +2,9 @@
 
 Patterns extracted from 51 compiled sites (M0–M21). Read this before compiling a new site to set expectations for auth, transport, key pages, and common pitfalls.
 
-M22 coverage sweep (redo): 105 OpenTabs plugins classified → 17 A (has fixture), 35 B (L1 compilable, api_key/bearer_token), 48 C (L2 needs browser login), 1 D (needs new primitive), 4 E (needs L3 adapter), 0 F. 49.5% immediately compilable (A+B), 95.2% reachable with existing primitives (A+B+C).
+M22 coverage sweep (redo): 105 OpenTabs plugins classified → 17 A (has site package), 35 B (L1 compilable, api_key/bearer_token), 48 C (L2 needs browser login), 1 D (needs new primitive), 4 E (needs page transport with adapter extraction), 0 F. 49.5% immediately compilable (A+B), 95.2% reachable with existing primitives (A+B+C).
 
-Note: 34 of our 51 fixtures are for sites NOT in the OpenTabs 105 set (fun/reference/weather APIs). Those archetypes are well-covered but not listed in OpenTabs plugins.
+Note: 34 of our 51 site packages are for sites NOT in the OpenTabs 105 set (fun/reference/weather APIs). Those archetypes are well-covered but not listed in OpenTabs plugins.
 
 ## Social Media (M22: 4/10 OpenTabs plugins, 40%)
 
@@ -18,8 +18,8 @@ Examples: Instagram, Reddit, Bluesky, X
 **Instagram**: cookie_session + cookie_to_header CSRF. Node transport. Cursor pagination via `next_max_id`.
 **Reddit**: cookie_session → exchange_chain (shreddit/token → bearer JWT → oauth.reddit.com).
 **Bluesky**: localStorage_jwt auth. Node transport. Cursor pagination.
-**X (Twitter)**: browser_fetch transport (TLS fingerprint). cookie_to_header CSRF on ALL methods (including GET). Static bearer as const header.
-**TikTok**: BLOCKED. cookie_session auth. X-Bogus/X-Gnarly custom signing (client-side VM-based anti-bot) on ALL API requests. Core content (search, video detail, user profile) served via SSR `__UNIVERSAL_DATA_FOR_REHYDRATION__` (not API calls). Needs L3 adapter: browser_fetch transport + page.evaluate() SSR extraction. msToken dynamic signing also present.
+**X (Twitter)**: page transport (TLS fingerprint). cookie_to_header CSRF on ALL methods (including GET). Static bearer as const header.
+**TikTok**: BLOCKED. cookie_session auth. X-Bogus/X-Gnarly custom signing (client-side VM-based anti-bot) on ALL API requests. Core content (search, video detail, user profile) served via SSR `__UNIVERSAL_DATA_FOR_REHYDRATION__` (not API calls). Needs page transport with adapter extraction: page.evaluate() SSR extraction. msToken dynamic signing also present.
 
 Expected Operations:
 - [ ] Feed / timeline (read, paginated)
@@ -32,15 +32,15 @@ Expected Operations:
 
 ## Messaging (M22: 3/6 OpenTabs plugins, 50%)
 
-Auth: cookie_session, webpack_module_walk, or browser state (L3)
-Transport: page or adapter (L3)
+Auth: cookie_session, webpack_module_walk, or browser state (page transport)
+Transport: page (some need adapter extraction)
 Key pages: /conversations, /messages, /contacts
-Real-time: WebSocket/SSE — capture cannot intercept, mark as known limitation
+Real-time: WebSocket — gateway connection capturable since M35
 Examples: Discord, Telegram, WhatsApp
 
-**Discord**: webpack_module_walk token extraction. browser_fetch transport. Token lives in webpack module cache.
-**Telegram**: L3 adapter. teact getGlobal() dynamic discovery via webpack walk. State read from global store.
-**WhatsApp**: L3 adapter. Meta `__d`/`__w`/`require` module system. State read from internal modules.
+**Discord**: webpack_module_walk token extraction. Page transport. Token lives in webpack module cache.
+**Telegram**: Page transport with adapter extraction. teact getGlobal() dynamic discovery via webpack walk. State read from global store.
+**WhatsApp**: Page transport with adapter extraction. Meta `__d`/`__w`/`require` module system. State read from internal modules.
 
 Expected Operations:
 - [ ] List conversations (read, paginated)
@@ -49,7 +49,7 @@ Expected Operations:
 - [ ] List contacts / friends (read)
 - [ ] Search messages (read)
 
-## Developer Tools (M22: 4/26 OpenTabs plugins, 15% fixture | 85% compilable)
+## Developer Tools (M22: 4/26 OpenTabs plugins, 15% site package | 85% compilable)
 
 Auth: cookie_session, none, or header-based key/token (modeled as OpenAPI parameters, not primitives)
 Transport: node
@@ -73,7 +73,7 @@ Expected Operations:
 - [ ] Search (read)
 - [ ] User / org profile (read)
 
-## Weather / Data APIs (not in OpenTabs 105; 5 fixtures from external APIs)
+## Weather / Data APIs (not in OpenTabs 105; 5 site packages from external APIs)
 
 Auth: none or header-based key (modeled as OpenAPI parameter)
 Transport: node
@@ -98,10 +98,10 @@ Extraction: ssr_next_data or script_json common
 Examples: Walmart
 
 **Walmart**: ssr_next_data extraction (Next.js `__NEXT_DATA__`). Node transport — direct HTTP fetch returns full SSR payload. CDP browser blocked by PerimeterX bot detection (even non-headless). Use node-based SSR extraction (no browser needed). Search, product detail, and pricing all available via `__NEXT_DATA__` paths. Search results use flat pricing (`priceInfo.linePrice`), PDP uses nested pricing (`priceInfo.currentPrice.price`).
-**Best Buy**: Page transport (browser_fetch) required — Akamai bot protection blocks all direct HTTP and headless PDP navigation (HTTP/2 protocol errors). Three internal REST APIs work via same-origin fetch: `/suggest/v1/fragment/suggest/www?query=` (search by keyword, returns SKU IDs + categories), `/suggest/v1/fragment/products/www?skuids=` (product name/image/rating/reviews), `/api/3.0/priceBlocks?skus=` (full pricing with current/regular/savings). No auth for public data, but session cookies (SID, CTT) must be present. Compiler cannot handle this site — manual fixture creation required.
+**Best Buy**: Page transport required — Akamai bot protection blocks all direct HTTP and headless PDP navigation (HTTP/2 protocol errors). Three internal REST APIs work via same-origin fetch: `/suggest/v1/fragment/suggest/www?query=` (search by keyword, returns SKU IDs + categories), `/suggest/v1/fragment/products/www?skuids=` (product name/image/rating/reviews), `/api/3.0/priceBlocks?skus=` (full pricing with current/regular/savings). No auth for public data, but session cookies (SID, CTT) must be present. Compiler cannot handle this site — manual site package creation required.
 **eBay**: SSR HTML extraction (DOMParser). Autocomplete uses JSONP (`/autosug`), not JSON. Session cookies + CSRF for user actions.
-**Yelp**: SSR HTML with `window.yelp.react_root_props` embedded JSON. Public autocomplete API at `/search_suggest/v2/prefetch?prefix=&loc=`. DataDome bot detection blocks CDP browser and direct HTTP fetch — currently blocked for fixture creation.
-**Zillow**: PerimeterX bot detection (app ID `PXHYx10rg3`) blocks all access — CDP browser, direct HTTP, and even real browsers after IP poisoning from automated probes. Five-layer detection: TLS fingerprint, HTTP/2 fingerprint, JS challenge, behavioral analysis, IP reputation. Known API endpoints: search (`PUT /search/GetSearchPageState.htm` with JSON body), GraphQL (`/zg-graph`, `/graphql`), autocomplete (`/autocomplete/v3/suggestions`), property detail (`/homedetails/{address}/{zpid}_zpid/`). All behind PX. `robots.txt` accessible. Currently blocked for fixture creation.
+**Yelp**: SSR HTML with `window.yelp.react_root_props` embedded JSON. Public autocomplete API at `/search_suggest/v2/prefetch?prefix=&loc=`. DataDome bot detection blocks CDP browser and direct HTTP fetch — currently blocked for site package creation.
+**Zillow**: PerimeterX bot detection (app ID `PXHYx10rg3`) blocks all access — CDP browser, direct HTTP, and even real browsers after IP poisoning from automated probes. Five-layer detection: TLS fingerprint, HTTP/2 fingerprint, JS challenge, behavioral analysis, IP reputation. Known API endpoints: search (`PUT /search/GetSearchPageState.htm` with JSON body), GraphQL (`/zg-graph`, `/graphql`), autocomplete (`/autocomplete/v3/suggestions`), property detail (`/homedetails/{address}/{zpid}_zpid/`). All behind PX. `robots.txt` accessible. Currently blocked for site package creation.
 
 Expected Operations:
 - [ ] Search products (read)
@@ -122,7 +122,7 @@ Examples: YouTube, Hacker News, Wikipedia, ChatGPT
 **Hacker News**: html_selector extraction. No auth. Node transport.
 **ChatGPT**: exchange_chain (GET session endpoint) + Cloudflare User-Agent binding.
 **Wikipedia**: No auth. Node transport. Search + page summary.
-**Google Maps**: L3 adapter. Search and directions use SPA navigation + DOM extraction (APIs need session-specific tokens only generated during navigation). Place details work via direct `page.evaluate(fetch())` to `/maps/preview/place?pb=...`. Protobuf-like `pb` parameter with `!` delimiters. Responses are JSON prefixed with `)]}'`. No SAPISIDHASH needed for public data (unauthenticated). Compiler cannot handle — manual fixture. Place data at response[6] is 200+ element positional array.
+**Google Maps**: Page transport with adapter extraction. Search and directions use SPA navigation + DOM extraction (APIs need session-specific tokens only generated during navigation). Place details work via direct `page.evaluate(fetch())` to `/maps/preview/place?pb=...`. Protobuf-like `pb` parameter with `!` delimiters. Responses are JSON prefixed with `)]}'`. No SAPISIDHASH needed for public data (unauthenticated). Compiler cannot handle — manual site package. Place data at response[6] is 200+ element positional array.
 
 Expected Operations:
 - [ ] Feed / homepage (read, paginated)
@@ -131,7 +131,7 @@ Expected Operations:
 - [ ] User / channel profile (read)
 - [ ] Comment / reply (write)
 
-## Productivity / Enterprise (M22: 1/17 OpenTabs plugins, 6% fixture | 76% compilable)
+## Productivity / Enterprise (M22: 1/17 OpenTabs plugins, 6% site package | 76% compilable)
 
 Auth: sessionStorage_msal, cookie_session, or exchange_chain
 Transport: node
@@ -154,7 +154,7 @@ Examples: Microsoft Word, New Relic
 **Zendesk**: cookie_session + CSRF from `<meta name="csrf-token">` or `_zendesk_csrf` cookie. REST API at `/api/v2`. Instance-specific subdomain (e.g., `company.zendesk.com`).
 **Amplitude**: cookie_session (`onenav_jwt_prod`). GraphQL at relative `/t/graphql/org/{orgId}`. Org context from URL pattern and `intercomSettings.org_id` page global.
 
-Note: In the 105-plugin classification, New Relic is grouped under DevTools. Microsoft Word is the sole Productivity fixture. 12 B-category plugins (jira, confluence, notion, figma, linear, airtable, asana, clickup, todoist, shortcut, calendly, zendesk) are immediately compilable once logged in.
+Note: In the 105-plugin classification, New Relic is grouped under DevTools. Microsoft Word is the sole Productivity site package. 12 B-category plugins (jira, confluence, notion, figma, linear, airtable, asana, clickup, todoist, shortcut, calendly, zendesk) are immediately compilable once logged in.
 
 Expected Operations:
 - [ ] List documents / items (read, paginated)
@@ -164,7 +164,7 @@ Expected Operations:
 - [ ] Search (read)
 - [ ] Dashboard / overview (read)
 
-## Prediction / Fun APIs (not in OpenTabs 105; 12 fixtures from external APIs)
+## Prediction / Fun APIs (not in OpenTabs 105; 12 site packages from external APIs)
 
 Auth: none
 Transport: node
@@ -172,13 +172,13 @@ Key pages: single endpoint per service
 Usually: simple GET with query params, JSON response, no pagination
 Examples: Agify, Genderize, Nationalize, Cat Facts, Chuck Norris, Advice Slip, Kanye Rest, Official Joke, Useless Facts, Affirmations, Random Fox, Bored API
 
-These are the simplest archetype — no auth, no CSRF, no signing, single-operation fixtures.
+These are the simplest archetype — no auth, no CSRF, no signing, single-operation site packages.
 
 Expected Operations:
 - [ ] Query / predict (read, single call)
 - [ ] Random result (read)
 
-## Reference / Lookup APIs (M22: 0/2 OpenTabs plugins; 15 fixtures from external APIs)
+## Reference / Lookup APIs (M22: 0/2 OpenTabs plugins; 15 site packages from external APIs)
 
 Auth: none
 Transport: node
@@ -193,7 +193,7 @@ Expected Operations:
 - [ ] Detail by ID or name (read)
 - [ ] Random entry (read, if supported)
 
-## Crypto / Finance (M22: 0/4 OpenTabs plugins, 0%; 2 fixtures from external APIs)
+## Crypto / Finance (M22: 0/4 OpenTabs plugins, 0%; 2 site packages from external APIs)
 
 Auth: none or header-based key (modeled as OpenAPI parameter)
 Transport: node
@@ -208,7 +208,7 @@ Expected Operations:
 - [ ] Exchange rates (read)
 - [ ] Historical data (read, by range)
 
-## News (not in OpenTabs 105; 0 fixtures)
+## News (not in OpenTabs 105; 0 site packages)
 
 Auth: none or header-based key (modeled as OpenAPI parameter)
 Transport: node
@@ -221,7 +221,7 @@ Expected Operations:
 - [ ] Article detail (read, by ID or URL)
 - [ ] Search articles (read)
 
-## Email (not in OpenTabs 105; 0 fixtures)
+## Email (not in OpenTabs 105; 0 site packages)
 
 Auth: oauth2 (PKCE) or sessionStorage_msal
 Transport: node
@@ -258,7 +258,7 @@ Key pages: /search, /listing, /booking, /account
 Anti-bot: varies (Airbnb heavy, others moderate)
 Examples: Airbnb, Booking.com, Expedia, Priceline, TripAdvisor, Uber
 
-**Google Flights**: page_global_data extraction from SPA. No separate REST API — data delivered via internal `FlightsFrontendService` RPC calls (`GetShoppingResults`, `GetBookingResults`, `GetCalendarPicker`, `GetExploreDestinations`) triggered automatically by page JavaScript. Search parameters encoded in URL `tfs` param (protobuf-encoded base64). Flight results rendered in `li.pIav2d` elements with text containing times, airline, route, price, CO2. Text uses `\u00A0` (NBSP) and `\u2013` (en-dash) — regex must account for these. Headless browsers blocked by Google bot detection; must use managed (non-headless) browser for capture. Auto-compiler cannot handle this site — manual fixture required.
+**Google Flights**: page_global_data extraction from SPA. No separate REST API — data delivered via internal `FlightsFrontendService` RPC calls (`GetShoppingResults`, `GetBookingResults`, `GetCalendarPicker`, `GetExploreDestinations`) triggered automatically by page JavaScript. Search parameters encoded in URL `tfs` param (protobuf-encoded base64). Flight results rendered in `li.pIav2d` elements with text containing times, airline, route, price, CO2. Text uses `\u00A0` (NBSP) and `\u2013` (en-dash) — regex must account for these. Headless browsers blocked by Google bot detection; must use managed (non-headless) browser for capture. Auto-compiler cannot handle this site — manual site package required.
 
 Expected Operations:
 - [ ] Search listings (read, paginated)
