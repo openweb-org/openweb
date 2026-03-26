@@ -45,7 +45,7 @@ When documenting write operations in DOC.md, mark each with a safety level: ✅ 
 **Never trigger during discovery:**
 - Purchase/payment/checkout completion
 - Delete account or important data
-- Send messages to strangers
+- Send messages to anyone unless specified by user as safe
 - Any irreversible action with real-world consequences
 
 Verify skips write operations by default. To verify writes, use `--include-writes` (manual only).

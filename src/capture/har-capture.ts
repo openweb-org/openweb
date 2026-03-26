@@ -97,6 +97,8 @@ function shouldCapture(url: URL, contentType: string | null): boolean {
 
 export interface HarCapture {
   readonly entries: HarEntry[]
+  /** Number of requests blocked by domain/asset filter during capture */
+  readonly blockedCount: () => number
   /** Number of in-flight requests (awaiting response) + async response handlers */
   readonly pendingCount: () => number
   /** Resolves when all in-flight response handlers complete (or timeout) */
@@ -108,11 +110,15 @@ export function attachHarCapture(page: Page): HarCapture {
   const entries: HarEntry[] = []
   const pendingRequests = new Map<Request, { startedDateTime: string; startTime: number }>()
   const pendingResponses = new Set<Promise<void>>()
+  let blocked = 0
 
   const onRequest = (req: Request): void => {
     try {
       const url = new URL(req.url())
-      if (isBlockedDomain(url.hostname) || STATIC_ASSET_RE.test(url.pathname)) return
+      if (isBlockedDomain(url.hostname) || STATIC_ASSET_RE.test(url.pathname)) {
+        blocked++
+        return
+      }
       pendingRequests.set(req, { startedDateTime: new Date().toISOString(), startTime: Date.now() })
     } catch {
       // intentional: invalid URL from browser — cannot be an API request
@@ -181,6 +187,7 @@ export function attachHarCapture(page: Page): HarCapture {
 
   return {
     entries,
+    blockedCount: () => blocked,
     pendingCount: () => pendingRequests.size + pendingResponses.size,
     drain(timeoutMs = 3000): Promise<void> {
       if (pendingResponses.size === 0) return Promise.resolve()

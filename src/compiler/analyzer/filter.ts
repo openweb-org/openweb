@@ -190,17 +190,41 @@ function isBlockedPath(urlPath: string): boolean {
   return BLOCKED_PATH_PATTERNS.some((pattern) => pattern.test(urlPath))
 }
 
-export function filterSamples(samples: RecordedRequestSample[], options: FilterOptions = {}): RecordedRequestSample[] {
+export type FilterReason = 'blocked_host' | 'blocked_path' | 'non_2xx' | 'wrong_content_type' | 'mutation_gated' | 'off_domain'
+
+export interface FilteredSample {
+  readonly sample: RecordedRequestSample
+  readonly reason: FilterReason
+}
+
+export interface FilterResult {
+  readonly kept: RecordedRequestSample[]
+  readonly rejected: FilteredSample[]
+}
+
+export function filterSamples(samples: RecordedRequestSample[], options: FilterOptions = {}): FilterResult {
   const allowedDomains = buildAllowedDomains(options)
   const allowMutations = options.allowMutations ?? true
+  const kept: RecordedRequestSample[] = []
+  const rejected: FilteredSample[] = []
 
-  return samples.filter((sample) => {
-    if (!allowMutations && sample.method !== 'GET') return false
-    if (sample.status < 200 || sample.status >= 300) return false
-    if (isBlockedHost(sample.host)) return false
-    if (!isAllowedHost(sample.host, allowedDomains)) return false
-    if (isBlockedPath(sample.path)) return false
-    if (sample.contentType && !sample.contentType.includes('application/json')) return false
-    return true
-  })
+  for (const sample of samples) {
+    if (!allowMutations && sample.method !== 'GET') {
+      rejected.push({ sample, reason: 'mutation_gated' })
+    } else if (sample.status < 200 || sample.status >= 300) {
+      rejected.push({ sample, reason: 'non_2xx' })
+    } else if (isBlockedHost(sample.host)) {
+      rejected.push({ sample, reason: 'blocked_host' })
+    } else if (!isAllowedHost(sample.host, allowedDomains)) {
+      rejected.push({ sample, reason: 'off_domain' })
+    } else if (isBlockedPath(sample.path)) {
+      rejected.push({ sample, reason: 'blocked_path' })
+    } else if (sample.contentType && !sample.contentType.includes('application/json')) {
+      rejected.push({ sample, reason: 'wrong_content_type' })
+    } else {
+      kept.push(sample)
+    }
+  }
+
+  return { kept, rejected }
 }

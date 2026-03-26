@@ -30,9 +30,9 @@ describe('filterSamples', () => {
       makeSample({ host: 'example.com', path: '/api', url: 'https://example.com/api' }),
     ]
 
-    const output = filterSamples(input, { targetUrl: 'https://open-meteo.com', allowMutations: false })
-    expect(output).toHaveLength(1)
-    expect(output[0].host).toBe('api.open-meteo.com')
+    const { kept } = filterSamples(input, { targetUrl: 'https://open-meteo.com', allowMutations: false })
+    expect(kept).toHaveLength(1)
+    expect(kept[0].host).toBe('api.open-meteo.com')
   })
 
   it('allows subdomains of target domain', () => {
@@ -43,9 +43,9 @@ describe('filterSamples', () => {
       makeSample({ host: 'unrelated.com' }),
     ]
 
-    const output = filterSamples(input, { targetUrl: 'https://www.notion.so' })
-    expect(output).toHaveLength(3)
-    expect(output.map((s) => s.host)).toEqual(['api.notion.so', 'www.notion.so', 'notion.so'])
+    const { kept } = filterSamples(input, { targetUrl: 'https://www.notion.so' })
+    expect(kept).toHaveLength(3)
+    expect(kept.map((s) => s.host)).toEqual(['api.notion.so', 'www.notion.so', 'notion.so'])
   })
 
   it('blocks analytics/tracking domains', () => {
@@ -57,9 +57,11 @@ describe('filterSamples', () => {
       makeSample({ host: 'js.sentry.io' }),
     ]
 
-    const output = filterSamples(input, { targetUrl: 'https://example.com' })
-    expect(output).toHaveLength(1)
-    expect(output[0].host).toBe('api.example.com')
+    const { kept, rejected } = filterSamples(input, { targetUrl: 'https://example.com' })
+    expect(kept).toHaveLength(1)
+    expect(kept[0].host).toBe('api.example.com')
+    expect(rejected).toHaveLength(4)
+    expect(rejected.every((r) => r.reason === 'blocked_host')).toBe(true)
   })
 
   it('allows mutations by default', () => {
@@ -69,8 +71,8 @@ describe('filterSamples', () => {
       makeSample({ method: 'DELETE' }),
     ]
 
-    const output = filterSamples(input, { targetUrl: 'https://example.com' })
-    expect(output).toHaveLength(3)
+    const { kept } = filterSamples(input, { targetUrl: 'https://example.com' })
+    expect(kept).toHaveLength(3)
   })
 
   it('rejects mutations when allowMutations is false', () => {
@@ -80,8 +82,10 @@ describe('filterSamples', () => {
       makeSample({ method: 'PUT' }),
     ]
 
-    const output = filterSamples(input, { targetUrl: 'https://example.com', allowMutations: false })
-    expect(output).toHaveLength(1)
+    const { kept, rejected } = filterSamples(input, { targetUrl: 'https://example.com', allowMutations: false })
+    expect(kept).toHaveLength(1)
+    expect(rejected).toHaveLength(2)
+    expect(rejected.every((r) => r.reason === 'mutation_gated')).toBe(true)
   })
 
   it('rejects non-2xx responses', () => {
@@ -92,8 +96,10 @@ describe('filterSamples', () => {
       makeSample({ status: 500 }),
     ]
 
-    const output = filterSamples(input)
-    expect(output).toHaveLength(1)
+    const { kept, rejected } = filterSamples(input)
+    expect(kept).toHaveLength(1)
+    expect(rejected).toHaveLength(3)
+    expect(rejected.every((r) => r.reason === 'non_2xx')).toBe(true)
   })
 
   it('rejects non-JSON content types', () => {
@@ -103,8 +109,10 @@ describe('filterSamples', () => {
       makeSample({ contentType: 'image/png' }),
     ]
 
-    const output = filterSamples(input)
-    expect(output).toHaveLength(1)
+    const { kept, rejected } = filterSamples(input)
+    expect(kept).toHaveLength(1)
+    expect(rejected).toHaveLength(2)
+    expect(rejected.every((r) => r.reason === 'wrong_content_type')).toBe(true)
   })
 
   it('allows all hosts when no targetUrl specified (minus blocklist)', () => {
@@ -114,8 +122,8 @@ describe('filterSamples', () => {
       makeSample({ host: 'www.google-analytics.com' }),
     ]
 
-    const output = filterSamples(input)
-    expect(output).toHaveLength(2)
+    const { kept } = filterSamples(input)
+    expect(kept).toHaveLength(2)
   })
 
   it('supports explicit allowHosts', () => {
@@ -124,9 +132,9 @@ describe('filterSamples', () => {
       makeSample({ host: 'api.example.com' }),
     ]
 
-    const output = filterSamples(input, { allowHosts: ['custom-api.io'] })
-    expect(output).toHaveLength(1)
-    expect(output[0].host).toBe('custom-api.io')
+    const { kept } = filterSamples(input, { allowHosts: ['custom-api.io'] })
+    expect(kept).toHaveLength(1)
+    expect(kept[0].host).toBe('custom-api.io')
   })
 
   it('blocks infrastructure/noise paths', () => {
@@ -140,9 +148,9 @@ describe('filterSamples', () => {
       makeSample({ path: '/_/tracking' }),
     ]
 
-    const output = filterSamples(input)
-    expect(output).toHaveLength(1)
-    expect(output[0].path).toBe('/api/v1/users')
+    const { kept } = filterSamples(input)
+    expect(kept).toHaveLength(1)
+    expect(kept[0].path).toBe('/api/v1/users')
   })
 
   it('does not false-positive on real API paths with similar words', () => {
@@ -156,8 +164,8 @@ describe('filterSamples', () => {
       makeSample({ path: '/api/v1/pixel/campaigns' }),         // real: marketing pixel mgmt
     ]
 
-    const output = filterSamples(input)
-    expect(output).toHaveLength(7) // all should pass
+    const { kept } = filterSamples(input)
+    expect(kept).toHaveLength(7) // all should pass
   })
 
   it('handles multi-part TLDs correctly', () => {
@@ -168,9 +176,9 @@ describe('filterSamples', () => {
       makeSample({ host: 'unrelated.co.uk' }),
     ]
 
-    const output = filterSamples(input, { targetUrl: 'https://www.bbc.co.uk' })
-    expect(output).toHaveLength(3)
-    expect(output.map((s) => s.host)).toEqual(['api.bbc.co.uk', 'www.bbc.co.uk', 'bbc.co.uk'])
+    const { kept } = filterSamples(input, { targetUrl: 'https://www.bbc.co.uk' })
+    expect(kept).toHaveLength(3)
+    expect(kept.map((s) => s.host)).toEqual(['api.bbc.co.uk', 'www.bbc.co.uk', 'bbc.co.uk'])
   })
 
   it('isolates hosting platform subdomains (github.io, netlify.app, etc.)', () => {
@@ -180,9 +188,9 @@ describe('filterSamples', () => {
       makeSample({ host: 'github.io' }),
     ]
 
-    const output = filterSamples(input, { targetUrl: 'https://mysite.github.io' })
-    expect(output).toHaveLength(1)
-    expect(output[0].host).toBe('mysite.github.io')
+    const { kept } = filterSamples(input, { targetUrl: 'https://mysite.github.io' })
+    expect(kept).toHaveLength(1)
+    expect(kept[0].host).toBe('mysite.github.io')
   })
 
   it('does not block .well-known with unescaped dot', () => {
@@ -191,8 +199,30 @@ describe('filterSamples', () => {
       makeSample({ path: '/.well-known/openid' }),      // should be blocked
     ]
 
-    const output = filterSamples(input)
-    expect(output).toHaveLength(1)
-    expect(output[0].path).toBe('/xwell-known/something')
+    const { kept } = filterSamples(input)
+    expect(kept).toHaveLength(1)
+    expect(kept[0].path).toBe('/xwell-known/something')
+  })
+
+  it('returns rejected samples with correct reasons', () => {
+    const input = [
+      makeSample({ host: 'api.example.com' }),
+      makeSample({ host: 'www.google-analytics.com' }),
+      makeSample({ status: 404 }),
+      makeSample({ path: '/manifest.json' }),
+      makeSample({ contentType: 'text/html' }),
+      makeSample({ host: 'off-domain.com' }),
+    ]
+
+    const { kept, rejected } = filterSamples(input, { targetUrl: 'https://example.com' })
+    expect(kept).toHaveLength(1)
+    expect(rejected).toHaveLength(5)
+
+    const reasons = rejected.map((r) => r.reason)
+    expect(reasons).toContain('blocked_host')
+    expect(reasons).toContain('non_2xx')
+    expect(reasons).toContain('blocked_path')
+    expect(reasons).toContain('wrong_content_type')
+    expect(reasons).toContain('off_domain')
   })
 })

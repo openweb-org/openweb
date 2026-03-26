@@ -26,7 +26,7 @@ User-facing sites focused on content consumption, social interaction, and commun
 - Send message (write)
 - List contacts / friends (read)
 - Search messages (read)
-- WebSocket gateway — real-time events (since M35)
+- WebSocket gateway — real-time events
 
 ### Content Platforms
 - Feed / homepage (read, paginated)
