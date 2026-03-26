@@ -16,4 +16,5 @@ doc/todo/progress.json
 # Personal agent memory (not for OSS)
 .claude/projects/
 # Temporary files
-tmp/
+tmp/# Stale capture/test artifacts
+test-results/
