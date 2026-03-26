@@ -7,25 +7,73 @@ After completing any workflow (discover, compile, troubleshoot) that taught you 
 - Only save what's novel — don't duplicate what's in the code
 - Save patterns, not instances — "Next.js sites use `__NEXT_DATA__`" not "Walmart uses `__NEXT_DATA__`"
 - Keep files <200 lines — split when a file grows too large
+- Deduplicate — search existing knowledge files before adding. If the pattern exists, refine it rather than re-stating it.
 
 ## Process
 
-### 1. Evaluate
+### 1. Scope Decision
 
-What did you learn that isn't already in `knowledge/`?
+Is this site-specific or general?
+
+- **Site-specific** (this site's exact API, auth flow, quirks) → write to the site's `DOC.md` (see [site-doc.md](site-doc.md))
+- **General pattern** (applies across many sites) → write to `knowledge/` (this guide)
+- **Both** → write to both, with the general version abstracted
 
 ### 2. Classify
 
-Which knowledge file does it belong to?
+Which knowledge file does it belong to? Search existing files before creating a new one.
 
-- `knowledge/auth-patterns.md` — auth, CSRF, signing patterns
-- `knowledge/archetypes.md` — site categories and expected behaviors
-- Create a new file in `knowledge/` if neither fits
+| File | Scope |
+|------|-------|
+| `knowledge/auth-patterns.md` | Auth, CSRF, signing, cookie/token patterns |
+| `knowledge/archetypes.md` | Site categories and expected behaviors |
+| `knowledge/ws-patterns.md` | WebSocket message types, connection patterns, curation |
+| `knowledge/bot-detection-patterns.md` | Detection systems, transport impact, capture strategy |
+| `knowledge/extraction-patterns.md` | SSR data, DOM, page globals, adapter extraction |
+| `knowledge/graphql-patterns.md` | Persisted queries, batching, introspection, schema |
+| `knowledge/troubleshooting-patterns.md` | Failure patterns organized by category |
+
+Create a new file in `knowledge/` only if the pattern doesn't fit any existing file. Name it `<topic>-patterns.md`.
 
 ### 3. Write
 
-Append to the appropriate `knowledge/` file. Follow the existing format.
+Follow the normalized entry format:
 
-### 4. Update Process Guide (if needed)
+```markdown
+### Pattern Name
 
-If the learning changes the recommended process, update `discover.md`, `compile.md`, or `troubleshooting.md`.
+Description of the pattern — what it is and when it occurs.
+
+- **Detection signals:** how to recognize this pattern in captured traffic or site behavior
+- **Impact:** what this means for transport, auth, or fixture modeling
+- **Action:** what to do when you encounter it
+- **Example:** (optional) concrete example from a real site, generalized
+```
+
+Not every field is required — skip what's not relevant. The goal is: the next agent encountering this pattern can recognize it and know what to do.
+
+### 4. Persistence Test
+
+Before saving, verify the knowledge is durable:
+
+- Will this still be true in 6 months? (If no → site-specific DOC.md, not knowledge)
+- Is this already captured by the code itself? (If yes → don't save)
+- Does this change how an agent should behave? (If no → probably not worth saving)
+
+### 5. Size Management
+
+After writing, check the file size:
+
+```bash
+wc -l skill/openweb/knowledge/<file>.md
+```
+
+If a file exceeds 200 lines:
+1. Identify a coherent subtopic that can split out
+2. Create a new `knowledge/<subtopic>-patterns.md`
+3. Move the relevant entries
+4. Update this guide's file listing (Step 2 table above)
+
+### 6. Update Process Guide (if needed)
+
+If the learning changes the recommended process, update `references/discover.md`, `references/compile.md`, or `references/troubleshooting.md`.
