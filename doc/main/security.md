@@ -1,7 +1,7 @@
 # Security Model
 
 > SSRF protection, redirect safety, error handling, and risk tiers.
-> Last updated: 2026-03-16 (commit: `dd2b17e`)
+> Last updated: 2026-03-26 (M38)
 
 ## Overview
 
@@ -162,9 +162,12 @@ Response schema validation is also performed when a schema is defined in the Ope
 
 ```
 src/lib/
-├── ssrf.ts       # SSRF validation (IPv4/v6, DNS, metadata)
-├── errors.ts     # OpenWebError, OpenWebErrorPayload, error utilities
-└── openapi.ts    # OpenAPI parsing, URL building
+├── ssrf.ts             # SSRF validation (IPv4/v6, DNS, metadata)
+├── errors.ts           # OpenWebError, structured error contract
+├── openapi.ts          # OpenAPI parsing, URL building
+├── site-resolver.ts    # Site resolution (bundled + user-installed)
+├── spec-loader.ts      # Spec loading + validation
+└── permissions.ts      # Permission system + derivation
 ```
 
 ---

@@ -1,21 +1,21 @@
 # Compiler Pipeline
 
 > Record → Analyze → Classify → Probe → Emit: turning website observations into skill packages.
-> Last updated: 2026-03-17 (commit: M15)
+> Last updated: 2026-03-26 (M38)
 
 ## Overview
 
-The compiler observes a website's behavior and generates a skill package (OpenAPI spec + manifest + tests). It operates in 4 phases:
+The compiler observes a website's behavior and generates skill packages (OpenAPI spec + AsyncAPI spec + manifest + tests). It operates in 6 phases:
 
 ```
-Phase 1: Capture    Record HTTP traffic, WebSocket frames, state, DOM
-Phase 2: Analyze    Cluster requests, differentiate params, infer schemas
-Phase 3: Classify   Detect L2 primitives, assign risk tier
-Phase 4: Probe      (opt-in) Validate classify heuristics with real requests
-Phase 5: Emit       Generate openapi.yaml + manifest.json + tests/
+Phase 1: Capture      Record HTTP traffic, WebSocket frames, state, DOM
+Phase 2: Analyze      Cluster requests, differentiate params, infer schemas
+Phase 3: Classify     Detect L2 primitives, assign risk tier
+Phase 3b: WS Analyze  Cluster WS frames, classify channels, infer schemas (M35)
+Phase 4: Probe        (opt-in) Validate classify heuristics with real requests
+Phase 5: Emit         Generate openapi.yaml + asyncapi.yaml + manifest.json + tests/
+Phase 6: Report       Output compile report (filtered.json, clusters.json, classify.json, probe.json, summary.txt)
 ```
-
-Currently: Phase 1 is complete (M0), Phases 2-5 handle L1 emission with partial L2 classification + optional probing (M15).
 
 -> See: `src/compiler/`
 
@@ -104,14 +104,11 @@ Step 3: page (deferred) → browser_fetch via CDP
 
 Generates the skill package from analyzed operations.
 
-```typescript
-async function generatePackage(input: GeneratePackageInput): Promise<string>
-```
-
 **Generates:**
 1. `openapi.yaml` — OpenAPI 3.1 spec with x-openweb extensions
-2. `manifest.json` — Package metadata
-3. `tests/<operationId>.test.json` — Test cases from captured samples
+2. `asyncapi.yaml` — AsyncAPI 3.0 spec for WebSocket channels (if WS frames captured)
+3. `manifest.json` — Package metadata (includes `ws_count`)
+4. `tests/<operationId>.test.json` — Test cases from captured samples
 
 **Risk tier derivation:**
 - DELETE → `high`
@@ -122,7 +119,7 @@ async function generatePackage(input: GeneratePackageInput): Promise<string>
 - Server-level: mode, auth, CSRF (from ClassifyResult)
 - Operation-level: permission, stable_id, signature_id, tool_version
 
--> See: `src/compiler/generator.ts`
+-> See: `src/compiler/generator/openapi.ts`, `src/compiler/generator/asyncapi.ts`, `src/compiler/generator/package.ts`
 
 ---
 
@@ -161,21 +158,24 @@ openweb compile <url>
 
 ```bash
 # Interactive capture + compile
-openweb compile <url>
+pnpm dev compile <url>
 
 # Scripted recording + compile
-openweb compile <url> --script ./scripts/record-instagram.ts
+pnpm dev compile <url> --script ./scripts/record-instagram.ts
 
 # Compile with probing (validates classify heuristics via real requests)
-openweb compile <url> --probe
-openweb compile <url> --probe --cdp-endpoint http://localhost:9222
+pnpm dev compile <url> --probe
+pnpm dev compile <url> --probe --cdp-endpoint http://localhost:9222
+
+# Compile from existing capture directory (skip capture phase)
+pnpm dev compile <url> --capture-dir ./captures/my-site
 
 # Capture only (manual)
-openweb capture start --cdp-endpoint http://localhost:9222
-openweb capture stop
+pnpm dev capture start --cdp-endpoint http://localhost:9222
+pnpm dev capture stop
 
 # Test compiled package
-openweb <site> test
+pnpm dev <site> test
 ```
 
 ---
@@ -184,16 +184,24 @@ openweb <site> test
 
 ```
 src/compiler/
-├── recorder.ts         # HAR parsing + scripted recording spawn
-├── generator.ts        # OpenAPI + manifest emission
-├── prober.ts           # Probe escalation ladder + merge
-└── analyzer/           # Analysis pipeline
-    ├── cluster.ts      # Group requests by path template
-    ├── filter.ts       # Remove non-API requests
-    ├── differentiate.ts # Path params vs query params
-    ├── schema.ts       # Response JSON Schema inference
-    ├── annotate.ts     # Metadata attachment
-    └── classify/       # L2 primitive detection
+├── recorder.ts             # HAR parsing + scripted recording spawn
+├── prober.ts               # Probe escalation ladder + merge
+├── analyzer/               # HTTP analysis pipeline
+│   ├── cluster.ts          # Group requests by path template
+│   ├── filter.ts           # Remove non-API requests
+│   ├── differentiate.ts    # Path params vs query params
+│   ├── schema.ts           # Response JSON Schema inference
+│   ├── annotate.ts         # Metadata attachment
+│   └── classify/           # L2 primitive detection
+├── ws-analyzer/            # WebSocket analysis pipeline (M35)
+│   ├── ws-load.ts          # Load WS frames from capture
+│   ├── ws-cluster.ts       # Cluster frames by channel/topic
+│   ├── ws-classify.ts      # Classify WS message types
+│   └── ws-schema.ts        # Infer message schemas
+└── generator/              # Package emission (M36 split)
+    ├── openapi.ts          # OpenAPI 3.1 spec generation
+    ├── asyncapi.ts         # AsyncAPI 3.0 spec generation
+    └── package.ts          # manifest.json + tests + bundle
 ```
 
 ---
@@ -203,4 +211,4 @@ src/compiler/
 - [browser-capture.md](browser-capture.md) — Phase 1 capture details
 - [meta-spec.md](meta-spec.md) — Types used in emission
 - [architecture.md](architecture.md) — Where compiler fits
-- `src/compiler/generator.ts` — Emission implementation
+- `src/compiler/generator/` — Emission implementation

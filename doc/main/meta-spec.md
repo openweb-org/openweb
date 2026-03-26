@@ -1,7 +1,7 @@
 # Meta-spec: Type System & Validation
 
 > L2 primitive types, x-openweb extensions, JSON Schema, and AJV validation.
-> Last updated: 2026-03-17 (commit: M14)
+> Last updated: 2026-03-26 (M38)
 
 ## Overview
 
@@ -25,7 +25,7 @@ OpenWeb extends OpenAPI 3.1 with `x-openweb` at two levels:
 
 ```typescript
 interface XOpenWebServer {
-  transport: 'node' | 'page'
+  transport: 'node' | 'page' | 'ws'
   auth?: AuthPrimitive
   csrf?: CsrfPrimitive & { scope?: string[] }
   signing?: SigningPrimitive
@@ -214,6 +214,7 @@ A compiled skill package contains:
 ```
 sites/<site>/
 ├── openapi.yaml          # L1 spec + x-openweb L2 extensions
+├── asyncapi.yaml         # AsyncAPI 3.0 for WS channels (optional)
 ├── manifest.json         # Package metadata
 ├── adapters/             # L3 code (optional)
 │   └── <name>.js
@@ -231,7 +232,7 @@ sites/<site>/
   "spec_version": "2.0",
   "site_url": "https://www.instagram.com",
   "requires_auth": true,
-  "stats": { "operation_count": 3, "l1_count": 0, "l2_count": 3, "l3_count": 0 }
+  "stats": { "operation_count": 3, "l1_count": 0, "l2_count": 3, "l3_count": 0, "ws_count": 0 }
 }
 ```
 

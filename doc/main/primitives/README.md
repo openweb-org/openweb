@@ -1,7 +1,7 @@
 # L2 Primitive Resolvers
 
 > Auth, CSRF, signing, pagination, and extraction primitives — the declarative layer that handles ~50% of websites.
-> Last updated: 2026-03-17 (commit: M9)
+> Last updated: 2026-03-26 (M38)
 
 ## Overview
 

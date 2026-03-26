@@ -10,8 +10,8 @@
 | Build | `pnpm build` |
 | Test | `pnpm test` |
 | Lint | `pnpm lint` |
-| List sites | `openweb sites` |
-| Execute | `openweb <site> exec <op> '{...}'` |
+| List sites | `pnpm dev sites` |
+| Execute | `pnpm dev <site> exec <op> '{...}'` |
 
 ---
 

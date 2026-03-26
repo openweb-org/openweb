@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-18 (commit: M22)
+> Last updated: 2026-03-26 (M38)
 
 ## Mission
 
@@ -49,16 +49,16 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
                     │   executor   │  Load spec → find operation → permission gate → resolve transport
                     └──────┬───────┘
                            │
-              ┌────────────┼────────────┐
-              │            │            │
-              ▼            ▼            ▼
-        ┌──────────┐ ┌──────────┐ ┌──────────┐
-        │ adapter  │ │extraction│ │   page   │
-        │  (L3)    │ │          │ │          │
-        │          │ │ DOM/JSON │ │ page.    │
-        │ arbitrary│ │ from live│ │ evaluate │
-        │ JS       │ │ page     │ │ (fetch)  │
-        └──────────┘ └──────────┘ └────┬─────┘
+              ┌────────────┼────────────┼────────────┐
+              │            │            │            │
+              ▼            ▼            ▼            ▼
+        ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+        │ adapter  │ │extraction│ │   page   │ │    ws    │
+        │  (L3)    │ │          │ │          │ │          │
+        │          │ │ DOM/JSON │ │ page.    │ │ WebSocket│
+        │ arbitrary│ │ from live│ │ evaluate │ │ real-time│
+        │ JS       │ │ page     │ │ (fetch)  │ │ channels │
+        └──────────┘ └──────────┘ └────┬─────┘ └──────────┘
                                        │
                                  ┌─────┴─────┐
                                  │   node    │
@@ -83,15 +83,13 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 | Component | What it does | Key files | Status |
 |-----------|-------------|-----------|--------|
 | **Meta-spec** | x-openweb schema: L2 types + L3 interface + package format | `src/types/` | Formalized (M1) |
-| **Runtime** | Reads skill packages, resolves primitives, executes requests | `src/runtime/` | L1 + L2 + L3 + extraction + token cache (M14) |
-| **Compiler** | Captures behavior, detects patterns, emits skill packages | `src/compiler/` | L1 emit + L2 classify + probe (M15) |
+| **Runtime** | Reads skill packages, resolves primitives, executes requests (HTTP + WS) | `src/runtime/` | L1 + L2 + L3 + extraction + WS + token cache (M35) |
+| **Compiler** | Captures behavior, detects patterns, emits skill packages (OpenAPI + AsyncAPI) | `src/compiler/` | L1 emit + L2 classify + WS classify + probe + compile report (M38) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM), dynamic globals detection | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17) |
-| **Lifecycle** | Drift detection, verification, quarantine | `src/lifecycle/` | Fingerprint + verify + quarantine (M12) |
-| **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skill/openweb/references/` | Reference docs (M19), CLI + CompileSummary removed (M20) |
-| **Registry** | Site version management, install, rollback | `src/lifecycle/registry.ts` | Internal registry (M12) |
-| **CLI** | Progressive navigation + exec + init + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete (M14: browser, login; M18: discovery moved to agent workflow; M20: knowledge CLI removed; M21: init, auto-exec, npm packaging) |
-| **Skill packages** | Per-site instance specs | `src/sites/` (dev), `~/.openweb/sites/` (installed) | 135 sites (17 A-class verified + 35 B-class + 48 C-class stubs + 34 public API + 1 open-meteo) |
-| **Agent skill** | CLI wrapper for Claude/Codex agents | `skill/openweb/SKILL.md` | Complete (M5), Draft-Curate-Verify + knowledge refs (M19) |
+| **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skill/openweb/references/` | Reference docs (M19), 7 knowledge files (M38) |
+| **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete — npm binary `openweb` (M33) |
+| **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `~/.openweb/sites/` (installed) | 67 sites with DOC.md + PROGRESS.md (M38) |
+| **Agent skill** | CLI wrapper for Claude/Codex agents | `skill/openweb/SKILL.md` | 5-intent router (M38) |
 
 ---
 
@@ -101,6 +99,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 |-----------|-----------|---------------|-------------|
 | `node` | HTTP from Node.js. If auth/csrf/signing config present, uses browser cookies. | Only for auth | Public APIs, cookie auth, CSRF, token extraction |
 | `page` | HTTP via `page.evaluate(fetch(...))`. Always needs browser. | Yes (CDP) | Signing, native TLS, CORS-bound APIs |
+| `ws` | WebSocket connection with message routing. AsyncAPI-defined channels. | Only for auth | Real-time APIs (Discord gateway, Coinbase feed) |
 
 **Transport resolution**: operation-level `x-openweb.transport` → server-level `x-openweb.transport` → default `node`
 `x-openweb.extraction` short-circuits HTTP transport dispatch and runs directly against the matching page state.
@@ -182,13 +181,13 @@ Policy is configurable per-site in `~/.openweb/permissions.yaml`.
 
 `openweb browser start` copies auth-relevant files from the default Chrome profile to a secure temp directory (`mkdtemp`, mode 0o700), launches Chrome with CDP, and saves PID/port to `~/.openweb/`. All `exec` commands auto-detect the managed browser — no `--cdp-endpoint` needed.
 
-Token cache at `~/.openweb/tokens/<site>/` stores cookies + localStorage + sessionStorage after successful authenticated requests. Cache has JWT-aware TTL. Cache hit → no browser connection needed. 401/403 → cache invalidated → browser fallback.
+Token cache at `~/.openweb/vault.json` stores cookies + localStorage + sessionStorage with AES-256-GCM encryption and PBKDF2 machine-binding. JWT-aware TTL. Cache hit → no browser connection needed. 401/403 → cache invalidated → browser fallback.
 
 -> See: `src/commands/browser.ts`, `src/runtime/token-cache.ts`
 
 ---
 
-## Verified Sites (M0-M12)
+## Verified Sites (representative)
 
 | Site | Layer | Auth | CSRF | Signing | Extraction | Transport |
 |------|-------|------|------|---------|------------|-----------|
@@ -201,48 +200,14 @@ Token cache at `~/.openweb/tokens/<site>/` stores cookies + localStorage + sessi
 | Walmart | L2 | — | — | — | ssr_next_data | node |
 | Hacker News | L2 | — | — | — | html_selector | node |
 | Microsoft Word | L2 | sessionStorage_msal | — | — | — | node |
-| New Relic | L2 | cookie_session | — | — | — | node |
-| Discord | L2 | webpack_module_walk | — | — | — | page |
+| Discord | L2+WS | webpack_module_walk | — | — | — | page + ws |
 | ChatGPT | L2 | exchange_chain | — | — | — | node |
 | X | L2 | cookie_session | cookie_to_header | — | — | page |
+| Coinbase | WS | — | — | — | — | ws |
 | WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |
 | Telegram | L3 | adapter | — | — | adapter | adapter (L3) |
-| Stack Overflow | L1 | — | — | — | — | node |
-| CoinGecko | L1 | — | — | — | — | node |
-| Wikipedia | L1 | — | — | — | — | node |
-| npm | L1 | — | — | — | — | node |
-| DuckDuckGo | L1 | — | — | — | — | node |
-| JSONPlaceholder | L1 | — | — | — | — | node |
-| Dog CEO | L1 | — | — | — | — | node |
-| GitHub (public) | L1 | — | — | — | — | node |
-| REST Countries | L1 | — | — | — | — | node |
-| IP API | L1 | — | — | — | — | node |
-| Agify | L1 | — | — | — | — | node |
-| Bored API | L1 | — | — | — | — | node |
-| Cat Facts | L1 | — | — | — | — | node |
-| Exchange Rate | L1 | — | — | — | — | node |
-| Genderize | L1 | — | — | — | — | node |
-| HTTPBin | L1 | — | — | — | — | node |
-| Nationalize | L1 | — | — | — | — | node |
-| Open Library | L1 | — | — | — | — | node |
-| PokeAPI | L1 | — | — | — | — | node |
-| Random User | L1 | — | — | — | — | node |
-| Advice Slip | L1 | — | — | — | — | node |
-| Affirmations | L1 | — | — | — | — | node |
-| Chuck Norris | L1 | — | — | — | — | node |
-| CocktailDB | L1 | — | — | — | — | node |
-| Color API | L1 | — | — | — | — | node |
-| Country.is | L1 | — | — | — | — | node |
-| Dictionary API | L1 | — | — | — | — | node |
-| Random Fox | L1 | — | — | — | — | node |
-| Kanye Rest | L1 | — | — | — | — | node |
-| Official Joke | L1 | — | — | — | — | node |
-| Public Holidays | L1 | — | — | — | — | node |
-| Sunrise Sunset | L1 | — | — | — | — | node |
-| Universities | L1 | — | — | — | — | node |
-| Useless Facts | L1 | — | — | — | — | node |
-| World Time | L1 | — | — | — | — | node |
-| Zippopotam | L1 | — | — | — | — | node |
+
+67 total sites. Full list: `pnpm dev sites`
 
 **Note:** The GitHub public fixture also includes a `graphqlQuery` operation (POST `/graphql`, `permission: write`) demonstrating POST-based GraphQL on a public API.
 

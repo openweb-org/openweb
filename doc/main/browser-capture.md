@@ -1,7 +1,7 @@
 # Browser Capture (CDP)
 
 > Passive browser recording via Chrome DevTools Protocol.
-> Last updated: 2026-03-16 (commit: `dd2b17e`)
+> Last updated: 2026-03-26 (M38)
 
 ## Overview
 

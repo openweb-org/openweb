@@ -1,7 +1,7 @@
 # L3 Adapter Framework
 
 > CodeAdapter interface, loading, and execution lifecycle for sites that defy declarative modeling.
-> Last updated: 2026-03-16 (commit: `dd2b17e`)
+> Last updated: 2026-03-26 (M38)
 
 ## Overview
 

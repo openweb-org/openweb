@@ -38,48 +38,48 @@ pnpm lint           # Biome lint check
 
 ```bash
 # List sites / show operations / show operation details
-openweb sites
-openweb instagram
-openweb instagram getTimeline
-openweb instagram getTimeline --json     # Machine-readable
-openweb instagram getTimeline --example  # Generate example params
+pnpm dev sites
+pnpm dev instagram
+pnpm dev instagram getTimeline
+pnpm dev instagram getTimeline --json     # Machine-readable
+pnpm dev instagram getTimeline --example  # Generate example params
 
 # Execute (auto-exec: JSON arg triggers exec mode)
-openweb instagram getTimeline '{}'
-openweb instagram getTimeline '{}' --cdp-endpoint http://localhost:9222
-openweb instagram getTimeline '{}' --max-response 8192  # Auto-spill
-openweb instagram getTimeline '{}' --output file        # Always file
+pnpm dev instagram getTimeline '{}'
+pnpm dev instagram getTimeline '{}' --cdp-endpoint http://localhost:9222
+pnpm dev instagram getTimeline '{}' --max-response 8192  # Auto-spill
+pnpm dev instagram getTimeline '{}' --output file        # Always file
 ```
 
 ### Browser Management
 
 ```bash
-openweb browser start                            # Auto-copies Chrome profile, CDP
-openweb browser start --headless                 # No window
-openweb browser stop                             # Stop, preserve token cache
-openweb browser restart                          # Re-copy profile + clear token cache
-openweb browser status                           # Check if running
-openweb login instagram                          # Open site in default browser
+pnpm dev browser start                            # Auto-copies Chrome profile, CDP
+pnpm dev browser start --headless                 # No window
+pnpm dev browser stop                             # Stop, preserve token cache
+pnpm dev browser restart                          # Re-copy profile + clear token cache
+pnpm dev browser status                           # Check if running
+pnpm dev login instagram                          # Open site in default browser
 ```
 
 ### Compile a Site
 
 ```bash
-openweb compile https://api.example.com
-openweb compile https://api.example.com --script ./scripts/record.ts
-openweb compile https://api.example.com --probe --cdp-endpoint http://localhost:9222
-openweb compile https://api.example.com --capture-dir ./captures/my-site  # Use existing capture
+pnpm dev compile https://api.example.com
+pnpm dev compile https://api.example.com --script ./scripts/record.ts
+pnpm dev compile https://api.example.com --probe --cdp-endpoint http://localhost:9222
+pnpm dev compile https://api.example.com --capture-dir ./captures/my-site  # Use existing capture
 ```
 
 ### Run Site Tests / Verify / Registry
 
 ```bash
-openweb instagram test
-openweb verify walmart                           # Single site
-openweb verify --all --report markdown           # Batch verify
-openweb registry list                            # List registered
-openweb registry install walmart                 # Archive
-openweb registry rollback walmart                # Revert
+pnpm dev instagram test
+pnpm dev verify walmart                           # Single site
+pnpm dev verify --all --report markdown           # Batch verify
+pnpm dev registry list                            # List registered
+pnpm dev registry install walmart                 # Archive
+pnpm dev registry rollback walmart                # Revert
 ```
 
 ## Development Cycle
@@ -108,9 +108,9 @@ pnpm test -- --watch                  # Watch mode
 
 ```bash
 pnpm dev browser start
-openweb login instagram               # Log in in Chrome, then:
+pnpm dev login instagram               # Log in in Chrome, then:
 pnpm dev browser restart
-openweb instagram getTimeline '{}'
+pnpm dev instagram getTimeline '{}'
 ```
 
 ## Project Structure
@@ -189,6 +189,29 @@ Agent validation benchmarks in `tests/benchmark/` -- 10 tasks covering all execu
 - TypeScript strict mode, no `any`
 - ESM only (import/export, no require)
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`
+
+## Build → Install → Final QA
+
+During development use `pnpm dev` — it runs source directly via tsx. The final deliverable is the `openweb` binary (installed via npm).
+
+```bash
+# 1. Build distributable
+pnpm build                          # tsup → dist/ (ESM), adapters compiled
+
+# 2. Pack and inspect
+pnpm pack:check                     # dry-run, verify tarball contents (~284kB)
+pnpm pack                           # produces openweb-org-openweb-*.tgz
+
+# 3. Global install for final QA
+npm install -g ./openweb-org-openweb-*.tgz
+
+# 4. Final QA — use openweb (not pnpm dev)
+openweb sites                       # verify bundled site resolution
+openweb instagram getTimeline '{}'  # verify execution end-to-end
+openweb verify --all                # batch verify all sites
+```
+
+When testing the installed binary, replace all `pnpm dev` with `openweb`. The binary resolves sites from `dist/sites/` (bundled read-only) or `~/.openweb/sites/` (user-installed).
 
 ## Troubleshooting
 

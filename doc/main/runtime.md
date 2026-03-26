@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-03-17 (commit: M14)
+> Last updated: 2026-03-26 (M38)
 
 ## Overview
 
@@ -34,6 +34,9 @@ executeOperation(site, operationId, params, deps)
        │
        ├── extraction?
        │     └── executeExtraction()
+       │
+       ├── ws?
+       │     └── ws-executor → ws-connection (7-state machine) → ws-router
        │
        ├── page?
        │     └── executeBrowserFetch()
@@ -178,6 +181,28 @@ fetch(url, { method, headers, body })
 
 ---
 
+## WebSocket Transport (M35)
+
+For sites with AsyncAPI specs (real-time channels), the WS executor manages persistent connections:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  1. Load AsyncAPI spec (asyncapi.yaml)              │
+│  2. Find channel by operationId                     │
+│  3. Connect via ws-connection (7-state machine)     │
+│     idle → connecting → connected → subscribing     │
+│     → active → draining → closed                    │
+│  4. Route messages via ws-router (pattern matching)  │
+│  5. Return structured result                        │
+└─────────────────────────────────────────────────────┘
+```
+
+Connection pooling reuses connections across operations on the same server. Auth primitives (ws_url_token, ws_first_message) inject credentials into the WebSocket handshake or initial message.
+
+-> See: `src/runtime/ws-executor.ts`, `src/runtime/ws-connection.ts`, `src/runtime/ws-router.ts`
+
+---
+
 ## Redirect Handling
 
 All transports (except page, which delegates to browser) follow redirects manually:
@@ -270,17 +295,26 @@ The CLI catches errors and writes structured JSON to stderr.
 ```
 src/runtime/
 ├── executor.ts               # Main dispatcher (transport routing, response handling)
-├── session-executor.ts       # Node transport (parameter binding, auth pipeline)
+├── http-executor.ts          # HTTP execution (direct + session, split from executor M36)
+├── executor-result.ts        # Unified ExecutorResult types (M36)
 ├── request-builder.ts        # Shared request construction (path/query/header/body binding)
 ├── redirect.ts               # Redirect handling with SSRF validation
 ├── operation-context.ts      # Operation metadata resolution (transport, auth, extraction)
 ├── browser-fetch-executor.ts # Page transport (page.evaluate)
+├── node-ssr-executor.ts      # Node SSR execution
 ├── extraction-executor.ts    # Extraction-only operations
 ├── adapter-executor.ts       # L3 adapter loading + execution
 ├── paginator.ts              # Pagination executor (cursor + link_header)
 ├── value-path.ts             # Shared dot-path helper for nested payloads
 ├── navigator.ts              # CLI navigation helper (render site/operation info)
-├── token-cache.ts            # Token cache (cookies + localStorage + sessionStorage, JWT-aware TTL)
+├── cache-manager.ts          # Response cache
+├── token-cache.ts            # AES-256-GCM encrypted vault (M34)
+├── test-runner.ts            # verify command implementation
+├── ws-executor.ts            # WebSocket operation execution (M35)
+├── ws-connection.ts          # WS connection manager (7-state machine)
+├── ws-router.ts              # WS message routing
+├── ws-runtime.ts             # WS runtime lifecycle
+├── ws-pool.ts                # WS connection pooling
 └── primitives/               # L2 primitive resolvers
     ├── registry.ts           # Primitive type registry
     ├── index.ts              # Primitive pipeline orchestration
