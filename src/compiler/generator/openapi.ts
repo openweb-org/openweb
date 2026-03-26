@@ -176,6 +176,22 @@ export async function generateOpenApi(input: GenerateOpenApiInput): Promise<void
       },
     }
 
+    // Emit requestBody for write operations with inferred body schema
+    if (operation.requestBodySchema) {
+      const bodyContent: Record<string, unknown> = {
+        schema: operation.requestBodySchema,
+      }
+      if (operation.exampleRequestBody !== undefined) {
+        bodyContent.example = operation.exampleRequestBody
+      }
+      operationObject.requestBody = {
+        required: true,
+        content: {
+          'application/json': bodyContent,
+        },
+      }
+    }
+
     if (operation.host !== primaryHost) {
       operationObject.servers = [{ url: `https://${operation.host}` }]
     }
@@ -189,6 +205,7 @@ export async function generateOpenApi(input: GenerateOpenApiInput): Promise<void
     const testShape = {
       operation_id: operation.operationId,
       method: operation.method,
+      ...(operation.exampleRequestBody !== undefined ? { request_body: operation.exampleRequestBody } : {}),
       cases: [
         {
           input: operation.exampleInput,

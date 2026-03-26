@@ -36,6 +36,8 @@ export interface AnalyzedOperation {
   readonly summary: string
   readonly parameters: ParameterDescriptor[]
   readonly responseSchema: JsonSchema
+  readonly requestBodySchema?: JsonSchema
+  readonly exampleRequestBody?: unknown
   readonly exampleInput: Record<string, unknown>
   readonly verified: boolean
 }

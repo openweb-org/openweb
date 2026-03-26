@@ -173,6 +173,26 @@ export async function compileSite(
     const annotatedParams = annotateParameterDescriptions(differentiatedParams)
     const responseSchema = inferSchema(cluster.samples.map((sample) => sample.responseJson))
 
+    // Infer request body schema from recorded samples (for write operations)
+    let requestBodySchema: ReturnType<typeof inferSchema> | undefined
+    let exampleRequestBody: unknown | undefined
+    if (cluster.method !== 'GET' && cluster.method !== 'HEAD') {
+      const parsedBodies: unknown[] = []
+      for (const sample of cluster.samples) {
+        if (sample.requestBody) {
+          try {
+            parsedBodies.push(JSON.parse(sample.requestBody))
+          } catch {
+            // non-JSON body — skip schema inference
+          }
+        }
+      }
+      if (parsedBodies.length > 0) {
+        requestBodySchema = inferSchema(parsedBodies)
+        exampleRequestBody = parsedBodies[0]
+      }
+    }
+
     const operationBase = {
       method: cluster.method.toLowerCase(),
       host: cluster.host,
@@ -181,6 +201,8 @@ export async function compileSite(
       summary: annotation.summary,
       parameters: annotatedParams,
       responseSchema,
+      requestBodySchema,
+      exampleRequestBody,
       exampleInput: buildExampleInput(annotatedParams),
     }
 
