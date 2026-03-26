@@ -1,0 +1,11 @@
+{
+  "operationId": "getPlaceReviews",
+  "params": {
+    "placeId": "0x80858135f0db680b:0x47e714bf5f0080a3",
+    "query": "The Coffee Berry SF"
+  },
+  "expect": {
+    "status": 200,
+    "schema_valid": true
+  }
+}

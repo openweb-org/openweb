@@ -239,3 +239,270 @@ paths:
                             - string
                             - 'null'
                           description: Route summary text.
+  /internal/getPlaceReviews:
+    get:
+      operationId: getPlaceReviews
+      summary: Get place reviews — author names, ratings, text, relative time
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0004
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: getPlaceReviews
+      parameters:
+        - name: placeId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Place ID from searchPlaces (hex format "0x...:0x...").
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Place name (helps Maps resolve the place).
+      responses:
+        '200':
+          description: Place reviews with author details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - reviews
+                properties:
+                  placeName:
+                    type:
+                      - string
+                      - 'null'
+                  placeId:
+                    type: string
+                  rating:
+                    type:
+                      - number
+                      - 'null'
+                    description: Overall place rating.
+                  reviewCount:
+                    type:
+                      - integer
+                      - 'null'
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        authorName:
+                          type:
+                            - string
+                            - 'null'
+                        authorUrl:
+                          type:
+                            - string
+                            - 'null'
+                        rating:
+                          type:
+                            - number
+                            - 'null'
+                          description: Individual review star rating.
+                        relativeTime:
+                          type:
+                            - string
+                            - 'null'
+                          description: When the review was posted (e.g. "2 months ago").
+  /internal/getPlacePhotos:
+    get:
+      operationId: getPlacePhotos
+      summary: Get place photo URLs — images with dimensions and captions
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0005
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: getPlacePhotos
+      parameters:
+        - name: placeId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Place ID from searchPlaces (hex format "0x...:0x...").
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Place name (helps Maps resolve the place).
+      responses:
+        '200':
+          description: Place photos with URLs.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - photos
+                properties:
+                  placeName:
+                    type:
+                      - string
+                      - 'null'
+                  placeId:
+                    type: string
+                  photos:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                          description: Direct photo URL.
+                        width:
+                          type:
+                            - integer
+                            - 'null'
+                        height:
+                          type:
+                            - integer
+                            - 'null'
+                        caption:
+                          type:
+                            - string
+                            - 'null'
+  /internal/nearbySearch:
+    get:
+      operationId: nearbySearch
+      summary: Search places by category near a location — restaurants, hotels, etc.
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0006
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: nearbySearch
+      parameters:
+        - name: category
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Place category (e.g. "restaurants", "hotels", "gas stations", "pharmacies").
+        - name: location
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Location to search near (e.g. "Times Square", "downtown Seattle").
+      responses:
+        '200':
+          description: Nearby places matching the category.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - places
+                properties:
+                  category:
+                    type: string
+                  location:
+                    type: string
+                  places:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        placeId:
+                          type: string
+                        name:
+                          type: string
+                        address:
+                          type: string
+                        rating:
+                          type:
+                            - number
+                            - 'null'
+                        reviewCount:
+                          type:
+                            - integer
+                            - 'null'
+                        priceLevel:
+                          type:
+                            - string
+                            - 'null'
+                        types:
+                          type: array
+                          items:
+                            type: string
+                        lat:
+                          type: number
+                        lng:
+                          type: number
+  /internal/getAutocompleteSuggestions:
+    get:
+      operationId: getAutocompleteSuggestions
+      summary: Get autocomplete suggestions for a partial search query
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0007
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: getAutocompleteSuggestions
+      parameters:
+        - name: input
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Partial search text (e.g. "Statue of Lib", "coffee near dow").
+      responses:
+        '200':
+          description: Autocomplete suggestions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - suggestions
+                properties:
+                  input:
+                    type: string
+                  suggestions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                          description: Suggested completion text.
+                        placeId:
+                          type:
+                            - string
+                            - 'null'
+                          description: Place ID if the suggestion is a specific place.
+                        description:
+                          type:
+                            - string
+                            - 'null'
+                          description: Additional context about the suggestion.
