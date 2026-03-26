@@ -1,3 +1,15 @@
+## 2026-03-26: CoinGecko — expand coverage from 3 to 8 ops
+
+**What changed:**
+- Added 5 new operations: getCoinDetail, getCoinMarketChart, getTrendingCoins, getGlobalData, getExchanges
+- DOC.md updated with all 8 operations, API architecture notes, and known rate limiting issues
+- Test files added for all new operations
+
+**Why:**
+- Expand CoinGecko coverage for coin detail, historical charts, trending, global market data, and exchanges
+
+**Verification:** 7/8 PASS (getPrice transient 429 rate limit)
+
 ## 2026-03-26: M38 — Skill review + doc polish + lint + publish prep
 
 **What changed:**

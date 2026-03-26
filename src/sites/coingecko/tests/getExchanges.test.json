@@ -1,0 +1,15 @@
+{
+  "operation_id": "getExchanges",
+  "cases": [
+    {
+      "input": {
+        "per_page": 10,
+        "page": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
