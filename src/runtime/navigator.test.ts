@@ -62,18 +62,14 @@ describe('navigator', () => {
     expect(result).toContain('Best Buy')
   })
 
-  it('omits notes hint when no DOC.md', async () => {
-    const output = await renderSite('open-meteo')
-    expect(output).not.toContain('Notes:')
-  })
-
-  it('includes hasNotes in JSON output', async () => {
-    // Use safeReadNotes directly to avoid ~/.openweb resolution
-    const withNotes = await safeReadNotes(path.join(process.cwd(), 'src/sites/bestbuy'))
-    const withoutNotes = await safeReadNotes(path.join(process.cwd(), 'src/sites/open-meteo')).catch(() => null)
-
-    expect(withNotes).toBeTruthy()
-    expect(withoutNotes).toBeNull()
+  it('returns null when no DOC.md exists', async () => {
+    const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'no-doc-'))
+    try {
+      const result = await safeReadNotes(tmpDir)
+      expect(result).toBeNull()
+    } finally {
+      await rm(tmpDir, { recursive: true })
+    }
   })
 
   it('rejects symlinked DOC.md', async () => {

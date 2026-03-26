@@ -49,12 +49,18 @@ function getTransportLabel(transport: string, hasAdapter: boolean): string {
   return hasAdapter ? 'adapter (L3)' : transport
 }
 
-/** Read DOC.md safely: reject symlinks, enforce path inside siteRoot, only ignore ENOENT. */
+/** Read DOC.md safely: reject symlinks, enforce path inside siteRoot, return null if missing. */
 export async function safeReadNotes(siteRoot: string): Promise<string | null> {
   const docPath = path.join(siteRoot, 'DOC.md')
 
-  // Reject symlinks
-  const stat = await lstat(docPath)
+  // Reject symlinks; return null if file doesn't exist
+  let stat: Awaited<ReturnType<typeof lstat>>
+  try {
+    stat = await lstat(docPath)
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw err
+  }
   if (stat.isSymbolicLink()) return null
 
   // Enforce resolved path stays inside siteRoot
@@ -114,13 +120,9 @@ export async function renderSite(site: string): Promise<string> {
   lines.push(`Permissions:      ${permParts.join(' ')}`)
 
   // Per-site notes hint
-  try {
-    const firstLine = await safeReadNotes(pkg.root)
-    if (firstLine) {
-      lines.push(`Notes:            ${firstLine}`)
-    }
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+  const firstLine = await safeReadNotes(pkg.root)
+  if (firstLine) {
+    lines.push(`Notes:            ${firstLine}`)
   }
 
   lines.push('')
@@ -220,17 +222,8 @@ export async function renderSiteJson(site: string): Promise<string> {
   const manifest = await loadManifest(pkg.root)
   const allOps = Array.from(pkg.operations.values())
 
-  // Check for DOC.md
-  let hasNotes = false
-  try {
-    hasNotes = (await safeReadNotes(pkg.root)) !== null
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
-  }
-
   const result = {
     name: manifest?.display_name ?? site,
-    hasNotes,
     operations: allOps.map((entry) => {
       if (entry.protocol === 'ws') {
         return {
