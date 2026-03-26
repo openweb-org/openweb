@@ -35,6 +35,7 @@ import { validateSSRF } from '../lib/ssrf.js'
 interface CompileArgs {
   readonly url: string
   readonly script?: string
+  readonly captureDir?: string
   readonly interactive?: boolean
   readonly probe?: boolean
   readonly cdpEndpoint?: string
@@ -123,7 +124,8 @@ export async function compileSite(
 
   const scriptPath = args.script ?? path.join('scripts', 'record_open_meteo.ts')
 
-  const recordingDir = await runScriptedRecording(scriptPath)
+  const userProvidedDir = args.captureDir
+  const recordingDir = userProvidedDir ?? await runScriptedRecording(scriptPath)
   let filteredSamples: RecordedRequestSample[] = []
   let rejectedSamples: FilteredSample[] = []
   let totalRecordedCount = 0
@@ -149,7 +151,9 @@ export async function compileSite(
       wsInput = compileWsFrames(await loadWsCapture(wsFramesPath))
     }
   } finally {
-    await cleanupRecordingDir(recordingDir)
+    if (!userProvidedDir) {
+      await cleanupRecordingDir(recordingDir)
+    }
   }
 
   const hasWsOps = wsInput && wsInput.operations.length > 0

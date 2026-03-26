@@ -164,6 +164,7 @@ await yargs(argv)
       cmd
         .positional('url', { type: 'string', demandOption: true })
         .option('script', { type: 'string', describe: 'Playwright script file path' })
+        .option('capture-dir', { type: 'string', describe: 'Use existing capture bundle instead of recording' })
         .option('interactive', { type: 'boolean', default: false, describe: 'Use interactive recording mode' })
         .option('probe', { type: 'boolean', default: false, describe: 'Probe operations to validate classify heuristics (requires managed browser)' })
         .option('cdp-endpoint', { type: 'string', default: CDP_ENDPOINT, describe: 'CDP endpoint for --probe' }),
@@ -172,6 +173,7 @@ await yargs(argv)
         await compileCommand({
           url: String(args.url),
           script: args.script ? String(args.script) : undefined,
+          captureDir: args['capture-dir'] ? String(args['capture-dir']) : undefined,
           interactive: Boolean(args.interactive),
           probe: Boolean(args.probe),
           cdpEndpoint: args['cdp-endpoint'] ? String(args['cdp-endpoint']) : undefined,
