@@ -103,7 +103,7 @@ async function probeOne(
             try {
               const urlHost = new URL(url).hostname
               const cookieDomain = c.domain.replace(/^\./, '')
-              return urlHost === cookieDomain || urlHost.endsWith('.' + cookieDomain)
+              return urlHost === cookieDomain || urlHost.endsWith(`.${cookieDomain}`)
             } catch { return false } // intentional: URL parse failure in cookie filter
           })
           .map((c) => `${c.name}=${c.value}`)

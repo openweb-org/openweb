@@ -17,6 +17,7 @@ import type { GeneratePackageInput } from '../compiler/generator/index.js'
 import { cleanupRecordingDir, loadCaptureData, loadRecordedSamples, runScriptedRecording } from '../compiler/recorder.js'
 import { probeOperations, mergeProbeResults } from '../compiler/prober.js'
 import { connectWithRetry } from '../capture/connection.js'
+import type { Browser } from 'playwright'
 import { loadWsCapture } from '../compiler/ws-analyzer/ws-load.js'
 import type { WsConnection } from '../compiler/ws-analyzer/ws-load.js'
 import { analyzeWsConnection } from '../compiler/ws-analyzer/ws-cluster.js'
@@ -219,7 +220,7 @@ export async function compileSite(
   // Probe: validate classify heuristics with real requests (opt-in)
   if (args.probe && classifyResult) {
     const cdpEndpoint = args.cdpEndpoint ?? CDP_ENDPOINT
-    let browser
+    let browser: Browser | undefined
     try {
       browser = await connectWithRetry(cdpEndpoint, 1)
     } catch {
@@ -227,7 +228,7 @@ export async function compileSite(
         error: 'execution_failed',
         code: 'EXECUTION_FAILED',
         message: '--probe requires a managed browser. Could not connect to CDP.',
-        action: `Run \`openweb browser start\` first, then retry with --probe.`,
+        action: "Run `openweb browser start` first, then retry with --probe.",
         retriable: true,
         failureClass: 'needs_browser',
       })

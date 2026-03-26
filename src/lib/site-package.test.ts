@@ -162,7 +162,7 @@ describe('site-package', () => {
 
     const sub = pkg.operations.get('subscribe_prices')
     expect(sub).toBeDefined()
-    expect(sub!.protocol).toBe('ws')
+    expect(sub?.protocol).toBe('ws')
     expect((sub as { pattern: string }).pattern).toBe('subscribe')
   })
 
@@ -177,11 +177,11 @@ describe('site-package', () => {
 
     const httpOp = pkg.operations.get('listItems')
     expect(httpOp).toBeDefined()
-    expect(httpOp!.protocol).toBe('http')
+    expect(httpOp?.protocol).toBe('http')
 
     const wsOp = pkg.operations.get('subscribe_prices')
     expect(wsOp).toBeDefined()
-    expect(wsOp!.protocol).toBe('ws')
+    expect(wsOp?.protocol).toBe('ws')
   })
 
   it('loads HTTP-only site without asyncapi.yaml', async () => {
@@ -214,6 +214,6 @@ describe('site-package', () => {
   it('WS operations have correct permission from x-openweb', async () => {
     const pkg = await loadSitePackage('ws-only-test')
     const sub = pkg.operations.get('subscribe_prices')
-    expect(sub!.permission).toBe('read')
+    expect(sub?.permission).toBe('read')
   })
 })

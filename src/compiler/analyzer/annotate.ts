@@ -123,7 +123,7 @@ function heuristicAnnotation(method: string, path: string): Annotation {
   const methodLower = method.toLowerCase()
   let verb: string
 
-  if (segments.length > 0 && SEARCH_SEGMENTS.has(segments[segments.length - 1]!.toLowerCase())) {
+  if (segments.length > 0 && SEARCH_SEGMENTS.has((segments[segments.length - 1] ?? '').toLowerCase())) {
     verb = 'search'
   } else if (methodLower === 'post') {
     verb = 'create'
@@ -160,15 +160,15 @@ function heuristicAnnotation(method: string, path: string): Annotation {
   let nounPart: string
   if (nounSegments.length === 0) {
     nounPart = ''
-  } else if (verb === 'get' && SINGULAR_SEGMENTS.has(nounSegments[nounSegments.length - 1]!)) {
+  } else if (verb === 'get' && SINGULAR_SEGMENTS.has(nounSegments[nounSegments.length - 1] ?? '')) {
     // e.g. /users/me → getMe
-    nounPart = nounSegments[nounSegments.length - 1]!
+    nounPart = nounSegments[nounSegments.length - 1] ?? ''
   } else if (shouldSingularize && nounSegments.length > 0) {
     // e.g. /users/{id} → getUser, deleteUser, updateUser
-    const lastNoun = nounSegments[nounSegments.length - 1]!
+    const lastNoun = nounSegments[nounSegments.length - 1] ?? ''
     const singular = isLikelyPlural(lastNoun) ? lastNoun.slice(0, -1) : lastNoun
     if (nounSegments.length > 1) {
-      nounPart = nounSegments.slice(0, -1).join('_') + '_' + singular
+      nounPart = `${nounSegments.slice(0, -1).join('_')}_${singular}`
     } else {
       nounPart = singular
     }

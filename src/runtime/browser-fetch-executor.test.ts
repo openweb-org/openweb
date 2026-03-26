@@ -100,7 +100,7 @@ describe('executeBrowserFetch', () => {
       { name: 'test-item' },
     )
 
-    const callArgs = evaluateFn.mock.calls[0]![1] as { url: string; method: string; headers: Record<string, string>; body: string }
+    const callArgs = evaluateFn.mock.calls[0]?.[1] as { url: string; method: string; headers: Record<string, string>; body: string }
     expect(callArgs.method).toBe('POST')
     expect(callArgs.body).toBe('{"name":"test-item"}')
     expect(callArgs.headers['Content-Type']).toBe('application/json')
@@ -148,7 +148,7 @@ describe('executeBrowserFetch', () => {
       {},
     )
 
-    const callArgs = evaluateFn.mock.calls[0]![1] as { body: string; headers: Record<string, string> }
+    const callArgs = evaluateFn.mock.calls[0]?.[1] as { body: string; headers: Record<string, string> }
     expect(callArgs.body).toBe('{}')
     expect(callArgs.headers['Content-Type']).toBe('application/json')
   })
@@ -259,7 +259,7 @@ describe('executeBrowserFetch', () => {
       {},
     )
 
-    const callArgs = evaluateFn.mock.calls[0]![1] as { headers: Record<string, string> }
+    const callArgs = evaluateFn.mock.calls[0]?.[1] as { headers: Record<string, string> }
     expect(callArgs.headers.Cookie).toBeUndefined()
   })
 
@@ -339,7 +339,7 @@ describe('executeBrowserFetch', () => {
       {},
     )
 
-    const callArgs = evaluateFn.mock.calls[0]![1] as { url: string }
+    const callArgs = evaluateFn.mock.calls[0]?.[1] as { url: string }
     expect(callArgs.url).toContain('limit=200')
   })
 })

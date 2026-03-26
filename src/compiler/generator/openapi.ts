@@ -183,7 +183,7 @@ export async function generateOpenApi(input: GenerateOpenApiInput): Promise<void
     if (!paths[operation.path]) {
       paths[operation.path] = {}
     }
-    const pathEntry = paths[operation.path]!
+    const pathEntry = paths[operation.path] as Record<string, unknown>
     pathEntry[operation.method] = operationObject
 
     const testShape = {
@@ -209,7 +209,8 @@ export async function generateOpenApi(input: GenerateOpenApiInput): Promise<void
   // Generate extraction operations from classify signals
   if (input.classify?.extractions) {
     for (let i = 0; i < input.classify.extractions.length; i++) {
-      const signal = input.classify.extractions[i]!
+      const signal = input.classify.extractions[i]
+      if (!signal) continue
       const opId = extractionOperationId(signal, i)
       const extractionPath = `/_extraction/${opId}`
 
@@ -254,7 +255,7 @@ export async function generateOpenApi(input: GenerateOpenApiInput): Promise<void
       }
 
       if (!paths[extractionPath]) paths[extractionPath] = {}
-      paths[extractionPath]!.get = extractionOp
+      ;(paths[extractionPath] as Record<string, unknown>).get = extractionOp
 
       const testShape = {
         operation_id: opId,

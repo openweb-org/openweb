@@ -390,7 +390,8 @@ export async function verifyAll(deps?: ExecuteDependencies): Promise<SiteVerifyR
   const results: SiteVerifyResult[] = []
 
   for (let i = 0; i < sites.length; i++) {
-    const site = sites[i]!
+    const site = sites[i]
+    if (!site) continue
     results.push(await verifySite(site, deps))
     // Rate limit: 500ms delay between sites
     if (i < sites.length - 1) {

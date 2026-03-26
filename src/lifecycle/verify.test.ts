@@ -58,9 +58,9 @@ describe('generateDriftReport', () => {
   it('includes drift details', () => {
     const report = generateDriftReport(mockResults) as Record<string, unknown>
     const sites = report.sites as Array<{ operations: Array<{ drift_type: string }> }>
-    expect(sites[0]!.operations[0]!.drift_type).toBe('schema_drift')
-    expect(sites[1]!.operations[0]!.drift_type).toBe('endpoint_removed')
-    expect(sites[2]!.operations[0]!.drift_type).toBe('auth_drift')
+    expect(sites[0]?.operations[0]?.drift_type).toBe('schema_drift')
+    expect(sites[1]?.operations[0]?.drift_type).toBe('endpoint_removed')
+    expect(sites[2]?.operations[0]?.drift_type).toBe('auth_drift')
   })
 })
 
@@ -91,7 +91,7 @@ describe('hasNonPassResults', () => {
   })
 
   it('returns false when all PASS', () => {
-    expect(hasNonPassResults([mockResults[0]!])).toBe(false)
+    expect(hasNonPassResults(mockResults.filter(r => r.overallStatus === 'PASS'))).toBe(false)
   })
 })
 

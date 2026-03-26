@@ -43,7 +43,7 @@ sites:
 `)
     const config = loadPermissions(path)
     expect(config.defaults.write).toBe('allow')
-    expect(config.sites?.['instagram']?.write).toBe('deny')
+    expect(config.sites?.instagram?.write).toBe('deny')
   })
 
   it('falls back to defaults on invalid config', () => {
@@ -63,8 +63,8 @@ sites:
     // Should merge with built-in defaults
     expect(config.defaults.read).toBe('allow')
     expect(config.defaults.write).toBe('prompt')
-    expect(config.sites?.['bank']?.read).toBe('deny')
-    expect(config.sites?.['bank']?.write).toBe('deny')
+    expect(config.sites?.bank?.read).toBe('deny')
+    expect(config.sites?.bank?.write).toBe('deny')
   })
 
   it('ignores invalid policy values in defaults', () => {

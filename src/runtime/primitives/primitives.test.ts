@@ -512,7 +512,7 @@ describe('resolveExchangeChain', () => {
       inject: { header: 'Authorization', prefix: 'Bearer ' },
     }, 'https://api.example.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf })
 
-    const calledHeaders = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![1].headers as Record<string, string>
+    const calledHeaders = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].headers as Record<string, string>
     expect(calledHeaders.Cookie).toBe('auth_cookie=auth123')
   })
 
@@ -647,7 +647,7 @@ describe('resolveExchangeChain', () => {
     // Only the second step makes an HTTP request (cookie step skips fetch)
     expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
     // Verify the POST used the cookie-extracted csrf value in its body
-    const firstCall = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    const firstCall = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0] ?? []
     expect(firstCall[1].body).toBe('csrf_token=csrf_from_cookie')
   })
 
@@ -682,7 +682,7 @@ describe('resolveExchangeChain', () => {
       inject: { header: 'Authorization', prefix: 'Bearer ' },
     }, 'https://example.com', { fetchImpl: fetchMock, ssrfValidator: noopSsrf })
 
-    const secondCall = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[1]!
+    const secondCall = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[1] ?? []
     const secondUrl = String(secondCall[0])
     const secondInit = secondCall[1] as RequestInit
     const secondHeaders = secondInit.headers as Record<string, string>
@@ -744,7 +744,7 @@ describe('resolveApiResponse', () => {
     })
 
     // Verify fetch was called with auth headers
-    const calledHeaders = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![1].headers as Record<string, string>
+    const calledHeaders = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[1].headers as Record<string, string>
     expect(calledHeaders.Authorization).toBe('Bearer test_token')
   })
 

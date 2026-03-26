@@ -53,7 +53,7 @@ describe('Coinbase Exchange WS end-to-end', () => {
     const analysis = analyzeWsConnection(conn)
 
     expect(analysis.discriminator.sent).toBeDefined()
-    expect(analysis.discriminator.sent!.field).toBe('type')
+    expect(analysis.discriminator.sent?.field).toBe('type')
   })
 
   it('detects type as received discriminator with product_id sub-field', async () => {
@@ -61,9 +61,9 @@ describe('Coinbase Exchange WS end-to-end', () => {
     const analysis = analyzeWsConnection(conn)
 
     expect(analysis.discriminator.received).toBeDefined()
-    expect(analysis.discriminator.received!.field).toBe('type')
-    expect(analysis.discriminator.received!.sub_field).toBe('product_id')
-    expect(analysis.discriminator.received!.sub_field_on).toBe('ticker')
+    expect(analysis.discriminator.received?.field).toBe('type')
+    expect(analysis.discriminator.received?.sub_field).toBe('product_id')
+    expect(analysis.discriminator.received?.sub_field_on).toBe('ticker')
   })
 
   it('produces clusters for subscribe, unsubscribe, and ticker', async () => {
@@ -87,7 +87,7 @@ describe('Coinbase Exchange WS end-to-end', () => {
       (c) => c.direction === 'sent' && c.discriminatorValue === 'subscribe',
     )
     expect(subCluster).toBeDefined()
-    expect(subCluster!.pattern).toBe('subscribe')
+    expect(subCluster?.pattern).toBe('subscribe')
   })
 
   it('classifies ticker/BTC-USD as stream', async () => {
@@ -99,7 +99,7 @@ describe('Coinbase Exchange WS end-to-end', () => {
       (c) => c.discriminatorValue === 'ticker' && c.subValue === 'BTC-USD',
     )
     expect(btcStream).toBeDefined()
-    expect(btcStream!.pattern).toBe('stream')
+    expect(btcStream?.pattern).toBe('stream')
   })
 
   it('classifies ticker/ETH-USD as stream', async () => {
@@ -111,7 +111,7 @@ describe('Coinbase Exchange WS end-to-end', () => {
       (c) => c.discriminatorValue === 'ticker' && c.subValue === 'ETH-USD',
     )
     expect(ethStream).toBeDefined()
-    expect(ethStream!.pattern).toBe('stream')
+    expect(ethStream?.pattern).toBe('stream')
   })
 
   it('has ≥ 1 executable pattern', async () => {
@@ -152,11 +152,11 @@ describe('Coinbase Exchange WS end-to-end', () => {
 
     const sub = ops.find((o) => o.operationId === 'ws_send_subscribe')
     expect(sub).toBeDefined()
-    expect(sub!.pattern).toBe('subscribe')
-    expect(sub!.messageTemplate).toBeDefined()
-    expect(sub!.messageTemplate!.constants).toEqual({ type: 'subscribe' })
+    expect(sub?.pattern).toBe('subscribe')
+    expect(sub?.messageTemplate).toBeDefined()
+    expect(sub?.messageTemplate?.constants).toEqual({ type: 'subscribe' })
 
-    const bindingPaths = sub!.messageTemplate!.bindings.map((b) => b.path)
+    const bindingPaths = sub?.messageTemplate?.bindings.map((b) => b.path)
     expect(bindingPaths).toContain('channels')
   })
 
@@ -169,12 +169,12 @@ describe('Coinbase Exchange WS end-to-end', () => {
 
     const btc = ops.find((o) => o.operationId === 'ws_recv_ticker_BTC_USD')
     expect(btc).toBeDefined()
-    expect(btc!.payloadSchema.type).toBe('object')
-    expect(btc!.payloadSchema.required).toContain('type')
-    expect(btc!.payloadSchema.required).toContain('product_id')
-    expect(btc!.payloadSchema.required).toContain('price')
-    expect(btc!.payloadSchema.required).toContain('time')
-    expect(btc!.payloadSchema.properties).toHaveProperty('trade_id')
+    expect(btc?.payloadSchema.type).toBe('object')
+    expect(btc?.payloadSchema.required).toContain('type')
+    expect(btc?.payloadSchema.required).toContain('product_id')
+    expect(btc?.payloadSchema.required).toContain('price')
+    expect(btc?.payloadSchema.required).toContain('time')
+    expect(btc?.payloadSchema.properties).toHaveProperty('trade_id')
   })
 
   // ── Committed AsyncAPI spec validation ────────────────────────────

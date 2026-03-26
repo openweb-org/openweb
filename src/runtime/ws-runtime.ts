@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 
 import type { WsSocketFactory } from './ws-socket.js'
 import { createNodeSocketFactory } from './ws-socket.js'
-import { WsConnectionManager, type WsConnectionConfig } from './ws-connection.js'
+import type { WsConnectionManager, WsConnectionConfig } from './ws-connection.js'
 import { WsConnectionPool } from './ws-pool.js'
 import { WsRouter, type WsRouterConfig, type EventRoute } from './ws-router.js'
 import { resolveWsAuth, type WsAuthResult } from './primitives/ws-registry.js'

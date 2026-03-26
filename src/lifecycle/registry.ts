@@ -165,7 +165,8 @@ export async function rollbackSite(site: string): Promise<string> {
     throw new Error(`Already at oldest version (${versions[0]}) for ${site}`)
   }
 
-  const previousVersion = versions[currentIdx - 1]!
+  const previousVersion = versions[currentIdx - 1]
+  if (!previousVersion) throw new Error(`Cannot determine previous version for ${site}`)
   await setCurrentVersion(site, previousVersion)
   return previousVersion
 }

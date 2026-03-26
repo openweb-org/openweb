@@ -74,7 +74,7 @@ const HTTP_METHODS: ReadonlyArray<HttpMethod> = [
 
 export async function loadOpenApi(site: string): Promise<OpenApiSpec> {
   const root = await resolveSiteRoot(site)
-  const content = await readFile(root + '/openapi.yaml', 'utf8')
+  const content = await readFile(`${root}/openapi.yaml`, 'utf8')
   const parsed = parse(content) as OpenApiSpec
 
   if (!parsed?.openapi || !parsed?.paths) {

@@ -94,7 +94,7 @@ export function executeWsOperation(
   if (corr) outgoing = corr.outgoing
 
   if (!operation.correlation && operation.pattern === 'request_reply') {
-    process.stderr?.write?.(`warning: request_reply operation has no correlation config — using first-response matching\n`)
+    process.stderr?.write?.("warning: request_reply operation has no correlation config — using first-response matching\n")
   }
 
   return new Promise<WsExecuteResult>((resolve) => {
@@ -174,7 +174,7 @@ export function streamWsOperation(
       return {
         next(): Promise<IteratorResult<unknown>> {
           if (buffer.length > 0) {
-            return Promise.resolve({ value: buffer.shift()!, done: false })
+            return Promise.resolve({ value: buffer.shift(), done: false })
           }
           if (closed) {
             return Promise.resolve({ value: undefined, done: true })

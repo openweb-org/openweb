@@ -49,7 +49,7 @@ export function detectCookieSession(data: CaptureData): boolean {
     const cookieHeader = entry.request.headers.find((h) => h.name.toLowerCase() === 'cookie')
     if (!cookieHeader) return false
 
-    const requestCookieNames = cookieHeader.value.split(';').map((c) => c.trim().split('=')[0]!)
+    const requestCookieNames = cookieHeader.value.split(';').map((c) => c.trim().split('=')[0] ?? '')
     const hasOverlap = requestCookieNames.some(
       (name) => snapshotCookieNames.has(name) && !isTrackingCookie(name),
     )

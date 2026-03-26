@@ -19,7 +19,7 @@ export async function resolveWsHttpHandshake(
     Object.assign(headers, ctx.httpAuth.headers)
   }
   if (ctx.httpAuth?.cookieString) {
-    headers['Cookie'] = ctx.httpAuth.cookieString
+    headers.Cookie = ctx.httpAuth.cookieString
   }
 
   const resp = await fetchFn(config.endpoint, { method: config.method, headers })

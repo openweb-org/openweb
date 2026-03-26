@@ -51,8 +51,8 @@ describe('token cache', () => {
     await writeTokenCache('test-site', tokens, dir)
     const result = await readTokenCache('test-site', dir)
     expect(result).not.toBeNull()
-    expect(result!.cookies[0]!.name).toBe('session')
-    expect(result!.localStorage.token).toBe('jwt_xyz')
+    expect(result?.cookies[0]?.name).toBe('session')
+    expect(result?.localStorage.token).toBe('jwt_xyz')
   })
 
   it('read returns null when TTL expired', async () => {
@@ -230,8 +230,8 @@ describe('encrypted token cache', () => {
 
     const r1 = await readTokenCache('shared-name', dir1)
     const r2 = await readTokenCache('shared-name', dir2)
-    expect(r1!.localStorage.k).toBe('from-dir1')
-    expect(r2!.localStorage.k).toBe('from-dir2')
+    expect(r1?.localStorage.k).toBe('from-dir1')
+    expect(r2?.localStorage.k).toBe('from-dir2')
   })
 
   it('expired cache cleanup: write with past expiry clears and returns null', async () => {
@@ -305,9 +305,9 @@ describe('token cache race condition', () => {
     // After all concurrent writes, the cache must be readable (not corrupted)
     const result = await readTokenCache('race-site', dir)
     expect(result).not.toBeNull()
-    expect(result!.cookies[0]!.name).toBe('session')
+    expect(result?.cookies[0]?.name).toBe('session')
     // The value should be from one of the 20 writes (last writer wins)
-    const idx = Number(result!.localStorage.idx)
+    const idx = Number(result?.localStorage.idx)
     expect(idx).toBeGreaterThanOrEqual(0)
     expect(idx).toBeLessThan(20)
   })
@@ -330,7 +330,7 @@ describe('token cache race condition', () => {
     for (let i = 0; i < results.length; i += 2) {
       const read = results[i] as CachedTokens | null
       if (read !== null) {
-        expect(read.cookies[0]!.name).toBe('session')
+        expect(read.cookies[0]?.name).toBe('session')
       }
     }
 
@@ -351,7 +351,7 @@ describe('token cache race condition', () => {
     for (const s of sites) {
       const result = await readTokenCache(s, dir)
       expect(result).not.toBeNull()
-      expect(result!.localStorage.site).toBe(s)
+      expect(result?.localStorage.site).toBe(s)
     }
   })
 

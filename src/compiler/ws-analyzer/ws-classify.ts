@@ -35,9 +35,9 @@ export const CORRELATION_FIELDS = new Set([
 // ── Helpers ───────────────────────────────────────────────────
 
 function coefficientOfVariation(values: number[]): number {
-  if (values.length < 2) return Infinity
+  if (values.length < 2) return Number.POSITIVE_INFINITY
   const mean = values.reduce((a, b) => a + b, 0) / values.length
-  if (mean === 0) return Infinity
+  if (mean === 0) return Number.POSITIVE_INFINITY
   const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length
   return Math.sqrt(variance) / mean
 }

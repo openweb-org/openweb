@@ -148,9 +148,9 @@ export async function renderOperation(site: string, operationId: string, full: b
     if (wsEntry.summary) {
       lines.push(wsEntry.summary)
     }
-    lines.push(`Transport: node`)
+    lines.push("Transport: node")
     lines.push(`Permission: ${wsEntry.permission}`)
-    lines.push(`Protocol: ws`)
+    lines.push("Protocol: ws")
 
     if (full && pkg.asyncapi?.operations?.[operationId]) {
       lines.push('')
@@ -309,7 +309,6 @@ export async function renderExample(site: string, operationId: string): Promise<
     if (p.schema?.default !== undefined) {
       example[p.name] = p.schema.default
     } else if (p.schema?.const !== undefined) {
-      continue // const params are auto-filled
     } else {
       // Generate a placeholder based on type
       const type = typeof p.schema?.type === 'string' ? p.schema.type : 'string'

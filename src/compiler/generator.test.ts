@@ -180,8 +180,8 @@ describe('generatePackage', () => {
       // Test file should exist but not assert response_schema_valid
       const testRaw = await readFile(path.join(outputRoot, 'tests', 'extract_next_data.test.json'), 'utf8')
       const testData = JSON.parse(testRaw) as { cases: Array<{ assertions: Record<string, unknown> }> }
-      expect(testData.cases[0]!.assertions.status).toBe(200)
-      expect(testData.cases[0]!.assertions).not.toHaveProperty('response_schema_valid')
+      expect(testData.cases[0]?.assertions.status).toBe(200)
+      expect(testData.cases[0]?.assertions).not.toHaveProperty('response_schema_valid')
     } finally {
       await rm(outputBaseDir, { recursive: true, force: true })
     }

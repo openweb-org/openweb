@@ -209,14 +209,14 @@ describe('executeSessionHttp', () => {
       spec,
       '/feed/timeline/',
       'get',
-      spec.paths!['/feed/timeline/']!.get!,
+      spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
       {},
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
 
     expect(result.status).toBe(200)
 
-    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0] ?? []
     const calledUrl = String(calledArgs[0])
     const calledInit = calledArgs[1] as RequestInit
     const headers = calledInit.headers as Record<string, string>
@@ -247,14 +247,14 @@ describe('executeSessionHttp', () => {
       spec,
       '/media/{media_id}/like/',
       'post',
-      spec.paths!['/media/{media_id}/like/']!.post!,
+      spec.paths?.['/media/{media_id}/like/']?.post ?? ({} as OpenApiOperation),
       { media_id: '99999' },
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
 
     expect(result.status).toBe(200)
 
-    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0] ?? []
     const calledUrl = String(calledArgs[0])
     const calledInit = calledArgs[1] as RequestInit
     const headers = calledInit.headers as Record<string, string>
@@ -279,7 +279,7 @@ describe('executeSessionHttp', () => {
         spec,
         '/feed/timeline/',
         'get',
-        spec.paths!['/feed/timeline/']!.get!,
+        spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
         {},
         { fetchImpl: vi.fn() as unknown as typeof fetch, ssrfValidator: async () => {} },
       ),
@@ -307,7 +307,7 @@ describe('executeSessionHttp', () => {
         spec,
         '/feed/timeline/',
         'get',
-        spec.paths!['/feed/timeline/']!.get!,
+        spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
         {},
         { fetchImpl: vi.fn() as unknown as typeof fetch, ssrfValidator: async () => {} },
       ),
@@ -360,12 +360,12 @@ describe('executeSessionHttp', () => {
       spec,
       '/repos/{owner}/{repo}/issues',
       'get',
-      spec.paths!['/repos/{owner}/{repo}/issues']!.get!,
+      spec.paths?.['/repos/{owner}/{repo}/issues']?.get ?? ({} as OpenApiOperation),
       { owner: 'openai', repo: 'openai-node' },
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
 
-    expect(String((fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![0])).toContain('per_page=30')
+    expect(String((fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[0])).toContain('per_page=30')
   })
 
   it('maps HTTP 401 to needs_login instead of fatal', async () => {
@@ -387,7 +387,7 @@ describe('executeSessionHttp', () => {
         spec,
         '/feed/timeline/',
         'get',
-        spec.paths!['/feed/timeline/']!.get!,
+        spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
         {},
         { fetchImpl: fetchMock, ssrfValidator: async () => {} },
       ),
@@ -472,13 +472,13 @@ describe('executeSessionHttp', () => {
       spec,
       '/player',
       'post',
-      spec.paths!['/player']!.post!,
+      spec.paths?.['/player']?.post ?? ({} as OpenApiOperation),
       { videoId: 'dQw4w9WgXcQ' },
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
 
-    expect(String((fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![0])).toContain('key=yt_api_key_123')
-    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![1]?.body).toBe(
+    expect(String((fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[0])).toContain('key=yt_api_key_123')
+    expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]?.body).toBe(
       JSON.stringify({
         videoId: 'dQw4w9WgXcQ',
         context: {
@@ -512,14 +512,14 @@ describe('executeSessionHttp', () => {
       spec,
       '/media/{media_id}/comment/',
       'post',
-      spec.paths!['/media/{media_id}/comment/']!.post!,
+      spec.paths?.['/media/{media_id}/comment/']?.post ?? ({} as OpenApiOperation),
       { media_id: '99999', comment_text: 'Great photo!' },
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
 
     expect(result.status).toBe(200)
 
-    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0] ?? []
     const calledInit = calledArgs[1] as RequestInit
     const headers = calledInit.headers as Record<string, string>
 
@@ -584,12 +584,12 @@ describe('executeSessionHttp', () => {
       spec,
       '/required-body/',
       'post',
-      spec.paths!['/required-body/']!.post!,
+      spec.paths?.['/required-body/']?.post ?? ({} as OpenApiOperation),
       {},
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
 
-    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0] ?? []
     const calledInit = calledArgs[1] as RequestInit
     const headers = calledInit.headers as Record<string, string>
 
@@ -616,12 +616,12 @@ describe('executeSessionHttp', () => {
       spec,
       '/media/{media_id}/like/',
       'post',
-      spec.paths!['/media/{media_id}/like/']!.post!,
+      spec.paths?.['/media/{media_id}/like/']?.post ?? ({} as OpenApiOperation),
       { media_id: '99999' },
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
 
-    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0] ?? []
     const calledInit = calledArgs[1] as RequestInit
     const headers = calledInit.headers as Record<string, string>
 
@@ -649,12 +649,12 @@ describe('executeSessionHttp', () => {
       spec,
       '/feed/timeline/',
       'get',
-      spec.paths!['/feed/timeline/']!.get!,
+      spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
       {},
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
 
-    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]!
+    const calledArgs = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0] ?? []
     const calledInit = calledArgs[1] as RequestInit
 
     expect(calledInit.body).toBeUndefined()
@@ -683,7 +683,7 @@ describe('executeSessionHttp', () => {
       spec,
       '/feed/timeline/',
       'get',
-      spec.paths!['/feed/timeline/']!.get!,
+      spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
       {},
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
@@ -693,7 +693,7 @@ describe('executeSessionHttp', () => {
 
     const calls = (fetchMock as ReturnType<typeof vi.fn>).mock.calls
     expect(calls).toHaveLength(2)
-    expect(String(calls[1]![0])).toBe('https://www.instagram.com/api/v1/feed/new-timeline/')
+    expect(String(calls[1]?.[0])).toBe('https://www.instagram.com/api/v1/feed/new-timeline/')
   })
 
   it('switches method to GET on 303 redirect', async () => {
@@ -718,15 +718,15 @@ describe('executeSessionHttp', () => {
       spec,
       '/media/{media_id}/like/',
       'post',
-      spec.paths!['/media/{media_id}/like/']!.post!,
+      spec.paths?.['/media/{media_id}/like/']?.post ?? ({} as OpenApiOperation),
       { media_id: '99999' },
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
 
     const calls = (fetchMock as ReturnType<typeof vi.fn>).mock.calls
     expect(calls).toHaveLength(2)
-    expect((calls[0]![1] as RequestInit).method).toBe('POST')
-    expect((calls[1]![1] as RequestInit).method).toBe('GET')
+    expect((calls[0]?.[1] as RequestInit).method).toBe('POST')
+    expect((calls[1]?.[1] as RequestInit).method).toBe('GET')
   })
 
   it('strips sensitive headers on cross-origin redirect', async () => {
@@ -757,7 +757,7 @@ describe('executeSessionHttp', () => {
       spec,
       '/feed/timeline/',
       'get',
-      spec.paths!['/feed/timeline/']!.get!,
+      spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
       {},
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
@@ -765,11 +765,11 @@ describe('executeSessionHttp', () => {
     expect(capturedHeaders).toHaveLength(2)
 
     // First call should have Cookie (same-origin)
-    expect(capturedHeaders[0]!.Cookie).toBeDefined()
+    expect(capturedHeaders[0]?.Cookie).toBeDefined()
 
     // Second call (cross-origin) should NOT have Cookie or Authorization
-    expect(capturedHeaders[1]!.Cookie).toBeUndefined()
-    expect(capturedHeaders[1]!.Authorization).toBeUndefined()
+    expect(capturedHeaders[1]?.Cookie).toBeUndefined()
+    expect(capturedHeaders[1]?.Authorization).toBeUndefined()
   })
 
   it('throws an explicit error when Location header is missing', async () => {
@@ -788,7 +788,7 @@ describe('executeSessionHttp', () => {
         spec,
         '/feed/timeline/',
         'get',
-        spec.paths!['/feed/timeline/']!.get!,
+        spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
         {},
         { fetchImpl: fetchMock, ssrfValidator: async () => {} },
       ),
@@ -828,7 +828,7 @@ describe('executeSessionHttp', () => {
       spec,
       '/feed/timeline/',
       'get',
-      spec.paths!['/feed/timeline/']!.get!,
+      spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
       {},
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
@@ -859,7 +859,7 @@ describe('executeSessionHttp', () => {
         spec,
         '/feed/timeline/',
         'get',
-        spec.paths!['/feed/timeline/']!.get!,
+        spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
         {},
         { fetchImpl: fetchMock, ssrfValidator: async () => {} },
       ),
@@ -900,7 +900,7 @@ describe('executeSessionHttp', () => {
       spec,
       '/media/{media_id}/comment/',
       'post',
-      spec.paths!['/media/{media_id}/comment/']!.post!,
+      spec.paths?.['/media/{media_id}/comment/']?.post ?? ({} as OpenApiOperation),
       { media_id: '99999', comment_text: 'Great photo!' },
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
@@ -908,12 +908,12 @@ describe('executeSessionHttp', () => {
     const calls = (fetchMock as ReturnType<typeof vi.fn>).mock.calls
 
     // First call: POST with body
-    const firstInit = calls[0]![1] as RequestInit
+    const firstInit = calls[0]?.[1] as RequestInit
     expect(firstInit.method).toBe('POST')
     expect(firstInit.body).toBe(JSON.stringify({ comment_text: 'Great photo!' }))
 
     // Second call: GET without body (303 redirect)
-    const secondInit = calls[1]![1] as RequestInit
+    const secondInit = calls[1]?.[1] as RequestInit
     expect(secondInit.method).toBe('GET')
     expect(secondInit.body).toBeUndefined()
   })
@@ -937,7 +937,7 @@ describe('executeSessionHttp', () => {
         spec,
         '/feed/timeline/',
         'get',
-        spec.paths!['/feed/timeline/']!.get!,
+        spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
         {},
         { fetchImpl: fetchMock, ssrfValidator },
       ),
@@ -994,12 +994,12 @@ describe('executeSessionHttp', () => {
       spec,
       '/feed/timeline/',
       'get',
-      spec.paths!['/feed/timeline/']!.get!,
+      spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
       {},
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
 
-    const calledInit = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]![1] as RequestInit
+    const calledInit = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as RequestInit
     const headers = calledInit.headers as Record<string, string>
     expect(headers['X-IG-App-ID']).toBe('936619743392459')
   })
@@ -1048,7 +1048,7 @@ describe('executeSessionHttp', () => {
       spec,
       '/feed/timeline/',
       'get',
-      spec.paths!['/feed/timeline/']!.get!,
+      spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
       {},
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
@@ -1101,7 +1101,7 @@ describe('executeSessionHttp', () => {
       spec,
       '/feed/timeline/',
       'get',
-      spec.paths!['/feed/timeline/']!.get!,
+      spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
       {},
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
@@ -1131,7 +1131,7 @@ describe('executeSessionHttp', () => {
         spec,
         '/feed/timeline/',
         'get',
-        spec.paths!['/feed/timeline/']!.get!,
+        spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
         {},
         { fetchImpl: fetchMock, ssrfValidator: async () => {} },
       ),

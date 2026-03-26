@@ -49,7 +49,7 @@ export async function resolveWebpackModuleWalk(
         (r: { c?: Record<string, { exports?: Record<string, unknown> }> }) => {
           sawModules = Object.keys(r.c ?? {}).length > 0
           for (const id of Object.keys(r.c ?? {})) {
-            const exp = r.c![id]?.exports
+            const exp = r.c?.[id]?.exports
             if (!exp) continue
             for (const key of ['default', 'Z', 'ZP']) {
               const mod = exp[key] as Record<string, unknown> | undefined

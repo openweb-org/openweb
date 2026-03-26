@@ -44,7 +44,7 @@ export async function resolveSapisidhash(
   const timestamp = Math.floor(Date.now() / 1000)
   const hash = computeSapisidhash(timestamp, sapisid, config.origin)
 
-  const headerValue = (config.inject.prefix ?? '') + `${timestamp}_${hash}`
+  const headerValue = `${config.inject.prefix ?? ''}${timestamp}_${hash}`
   const headers: Record<string, string> = {}
   if (config.inject.header) {
     headers[config.inject.header] = headerValue

@@ -160,7 +160,7 @@ async function executeLinkHeaderPagination(
     pages++
     allItems.push(...extractItems(result.body))
 
-    const linkHeader = result.responseHeaders?.['link']
+    const linkHeader = result.responseHeaders?.link
     if (!linkHeader) break
 
     const nextUrl = parseLinkHeader(linkHeader, config.rel ?? 'next')

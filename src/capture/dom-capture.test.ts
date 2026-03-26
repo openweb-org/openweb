@@ -7,6 +7,7 @@ describe('detectDynamicGlobals', () => {
       evaluate: vi.fn(async () => ['customAppState', 'siteConfig']),
     }
 
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
     const result = await detectDynamicGlobals(mockPage as any)
     expect(result).toEqual(['customAppState', 'siteConfig'])
     expect(mockPage.evaluate).toHaveBeenCalledTimes(1)
@@ -29,9 +30,10 @@ describe('captureDomAndGlobals with extraGlobals', () => {
       url: vi.fn(() => 'https://example.com'),
     }
 
+    // biome-ignore lint/suspicious/noExplicitAny: test mock
     await captureDomAndGlobals(mockPage as any, 'page_load', ['CUSTOM_VAR'])
 
-    const passedGlobals = mockPage.evaluate.mock.calls[0]![1] as string[]
+    const passedGlobals = mockPage.evaluate.mock.calls[0]?.[1] as string[]
     expect(passedGlobals).toContain('__NEXT_DATA__')
     expect(passedGlobals).toContain('CUSTOM_VAR')
   })

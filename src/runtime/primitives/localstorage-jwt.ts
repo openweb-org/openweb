@@ -67,7 +67,7 @@ export async function resolveLocalStorageJwt(
     throw new OpenWebError({
       error: 'auth',
       code: 'AUTH_FAILED',
-      message: `No valid token found at "${key}${path ? '.' + path : ''}".`,
+      message: `No valid token found at "${key}${path ? `.${path}` : ''}".`,
       action: 'Ensure you are logged in and the token is present.',
       retriable: true,
       failureClass: 'needs_login',

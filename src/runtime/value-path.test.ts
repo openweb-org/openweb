@@ -114,7 +114,7 @@ describe('setValueAtPath', () => {
   it('rejects __proto__ path segments', () => {
     const result = setValueAtPath({}, '__proto__.polluted', true)
     expect(result).toEqual({})
-    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined()
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined()
   })
 
   it('rejects constructor.prototype path segments', () => {

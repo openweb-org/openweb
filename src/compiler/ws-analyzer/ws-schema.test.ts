@@ -76,24 +76,25 @@ describe('parameters extracted from varying subscribe fields', () => {
     expect(schema.parameterSchema).toBeDefined()
 
     // 'action' is constant across all frames
-    expect(schema.messageTemplate!.constants).toEqual({ action: 'subscribe' })
+    expect(schema.messageTemplate?.constants).toEqual({ action: 'subscribe' })
 
     // 'channel' and 'symbol' vary → bindings
-    const bindingPaths = schema.messageTemplate!.bindings.map((b) => b.path).sort()
+    const bindingPaths = schema.messageTemplate?.bindings.map((b) => b.path).sort()
     expect(bindingPaths).toEqual(['channel', 'symbol'])
 
     // All bindings source from param
-    for (const binding of schema.messageTemplate!.bindings) {
+    const bindings = schema.messageTemplate?.bindings ?? []
+    for (const binding of bindings) {
       expect(binding.source).toBe('param')
       expect(binding.key).toBe(binding.path)
     }
 
     // Parameter schema describes the varying fields
-    expect(schema.parameterSchema!.type).toBe('object')
-    expect(schema.parameterSchema!.properties).toHaveProperty('channel')
-    expect(schema.parameterSchema!.properties).toHaveProperty('symbol')
-    expect(schema.parameterSchema!.required).toContain('channel')
-    expect(schema.parameterSchema!.required).toContain('symbol')
+    expect(schema.parameterSchema?.type).toBe('object')
+    expect(schema.parameterSchema?.properties).toHaveProperty('channel')
+    expect(schema.parameterSchema?.properties).toHaveProperty('symbol')
+    expect(schema.parameterSchema?.required).toContain('channel')
+    expect(schema.parameterSchema?.required).toContain('symbol')
   })
 
   it('extracts parameters for publish patterns', () => {
@@ -106,9 +107,9 @@ describe('parameters extracted from varying subscribe fields', () => {
     // publish now gets template extraction (msg varies)
     expect(schema.parameterSchema).toBeDefined()
     expect(schema.messageTemplate).toBeDefined()
-    expect(schema.messageTemplate!.constants).toEqual({ action: 'log' })
-    expect(schema.messageTemplate!.bindings).toHaveLength(1)
-    expect(schema.messageTemplate!.bindings[0].path).toBe('msg')
+    expect(schema.messageTemplate?.constants).toEqual({ action: 'log' })
+    expect(schema.messageTemplate?.bindings).toHaveLength(1)
+    expect(schema.messageTemplate?.bindings[0].path).toBe('msg')
   })
 
   it('does not extract parameters when all fields are constant', () => {

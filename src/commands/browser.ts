@@ -176,7 +176,7 @@ async function cleanTempProfile(): Promise<void> {
     const profileDir = (await readFile(PROFILE_DIR_FILE, 'utf8')).trim()
     // Safety: only rm -rf paths that look like our mkdtemp output
     const expectedPrefix = join(tmpdir(), 'openweb-profile-')
-    if (profileDir && profileDir.startsWith(expectedPrefix)) {
+    if (profileDir?.startsWith(expectedPrefix)) {
       await rm(profileDir, { recursive: true, force: true })
     }
     await unlink(PROFILE_DIR_FILE)

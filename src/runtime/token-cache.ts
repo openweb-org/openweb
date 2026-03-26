@@ -68,7 +68,9 @@ export function extractJwtExp(token: string): number | undefined {
   try {
     const parts = token.split('.')
     if (parts.length !== 3) return undefined
-    const payload = JSON.parse(Buffer.from(parts[1]!, 'base64url').toString()) as Record<string, unknown>
+    const part = parts[1]
+    if (!part) return undefined
+    const payload = JSON.parse(Buffer.from(part, 'base64url').toString()) as Record<string, unknown>
     const exp = payload.exp
     return typeof exp === 'number' ? exp : undefined
   } catch {
@@ -164,7 +166,7 @@ async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
   try {
     return await fn()
   } finally {
-    release!()
+    release?.()
     if (locks.get(key) === next) locks.delete(key)
   }
 }

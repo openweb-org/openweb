@@ -63,11 +63,12 @@ export class WsConnectionPool {
 
     if (activeCount >= this.maxPerKey) {
       // Return the least-used active connection
-      const sorted = entries!.filter(e => {
+      const sorted = entries?.filter(e => {
         const s = e.connection.getState()
         return s !== 'CLOSED' && s !== 'DISCONNECTED'
       }).sort((a, b) => a.refCount - b.refCount)
-      const entry = sorted[0]!
+      const entry = sorted?.[0]
+      if (!entry) throw new Error('No active connection found for pool key')
       entry.refCount++
       return entry.connection
     }
@@ -85,7 +86,7 @@ export class WsConnectionPool {
     if (!this.entries.has(key)) {
       this.entries.set(key, [])
     }
-    this.entries.get(key)!.push(entry)
+    this.entries.get(key)?.push(entry)
 
     // Clean up closed entries on close
     conn.on('stateChange', (_from, to) => {
@@ -122,7 +123,8 @@ export class WsConnectionPool {
   /** Destroy all connections and clear the pool */
   destroyAll(): void {
     for (const key of Array.from(this.entries.keys())) {
-      const entries = this.entries.get(key)!
+      const entries = this.entries.get(key)
+      if (!entries) continue
       for (const entry of entries) {
         if (entry.idleTimer) clearTimeout(entry.idleTimer)
         entry.connection.destroy()
@@ -136,7 +138,8 @@ export class WsConnectionPool {
     if (!entries) return
     const idx = entries.findIndex(e => e.connection === connection)
     if (idx >= 0) {
-      const entry = entries[idx]!
+      const entry = entries[idx]
+      if (!entry) return
       if (entry.idleTimer) clearTimeout(entry.idleTimer)
       entries.splice(idx, 1)
     }

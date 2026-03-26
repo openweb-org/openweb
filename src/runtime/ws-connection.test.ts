@@ -23,7 +23,7 @@ class MockWebSocket {
 
   addEventListener(type: string, listener: (event: unknown) => void): void {
     if (!this.listeners.has(type)) this.listeners.set(type, [])
-    this.listeners.get(type)!.push(listener)
+    this.listeners.get(type)?.push(listener)
   }
 
   send(_data: string | ArrayBuffer): void {}
@@ -101,7 +101,7 @@ describe('WsConnectionManager', () => {
       conn.connect()
       expect(conn.getState()).toBe('CONNECTING')
 
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
       expect(conn.getState()).toBe('AUTHENTICATING')
       expect(states).toEqual(['CONNECTING', 'AUTHENTICATING'])
     })
@@ -109,7 +109,7 @@ describe('WsConnectionManager', () => {
     it('AUTHENTICATING → READY on completeAuth()', () => {
       const conn = new WsConnectionManager(baseConfig)
       conn.connect()
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
 
       conn.completeAuth()
       expect(conn.getState()).toBe('READY')
@@ -118,7 +118,7 @@ describe('WsConnectionManager', () => {
     it('READY → CLOSING → CLOSED on close()', () => {
       const conn = new WsConnectionManager(baseConfig)
       conn.connect()
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
       conn.completeAuth()
 
       conn.close()
@@ -128,7 +128,7 @@ describe('WsConnectionManager', () => {
     it('AUTHENTICATING without auth goes directly to READY on hello', () => {
       const conn = new WsConnectionManager(baseConfig)
       conn.connect()
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
 
       conn.handleHello({ heartbeat_interval: 30000 })
       expect(conn.getState()).toBe('READY')
@@ -160,14 +160,15 @@ describe('WsConnectionManager', () => {
       const conn = new WsConnectionManager(config)
       conn.setConnectionState({ sequence: 42 })
       conn.connect()
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
       conn.completeAuth()
 
-      const sendSpy = vi.spyOn(lastMockWs!, 'send')
+      expect(lastMockWs).not.toBeNull()
+      const sendSpy = vi.spyOn(lastMockWs as MockWebSocket, 'send')
 
       vi.advanceTimersByTime(1000)
       expect(sendSpy).toHaveBeenCalledTimes(1)
-      const sent = JSON.parse(sendSpy.mock.calls[0]![0] as string)
+      const sent = JSON.parse(sendSpy.mock.calls[0]?.[0] as string)
       expect(sent).toEqual({ op: 1, d: 42 })
 
       vi.advanceTimersByTime(1000)
@@ -187,13 +188,14 @@ describe('WsConnectionManager', () => {
 
       const conn = new WsConnectionManager(config)
       conn.connect()
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
 
       // Hello message provides dynamic interval
       conn.handleHello({ d: { heartbeat_interval: 500 } })
       // handleHello transitions to READY (no auth), starting heartbeat at 500ms
 
-      const sendSpy = vi.spyOn(lastMockWs!, 'send')
+      expect(lastMockWs).not.toBeNull()
+      const sendSpy = vi.spyOn(lastMockWs as MockWebSocket, 'send')
       vi.advanceTimersByTime(500)
       expect(sendSpy).toHaveBeenCalledTimes(1)
     })
@@ -211,7 +213,7 @@ describe('WsConnectionManager', () => {
 
       const conn = new WsConnectionManager(config)
       conn.connect()
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
       conn.completeAuth()
 
       // Tick 3 times without ack → missed_count > max_missed(2) → RECONNECTING
@@ -235,7 +237,7 @@ describe('WsConnectionManager', () => {
 
       const conn = new WsConnectionManager(config)
       conn.connect()
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
       conn.completeAuth()
 
       vi.advanceTimersByTime(100) // tick 1, missed=1
@@ -256,11 +258,11 @@ describe('WsConnectionManager', () => {
 
       const conn = new WsConnectionManager(config)
       conn.connect()
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
       conn.completeAuth()
 
       // Unexpected close triggers reconnect
-      lastMockWs!.simulateClose(1006, 'abnormal')
+      lastMockWs?.simulateClose(1006, 'abnormal')
       expect(conn.getState()).toBe('RECONNECTING')
 
       // After backoff (100ms * 2^0 = 100ms), should transition to CONNECTING
@@ -279,11 +281,11 @@ describe('WsConnectionManager', () => {
       conn.on('error', (e) => errors.push(e))
 
       conn.connect()
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
       conn.completeAuth()
 
       // First unexpected close → RECONNECTING
-      lastMockWs!.simulateClose(1006)
+      lastMockWs?.simulateClose(1006)
       expect(conn.getState()).toBe('RECONNECTING')
 
       // Retry
@@ -291,17 +293,17 @@ describe('WsConnectionManager', () => {
       expect(conn.getState()).toBe('CONNECTING')
 
       // Second close → max retries exceeded
-      lastMockWs!.simulateClose(1006)
+      lastMockWs?.simulateClose(1006)
       expect(conn.getState()).toBe('CLOSED')
     })
 
     it('does not reconnect without reconnect config', () => {
       const conn = new WsConnectionManager(baseConfig) // no reconnect config
       conn.connect()
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
       conn.completeAuth()
 
-      lastMockWs!.simulateClose(1006)
+      lastMockWs?.simulateClose(1006)
       expect(conn.getState()).toBe('CLOSED')
     })
   })
@@ -319,7 +321,7 @@ describe('WsConnectionManager', () => {
 
       const conn = new WsConnectionManager(config)
       conn.connect()
-      lastMockWs!.simulateOpen()
+      lastMockWs?.simulateOpen()
       conn.completeAuth()
 
       conn.destroy()
@@ -419,7 +421,7 @@ describe('WsConnectionPool', () => {
 
     const conn1 = pool.acquire(key, config)
     conn1.connect()
-    lastMockWs!.simulateOpen()
+    lastMockWs?.simulateOpen()
     conn1.completeAuth()
 
     const conn2 = pool.acquire(key, config)
@@ -450,7 +452,7 @@ describe('WsConnectionPool', () => {
 
     const conn1 = pool.acquire(key, config)
     conn1.connect()
-    lastMockWs!.simulateOpen()
+    lastMockWs?.simulateOpen()
     conn1.completeAuth()
     conn1.close() // goes to CLOSED
 
@@ -466,7 +468,7 @@ describe('WsConnectionPool', () => {
 
     const conn = pool.acquire(key, config)
     conn.connect()
-    lastMockWs!.simulateOpen()
+    lastMockWs?.simulateOpen()
     conn.completeAuth()
 
     pool.release(key, conn)

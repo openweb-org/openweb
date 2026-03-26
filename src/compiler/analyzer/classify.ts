@@ -58,10 +58,9 @@ function detectScriptJson(data: CaptureData): ExtractionSignal[] {
 
   const signals: ExtractionSignal[] = []
   const regex = /<script\s+([^>]*)type="application\/json"([^>]*)>/gi
-  let match: RegExpExecArray | null
 
-  while ((match = regex.exec(html)) !== null) {
-    const attrs = match[1]! + match[2]!
+  for (let match = regex.exec(html); match !== null; match = regex.exec(html)) {
+    const attrs = (match[1] ?? '') + (match[2] ?? '')
 
     // Skip __NEXT_DATA__ — handled by detectSsrNextData
     if (/id="__NEXT_DATA__"/i.test(attrs)) continue

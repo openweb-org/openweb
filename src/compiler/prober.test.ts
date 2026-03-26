@@ -33,9 +33,9 @@ describe('probeOperations', () => {
     )
 
     expect(results).toHaveLength(1)
-    expect(results[0]!.probeMethod).toBe('node_no_auth')
-    expect(results[0]!.authRequired).toBe(false)
-    expect(results[0]!.transport).toBe('node')
+    expect(results[0]?.probeMethod).toBe('node_no_auth')
+    expect(results[0]?.authRequired).toBe(false)
+    expect(results[0]?.transport).toBe('node')
   })
 
   it('builds URL from operation.host, not a serverUrl parameter', async () => {
@@ -101,8 +101,8 @@ describe('probeOperations', () => {
     )
 
     expect(results).toHaveLength(1)
-    expect(results[0]!.probeMethod).toBe('node_with_auth')
-    expect(results[0]!.authRequired).toBe(true)
+    expect(results[0]?.probeMethod).toBe('node_with_auth')
+    expect(results[0]?.authRequired).toBe(true)
   })
 
   it('returns empty when fetch throws (network error)', async () => {

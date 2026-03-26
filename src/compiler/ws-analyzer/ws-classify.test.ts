@@ -91,7 +91,7 @@ describe('request/reply detection', () => {
     ], 'ok')
 
     const result = classifyClusters([sent, received])
-    expect(result.find((c) => c.direction === 'sent')!.pattern).toBe('request_reply')
+    expect(result.find((c) => c.direction === 'sent')?.pattern).toBe('request_reply')
   })
 })
 
@@ -113,9 +113,9 @@ describe('subscribe detection', () => {
     ], 'trade')
 
     const result = classifyClusters([sub, events])
-    expect(result.find((c) => c.direction === 'sent')!.pattern).toBe('subscribe')
+    expect(result.find((c) => c.direction === 'sent')?.pattern).toBe('subscribe')
     // The received side has no correlation → stream
-    expect(result.find((c) => c.direction === 'received')!.pattern).toBe('stream')
+    expect(result.find((c) => c.direction === 'received')?.pattern).toBe('stream')
   })
 })
 
@@ -147,7 +147,7 @@ describe('event detection', () => {
     ], 'price_update')
 
     const result = classifyClusters([sent, push])
-    expect(result.find((c) => c.discriminatorValue === 'price_update')!.pattern).toBe('stream')
+    expect(result.find((c) => c.discriminatorValue === 'price_update')?.pattern).toBe('stream')
   })
 })
 

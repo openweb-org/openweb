@@ -57,9 +57,9 @@ describe('fetchWithRedirects', () => {
     )
 
     const calls = (fetchMock as ReturnType<typeof vi.fn>).mock.calls
-    expect((calls[0]![1] as RequestInit).method).toBe('POST')
-    expect((calls[1]![1] as RequestInit).method).toBe('GET')
-    expect((calls[1]![1] as RequestInit).body).toBeUndefined()
+    expect((calls[0]?.[1] as RequestInit).method).toBe('POST')
+    expect((calls[1]?.[1] as RequestInit).method).toBe('GET')
+    expect((calls[1]?.[1] as RequestInit).body).toBeUndefined()
   })
 
   it('rewrites POST to GET on 301 redirect', async () => {
@@ -79,9 +79,9 @@ describe('fetchWithRedirects', () => {
     )
 
     const calls = (fetchMock as ReturnType<typeof vi.fn>).mock.calls
-    expect((calls[0]![1] as RequestInit).method).toBe('POST')
-    expect((calls[1]![1] as RequestInit).method).toBe('GET')
-    expect((calls[1]![1] as RequestInit).body).toBeUndefined()
+    expect((calls[0]?.[1] as RequestInit).method).toBe('POST')
+    expect((calls[1]?.[1] as RequestInit).method).toBe('GET')
+    expect((calls[1]?.[1] as RequestInit).body).toBeUndefined()
   })
 
   it('preserves method on 307 redirect', async () => {
@@ -101,8 +101,8 @@ describe('fetchWithRedirects', () => {
     )
 
     const calls = (fetchMock as ReturnType<typeof vi.fn>).mock.calls
-    expect((calls[0]![1] as RequestInit).method).toBe('POST')
-    expect((calls[1]![1] as RequestInit).method).toBe('POST')
+    expect((calls[0]?.[1] as RequestInit).method).toBe('POST')
+    expect((calls[1]?.[1] as RequestInit).method).toBe('POST')
   })
 
   it('strips sensitive headers on cross-origin redirect', async () => {
@@ -126,9 +126,9 @@ describe('fetchWithRedirects', () => {
       { fetchImpl: fetchMock, ssrfValidator: async () => {} },
     )
 
-    expect(capturedHeaders[0]!.Cookie).toBe('session=abc')
-    expect(capturedHeaders[1]!.Cookie).toBeUndefined()
-    expect(capturedHeaders[1]!.Authorization).toBeUndefined()
+    expect(capturedHeaders[0]?.Cookie).toBe('session=abc')
+    expect(capturedHeaders[1]?.Cookie).toBeUndefined()
+    expect(capturedHeaders[1]?.Authorization).toBeUndefined()
   })
 
   it('throws on missing Location header', async () => {

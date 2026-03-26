@@ -46,7 +46,7 @@ export async function findPageForOrigin(context: BrowserContext, serverUrl: stri
     for (const page of pages) {
       try {
         const pageHost = new URL(page.url()).hostname
-        if (pageHost === baseDomain || pageHost === 'www.' + baseDomain || pageHost.endsWith('.' + baseDomain)) return page
+        if (pageHost === baseDomain || pageHost === `www.${baseDomain}` || pageHost.endsWith(`.${baseDomain}`)) return page
       } catch { /* skip */ }
     }
 
@@ -147,7 +147,7 @@ export async function executeSessionHttp(
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    Referer: target.origin + '/',
+    Referer: `${target.origin}/`,
     ...buildHeaderParams(allParams, inputParams),
   }
   if (jsonBody) headers['Content-Type'] = 'application/json'

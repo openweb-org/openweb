@@ -14,7 +14,8 @@ describe('getServerXOpenWeb', () => {
       } as unknown as { url: string }],
       paths: { '/test': { get: { operationId: 'test' } } },
     }
-    const op = spec.paths!['/test']!.get!
+    const op = spec.paths?.['/test']?.get
+    if (!op) throw new Error('missing op')
     const ext = getServerXOpenWeb(spec, op)
     expect(ext?.transport).toBe('node')
     expect(ext?.auth).toEqual({ type: 'cookie_session' })
@@ -27,7 +28,9 @@ describe('getServerXOpenWeb', () => {
       servers: [{ url: 'https://example.com' }],
       paths: { '/test': { get: { operationId: 'test' } } },
     }
-    expect(getServerXOpenWeb(spec, spec.paths!['/test']!.get!)).toBeUndefined()
+    const op = spec.paths?.['/test']?.get
+    if (!op) throw new Error('missing op')
+    expect(getServerXOpenWeb(spec, op)).toBeUndefined()
   })
 })
 
@@ -42,7 +45,9 @@ describe('resolveTransport', () => {
       } as unknown as { url: string }],
       paths: { '/test': { get: { operationId: 'test' } } },
     }
-    expect(resolveTransport(spec, spec.paths!['/test']!.get!)).toBe('page')
+    const op = spec.paths?.['/test']?.get
+    if (!op) throw new Error('missing op')
+    expect(resolveTransport(spec, op)).toBe('page')
   })
 
   it('defaults to node when no x-openweb', () => {
@@ -52,7 +57,9 @@ describe('resolveTransport', () => {
       servers: [{ url: 'https://example.com' }],
       paths: { '/test': { get: { operationId: 'test' } } },
     }
-    expect(resolveTransport(spec, spec.paths!['/test']!.get!)).toBe('node')
+    const op = spec.paths?.['/test']?.get
+    if (!op) throw new Error('missing op')
+    expect(resolveTransport(spec, op)).toBe('node')
   })
 
   it('operation-level transport overrides server-level', () => {
@@ -65,6 +72,8 @@ describe('resolveTransport', () => {
       } as unknown as { url: string }],
       paths: { '/test': { get: { operationId: 'test', 'x-openweb': { transport: 'page' } } } },
     }
-    expect(resolveTransport(spec, spec.paths!['/test']!.get!)).toBe('page')
+    const op = spec.paths?.['/test']?.get
+    if (!op) throw new Error('missing op')
+    expect(resolveTransport(spec, op)).toBe('page')
   })
 })

@@ -110,7 +110,7 @@ export function buildJsonRequestBody(operation: OpenApiOperation, params: Record
 export function resolveAllParameters(spec: OpenApiSpec, operation: OpenApiOperation): OpenApiParameter[] {
   const params = operation.parameters ?? []
   return params.flatMap((p) => {
-    const ref = (p as unknown as Record<string, unknown>)['$ref'] as string | undefined
+    const ref = (p as unknown as Record<string, unknown>).$ref as string | undefined
     if (!ref) return [p]
 
     const parts = ref.replace('#/', '').split('/')

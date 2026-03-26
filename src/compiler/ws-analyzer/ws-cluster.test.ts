@@ -194,8 +194,8 @@ describe('No discriminator traffic', () => {
     const analysis = analyzeWsConnection(conn(sameFrames))
     const sentClusters = analysis.clusters.filter((c) => c.direction === 'sent')
     expect(sentClusters).toHaveLength(1)
-    expect(sentClusters[0]!.discriminatorValue).toBe('*')
-    expect(sentClusters[0]!.count).toBe(3)
+    expect(sentClusters[0]?.discriminatorValue).toBe('*')
+    expect(sentClusters[0]?.count).toBe(3)
   })
 })
 

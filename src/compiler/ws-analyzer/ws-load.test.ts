@@ -29,16 +29,18 @@ describe('ws-load', () => {
     const connections = parseWsCapture(input)
     expect(connections).toHaveLength(2)
 
-    const connA = connections.find((c) => c.connectionId === 'a')!
-    expect(connA.url).toBe('wss://example.com')
-    expect(connA.frames).toHaveLength(2)
+    const connA = connections.find((c) => c.connectionId === 'a')
+    expect(connA).toBeDefined()
+    expect(connA?.url).toBe('wss://example.com')
+    expect(connA?.frames).toHaveLength(2)
     // Should be sorted: T1 (sent) before T2 (received)
-    expect(connA.frames[0]!.direction).toBe('sent')
-    expect(connA.frames[1]!.direction).toBe('received')
+    expect(connA?.frames[0]?.direction).toBe('sent')
+    expect(connA?.frames[1]?.direction).toBe('received')
 
-    const connB = connections.find((c) => c.connectionId === 'b')!
-    expect(connB.url).toBe('wss://other.com')
-    expect(connB.frames).toHaveLength(1)
+    const connB = connections.find((c) => c.connectionId === 'b')
+    expect(connB).toBeDefined()
+    expect(connB?.url).toBe('wss://other.com')
+    expect(connB?.frames).toHaveLength(1)
   })
 
   it('parses JSON payloads and skips binary frames', () => {
@@ -52,11 +54,12 @@ describe('ws-load', () => {
 
     const connections = parseWsCapture(input)
     expect(connections).toHaveLength(1)
-    const conn = connections[0]!
+    const conn = connections[0]
+    expect(conn).toBeDefined()
     // Binary (opcode 2) and non-JSON text frames are skipped
-    expect(conn.frames).toHaveLength(2)
-    expect(conn.frames[0]!.payload).toEqual({ action: 'sub' })
-    expect(conn.frames[1]!.payload).toEqual({ price: 42.5 })
+    expect(conn?.frames).toHaveLength(2)
+    expect(conn?.frames[0]?.payload).toEqual({ action: 'sub' })
+    expect(conn?.frames[1]?.payload).toEqual({ price: 42.5 })
   })
 
   it('extracts handshake metadata from enhanced open frames', () => {
@@ -78,15 +81,16 @@ describe('ws-load', () => {
     )
 
     const connections = parseWsCapture(input)
-    const conn = connections[0]!
-    expect(conn.handshake).toBeDefined()
-    expect(conn.handshake!.requestHeaders).toEqual([
+    const conn = connections[0]
+    expect(conn).toBeDefined()
+    expect(conn?.handshake).toBeDefined()
+    expect(conn.handshake?.requestHeaders).toEqual([
       { name: 'Cookie', value: 'session=abc' },
       { name: 'Origin', value: 'https://discord.com' },
     ])
-    expect(conn.handshake!.responseStatus).toBe(101)
-    expect(conn.handshake!.responseHeaders).toEqual([{ name: 'Sec-WebSocket-Accept', value: 'xyz' }])
-    expect(conn.handshake!.subprotocol).toBe('graphql-ws')
+    expect(conn.handshake?.responseStatus).toBe(101)
+    expect(conn.handshake?.responseHeaders).toEqual([{ name: 'Sec-WebSocket-Accept', value: 'xyz' }])
+    expect(conn.handshake?.subprotocol).toBe('graphql-ws')
   })
 
   it('returns no handshake for open frames without headers', () => {
@@ -96,7 +100,7 @@ describe('ws-load', () => {
     )
 
     const connections = parseWsCapture(input)
-    expect(connections[0]!.handshake).toBeUndefined()
+    expect(connections[0]?.handshake).toBeUndefined()
   })
 
   it('returns empty array for empty input', () => {
@@ -112,9 +116,10 @@ describe('ws-load', () => {
     )
 
     const connections = parseWsCapture(input)
-    const conn = connections[0]!
-    expect(conn.closeCode).toBe(1000)
-    expect(conn.closeTimestamp).toBe(new Date(T2).getTime())
+    const conn = connections[0]
+    expect(conn).toBeDefined()
+    expect(conn?.closeCode).toBe(1000)
+    expect(conn?.closeTimestamp).toBe(new Date(T2).getTime())
   })
 
   it('sets openTimestamp from open frame', () => {
@@ -124,7 +129,7 @@ describe('ws-load', () => {
     )
 
     const connections = parseWsCapture(input)
-    expect(connections[0]!.openTimestamp).toBe(new Date(T0).getTime())
+    expect(connections[0]?.openTimestamp).toBe(new Date(T0).getTime())
   })
 
   it('skips JSON arrays and primitives — only objects become payloads', () => {
@@ -136,6 +141,6 @@ describe('ws-load', () => {
     )
 
     const connections = parseWsCapture(input)
-    expect(connections[0]!.frames).toHaveLength(0)
+    expect(connections[0]?.frames).toHaveLength(0)
   })
 })

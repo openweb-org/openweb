@@ -362,8 +362,8 @@ describe('classify', () => {
     const result = classify(data)
     expect(result.extractions).toBeDefined()
     expect(result.extractions).toHaveLength(1)
-    expect(result.extractions![0]!.type).toBe('ssr_next_data')
-    expect(result.extractions![0]!.selector).toBe('script#__NEXT_DATA__')
+    expect(result.extractions?.[0]?.type).toBe('ssr_next_data')
+    expect(result.extractions?.[0]?.selector).toBe('script#__NEXT_DATA__')
   })
 
   it('detects ssr_next_data from HAR HTML responses', () => {
@@ -392,7 +392,7 @@ describe('classify', () => {
 
     const result = classify(data)
     expect(result.extractions).toBeDefined()
-    expect(result.extractions![0]!.type).toBe('ssr_next_data')
+    expect(result.extractions?.[0]?.type).toBe('ssr_next_data')
   })
 
   it('detects script_json tags (excluding __NEXT_DATA__)', () => {
@@ -409,14 +409,14 @@ describe('classify', () => {
     const result = classify(data)
     expect(result.extractions).toBeDefined()
     // Should detect ssr_next_data + 2 script_json (excluding __NEXT_DATA__)
-    expect(result.extractions!.length).toBe(3)
-    const ssrSignal = result.extractions!.find(e => e.type === 'ssr_next_data')
+    expect(result.extractions?.length).toBe(3)
+    const ssrSignal = result.extractions?.find(e => e.type === 'ssr_next_data')
     expect(ssrSignal).toBeDefined()
-    const scriptSignals = result.extractions!.filter(e => e.type === 'script_json')
+    const scriptSignals = result.extractions?.filter(e => e.type === 'script_json')
     expect(scriptSignals).toHaveLength(2)
-    expect(scriptSignals[0]!.id).toBe('repo-data')
-    expect(scriptSignals[0]!.selector).toBe('script#repo-data')
-    expect(scriptSignals[1]!.dataType).toBe('react-app.embeddedData')
+    expect(scriptSignals[0]?.id).toBe('repo-data')
+    expect(scriptSignals[0]?.selector).toBe('script#repo-data')
+    expect(scriptSignals[1]?.dataType).toBe('react-app.embeddedData')
   })
 
   it('returns no extractions when domHtml has no matching tags', () => {

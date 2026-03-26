@@ -52,9 +52,8 @@ export function detectMetaTag(data: CaptureData): { name: string; header: string
   // Find <meta name="..." content="..."> tags
   const metaRegex = /<meta\s+name="([^"]+)"\s+content="([^"]+)"/gi
   const metaTags = new Map<string, string>()
-  let match: RegExpExecArray | null
-  while ((match = metaRegex.exec(data.domHtml)) !== null) {
-    metaTags.set(match[1]!, match[2]!)
+  for (let match = metaRegex.exec(data.domHtml); match !== null; match = metaRegex.exec(data.domHtml)) {
+    metaTags.set(match[1] ?? '', match[2] ?? '')
   }
 
   if (metaTags.size === 0) return undefined
