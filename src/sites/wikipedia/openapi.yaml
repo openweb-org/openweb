@@ -123,7 +123,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Page title.
+          description: Page title (underscores for spaces).
       responses:
         '200':
           description: Success.
@@ -168,4 +168,249 @@ paths:
                   extract:
                     type: string
                   extract_html:
+                    type: string
+  /w/rest.php/v1/page/{title}:
+    get:
+      operationId: getPageSource
+      summary: Get the full wikitext source and metadata of a Wikipedia article
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: wp0003
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: title
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Page title (underscores for spaces).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, key, title, latest, content_model, license, source]
+                properties:
+                  id:
+                    type: integer
+                  key:
+                    type: string
+                  title:
+                    type: string
+                  latest:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      timestamp:
+                        type: string
+                  content_model:
+                    type: string
+                  license:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                      title:
+                        type: string
+                  source:
+                    type: string
+                    description: Full article wikitext source.
+  /api/rest_v1/page/media-list/{title}:
+    get:
+      operationId: getPageMediaList
+      summary: Get all images and media files for a Wikipedia page
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: wp0004
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: title
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Page title (underscores for spaces).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revision, tid, items]
+                properties:
+                  revision:
+                    type: string
+                  tid:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [title, type, section_id]
+                      properties:
+                        title:
+                          type: string
+                          description: File title (e.g. File:Example.jpg).
+                        leadImage:
+                          type: boolean
+                        section_id:
+                          type: integer
+                        type:
+                          type: string
+                          description: Media type (image, audio, video).
+                        showInGallery:
+                          type: boolean
+                        caption:
+                          type: object
+                          properties:
+                            html:
+                              type: string
+                            text:
+                              type: string
+                        srcset:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              src:
+                                type: string
+                              scale:
+                                type: string
+  /api/rest_v1/page/random/summary:
+    get:
+      operationId: getRandomArticle
+      summary: Get a summary of a random Wikipedia article
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: wp0005
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters: []
+      responses:
+        '200':
+          description: Success. Same schema as getPageSummary.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [type, title, pageid, lang, dir, revision, tid, extract]
+                properties:
+                  type:
+                    type: string
+                  title:
+                    type: string
+                  displaytitle:
+                    type: string
+                  namespace:
+                    type: object
+                  wikibase_item:
+                    type: string
+                  titles:
+                    type: object
+                  pageid:
+                    type: integer
+                  thumbnail:
+                    type: object
+                  originalimage:
+                    type: object
+                  lang:
+                    type: string
+                  dir:
+                    type: string
+                  revision:
+                    type: string
+                  tid:
+                    type: string
+                  description:
+                    type: string
+                  content_urls:
+                    type: object
+                  extract:
+                    type: string
+                  extract_html:
+                    type: string
+  /w/rest.php/v1/page/{title}/history:
+    get:
+      operationId: getPageRevisions
+      summary: Get the revision history of a Wikipedia page
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: wp0006
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: title
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Page title (underscores for spaces).
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of revisions to return.
+        - name: older_than
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Revision ID to paginate from (returns revisions older than this).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revisions]
+                properties:
+                  revisions:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, timestamp, size, comment, user]
+                      properties:
+                        id:
+                          type: integer
+                        timestamp:
+                          type: string
+                        minor:
+                          type: boolean
+                        size:
+                          type: integer
+                        comment:
+                          type: string
+                        user:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            name:
+                              type: string
+                        delta:
+                          type: integer
+                  latest:
+                    type: string
+                  older:
                     type: string

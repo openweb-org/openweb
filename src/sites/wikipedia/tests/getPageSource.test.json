@@ -1,0 +1,14 @@
+{
+  "operation_id": "getPageSource",
+  "cases": [
+    {
+      "input": {
+        "title": "Claude_Shannon"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
