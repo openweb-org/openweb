@@ -99,7 +99,7 @@ Verify skips write operations by default. To verify writes, use `--include-write
   (Based on user needs and actual site capabilities, not copied from archetype templates)
 - Create or update DOC.md with an initial overview and target-intent checklist
   (Following the `references/site-doc.md` template)
-- If the task has `acceptCriteria` with specific operations listed, those are your targets
+- If specific operations are requested, those are your targets
 
 **Examples of good target intents:**
 - E-commerce → search products by keyword; get product detail; get reviews
