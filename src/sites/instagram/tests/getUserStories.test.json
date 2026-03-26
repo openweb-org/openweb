@@ -1,0 +1,12 @@
+{
+  "operation_id": "getUserStories",
+  "method": "get",
+  "cases": [
+    {
+      "input": { "user_id": "528817151" },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

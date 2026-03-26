@@ -1,0 +1,12 @@
+{
+  "operation_id": "searchUsers",
+  "method": "get",
+  "cases": [
+    {
+      "input": { "query": "nasa", "context": "blended" },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

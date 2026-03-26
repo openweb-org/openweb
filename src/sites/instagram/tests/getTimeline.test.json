@@ -1,0 +1,12 @@
+{
+  "operation_id": "getTimeline",
+  "method": "get",
+  "cases": [
+    {
+      "input": {},
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

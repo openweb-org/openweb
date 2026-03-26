@@ -1,0 +1,12 @@
+{
+  "operation_id": "getMediaInfo",
+  "method": "get",
+  "cases": [
+    {
+      "input": { "media_id": "3857263556874012950" },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

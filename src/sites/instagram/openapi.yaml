@@ -103,6 +103,244 @@ paths:
                         type: string
                       full_name:
                         type: string
+  /feed/user/{user_id}/:
+    get:
+      operationId: getUserPosts
+      summary: Get a user's media posts
+      x-openweb:
+        permission: read
+        build:
+          stable_id: d3e4f5a6
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        pagination:
+          type: cursor
+          response_field: next_max_id
+          request_param: max_id
+      parameters:
+        - $ref: '#/components/parameters/X-IG-App-ID'
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Numeric user ID.
+        - name: max_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor for next page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  next_max_id:
+                    type: string
+                  more_available:
+                    type: boolean
+  /media/{media_id}/info/:
+    get:
+      operationId: getMediaInfo
+      summary: Get detailed information about a media post
+      x-openweb:
+        permission: read
+        build:
+          stable_id: b7c8d9e0
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - $ref: '#/components/parameters/X-IG-App-ID'
+        - name: media_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Numeric media ID.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+  /media/{media_id}/comments/:
+    get:
+      operationId: getMediaComments
+      summary: Get comments on a media post
+      x-openweb:
+        permission: read
+        build:
+          stable_id: f1a2b3c4
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        pagination:
+          type: cursor
+          response_field: next_min_id
+          request_param: min_id
+      parameters:
+        - $ref: '#/components/parameters/X-IG-App-ID'
+        - name: media_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Numeric media ID.
+        - name: can_support_threading
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: Enable threaded comment replies.
+        - name: min_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor for next page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                  next_min_id:
+                    type: string
+                  has_more_comments:
+                    type: boolean
+  /web/search/topsearch/:
+    get:
+      operationId: searchUsers
+      summary: Search for users, hashtags, and places
+      x-openweb:
+        permission: read
+        build:
+          stable_id: a5b6c7d8
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - $ref: '#/components/parameters/X-IG-App-ID'
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query.
+        - name: context
+          in: query
+          required: false
+          schema:
+            type: string
+            default: blended
+          description: Search context (blended, user, hashtag, place).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                  hashtags:
+                    type: array
+                    items:
+                      type: object
+                  places:
+                    type: array
+                    items:
+                      type: object
+  /feed/reels_tray/:
+    get:
+      operationId: getReelsTray
+      summary: Get stories tray for followed users
+      x-openweb:
+        permission: read
+        build:
+          stable_id: e9f0a1b2
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - $ref: '#/components/parameters/X-IG-App-ID'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tray:
+                    type: array
+                    items:
+                      type: object
+                  status:
+                    type: string
+  /feed/user/{user_id}/story/:
+    get:
+      operationId: getUserStories
+      summary: Get a user's active stories
+      x-openweb:
+        permission: read
+        build:
+          stable_id: c3d4e5f6
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - $ref: '#/components/parameters/X-IG-App-ID'
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Numeric user ID.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reel:
+                    type: object
+                  status:
+                    type: string
   /media/{media_id}/like/:
     post:
       operationId: likeMedia
@@ -123,6 +361,98 @@ paths:
           schema:
             type: string
           description: Media ID to like.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /media/{media_id}/unlike/:
+    post:
+      operationId: unlikeMedia
+      summary: Unlike a media post
+      x-openweb:
+        permission: write
+        build:
+          stable_id: d1e2f3a4
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - $ref: '#/components/parameters/X-IG-App-ID'
+        - name: media_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Media ID to unlike.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /friendships/create/{user_id}/:
+    post:
+      operationId: followUser
+      summary: Follow a user
+      x-openweb:
+        permission: write
+        build:
+          stable_id: b5c6d7e8
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - $ref: '#/components/parameters/X-IG-App-ID'
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Numeric user ID to follow.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  friendship_status:
+                    type: object
+                  status:
+                    type: string
+  /media/{media_id}/save/:
+    post:
+      operationId: bookmarkMedia
+      summary: Save/bookmark a media post
+      x-openweb:
+        permission: write
+        build:
+          stable_id: f9a0b1c2
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - $ref: '#/components/parameters/X-IG-App-ID'
+        - name: media_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Media ID to save/bookmark.
       responses:
         '200':
           description: Success.
