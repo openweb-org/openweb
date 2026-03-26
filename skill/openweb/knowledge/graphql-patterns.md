@@ -1,6 +1,6 @@
 # GraphQL Patterns
 
-Patterns for sites that use GraphQL instead of (or alongside) REST. GraphQL introduces unique challenges for discovery, capture, and fixture modeling.
+Patterns for sites that use GraphQL instead of (or alongside) REST. GraphQL introduces unique challenges for discovery, capture, and site package modeling.
 
 ## Persisted Queries
 
@@ -15,9 +15,9 @@ The client sends a hash instead of the full query string. The server looks up th
     "extensions": {"persistedQuery": {"version": 1, "sha256Hash": "abc123def456..."}}
   }
   ```
-- **Impact:** cannot construct new queries — only the pre-registered hashes work. Fixture must store the exact hash per operation.
+- **Impact:** cannot construct new queries — only the pre-registered hashes work. site package must store the exact hash per operation.
 - **Capture strategy:** record the hash + variables for each operation. The hash is the operation identity.
-- **Fixture modeling:** store hash in `x-persisted-query-hash` extension in openapi.yaml.
+- **site package modeling:** store hash in `x-persisted-query-hash` extension in openapi.yaml.
 
 ## Query Hashing (Client-Side)
 
@@ -42,7 +42,7 @@ Multiple queries sent in a single HTTP request as a JSON array.
   ```
 - **Impact:** each query in the batch is a separate operation. During capture, split the batch into individual operations.
 - **Capture strategy:** decompose batched requests. Map each array element to its own operation. Note that some operations only appear inside batches (page-load bundles).
-- **Fixture modeling:** model each query as a separate operation. Add a note if the site expects batching (some reject individual queries).
+- **site package modeling:** model each query as a separate operation. Add a note if the site expects batching (some reject individual queries).
 
 ## Introspection Disabled
 
@@ -72,7 +72,7 @@ REST maps HTTP method to permission (GET→read, POST→write). GraphQL uses POS
 - `mutation` operations → `write` (or `delete`/`transact` based on intent)
 - `subscription` operations → `read` (stream)
 
-## Fixture Modeling
+## site package Modeling
 
 GraphQL operations map to openapi.yaml with a single path and operation-level discrimination:
 
@@ -105,3 +105,9 @@ GraphQL operations map to openapi.yaml with a single path and operation-level di
 3. **Ignoring `operationName`** — some sites use the same hash for multiple operations distinguished by `operationName`
 4. **Missing fragments** — queries may reference fragments defined elsewhere. Capture the full query text including fragments.
 5. **CSRF on GraphQL** — many GraphQL endpoints require a CSRF token even though they accept JSON. Check for `x-csrf-token` or similar headers.
+
+## Related References
+
+- `references/compile.md` — compile review for GraphQL operations
+- `references/discover.md` — identifying GraphQL during capture inspection
+- `knowledge/auth-patterns.md` — CSRF detection for GraphQL endpoints

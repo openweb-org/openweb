@@ -45,7 +45,7 @@ Follow the normalized entry format:
 Description of the pattern — what it is and when it occurs.
 
 - **Detection signals:** how to recognize this pattern in captured traffic or site behavior
-- **Impact:** what this means for transport, auth, or fixture modeling
+- **Impact:** what this means for transport, auth, or site package modeling
 - **Action:** what to do when you encounter it
 - **Example:** (optional) concrete example from a real site, generalized
 ```
@@ -77,3 +77,10 @@ If a file exceeds 200 lines:
 ### 6. Update Process Guide (if needed)
 
 If the learning changes the recommended process, update `references/discover.md`, `references/compile.md`, or `references/troubleshooting.md`.
+
+## Related References
+
+- `references/site-doc.md` — site-specific documentation (DOC.md vs knowledge/)
+- `references/discover.md` — discovery workflow that produces knowledge
+- `references/compile.md` — compile review that produces knowledge
+- `references/troubleshooting.md` — debugging that produces knowledge

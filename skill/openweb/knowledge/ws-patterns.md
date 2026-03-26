@@ -106,7 +106,7 @@ Session limits, rate limit headers, shard info. Useful for transport config, not
 - Capture must record WS frames (CDP `Network.webSocketFrameSent` / `Network.webSocketFrameReceived`)
 - Long-running captures generate large volumes — set a time bound or message count limit
 
-## Fixture Modeling
+## Site Package Modeling
 
 WS operations map to the same openapi.yaml structure as REST:
 
@@ -126,3 +126,9 @@ WS operations map to the same openapi.yaml structure as REST:
 ```
 
 The `x-ws-subscribe` extension holds the subscription template. The adapter sends it after connecting and yields incoming messages as the response stream.
+
+## Related References
+
+- `references/compile.md` — Track B: WS/AsyncAPI curation
+- `references/discover.md` — WS traffic inspection during capture
+- `knowledge/troubleshooting-patterns.md` — WS failure patterns

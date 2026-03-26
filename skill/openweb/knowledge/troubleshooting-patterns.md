@@ -14,13 +14,13 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 
 - **Symptoms:** `403` with "invalid CSRF token" or "forbidden" on POST/PUT/DELETE
 - **Detection signals:** site sends a CSRF token in a cookie or meta tag; the request is missing the corresponding header
-- **Action:** check if the fixture's openapi.yaml includes the CSRF header. If not, add it during compile. Some sites rotate CSRF tokens per page load — requires `page` transport.
+- **Action:** check if the site package's openapi.yaml includes the CSRF header. If not, add it during compile. Some sites rotate CSRF tokens per page load — requires `page` transport.
 
 ### Cookie Domain Mismatch
 
 - **Symptoms:** auth works in browser but operations fail — cookies not being sent
 - **Detection signals:** site uses a subdomain for API (`api.example.com`) but cookies are set on `www.example.com`
-- **Action:** check cookie domain scope. The browser profile copy may not include subdomain cookies. Set `domain` explicitly in the fixture's auth config.
+- **Action:** check cookie domain scope. The browser profile copy may not include subdomain cookies. Set `domain` explicitly in the site package's auth config.
 
 ## Discovery Failures
 
@@ -40,7 +40,7 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 
 ### No Operations Extracted
 
-- **Symptoms:** compile finishes but the fixture has 0 operations
+- **Symptoms:** compile finishes but the site package has 0 operations
 - **Detection signals:** empty `paths` in generated openapi.yaml
 - **Action:** check the capture data — were API calls recorded? If the site uses only SSR (no XHR/fetch), the compiler won't find API operations. Use extraction patterns (see [extraction-patterns.md](extraction-patterns.md)).
 
@@ -56,7 +56,7 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 
 - **Symptoms:** `openweb verify` returns `DRIFT` for an operation
 - **Detection signals:** response shape changed — missing fields, new fields, type changes
-- **Action:** check if the site updated its API. Re-run `openweb compile` to update the fixture if the change is intentional. If it's a transient issue (e.g., A/B test), note it in DOC.md.
+- **Action:** check if the site updated its API. Re-run `openweb compile` to update the site package if the change is intentional. If it's a transient issue (e.g., A/B test), note it in DOC.md.
 
 ### Rate Limiting (429)
 
@@ -122,10 +122,18 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 
 - **Symptoms:** auth operations that previously worked now return `401`, browser session is valid
 - **Detection signals:** the site changed how it issues tokens — different cookie name, different header format, moved from cookie to `Authorization` bearer
-- **Action:** re-capture the auth flow. Update the fixture's auth config to match the new token delivery mechanism. Clear the token cache (`browser restart`), then `openweb verify <site>`.
+- **Action:** re-capture the auth flow. Update the site package's auth config to match the new token delivery mechanism. Clear the token cache (`browser restart`), then `openweb verify <site>`.
 
 ### Cross-Site Token Conflict
 
 - **Symptoms:** logging into site B invalidates auth for site A
 - **Detection signals:** both sites share a parent domain or use the same SSO provider, cookie scope overlaps
 - **Action:** document the conflict in both sites' DOC.md. Use separate browser profiles if possible. As a workaround, verify sites sequentially rather than concurrently.
+
+## Related References
+
+- `references/troubleshooting.md` — process guide for diagnosing failures
+- `references/discover.md` — discovery workflow context
+- `references/compile.md` — compile review context
+- `knowledge/auth-patterns.md` — auth primitive detection details
+- `knowledge/ws-patterns.md` — WS connection/message patterns

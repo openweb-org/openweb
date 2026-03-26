@@ -50,7 +50,7 @@ Some sites roll their own detection in addition to (or instead of) commercial so
 
 ## Impact on Transport Selection
 
-```
+```text
 Can Node make the request without auth cookies?
   ├─ Yes → node transport (fastest, simplest)
   └─ No → Does the site use bot detection?
@@ -58,7 +58,7 @@ Can Node make the request without auth cookies?
        └─ Heavy (Akamai/PX/DataDome/custom) → page transport
             └─ Does page need specific JS context?
                  ├─ No → page transport with evaluate
-                 └─ Yes → adapter (L3) transport
+                 └─ Yes → adapter transport
 ```
 
 ## Impact on Capture Strategy
@@ -78,4 +78,11 @@ Can Node make the request without auth cookies?
 4. **Use `openweb browser start`** — it copies the real Chrome profile, which has history/cookies that look legitimate
 5. **Don't replay raw requests** — extract the pattern (URL, params, headers) and let the transport regenerate auth headers
 6. **Rate limit operations** — even with valid auth, high request rates trigger server-side blocking
-7. **Document detection in DOC.md** — if a site uses bot detection, note the system and its impact in the fixture's Known Issues section
+7. **Document detection in DOC.md** — if a site uses bot detection, note the system and its impact in the site package's Known Issues section
+
+## Related References
+
+- `references/discover.md` — Browser First rule, capture strategy
+- `references/compile.md` — transport decision model
+- `knowledge/extraction-patterns.md` — extraction alternatives when APIs are blocked
+- `knowledge/troubleshooting-patterns.md` — bot detection failure patterns

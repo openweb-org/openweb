@@ -26,6 +26,13 @@ Known failure patterns and fixes, extracted from M3–M18 experience and M26 dis
 **Cause**: `findPageForOrigin` matched a service worker page.
 **Fix**: Filter out service worker pages — they are not user-visible.
 
+## Related References
+
+- `references/troubleshooting.md` — process guide for diagnosing failures
+- `references/discover.md` — discovery workflow (capture/compile context)
+- `references/compile.md` — compile review (correctness context)
+- `references/cli.md` — CLI commands and browser management
+
 ### Backgrounded tab returns undefined for page.evaluate
 **Cause**: Chrome discards JS heap in backgrounded tabs.
 **Fix**: Detect tab discard and reload before extraction.
@@ -46,7 +53,7 @@ Known failure patterns and fixes, extracted from M3–M18 experience and M26 dis
 
 ### No filtered samples after analyzer filtering
 **Cause**: All captured traffic was filtered as noise (tracking, CDN, infrastructure). Also happens when a site uses protobuf-encoded parameters (like Google Maps' `pb` parameter) or map tiles that the analyzer doesn't recognize as API traffic.
-**Fix**: Browse more pages to capture real API traffic. Check that target URL matches the site's API domain. For sites with unusual API formats (protobuf, binary, non-standard encoding), manual fixture creation may be required — the compiler cannot handle all patterns.
+**Fix**: Browse more pages to capture real API traffic. Check that target URL matches the site's API domain. For sites with unusual API formats (protobuf, binary, non-standard encoding), manual site package creation may be required — the compiler cannot handle all patterns.
 
 ### No operations produced from clusters
 **Cause**: All endpoints were mutations with request bodies (skipped by safety gate) or all samples filtered.
@@ -86,7 +93,7 @@ Known failure patterns and fixes, extracted from M3–M18 experience and M26 dis
 
 ### Bot detection blocks CDP browser (even non-headless)
 **Cause**: E-commerce sites (Walmart, Amazon) use bot detection (PerimeterX, DataDome) that fingerprints CDP-connected browsers. Both headless and non-headless modes are detected — the CDP protocol itself is the signal.
-**Fix**: For Next.js sites, use node-based SSR extraction instead of browser extraction. Direct HTTP `fetch()` from Node.js is not blocked — it returns full SSR HTML with `__NEXT_DATA__` embedded. Set `transport: node` + `extraction.type: ssr_next_data` in the fixture. The runtime will fetch the page via HTTP and parse `__NEXT_DATA__` without a browser. For non-Next.js sites blocked by bot detection, there is currently no workaround.
+**Fix**: For Next.js sites, use node-based SSR extraction instead of browser extraction. Direct HTTP `fetch()` from Node.js is not blocked — it returns full SSR HTML with `__NEXT_DATA__` embedded. Set `transport: node` + `extraction.type: ssr_next_data` in the site package. The runtime will fetch the page via HTTP and parse `__NEXT_DATA__` without a browser. For non-Next.js sites blocked by bot detection, there is currently no workaround.
 
 ### IP poisoning from direct HTTP probes during discovery
 **Cause**: Using curl/fetch/wget to probe a site's endpoints before browser capture. Bot detection systems (PerimeterX, DataDome) track IP reputation. Non-browser HTTP requests have fundamentally different TLS fingerprints (JA3/JA4) and HTTP/2 settings — even with a correct User-Agent, the TLS handshake exposes the client as non-browser. Each probe raises the IP's risk score. After enough probes, the IP is flagged and ALL requests from it — including real browser sessions — trigger unsolvable CAPTCHAs.

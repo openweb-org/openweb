@@ -22,7 +22,7 @@ Read `knowledge/troubleshooting-patterns.md` for the matching category. Most fai
 2. Check `openweb browser status` — is Chrome running?
 3. Check if the site is in `doc/blocked.md` — known blocker?
 4. Try the operation with `--verbose` for more detail
-5. Check the fixture's `openapi.yaml` — is the endpoint/auth correct?
+5. Check the site's `openapi.yaml` — is the endpoint/auth correct?
 
 ## Step 4: Fix and verify
 
@@ -35,3 +35,10 @@ pnpm build && pnpm test        # ensure no regressions
 ## Step 5: Update Knowledge
 
 → Read `update-knowledge.md` — if you learned something novel during debugging, write it to `knowledge/`.
+
+## Related References
+
+- `references/knowledge/troubleshooting-patterns.md` — known failure patterns by category
+- `references/discover.md` — discovery workflow (capture/compile issues)
+- `references/compile.md` — compile review (correctness issues)
+- `references/cli.md` — CLI commands and browser management

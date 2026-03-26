@@ -77,7 +77,7 @@ Records all browser traffic for later compilation. One capture session at a time
 openweb compile <site-url> [--probe] [--capture-dir <dir>]
 ```
 
-Transforms captured traffic into a fixture. `--probe` tests endpoints during compile. `--capture-dir` loads from an existing capture bundle instead of launching a new recording.
+Transforms captured traffic into a site package. `--probe` tests endpoints during compile. `--capture-dir` loads from an existing capture bundle instead of launching a new recording.
 
 ## Verify
 
@@ -93,7 +93,7 @@ Status vocabulary: `PASS` | `DRIFT` | `AUTH_FAIL` | `ERROR`
 
 ```bash
 openweb registry list            # registered sites with versions
-openweb registry install <site>  # archive fixture to registry
+openweb registry install <site>  # archive site package to registry
 openweb registry rollback <site> # revert to previous version
 openweb registry show <site>     # version history
 ```
@@ -115,7 +115,7 @@ Configured per-site, not chosen by the agent:
 
 - **node**: HTTP from Node.js — with or without browser auth
 - **page**: HTTP via `page.evaluate()` in the browser
-- **adapter (L3)**: Arbitrary JS in the browser page (Telegram, WhatsApp)
+- **adapter**: Arbitrary JS in the browser page via page.evaluate (Telegram, WhatsApp)
 
 ---
 

@@ -79,7 +79,7 @@ Structured data in a `<script type="application/ld+json">` or similar non-execut
 - **Transport:** node (parse HTML) or page (query DOM)
 - **Gotcha:** multiple `ld+json` blocks per page — filter by `@type`.
 
-## page.evaluate Adapter (L3)
+## page.evaluate Adapter
 
 Run arbitrary JavaScript in the browser page context. Used when no simpler pattern works.
 
@@ -99,12 +99,12 @@ Run arbitrary JavaScript in the browser page context. Used when no simpler patte
     });
   }
   ```
-- **Transport:** adapter (L3) — full page control
+- **Transport:** adapter — full page control
 - **Gotcha:** slowest pattern. Use only when simpler extraction fails. Fragile to UI changes.
 
 ## Decision Flow
 
-```
+```text
 Is data in an API response (XHR/fetch)?
   └─ Yes → use the API directly (REST/GraphQL patterns) ← preferred
   └─ No → Is data in initial HTML?
@@ -122,3 +122,10 @@ Is data in an API response (XHR/fetch)?
 2. **Prefer JSON over DOM** — `ssr_next_data` > `html_selector` for stability
 3. **Document the pattern in DOC.md** — the Extraction section should name the pattern and the specific selector/variable
 4. **Test with `openweb verify`** — extraction patterns are fragile; verify catches drift early
+
+## Related References
+
+- `references/compile.md` — extraction complexity rule, adapter extraction
+- `references/discover.md` — SSR/DOM inspection during capture
+- `knowledge/bot-detection-patterns.md` — when extraction is the only option
+- `knowledge/troubleshooting-patterns.md` — extraction failure patterns

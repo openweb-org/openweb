@@ -161,3 +161,9 @@ If classify.ts detects no auth primitive:
 1. The site may genuinely be public (most L1 site packages)
 2. The capture may be missing authenticated traffic — was the user logged in during capture?
 3. The site may use an auth pattern not yet supported (check for bearer tokens in headers, OAuth redirects, etc.)
+
+## Related References
+
+- `references/discover.md` — discovery workflow where auth is first encountered
+- `references/compile.md` — compile review where auth detection is verified
+- `references/knowledge/troubleshooting-patterns.md` — auth failure patterns
