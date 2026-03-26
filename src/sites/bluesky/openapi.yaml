@@ -142,3 +142,434 @@ paths:
                       type: object
                   cursor:
                     type: string
+  /app.bsky.feed.getPostThread:
+    get:
+      operationId: getPostThread
+      summary: Get a post and its reply thread
+      x-openweb:
+        permission: read
+        build:
+          stable_id: bsky0004
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: uri
+          in: query
+          required: true
+          schema:
+            type: string
+          description: AT URI of the post (e.g. at://did:plc:xxx/app.bsky.feed.post/yyy).
+        - name: depth
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 6
+          description: How many levels of replies to include.
+        - name: parentHeight
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 80
+          description: How many levels of parent posts to include.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  thread:
+                    type: object
+  /app.bsky.feed.getAuthorFeed:
+    get:
+      operationId: getAuthorFeed
+      summary: Get a user's posts (author feed)
+      x-openweb:
+        permission: read
+        build:
+          stable_id: bsky0005
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        pagination:
+          type: cursor
+          response_field: cursor
+          request_param: cursor
+      parameters:
+        - name: actor
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Handle or DID of the user.
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            default: posts_with_replies
+          description: 'Filter type: posts_with_replies, posts_no_replies, posts_with_media, posts_and_author_threads.'
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Number of items per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  feed:
+                    type: array
+                    items:
+                      type: object
+                  cursor:
+                    type: string
+  /app.bsky.feed.getActorLikes:
+    get:
+      operationId: getActorLikes
+      summary: Get posts liked by a user
+      x-openweb:
+        permission: read
+        build:
+          stable_id: bsky0006
+          tool_version: 1
+          verified: false
+        pagination:
+          type: cursor
+          response_field: cursor
+          request_param: cursor
+      parameters:
+        - name: actor
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Handle or DID of the user.
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Number of items per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  feed:
+                    type: array
+                    items:
+                      type: object
+                  cursor:
+                    type: string
+  /app.bsky.feed.searchPosts:
+    get:
+      operationId: searchPosts
+      summary: Search posts by keyword
+      x-openweb:
+        permission: read
+        build:
+          stable_id: bsky0007
+          tool_version: 1
+          verified: false
+        pagination:
+          type: cursor
+          response_field: cursor
+          request_param: cursor
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query.
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            default: latest
+          description: 'Sort order: top or latest.'
+        - name: author
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by author handle or DID.
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by language (BCP-47 code).
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+          description: Number of items per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      type: object
+                  cursor:
+                    type: string
+  /app.bsky.feed.getPosts:
+    get:
+      operationId: getPosts
+      summary: Get multiple posts by AT URIs (batch)
+      x-openweb:
+        permission: read
+        build:
+          stable_id: bsky0008
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: uris
+          in: query
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+          description: List of AT URIs to fetch (max 25).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      type: object
+  /app.bsky.graph.getFollowers:
+    get:
+      operationId: getFollowers
+      summary: Get a user's followers
+      x-openweb:
+        permission: read
+        build:
+          stable_id: bsky0009
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        pagination:
+          type: cursor
+          response_field: cursor
+          request_param: cursor
+      parameters:
+        - name: actor
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Handle or DID of the user.
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Number of items per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  followers:
+                    type: array
+                    items:
+                      type: object
+                  cursor:
+                    type: string
+                  subject:
+                    type: object
+  /app.bsky.graph.getFollows:
+    get:
+      operationId: getFollows
+      summary: Get accounts a user follows
+      x-openweb:
+        permission: read
+        build:
+          stable_id: bsky0010
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        pagination:
+          type: cursor
+          response_field: cursor
+          request_param: cursor
+      parameters:
+        - name: actor
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Handle or DID of the user.
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Number of items per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  follows:
+                    type: array
+                    items:
+                      type: object
+                  cursor:
+                    type: string
+                  subject:
+                    type: object
+  /com.atproto.repo.createRecord:
+    post:
+      operationId: createRecord
+      summary: 'Create a record (like, repost, or follow)'
+      x-openweb:
+        permission: write
+        build:
+          stable_id: bsky0011
+          tool_version: 1
+          verified: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - repo
+                - collection
+                - record
+              properties:
+                repo:
+                  type: string
+                  description: DID of the authenticated user (repo owner).
+                collection:
+                  type: string
+                  description: 'Record collection NSID: app.bsky.feed.like, app.bsky.feed.repost, or app.bsky.graph.follow.'
+                record:
+                  type: object
+                  description: 'Record data. For like: {subject: {uri, cid}, createdAt}. For repost: {subject: {uri, cid}, createdAt}. For follow: {subject: did, createdAt}.'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uri:
+                    type: string
+                  cid:
+                    type: string
+  /com.atproto.repo.deleteRecord:
+    post:
+      operationId: deleteRecord
+      summary: 'Delete a record (unlike, unrepost, or unfollow)'
+      x-openweb:
+        permission: write
+        build:
+          stable_id: bsky0012
+          tool_version: 1
+          verified: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - repo
+                - collection
+                - rkey
+              properties:
+                repo:
+                  type: string
+                  description: DID of the authenticated user (repo owner).
+                collection:
+                  type: string
+                  description: 'Record collection NSID: app.bsky.feed.like, app.bsky.feed.repost, or app.bsky.graph.follow.'
+                rkey:
+                  type: string
+                  description: Record key (last segment of the AT URI).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

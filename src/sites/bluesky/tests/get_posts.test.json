@@ -1,0 +1,12 @@
+{
+  "operation_id": "getPosts",
+  "cases": [
+    {
+      "input": { "uris": ["at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3l6oveex3ii2l"] },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
