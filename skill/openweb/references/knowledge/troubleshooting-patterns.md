@@ -1,116 +1,139 @@
 # Troubleshooting Patterns
 
-Known failure patterns and fixes, extracted from M3–M18 experience and M26 discovery.
+Known failure patterns organized by category. Referenced from [troubleshooting.md](../references/troubleshooting.md).
 
 ## Auth Failures
 
-### 401/403 after token cache hit
-**Cause**: Cached tokens expired.
-**Fix**: Clear token cache and retry with fresh browser extraction. Run `openweb browser restart` to clear cache, then retry.
+### Expired or Missing Cookie
 
-### cookie_session detected on public API
-**Cause**: Public APIs may set tracking cookies that look like sessions.
-**Fix**: Verify with `--probe` flag during compile. If API works without cookies, remove auth from spec.
+- **Symptoms:** `401` or `403` on operations that previously worked
+- **Detection signals:** response body mentions "session expired", "login required", or returns a redirect to login page
+- **Action:** run `openweb login <site>`, then `openweb verify <site>`. If using token cache, run `openweb browser restart` to clear stale tokens.
 
-### MSAL token not found in sessionStorage
-**Cause**: User not logged in to Microsoft service, or MSAL cache expired.
-**Fix**: `openweb login <site>` → log in → `openweb browser restart` → retry.
+### CSRF Token Mismatch
 
-### exchange_chain token endpoint returns 403
-**Cause**: Missing required cookies, wrong User-Agent, or Cloudflare protection.
-**Fix**: Ensure browser has active session. Some exchange chains require specific User-Agent binding (e.g., ChatGPT).
+- **Symptoms:** `403` with "invalid CSRF token" or "forbidden" on POST/PUT/DELETE
+- **Detection signals:** site sends a CSRF token in a cookie or meta tag; the request is missing the corresponding header
+- **Action:** check if the site package's openapi.yaml includes the CSRF header. If not, add it during compile. Some sites rotate CSRF tokens per page load — requires `page` transport.
 
-## Discovery / Capture Failures
+### Cookie Domain Mismatch
 
-### Service worker page matched instead of user page
-**Cause**: `findPageForOrigin` matched a service worker page.
-**Fix**: Filter out service worker pages — they are not user-visible.
+- **Symptoms:** auth works in browser but operations fail — cookies not being sent
+- **Detection signals:** site uses a subdomain for API (`api.example.com`) but cookies are set on `www.example.com`
+- **Action:** check cookie domain scope. The browser profile copy may not include subdomain cookies. Set `domain` explicitly in the site package's auth config.
+
+## Discovery Failures
+
+### No Traffic Captured
+
+- **Symptoms:** capture produces empty or near-empty output
+- **Detection signals:** `openweb capture stop` reports 0 requests
+- **Action:** verify Chrome is running (`openweb browser status`), verify the CDP endpoint is correct, check that you browsed the site during capture.
+
+### Login Redirect Loop
+
+- **Symptoms:** every page redirects to login, capture only records redirect responses
+- **Detection signals:** all captured URLs are `/login`, `/auth`, or OAuth flows
+- **Action:** complete login manually first, verify with `openweb verify <site>`, then start capture.
+
+## Compile Failures
+
+### No Operations Extracted
+
+- **Symptoms:** compile finishes but the site package has 0 operations
+- **Detection signals:** empty `paths` in generated openapi.yaml
+- **Action:** check the capture data — were API calls recorded? If the site uses only SSR (no XHR/fetch), the compiler won't find API operations. Use extraction patterns (see [extraction-patterns.md](extraction-patterns.md)).
+
+### Duplicate Operations
+
+- **Symptoms:** multiple operations for the same logical action with slight URL variations
+- **Detection signals:** operations like `searchProducts_1`, `searchProducts_2` with identical shapes
+- **Action:** merge during compile review. URL params that vary per request (pagination, timestamps) should be parameterized, not create new operations.
+
+## Verify Failures
+
+### DRIFT
+
+- **Symptoms:** `openweb verify` returns `DRIFT` for an operation
+- **Detection signals:** response shape changed — missing fields, new fields, type changes
+- **Action:** check if the site updated its API. Re-run `openweb compile` to update the site package if the change is intentional. If it's a transient issue (e.g., A/B test), note it in DOC.md.
+
+### Rate Limiting (429)
+
+- **Symptoms:** `ERROR` on verify with `429` status, especially when running `--all`
+- **Detection signals:** `429 Too Many Requests`, `Retry-After` header
+- **Action:** add delays between operations. Check if the site documents rate limits. Consider reducing verify frequency.
+
+## Browser Failures
+
+### CDP Connection Refused
+
+- **Symptoms:** `Error: connect ECONNREFUSED 127.0.0.1:9222`
+- **Detection signals:** no Chrome process running, or Chrome launched without `--remote-debugging-port`
+- **Action:** run `openweb browser start`. If already running, check `openweb browser status`. Port conflict: check if another process uses 9222.
+
+### Stale Browser Session
+
+- **Symptoms:** operations fail silently or return empty data, but browser appears running
+- **Detection signals:** `openweb browser status` shows running but operations return unexpected results
+- **Action:** `openweb browser restart` — kills the old session, re-copies the profile, clears token cache.
+
+## WebSocket Failures
+
+### Connection Upgrade Rejected
+
+- **Symptoms:** `HTTP 400` or `403` on the WebSocket handshake
+- **Detection signals:** error during `new WebSocket()` or CDP reports `WebSocket connection failed`, response headers indicate the upgrade was denied
+- **Action:** check if the WS endpoint requires auth headers or cookies on the upgrade request. Some sites validate `Origin` header — ensure it matches the site domain. Use `page` transport so the browser handles the handshake.
+
+### Heartbeat Timeout / Disconnect
+
+- **Symptoms:** WS connection drops after 30–60 seconds of inactivity
+- **Detection signals:** `close` event with code `1000` or `1006`, server sends no data after initial connection
+- **Action:** the site expects heartbeat/ping frames at a specific interval. Check captured traffic for the heartbeat pattern (see [ws-patterns.md](ws-patterns.md)). Implement the heartbeat in the adapter.
+
+### Message Deserialization Failure
+
+- **Symptoms:** WS messages received but cannot be parsed — adapter returns empty or error
+- **Detection signals:** messages are binary (opcode 2), compressed (zlib/zstd), or use a non-JSON format (protobuf, MessagePack)
+- **Action:** check the `Sec-WebSocket-Extensions` response header for `permessage-deflate`. If compressed, decompress before parsing. If protobuf, identify the `.proto` schema from the site's JS bundles. Document the encoding in DOC.md.
+
+### Subscription Not Acknowledged
+
+- **Symptoms:** subscribe message sent but no data received, connection stays open
+- **Detection signals:** no server response after sending subscribe frame, or server responds with an error like `{"error":"invalid channel"}`
+- **Action:** verify the subscribe message format against captured traffic. Channel names, product IDs, and auth tokens may be required. Some sites require the `identify`/`auth` message before any subscription.
+
+### Reconnection Loop
+
+- **Symptoms:** adapter repeatedly connects and disconnects, never stabilizes
+- **Detection signals:** rapid succession of connect/disconnect events in logs, server sends `close` immediately after connect
+- **Action:** check if the server requires a specific protocol version or subprotocol in the upgrade request. Verify that the resume/reconnect payload (session_id, seq) is correct. Rate limiting on connections is common — add backoff between reconnect attempts.
+
+## Token Vault Failures
+
+### Cache Returns Stale Token
+
+- **Symptoms:** operation fails with `401` but `openweb browser status` shows the browser is authenticated
+- **Detection signals:** token in `~/.openweb/tokens/<site>/` has expired but the cache hasn't evicted it, JWT `exp` claim is in the past
+- **Action:** run `openweb browser restart` to clear the token cache. Check if the TTL config for this site is too long — JWT tokens with short expiry (e.g., 5 min) need a matching cache TTL.
+
+### Token Extraction Fails After Site Update
+
+- **Symptoms:** auth operations that previously worked now return `401`, browser session is valid
+- **Detection signals:** the site changed how it issues tokens — different cookie name, different header format, moved from cookie to `Authorization` bearer
+- **Action:** re-capture the auth flow. Update the site package's auth config to match the new token delivery mechanism. Clear the token cache (`browser restart`), then `openweb verify <site>`.
+
+### Cross-Site Token Conflict
+
+- **Symptoms:** logging into site B invalidates auth for site A
+- **Detection signals:** both sites share a parent domain or use the same SSO provider, cookie scope overlaps
+- **Action:** document the conflict in both sites' DOC.md. Use separate browser profiles if possible. As a workaround, verify sites sequentially rather than concurrently.
 
 ## Related References
 
 - `references/troubleshooting.md` — process guide for diagnosing failures
-- `references/discover.md` — discovery workflow (capture/compile context)
-- `references/compile.md` — compile review (correctness context)
-- `references/cli.md` — CLI commands and browser management
-
-### Backgrounded tab returns undefined for page.evaluate
-**Cause**: Chrome discards JS heap in backgrounded tabs.
-**Fix**: Detect tab discard and reload before extraction.
-
-### SPA page with long bootstrap time (10s+)
-**Cause**: Webpack chunk loading, framework bootstrap.
-**Fix**: Wait for network idle, not just DOMContentLoaded. SPA bootstrap timing varies.
-
-### pnpm dev stdout contains non-JSON banner text
-**Cause**: pnpm outputs banner text that corrupts JSON parsing.
-**Fix**: Always use `pnpm --silent dev` to suppress banner.
-
-### Login wall detected during capture
-**Cause**: Site requires authentication, user not logged in.
-**Fix**: `openweb login <site>` → log in in default browser → `openweb browser restart` → retry.
-
-## Compile Failures
-
-### No filtered samples after analyzer filtering
-**Cause**: All captured traffic was filtered as noise (tracking, CDN, infrastructure). Also happens when a site uses protobuf-encoded parameters (like Google Maps' `pb` parameter) or map tiles that the analyzer doesn't recognize as API traffic.
-**Fix**: Browse more pages to capture real API traffic. Check that target URL matches the site's API domain. For sites with unusual API formats (protobuf, binary, non-standard encoding), manual site package creation may be required — the compiler cannot handle all patterns.
-
-### No operations produced from clusters
-**Cause**: All endpoints were mutations with request bodies (skipped by safety gate) or all samples filtered.
-**Fix**: Ensure GET requests are captured. Browse read-only pages (profile, feed, search results).
-
-### POST/PUT endpoint without recorded request body
-**Cause**: Mutation operations can't be auto-generated without body inference.
-**Fix**: These are skipped during compile. Agent should identify and model these manually if needed.
-
-### GraphQL endpoint flagged for mutation risk
-**Cause**: GraphQL queries via POST may contain mutations.
-**Fix**: Review GraphQL operations carefully. Assign appropriate permissions.
-
-## Verify / Drift Failures
-
-### Response status 429 or Retry-After header
-**Cause**: Rate limiting by the target site.
-**Fix**: Mark as retriable, not DRIFT or FAIL. Wait and retry.
-
-### Probe request sent to wrong host
-**Cause**: Probe URL built from CLI URL instead of operation host.
-**Fix**: Ensure probe URL uses `operation.host`, not CLI-provided URL.
-
-### Redirect during probe escapes to internal network
-**Cause**: Redirect chain can target internal/private IP ranges.
-**Fix**: SSRF validation on each redirect hop (already enforced by fetchWithValidatedRedirects).
-
-### Response schema mismatch (field X vs field Y)
-**Cause**: API schema drift — field names change between versions.
-**Fix**: Regenerate schema from fresh response. Compare with existing spec and update.
-
-### Persistent DRIFT on dynamic endpoints (search results)
-**Cause**: Search and recommendation endpoints return different products on each call. Different products have different field structures (some have `similarItems`, others don't), so the response shape fingerprint changes every time.
-**Fix**: This is expected behavior, not a bug. Clear the stored fingerprint before the definitive verify run. The first verify after clearing will PASS (no stored hash to compare against). Subsequent verifies will show DRIFT — this is informational. Schema validation (status + schema_valid) is the authoritative check; fingerprint DRIFT on dynamic endpoints should not block acceptance.
-
-## Browser / CDP Failures
-
-### Bot detection blocks CDP browser (even non-headless)
-**Cause**: E-commerce sites (Walmart, Amazon) use bot detection (PerimeterX, DataDome) that fingerprints CDP-connected browsers. Both headless and non-headless modes are detected — the CDP protocol itself is the signal.
-**Fix**: For Next.js sites, use node-based SSR extraction instead of browser extraction. Direct HTTP `fetch()` from Node.js is not blocked — it returns full SSR HTML with `__NEXT_DATA__` embedded. Set `transport: node` + `extraction.type: ssr_next_data` in the site package. The runtime will fetch the page via HTTP and parse `__NEXT_DATA__` without a browser. For non-Next.js sites blocked by bot detection, there is currently no workaround.
-
-### IP poisoning from direct HTTP probes during discovery
-**Cause**: Using curl/fetch/wget to probe a site's endpoints before browser capture. Bot detection systems (PerimeterX, DataDome) track IP reputation. Non-browser HTTP requests have fundamentally different TLS fingerprints (JA3/JA4) and HTTP/2 settings — even with a correct User-Agent, the TLS handshake exposes the client as non-browser. Each probe raises the IP's risk score. After enough probes, the IP is flagged and ALL requests from it — including real browser sessions — trigger unsolvable CAPTCHAs.
-**Symptoms**: PerimeterX "Press & Hold" CAPTCHA that never resolves, even in a real browser with a real user interaction. Affects managed browser AND user's default browser on the same network.
-**Fix**: No immediate fix once IP is poisoned. Wait 15–60 minutes for PX risk score to decay, or switch to a different IP (VPN, mobile hotspot). **Prevention**: Never use curl/fetch to probe during discovery. Always use the browser first. See `discover.md` "Browser First" rule.
-**Observed on**: Zillow (PerimeterX app ID `PXHYx10rg3`). Five-layer detection: TLS fingerprint → HTTP/2 fingerprint → JS challenge → behavioral analysis → IP reputation.
-
-### Could not connect to CDP
-**Cause**: Managed browser not running.
-**Fix**: `openweb browser start` → retry.
-
-### No tab matches site URL
-**Cause**: Browser connected but site not open.
-**Fix**: User should open a tab to the site URL, or use `openweb login <site>`.
-
-## CSS / DOM Failures
-
-### Selector with special characters fails
-**Cause**: Unescaped colons, brackets in CSS selectors.
-**Fix**: Use `CSS.escape()` for DOM-derived id/name values.
+- `references/discover.md` — discovery workflow context
+- `references/compile.md` — compile review context
+- `knowledge/auth-patterns.md` — auth primitive detection details
+- `knowledge/ws-patterns.md` — WS connection/message patterns
