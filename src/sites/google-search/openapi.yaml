@@ -170,3 +170,230 @@ paths:
                         height:
                           type: integer
                           description: Thumbnail natural height in pixels.
+  /search/news:
+    get:
+      operationId: searchNews
+      summary: Extract news search results from an open Google News tab page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0004
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: searchNews
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query — must match the query on the open Google News page (navigate with tbm=nws).
+      responses:
+        '200':
+          description: News search results extracted from the page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - query
+                  - results
+                properties:
+                  query:
+                    type: string
+                    description: The search query shown on the page.
+                  resultCount:
+                    type: integer
+                    description: Number of news results extracted.
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                          description: News article headline.
+                        link:
+                          type: string
+                          description: URL of the news article.
+                        source:
+                          type: string
+                          description: Publisher name (e.g. "Forbes", "The Verge").
+                        snippet:
+                          type: string
+                          description: Article summary/snippet text.
+                        publishedAt:
+                          type: string
+                          description: ISO 8601 timestamp or relative time string.
+  /search/videos:
+    get:
+      operationId: searchVideos
+      summary: Extract video search results from an open Google Videos tab page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0005
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: searchVideos
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query — must match the query on the open Google Videos page (navigate with tbm=vid).
+      responses:
+        '200':
+          description: Video search results extracted from the page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - query
+                  - results
+                properties:
+                  query:
+                    type: string
+                    description: The search query shown on the page.
+                  resultCount:
+                    type: integer
+                    description: Number of video results extracted.
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                          description: Video title.
+                        link:
+                          type: string
+                          description: URL of the video page.
+                        source:
+                          type: string
+                          description: Display URL or channel source.
+                        snippet:
+                          type: string
+                          description: Video description/snippet text.
+  /search/shopping:
+    get:
+      operationId: searchShopping
+      summary: Extract shopping product results from an open Google Shopping page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0006
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: searchShopping
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query — must match the query on the open Google Shopping page (navigate with udm=28 or tbm=shop).
+      responses:
+        '200':
+          description: Shopping product results extracted from the page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - query
+                  - results
+                properties:
+                  query:
+                    type: string
+                    description: The search query shown on the page.
+                  resultCount:
+                    type: integer
+                    description: Number of product results extracted.
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                          description: Product name.
+                        price:
+                          type: string
+                          description: Current price (e.g. "$99.99").
+                        originalPrice:
+                          type: string
+                          description: Original/list price before discount.
+                        merchant:
+                          type: string
+                          description: Seller name (e.g. "Target", "Best Buy").
+                        reviewCount:
+                          type: string
+                          description: Number of reviews (e.g. "(9k+)").
+  /search/knowledge:
+    get:
+      operationId: getKnowledgePanel
+      summary: Extract knowledge panel data from a Google search results page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0007
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: getKnowledgePanel
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query for an entity (person, place, organization) — must match the query on the open Google search page.
+      responses:
+        '200':
+          description: Knowledge panel data extracted from the page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    nullable: true
+                    description: Entity name (e.g. "Albert Einstein").
+                  subtitle:
+                    type: string
+                    nullable: true
+                    description: Entity type/role (e.g. "Theoretical physicist").
+                  description:
+                    type: string
+                    nullable: true
+                    description: Short entity description.
+                  facts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        label:
+                          type: string
+                          description: Fact label (e.g. "Born", "Spouse").
+                        value:
+                          type: string
+                          description: Fact value.
