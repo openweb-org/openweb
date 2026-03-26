@@ -13,3 +13,7 @@ src/sites/*/adapters/*.js
 # Task progress state (local only)
 doc/todo/progress.json
 .multmux
+# Personal agent memory (not for OSS)
+.claude/projects/
+# Temporary files
+tmp/
