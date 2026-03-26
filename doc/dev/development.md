@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-18 (commit: M22)
+> Last updated: 2026-03-26 (M38)
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@
 ```bash
 pnpm install        # Install dependencies
 pnpm build          # Build (tsup -> dist/ + compile adapters)
-pnpm test           # Run tests (362 pass)
+pnpm test           # Run tests (560 pass)
 pnpm lint           # Biome lint check
 ```
 
@@ -38,47 +38,48 @@ pnpm lint           # Biome lint check
 
 ```bash
 # List sites / show operations / show operation details
-pnpm dev sites
-pnpm dev instagram
-pnpm dev instagram getTimeline
-pnpm dev instagram getTimeline --json     # Machine-readable
-pnpm dev instagram getTimeline --example  # Generate example params
+openweb sites
+openweb instagram
+openweb instagram getTimeline
+openweb instagram getTimeline --json     # Machine-readable
+openweb instagram getTimeline --example  # Generate example params
 
 # Execute (auto-exec: JSON arg triggers exec mode)
-pnpm dev instagram getTimeline '{}'
-pnpm dev instagram getTimeline '{}' --cdp-endpoint http://localhost:9222
-pnpm dev instagram getTimeline '{}' --max-response 8192  # Auto-spill
-pnpm dev instagram getTimeline '{}' --output file        # Always file
+openweb instagram getTimeline '{}'
+openweb instagram getTimeline '{}' --cdp-endpoint http://localhost:9222
+openweb instagram getTimeline '{}' --max-response 8192  # Auto-spill
+openweb instagram getTimeline '{}' --output file        # Always file
 ```
 
 ### Browser Management
 
 ```bash
-pnpm dev browser start                            # Auto-copies Chrome profile, CDP
-pnpm dev browser start --headless                 # No window
-pnpm dev browser stop                             # Stop, preserve token cache
-pnpm dev browser restart                          # Re-copy profile + clear token cache
-pnpm dev browser status                           # Check if running
-pnpm dev login instagram                  # Open site in default browser
+openweb browser start                            # Auto-copies Chrome profile, CDP
+openweb browser start --headless                 # No window
+openweb browser stop                             # Stop, preserve token cache
+openweb browser restart                          # Re-copy profile + clear token cache
+openweb browser status                           # Check if running
+openweb login instagram                          # Open site in default browser
 ```
 
 ### Compile a Site
 
 ```bash
-pnpm dev compile https://api.example.com
-pnpm dev compile https://api.example.com --script ./scripts/record.ts
-pnpm dev compile https://api.example.com --probe --cdp-endpoint http://localhost:9222
+openweb compile https://api.example.com
+openweb compile https://api.example.com --script ./scripts/record.ts
+openweb compile https://api.example.com --probe --cdp-endpoint http://localhost:9222
+openweb compile https://api.example.com --capture-dir ./captures/my-site  # Use existing capture
 ```
 
 ### Run Site Tests / Verify / Registry
 
 ```bash
-pnpm dev instagram test
-pnpm dev verify walmart                   # Single site
-pnpm dev verify --all --report markdown           # Batch verify
-pnpm dev registry list                            # List registered
-pnpm dev registry install walmart         # Archive
-pnpm dev registry rollback walmart        # Revert
+openweb instagram test
+openweb verify walmart                           # Single site
+openweb verify --all --report markdown           # Batch verify
+openweb registry list                            # List registered
+openweb registry install walmart                 # Archive
+openweb registry rollback walmart                # Revert
 ```
 
 ## Development Cycle
@@ -107,9 +108,9 @@ pnpm test -- --watch                  # Watch mode
 
 ```bash
 pnpm dev browser start
-pnpm dev login instagram      # Log in in Chrome, then:
+openweb login instagram               # Log in in Chrome, then:
 pnpm dev browser restart
-pnpm dev instagram getTimeline '{}'
+openweb instagram getTimeline '{}'
 ```
 
 ## Project Structure
@@ -117,15 +118,16 @@ pnpm dev instagram getTimeline '{}'
 ```
 src/
 ├── cli.ts                    # Entry point, yargs routing
-├── commands/                 # CLI commands (exec, init, show, browser, compile, capture, test, sites, verify, registry)
-├── runtime/                  # Operation execution (3 modes + L3)
+├── commands/                 # CLI commands (exec, show, browser, compile, capture, test, sites, verify, registry)
+├── runtime/                  # Operation execution (HTTP + WS modes)
 ├── types/                    # Meta-spec type system
 ├── compiler/                 # Site compilation pipeline
+│   ├── analyzer/             #   filter → cluster → differentiate → classify → schema
+│   ├── generator/            #   openapi.ts, asyncapi.ts, package.ts
+│   └── ws-analyzer/          #   WS capture → classify → cluster → schema
 ├── capture/                  # Browser CDP recording
-├── lifecycle/                # Drift detection, verification, registry
-├── knowledge/                # Heuristics + failure recording
-├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, manifest, permissions)
-└── sites/                    # Site packages (17 A-class + 35 B-class + public API)
+├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, AsyncAPI, permissions, logger)
+└── sites/                    # Site packages (67 sites)
 ```
 
 -> See: [doc/main/README.md](../main/README.md) -- full code structure with per-file annotations
