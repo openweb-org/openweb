@@ -9,6 +9,9 @@ servers:
   - url: https://redsky.target.com
     x-openweb:
       transport: node
+  - url: https://carts.target.com
+    x-openweb:
+      transport: node
 paths:
   /redsky_aggregations/v1/web/plp_search_v2:
     get:
@@ -538,3 +541,129 @@ paths:
                                           type: string
                                         postal_code:
                                           type: string
+
+  /web_checkouts/v1/cart_items:
+    servers:
+      - url: https://carts.target.com
+        x-openweb:
+          transport: node
+    post:
+      operationId: addToCart
+      summary: Add a product to the shopping cart by TCIN
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: tgt0004
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: field_groups
+          in: query
+          required: true
+          schema:
+            type: string
+            default: CART,CART_ITEMS,SUMMARY
+          description: Response field groups to include.
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            default: 9f36aeafbe60771e321a7cc95a78140772ab3e96
+          description: API key (static, embedded in frontend).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - cart_item
+              properties:
+                cart_item:
+                  type: object
+                  required:
+                    - tcin
+                  properties:
+                    item_channel_id:
+                      type: string
+                      default: '10'
+                    tcin:
+                      type: string
+                      description: Target item ID (e.g. "91252434").
+                    quantity:
+                      type: integer
+                      default: 1
+                      description: Number of units to add.
+                fulfillment:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      default: PICKUP
+                      description: Fulfillment type (PICKUP or SHIP).
+                    location_id:
+                      type: integer
+                      default: 2281
+                      description: Store ID for pickup fulfillment.
+                    ship_method:
+                      type: string
+                      default: STORE_PICKUP
+                      description: Shipping method (STORE_PICKUP, STANDARD, CURBSIDE).
+                cart_type:
+                  type: string
+                  default: REGULAR
+                channel_id:
+                  type: string
+                  default: '10'
+                shopping_context:
+                  type: string
+                  default: DIGITAL
+      responses:
+        '201':
+          description: Item added to cart — returns cart summary with item details and pricing.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart_id:
+                    type: string
+                    description: Unique cart identifier.
+                  total_cart_item_quantity:
+                    type: integer
+                    description: Total number of items in cart.
+                  cart_item_id:
+                    type: string
+                    description: Unique ID for the added cart line.
+                  tcin:
+                    type: string
+                    description: Target item ID.
+                  quantity:
+                    type: integer
+                  unit_price:
+                    type: number
+                    description: Unit price in dollars.
+                  list_price:
+                    type: number
+                  current_price:
+                    type: number
+                  fulfillment:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      location_id:
+                        type: string
+                      ship_method:
+                        type: string
+                      estimated_arrival_start_date:
+                        type: string
+                      estimated_arrival_end_date:
+                        type: string
+                      guest_pick_sla:
+                        type: integer
+                        description: Pickup SLA in minutes.

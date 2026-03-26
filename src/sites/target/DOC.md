@@ -4,15 +4,17 @@
 Target.com — major US e-commerce retailer. Product search, detail, and store availability via internal Redsky aggregation APIs.
 
 ## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| searchProducts | search products by keyword | GET /redsky_aggregations/v1/web/plp_search_v2 | returns 24 products with title, price, rating, images; HTTP 206 |
-| getProductDetail | full product detail by TCIN | GET /redsky_aggregations/v1/web/pdp_client_v1 | description, price, rating distribution, variants, brand |
-| getStoreAvailability | per-store stock and pickup times | GET /redsky_aggregations/v1/web/fiats_v1 | stock qty, pickup SLA, curbside, nearby stores by zip |
+| Operation | Intent | Method | Safety | Notes |
+|-----------|--------|--------|--------|-------|
+| searchProducts | search products by keyword | GET /redsky_aggregations/v1/web/plp_search_v2 | ✅ read | returns 24 products with title, price, rating, images; HTTP 206 |
+| getProductDetail | full product detail by TCIN | GET /redsky_aggregations/v1/web/pdp_client_v1 | ✅ read | description, price, rating distribution, variants, brand |
+| getStoreAvailability | per-store stock and pickup times | GET /redsky_aggregations/v1/web/fiats_v1 | ✅ read | stock qty, pickup SLA, curbside, nearby stores by zip |
+| addToCart | add product to cart by TCIN | POST /web_checkouts/v1/cart_items | ⚠️ CAUTION | adds item to cart only, NEVER checkout/purchase; returns cart_id, pricing, fulfillment; on carts.target.com |
 
 ## API Architecture
-- REST JSON APIs on `redsky.target.com` — a dedicated aggregation subdomain separate from `www.target.com`
-- All endpoints follow the pattern `/redsky_aggregations/v1/web/<aggregation_name>`
+- REST JSON APIs on `redsky.target.com` (read aggregation) and `carts.target.com` (cart mutations) — both dedicated subdomains separate from `www.target.com`
+- Read endpoints follow the pattern `/redsky_aggregations/v1/web/<aggregation_name>`
+- Cart endpoint at `/web_checkouts/v1/cart_items` accepts POST with JSON body `{cart_item: {tcin, quantity}, fulfillment: {type, location_id, ship_method}}`
 - Static API key required as `key` query param (embedded in frontend JS): `9f36aeafbe60771e321a7cc95a78140772ab3e96`
 - Search returns HTTP 206 (Partial Content), not 200 — the response is paginated and `count`/`offset` control pagination
 - Product IDs are called TCINs (Target item IDs), e.g. `92750139`
