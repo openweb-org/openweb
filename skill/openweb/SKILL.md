@@ -79,6 +79,10 @@ Errors on stderr include `failureClass`:
 | `references/cli.md` | CLI reference, browser mgmt |
 | `references/troubleshooting.md` | Debugging errors |
 | `references/update-knowledge.md` | After learning something new |
-| `references/knowledge/archetypes.md` | Before discover — site type |
-| `references/knowledge/auth-patterns.md` | Before compile — auth detection |
-| `references/knowledge/troubleshooting-patterns.md` | During debug — failure patterns |
+| `knowledge/archetypes/index.md` | Before discover — identify site type and expected operations |
+| `knowledge/auth-patterns.md` | Before compile — auth primitive detection |
+| `knowledge/bot-detection-patterns.md` | Before discover — anticipate anti-bot measures |
+| `knowledge/extraction-patterns.md` | Before compile — SSR/DOM extraction techniques |
+| `knowledge/graphql-patterns.md` | Before GraphQL compile — persisted queries, batching |
+| `knowledge/ws-patterns.md` | Before WS compile — connection/message/heartbeat patterns |
+| `knowledge/troubleshooting-patterns.md` | During debug — known failure patterns |
