@@ -1,17 +1,17 @@
 {
   "name": "hackernews",
   "display_name": "Hacker News",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "spec_version": "2.0",
   "site_url": "https://news.ycombinator.com/news",
-  "description": "Hacker News front page extraction via DOM selectors",
+  "description": "Hacker News — feeds, story detail, comments, user profiles via DOM extraction",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
-    "operation_count": 1,
+    "operation_count": 10,
     "l1_count": 0,
-    "l2_count": 1,
-    "l3_count": 0,
+    "l2_count": 7,
+    "l3_count": 3,
     "ws_count": 0
   }
 }

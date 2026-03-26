@@ -1,7 +1,7 @@
 openapi: '3.1.0'
 info:
   title: Hacker News DOM Data
-  version: '1.0'
+  version: '2.0'
   x-openweb:
     spec_version: '2.0'
 servers:
@@ -17,7 +17,7 @@ paths:
         permission: read
         build:
           stable_id: hn0001
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - dom_only
@@ -28,6 +28,7 @@ paths:
             title: .titleline > a
             score: .score
             author: .hnuser
+            age: .age a
           multiple: true
       responses:
         '200':
@@ -51,3 +52,466 @@ paths:
                       type:
                         - string
                         - 'null'
+                    age:
+                      type:
+                        - string
+                        - 'null'
+  /newest:
+    get:
+      operationId: getNewestStories
+      summary: Extract newest stories sorted by submission time
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hn0002
+          tool_version: 1
+          verified: true
+          signals:
+            - dom_only
+        extraction:
+          type: html_selector
+          page_url: /newest
+          selectors:
+            title: .titleline > a
+            score: .score
+            author: .hnuser
+            age: .age a
+          multiple: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type:
+                        - string
+                        - 'null'
+                    score:
+                      type:
+                        - string
+                        - 'null'
+                    author:
+                      type:
+                        - string
+                        - 'null'
+                    age:
+                      type:
+                        - string
+                        - 'null'
+  /best:
+    get:
+      operationId: getBestStories
+      summary: Extract highest-voted stories
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hn0003
+          tool_version: 1
+          verified: true
+          signals:
+            - dom_only
+        extraction:
+          type: html_selector
+          page_url: /best
+          selectors:
+            title: .titleline > a
+            score: .score
+            author: .hnuser
+            age: .age a
+          multiple: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type:
+                        - string
+                        - 'null'
+                    score:
+                      type:
+                        - string
+                        - 'null'
+                    author:
+                      type:
+                        - string
+                        - 'null'
+                    age:
+                      type:
+                        - string
+                        - 'null'
+  /ask:
+    get:
+      operationId: getAskStories
+      summary: Extract Ask HN posts
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hn0004
+          tool_version: 1
+          verified: true
+          signals:
+            - dom_only
+        extraction:
+          type: html_selector
+          page_url: /ask
+          selectors:
+            title: .titleline > a
+            score: .score
+            author: .hnuser
+            age: .age a
+          multiple: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type:
+                        - string
+                        - 'null'
+                    score:
+                      type:
+                        - string
+                        - 'null'
+                    author:
+                      type:
+                        - string
+                        - 'null'
+                    age:
+                      type:
+                        - string
+                        - 'null'
+  /show:
+    get:
+      operationId: getShowStories
+      summary: Extract Show HN posts
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hn0005
+          tool_version: 1
+          verified: true
+          signals:
+            - dom_only
+        extraction:
+          type: html_selector
+          page_url: /show
+          selectors:
+            title: .titleline > a
+            score: .score
+            author: .hnuser
+            age: .age a
+          multiple: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type:
+                        - string
+                        - 'null'
+                    score:
+                      type:
+                        - string
+                        - 'null'
+                    author:
+                      type:
+                        - string
+                        - 'null'
+                    age:
+                      type:
+                        - string
+                        - 'null'
+  /jobs:
+    get:
+      operationId: getJobPostings
+      summary: Extract job postings from the HN jobs page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hn0006
+          tool_version: 1
+          verified: true
+          signals:
+            - dom_only
+        extraction:
+          type: html_selector
+          page_url: /jobs
+          selectors:
+            title: .titleline > a
+            age: .age a
+          multiple: true
+      responses:
+        '200':
+          description: Success. Jobs have no score or author.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type:
+                        - string
+                        - 'null'
+                    age:
+                      type:
+                        - string
+                        - 'null'
+  /front:
+    get:
+      operationId: getFrontPageStories
+      summary: Extract stories from the time-based front page view
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hn0007
+          tool_version: 1
+          verified: true
+          signals:
+            - dom_only
+        extraction:
+          type: html_selector
+          page_url: /front
+          selectors:
+            title: .titleline > a
+            score: .score
+            author: .hnuser
+            age: .age a
+          multiple: true
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type:
+                        - string
+                        - 'null'
+                    score:
+                      type:
+                        - string
+                        - 'null'
+                    author:
+                      type:
+                        - string
+                        - 'null'
+                    age:
+                      type:
+                        - string
+                        - 'null'
+  /internal/getStoryDetail:
+    get:
+      operationId: getStoryDetail
+      summary: Get story metadata and comment summary from an item page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hn0008
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: getStoryDetail
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Hacker News item ID.
+      responses:
+        '200':
+          description: Story detail with comment list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type:
+                      - string
+                      - 'null'
+                  url:
+                    type:
+                      - string
+                      - 'null'
+                  site:
+                    type:
+                      - string
+                      - 'null'
+                  score:
+                    type:
+                      - string
+                      - 'null'
+                  author:
+                    type:
+                      - string
+                      - 'null'
+                  age:
+                    type:
+                      - string
+                      - 'null'
+                  commentCount:
+                    type: integer
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        author:
+                          type:
+                            - string
+                            - 'null'
+                        age:
+                          type:
+                            - string
+                            - 'null'
+                        text:
+                          type:
+                            - string
+                            - 'null'
+                        indent:
+                          type: integer
+                          description: Nesting level (0 = top-level, higher = deeper reply)
+  /internal/getUserProfile:
+    get:
+      operationId: getUserProfile
+      summary: Get a user's profile info — username, karma, created date, about text
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hn0009
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: getUserProfile
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Hacker News username.
+      responses:
+        '200':
+          description: User profile info.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type:
+                      - string
+                      - 'null'
+                  created:
+                    type:
+                      - string
+                      - 'null'
+                  karma:
+                    type:
+                      - string
+                      - 'null'
+                  about:
+                    type:
+                      - string
+                      - 'null'
+  /internal/getStoryComments:
+    get:
+      operationId: getStoryComments
+      summary: Get the comment thread for a story
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hn0010
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: getStoryComments
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Hacker News item ID.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of comments to return.
+      responses:
+        '200':
+          description: Comment thread.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  storyId:
+                    type: integer
+                  commentCount:
+                    type: integer
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        author:
+                          type:
+                            - string
+                            - 'null'
+                        age:
+                          type:
+                            - string
+                            - 'null'
+                        text:
+                          type:
+                            - string
+                            - 'null'
+                        indent:
+                          type: integer
+                          description: Nesting level (0 = top-level, higher = deeper reply)
