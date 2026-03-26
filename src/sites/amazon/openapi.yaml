@@ -234,3 +234,181 @@ paths:
                           type:
                             - string
                             - 'null'
+  /internal/productQA/{asin}:
+    get:
+      operationId: getProductQA
+      summary: Get suggested Q&A questions from an Amazon product page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: amz0004
+          tool_version: 1
+          verified: false
+          signals:
+            - html-dom
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const container = document.querySelector('#dpx-nice-widget-container');
+              const pills = container
+                ? Array.from(container.querySelectorAll('.small-widget-pill'))
+                    .map(p => p.textContent?.trim())
+                    .filter(t => t && t !== 'Ask something else')
+                : [];
+              const heading = container?.querySelector('h3 label')?.textContent?.trim() || null;
+              return {
+                asin: location.pathname.match(/\\/dp\\/([A-Z0-9]+)/)?.[1] || null,
+                heading,
+                questionCount: pills.length,
+                questions: pills,
+              };
+            })()
+      parameters:
+        - name: asin
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Amazon Standard Identification Number (e.g. B09B8V1LZ3)
+      responses:
+        '200':
+          description: Suggested Q&A questions from the product page Rufus AI widget.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  asin:
+                    type: string
+                  heading:
+                    type:
+                      - string
+                      - 'null'
+                  questionCount:
+                    type: integer
+                  questions:
+                    type: array
+                    items:
+                      type: string
+  /deals:
+    get:
+      operationId: getDeals
+      summary: Get current Amazon deals and discounts
+      x-openweb:
+        permission: read
+        build:
+          stable_id: amz0005
+          tool_version: 1
+          verified: false
+          signals:
+            - html-dom
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const cards = document.querySelectorAll('.dcl-product');
+              const items = [];
+              for (const card of cards) {
+                const link = card.querySelector('a[href*="/dp/"]');
+                if (!link) continue;
+                const asinMatch = link.href.match(/\/dp\/([A-Z0-9]+)/);
+                const img = card.querySelector('img');
+                const discountEl = card.querySelector('.dcl-badge span.a-size-mini');
+                const priceEl = card.querySelector('.dcl-product-price-new .a-offscreen');
+                const oldPriceEl = card.querySelector('.dcl-product-old-price-section .a-offscreen')
+                  || card.querySelector('.dcl-product-old-price-section .a-text-price');
+                const timerEl = card.querySelector('[data-component="badge-countdown-timer"]');
+                items.push({
+                  asin: asinMatch?.[1] || null,
+                  title: img?.alt || null,
+                  imageUrl: img?.src || null,
+                  discount: discountEl?.textContent?.trim() || null,
+                  price: priceEl?.textContent?.trim() || null,
+                  originalPrice: oldPriceEl?.textContent?.trim() || null,
+                  endsIn: timerEl?.textContent?.trim() || null,
+                  url: link.href || null,
+                });
+              }
+              return { dealCount: items.length, items };
+            })()
+      responses:
+        '200':
+          description: Current deals and discounted products.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dealCount:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        asin:
+                          type: string
+                        title:
+                          type: string
+                        imageUrl:
+                          type: string
+                        discount:
+                          type: string
+                        price:
+                          type: string
+                        originalPrice:
+                          type:
+                            - string
+                            - 'null'
+                        endsIn:
+                          type:
+                            - string
+                            - 'null'
+                        url:
+                          type: string
+  /internal/addToCart:
+    post:
+      operationId: addToCart
+      summary: Add a product to Amazon shopping cart
+      x-openweb:
+        permission: write
+        build:
+          stable_id: amz0006
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: amazon-cart
+          operation: addToCart
+      parameters:
+        - name: asin
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Amazon Standard Identification Number (e.g. B0DQSJ4QHB)
+        - name: quantity
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Quantity to add (default 1).
+      responses:
+        '200':
+          description: Cart update result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  asin:
+                    type: string
+                  cartItemCount:
+                    type:
+                      - integer
+                      - 'null'

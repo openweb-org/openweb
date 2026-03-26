@@ -4,14 +4,14 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.amazon.com",
-  "description": "Amazon product search, detail, and reviews via browser DOM extraction",
+  "description": "Amazon product search, detail, reviews, Q&A, deals, and cart via browser DOM extraction",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
-    "operation_count": 3,
-    "l1_count": 3,
+    "operation_count": 6,
+    "l1_count": 5,
     "l2_count": 0,
-    "l3_count": 0,
+    "l3_count": 1,
     "ws_count": 0
   }
 }

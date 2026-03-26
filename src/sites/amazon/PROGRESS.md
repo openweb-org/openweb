@@ -1,5 +1,27 @@
 # Amazon Fixture — Progress
 
+## 2026-03-26: Expand coverage from 3 to 6 ops
+
+**What changed:**
+- Added getProductQA: extracts Rufus AI suggested questions from product detail page (`#dpx-nice-widget-container .small-widget-pill`)
+- Added getDeals: extracts deal cards from `/deals` page (`.dcl-product` cards with discount %, price, timer)
+- Added addToCart: adapter-based write operation that reads `#addToCart` form and POSTs to buy-box handler
+- Created `adapters/amazon-cart.ts` for the addToCart adapter
+- Updated manifest.json: operation_count 3→6, l3_count 0→1
+
+**Why:**
+- Expanding coverage to include deals discovery, product Q&A context, and cart interaction
+- Amazon's Q&A has been replaced by Rufus AI widget — traditional `/ask/questions/asin/` URL returns 404
+- Deals page uses event-specific URLs (e.g., `/events/bigspringsale`) but card structure is consistent
+
+**Verification:**
+- Build: `pnpm build` exits 0
+- Spec validation: passed (after removing invalid `page_match` property from extraction)
+- Read ops (getProductQA, getDeals): verified DOM selectors against live page structure via CDP
+- Write op (addToCart): `verified: false` — form structure confirmed, adapter written but not triggered during verification
+
+**Commit:** pending
+
 ## 2026-03-23: Initial discovery and fixture creation
 
 **What changed:**
