@@ -266,3 +266,91 @@ paths:
                         error:
                           type: string
                           description: Error message if SKU not found.
+  /cart/api/v1/addToCart:
+    post:
+      operationId: addToCart
+      summary: Add a product to the shopping cart by SKU ID
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: bb0004
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - skuId
+                    properties:
+                      skuId:
+                        type: string
+                        description: The SKU ID of the product to add (e.g. "6614950").
+                fetchInterruptorData:
+                  type: boolean
+                  default: true
+                  description: Whether to return warranty/accessory interruptor data.
+      responses:
+        '200':
+          description: Item added to cart successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - cartCount
+                  - summaryItems
+                properties:
+                  cartCount:
+                    type: integer
+                    description: Total number of items in cart.
+                  cartSubTotal:
+                    type: number
+                    description: Cart subtotal in dollars.
+                  summaryItems:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - skuId
+                        - quantity
+                        - price
+                      properties:
+                        skuId:
+                          type: string
+                        lineId:
+                          type: string
+                          description: Unique cart line identifier.
+                        quantity:
+                          type: integer
+                        price:
+                          type: number
+                        priceDetails:
+                          type: object
+                          properties:
+                            totalCurrentPrice:
+                              type: number
+                            totalRegularPrice:
+                              type: number
+                            totalSavings:
+                              type: number
+                            unitCurrentPrice:
+                              type: number
+                            unitRegularPrice:
+                              type: number
+                  isEmployee:
+                    type: boolean
+                  category:
+                    type: string
