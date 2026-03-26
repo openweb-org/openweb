@@ -404,6 +404,7 @@ function buildSummaryTxt(data: CompileReportData): string {
 }
 
 async function writeCompileReport(reportDir: string, data: CompileReportData): Promise<void> {
+  await fs.rm(reportDir, { recursive: true, force: true })
   await fs.mkdir(reportDir, { recursive: true })
 
   await Promise.all([
