@@ -1,30 +1,45 @@
 # Compile Process
 
-How to compile captured traffic into an openweb fixture.
+How to review and curate compiled output into a correct site package.
+
+**Responsibility:** Correctness review — is the generated spec correct? Coverage is discover.md's job.
 
 ## When to Use
 
-- After `capture stop` — turning raw traffic into a fixture
+- After `openweb compile` — reviewing generated spec
 - Recompiling an existing site with new traffic
+- Reviewing WS/AsyncAPI output alongside HTTP
 
 ## Process
 
-### Step 1: Draft
+### Step 1: Compile
 
 ```bash
-pnpm --silent dev compile <site-url> [--capture-dir <dir>] [--probe]
+openweb compile <site-url> [--capture-dir <dir>] [--probe]
 ```
 
 Read the compile summary: samples captured/filtered, operations generated, auth primitives detected, hints.
 
-### Step 2: Curate
+### Step 2: Review Compile Report
+
+Check the compile-report for the code pipeline's reasoning:
+
+- **`summary.txt`** — operationCount, auth detected, transport chosen
+- **`clusters.json`** — are request groupings correct? Were GraphQL queries merged properly?
+- **`classify.json`** — auth/CSRF confidence levels (high/medium/low). Low confidence needs careful review.
+- **`probe.json`** — which ops verified, which failed? (if `--probe` was used)
+
+Report location: `~/.openweb/compile/<site>/`
+
+### Step 3: Curate (Track A — HTTP/OpenAPI)
 
 Review the generated `openapi.yaml`:
 
 - **Rename** operations for clarity (e.g., `get_api_v1_users` → `getUsers`)
 - **Remove** noise: analytics (`/collect`, `/track`), CDN (`/static/`, `/_next/`), tracking pixels
 - **Confirm** auth/CSRF/signing detection matches expectations
-- **Check** against `knowledge/archetypes.md` expectations for this site type
+- **Review** against the relevant archetype's expectations (see `knowledge/archetypes.md`)
+- **Update** DOC.md with auth, transport, extraction, and known issues discovered during curation
 
 #### Extraction Complexity Rule
 
@@ -42,56 +57,93 @@ x-openweb:
   adapter: ./adapters/<site>.ts
 ```
 
-**Inline is OK for:** simple `ssr_next_data`, `page_global`, short `html_selector` (1-3 lines).
+**Inline is OK for:** simple `ssr_next_data`, `page_global`, short `html_selector` (1–3 lines).
 **Adapter is required for:** multi-line DOM queries, regex parsing, complex data transformation.
 
 openapi.yaml should be readable as a spec, not a code dump.
 
-#### Per-Archetype Checklist
+### Step 4: Curate (Track B — WS/AsyncAPI)
 
-**Social Media:**
-- Auth detected correctly (cookie_session, exchange_chain, etc.)
-- CSRF detected if present (cookie_to_header is common)
-- Feed/timeline endpoint captured; pagination works (cursor-based typical)
-- Write operations gated (write/transact permission)
+If compile emitted `asyncapi.yaml`:
 
-**Messaging:**
-- Transport correct (page or adapter for Discord/Telegram/WhatsApp)
-- Token extraction correct (webpack_module_walk for Discord)
-- WebSocket limitation acknowledged (no real-time streams)
+#### B1. Review WS Summary
 
-**Developer Tools:**
-- Pagination type correct (link_header for GitHub, cursor for others)
-- Path parameters extracted properly (e.g., `/{owner}/{repo}`)
-- GraphQL endpoints handled
+- Channels detected (e.g., `/gateway`, `/ws/v2`)
+- Message patterns (heartbeat, subscribe, event stream)
+- Protocol classification (subscribe, publish, request_reply, stream)
 
-**E-commerce:**
-- Extraction type correct (ssr_next_data for Next.js sites)
-- Checkout/payment paths assigned `transact` permission
-- Product search and detail endpoints captured
+#### B2. Curate AsyncAPI Spec
 
-**Public APIs (no auth):**
-- Auth correctly detected as "none" (no false positive from tracking cookies)
-- Response schema accurate; example parameters reasonable
+Review questions:
+- Is the server URL canonical (not a CDN or monitoring endpoint)?
+- Is the channel address/path correct?
+- Are sent and received operations both represented where useful?
+- Are control frames (ping/pong, close) excluded from tool surface?
+- Does a stream op have deterministic `event_match`?
+- Does a request_reply op have reliable correlation?
+- Are subscribe/unsubscribe templates present and correct?
+- Is the heartbeat interval detected correctly?
 
-### Step 3: Verify
+#### B3. Per-Archetype WS Expectations
+
+See `knowledge/ws-patterns.md` for per-archetype WS checklists
+(Messaging gateway, Crypto/Finance feeds, etc.)
+
+#### Hybrid Packages (HTTP + WS)
+
+When a site has both `openapi.yaml` and `asyncapi.yaml`:
+- Review each independently — they may have different auth/transport
+- Ensure WS operations don't duplicate HTTP operations (e.g., real-time feed vs REST feed)
+- DOC.md should document both protocols and when each is appropriate
+
+### Step 5: Verify
 
 ```bash
-pnpm --silent dev verify <site>
+openweb verify <site>
 ```
 
 A spec is **Ready** when curated + verified with PASS.
 
-### Step 4: Update Knowledge
+### Step 6: Update Knowledge
 
-→ Read `update-knowledge.md` — evaluate what you learned, write to `knowledge/` if novel.
+> Read `update-knowledge.md` — evaluate what you learned, write to `knowledge/` if novel.
+
+## Execution Model Decision
+
+A compile may emit `openapi.yaml`, `asyncapi.yaml`, or both. Review each independently. A site package is ready only when its useful protocols are curated, not merely emitted.
+
+### Does the data come from WebSocket?
+
+Yes → curate via Track B (Step 4) above.
+
+### If HTTP/page data:
+
+**Direct JSON replay works** (API returns JSON, no bot detection)?
+→ Use `node` transport.
+
+**Browser network stack required** (bot detection, TLS fingerprint, session binding)?
+→ Use `page` transport.
+
+**Page contains structured SSR/global/DOM data** and API is weak/noisy?
+→ Use extraction (`ssr_next_data`, `page_global`, `html_selector`, `script_json`).
+
+**Declarative extraction unreadable**, or site uses browser-internal logic?
+→ Use adapter (`page.evaluate` with custom JS in `adapters/` directory).
+
+### Anti-pattern: probing with curl/fetch before capture
+
+**NEVER** test endpoints with curl, wget, fetch, or any direct HTTP tool during discovery. This poisons IP reputation with bot detection systems and can block even real browser sessions on the same IP. See `discover.md` "Browser First" rule.
+
+The `--probe` flag in the compile step is the **only** safe way to test node transport — it runs after capture is complete and uses controlled, minimal requests.
 
 ## Common False Positives
 
 - **Tracking cookies as auth**: Cloudflare, GA, Meta pixel cookies trigger cookie_session. Use `--probe` to catch.
 - **Analytics as operations**: `/collect`, `/beacon`, `/pixel` — filter should catch most.
 - **CDN endpoints**: `/static/`, `/_next/`, `/assets/` — should be filtered.
-- **Dashboard internal endpoints**: SaaS dashboards (e.g. Stripe) generate heavy noise from internal `/ajax/*`, `/conversations/`, `/_extraction/` namespaces. Compile captures these alongside the real API — manual curation must filter ~80% of operations for typical dashboard sites.
+- **Dashboard noise**: SaaS dashboards (e.g. Stripe) generate heavy noise from internal namespaces. Manual curation must filter these.
+- **Heartbeat-only WS**: WebSocket connections that only carry ping/pong — not useful as operations.
+- **CDN/monitoring WS**: WebSocket endpoints for telemetry or CDN health checks — filter out.
 
 ## Common False Negatives
 
@@ -99,37 +151,11 @@ A spec is **Ready** when curated + verified with PASS.
 - **CSRF not detected**: Token embedded in JavaScript (not cookie/meta tag) — identify manually.
 - **Operations missing**: Key pages not visited during capture — recapture with targeted browsing.
 
-## Transport Degradation Ladder
+## Related References
 
-When deciding the transport for a compiled fixture, start at the highest (safest) level and only downgrade after confirming the lower level actually works. **Never skip levels.**
-
-### Level 1: `page` (browser fetch via same-origin)
-
-Default starting point. All captured traffic originates from a browser session, so `page` transport is always safe — it inherits cookies, TLS fingerprint, and bot detection clearance.
-
-Stay here if:
-- Site uses bot detection (PerimeterX, DataDome, Akamai, Cloudflare)
-- Site requires cookie_session auth
-- Site requires CSRF tokens from cookies or DOM
-
-### Level 2: `node` with extraction (SSR)
-
-Downgrade to node **only after confirming** that direct HTTP fetch returns the same SSR data the browser sees. Confirm by:
-1. Opening the page in the browser (already done during capture)
-2. Running `compile --probe` which tests node fetch against the captured URL
-3. Checking that the probe response contains the expected data (e.g., `__NEXT_DATA__` with actual listings, not empty/error state)
-
-If the probe returns a CAPTCHA page, bot detection block, or empty data → stay at `page`.
-
-### Level 3: `node` without extraction (direct API)
-
-Only for public APIs with no bot detection. Confirm by:
-1. The `--probe` flag during compile shows the endpoint responds with 200 + valid JSON
-2. No cookies or browser state are needed
-3. The API domain is different from the site domain (e.g., `api.example.com` vs `www.example.com`) — separate API domains are less likely to have page-level bot detection
-
-### Anti-pattern: probing with curl/fetch before capture
-
-**NEVER** test endpoints with curl, wget, fetch, or any direct HTTP tool during discovery. This poisons IP reputation with bot detection systems and can block even real browser sessions on the same IP. See `discover.md` "Browser First" rule.
-
-The `--probe` flag in the compile step is the **only** safe way to test node transport — it runs after capture is complete and uses controlled, minimal requests.
+- `references/discover.md` — coverage responsibility (target intents, gap review)
+- `references/site-doc.md` — DOC.md / PROGRESS.md template
+- `references/update-knowledge.md` — when to write cross-site patterns
+- `references/knowledge/archetypes.md` — per-archetype curation expectations
+- `references/knowledge/auth-patterns.md` — auth primitive detection
+- `references/knowledge/ws-patterns.md` — WS connection/message patterns
