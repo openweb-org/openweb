@@ -1,9 +1,11 @@
 /**
- * Google Flights adapter — DOM extraction from search, overview, and booking pages.
+ * Google Flights adapter — DOM extraction from search, overview, booking, explore, and insights pages.
  *
  * searchFlights:          Extract flight listings from /travel/flights/search
  * getFlightOverview:      Extract cheapest fares from /travel/flights route page
  * getFlightBookingDetails: Extract itinerary details from a booking detail page
+ * exploreDestinations:    Extract destination cards from /travel/explore
+ * getPriceInsights:       Extract price trends and popular airlines from search overview
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
@@ -147,20 +149,120 @@ async function getFlightBookingDetails(page: Page): Promise<unknown> {
 	})
 }
 
+/* ---------- exploreDestinations ---------- */
+
+async function exploreDestinations(page: Page): Promise<unknown> {
+	return page.evaluate(() => {
+		const origin =
+			(document.querySelector('input[aria-label*="Where from"]') as HTMLInputElement)?.value || ''
+		const destinations: Array<Record<string, unknown>> = []
+		const listItems = document.querySelectorAll('li')
+		for (const li of listItems) {
+			const text = li.textContent?.trim() || ''
+			if (text.length > 200 || text.length < 10) continue
+			if (!text.includes('$')) continue
+			if (!/Nonstop|\d+\s*stop/i.test(text)) continue
+
+			const parts = text.split('$')
+			if (parts.length < 3) continue
+
+			const beforePrice = parts[0]
+			const flightPriceMatch = parts[1].match(/^(\d+)/)
+			const hotelPriceMatch = parts[parts.length - 1].match(/^(\d+)/)
+			if (!flightPriceMatch) continue
+
+			const dateMatch = beforePrice.match(
+				/((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+\s*[–—]\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+)?\d+)/i,
+			)
+			const destination = dateMatch ? beforePrice.slice(0, dateMatch.index).trim() : beforePrice.trim()
+			const dates = dateMatch ? dateMatch[1].trim() : ''
+			const middlePart = parts[1].replace(/^\d+/, '')
+			const stopsMatch = middlePart.match(/(Nonstop|\d+\s*stops?)/i)
+			const durationMatch = middlePart.match(/(\d+\s*hr(?:\s*\d+\s*min)?|\d+\s*min)/)
+
+			destinations.push({
+				destination,
+				dates,
+				flightPrice: parseInt(flightPriceMatch[1]),
+				stops: stopsMatch ? stopsMatch[1] : '',
+				duration: durationMatch ? durationMatch[1].trim() : '',
+				hotelPricePerNight: hotelPriceMatch ? parseInt(hotelPriceMatch[1]) : null,
+			})
+		}
+		return { origin, destinationCount: destinations.length, destinations }
+	})
+}
+
+/* ---------- getPriceInsights ---------- */
+
+async function getPriceInsights(page: Page): Promise<unknown> {
+	return page.evaluate(() => {
+		const text = document.body.innerText
+		const origin =
+			(document.querySelector('input[aria-label*="Where from"]') as HTMLInputElement)?.value || ''
+		const dest =
+			(document.querySelector('input[aria-label*="Where to"]') as HTMLInputElement)?.value || ''
+
+		// Price trend prediction (from search results page)
+		const trendMatch = text.match(/Prices are (likely to go up[^\n]*|currently low|expected to[^\n]*|unlikely to[^\n]*)/)
+		const priceTrend = trendMatch ? trendMatch[1].trim() : ''
+
+		// Cheapest/most expensive months (from overview page)
+		const cheapMonthMatch = text.match(/cheapest month to fly.*?is typically (\w+)/)
+		const expMonthMatch = text.match(/most expensive month.*?is typically (\w+)/)
+		const cheapRangeMatch = text.match(
+			/(\w+)Cheapest\s*Typical prices:\s*\$(\d+)[–—](\d+)/,
+		)
+		const expRangeMatch = text.match(
+			/(\w+)Most expensive\s*Typical prices:\s*\$(\d+)[–—](\d+)/,
+		)
+
+		// Popular airlines
+		const airlines: Array<Record<string, unknown>> = []
+		const airlineSection = text.match(/Popular airlines[^\n]*\n([\s\S]*?)(?:Popular airports|Frequently|$)/);
+		if (airlineSection) {
+			const airlineMatches = airlineSection[1].matchAll(
+				/([A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)*)\n(Nonstop|\d+\s*stops?)\nfrom\s*\$(\d+)/g,
+			)
+			for (const m of airlineMatches) {
+				airlines.push({ airline: m[1].trim(), stops: m[2], fromPrice: parseInt(m[3]) })
+			}
+		}
+
+		return {
+			origin,
+			destination: dest,
+			priceTrend,
+			cheapestMonth: cheapMonthMatch ? cheapMonthMatch[1] : '',
+			mostExpensiveMonth: expMonthMatch ? expMonthMatch[1] : '',
+			cheapestRange: cheapRangeMatch
+				? { low: parseInt(cheapRangeMatch[2]), high: parseInt(cheapRangeMatch[3]) }
+				: null,
+			mostExpensiveRange: expRangeMatch
+				? { low: parseInt(expRangeMatch[2]), high: parseInt(expRangeMatch[3]) }
+				: null,
+			popularAirlines: airlines,
+		}
+	})
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page) => Promise<unknown>> = {
 	searchFlights,
 	getFlightOverview,
 	getFlightBookingDetails,
+	exploreDestinations,
+	getPriceInsights,
 }
 
 const adapter: CodeAdapter = {
 	name: 'google-flights',
-	description: 'Google Flights — search results, route overview, booking details via DOM extraction',
+	description: 'Google Flights — search, overview, booking, explore destinations, price insights via DOM extraction',
 
 	async init(page: Page): Promise<boolean> {
-		return page.url().includes('google.com/travel/flights')
+		const url = page.url()
+		return url.includes('google.com/travel/flights') || url.includes('google.com/travel/explore')
 	},
 
 	async isAuthenticated(): Promise<boolean> {

@@ -226,3 +226,152 @@ paths:
                   bookWith:
                     type: string
                     description: Airlines to book with.
+  /travel/explore:
+    get:
+      operationId: exploreDestinations
+      summary: Browse flight destinations by budget from an origin city — destination, dates, flight price, stops, duration
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gf0004
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-flights
+          operation: exploreDestinations
+      parameters:
+        - name: tfs
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            Encoded explore parameters (origin, trip type, filters).
+            Navigate to the Google Flights explore page with origin set.
+        - name: tfu
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Additional explore UI parameters.
+      responses:
+        '200':
+          description: Destination cards with flight prices and suggested dates.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  origin:
+                    type: string
+                    description: Departure city name.
+                  destinationCount:
+                    type: integer
+                    description: Number of destinations found.
+                  destinations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        destination:
+                          type: string
+                          description: Destination city or landmark name.
+                        dates:
+                          type: string
+                          description: Suggested travel dates (e.g. "Apr 9 – 17").
+                        flightPrice:
+                          type: integer
+                          description: Round-trip flight price in USD.
+                        stops:
+                          type: string
+                          description: Stop info ("Nonstop" or "1 stop").
+                        duration:
+                          type: string
+                          description: Flight duration (e.g. "2 hr 10 min").
+                        hotelPricePerNight:
+                          type: integer
+                          nullable: true
+                          description: Estimated hotel price per night in USD.
+  /travel/flights/search/insights:
+    get:
+      operationId: getPriceInsights
+      summary: Extract price trends, cheapest months, and popular airlines for a route — when to book, price predictions
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gf0005
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-flights
+          operation: getPriceInsights
+      parameters:
+        - name: tfs
+          in: query
+          required: true
+          schema:
+            type: string
+          description: >-
+            Encoded flight search parameters (origin, destination).
+            Navigate to the Google Flights search page with this parameter set.
+      responses:
+        '200':
+          description: Price insights including trends, cheapest months, and popular airlines.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  origin:
+                    type: string
+                    description: Departure city name.
+                  destination:
+                    type: string
+                    description: Arrival city name.
+                  priceTrend:
+                    type: string
+                    description: >-
+                      Price trend prediction (e.g. "likely to go up in the next 5 days by at least $10",
+                      "currently low").
+                  cheapestMonth:
+                    type: string
+                    description: Typically cheapest month to fly (e.g. "February").
+                  mostExpensiveMonth:
+                    type: string
+                    description: Typically most expensive month to fly (e.g. "April").
+                  cheapestRange:
+                    type: object
+                    nullable: true
+                    properties:
+                      low:
+                        type: integer
+                      high:
+                        type: integer
+                    description: Typical price range for the cheapest month.
+                  mostExpensiveRange:
+                    type: object
+                    nullable: true
+                    properties:
+                      low:
+                        type: integer
+                      high:
+                        type: integer
+                    description: Typical price range for the most expensive month.
+                  popularAirlines:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        airline:
+                          type: string
+                          description: Airline name.
+                        stops:
+                          type: string
+                          description: Stop info.
+                        fromPrice:
+                          type: integer
+                          description: Starting price in USD.
