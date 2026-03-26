@@ -25,6 +25,29 @@ Why: Bot detection systems (PerimeterX, DataDome, Akamai) track IP reputation ac
 
 **Always start with the managed browser.** If the browser hits a CAPTCHA, that's the time to decide whether to solve it or declare the site blocked. Do not attempt to gather information via direct HTTP first.
 
+## Write Operation Safety
+
+When discovering write operations (POST/PUT/PATCH/DELETE), capture the traffic but be cautious about verification:
+
+**Safe to capture and trigger:**
+- Add to cart (without purchasing)
+- Like/upvote/bookmark
+- Follow/unfollow
+- Fill forms (without submitting payment)
+- Post content (then immediately delete)
+
+**Caution (only in safe contexts):**
+- Send messages: only to yourself (Slack) or quiet test channels (Discord)
+- Post tweets: delete immediately after capture
+
+**Never trigger during discovery:**
+- Purchase/payment/checkout completion
+- Delete account or important data
+- Send messages to strangers
+- Any irreversible action with real-world consequences
+
+Verify skips write operations by default. To verify writes, use `--include-writes` (manual only).
+
 ## Process
 
 ### Overview

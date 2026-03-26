@@ -60,6 +60,7 @@ interface WsTestCase {
 interface HttpTestFile {
   readonly operation_id: string
   readonly protocol?: 'http'
+  readonly method?: string
   readonly cases: HttpTestCase[]
 }
 
@@ -121,6 +122,11 @@ export async function verifySite(
   for (const fileName of testFiles) {
     const raw = await readFile(path.join(testsDir, fileName), 'utf8')
     const testFile = JSON.parse(raw) as TestFile
+
+    // Only verify GET operations — mutations are not safe to replay
+    if (testFile.protocol !== 'ws' && testFile.method && testFile.method !== 'get') {
+      continue
+    }
 
     if (testFile.protocol === 'ws') {
       for (const testCase of testFile.cases) {

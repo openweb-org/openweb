@@ -188,6 +188,7 @@ export async function generateOpenApi(input: GenerateOpenApiInput): Promise<void
 
     const testShape = {
       operation_id: operation.operationId,
+      method: operation.method,
       cases: [
         {
           input: operation.exampleInput,

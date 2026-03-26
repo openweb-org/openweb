@@ -1,4 +1,6 @@
 import { existsSync } from 'node:fs'
+import fs from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 
 import Ajv from 'ajv'
@@ -9,13 +11,16 @@ import { buildQueryUrl } from '../lib/openapi.js'
 import { annotateOperation, annotateParameterDescriptions } from '../compiler/analyzer/annotate.js'
 import { clusterSamples } from '../compiler/analyzer/cluster.js'
 import { classify } from '../compiler/analyzer/classify.js'
+import type { ClassifyResult } from '../compiler/analyzer/classify.js'
 import { differentiateParameters } from '../compiler/analyzer/differentiate.js'
 import { filterSamples } from '../compiler/analyzer/filter.js'
+import type { FilteredSample } from '../compiler/analyzer/filter.js'
 import { inferSchema } from '../compiler/analyzer/schema.js'
 import { generatePackage } from '../compiler/generator/index.js'
 import type { GeneratePackageInput } from '../compiler/generator/index.js'
 import { cleanupRecordingDir, loadCaptureData, loadRecordedSamples, runScriptedRecording } from '../compiler/recorder.js'
 import { probeOperations, mergeProbeResults } from '../compiler/prober.js'
+import type { ProbeResult } from '../compiler/prober.js'
 import { connectWithRetry } from '../capture/connection.js'
 import type { Browser } from 'playwright'
 import { loadWsCapture } from '../compiler/ws-analyzer/ws-load.js'
@@ -23,7 +28,7 @@ import type { WsConnection } from '../compiler/ws-analyzer/ws-load.js'
 import { analyzeWsConnection } from '../compiler/ws-analyzer/ws-cluster.js'
 import { classifyClusters } from '../compiler/ws-analyzer/ws-classify.js'
 import { inferWsSchemas } from '../compiler/ws-analyzer/ws-schema.js'
-import type { AnalyzedOperation, ParameterDescriptor, RecordedRequestSample } from '../compiler/types.js'
+import type { AnalyzedOperation, ClusteredEndpoint, ParameterDescriptor, RecordedRequestSample } from '../compiler/types.js'
 import { fetchWithRedirects } from '../runtime/redirect.js'
 import { validateSSRF } from '../lib/ssrf.js'
 
@@ -120,12 +125,17 @@ export async function compileSite(
 
   const recordingDir = await runScriptedRecording(scriptPath)
   let filteredSamples: RecordedRequestSample[] = []
+  let rejectedSamples: FilteredSample[] = []
+  let totalRecordedCount = 0
   let classifyResult: ReturnType<typeof classify> | undefined // mutable: probe may override
   let wsInput: GeneratePackageInput['ws'] | undefined
   const site = siteSlugFromUrl(args.url)
   try {
     const recordedSamples = await loadRecordedSamples(recordingDir)
-    filteredSamples = filterSamples(recordedSamples, { targetUrl: args.url })
+    totalRecordedCount = recordedSamples.length
+    const filterResult = filterSamples(recordedSamples, { targetUrl: args.url })
+    filteredSamples = filterResult.kept
+    rejectedSamples = filterResult.rejected
 
     // Load full capture data for L2 classification
     const captureData = await loadCaptureData(recordingDir)
@@ -154,26 +164,14 @@ export async function compileSite(
     })
   }
 
-  const MUTATION_METHODS = new Set(['post', 'put', 'patch', 'delete'])
   const clusters = clusterSamples(filteredSamples)
   const analyzedOperations: AnalyzedOperation[] = []
-  const skippedMutations: Array<{ method: string; path: string }> = []
 
   for (const cluster of clusters) {
     const annotation = annotateOperation(cluster.host, cluster.path, cluster.method)
     const differentiatedParams = differentiateParameters(cluster)
     const annotatedParams = annotateParameterDescriptions(differentiatedParams)
     const responseSchema = inferSchema(cluster.samples.map((sample) => sample.responseJson))
-
-    // Gate: skip mutation ops that have recorded request bodies (no body inference yet).
-    // Mutations with only query params are safe to emit — params are modeled.
-    if (MUTATION_METHODS.has(cluster.method.toLowerCase())) {
-      const hasRequestBody = cluster.samples.some((s) => s.requestBody)
-      if (hasRequestBody) {
-        skippedMutations.push({ method: cluster.method, path: cluster.path })
-        continue
-      }
-    }
 
     const operationBase = {
       method: cluster.method.toLowerCase(),
@@ -197,15 +195,6 @@ export async function compileSite(
     })
   }
 
-  if (skippedMutations.length > 0) {
-    process.stderr.write(
-      `\u26A0 Skipped ${skippedMutations.length} mutation(s) with request bodies (not yet supported):\n`,
-    )
-    for (const op of skippedMutations) {
-      process.stderr.write(`  ${op.method.toUpperCase()} ${op.path}\n`)
-    }
-  }
-
   if (analyzedOperations.length === 0 && !classifyResult?.extractions && !hasWsOps) {
     throw new OpenWebError({
       error: 'execution_failed',
@@ -218,6 +207,7 @@ export async function compileSite(
   }
 
   // Probe: validate classify heuristics with real requests (opt-in)
+  let probeResults: ProbeResult[] | undefined
   if (args.probe && classifyResult) {
     const cdpEndpoint = args.cdpEndpoint ?? CDP_ENDPOINT
     let browser: Browser | undefined
@@ -234,7 +224,7 @@ export async function compileSite(
       })
     }
     try {
-      const probeResults = await probeOperations(analyzedOperations, { browser })
+      probeResults = await probeOperations(analyzedOperations, { browser })
       classifyResult = mergeProbeResults(classifyResult, probeResults)
     } finally {
       await browser.close()
@@ -254,12 +244,27 @@ export async function compileSite(
   const wsOpCount = wsInput?.operations.length ?? 0
   const totalOpCount = analyzedOperations.length + wsOpCount
 
+  // Write compile report
+  const reportDir = path.join(os.homedir(), '.openweb', 'compile', site)
+  await writeCompileReport(reportDir, {
+    totalRecorded: totalRecordedCount,
+    kept: filteredSamples,
+    rejected: rejectedSamples,
+    clusters,
+    classifyResult,
+    probeResults,
+    analyzedOperations,
+    verifiedCount,
+    wsOpCount,
+  })
+
   if (options.emitSummary) {
     const parts = [`Compiled ${analyzedOperations.length} HTTP tool(s), verified ${verifiedCount}/${analyzedOperations.length}`]
     if (wsOpCount > 0) {
       parts.push(`${wsOpCount} WS operation(s)`)
     }
     parts.push(`Output: ${outputRoot}`)
+    process.stderr.write(`Report: ${reportDir}\n`)
     process.stdout.write(`${parts.join('. ')}.\n`)
   }
 
@@ -269,6 +274,127 @@ export async function compileSite(
     operationCount: totalOpCount,
     verifiedCount,
   }
+}
+
+// ── Compile report ───────────────────────────────────────────
+
+interface CompileReportData {
+  readonly totalRecorded: number
+  readonly kept: RecordedRequestSample[]
+  readonly rejected: FilteredSample[]
+  readonly clusters: ClusteredEndpoint[]
+  readonly classifyResult?: ClassifyResult
+  readonly probeResults?: ProbeResult[]
+  readonly analyzedOperations: AnalyzedOperation[]
+  readonly verifiedCount: number
+  readonly wsOpCount: number
+}
+
+function buildFilteredJson(data: CompileReportData) {
+  const byReason: Record<string, number> = {}
+  for (const r of data.rejected) {
+    byReason[r.reason] = (byReason[r.reason] ?? 0) + 1
+  }
+
+  const requests = [
+    ...data.kept.map((s) => ({
+      host: s.host,
+      path: s.path,
+      method: s.method,
+      status: s.status,
+      content_type: s.contentType,
+      result: 'kept' as const,
+    })),
+    ...data.rejected.map((r) => ({
+      host: r.sample.host,
+      path: r.sample.path,
+      method: r.sample.method,
+      status: r.sample.status,
+      content_type: r.sample.contentType,
+      result: 'rejected' as const,
+      reason: r.reason,
+    })),
+  ]
+
+  return {
+    compiled_at: new Date().toISOString(),
+    total: data.totalRecorded,
+    kept: data.kept.length,
+    rejected: data.rejected.length,
+    by_reason: byReason,
+    requests,
+  }
+}
+
+function buildClustersJson(clusters: ClusteredEndpoint[]) {
+  const isGraphqlSingleEndpoint = clusters.length > 1
+    && clusters.every((c) => c.path === clusters[0].path && c.method.toLowerCase() === 'post')
+
+  return {
+    compiled_at: new Date().toISOString(),
+    cluster_count: clusters.length,
+    graphql_single_endpoint: isGraphqlSingleEndpoint,
+    clusters: clusters.map((c) => ({
+      method: c.method,
+      host: c.host,
+      path: c.path,
+      sample_count: c.samples.length,
+    })),
+  }
+}
+
+function confidenceLevel(result: ClassifyResult): 'high' | 'medium' | 'low' {
+  if (result.auth?.type === 'localStorage_jwt' || result.auth?.type === 'exchange_chain') return 'high'
+  if (result.auth?.type === 'cookie_session' && result.csrf) return 'high'
+  if (result.auth?.type === 'cookie_session') return 'medium'
+  return 'low'
+}
+
+function buildClassifyJson(result: ClassifyResult) {
+  return {
+    compiled_at: new Date().toISOString(),
+    confidence: confidenceLevel(result),
+    transport: result.transport,
+    auth: result.auth ?? null,
+    csrf: result.csrf ?? null,
+    signing: result.signing ?? null,
+    extractions: result.extractions ?? null,
+  }
+}
+
+function buildProbeJson(probeResults: ProbeResult[]) {
+  return {
+    compiled_at: new Date().toISOString(),
+    probed: probeResults.length,
+    results: probeResults,
+  }
+}
+
+function buildSummaryTxt(data: CompileReportData): string {
+  const parts = [
+    `${data.analyzedOperations.length} HTTP ops`,
+    `${data.verifiedCount} verified`,
+    `${data.kept.length}/${data.totalRecorded} requests kept`,
+  ]
+  if (data.wsOpCount > 0) parts.push(`${data.wsOpCount} WS ops`)
+  if (data.classifyResult?.auth) parts.push(`auth=${data.classifyResult.auth.type}`)
+  return parts.join(', ')
+}
+
+async function writeCompileReport(reportDir: string, data: CompileReportData): Promise<void> {
+  await fs.mkdir(reportDir, { recursive: true })
+
+  await Promise.all([
+    fs.writeFile(path.join(reportDir, 'summary.txt'), `${buildSummaryTxt(data)}\n`),
+    fs.writeFile(path.join(reportDir, 'filtered.json'), `${JSON.stringify(buildFilteredJson(data), null, 2)}\n`),
+    fs.writeFile(path.join(reportDir, 'clusters.json'), `${JSON.stringify(buildClustersJson(data.clusters), null, 2)}\n`),
+    data.classifyResult
+      ? fs.writeFile(path.join(reportDir, 'classify.json'), `${JSON.stringify(buildClassifyJson(data.classifyResult), null, 2)}\n`)
+      : Promise.resolve(),
+    data.probeResults
+      ? fs.writeFile(path.join(reportDir, 'probe.json'), `${JSON.stringify(buildProbeJson(data.probeResults), null, 2)}\n`)
+      : Promise.resolve(),
+  ])
 }
 
 // ── WS compiler pipeline ─────────────────────────────────────
