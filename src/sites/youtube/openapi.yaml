@@ -1,7 +1,7 @@
 openapi: '3.1.0'
 info:
   title: YouTube InnerTube API
-  version: '1.0'
+  version: '2.0'
   x-openweb:
     spec_version: '2.0'
 servers:
@@ -21,6 +21,58 @@ servers:
           header: Authorization
           prefix: 'SAPISIDHASH '
 paths:
+  /search:
+    post:
+      operationId: searchVideos
+      summary: Search videos by keyword
+      x-openweb:
+        permission: read
+        build:
+          stable_id: yt0003
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: InnerTube API key (injected by auth).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: Search query string.
+                context:
+                  type: object
+                  default:
+                    client:
+                      clientName: WEB
+                      clientVersion: '2.20260324.05.00'
+                      hl: en
+                      gl: US
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contents:
+                    type: object
+                    description: Search results in twoColumnSearchResultsRenderer.
+                  estimatedResults:
+                    type: string
   /player:
     post:
       operationId: getVideoInfo
@@ -29,7 +81,7 @@ paths:
         permission: read
         build:
           stable_id: yt0001
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - status-match
@@ -56,7 +108,7 @@ paths:
                   default:
                     client:
                       clientName: WEB
-                      clientVersion: '2.20260316.01.00'
+                      clientVersion: '2.20260324.05.00'
                       hl: en
                       gl: US
       responses:
@@ -73,14 +125,14 @@ paths:
                     type: object
   /next:
     post:
-      operationId: getComments
-      summary: Get video comments
+      operationId: getRelatedAndComments
+      summary: Get video comments and related videos
       x-openweb:
         permission: read
         build:
           stable_id: yt0002
-          tool_version: 1
-          verified: true
+          tool_version: 2
+          verified: false
           signals:
             - status-match
       parameters:
@@ -106,7 +158,7 @@ paths:
                   default:
                     client:
                       clientName: WEB
-                      clientVersion: '2.20260316.01.00'
+                      clientVersion: '2.20260324.05.00'
                       hl: en
                       gl: US
       responses:
@@ -119,3 +171,265 @@ paths:
                 properties:
                   contents:
                     type: object
+                    description: Comments and related videos.
+  /browse:
+    post:
+      operationId: browseContent
+      summary: Browse channel, playlist, or home feed
+      description: >
+        Generic browse endpoint. Pass a browseId to select content type:
+        channel ID (UC...) for channel page, VL + playlist ID for playlist,
+        FEwhat_to_watch for home feed.
+      x-openweb:
+        permission: read
+        build:
+          stable_id: yt0004
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: InnerTube API key (injected by auth).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - browseId
+              properties:
+                browseId:
+                  type: string
+                  description: >
+                    Content ID to browse. Channel: UC... (e.g. UCsBjURrPoezykLs9EqgamOA).
+                    Playlist: VL + playlist ID (e.g. VLPLWKjhJtqVAbkArDMaJhn2XB080UlFNRCt).
+                    Home feed: FEwhat_to_watch.
+                params:
+                  type: string
+                  description: Optional tab/filter params (e.g. for channel Videos tab).
+                context:
+                  type: object
+                  default:
+                    client:
+                      clientName: WEB
+                      clientVersion: '2.20260324.05.00'
+                      hl: en
+                      gl: US
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  header:
+                    type: object
+                  contents:
+                    type: object
+                  metadata:
+                    type: object
+  /get_transcript:
+    post:
+      operationId: getTranscript
+      summary: Get video transcript/subtitles
+      x-openweb:
+        permission: read
+        build:
+          stable_id: yt0009
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: InnerTube API key (injected by auth).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - params
+              properties:
+                params:
+                  type: string
+                  description: Transcript params token (from getRelatedAndComments engagement panel).
+                context:
+                  type: object
+                  default:
+                    client:
+                      clientName: WEB
+                      clientVersion: '2.20260324.05.00'
+                      hl: en
+                      gl: US
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actions:
+                    type: array
+                    description: Transcript segments.
+  /like/like:
+    post:
+      operationId: likeVideo
+      summary: Like a video
+      x-openweb:
+        permission: write
+        build:
+          stable_id: yt0007
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: InnerTube API key (injected by auth).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - target
+              properties:
+                target:
+                  type: object
+                  required:
+                    - videoId
+                  properties:
+                    videoId:
+                      type: string
+                context:
+                  type: object
+                  default:
+                    client:
+                      clientName: WEB
+                      clientVersion: '2.20260324.05.00'
+                      hl: en
+                      gl: US
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+  /like/removelike:
+    post:
+      operationId: unlikeVideo
+      summary: Remove like from a video
+      x-openweb:
+        permission: write
+        build:
+          stable_id: yt0010
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: InnerTube API key (injected by auth).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - target
+              properties:
+                target:
+                  type: object
+                  required:
+                    - videoId
+                  properties:
+                    videoId:
+                      type: string
+                context:
+                  type: object
+                  default:
+                    client:
+                      clientName: WEB
+                      clientVersion: '2.20260324.05.00'
+                      hl: en
+                      gl: US
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+  /subscription/subscribe:
+    post:
+      operationId: subscribeChannel
+      summary: Subscribe to a channel
+      x-openweb:
+        permission: write
+        build:
+          stable_id: yt0008
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: InnerTube API key (injected by auth).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - channelIds
+              properties:
+                channelIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Channel IDs to subscribe to.
+                context:
+                  type: object
+                  default:
+                    client:
+                      clientName: WEB
+                      clientVersion: '2.20260324.05.00'
+                      hl: en
+                      gl: US
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
