@@ -15,6 +15,7 @@ interface TestCase {
 
 interface TestFile {
   readonly operation_id: string
+  readonly method?: string
   readonly cases: TestCase[]
 }
 
@@ -46,6 +47,11 @@ export async function runSiteTests(site: string): Promise<{ passed: number; fail
 
     const raw = await readFile(path.join(testsDir, fileName), 'utf8')
     const testFile = JSON.parse(raw) as TestFile
+
+    // Skip non-GET operations — mutations are not safe to replay
+    if (testFile.method && testFile.method !== 'get') {
+      continue
+    }
 
     for (const testCase of testFile.cases) {
       try {
