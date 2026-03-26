@@ -215,10 +215,10 @@ When expanding an existing site package, start from gap review:
 
 Multiple workers can share one Chrome browser on the same CDP port. Rules:
 - **Open a new tab** for your site. Do NOT close other tabs or navigate existing tabs to a different URL.
-- Capture is **per-tab** (bound to a Playwright `Page` object) — it only records traffic from your tab, not the whole browser.
+- **Caveat: capture is browser-context-wide**, not per-tab. All traffic from all tabs is recorded in a single capture session. `compile` filters by site URL, so different-site captures don't interfere, but same-site captures from multiple tabs will merge.
+- For **true isolation** (same site, parallel workers), use **separate browser instances** on different CDP ports, or capture sequentially.
 - If `capture start` is already running (started by another worker), skip it — your traffic is already being recorded. Just browse your site in a new tab.
-- `compile` filters traffic by site URL, so concurrent captures on different sites don't interfere.
-- Only need separate CDP ports if you need isolated browser profiles (rare).
+- Only need separate CDP ports if you need isolated browser profiles or same-site parallel capture.
 
 ## Related References
 
