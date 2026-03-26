@@ -1,5 +1,26 @@
 # Xiaohongshu Fixture Progress
 
+## 2026-03-26: Expand coverage from 3 to 7 operations
+
+**What changed:**
+- Added getUserNotes: extracts user's posted notes from SSR state `user.notes` (paginated array of pages, ~30 notes per page)
+- Added getExploreFeed: extracts explore/discover feed from SSR state `feed.feeds` (~70 trending/recommended notes)
+- Added likeNote: navigates to note detail, clicks like button via `.engage-bar-style .like-wrapper`, idempotent (skips if already liked)
+- Added bookmarkNote: navigates to note detail, clicks collect button via `.engage-bar-style .collect-wrapper`, idempotent (skips if already bookmarked)
+- All note list operations return consistent schema: `{noteId, xsecToken, type, displayTitle, user, likedCount, cover}`
+
+**Why:**
+- Expanding XHS coverage for agent workflows: browse explore feed, view user's posts, interact with notes
+
+**Verification:**
+- API-level: searchNotes PASS, getNoteDetail PASS, getExploreFeed PASS, getUserProfile CAPTCHA, getUserNotes CAPTCHA
+- Content-level: explore feed returns ~74 notes with titles/authors/covers, user notes returns 30+ notes per page across 5 pages
+- Like/bookmark manually tested via CDP: like triggers POST to `/note/like`, collect triggers POST to `/note/collect`, both toggle correctly
+
+**Known issues:**
+- getUserNotes and getUserProfile share the same CAPTCHA rate limit (both navigate to profile page)
+- Like/bookmark require active login session (`web_session` cookie)
+
 ## 2026-03-23: Initial discovery and fixture creation
 
 **What changed:**

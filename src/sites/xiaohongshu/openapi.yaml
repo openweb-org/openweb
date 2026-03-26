@@ -295,3 +295,241 @@ paths:
                         tagType:
                           type: string
                           description: "Tag type: info, location, college."
+  /internal/getUserNotes:
+    get:
+      operationId: getUserNotes
+      summary: Get a user's posted notes — titles, covers, like counts
+      x-openweb:
+        permission: read
+        build:
+          stable_id: xhs0004
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: getUserNotes
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User ID (from searchNotes or getNoteDetail).
+      responses:
+        '200':
+          description: List of user's notes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - notes
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  notes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        noteId:
+                          type: string
+                        xsecToken:
+                          type: string
+                        type:
+                          type: string
+                          enum:
+                            - normal
+                            - video
+                        displayTitle:
+                          type: string
+                        user:
+                          type: object
+                          properties:
+                            userId:
+                              type: string
+                            nickname:
+                              type: string
+                            avatar:
+                              type: string
+                        likedCount:
+                          type:
+                            - string
+                            - 'null'
+                        cover:
+                          type:
+                            - object
+                            - 'null'
+                          properties:
+                            url:
+                              type: string
+                            width:
+                              type: integer
+                            height:
+                              type: integer
+  /internal/getExploreFeed:
+    get:
+      operationId: getExploreFeed
+      summary: Get explore/discover feed — trending and recommended notes
+      x-openweb:
+        permission: read
+        build:
+          stable_id: xhs0005
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: getExploreFeed
+      parameters: []
+      responses:
+        '200':
+          description: List of explore feed notes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - notes
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  notes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        noteId:
+                          type: string
+                        xsecToken:
+                          type: string
+                        type:
+                          type: string
+                          enum:
+                            - normal
+                            - video
+                        displayTitle:
+                          type: string
+                        user:
+                          type: object
+                          properties:
+                            userId:
+                              type: string
+                            nickname:
+                              type: string
+                            avatar:
+                              type: string
+                        likedCount:
+                          type:
+                            - string
+                            - 'null'
+                        cover:
+                          type:
+                            - object
+                            - 'null'
+                          properties:
+                            url:
+                              type: string
+                            width:
+                              type: integer
+                            height:
+                              type: integer
+  /internal/likeNote:
+    post:
+      operationId: likeNote
+      summary: Like a note (toggle — skips if already liked). Requires login.
+      x-openweb:
+        permission: write
+        build:
+          stable_id: xhs0006
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: likeNote
+      parameters:
+        - name: noteId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Note ID to like.
+        - name: xsecToken
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Security token (from searchNotes). Improves reliability.
+      responses:
+        '200':
+          description: Like result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  noteId:
+                    type: string
+                  liked:
+                    type: boolean
+                  action:
+                    type: string
+                    description: "Result: liked, already_liked, or failed."
+                    enum:
+                      - liked
+                      - already_liked
+                      - failed
+  /internal/bookmarkNote:
+    post:
+      operationId: bookmarkNote
+      summary: Bookmark/collect a note (toggle — skips if already bookmarked). Requires login.
+      x-openweb:
+        permission: write
+        build:
+          stable_id: xhs0007
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: bookmarkNote
+      parameters:
+        - name: noteId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Note ID to bookmark.
+        - name: xsecToken
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Security token (from searchNotes). Improves reliability.
+      responses:
+        '200':
+          description: Bookmark result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  noteId:
+                    type: string
+                  bookmarked:
+                    type: boolean
+                  action:
+                    type: string
+                    description: "Result: bookmarked, already_bookmarked, or failed."
+                    enum:
+                      - bookmarked
+                      - already_bookmarked
+                      - failed

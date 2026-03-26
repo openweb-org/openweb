@@ -191,17 +191,174 @@ async function getUserProfile(page: Page, params: Record<string, unknown>): Prom
   })
 }
 
+async function getUserNotes(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const userId = String(params.userId ?? params.user_id ?? '')
+  if (!userId) throw OpenWebError.missingParam('userId')
+
+  await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+
+  if (page.url().includes('captcha') || page.url().includes('login')) {
+    throw OpenWebError.apiError('Xiaohongshu', 'CAPTCHA triggered — please solve it in the browser and retry')
+  }
+
+  await page.waitForTimeout(4000)
+
+  return page.evaluate(() => {
+    const state = (window as any).__INITIAL_STATE__
+    if (!state?.user) return { notes: [], count: 0 }
+
+    const notesRef = state.user.notes
+    const notePages: any[] = notesRef?._rawValue ?? notesRef ?? []
+    if (!Array.isArray(notePages) || notePages.length === 0) return { notes: [], count: 0 }
+
+    // Flatten all pages of notes
+    const allNotes: any[] = []
+    for (const page of notePages) {
+      const items: any[] = page?._rawValue ?? page ?? []
+      if (Array.isArray(items)) {
+        for (const item of items) {
+          if (item?.noteCard) {
+            const card = item.noteCard
+            allNotes.push({
+              noteId: item.id,
+              xsecToken: item.xsecToken,
+              type: card.type,
+              displayTitle: card.displayTitle,
+              user: card.user
+                ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar }
+                : null,
+              likedCount: card.interactInfo?.likedCount ?? null,
+              cover: card.cover
+                ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height }
+                : null,
+            })
+          }
+        }
+      }
+    }
+
+    return { notes: allNotes, count: allNotes.length }
+  })
+}
+
+async function getExploreFeed(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+  await page.goto(`${BASE}/explore`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.waitForTimeout(4000)
+
+  return page.evaluate(() => {
+    const state = (window as any).__INITIAL_STATE__
+    if (!state?.feed) return { notes: [], count: 0 }
+
+    const feedsRef = state.feed.feeds
+    const feeds: any[] = feedsRef?._rawValue ?? feedsRef ?? []
+    if (!Array.isArray(feeds)) return { notes: [], count: 0 }
+
+    const notes = feeds
+      .filter((f: any) => f.modelType === 'note' && f.noteCard)
+      .map((f: any) => {
+        const card = f.noteCard
+        return {
+          noteId: f.id,
+          xsecToken: f.xsecToken,
+          type: card.type,
+          displayTitle: card.displayTitle,
+          user: card.user
+            ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar }
+            : null,
+          likedCount: card.interactInfo?.likedCount ?? null,
+          cover: card.cover
+            ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height }
+            : null,
+        }
+      })
+
+    return { notes, count: notes.length }
+  })
+}
+
+async function navigateToNote(page: Page, params: Record<string, unknown>): Promise<string> {
+  const noteId = String(params.noteId ?? params.note_id ?? '')
+  if (!noteId) throw OpenWebError.missingParam('noteId')
+  const xsecToken = String(params.xsecToken ?? params.xsec_token ?? '')
+
+  const tokenParam = xsecToken ? `&xsec_token=${encodeURIComponent(xsecToken)}` : ''
+  await page.goto(
+    `${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`,
+    { waitUntil: 'domcontentloaded', timeout: 30000 },
+  )
+  await page.waitForTimeout(4000)
+  return noteId
+}
+
+async function likeNote(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const noteId = await navigateToNote(page, params)
+
+  // Check current liked state
+  const wasLiked = await page.evaluate(() => {
+    const state = (window as any).__INITIAL_STATE__
+    const mapRef = state?.note?.noteDetailMap
+    const map: Record<string, any> = mapRef?._rawValue ?? mapRef ?? {}
+    const entry = Object.values(map)[0] as any
+    return (entry?.note ?? entry)?.interactInfo?.liked ?? false
+  })
+
+  if (wasLiked) return { noteId, liked: true, action: 'already_liked' }
+
+  // Intercept the like API response
+  const likePromise = page.waitForResponse(
+    (resp) => resp.url().includes('/api/sns/web/v1/note/like') && resp.status() === 200,
+    { timeout: 10000 },
+  ).catch(() => null)
+
+  await page.click('.engage-bar-style .like-wrapper', { timeout: 5000 })
+  const likeResp = await likePromise
+
+  const success = !!likeResp
+  return { noteId, liked: success, action: success ? 'liked' : 'failed' }
+}
+
+async function bookmarkNote(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const noteId = await navigateToNote(page, params)
+
+  // Check current collected state
+  const wasCollected = await page.evaluate(() => {
+    const state = (window as any).__INITIAL_STATE__
+    const mapRef = state?.note?.noteDetailMap
+    const map: Record<string, any> = mapRef?._rawValue ?? mapRef ?? {}
+    const entry = Object.values(map)[0] as any
+    return (entry?.note ?? entry)?.interactInfo?.collected ?? false
+  })
+
+  if (wasCollected) return { noteId, bookmarked: true, action: 'already_bookmarked' }
+
+  // Intercept the collect API response
+  const collectPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/api/sns/web/v1/note/collect') && resp.status() === 200,
+    { timeout: 10000 },
+  ).catch(() => null)
+
+  await page.click('.engage-bar-style .collect-wrapper', { timeout: 5000 })
+  const collectResp = await collectPromise
+
+  const success = !!collectResp
+  return { noteId, bookmarked: success, action: success ? 'bookmarked' : 'failed' }
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
   searchNotes,
   getNoteDetail,
   getUserProfile,
+  getUserNotes,
+  getExploreFeed,
+  likeNote,
+  bookmarkNote,
 }
 
 const adapter: CodeAdapter = {
   name: 'xiaohongshu-web',
-  description: 'Xiaohongshu (小红书) — search notes, note detail with comments, user profile via Vue SSR extraction',
+  description: 'Xiaohongshu (小红书) — search, detail, profile, user notes, explore feed, like, bookmark via Vue SSR + button interaction',
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()

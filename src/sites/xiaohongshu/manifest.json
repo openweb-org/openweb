@@ -4,17 +4,20 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.xiaohongshu.com",
-  "description": "Xiaohongshu note search, detail with comments, and user profile — Vue SSR extraction via L3 adapter. getUserProfile may trigger CAPTCHA under rate limiting.",
+  "description": "Xiaohongshu note search, detail with comments, user profile, user notes, explore feed, like, and bookmark — Vue SSR extraction via L3 adapter. Write ops (like, bookmark) require login.",
   "requires_auth": false,
   "dependencies": {
     "searchNotes → getNoteDetail": "searchNotes returns noteId and xsecToken used by getNoteDetail",
-    "searchNotes → getUserProfile": "searchNotes returns userId used by getUserProfile"
+    "searchNotes → getUserProfile": "searchNotes returns userId used by getUserProfile",
+    "searchNotes → getUserNotes": "searchNotes returns userId used by getUserNotes",
+    "searchNotes → likeNote": "searchNotes returns noteId and xsecToken used by likeNote",
+    "searchNotes → bookmarkNote": "searchNotes returns noteId and xsecToken used by bookmarkNote"
   },
   "stats": {
-    "operation_count": 3,
+    "operation_count": 7,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 3,
+    "l3_count": 7,
     "ws_count": 0
   },
   "last_verified": "2026-03-23T23:40:38.262Z",
