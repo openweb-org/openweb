@@ -183,3 +183,199 @@ paths:
                           items:
                             type: string
                         description: Product attributes keyed by name (e.g. "Color", "Features").
+  /internal/getProductReviews:
+    get:
+      operationId: getProductReviews
+      summary: Get customer reviews for a Costco product — ratings, text, photos via BazaarVoice
+      x-openweb:
+        permission: read
+        build:
+          stable_id: co0003
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: getProductReviews
+      parameters:
+        - name: productId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Costco item/product number (from searchProducts or getProductDetail).
+      responses:
+        '200':
+          description: Product review summary statistics (rating, distribution, recommendation %).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  productId:
+                    type: string
+                  totalReviews:
+                    type: integer
+                    description: Total number of reviews for this product.
+                  averageRating:
+                    type:
+                      - number
+                      - 'null'
+                    description: Average rating (1-5 scale).
+                  ratingDistribution:
+                    type:
+                      - array
+                      - 'null'
+                    description: Breakdown of ratings by star count.
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: integer
+                        count:
+                          type: integer
+                  recommendedPercentage:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Percentage of reviewers who recommend the product.
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                    description: Empty array (full review text blocked by PerimeterX + BazaarVoice auth).
+  /internal/findWarehouses:
+    get:
+      operationId: findWarehouses
+      summary: Find Costco warehouse locations near coordinates — address, hours, services
+      x-openweb:
+        permission: read
+        build:
+          stable_id: co0004
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: findWarehouses
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Latitude of search center (e.g. 37.35).
+        - name: longitude
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Longitude of search center (e.g. -121.95).
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Maximum number of warehouses to return.
+      responses:
+        '200':
+          description: Nearby warehouse locations.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalCount:
+                    type: integer
+                  warehouses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        warehouseId:
+                          type: string
+                        name:
+                          type: string
+                        phone:
+                          type:
+                            - string
+                            - 'null'
+                        address:
+                          type: object
+                          properties:
+                            street:
+                              type: string
+                            city:
+                              type: string
+                            state:
+                              type: string
+                            zipCode:
+                              type: string
+                            country:
+                              type: string
+                        latitude:
+                          type: number
+                        longitude:
+                          type: number
+                        distance:
+                          type:
+                            - number
+                            - 'null'
+                          description: Distance from search coordinates in miles.
+                        hours:
+                          type: object
+                          description: Operating hours by department.
+                          properties:
+                            warehouse:
+                              type:
+                                - string
+                                - 'null'
+                            pharmacy:
+                              type:
+                                - string
+                                - 'null'
+                            gasStation:
+                              type:
+                                - string
+                                - 'null'
+                            tireCenter:
+                              type:
+                                - string
+                                - 'null'
+                        services:
+                          type: array
+                          items:
+                            type: string
+                          description: Available services (Food Court, Gas Station, Pharmacy, etc.).
+  /internal/addToCart:
+    post:
+      operationId: addToCart
+      summary: Add a product to Costco shopping cart — requires login
+      x-openweb:
+        permission: write
+        build:
+          stable_id: co0005
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: addToCart
+      parameters:
+        - name: itemNumber
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Costco item number to add (from searchProducts or getProductDetail).
+        - name: quantity
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Quantity to add.

@@ -16,6 +16,10 @@
     "l3_count": 2,
     "ws_count": 0
   },
-  "last_verified": "2026-03-23T22:45:00.000Z",
-  "quarantined": false
+  "last_verified": "2026-03-26T19:19:05.872Z",
+  "quarantined": false,
+  "fingerprint": {
+    "response_shape_hash": "getProductDetail:05a0d8eadddda637,searchProducts:3be7720fbd17be54",
+    "last_validated": "2026-03-26T19:19:05.874Z"
+  }
 }
