@@ -8,7 +8,7 @@
 import type { CodeAdapter } from '../../../types/adapter.js'
 import type { Page } from 'playwright-core'
 import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import { gqlFetch, getTopStreams } from './queries.js'
+import { gqlFetch, gqlMutate, getTopStreams } from './queries.js'
 
 /* ---------- operation handlers ---------- */
 
@@ -345,6 +345,68 @@ async function getFeaturedStreams(page: Page, params: Record<string, unknown>): 
   }
 }
 
+/* ---------- write operations ---------- */
+
+const FOLLOW_MUTATION = `
+mutation FollowChannelByLogin($channelID: ID!, $disableNotifications: Boolean!) {
+  followUser(input: {
+    targetID: $channelID,
+    disableNotifications: $disableNotifications
+  }) {
+    follow {
+      disableNotifications
+      user {
+        id
+        login
+        displayName
+      }
+    }
+    error {
+      code
+    }
+  }
+}
+`
+
+async function followChannel(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const channelLogin = String(params.channelLogin ?? params.login ?? params.channel ?? '')
+  const disableNotifications = Boolean(params.disableNotifications ?? false)
+
+  // Resolve channelLogin → channelID via getChannelInfo
+  const channelData = (await gqlFetch(page, 'ChannelRoot_AboutPanel', {
+    channelLogin,
+    skipSchedule: true,
+  })) as Record<string, unknown>
+
+  const user = channelData.user as Record<string, unknown>
+  if (!user?.id) {
+    throw OpenWebError.apiError('followChannel', `Channel "${channelLogin}" not found`)
+  }
+  const channelID = String(user.id)
+
+  const data = (await gqlMutate(page, FOLLOW_MUTATION, {
+    channelID,
+    disableNotifications,
+  })) as Record<string, unknown>
+
+  const result = data.followUser as Record<string, unknown>
+  const error = result?.error as Record<string, unknown> | null
+  if (error?.code) {
+    throw OpenWebError.apiError('followChannel', `Follow failed: ${error.code}`)
+  }
+
+  const follow = result?.follow as Record<string, unknown>
+  const followedUser = follow?.user as Record<string, unknown>
+
+  return {
+    channelId: followedUser?.id ?? channelID,
+    channelLogin: followedUser?.login ?? channelLogin,
+    displayName: followedUser?.displayName,
+    isFollowing: true,
+    disableNotifications: follow?.disableNotifications ?? disableNotifications,
+  }
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
@@ -358,19 +420,20 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getCategoryStreams,
   getTopStreams,
   getFeaturedStreams,
+  followChannel,
 }
 
 const adapter: CodeAdapter = {
   name: 'twitch-graphql',
-  description: 'Twitch GraphQL API — streams, channels, categories, clips, schedules',
+  description: 'Twitch GraphQL API — streams, channels, categories, clips, schedules, follow',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('twitch.tv')
   },
 
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    // All operations are public — no auth needed
-    return true
+  async isAuthenticated(page: Page): Promise<boolean> {
+    const hasAuth = await page.evaluate(() => document.cookie.includes('auth-token'))
+    return Boolean(hasAuth)
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {

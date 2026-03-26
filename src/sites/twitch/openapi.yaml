@@ -5,7 +5,7 @@ info:
   x-openweb:
     spec_version: '2.0'
     compiled_at: '2026-03-24T00:00:00Z'
-    requires_auth: false
+    requires_auth: optional
 servers:
   - url: https://www.twitch.tv
     x-openweb:
@@ -696,3 +696,60 @@ paths:
                               type: array
                               items:
                                 type: string
+  /channel/{channelLogin}/follow:
+    post:
+      operationId: followChannel
+      summary: Follow a channel — requires auth, reversible (unfollow via Twitch UI)
+      x-openweb:
+        permission: write
+        safety: safe
+        build:
+          stable_id: tw0011
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: twitch-graphql
+          operation: followChannel
+      parameters:
+        - name: channelLogin
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Channel login name to follow (e.g. "shroud", "pokimane").
+        - name: disableNotifications
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Disable live notifications for this follow.
+      responses:
+        '200':
+          description: Channel followed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - channelId
+                  - channelLogin
+                  - isFollowing
+                properties:
+                  channelId:
+                    type: string
+                    description: Twitch user ID of the followed channel.
+                  channelLogin:
+                    type: string
+                    description: Login name of the followed channel.
+                  displayName:
+                    type: string
+                    description: Display name of the followed channel.
+                  isFollowing:
+                    type: boolean
+                    description: Always true on success.
+                  disableNotifications:
+                    type: boolean
+                    description: Whether live notifications are disabled.

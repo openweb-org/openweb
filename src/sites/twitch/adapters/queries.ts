@@ -57,6 +57,51 @@ export async function gqlFetch(
   return json.data
 }
 
+/* ---------- GraphQL mutation (inline query, requires auth) ---------- */
+
+export async function gqlMutate(
+  page: Page,
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<unknown> {
+  const body = JSON.stringify({ query, variables })
+
+  const result = await page.evaluate(
+    async (args: { url: string; body: string; clientId: string }) => {
+      const cookies = document.cookie.split(';').reduce(
+        (acc, c) => {
+          const [k, ...v] = c.trim().split('=')
+          acc[k] = v.join('=')
+          return acc
+        },
+        {} as Record<string, string>,
+      )
+      const authToken = cookies['auth-token']
+      const headers: Record<string, string> = {
+        'Content-Type': 'text/plain;charset=UTF-8',
+        'Client-ID': args.clientId,
+      }
+      if (authToken) headers['Authorization'] = `OAuth ${authToken}`
+
+      const resp = await fetch(args.url, { method: 'POST', headers, body: args.body })
+      return { status: resp.status, text: await resp.text() }
+    },
+    { url: GQL_URL, body, clientId: CLIENT_ID },
+  )
+
+  if (result.status >= 400) {
+    throw OpenWebError.httpError(result.status)
+  }
+
+  const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
+  if (json.errors) {
+    const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Unknown GQL error'
+    throw OpenWebError.apiError('GraphQL mutation', msg)
+  }
+
+  return json.data
+}
+
 /* ---------- query operations ---------- */
 
 export async function getTopStreams(page: Page, params: Record<string, unknown>): Promise<unknown> {
