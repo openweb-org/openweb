@@ -18,6 +18,10 @@ Chinese microblogging platform (China's Twitter/X). Trending topics, post search
 | getUserTimeline | user's posts | GET /ajax/statuses/mymblog?uid= | page-based pagination, filter by type (all/original/image/video) |
 | searchPosts | search posts by keyword | GET /ajax/side/search?q= | returns matching posts from sidebar search |
 | getIndexBand | categorized trending lists | GET s.weibo.com/ajax_Indexband/getIndexBand | trending topics by category |
+| likePost | like a post | POST /ajax/statuses/setLike | ✅ SAFE — reversible via cancelLike |
+| repost | repost/retweet a post | POST /ajax/statuses/repost | ✅ SAFE — reversible via destroy |
+| followUser | follow a user | POST /ajax/friendships/create | ✅ SAFE — reversible via unfollow |
+| bookmarkPost | bookmark/favorite a post | POST /ajax/statuses/createFavorites | ✅ SAFE — reversible via destoryFavorites |
 
 ## API Architecture
 
@@ -32,5 +36,7 @@ Chinese microblogging platform (China's Twitter/X). Trending topics, post search
 - **Login required** — all operations need an active Weibo session (SUB cookie)
 - **Rate limiting** — aggressive rate limits on search and feed APIs; may return 418 or empty data
 - **CSRF token rotation** — XSRF-TOKEN cookie rotates; the adapter fetches within the browser context so this is handled automatically
+- **CSRF on writes** — write operations require X-XSRF-TOKEN header derived from the XSRF-TOKEN cookie; the adapter handles this automatically
 - **search endpoint** — `/ajax/side/search` returns sidebar-style results; the full search at `s.weibo.com/weibo?q=` returns server-rendered HTML (not JSON API) and is not covered
 - **Long text truncation** — posts over ~140 chars are truncated unless `isGetLongText=true` is set in getPostDetail
+- **API typos** — Weibo's API has known typos: `/ajax/friendships/destory` (not "destroy"), `/ajax/statuses/destoryFavorites` (not "destroy")

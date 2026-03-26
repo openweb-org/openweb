@@ -520,6 +520,184 @@ paths:
                   data:
                     type: object
 
+  /ajax/statuses/setLike:
+    post:
+      operationId: likePost
+      summary: Like a post — reversible, toggle with cancelLike
+      x-openweb:
+        permission: write
+        safety: safe
+        build:
+          stable_id: weibo0011
+          signature_id: weibo0011s
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: weibo-web
+          operation: likePost
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: string
+                  description: Post ID (mid) to like.
+      responses:
+        '200':
+          description: Like result with attitude info.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: integer
+                  id:
+                    type: integer
+                    description: Attitude record ID.
+                  attitude:
+                    type: string
+                    description: Attitude type (e.g. "heart").
+                  attitude_type:
+                    type: integer
+                  status:
+                    $ref: '#/components/schemas/WeiboPost'
+
+  /ajax/statuses/repost:
+    post:
+      operationId: repost
+      summary: Repost/retweet a post — creates a new post quoting the original
+      x-openweb:
+        permission: write
+        safety: safe
+        build:
+          stable_id: weibo0012
+          signature_id: weibo0012s
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: weibo-web
+          operation: repost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: string
+                  description: Post ID (mid) to repost.
+                reason:
+                  type: string
+                  default: 转发微博
+                  description: Repost comment text (default "转发微博").
+      responses:
+        '200':
+          description: Reposted post data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: integer
+                  statuses:
+                    $ref: '#/components/schemas/WeiboPost'
+
+  /ajax/friendships/create:
+    post:
+      operationId: followUser
+      summary: Follow a user — reversible, toggle with unfollow
+      x-openweb:
+        permission: write
+        safety: safe
+        build:
+          stable_id: weibo0013
+          signature_id: weibo0013s
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: weibo-web
+          operation: followUser
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [friend_uid]
+              properties:
+                friend_uid:
+                  type: string
+                  description: User ID (numeric) to follow.
+      responses:
+        '200':
+          description: Followed user profile data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeiboUser'
+
+  /ajax/statuses/createFavorites:
+    post:
+      operationId: bookmarkPost
+      summary: Bookmark/favorite a post — reversible, toggle with destoryFavorites
+      x-openweb:
+        permission: write
+        safety: safe
+        build:
+          stable_id: weibo0014
+          signature_id: weibo0014s
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: weibo-web
+          operation: bookmarkPost
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: string
+                  description: Post ID (mid) to bookmark.
+      responses:
+        '200':
+          description: Bookmarked post with tags and timestamp.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: integer
+                  status:
+                    $ref: '#/components/schemas/WeiboPost'
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  favorited_time:
+                    type: string
+                    description: Timestamp when bookmarked.
+
   /ajax_Indexband/getIndexBand:
     get:
       operationId: getIndexBand

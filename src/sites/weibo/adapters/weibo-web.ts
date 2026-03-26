@@ -24,6 +24,36 @@ async function fetchJson(page: Page, url: string): Promise<unknown> {
   }, url)
 }
 
+async function postForm(page: Page, url: string, body: string): Promise<unknown> {
+  return page.evaluate(async ({ url, body }: { url: string; body: string }) => {
+    const xsrf = document.cookie.split(';').map((c: string) => c.trim()).find((c: string) => c.startsWith('XSRF-TOKEN='))
+    const token = xsrf ? decodeURIComponent(xsrf.split('=')[1]) : ''
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-XSRF-TOKEN': token },
+      credentials: 'include',
+      body,
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json()
+  }, { url, body })
+}
+
+async function postJson(page: Page, url: string, body: Record<string, unknown>): Promise<unknown> {
+  return page.evaluate(async ({ url, bodyStr }: { url: string; bodyStr: string }) => {
+    const xsrf = document.cookie.split(';').map((c: string) => c.trim()).find((c: string) => c.startsWith('XSRF-TOKEN='))
+    const token = xsrf ? decodeURIComponent(xsrf.split('=')[1]) : ''
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': token },
+      credentials: 'include',
+      body: bodyStr,
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json()
+  }, { url, bodyStr: JSON.stringify(body) })
+}
+
 function buildUrl(base: string, path: string, params: Record<string, unknown>): string {
   const url = new URL(path, base)
   for (const [k, v] of Object.entries(params)) {
@@ -134,6 +164,33 @@ async function getIndexBand(page: Page, params: Record<string, unknown>): Promis
   return data
 }
 
+/* ---------- write operations ---------- */
+
+async function likePost(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const id = String(params.id ?? '')
+  if (!id) throw OpenWebError.missingParam('id')
+  return postForm(page, `${SITE}/ajax/statuses/setLike`, `id=${id}`)
+}
+
+async function repost(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const id = String(params.id ?? '')
+  if (!id) throw OpenWebError.missingParam('id')
+  const reason = String(params.reason ?? '转发微博')
+  return postJson(page, `${SITE}/ajax/statuses/repost`, { id, reason })
+}
+
+async function followUser(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const uid = String(params.friend_uid ?? params.uid ?? '')
+  if (!uid) throw OpenWebError.missingParam('friend_uid')
+  return postForm(page, `${SITE}/ajax/friendships/create`, `friend_uid=${uid}`)
+}
+
+async function bookmarkPost(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const id = String(params.id ?? '')
+  if (!id) throw OpenWebError.missingParam('id')
+  return postForm(page, `${SITE}/ajax/statuses/createFavorites`, `id=${id}`)
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
@@ -147,6 +204,10 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getUserTimeline,
   searchPosts,
   getIndexBand,
+  likePost,
+  repost,
+  followUser,
+  bookmarkPost,
 }
 
 const adapter: CodeAdapter = {
