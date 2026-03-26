@@ -1,3 +1,96 @@
+## 2026-03-26: M38 — Skill review + doc polish + lint + publish prep
+
+**What changed:**
+- skill/openweb/ fully rewritten: SKILL.md router (5 intents), discover.md (iterative loop), compile.md (decision model + WS track)
+- 7 new knowledge files: ws-patterns, bot-detection-patterns, extraction-patterns, graphql-patterns, archetypes split (5 deep files)
+- site-doc.md moved from doc/todo/ to references/
+- Lint clean on core code (44 files), gitignore cleaned (.claude/projects/, tmp/)
+- CLAUDE.md synced with M33-M36 architecture
+- Compile report implemented (filtered.json, clusters.json, classify.json, probe.json, summary.txt)
+- Write operation compilation enabled (mutation filter removed, verify skips writes)
+- --capture-dir flag implemented
+- Request body schema inference for write ops
+- 67/67 sites have DOC.md + PROGRESS.md
+- 560 tests, build clean
+
+**Why:**
+- Skill docs needed rewrite for intent-based routing and WS support. Lint + doc cleanup for publish readiness.
+
+**Key files:** skill/openweb/, CLAUDE.md, src/compiler/, .gitignore
+**Verification:** `pnpm build` clean, `pnpm test` 560/560 pass, `pnpm lint` clean
+**Next:** M37 site coverage expansion (16 HIGH + 6 MEDIUM re-discovery)
+**Blockers:** None
+
+## 2026-03-25: M36 — Codebase review + refactor
+
+**What changed:**
+- Double-design audit (Claude + Codex), 27 tasks across 5 phases
+- 3 oversized files split (executor, openapi, classify)
+- Schema-type alignment (fallback removed, heartbeat added, ws_count required)
+- Capture session resource leaks fixed
+- Compile→verify pipeline repaired (5 silent-drop points)
+- Logger utility, standardized error handling (OpenWebError everywhere)
+- SSRF validation mandatory, token cache race condition fixed
+- Barrel exports, executor result types unified, 6 oversized adapters split
+- 559 tests passing
+
+**Why:**
+- Systematic quality pass before publish. Double-design audit surfaced 27 issues across architecture, types, and pipeline.
+
+**Key files:** src/runtime/executor.ts, src/lib/openapi.ts, src/compiler/analyzer/classify.ts, src/lib/errors.ts, src/lib/logger.ts
+**Verification:** `pnpm build` clean, `pnpm test` 559/559 pass
+**Next:** M37 skill rewrite, M38 publish prep
+**Blockers:** None
+
+## 2026-03-25: M35 — WebSocket + AsyncAPI support
+
+**What changed:**
+- Full WS pipeline: capture → load → cluster → classify → schema → AsyncAPI 3.0 emitter
+- WS runtime: connection manager (7-state machine), router, executor, pool, 4 auth primitives
+- Coinbase Exchange E2E (compiler-generated asyncapi.yaml, 14 CI tests)
+- WhatsApp Web exploration (binary WS, Store-level access breakthrough)
+- Discord Gateway handwritten fixture (12 ops)
+- 498 tests
+
+**Why:**
+- WebSocket support is essential for real-time sites (Discord, Coinbase, WhatsApp). AsyncAPI 3.0 is the spec standard for event-driven APIs.
+
+**Key files:** src/compiler/ws-analyzer/, src/runtime/ws-executor.ts, src/runtime/ws-connection.ts, src/runtime/ws-router.ts, src/compiler/generator/asyncapi.ts
+**Verification:** `pnpm build` clean, `pnpm test` 498/498 pass, Coinbase WS E2E works
+**Next:** M36 codebase review
+**Blockers:** None
+
+## 2026-03-25: M34 — Token cache encrypted storage
+
+**What changed:**
+- AES-256-GCM vault.json with PBKDF2 machine-binding
+- 20 token-cache tests
+
+**Why:**
+- Auth tokens cached to disk need encryption at rest. Machine-binding prevents token theft via file copy.
+
+**Key files:** src/runtime/token-cache.ts
+**Verification:** `pnpm test` — 20 token-cache tests pass
+**Next:** M35 WebSocket support
+**Blockers:** None
+
+## 2026-03-25: M33 — npm publish + install story
+
+**What changed:**
+- src/fixtures/ → src/sites/ rename (562 files)
+- @openweb-org/openweb package, playwright-core migration
+- dist/sites/ build step, bundled read-only resolution
+- LICENSE, README, pack:check
+- 284kB tarball, global install works
+
+**Why:**
+- Package must be installable via npm for end users. Sites bundled in dist/ for zero-config usage.
+
+**Key files:** package.json, tsup.config.ts, src/lib/site-resolver.ts, src/sites/
+**Verification:** `pnpm build` clean, `pnpm pack` → 284kB, global install resolves sites
+**Next:** M34 token cache encryption
+**Blockers:** None
+
 ## 2026-03-24: Post-M26 Cleanup — fixtures, knowledge, roadmap
 
 **What changed:**
