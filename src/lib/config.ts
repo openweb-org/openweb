@@ -31,4 +31,14 @@ export const TIMEOUT = {
   adapterRetry: 500,
   /** AsyncAPI generator default timeout */
   asyncapiDefault: 10_000,
+  /** Verify-replay fetch timeout */
+  verify: 5_000,
+  /** Recording script timeout */
+  recording: 120_000,
 } as const
+
+/** Max concurrent verify-replay requests */
+export const VERIFY_CONCURRENCY = 6
+
+/** Max concurrent probe requests */
+export const PROBE_CONCURRENCY = 4

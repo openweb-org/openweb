@@ -6,7 +6,7 @@ import path from 'node:path'
 import Ajv from 'ajv'
 
 import { OpenWebError } from '../lib/errors.js'
-import { CDP_ENDPOINT } from '../lib/config.js'
+import { CDP_ENDPOINT, TIMEOUT, VERIFY_CONCURRENCY } from '../lib/config.js'
 import { buildQueryUrl } from '../lib/openapi.js'
 import { annotateOperation, annotateParameterDescriptions } from '../compiler/analyzer/annotate.js'
 import { clusterSamples } from '../compiler/analyzer/cluster.js'
@@ -68,7 +68,7 @@ function buildExampleInput(parameters: ParameterDescriptor[]): Record<string, un
   return input
 }
 
-async function verifyOperation(operation: Omit<AnalyzedOperation, 'verified'>): Promise<boolean> {
+async function verifyOperation(operation: Omit<AnalyzedOperation, 'verified'>, ajv: Ajv): Promise<boolean> {
   try {
     const url = buildQueryUrl(
       `https://${operation.host}`,
@@ -82,22 +82,71 @@ async function verifyOperation(operation: Omit<AnalyzedOperation, 'verified'>): 
       operation.exampleInput,
     )
 
-    const response = await fetchWithRedirects(url, operation.method.toUpperCase(), { Accept: 'application/json' }, undefined, {
-      fetchImpl: fetch,
-      ssrfValidator: validateSSRF,
-    })
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), TIMEOUT.verify)
+    try {
+      const wrappedFetch: typeof fetch = (input, init) =>
+        fetch(input, { ...init, signal: controller.signal })
+      const response = await fetchWithRedirects(url, operation.method.toUpperCase(), { Accept: 'application/json' }, undefined, {
+        fetchImpl: wrappedFetch,
+        ssrfValidator: validateSSRF,
+      })
 
-    if (!response.ok) {
-      return false
+      if (!response.ok) {
+        return false
+      }
+
+      const body = await response.json()
+      const validator = ajv.compile(operation.responseSchema)
+      return Boolean(validator(body))
+    } finally {
+      clearTimeout(timer)
     }
-
-    const body = await response.json()
-    const validator = new Ajv({ strict: false }).compile(operation.responseSchema)
-    return Boolean(validator(body))
   } catch {
-    // intentional: verification probe failed (network, parse) — treat as unverified
+    // intentional: verification probe failed (network, parse, timeout) — treat as unverified
     return false
   }
+}
+
+/**
+ * Verify GET operations with bounded concurrency.
+ * Non-GET operations are marked as unverified immediately (mutations are not safe to replay).
+ */
+async function verifyAllOperations(
+  operations: Array<Omit<AnalyzedOperation, 'verified'>>,
+  ajv: Ajv,
+  doVerify: boolean,
+): Promise<AnalyzedOperation[]> {
+  if (!doVerify) {
+    return operations.map((op) => ({ ...op, verified: false }))
+  }
+
+  const getOps = operations.filter((op) => op.method === 'get')
+
+  // Verify GET operations concurrently with bounded concurrency
+  const verifyResults = new Map<string, boolean>()
+  let cursor = 0
+
+  async function runNext(): Promise<void> {
+    while (cursor < getOps.length) {
+      const idx = cursor++
+      const op = getOps[idx]
+      verifyResults.set(op.operationId, await verifyOperation(op, ajv))
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(VERIFY_CONCURRENCY, getOps.length) },
+    () => runNext(),
+  )
+  await Promise.all(workers)
+
+  return [
+    ...operations.map((op) => ({
+      ...op,
+      verified: verifyResults.get(op.operationId) ?? false,
+    })),
+  ]
 }
 
 export async function compileCommand(args: CompileArgs): Promise<void> {
@@ -133,22 +182,29 @@ export async function compileSite(
   let wsInput: GeneratePackageInput['ws'] | undefined
   const site = siteSlugFromUrl(args.url)
   try {
+    // Load capture data + WS frames in parallel
+    const wsFramesPath = path.join(recordingDir, 'websocket_frames.jsonl')
+    const hasWsFrames = existsSync(wsFramesPath)
+
+    const [captureData, wsConnections] = await Promise.all([
+      loadCaptureData(recordingDir),
+      hasWsFrames ? loadWsCapture(wsFramesPath) : Promise.resolve([] as WsConnection[]),
+    ])
+
     const recordedSamples = await loadRecordedSamples(recordingDir)
     totalRecordedCount = recordedSamples.length
     const filterResult = filterSamples(recordedSamples, { targetUrl: args.url })
     filteredSamples = filterResult.kept
     rejectedSamples = filterResult.rejected
 
-    // Load full capture data for L2 classification
-    const captureData = await loadCaptureData(recordingDir)
+    // L2 classification
     if (captureData.harEntries.length > 0 || captureData.stateSnapshots.length > 0 || captureData.domHtml) {
       classifyResult = classify(captureData)
     }
 
-    // Load WS capture data if present
-    const wsFramesPath = path.join(recordingDir, 'websocket_frames.jsonl')
-    if (existsSync(wsFramesPath)) {
-      wsInput = compileWsFrames(await loadWsCapture(wsFramesPath))
+    // WS compilation
+    if (wsConnections.length > 0) {
+      wsInput = compileWsFrames(wsConnections)
     }
   } finally {
     if (!userProvidedDir) {
@@ -169,8 +225,9 @@ export async function compileSite(
   }
 
   const clusters = clusterSamples(filteredSamples)
-  const analyzedOperations: AnalyzedOperation[] = []
 
+  // Phase 1: CPU-bound analysis (fast, no I/O) — sequential is fine
+  const operationBases: Array<Omit<AnalyzedOperation, 'verified'>> = []
   for (const cluster of clusters) {
     const annotation = annotateOperation(cluster.host, cluster.path, cluster.method)
     const differentiatedParams = differentiateParameters(cluster)
@@ -197,7 +254,7 @@ export async function compileSite(
       }
     }
 
-    const operationBase = {
+    operationBases.push({
       method: cluster.method.toLowerCase(),
       host: cluster.host,
       path: cluster.path,
@@ -208,18 +265,16 @@ export async function compileSite(
       requestBodySchema,
       exampleRequestBody,
       exampleInput: buildExampleInput(annotatedParams),
-    }
-
-    // Only verify GET operations — mutations are not safe to replay
-    const verified = options.verifyReplay === false || cluster.method !== 'GET'
-      ? false
-      : await verifyOperation(operationBase)
-
-    analyzedOperations.push({
-      ...operationBase,
-      verified,
     })
   }
+
+  // Phase 2: Verify GET operations concurrently (network-bound)
+  const ajv = new Ajv({ strict: false })
+  const analyzedOperations: AnalyzedOperation[] = await verifyAllOperations(
+    operationBases,
+    ajv,
+    options.verifyReplay !== false,
+  )
 
   if (analyzedOperations.length === 0 && !classifyResult?.extractions && !hasWsOps) {
     throw new OpenWebError({

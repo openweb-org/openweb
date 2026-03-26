@@ -3,7 +3,7 @@ import type { Browser } from 'playwright-core'
 import type { AnalyzedOperation } from './types.js'
 import type { ClassifyResult } from './analyzer/classify.js'
 import { validateSSRF } from '../lib/ssrf.js'
-import { TIMEOUT } from '../lib/config.js'
+import { TIMEOUT, PROBE_CONCURRENCY } from '../lib/config.js'
 import { logger } from '../lib/logger.js'
 import { fetchWithRedirects } from '../runtime/redirect.js'
 
@@ -24,7 +24,6 @@ export interface ProbeOptions {
 }
 
 const PROBE_TIMEOUT = TIMEOUT.probe
-const PROBE_DELAY = TIMEOUT.probeDelay
 const MAX_OUTBOUND_REQUESTS = 30
 
 /** Fetch with per-hop SSRF validation, cross-origin header stripping, and timeout */
@@ -138,36 +137,35 @@ async function probeOne(
 
 /**
  * Probe GET operations to validate classify heuristics.
+ * Uses bounded concurrency to probe multiple operations in parallel.
  * Returns results only for operations that were successfully probed.
- * Operations that couldn't be probed (timeout, error, non-GET) return no result.
  */
 export async function probeOperations(
   operations: AnalyzedOperation[],
   options: ProbeOptions = {},
 ): Promise<ProbeResult[]> {
+  const getOps = operations.filter((op) => op.method.toLowerCase() === 'get')
+  if (getOps.length === 0) return []
+
   const results: ProbeResult[] = []
   let totalRequests = 0
+  let cursor = 0
 
-  for (const operation of operations) {
-    if (totalRequests >= MAX_OUTBOUND_REQUESTS) break
+  async function runNext(): Promise<void> {
+    while (cursor < getOps.length && totalRequests < MAX_OUTBOUND_REQUESTS) {
+      const idx = cursor++
+      const op = getOps[idx]
+      const remaining = MAX_OUTBOUND_REQUESTS - totalRequests
+      if (remaining <= 0) break
 
-    // Skip non-GET early — don't consume probe budget
-    if (operation.method.toLowerCase() !== 'get') continue
-
-    const [result, requestsMade] = await probeOne(
-      operation, options.browser, options, MAX_OUTBOUND_REQUESTS - totalRequests,
-    )
-    totalRequests += requestsMade
-
-    if (result) {
-      results.push(result)
-    }
-
-    // Rate limit between probes
-    if (totalRequests < MAX_OUTBOUND_REQUESTS) {
-      await new Promise((r) => setTimeout(r, PROBE_DELAY))
+      const [result, requestsMade] = await probeOne(op, options.browser, options, remaining)
+      totalRequests += requestsMade
+      if (result) results.push(result)
     }
   }
+
+  const concurrency = Math.min(PROBE_CONCURRENCY, getOps.length)
+  await Promise.all(Array.from({ length: concurrency }, () => runNext()))
 
   return results
 }

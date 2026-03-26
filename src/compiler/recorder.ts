@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process'
 
 import { OpenWebError } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
+import { TIMEOUT } from '../lib/config.js'
 import type { RecordedRequestSample } from './types.js'
 import type { CaptureData } from './analyzer/classify.js'
 import type { HarEntry as CaptureHarEntry, StateSnapshot } from '../capture/types.js'
@@ -72,15 +73,24 @@ export async function runScriptedRecording(scriptPath: string): Promise<string> 
 
     let stderr = ''
 
+    // Kill child process after timeout to prevent hanging
+    const timer = setTimeout(() => {
+      child.kill('SIGTERM')
+      // Force kill after 5s grace period
+      setTimeout(() => child.kill('SIGKILL'), 5_000)
+    }, TIMEOUT.recording)
+
     child.stderr.on('data', (chunk: Buffer) => {
       stderr += chunk.toString('utf8')
     })
 
     child.on('error', (error) => {
+      clearTimeout(timer)
       reject(error)
     })
 
     child.on('close', (code) => {
+      clearTimeout(timer)
       if (code === 0) {
         resolve()
         return
