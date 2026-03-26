@@ -1,0 +1,15 @@
+{
+  "operation_id": "getDownloadRange",
+  "cases": [
+    {
+      "input": {
+        "package": "express",
+        "period": "last-week"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

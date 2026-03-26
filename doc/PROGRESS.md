@@ -1,3 +1,15 @@
+## 2026-03-26: npm — expand coverage from 2 to 6 ops
+
+**What changed:**
+- Added 4 new operations: getPackageVersion, getDistTags, getDownloadStats, getDownloadRange
+- Per-operation server override for api.npmjs.org download endpoints
+- DOC.md updated with all 6 operations
+
+**Why:**
+- Expand npm beyond search/metadata to include version details and download statistics
+
+**Verification:** All 6 operations PASS via `openweb verify npm`
+
 ## 2026-03-26: CoinGecko — expand coverage from 3 to 8 ops
 
 **What changed:**

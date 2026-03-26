@@ -1,0 +1,15 @@
+{
+  "operation_id": "getPackageVersion",
+  "cases": [
+    {
+      "input": {
+        "package": "express",
+        "version": "4.21.2"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

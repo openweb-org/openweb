@@ -11,7 +11,7 @@ paths:
   /{package}:
     get:
       operationId: getPackage
-      summary: Get metadata for an npm package by name
+      summary: Get full metadata for an npm package by name
       x-openweb:
         transport: node
         permission: read
@@ -27,7 +27,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Package name (e.g. express).
+          description: Package name (e.g. express). For scoped packages use %40scope%2Fname.
       responses:
         '200':
           description: Success.
@@ -67,6 +67,12 @@ paths:
                         type: string
                       url:
                         type: string
+                  readme:
+                    type: string
+                  license:
+                    type: string
+                  homepage:
+                    type: string
   /-/v1/search:
     get:
       operationId: searchPackages
@@ -143,4 +149,199 @@ paths:
                   total:
                     type: integer
                   time:
+                    type: string
+  /{package}/{version}:
+    get:
+      operationId: getPackageVersion
+      summary: Get metadata for a specific version of a package
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: npm0003
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: package
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Package name (e.g. express).
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Semver version string (e.g. 4.21.2).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, version]
+                properties:
+                  name:
+                    type: string
+                  version:
+                    type: string
+                  description:
+                    type: string
+                  main:
+                    type: string
+                  dependencies:
+                    type: object
+                  devDependencies:
+                    type: object
+                  dist:
+                    type: object
+                    properties:
+                      shasum:
+                        type: string
+                      tarball:
+                        type: string
+                      integrity:
+                        type: string
+                  engines:
+                    type: object
+                  license:
+                    type: string
+                  repository:
+                    type: object
+                  scripts:
+                    type: object
+  /-/package/{package}/dist-tags:
+    get:
+      operationId: getDistTags
+      summary: Get dist-tags (latest, next, etc.) for a package
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: npm0004
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: package
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Package name (e.g. express).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  latest:
+                    type: string
+                  next:
+                    type: string
+  /downloads/point/{period}/{package}:
+    get:
+      operationId: getDownloadStats
+      summary: Get total download count for a package over a period
+      servers:
+        - url: https://api.npmjs.org
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: npm0005
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: package
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Package name (e.g. express).
+        - name: period
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [last-day, last-week, last-month, last-year]
+          description: Time period for download counts.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [downloads, package, start, end]
+                properties:
+                  downloads:
+                    type: integer
+                  start:
+                    type: string
+                  end:
+                    type: string
+                  package:
+                    type: string
+  /downloads/range/{period}/{package}:
+    get:
+      operationId: getDownloadRange
+      summary: Get daily download counts for a package over a date range
+      servers:
+        - url: https://api.npmjs.org
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: npm0006
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: package
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Package name (e.g. express).
+        - name: period
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Date range as last-week, last-month, or YYYY-MM-DD:YYYY-MM-DD.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [downloads, package, start, end]
+                properties:
+                  downloads:
+                    type: array
+                    items:
+                      type: object
+                      required: [downloads, day]
+                      properties:
+                        downloads:
+                          type: integer
+                        day:
+                          type: string
+                  start:
+                    type: string
+                  end:
+                    type: string
+                  package:
                     type: string
