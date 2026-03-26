@@ -405,6 +405,230 @@ paths:
                       type: boolean
                     web_url:
                       type: string
+  /api/v4/projects/{projectId}/repository/files/{filePath}:
+    get:
+      operationId: getProjectFile
+      summary: Get file metadata from repository
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gl0009
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID or URL-encoded path of the project.
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+          description: URL-encoded full path to the file (e.g. README%2Emd).
+        - name: ref
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Branch name, tag, or commit SHA.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file_name:
+                    type: string
+                  file_path:
+                    type: string
+                  size:
+                    type: integer
+                  encoding:
+                    type: string
+                  content_sha256:
+                    type: string
+                  ref:
+                    type: string
+                  blob_id:
+                    type: string
+                  last_commit_id:
+                    type: string
+                  content:
+                    type: string
+  /api/v4/projects/{projectId}/repository/files/{filePath}/raw:
+    get:
+      operationId: getProjectFileRaw
+      summary: Get raw file content from repository
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gl0010
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID or URL-encoded path of the project.
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+          description: URL-encoded full path to the file (e.g. README%2Emd).
+        - name: ref
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Branch name, tag, or commit SHA.
+      responses:
+        '200':
+          description: Raw file content.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/v4/users:
+    get:
+      operationId: searchUsers
+      summary: Search users
+      x-openweb:
+        permission: read
+        pagination:
+          type: link_header
+        build:
+          stable_id: gl0011
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: username
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Exact username to look up.
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search users by name or username.
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of results per page (max 100).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    username:
+                      type: string
+                    name:
+                      type: string
+                    state:
+                      type: string
+                    avatar_url:
+                      type: string
+                    web_url:
+                      type: string
+  /api/v4/projects/{projectId}/star:
+    post:
+      operationId: starProject
+      summary: Star a project
+      x-openweb:
+        permission: write
+        build:
+          stable_id: gl0012
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID or URL-encoded path of the project.
+      responses:
+        '201':
+          description: Project starred successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  star_count:
+                    type: integer
+  /api/v4/projects/{projectId}/unstar:
+    post:
+      operationId: unstarProject
+      summary: Unstar a project
+      x-openweb:
+        permission: write
+        build:
+          stable_id: gl0013
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID or URL-encoded path of the project.
+      responses:
+        '200':
+          description: Project unstarred successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  star_count:
+                    type: integer
   /api/v4/groups:
     get:
       operationId: searchGroups
