@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-03-23 (doc-normalize)
+> Last updated: 2026-03-26 (M38)
 
 ## Quick Start
 
@@ -10,8 +10,8 @@
 | Build | `pnpm build` |
 | Test | `pnpm test` |
 | Lint | `pnpm lint` |
-| List sites | `pnpm dev sites` |
-| Execute | `pnpm dev <site> exec <op> '{...}'` |
+| List sites | `openweb sites` |
+| Execute | `openweb <site> exec <op> '{...}'` |
 
 ---
 
@@ -54,46 +54,33 @@ src/
 │   ├── test.ts                 #   run site tests
 │   └── sites.ts                #   list available sites
 │
-├── runtime/                    # Operation execution
+├── runtime/                    # Operation execution (HTTP + WS)
 │   ├── executor.ts             #   Main dispatcher (mode routing)
-│   ├── session-executor.ts     #   session_http mode (HTTP + browser cookies)
+│   ├── http-executor.ts        #   HTTP execution (direct + session)
 │   ├── browser-fetch-executor.ts # browser_fetch mode (page.evaluate)
-│   ├── adapter-executor.ts     #   L3 adapter loading + execution
-│   ├── extraction-executor.ts  #   extraction-only operations
-│   ├── paginator.ts            #   Pagination (cursor + link_header)
-│   ├── token-cache.ts          #   Auth token cache with TTL
-│   ├── navigator.ts            #   CLI navigation helper
-│   ├── value-path.ts           #   Shared dot-path helper
-│   └── primitives/             #   L2 primitive resolvers (14 handlers + helpers)
-│       ├── cookie-session.ts
-│       ├── cookie-to-header.ts
-│       ├── localstorage-jwt.ts
-│       ├── page-global.ts
-│       ├── sessionstorage-msal.ts
-│       ├── sapisidhash.ts
-│       ├── meta-tag.ts
-│       ├── api-response.ts
-│       ├── exchange-chain.ts
-│       ├── script-json.ts
-│       ├── ssr-next-data.ts
-│       ├── html-selector.ts
-│       ├── page-global-data.ts
-│       └── webpack-module-walk.ts
+│   ├── node-ssr-executor.ts    #   Node SSR execution
+│   ├── ws-executor.ts          #   WebSocket operation execution
+│   ├── ws-connection.ts        #   WS connection manager (7-state machine)
+│   ├── ws-router.ts            #   WS message routing
+│   ├── ws-runtime.ts           #   WS runtime lifecycle
+│   ├── cache-manager.ts        #   Response cache
+│   ├── token-cache.ts          #   Auth token cache (AES-256-GCM vault)
+│   ├── test-runner.ts          #   verify command implementation
+│   └── primitives/             #   L2 primitive resolvers (14 handlers)
 │
 ├── types/                      # Meta-spec type system
-│   ├── primitives.ts           #   27 L2 primitive discriminated unions
+│   ├── primitives.ts           #   L2 primitive discriminated unions
 │   ├── primitive-schemas.ts    #   JSON Schema for L2 primitives (AJV)
 │   ├── extensions.ts           #   XOpenWebServer, XOpenWebOperation
 │   ├── adapter.ts              #   CodeAdapter interface
-│   ├── manifest.ts             #   Manifest type
-│   ├── schema.ts               #   Composite JSON Schema
-│   ├── validator.ts            #   AJV validation
 │   └── index.ts                #   Re-exports
 │
 ├── compiler/                   # Site compilation
 │   ├── recorder.ts             #   HAR parsing + scripted recording
-│   ├── generator.ts            #   OpenAPI + manifest emission
-│   └── analyzer/               #   cluster → filter → differentiate → schema → annotate → classify
+│   ├── prober.ts               #   Post-compile endpoint verification
+│   ├── analyzer/               #   filter → cluster → differentiate → classify → schema
+│   ├── generator/              #   openapi.ts, asyncapi.ts, package.ts (split emitters)
+│   └── ws-analyzer/            #   WS capture → classify → cluster → schema
 │
 ├── capture/                    # Browser CDP recording
 │   ├── session.ts              #   Capture lifecycle orchestrator
@@ -102,27 +89,32 @@ src/
 │   ├── state-capture.ts        #   localStorage, sessionStorage, cookies
 │   ├── dom-capture.ts          #   Meta tags, hidden inputs, framework globals
 │   ├── bundle.ts               #   Write capture bundle to disk
-│   ├── connection.ts           #   CDP connection with retry
-│   └── types.ts                #   Capture type definitions
+│   └── connection.ts           #   CDP connection with retry
 │
 ├── lib/                        # Shared utilities
-│   ├── openapi.ts              #   OpenAPI parsing, URL building, site resolution
-│   ├── ssrf.ts                 #   SSRF validation (IPv4/v6, DNS, metadata)
-│   └── errors.ts               #   Structured error contract
+│   ├── site-resolver.ts        #   Site resolution (bundled + user-installed)
+│   ├── spec-loader.ts          #   OpenAPI/AsyncAPI spec loading
+│   ├── site-package.ts         #   Site package abstraction
+│   ├── openapi.ts              #   OpenAPI parsing, URL building
+│   ├── asyncapi.ts             #   AsyncAPI parsing
+│   ├── param-validator.ts      #   Parameter validation
+│   ├── permissions.ts          #   Permission system
+│   ├── permission-derive.ts    #   Permission derivation from specs
+│   ├── ssrf.ts                 #   SSRF validation (mandatory)
+│   ├── errors.ts               #   OpenWebError structured errors
+│   ├── logger.ts               #   Logger utility
+│   ├── config.ts               #   Configuration
+│   └── cookies.ts              #   Cookie management
 │
-└── sites/                      # Site packages (12 sites)
-    ├── open-meteo/     #   L1 (no x-openweb)
-    ├── instagram/      #   L2 (cookie_session + cookie_to_header)
-    ├── bluesky/        #   L2 (localStorage_jwt)
-    ├── youtube/        #   L2 (page_global + sapisidhash)
-    ├── github/         #   L2 (meta_tag + script_json)
-    ├── reddit/         #   L2 (cookie_session)
-    ├── walmart/        #   L2 (ssr_next_data extraction)
-    ├── hackernews/     #   L2 (html_selector extraction)
-    ├── microsoft-word/ #   L2 (sessionStorage_msal auth)
-    ├── discord/        #   L2 (webpack_module_walk + browser_fetch)
-    ├── whatsapp/       #   L3 adapter (Meta require() module system)
-    └── telegram/       #   L3 adapter (teact global state)
+└── sites/                      # Site packages (67 sites)
+    ├── open-meteo/             #   L1 (no x-openweb)
+    ├── instagram/              #   L2 (cookie_session + cookie_to_header)
+    ├── youtube/                #   L2 (page_global + sapisidhash)
+    ├── discord/                #   L2 + WS (webpack_module_walk + gateway)
+    ├── coinbase/               #   WS (AsyncAPI, compiler-generated)
+    ├── whatsapp/               #   L3 adapter (Meta require() module system)
+    ├── telegram/               #   L3 adapter (teact global state)
+    └── ...                     #   64 more sites
 ```
 
 ---
@@ -162,6 +154,7 @@ src/
 | **Primitive** | Declarative config unit for auth, CSRF, signing, pagination, extraction | [primitives/](primitives/README.md) |
 | **CodeAdapter** | L3 escape hatch — arbitrary JS running in browser context | [adapters.md](adapters.md) |
 | **Skill Package** | Per-site artifact: openapi.yaml + manifest.json + adapters/ + tests/ | [compiler.md](compiler.md) |
+| **AsyncAPI Package** | Per-site WS artifact: asyncapi.yaml for real-time event channels | [compiler.md](compiler.md) |
 | **Capture Bundle** | Raw recording: traffic.har + websocket_frames.jsonl + state + DOM | [browser-capture.md](browser-capture.md) |
 | **SSRF Protection** | DNS-resolved IP validation on every outgoing request | [security.md](security.md) |
 
