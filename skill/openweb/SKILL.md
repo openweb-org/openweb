@@ -5,45 +5,53 @@ description: "Access web services through the openweb CLI. Run `openweb sites` t
 
 # OpenWeb — Web Service Access via CLI
 
-Execute API operations against websites using the user's real browser session. Handles auth, CSRF, and signing automatically.
+Execute operations against websites using the user's real browser session. Handles auth, CSRF, signing, and protocol (HTTP/WS) automatically.
 
 ## Route by Intent
 
 ```
 User wants to...
-├── Access a website → Is there a fixture?
-│   ├── Yes → Exec flow below
-│   └── No  → Read references/discover.md (discover → compile → verify)
-├── Compile from captured traffic → Read references/compile.md
-├── Debug / fix an issue → Read references/troubleshooting.md
-└── Understand the CLI → Read references/cli.md
+├── Use a site that may already exist
+│   ├── Check `openweb sites`
+│   ├── Site exists → Exec flow below
+│   └── Site does not exist → Read references/discover.md
+├── Add or expand site coverage (new site OR more ops)
+│   └── Read references/discover.md
+├── Review compile output (HTTP and/or WS)
+│   └── Read references/compile.md
+├── Diagnose failures
+│   └── Read references/troubleshooting.md
+└── Update durable docs/knowledge
+    ├── Site-specific → references/site-doc.md
+    └── Cross-site patterns → references/update-knowledge.md
 ```
 
-If a site has no fixture, do NOT say "unsupported." Route to the discover flow.
+If a site has no package, do NOT say "unsupported." Route to the discover flow.
 
 ## Exec Flow (hot path)
 
 ### 1. Find the site
 ```bash
-pnpm --silent dev sites                              # list available sites
+openweb sites                                      # list available sites
 ```
 
 ### 2. Check readiness
 ```bash
-pnpm --silent dev <site>                             # transport, auth, operations
+openweb <site>                                     # transport, auth, operations
 ```
 - `Requires browser: yes` → run `openweb browser start` first
 - `Requires login: yes` → user must be logged in
 
 ### 3. Inspect the operation
 ```bash
-pnpm --silent dev <site> <op>                        # params, response shape
-pnpm --silent dev <site> <op> --example              # example params JSON
+openweb <site> <op>                                # params, response shape
+openweb <site> <op> --example                      # example params JSON
 ```
+Operations may be HTTP or WS. Inspect to see the type, parameters, and response shape.
 
 ### 4. Execute
 ```bash
-pnpm --silent dev <site> <op> '{"key":"value"}'      # stdout=JSON result, stderr=JSON error
+openweb <site> exec <op> '{"key":"value"}'         # stdout=JSON result, stderr=JSON error
 ```
 Auto-spill: responses over 4096 bytes write to temp file.
 
@@ -65,9 +73,12 @@ Errors on stderr include `failureClass`:
 
 | File | When |
 |---|---|
-| `references/discover.md` | Adding a new site (no fixture exists) |
-| `references/compile.md` | Reviewing/curating compile output |
-| `references/cli.md` | Full CLI reference, browser mgmt, permissions |
+| `references/discover.md` | Adding or expanding a site |
+| `references/compile.md` | Reviewing compile output |
+| `references/site-doc.md` | DOC.md / PROGRESS.md template |
+| `references/cli.md` | CLI reference, browser mgmt |
 | `references/troubleshooting.md` | Debugging errors |
-| `references/update-knowledge.md` | After any workflow that taught something new |
-| `references/knowledge/` | Auth patterns, site archetypes (read before discover/compile) |
+| `references/update-knowledge.md` | After learning something new |
+| `references/knowledge/archetypes.md` | Before discover — site type |
+| `references/knowledge/auth-patterns.md` | Before compile — auth detection |
+| `references/knowledge/troubleshooting-patterns.md` | During debug — failure patterns |
