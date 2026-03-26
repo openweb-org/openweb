@@ -16,6 +16,9 @@ Visual discovery and bookmarking platform. Search pins/images by keyword, browse
 | getRelatedPins | get "more like this" recommendations | Resource API | RelatedModulesResource for a pin ID |
 | getTypeahead | search autocomplete suggestions | Resource API | AdvancedTypeaheadResource |
 | getPinComments | get comments on a pin | Resource API | UnifiedCommentsResource; paginated |
+| savePin | save (repin) a pin to a board | Resource API | RepinResource/create; requires auth + CSRF |
+| likePin | react to (like) a pin | Resource API | ApiResource → /v3/pins/{id}/react/; requires auth + CSRF |
+| followUser | follow a user/pinner | Resource API | UserFollowResource/create; requires auth + CSRF |
 
 ## API Architecture
 - **Resource API**: All data served through `/resource/{ResourceName}/get/` GET endpoints
@@ -29,6 +32,7 @@ Visual discovery and bookmarking platform. Search pins/images by keyword, browse
 - Logged-in users get personalized home feed and recommendations
 - Auth tracked via `_auth`, `_pinterest_sess` cookies
 - CSRF protection via `csrftoken` cookie → `X-CSRFToken` header (required for write operations, optional for reads)
+- Write operations (savePin, likePin, followUser) require authentication
 
 ## Transport
 - `transport: page` — browser fetch for all operations
@@ -46,4 +50,5 @@ Visual discovery and bookmarking platform. Search pins/images by keyword, browse
 - **Rate limiting**: Heavy API usage may trigger temporary blocks
 - **Logged-out limitations**: Home feed returns generic trending content without login
 - **Bookmark pagination**: No page numbers; must iterate sequentially via bookmarks
-- **Write operations**: Save, create board, comment require auth + CSRF token (not implemented)
+- **Write operations**: Save, like, follow require auth + CSRF token — all are reversible (unsave, unlike, unfollow)
+- **Board follow**: Not available via current web Resource API (removed from web UI)

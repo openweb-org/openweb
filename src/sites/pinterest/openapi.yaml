@@ -428,6 +428,136 @@ paths:
                   bookmark:
                     type: string
                     nullable: true
+  /pin/{pinId}/save:
+    post:
+      operationId: savePin
+      summary: Save (repin) a pin to one of your boards
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          verified: true
+          stable_id: pin0011
+          signature_id: pin0011s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: savePin
+      parameters:
+        - name: pinId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pinterest pin ID to save (numeric string).
+        - name: boardId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Board ID to save the pin to.
+      responses:
+        '200':
+          description: Pin saved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  pinId:
+                    type: string
+                    description: New pin ID created by the save.
+                  boardId:
+                    type: string
+                  originalPinId:
+                    type: string
+  /pin/{pinId}/like:
+    post:
+      operationId: likePin
+      summary: React to (like) a pin — adds a heart reaction
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          verified: true
+          stable_id: pin0012
+          signature_id: pin0012s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: likePin
+      parameters:
+        - name: pinId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pinterest pin ID to react to (numeric string).
+      responses:
+        '200':
+          description: Pin reacted to successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  pinId:
+                    type: string
+  /user/{userId}/follow:
+    post:
+      operationId: followUser
+      summary: Follow a Pinterest user/pinner
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          verified: true
+          stable_id: pin0013
+          signature_id: pin0013s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: pinterest-api
+          operation: followUser
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Pinterest user ID to follow (numeric string).
+        - name: username
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Username (optional, used for source context).
+      responses:
+        '200':
+          description: User followed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  userId:
+                    type: string
+                  username:
+                    type: string
+                  fullName:
+                    type: string
+                    nullable: true
 components:
   schemas:
     Pin:

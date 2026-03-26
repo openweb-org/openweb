@@ -53,6 +53,60 @@ async function resourceGet(
   return json.resource_response?.data
 }
 
+async function getCSRFToken(page: Page): Promise<string> {
+  const cookies = await page.context().cookies(BASE_URL)
+  const token = cookies.find((c) => c.name === 'csrftoken')?.value
+  if (!token) throw OpenWebError.authRequired('Pinterest CSRF token not found — login required')
+  return token
+}
+
+async function resourceCreate(
+  page: Page,
+  resource: string,
+  action: 'create' | 'delete',
+  options: Record<string, unknown>,
+  sourceUrl = '/',
+): Promise<unknown> {
+  const csrfToken = await getCSRFToken(page)
+  const url = `${BASE_URL}/resource/${resource}/${action}/`
+
+  const result = await page.evaluate(
+    async (args: { url: string; options: Record<string, unknown>; sourceUrl: string; csrfToken: string }) => {
+      const body = new URLSearchParams()
+      body.append('source_url', args.sourceUrl)
+      body.append('data', JSON.stringify({ options: args.options, context: {} }))
+      const resp = await fetch(args.url, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json, text/javascript, */*, q=0.01',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-Pinterest-AppState': 'active',
+          'X-CSRFToken': args.csrfToken,
+        },
+        credentials: 'include',
+        body: body.toString(),
+      })
+      return { status: resp.status, text: await resp.text() }
+    },
+    { url, options, sourceUrl, csrfToken },
+  )
+
+  if (result.status >= 400) {
+    throw OpenWebError.httpError(result.status)
+  }
+
+  const json = JSON.parse(result.text) as {
+    resource_response?: { data?: unknown; error?: unknown; status?: string }
+  }
+
+  if (json.resource_response?.error) {
+    throw OpenWebError.apiError('Pinterest', JSON.stringify(json.resource_response.error))
+  }
+
+  return json.resource_response?.data
+}
+
 /* ---------- operation handlers ---------- */
 
 async function searchPins(page: Page, params: Record<string, unknown>): Promise<unknown> {
@@ -229,6 +283,92 @@ async function getPinComments(page: Page, params: Record<string, unknown>): Prom
   }
 }
 
+/* ---------- write operations ---------- */
+
+async function savePin(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const pinId = String(params.pinId ?? params.id ?? '')
+  const boardId = String(params.boardId ?? '')
+  if (!pinId) throw OpenWebError.validation('pinId is required')
+  if (!boardId) throw OpenWebError.validation('boardId is required')
+
+  const data = await resourceCreate(
+    page,
+    'RepinResource',
+    'create',
+    { pin_id: pinId, board_id: boardId, section_id: null, is_buyable_pin: false },
+    `/pin/${pinId}/`,
+  )
+
+  const pin = data as Record<string, unknown> | null
+  return {
+    success: true,
+    pinId: pin?.id ?? null,
+    boardId,
+    originalPinId: pinId,
+  }
+}
+
+async function likePin(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const pinId = String(params.pinId ?? params.id ?? '')
+  if (!pinId) throw OpenWebError.validation('pinId is required')
+
+  const csrfToken = await getCSRFToken(page)
+  const url = `${BASE_URL}/resource/ApiResource/create/`
+
+  const result = await page.evaluate(
+    async (args: { url: string; pinId: string; sourceUrl: string; csrfToken: string }) => {
+      const body = new URLSearchParams()
+      body.append('source_url', args.sourceUrl)
+      body.append('data', JSON.stringify({
+        options: { url: `/v3/pins/${args.pinId}/react/`, data: {} },
+        context: {},
+      }))
+      const resp = await fetch(args.url, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json, text/javascript, */*, q=0.01',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-Pinterest-AppState': 'active',
+          'X-CSRFToken': args.csrfToken,
+        },
+        credentials: 'include',
+        body: body.toString(),
+      })
+      return { status: resp.status, text: await resp.text() }
+    },
+    { url, pinId, sourceUrl: `/pin/${pinId}/`, csrfToken },
+  )
+
+  if (result.status >= 400) {
+    throw OpenWebError.httpError(result.status)
+  }
+
+  return { success: true, pinId }
+}
+
+async function followUser(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const userId = String(params.userId ?? params.id ?? '')
+  if (!userId) throw OpenWebError.validation('userId is required')
+  const username = params.username ? String(params.username) : ''
+
+  const data = await resourceCreate(
+    page,
+    'UserFollowResource',
+    'create',
+    { user_id: userId },
+    username ? `/${username}/` : '/',
+  )
+
+  const user = data as Record<string, unknown> | null
+  return {
+    success: true,
+    userId,
+    username: user?.username ?? username,
+    fullName: user?.full_name ?? null,
+  }
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
@@ -242,6 +382,9 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getRelatedPins,
   getTypeahead,
   getPinComments,
+  savePin,
+  likePin,
+  followUser,
 }
 
 const adapter: CodeAdapter = {
