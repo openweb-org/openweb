@@ -881,3 +881,144 @@ paths:
                                 content:
                                   type: string
                                   description: Reason text (e.g. "百万播放").
+  /x/web-interface/archive/like:
+    post:
+      operationId: likeVideo
+      summary: Like or unlike a video — reversible, requires auth
+      x-openweb:
+        permission: write
+        safety: safe
+        requires_auth: true
+        build:
+          stable_id: bili0011
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: bilibili-web
+          operation: likeVideo
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - aid
+              properties:
+                aid:
+                  type: integer
+                  description: Video aid (from getVideoDetail).
+                like:
+                  type: integer
+                  default: 1
+                  description: 1 = like, 2 = unlike.
+      responses:
+        '200':
+          description: Like result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 0 = success, 65006 = already liked/unliked.
+                  message:
+                    type: string
+  /x/v3/fav/resource/deal:
+    post:
+      operationId: addToFavorites
+      summary: Add or remove a video from favorites folder — reversible, requires auth
+      x-openweb:
+        permission: write
+        safety: safe
+        requires_auth: true
+        build:
+          stable_id: bili0012
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: bilibili-web
+          operation: addToFavorites
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - rid
+                - add_media_ids
+              properties:
+                rid:
+                  type: integer
+                  description: Video aid (from getVideoDetail).
+                add_media_ids:
+                  type: string
+                  description: Comma-separated favorite folder IDs to add to.
+                del_media_ids:
+                  type: string
+                  description: Comma-separated favorite folder IDs to remove from.
+      responses:
+        '200':
+          description: Favorites result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 0 = success.
+                  message:
+                    type: string
+  /x/relation/modify:
+    post:
+      operationId: followUploader
+      summary: Follow or unfollow a user — reversible, requires auth
+      x-openweb:
+        permission: write
+        safety: safe
+        requires_auth: true
+        build:
+          stable_id: bili0013
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: bilibili-web
+          operation: followUploader
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - fid
+              properties:
+                fid:
+                  type: integer
+                  description: Target user ID (mid).
+                act:
+                  type: integer
+                  default: 1
+                  description: 1 = follow, 2 = unfollow.
+      responses:
+        '200':
+          description: Follow result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 0 = success.
+                  message:
+                    type: string

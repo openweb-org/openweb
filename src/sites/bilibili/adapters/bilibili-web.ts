@@ -16,6 +16,36 @@ const API_BASE = 'https://api.bilibili.com'
 
 /* ---------- helpers ---------- */
 
+async function getCSRFToken(page: Page): Promise<string> {
+  const cookies = await page.context().cookies('https://www.bilibili.com')
+  const biliJct = cookies.find((c) => c.name === 'bili_jct')
+  if (!biliJct?.value) throw OpenWebError.needsLogin()
+  return biliJct.value
+}
+
+async function postApiViaPage(
+  page: Page,
+  apiPath: string,
+  body: Record<string, unknown>,
+): Promise<unknown> {
+  return page.evaluate(
+    async ({ path, data }) => {
+      const form = new URLSearchParams()
+      for (const [k, v] of Object.entries(data)) {
+        if (v !== undefined && v !== null) form.set(k, String(v))
+      }
+      const resp = await fetch(new URL(path, 'https://api.bilibili.com').toString(), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+      })
+      return resp.json()
+    },
+    { path: apiPath, data: body },
+  )
+}
+
 async function interceptApiResponse(
   page: Page,
   urlPattern: string,
@@ -213,6 +243,39 @@ async function getRecommendedFeed(page: Page, params: Record<string, unknown>): 
   })
 }
 
+/* ---------- write operations ---------- */
+
+async function likeVideo(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const aid = Number(params.aid)
+  if (!aid) throw OpenWebError.missingParam('aid')
+  const like = Number(params.like ?? 1)
+  const csrf = await getCSRFToken(page)
+  return postApiViaPage(page, '/x/web-interface/archive/like', { aid, like, csrf })
+}
+
+async function addToFavorites(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const rid = Number(params.rid)
+  if (!rid) throw OpenWebError.missingParam('rid')
+  const addMediaIds = String(params.add_media_ids ?? '')
+  if (!addMediaIds) throw OpenWebError.missingParam('add_media_ids')
+  const csrf = await getCSRFToken(page)
+  return postApiViaPage(page, '/x/v3/fav/resource/deal', {
+    rid,
+    type: 2,
+    add_media_ids: addMediaIds,
+    del_media_ids: params.del_media_ids ?? '',
+    csrf,
+  })
+}
+
+async function followUploader(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const fid = Number(params.fid)
+  if (!fid) throw OpenWebError.missingParam('fid')
+  const act = Number(params.act ?? 1)
+  const csrf = await getCSRFToken(page)
+  return postApiViaPage(page, '/x/relation/modify', { fid, act, re_src: 11, csrf })
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
@@ -226,6 +289,9 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getUploaderStats,
   getUserVideos,
   getRecommendedFeed,
+  likeVideo,
+  addToFavorites,
+  followUploader,
 }
 
 const adapter: CodeAdapter = {

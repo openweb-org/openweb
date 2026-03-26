@@ -15,10 +15,10 @@
     "getUserInfo → getUserVideos": "getUserInfo returns mid used by getUserVideos"
   },
   "stats": {
-    "operation_count": 10,
+    "operation_count": 13,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 10,
+    "l3_count": 13,
     "ws_count": 0
   },
   "last_verified": "2026-03-24T16:21:01.718Z",

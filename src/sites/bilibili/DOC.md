@@ -17,6 +17,13 @@ China's largest video-sharing platform (similar to YouTube). Archetype: Video/So
 | getUserVideos | search user's uploaded videos | `page.evaluate(fetch)` `/x/space/wbi/arc/search` | Paginated, sortable by date/views/favorites |
 | getRecommendedFeed | get homepage recommended videos | Intercept `/x/web-interface/wbi/index/top/feed/rcmd` | Personalized feed with stats |
 
+### Write Operations (3)
+| Operation | Description | Safety |
+|-----------|-------------|--------|
+| likeVideo | Like/unlike a video (aid, like=1\|2) | ✅ SAFE — reversible |
+| addToFavorites | Add/remove video from favorites folder (rid, add_media_ids) | ✅ SAFE — reversible |
+| followUploader | Follow/unfollow a user (fid, act=1\|2) | ✅ SAFE — reversible |
+
 ## API Architecture
 - REST APIs at `api.bilibili.com/x/` — all return `{ code, message, data }` envelope
 - **Wbi signing**: Most endpoints require `w_rid` and `wts` query params — MD5 hash of sorted params + mixing key from `/x/web-interface/nav`
@@ -28,6 +35,7 @@ China's largest video-sharing platform (similar to YouTube). Archetype: Video/So
 - Most read operations work without login
 - Search, trending, ranking, video detail, comments all public
 - User profile mostly public; some fields require login
+- **Write operations** require `SESSDATA` + `bili_jct` cookies (CSRF token derived from `bili_jct`)
 
 ## Transport
 - `page` (L3 adapter) — all operations via page navigation + API interception or in-page fetch
