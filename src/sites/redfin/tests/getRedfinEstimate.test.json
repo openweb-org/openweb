@@ -1,0 +1,12 @@
+{
+  "operation_id": "getRedfinEstimate",
+  "cases": [
+    {
+      "input": { "state": "WA", "city": "Seattle", "address": "3412-NW-56th-St-98107", "propertyId": "200910046" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

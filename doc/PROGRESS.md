@@ -1,3 +1,16 @@
+## 2026-03-26: Redfin — expand coverage from 3 to 7 ops
+
+**What changed:**
+- Added 4 new operations: getListingPhotos, getPriceHistory, getMarketInsights, getSimilarHomes
+- All new ops use DOM extraction from SSR-rendered property detail pages
+- Test files added for all 7 operations
+- DOC.md updated with full operation table and extraction details
+
+**Why:**
+- Expand real estate vertical coverage for core research intents (photos, history, market conditions, comparables)
+
+**Verification:** All 7 operations PASS via `openweb verify redfin`
+
 ## 2026-03-26: npm — expand coverage from 2 to 6 ops
 
 **What changed:**

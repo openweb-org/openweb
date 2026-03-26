@@ -288,3 +288,346 @@ paths:
                   message:
                     type: string
                     description: Present when estimate is unavailable.
+  /{state}/{city}/{address}/home/{propertyId}/photos:
+    get:
+      operationId: getListingPhotos
+      summary: Extract all listing photo URLs from an open Redfin property page via JSON-LD
+      x-openweb:
+        permission: read
+        build:
+          stable_id: rf0004
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: redfin-dom
+          operation: getListingPhotos
+      parameters:
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Two-letter state code (e.g. "WA").
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+          description: City name (e.g. "Seattle").
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+          description: URL-formatted address (e.g. "3412-NW-56th-St-98107").
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Redfin property ID (e.g. "200910046"). The property page must already be open.
+      responses:
+        '200':
+          description: All listing photos extracted from the property page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - photoCount
+                  - photos
+                properties:
+                  address:
+                    type: string
+                    description: Property address.
+                  url:
+                    type: string
+                    description: Redfin listing URL.
+                  photoCount:
+                    type: integer
+                    description: Number of listing photos.
+                  photos:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - url
+                      properties:
+                        url:
+                          type: string
+                          description: Photo URL on Redfin CDN.
+                        width:
+                          type:
+                            - integer
+                            - 'null'
+                          description: Photo width in pixels.
+                        height:
+                          type:
+                            - integer
+                            - 'null'
+                          description: Photo height in pixels.
+                    description: Listing photo objects with URL and dimensions.
+                  message:
+                    type: string
+                    description: Present when no photos are found.
+  /{state}/{city}/{address}/home/{propertyId}/history:
+    get:
+      operationId: getPriceHistory
+      summary: Extract sale and tax history events from an open Redfin property page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: rf0005
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: redfin-dom
+          operation: getPriceHistory
+      parameters:
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Two-letter state code (e.g. "WA").
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+          description: City name (e.g. "Seattle").
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+          description: URL-formatted address (e.g. "3412-NW-56th-St-98107").
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Redfin property ID (e.g. "200910046"). The property page must already be open.
+      responses:
+        '200':
+          description: Sale and tax history extracted from the property page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - eventCount
+                  - events
+                properties:
+                  address:
+                    type: string
+                    description: Property address from the history section heading.
+                  eventCount:
+                    type: integer
+                    description: Number of history events extracted.
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          description: Event date (e.g. "Mar 18, 2026").
+                        event:
+                          type: string
+                          description: Event type (e.g. "Listed (Active)", "Sold").
+                        source:
+                          type:
+                            - string
+                            - 'null'
+                          description: MLS source info.
+                        price:
+                          type:
+                            - string
+                            - 'null'
+                          description: Price at event (e.g. "$849,000").
+                        pricePerSqft:
+                          type:
+                            - string
+                            - 'null'
+                          description: Price per square foot (e.g. "$810/sq ft").
+                    description: Chronological sale/listing events.
+                  message:
+                    type: string
+                    description: Present when no history section is found.
+  /{state}/{city}/{address}/home/{propertyId}/market:
+    get:
+      operationId: getMarketInsights
+      summary: Extract local market insights (market type, offer trends, days on market) from an open Redfin property page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: rf0006
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: redfin-dom
+          operation: getMarketInsights
+      parameters:
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Two-letter state code (e.g. "WA").
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+          description: City name (e.g. "Seattle").
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+          description: URL-formatted address (e.g. "3412-NW-56th-St-98107").
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Redfin property ID (e.g. "200910046"). The property page must already be open.
+      responses:
+        '200':
+          description: Local market insights extracted from the property page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  neighborhood:
+                    type: string
+                    description: Neighborhood name (e.g. "Sunset Hill").
+                  marketType:
+                    type: string
+                    enum:
+                      - seller
+                      - buyer
+                      - neutral
+                    description: Whether it is a seller's, buyer's, or neutral market.
+                  summary:
+                    type: string
+                    description: Market summary (e.g. "Inventory is low and competition is high.").
+                  offerInsight:
+                    type:
+                      - string
+                      - 'null'
+                    description: Offer trend insight (e.g. "Most homes get multiple offers...").
+                  listToSalePrice:
+                    type:
+                      - string
+                      - 'null'
+                    description: List-to-sale price ratio (e.g. "4% above list").
+                  averageDaysOnMarket:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Average days on market before going pending.
+                  message:
+                    type: string
+                    description: Present when no market insights section is found.
+  /{state}/{city}/{address}/home/{propertyId}/similar:
+    get:
+      operationId: getSimilarHomes
+      summary: Extract nearby similar homes for sale from an open Redfin property page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: rf0007
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: redfin-dom
+          operation: getSimilarHomes
+      parameters:
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Two-letter state code (e.g. "WA").
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+          description: City name (e.g. "Seattle").
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+          description: URL-formatted address (e.g. "3412-NW-56th-St-98107").
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Redfin property ID (e.g. "200910046"). The property page must already be open.
+      responses:
+        '200':
+          description: Similar homes for sale near this property.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - homeCount
+                  - homes
+                properties:
+                  homeCount:
+                    type: integer
+                    description: Number of similar homes found.
+                  homes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        price:
+                          type:
+                            - string
+                            - 'null'
+                          description: Listing price (e.g. "$790,000").
+                        beds:
+                          type:
+                            - integer
+                            - 'null'
+                          description: Number of bedrooms.
+                        baths:
+                          type:
+                            - number
+                            - 'null'
+                          description: Number of bathrooms.
+                        sqft:
+                          type:
+                            - integer
+                            - 'null'
+                          description: Floor area in square feet.
+                        address:
+                          type:
+                            - string
+                            - 'null'
+                          description: Full address with city, state, and zip.
+                        url:
+                          type:
+                            - string
+                            - 'null'
+                          description: Redfin URL for the similar home.
+                    description: Nearby similar home listings.
+                  message:
+                    type: string
+                    description: Present when no similar homes section is found.
