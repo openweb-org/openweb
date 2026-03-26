@@ -122,6 +122,417 @@ paths:
                       type: string
                     state:
                       type: string
+    post:
+      operationId: createIssue
+      summary: Create an issue
+      x-openweb:
+        permission: write
+        build:
+          stable_id: gh0011
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                body:
+                  type: string
+                labels:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Issue created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  number:
+                    type: integer
+                  title:
+                    type: string
+                  html_url:
+                    type: string
+  /search/repositories:
+    get:
+      operationId: searchRepos
+      summary: Search repositories by keyword
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gh0005
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+        pagination:
+          type: link_header
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (e.g. "react language:typescript")
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [stars, forks, help-wanted-issues, updated]
+          description: Sort field
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        full_name:
+                          type: string
+                        description:
+                          type: string
+                        stargazers_count:
+                          type: integer
+                        language:
+                          type: string
+  /users/{username}:
+    get:
+      operationId: getUserProfile
+      summary: Get a user profile
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gh0006
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  login:
+                    type: string
+                  name:
+                    type: string
+                  bio:
+                    type: string
+                  public_repos:
+                    type: integer
+                  followers:
+                    type: integer
+  /repos/{owner}/{repo}/readme:
+    get:
+      operationId: getRepoReadme
+      summary: Get repository README
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gh0007
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  path:
+                    type: string
+                  content:
+                    type: string
+                    description: Base64-encoded README content
+                  encoding:
+                    type: string
+  /repos/{owner}/{repo}/pulls:
+    get:
+      operationId: listPullRequests
+      summary: List repository pull requests
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gh0008
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+        pagination:
+          type: link_header
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, closed, all]
+            default: open
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    title:
+                      type: string
+                    state:
+                      type: string
+                    user:
+                      type: object
+                      properties:
+                        login:
+                          type: string
+  /repos/{owner}/{repo}/contributors:
+    get:
+      operationId: listContributors
+      summary: List repository contributors
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gh0009
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+        pagination:
+          type: link_header
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    login:
+                      type: string
+                    contributions:
+                      type: integer
+                    avatar_url:
+                      type: string
+  /repos/{owner}/{repo}/forks:
+    post:
+      operationId: forkRepo
+      summary: Fork a repository
+      x-openweb:
+        permission: write
+        build:
+          stable_id: gh0010
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization:
+                  type: string
+                  description: Organization to fork into (optional)
+                name:
+                  type: string
+                  description: Name for the forked repo (optional)
+      responses:
+        '202':
+          description: Accepted — fork is being created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  full_name:
+                    type: string
   /user/starred/{owner}/{repo}:
     put:
       operationId: starRepo
