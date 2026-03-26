@@ -99,6 +99,199 @@ paths:
                     type: boolean
                   quota_remaining:
                     type: integer
+  /search/advanced:
+    get:
+      operationId: searchAdvanced
+      summary: Advanced search with tag filters, answer count, and body text
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: so0003
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Free-text search query (searches title, body, tags).
+        - name: tagged
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Semicolon-separated tags; results must have ALL listed tags.
+        - name: nottagged
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Semicolon-separated tags to exclude.
+        - name: answers
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Minimum number of answers.
+        - name: accepted
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: If true, only questions with accepted answers.
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            const: stackoverflow
+          description: Stack Exchange site to query.
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            default: desc
+          description: Sort order (asc or desc).
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            default: activity
+          description: Sort field (activity, votes, creation, relevance).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+        - name: pagesize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more, quota_remaining]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        question_id:
+                          type: integer
+                        title:
+                          type: string
+                        link:
+                          type: string
+                        score:
+                          type: integer
+                        answer_count:
+                          type: integer
+                        is_answered:
+                          type: boolean
+                        tags:
+                          type: array
+                          items:
+                            type: string
+                        owner:
+                          type: object
+                  has_more:
+                    type: boolean
+                  quota_remaining:
+                    type: integer
+  /questions/{ids}:
+    get:
+      operationId: getQuestionDetail
+      summary: Get full question detail including body
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: so0004
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: ids
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Semicolon-separated question IDs.
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            const: stackoverflow
+          description: Stack Exchange site to query.
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            default: withbody
+          description: Filter name. Use 'withbody' to include question body HTML.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more, quota_remaining]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        question_id:
+                          type: integer
+                        title:
+                          type: string
+                        body:
+                          type: string
+                        link:
+                          type: string
+                        score:
+                          type: integer
+                        answer_count:
+                          type: integer
+                        view_count:
+                          type: integer
+                        is_answered:
+                          type: boolean
+                        accepted_answer_id:
+                          type: integer
+                        tags:
+                          type: array
+                          items:
+                            type: string
+                        owner:
+                          type: object
+                        creation_date:
+                          type: integer
+                        last_activity_date:
+                          type: integer
+                  has_more:
+                    type: boolean
+                  quota_remaining:
+                    type: integer
   /questions/{ids}/answers:
     get:
       operationId: getQuestionAnswers
@@ -147,6 +340,13 @@ paths:
             type: integer
             default: 1
           description: Page number for pagination.
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            default: withbody
+          description: Filter name. Use 'withbody' to include answer body HTML.
       responses:
         '200':
           description: Success.
@@ -173,6 +373,441 @@ paths:
                           type: string
                         owner:
                           type: object
+                  has_more:
+                    type: boolean
+                  quota_remaining:
+                    type: integer
+  /questions/{ids}/comments:
+    get:
+      operationId: getQuestionComments
+      summary: Get comments on one or more questions
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: so0005
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: ids
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Semicolon-separated question IDs.
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            const: stackoverflow
+          description: Stack Exchange site to query.
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            default: desc
+          description: Sort order (asc or desc).
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            default: creation
+          description: Sort field (creation, votes).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more, quota_remaining]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        comment_id:
+                          type: integer
+                        post_id:
+                          type: integer
+                        score:
+                          type: integer
+                        body:
+                          type: string
+                        owner:
+                          type: object
+                        creation_date:
+                          type: integer
+                  has_more:
+                    type: boolean
+                  quota_remaining:
+                    type: integer
+  /questions/{ids}/related:
+    get:
+      operationId: getRelatedQuestions
+      summary: Get questions related to a given question
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: so0006
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: ids
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Semicolon-separated question IDs.
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            const: stackoverflow
+          description: Stack Exchange site to query.
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            default: desc
+          description: Sort order (asc or desc).
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            default: activity
+          description: Sort field (activity, votes, creation, relevance).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+        - name: pagesize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more, quota_remaining]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        question_id:
+                          type: integer
+                        title:
+                          type: string
+                        link:
+                          type: string
+                        score:
+                          type: integer
+                        answer_count:
+                          type: integer
+                        is_answered:
+                          type: boolean
+                        tags:
+                          type: array
+                          items:
+                            type: string
+                  has_more:
+                    type: boolean
+                  quota_remaining:
+                    type: integer
+  /answers/{ids}:
+    get:
+      operationId: getAnswerDetail
+      summary: Get specific answers by ID with body
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: so0007
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: ids
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Semicolon-separated answer IDs.
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            const: stackoverflow
+          description: Stack Exchange site to query.
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            default: withbody
+          description: Filter name. Use 'withbody' to include answer body HTML.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more, quota_remaining]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        answer_id:
+                          type: integer
+                        question_id:
+                          type: integer
+                        score:
+                          type: integer
+                        is_accepted:
+                          type: boolean
+                        body:
+                          type: string
+                        owner:
+                          type: object
+                        creation_date:
+                          type: integer
+                        last_activity_date:
+                          type: integer
+                  has_more:
+                    type: boolean
+                  quota_remaining:
+                    type: integer
+  /users/{ids}:
+    get:
+      operationId: getUserProfile
+      summary: Get user profiles with reputation and stats
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: so0008
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: ids
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Semicolon-separated user IDs.
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            const: stackoverflow
+          description: Stack Exchange site to query.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more, quota_remaining]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user_id:
+                          type: integer
+                        display_name:
+                          type: string
+                        reputation:
+                          type: integer
+                        link:
+                          type: string
+                        profile_image:
+                          type: string
+                        badge_counts:
+                          type: object
+                          properties:
+                            gold:
+                              type: integer
+                            silver:
+                              type: integer
+                            bronze:
+                              type: integer
+                        creation_date:
+                          type: integer
+                        last_access_date:
+                          type: integer
+                        answer_count:
+                          type: integer
+                        question_count:
+                          type: integer
+                  has_more:
+                    type: boolean
+                  quota_remaining:
+                    type: integer
+  /tags:
+    get:
+      operationId: getPopularTags
+      summary: Get popular or trending tags
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: so0009
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            const: stackoverflow
+          description: Stack Exchange site to query.
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            default: desc
+          description: Sort order (asc or desc).
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            default: popular
+          description: Sort field (popular, activity, name).
+        - name: inname
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter tags by substring match on name.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+        - name: pagesize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more, quota_remaining]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        count:
+                          type: integer
+                        has_synonyms:
+                          type: boolean
+                        is_moderator_only:
+                          type: boolean
+                        is_required:
+                          type: boolean
+                  has_more:
+                    type: boolean
+                  quota_remaining:
+                    type: integer
+  /tags/{tags}/wikis:
+    get:
+      operationId: getTagWiki
+      summary: Get wiki excerpt and body for tags
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          stable_id: so0010
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: tags
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Semicolon-separated tag names.
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            const: stackoverflow
+          description: Stack Exchange site to query.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, has_more, quota_remaining]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tag_name:
+                          type: string
+                        excerpt:
+                          type: string
+                        body:
+                          type: string
                   has_more:
                     type: boolean
                   quota_remaining:

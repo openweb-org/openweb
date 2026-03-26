@@ -53,6 +53,18 @@ for (const site of sites) {
     }
   }
 
+  // Copy test files
+  const testsDir = path.join(srcSite, 'tests')
+  if (existsSync(testsDir)) {
+    const dstTests = path.join(dstSite, 'tests')
+    mkdirSync(dstTests, { recursive: true })
+    for (const f of readdirSync(testsDir)) {
+      if (!f.endsWith('.test.json')) continue
+      cpSync(path.join(testsDir, f), path.join(dstTests, f))
+      copied++
+    }
+  }
+
   console.log(`  ${site.name}/`)
 }
 

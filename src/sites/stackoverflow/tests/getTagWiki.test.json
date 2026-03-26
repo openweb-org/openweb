@@ -1,0 +1,14 @@
+{
+  "operation_id": "getTagWiki",
+  "cases": [
+    {
+      "input": {
+        "tags": "javascript"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

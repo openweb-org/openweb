@@ -1,0 +1,14 @@
+{
+  "operation_id": "getQuestionComments",
+  "cases": [
+    {
+      "input": {
+        "ids": "14220321"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
