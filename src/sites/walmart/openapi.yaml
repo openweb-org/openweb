@@ -198,3 +198,76 @@ paths:
                         type: string
                   isPriceReduced:
                     type: boolean
+  /internal/addToCart:
+    post:
+      operationId: addToCart
+      summary: Add a product to the shopping cart by Walmart item ID
+      x-openweb:
+        permission: write
+        safety: caution
+        transport: page
+        build:
+          stable_id: wm0005
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: walmart-cart
+          operation: addToCart
+      parameters:
+        - name: usItemId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Walmart item ID (e.g. "234440748").
+        - name: quantity
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Quantity to add (default 1).
+      responses:
+        '200':
+          description: Item added to cart successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - cartId
+                  - cartCount
+                  - item
+                properties:
+                  cartId:
+                    type: string
+                    description: Cart identifier.
+                  cartCount:
+                    type: integer
+                    description: Total number of items in cart.
+                  item:
+                    type: object
+                    required:
+                      - usItemId
+                      - name
+                      - quantity
+                      - price
+                    properties:
+                      usItemId:
+                        type: string
+                      name:
+                        type: string
+                        description: Product name.
+                      quantity:
+                        type: integer
+                      price:
+                        type: number
+                        description: Line price in dollars.
+                      priceString:
+                        type: string
+                        description: Formatted price (e.g. "$142.49").
+                      imageUrl:
+                        type: string
+                        description: Product thumbnail URL.
