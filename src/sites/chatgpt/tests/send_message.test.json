@@ -1,0 +1,23 @@
+{
+  "operation_id": "sendMessage",
+  "method": "post",
+  "cases": [
+    {
+      "input": {
+        "action": "next",
+        "messages": [
+          {
+            "id": "test-msg-001",
+            "author": { "role": "user" },
+            "content": { "content_type": "text", "parts": ["say ok"] }
+          }
+        ],
+        "parent_message_id": "client-created-root",
+        "model": "gpt-5-3"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

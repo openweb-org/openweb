@@ -132,3 +132,263 @@ paths:
                     type:
                       - string
                       - 'null'
+  /conversation/{conversation_id}:
+    get:
+      operationId: getConversation
+      summary: Get full conversation with message history
+      x-openweb:
+        permission: read
+        build:
+          stable_id: cg0003
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: UUID of the conversation.
+        - name: User-Agent
+          in: header
+          required: false
+          schema:
+            type: string
+            default: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+          description: Required for Cloudflare cf_clearance cookie binding.
+      responses:
+        '200':
+          description: Full conversation including message tree.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - conversation_id
+                  - title
+                  - mapping
+                  - current_node
+                properties:
+                  conversation_id:
+                    type: string
+                  title:
+                    type: string
+                  create_time:
+                    type: number
+                  update_time:
+                    type: number
+                  current_node:
+                    type: string
+                    description: ID of the latest message node.
+                  default_model_slug:
+                    type: string
+                  is_archived:
+                    type: boolean
+                  mapping:
+                    type: object
+                    description: Tree of message nodes keyed by node ID.
+                    additionalProperties:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        parent:
+                          type:
+                            - string
+                            - 'null'
+                        children:
+                          type: array
+                          items:
+                            type: string
+                        message:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            author:
+                              type: object
+                              properties:
+                                role:
+                                  type: string
+                                  enum:
+                                    - system
+                                    - user
+                                    - assistant
+                                    - tool
+                            create_time:
+                              type:
+                                - number
+                                - 'null'
+                            content:
+                              type: object
+                              properties:
+                                content_type:
+                                  type: string
+                                parts:
+                                  type: array
+                                  items:
+                                    type: string
+                            status:
+                              type: string
+                            weight:
+                              type: number
+  /conversations/search:
+    get:
+      operationId: searchConversations
+      summary: Search past conversations by keyword
+      x-openweb:
+        permission: read
+        build:
+          stable_id: cg0004
+          tool_version: 1
+          verified: true
+          signals:
+            - status-match
+        pagination:
+          type: cursor
+          response_field: cursor
+          request_param: cursor
+          items_path: items
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword.
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor from previous response.
+        - name: User-Agent
+          in: header
+          required: false
+          schema:
+            type: string
+            default: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+          description: Required for Cloudflare cf_clearance cookie binding.
+      responses:
+        '200':
+          description: Search results with matching conversations and message snippets.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        conversation_id:
+                          type: string
+                        title:
+                          type: string
+                        is_archived:
+                          type: boolean
+                        update_time:
+                          type: number
+                        payload:
+                          type: object
+                          properties:
+                            kind:
+                              type: string
+                            message_id:
+                              type: string
+                            snippet:
+                              type: string
+                              description: Matched message text excerpt.
+                  cursor:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Next page cursor (numeric offset).
+  /f/conversation:
+    post:
+      operationId: sendMessage
+      summary: Send a message and get streaming response
+      x-openweb:
+        permission: write
+        build:
+          stable_id: cg0005
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: User-Agent
+          in: header
+          required: false
+          schema:
+            type: string
+            default: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+          description: Required for Cloudflare cf_clearance cookie binding.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+                - messages
+                - parent_message_id
+                - model
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - next
+                  description: Always "next" for new messages.
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - id
+                      - author
+                      - content
+                    properties:
+                      id:
+                        type: string
+                        description: UUID for the message.
+                      author:
+                        type: object
+                        properties:
+                          role:
+                            type: string
+                            enum:
+                              - user
+                      content:
+                        type: object
+                        properties:
+                          content_type:
+                            type: string
+                            enum:
+                              - text
+                          parts:
+                            type: array
+                            items:
+                              type: string
+                parent_message_id:
+                  type: string
+                  description: Parent node ID, or "client-created-root" for new conversations.
+                model:
+                  type: string
+                  description: Model slug (e.g. "gpt-5-3").
+                conversation_id:
+                  type: string
+                  description: Existing conversation UUID. Omit for new conversations.
+      responses:
+        '200':
+          description: Server-Sent Events stream with message deltas.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE stream with delta events containing message content.

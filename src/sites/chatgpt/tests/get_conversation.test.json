@@ -1,0 +1,12 @@
+{
+  "operation_id": "getConversation",
+  "cases": [
+    {
+      "input": { "conversation_id": "69c55a16-7c30-832e-8713-d4c411b8dea0" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
