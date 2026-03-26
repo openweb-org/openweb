@@ -1,37 +1,37 @@
 # CLI Reference
 
-Full command reference for the openweb CLI. All commands run from the project root via `pnpm --silent dev`.
+Full command reference for the openweb CLI.
 
 ## Core Commands
 
 ### `sites` — List available sites
 
 ```bash
-pnpm --silent dev sites                    # text table
-pnpm --silent dev sites --json             # [{name, transport, operationCount, permission}]
+openweb sites                    # text table
+openweb sites --json             # [{name, transport, operationCount, permission}]
 ```
 
 ### `<site>` — Show site info
 
 ```bash
-pnpm --silent dev <site>                   # text: transport, auth, operations
-pnpm --silent dev <site> --json            # {name, operations: [{id, method, path, permission}]}
+openweb <site>                   # text: transport, auth, operations
+openweb <site> --json            # {name, operations: [{id, method, path, permission}]}
 ```
 
 ### `<site> <operation>` — Show operation details
 
 ```bash
-pnpm --silent dev <site> <op>              # text: method, path, params, response shape
-pnpm --silent dev <site> <op> --json       # {id, method, path, permission, parameters}
-pnpm --silent dev <site> <op> --example    # generate example params JSON
+openweb <site> <op>              # text: method, path, params, response shape
+openweb <site> <op> --json       # {id, method, path, permission, parameters}
+openweb <site> <op> --example    # generate example params JSON
 ```
 
 ### `<site> <operation> '<params>'` — Execute
 
 ```bash
-pnpm --silent dev <site> <op> '{"key":"value"}'
-pnpm --silent dev <site> <op> '{}' --cdp-endpoint http://localhost:9222
-pnpm --silent dev <site> <op> '{}' --output file
+openweb <site> <op> '{"key":"value"}'
+openweb <site> <op> '{}' --cdp-endpoint http://localhost:9222
+openweb <site> <op> '{}' --output file
 ```
 
 - **stdout**: JSON result (success)
@@ -42,22 +42,22 @@ pnpm --silent dev <site> <op> '{}' --output file
 ## Browser Management
 
 ```bash
-pnpm --silent dev browser start [--headless] [--port 9222]
-pnpm --silent dev browser stop
-pnpm --silent dev browser restart        # re-copy profile + clear token cache
-pnpm --silent dev browser status
+openweb browser start [--headless] [--port 9222]
+openweb browser stop
+openweb browser restart        # re-copy profile + clear token cache
+openweb browser status
 ```
 
 **How it works:** `browser start` copies auth-relevant files from your default Chrome profile to a temp directory, then launches Chrome with `--remote-debugging-port=9222`. When running, `exec` auto-detects it — no `--cdp-endpoint` needed.
 
 **Token caching:** Successful auth requests cache cookies in `~/.openweb/tokens/<site>/`. Cache auto-expires by TTL (1h default or JWT exp). `browser restart` clears the cache.
 
-**Limitation:** Browser/capture orchestration is singleton in M25. One managed browser instance at a time.
+**Limitation:** Browser/capture orchestration is singleton. One managed browser instance at a time.
 
 ## Login
 
 ```bash
-pnpm --silent dev login <site>             # open site in default browser for login
+openweb login <site>             # open site in default browser for login
 ```
 
 After login: `openweb verify <site>` to confirm auth works.
@@ -65,16 +65,16 @@ After login: `openweb verify <site>` to confirm auth works.
 ## Capture
 
 ```bash
-pnpm --silent dev capture start --cdp-endpoint http://localhost:9222
-pnpm --silent dev capture stop
+openweb capture start --cdp-endpoint http://localhost:9222
+openweb capture stop
 ```
 
-Records all browser traffic for later compilation. One capture session at a time (singleton in M25).
+Records all browser traffic for later compilation. One capture session at a time.
 
 ## Compile
 
 ```bash
-pnpm --silent dev compile <site-url> [--probe] [--capture-dir <dir>]
+openweb compile <site-url> [--probe] [--capture-dir <dir>]
 ```
 
 Transforms captured traffic into a fixture. `--probe` tests endpoints during compile. `--capture-dir` loads from an existing capture bundle instead of launching a new recording.
@@ -82,9 +82,9 @@ Transforms captured traffic into a fixture. `--probe` tests endpoints during com
 ## Verify
 
 ```bash
-pnpm --silent dev verify <site>            # single site: PASS/DRIFT/AUTH_FAIL/ERROR per op
-pnpm --silent dev verify --all             # all sites sequentially
-pnpm --silent dev verify --all --report    # JSON drift report
+openweb verify <site>            # single site: PASS/DRIFT/AUTH_FAIL/ERROR per op
+openweb verify --all             # all sites sequentially
+openweb verify --all --report    # JSON drift report
 ```
 
 Status vocabulary: `PASS` | `DRIFT` | `AUTH_FAIL` | `ERROR`
@@ -92,10 +92,10 @@ Status vocabulary: `PASS` | `DRIFT` | `AUTH_FAIL` | `ERROR`
 ## Registry
 
 ```bash
-pnpm --silent dev registry list            # registered sites with versions
-pnpm --silent dev registry install <site>  # archive fixture to registry
-pnpm --silent dev registry rollback <site> # revert to previous version
-pnpm --silent dev registry show <site>     # version history
+openweb registry list            # registered sites with versions
+openweb registry install <site>  # archive fixture to registry
+openweb registry rollback <site> # revert to previous version
+openweb registry show <site>     # version history
 ```
 
 ## Permission System
@@ -116,3 +116,16 @@ Configured per-site, not chosen by the agent:
 - **node**: HTTP from Node.js — with or without browser auth
 - **page**: HTTP via `page.evaluate()` in the browser
 - **adapter (L3)**: Arbitrary JS in the browser page (Telegram, WhatsApp)
+
+---
+
+## Related References
+
+- [site-doc.md](site-doc.md) — Per-site documentation standards (DOC.md, PROGRESS.md)
+- [discover.md](discover.md) — Discovery workflow
+- [compile.md](compile.md) — Compilation workflow
+- [troubleshooting.md](troubleshooting.md) — Debugging site issues
+
+---
+
+*For development, use `pnpm --silent dev` instead of `openweb`.*
