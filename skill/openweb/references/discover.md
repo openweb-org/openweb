@@ -29,6 +29,8 @@ Why: Bot detection systems (PerimeterX, DataDome, Akamai) track IP reputation ac
 
 When discovering write operations (POST/PUT/PATCH/DELETE), capture the traffic but be cautious about verification:
 
+When documenting write operations in DOC.md, mark each with a safety level: ✅ SAFE (reversible), ⚠️ CAUTION (manageable impact), 🚫 NEVER (irreversible/costly).
+
 **Safe to capture and trigger:**
 - Add to cart (without purchasing)
 - Like/upvote/bookmark
