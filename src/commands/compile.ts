@@ -64,9 +64,25 @@ export async function compileSite(
   }
 
   const site = siteSlugFromUrl(args.url)
-  const scriptPath = args.script ?? path.join('scripts', 'record_open_meteo.ts')
   const userProvidedDir = args.captureDir
-  const recordingDir = userProvidedDir ?? await runScriptedRecording(scriptPath)
+
+  if (!args.script && !userProvidedDir) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: 'Either --script or --capture-dir is required.',
+      action: 'Provide a recording script via --script or a pre-recorded capture via --capture-dir.',
+      retriable: false,
+      failureClass: 'fatal',
+    })
+  }
+
+  const recordingDir = userProvidedDir ?? await runScriptedRecording(args.script!)
+
+  // Create report directory early — it's needed for the analysis handoff artifact
+  const reportDir = path.join(os.homedir(), '.openweb', 'compile', site)
+  await fs.rm(reportDir, { recursive: true, force: true })
+  await fs.mkdir(reportDir, { recursive: true })
 
   // Phase 2: Analyze
   let report: AnalysisReport
@@ -93,6 +109,13 @@ export async function compileSite(
       failureClass: 'fatal',
     })
   }
+
+  // Persist analysis.json — handoff artifact from discover agent to compile agent.
+  // Strip JSON response bodies to keep file size manageable (full bodies in analysis-full.json).
+  await fs.writeFile(
+    path.join(reportDir, 'analysis.json'),
+    `${JSON.stringify(stripResponseBodies(report), null, 2)}\n`,
+  )
 
   // Phase 3: Curate (auto-curation — accept all, top auth candidate, suggested names)
   const autoCurationDecisions: CurationDecisionSet = {}
@@ -142,6 +165,7 @@ export async function compileSite(
         parameters: op.parameters,
         exampleInput: op.exampleInput,
         replaySafety: op.replaySafety,
+        requestBody: op.exampleRequestBody,
       })),
       auth: cookies ? { cookies } : undefined,
     })
@@ -153,8 +177,7 @@ export async function compileSite(
   const wsOpCount = plan.ws?.operations.length ?? 0
   const totalOpCount = plan.operations.length + wsOpCount
 
-  // Write report
-  const reportDir = path.join(os.homedir(), '.openweb', 'compile', site)
+  // Write remaining report artifacts (analysis.json already written before curation)
   await writeCompileReportV2(reportDir, { report, verifyReport, plan })
 
   if (options.emitSummary) {
@@ -198,14 +221,33 @@ function buildSummaryV2(data: CompileReportV2Data): string {
 }
 
 async function writeCompileReportV2(reportDir: string, data: CompileReportV2Data): Promise<void> {
-  await fs.rm(reportDir, { recursive: true, force: true })
-  await fs.mkdir(reportDir, { recursive: true })
-
   await Promise.all([
     fs.writeFile(path.join(reportDir, 'summary.txt'), `${buildSummaryV2(data)}\n`),
-    fs.writeFile(path.join(reportDir, 'analysis.json'), `${JSON.stringify(data.report, null, 2)}\n`),
+    fs.writeFile(path.join(reportDir, 'analysis-full.json'), `${JSON.stringify(data.report, null, 2)}\n`),
     data.verifyReport
       ? fs.writeFile(path.join(reportDir, 'verify-report.json'), `${JSON.stringify(data.verifyReport, null, 2)}\n`)
       : Promise.resolve(),
   ])
+}
+
+// ── Analysis stripping ──────────────────────────────────────────
+
+/** Strip JSON response bodies from samples to keep analysis.json agent-readable.
+ *  Keeps all metadata, parameters, schemas, auth candidates, extraction signals.
+ *  Only removes `sample.response.body` for JSON responses (the main size culprit). */
+function stripResponseBodies(report: AnalysisReport): AnalysisReport {
+  return {
+    ...report,
+    samples: report.samples.map((labeled) => {
+      const { sample } = labeled
+      if (sample.response.kind !== 'json') return labeled
+      return {
+        ...labeled,
+        sample: {
+          ...sample,
+          response: { kind: 'json' as const, body: '[stripped]' },
+        },
+      }
+    }),
+  }
 }

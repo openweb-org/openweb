@@ -279,4 +279,84 @@ describe('verifyPackage', () => {
     expect(r?.overall).toBe('fail')
     expect(r?.attempts[0]?.reason).toBe('ssrf_blocked')
   })
+
+  it('GraphQL POST with requestBody replays as POST with JSON body', async () => {
+    const fetchMock = vi.fn(async (_url: unknown, init: RequestInit | undefined) => {
+      // Capture the request details for assertions
+      return jsonResponse({ data: { viewer: { login: 'test' } } })
+    }) as unknown as typeof fetch
+
+    const op = mockOp({
+      operationId: 'graphql_viewer',
+      method: 'post',
+      host: 'api.example.com',
+      pathTemplate: '/graphql',
+      parameters: [],
+      exampleInput: {},
+      requestBody: { query: '{ viewer { login } }' },
+      replaySafety: 'safe_read',
+    })
+
+    const report = await verifyPackage(baseInput([op], fetchMock))
+
+    const r = result0(report)
+    expect(r?.overall).toBe('pass')
+    expect(r?.attempts).toHaveLength(1)
+
+    // Verify the fetch was called with POST method and body
+    const calledUrl = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]
+    expect(calledUrl).toContain('api.example.com/graphql')
+
+    const calledInit = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]
+    expect(calledInit?.method).toBe('POST')
+    expect(calledInit?.body).toBe(JSON.stringify({ query: '{ viewer { login } }' }))
+    expect(calledInit?.headers?.['Content-Type']).toBe('application/json')
+  })
+
+  it('requestBody with custom content type sets correct header', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ ok: true })) as unknown as typeof fetch
+
+    const op = mockOp({
+      operationId: 'custom_body',
+      method: 'post',
+      host: 'api.example.com',
+      pathTemplate: '/data',
+      requestBody: { key: 'value' },
+      requestBodyContentType: 'application/graphql+json',
+      replaySafety: 'safe_read',
+    })
+
+    const report = await verifyPackage(baseInput([op], fetchMock))
+
+    const r = result0(report)
+    expect(r?.overall).toBe('pass')
+
+    const calledInit = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]
+    expect(calledInit?.headers?.['Content-Type']).toBe('application/graphql+json')
+  })
+
+  it('operation without requestBody still uses GET with query params', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ ok: true })) as unknown as typeof fetch
+
+    const op = mockOp({
+      operationId: 'get_search',
+      method: 'get',
+      host: 'api.example.com',
+      pathTemplate: '/search',
+      parameters: [
+        { name: 'q', location: 'query', required: true, schema: { type: 'string' }, exampleValue: 'test' },
+      ],
+      exampleInput: { q: 'hello' },
+      replaySafety: 'safe_read',
+    })
+
+    const report = await verifyPackage(baseInput([op], fetchMock))
+
+    const r = result0(report)
+    expect(r?.overall).toBe('pass')
+
+    const calledInit = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]
+    expect(calledInit?.method).toBe('GET')
+    expect(calledInit?.body).toBeUndefined()
+  })
 })

@@ -24,6 +24,8 @@ export interface VerifyOperationInput {
   readonly parameters: readonly ParameterDescriptor[]
   readonly exampleInput: Record<string, unknown>
   readonly replaySafety: 'safe_read' | 'unsafe_mutation'
+  readonly requestBody?: unknown
+  readonly requestBodyContentType?: string
 }
 
 export interface VerifyInput {
@@ -89,6 +91,8 @@ interface AttemptInput {
   readonly timeoutMs: number
   readonly fetchImpl: typeof fetch
   readonly ssrfValidator: (url: string) => Promise<void>
+  readonly body?: string
+  readonly bodyContentType?: string
 }
 
 async function attempt(input: AttemptInput): Promise<VerifyAttempt> {
@@ -99,6 +103,9 @@ async function attempt(input: AttemptInput): Promise<VerifyAttempt> {
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (input.mode === 'with_auth' && input.cookies) {
     headers.Cookie = input.cookies
+  }
+  if (input.bodyContentType) {
+    headers['Content-Type'] = input.bodyContentType
   }
 
   const wrappedFetch: typeof fetch = (reqInput, init) =>
@@ -114,7 +121,7 @@ async function attempt(input: AttemptInput): Promise<VerifyAttempt> {
       input.url,
       input.method.toUpperCase(),
       headers,
-      undefined,
+      input.body,
       redirectOpts,
     )
 
@@ -200,12 +207,21 @@ async function verifyOne(
     }
   }
 
+  // Determine replay method and body.
+  // When a requestBody is present, replay as POST with serialized body.
+  const hasBody = op.requestBody !== undefined
+  const replayMethod = hasBody ? 'POST' : op.method
+  const serializedBody = hasBody ? JSON.stringify(op.requestBody) : undefined
+  const bodyContentType = hasBody ? (op.requestBodyContentType ?? 'application/json') : undefined
+
   const baseAttempt = {
     url,
-    method: op.method,
+    method: replayMethod,
     timeoutMs,
     fetchImpl,
     ssrfValidator,
+    body: serializedBody,
+    bodyContentType,
   }
 
   const attempts: VerifyAttempt[] = []
