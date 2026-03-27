@@ -7,7 +7,6 @@
 
 import type { ParameterDescriptor } from './types.js'
 import type { VerifyAttempt, VerifyReason, VerifyReport, VerifyResult } from './types-v2.js'
-import { buildQueryUrl } from '../lib/openapi.js'
 import { fetchWithRedirects, type RedirectOptions } from '../runtime/redirect.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import { TIMEOUT } from '../lib/config.js'
@@ -163,17 +162,21 @@ async function attempt(input: AttemptInput): Promise<VerifyAttempt> {
 // ---------------------------------------------------------------------------
 
 function buildUrl(op: VerifyOperationInput): string {
-  return buildQueryUrl(
-    `https://${op.host}`,
-    op.pathTemplate,
-    op.parameters.map((p) => ({
-      name: p.name,
-      in: p.location,
-      required: p.required,
-      schema: p.schema,
-    })),
-    op.exampleInput,
-  )
+  // Substitute path parameters
+  let url = `https://${op.host}${op.pathTemplate}`
+  for (const p of op.parameters.filter((p) => p.location === 'path')) {
+    const value = op.exampleInput[p.name]
+    if (value !== undefined) url = url.replace(`{${p.name}}`, String(value))
+  }
+  // Add query parameters
+  const qp = new URLSearchParams()
+  for (const p of op.parameters.filter((p) => p.location === 'query')) {
+    const value = op.exampleInput[p.name]
+    if (value !== undefined) qp.set(p.name, String(value))
+  }
+  const qs = qp.toString()
+  if (qs) url += `?${qs}`
+  return url
 }
 
 async function verifyOne(

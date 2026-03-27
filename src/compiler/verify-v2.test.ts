@@ -210,25 +210,47 @@ describe('verifyPackage', () => {
     expect(maxConcurrency).toBeGreaterThan(1)
   })
 
-  it('URL construction uses buildQueryUrl with exampleInput', async () => {
+  it('URL construction substitutes path parameters and adds query params', async () => {
     const fetchMock = vi.fn(async () => jsonResponse({ ok: true })) as unknown as typeof fetch
 
     const op = mockOp({
       host: 'api.example.com',
-      pathTemplate: '/v1/search',
+      pathTemplate: '/v1/users/{userId}/posts/{postId}',
       parameters: [
+        { name: 'userId', location: 'path', required: true, schema: { type: 'string' }, exampleValue: '42' },
+        { name: 'postId', location: 'path', required: true, schema: { type: 'string' }, exampleValue: '99' },
         { name: 'q', location: 'query', required: true, schema: { type: 'string' }, exampleValue: 'test' },
         { name: 'limit', location: 'query', required: false, schema: { type: 'integer', default: 10 }, exampleValue: 20 },
       ],
-      exampleInput: { q: 'hello', limit: 20 },
+      exampleInput: { userId: '42', postId: '99', q: 'hello', limit: 20 },
     })
 
     await verifyPackage(baseInput([op], fetchMock))
 
     const calledUrl = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]
+    expect(calledUrl).toContain('api.example.com/v1/users/42/posts/99')
+    expect(calledUrl).not.toContain('{userId}')
+    expect(calledUrl).not.toContain('{postId}')
     expect(calledUrl).toContain('q=hello')
     expect(calledUrl).toContain('limit=20')
-    expect(calledUrl).toContain('api.example.com')
+  })
+
+  it('path-only parameters produce clean URL without query string', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ ok: true })) as unknown as typeof fetch
+
+    const op = mockOp({
+      host: 'api.example.com',
+      pathTemplate: '/v1/items/{id}',
+      parameters: [
+        { name: 'id', location: 'path', required: true, schema: { type: 'string' }, exampleValue: '123' },
+      ],
+      exampleInput: { id: '123' },
+    })
+
+    await verifyPackage(baseInput([op], fetchMock))
+
+    const calledUrl = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]
+    expect(calledUrl).toBe('https://api.example.com/v1/items/123')
   })
 
   it('with_auth sends Cookie header', async () => {
