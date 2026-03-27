@@ -1,0 +1,19 @@
+[
+  "\\/manifest\\.json$",
+  "\\/_next\\/",
+  "\\/\\.well-known\\/",
+  "\\/favicon\\.",
+  "\\/robots\\.txt$",
+  "\\/sitemap\\.xml",
+  "^\\/_\\/(trace|tracking|telemetry|beacon|collect|analytics|pixel)\\b",
+  ["\\/api\\/v?\\d*\\/(trace|telemetry|beacon|collect)\\b", "i"],
+  ["\\/events?\\/(create|batch|track|report)\\b", "i"],
+  "\\/health(z|check)?$",
+  "\\/ping$",
+  "\\/cookie-settings\\b",
+  "\\/_ajax\\b",
+  "\\/sw\\.js$",
+  "\\/service-worker",
+  "\\/workbox-",
+  "\\/csp-report\\b"
+]

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import type { RecordedRequestSample } from '../types.js'
 
 export interface FilterOptions {
@@ -9,47 +11,10 @@ export interface FilterOptions {
   readonly allowMutations?: boolean
 }
 
-/** Tracking / analytics domains to always block */
-const BLOCKED_HOST_PATTERNS: readonly string[] = [
-  'google-analytics.com',
-  'googletagmanager.com',
-  'googlesyndication.com',
-  'googleadservices.com',
-  'doubleclick.net',
-  'facebook.com',
-  'facebook.net',
-  'fbcdn.net',
-  'twitter.com',
-  'analytics.twitter.com',
-  't.co',
-  'hotjar.com',
-  'mixpanel.com',
-  'segment.io',
-  'segment.com',
-  'amplitude.com',
-  'sentry.io',
-  'newrelic.com',
-  'nr-data.net',
-  'optimizely.com',
-  'intercom.io',
-  'intercomcdn.com',
-  'crisp.chat',
-  'drift.com',
-  'fullstory.com',
-  'clarity.ms',
-  'mouseflow.com',
-  'bugsnag.com',
-  'datadoghq.com',
-  'logrocket.com',
-  'posthog.com',
-  'plausible.io',
-  'matomo.cloud',
-  'fonts.googleapis.com',
-  'fonts.gstatic.com',
-  'cdn.jsdelivr.net',
-  'unpkg.com',
-  'cdnjs.cloudflare.com',
-]
+/** Tracking / analytics domains to always block — loaded from shared config */
+const BLOCKED_HOST_PATTERNS: readonly string[] = JSON.parse(
+  readFileSync(new URL('../../lib/filters/blocked-domains.json', import.meta.url), 'utf8'),
+)
 
 /** Known multi-part public suffixes (ccSLD patterns) */
 const MULTI_PART_TLDS = new Set([
@@ -162,29 +127,17 @@ function isAllowedHost(host: string, allowedDomains: string[]): boolean {
   return allowedDomains.some((domain) => host === domain || host.endsWith(`.${domain}`))
 }
 
-/** Infrastructure/noise path patterns to reject.
+/** Infrastructure/noise path patterns to reject — loaded from shared config.
  * Patterns are intentionally narrow to avoid false positives on real API paths.
  * e.g. /api/tracking/shipments is allowed; /_/tracking is blocked.
  */
-const BLOCKED_PATH_PATTERNS: readonly RegExp[] = [
-  /\/manifest\.json$/,
-  /\/_next\//,
-  /\/\.well-known\//,
-  /\/favicon\./,
-  /\/robots\.txt$/,
-  /\/sitemap\.xml/,
-  /^\/_\/(trace|tracking|telemetry|beacon|collect|analytics|pixel)\b/,  // internal-prefixed paths
-  /\/api\/v?\d*\/(trace|telemetry|beacon|collect)\b/i,                  // api/v1/trace etc.
-  /\/events?\/(create|batch|track|report)\b/i,                         // event tracking
-  /\/health(z|check)?$/,
-  /\/ping$/,
-  /\/cookie-settings\b/,
-  /\/_ajax\b/,
-  /\/sw\.js$/,
-  /\/service-worker/,
-  /\/workbox-/,
-  /\/csp-report\b/,
-]
+const BLOCKED_PATH_PATTERNS: readonly RegExp[] = (
+  JSON.parse(
+    readFileSync(new URL('../../lib/filters/blocked-paths.json', import.meta.url), 'utf8'),
+  ) as (string | [string, string])[]
+).map((entry) =>
+  typeof entry === 'string' ? new RegExp(entry) : new RegExp(entry[0], entry[1]),
+)
 
 function isBlockedPath(urlPath: string): boolean {
   return BLOCKED_PATH_PATTERNS.some((pattern) => pattern.test(urlPath))

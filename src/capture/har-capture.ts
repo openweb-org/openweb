@@ -1,42 +1,16 @@
+import { readFileSync } from 'node:fs'
 import type { Page, Request, Response } from 'playwright'
 
 import type { HarEntry, HarLog } from './types.js'
 import { logger } from '../lib/logger.js'
 
-// ── Analytics / tracking domains to filter out ──────────────────
+// ── Analytics / tracking domains to filter out (shared config) ──
 
-const BLOCKED_DOMAINS = new Set([
-  'google-analytics.com',
-  'googletagmanager.com',
-  'segment.io',
-  'segment.com',
-  'mixpanel.com',
-  'amplitude.com',
-  'hotjar.com',
-  'sentry.io',
-  'doubleclick.net',
-  'facebook.net',
-  'fbcdn.net',
-  'criteo.com',
-  'datadoghq.com',
-  'newrelic.com',
-  'nr-data.net',
-  'fullstory.com',
-  'clarity.ms',
-  'optimizely.com',
-  'launchdarkly.com',
-  'intercom.io',
-  'intercomcdn.com',
-  'cdn.heapanalytics.com',
-  'quantserve.com',
-  'scorecardresearch.com',
-  'rubiconproject.com',
-  'adsrvr.org',
-  'adnxs.com',
-  'moatads.com',
-  'taboola.com',
-  'outbrain.com',
-])
+const BLOCKED_DOMAINS: ReadonlySet<string> = new Set(
+  JSON.parse(
+    readFileSync(new URL('../lib/filters/blocked-domains.json', import.meta.url), 'utf8'),
+  ) as string[],
+)
 
 /** Exact-match API MIME types */
 const API_CONTENT_TYPES = new Set([
