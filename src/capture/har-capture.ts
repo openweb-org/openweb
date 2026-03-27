@@ -1,78 +1,16 @@
-import { readFileSync } from 'node:fs'
 import type { Page, Request, Response } from 'playwright'
 
 import type { HarEntry, HarLog } from './types.js'
 import { logger } from '../lib/logger.js'
 
-// ── Analytics / tracking domains to filter out (shared config) ──
+// ── Body size gate ──────────────────────────────────────────────
 
-const BLOCKED_DOMAINS: ReadonlySet<string> = new Set(
-  JSON.parse(
-    readFileSync(new URL('../lib/filters/blocked-domains.json', import.meta.url), 'utf8'),
-  ) as string[],
-)
-
-/** Exact-match API MIME types */
-const API_CONTENT_TYPES = new Set([
-  'application/json',
-  'application/vnd.api+json',
-  'text/json',
-  'application/x-www-form-urlencoded',
-  'application/graphql+json',
-  'application/graphql-response+json',
-  'text/event-stream',
-])
-
-/** Non-API MIME types to explicitly reject */
-const REJECTED_CONTENT_TYPES = new Set([
-  'text/html',
-  'text/css',
-  'text/javascript',
-  'application/javascript',
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/svg+xml',
-  'image/webp',
-  'font/woff',
-  'font/woff2',
-  'application/font-woff',
-  'application/font-woff2',
-  'video/mp4',
-  'video/webm',
-  'audio/mpeg',
-])
-
-const STATIC_ASSET_RE = /\.(js|css|png|jpg|jpeg|gif|svg|woff2?|ttf|eot|ico|webp|avif|mp4|webm)$/
-
-// ── Filtering ───────────────────────────────────────────────────
-
-function isBlockedDomain(hostname: string): boolean {
-  for (const domain of BLOCKED_DOMAINS) {
-    if (hostname === domain || hostname.endsWith(`.${domain}`)) return true
-  }
-  return false
-}
-
-function shouldCapture(url: URL, contentType: string | null): boolean {
-  if (isBlockedDomain(url.hostname)) return false
-  if (STATIC_ASSET_RE.test(url.pathname)) return false
-  if (!contentType) return true // unknown content type — capture it
-
-  const base = contentType.split(';')[0]?.trim() ?? ''
-  if (!base) return true
-  if (API_CONTENT_TYPES.has(base)) return true
-  if (base.endsWith('+json')) return true // catch-all for *+json variants
-  if (REJECTED_CONTENT_TYPES.has(base)) return false
-  return true // unknown MIME — capture rather than drop
-}
+const MAX_BODY_SIZE = 1_048_576 // 1 MB — bodies larger than this are omitted (metadata still recorded)
 
 // ── HAR capture ─────────────────────────────────────────────────
 
 export interface HarCapture {
   readonly entries: HarEntry[]
-  /** Number of requests blocked by domain/asset filter during capture */
-  readonly blockedCount: () => number
   /** Number of in-flight requests (awaiting response) + async response handlers */
   readonly pendingCount: () => number
   /** Resolves when all in-flight response handlers complete (or timeout) */
@@ -84,18 +22,12 @@ export function attachHarCapture(page: Page): HarCapture {
   const entries: HarEntry[] = []
   const pendingRequests = new Map<Request, { startedDateTime: string; startTime: number }>()
   const pendingResponses = new Set<Promise<void>>()
-  let blocked = 0
 
   const onRequest = (req: Request): void => {
     try {
-      const url = new URL(req.url())
-      if (isBlockedDomain(url.hostname) || STATIC_ASSET_RE.test(url.pathname)) {
-        blocked++
-        return
-      }
       pendingRequests.set(req, { startedDateTime: new Date().toISOString(), startTime: Date.now() })
     } catch {
-      // intentional: invalid URL from browser — cannot be an API request
+      // intentional: invalid URL from browser
     }
   }
 
@@ -107,16 +39,16 @@ export function attachHarCapture(page: Page): HarCapture {
 
     const task = (async () => {
       try {
-        const url = new URL(req.url())
         const responseHeaders = await res.allHeaders()
         const contentType = responseHeaders['content-type'] ?? null
-
-        if (!shouldCapture(url, contentType)) return
 
         let bodyText: string | undefined
         try {
           const body = await res.body()
-          bodyText = body.toString('utf8')
+          if (body.length <= MAX_BODY_SIZE) {
+            bodyText = body.toString('utf8')
+          }
+          // If body > MAX_BODY_SIZE, bodyText stays undefined — metadata still recorded
         } catch {
           // intentional: body unavailable (streamed, aborted, or redirected)
         }
@@ -161,7 +93,6 @@ export function attachHarCapture(page: Page): HarCapture {
 
   return {
     entries,
-    blockedCount: () => blocked,
     pendingCount: () => pendingRequests.size + pendingResponses.size,
     drain(timeoutMs = 3000): Promise<void> {
       if (pendingResponses.size === 0) return Promise.resolve()
@@ -185,6 +116,3 @@ export function buildHarLog(entries: readonly HarEntry[]): HarLog {
     entries: [...entries],
   }
 }
-
-/** Re-export filter for testing */
-export { shouldCapture as shouldCaptureRequest, isBlockedDomain }
