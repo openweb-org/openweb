@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import type { CaptureData } from './classify.js'
 import type { AuthCandidate, AuthEvidence } from '../types-v2.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../../types/primitives.js'
@@ -5,22 +7,9 @@ import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../../types
 // ── Tracking cookies ────────────────────────────────────────────────────────
 // Prefixes/patterns that indicate tracking/analytics, NOT auth.
 // ct0 and twid are intentionally excluded — they are Twitter auth cookies.
-const TRACKING_COOKIE_PREFIXES = [
-  // Google
-  '_ga', '_gid', '_gat', '_gcl', '__utm', 'NID', '1P_JAR', 'APISID', 'HSID', 'SSID', 'SID',
-  'SAPISID', 'SIDCC', '__Secure-1P', '__Secure-3P',
-  // Facebook / Meta
-  '_fbp', '_fbc', 'fbm_', 'fbsr_', 'datr', 'sb',
-  // Cloudflare
-  '__cf_bm', '__cfruid', '__cfduid', 'cf_clearance',
-  // Analytics / tracking
-  'analytics', '_hjid', '_hjSession', 'mp_', 'ajs_', '_pk_', 'hubspot',
-  '_clck', '_clsk', 'posthog', 'ph_', '_dd_s',
-  // Consent
-  'consent', 'OptanonConsent', 'CookieConsent', 'eupubconsent', 'cookieyes',
-  // Twitter / X — tracking only (ct0 and twid removed: they are auth cookies)
-  'guest_id', 'personalization_id',
-]
+const TRACKING_COOKIE_PREFIXES: readonly string[] = JSON.parse(
+  readFileSync(new URL('../../lib/config/tracking-cookies.json', import.meta.url), 'utf8'),
+)
 
 function isTrackingCookie(name: string): boolean {
   const lower = name.toLowerCase()

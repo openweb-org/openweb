@@ -1,0 +1,7 @@
+[
+  ".js", ".mjs", ".css", ".png", ".jpg", ".jpeg", ".gif", ".svg",
+  ".ico", ".webp", ".avif", ".bmp", ".tiff",
+  ".woff", ".woff2", ".ttf", ".eot", ".otf",
+  ".mp4", ".webm", ".ogg", ".mp3", ".wav", ".flac",
+  ".map", ".ts", ".tsx", ".jsx"
+]

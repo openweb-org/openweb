@@ -117,13 +117,11 @@ function isStaticContentType(contentType: string): boolean {
   return STATIC_CONTENT_TYPE_PREFIXES.some((prefix) => ct.startsWith(prefix))
 }
 
-const STATIC_EXTENSIONS = new Set([
-  '.js', '.mjs', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg',
-  '.ico', '.webp', '.avif', '.bmp', '.tiff',
-  '.woff', '.woff2', '.ttf', '.eot', '.otf',
-  '.mp4', '.webm', '.ogg', '.mp3', '.wav', '.flac',
-  '.map', '.ts', '.tsx', '.jsx',
-])
+const STATIC_EXTENSIONS: ReadonlySet<string> = new Set(
+  JSON.parse(
+    readFileSync(new URL('../../lib/config/static-extensions.json', import.meta.url), 'utf8'),
+  ) as string[],
+)
 
 function getPathExtension(urlPath: string): string {
   // Strip query string and fragment
