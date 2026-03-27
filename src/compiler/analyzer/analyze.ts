@@ -125,6 +125,44 @@ function enrichClusters(
   return v2Clusters
 }
 
+/** Convert camelCase/PascalCase to snake_case. */
+function toSnakeCase(str: string): string {
+  return str
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .replace(/[-\s]+/g, '_')
+    .toLowerCase()
+}
+
+/** Derive operationId + summary from GraphQL cluster info. */
+function graphqlOperationAnnotation(
+  graphql: ClusteredEndpoint['graphql'] & object,
+  method: string,
+): { operationId: string; summary: string } {
+  let rawName: string | undefined
+
+  // 1. operationName directly available
+  if (graphql.operationName) {
+    rawName = graphql.operationName
+  }
+  // 2. queryId — extract the part before the dot (e.g. "voyagerJobsDashJobCards.abc123" → "voyagerJobsDashJobCards")
+  if (!rawName && graphql.queryId) {
+    const dotIdx = graphql.queryId.indexOf('.')
+    rawName = dotIdx > 0 ? graphql.queryId.slice(0, dotIdx) : graphql.queryId
+  }
+
+  if (!rawName) {
+    // Fall back to generic annotation
+    return annotateOperation('', graphql.endpointPath, method)
+  }
+
+  // Convert "Dash" in LinkedIn-style names to underscore (e.g. voyagerJobsDashJobCards → voyager_jobs_job_cards)
+  const cleaned = rawName.replace(/Dash/g, '_')
+  const operationId = toSnakeCase(cleaned)
+  const summary = operationId.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+
+  return { operationId, summary }
+}
+
 function buildClusteredEndpoint(
   idx: number,
   method: string,
@@ -148,8 +186,10 @@ function buildClusteredEndpoint(
   // Merge path + query parameters
   const parameters: ParameterDescriptor[] = [...pathParams, ...queryParams]
 
-  // Annotate operation
-  const { operationId, summary } = annotateOperation(host, normalizedTemplate, method)
+  // Annotate operation — use GraphQL discriminator when available
+  const { operationId, summary } = graphql
+    ? graphqlOperationAnnotation(graphql, method)
+    : annotateOperation(host, normalizedTemplate, method)
 
   // Build response variants
   const responseVariants = buildResponseVariants(samples)

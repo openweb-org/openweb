@@ -92,7 +92,7 @@ export interface PathNormalization {
   readonly originalPaths: readonly string[]
   readonly normalizedSegments: ReadonlyArray<{
     readonly index: number
-    readonly kind: 'numeric' | 'uuid' | 'hex' | 'learned'
+    readonly kind: 'numeric' | 'uuid' | 'hex' | 'urn' | 'learned'
   }>
 }
 

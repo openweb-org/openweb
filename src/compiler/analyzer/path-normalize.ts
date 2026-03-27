@@ -3,6 +3,11 @@ import type { PathNormalization } from '../types-v2.js'
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const NUMERIC_RE = /^\d+$/
 const HEX_RE = /^[0-9a-f]{9,}$/i
+/** Base64-ish: long alphanumeric with mixed case or padding */
+const BASE64_RE = /^[A-Za-z0-9+/=_-]{16,}$/
+
+/** Minimum distinct values to "learn" a segment as a parameter in batch mode */
+const MIN_LEARNED_CARDINALITY = 3
 
 type SegmentKind = PathNormalization['normalizedSegments'][number]['kind']
 
@@ -14,9 +19,14 @@ interface NormalizedSegment {
 type NormalizeResult = { template: string; normalization?: PathNormalization }
 
 function classifySegment(segment: string): SegmentKind | null {
-  if (NUMERIC_RE.test(segment)) return 'numeric'
+  // Very short segments (1-2 chars) are likely path prefixes, not IDs
+  if (segment.length <= 2) return null
+  if (/^urn:/.test(segment)) return 'urn'
   if (UUID_RE.test(segment)) return 'uuid'
+  if (NUMERIC_RE.test(segment)) return 'numeric'
   if (HEX_RE.test(segment)) return 'hex'
+  // Only treat base64-ish tokens as IDs (skip common words/names)
+  if (BASE64_RE.test(segment) && /\d/.test(segment)) return 'hex'
   return null
 }
 
@@ -81,6 +91,9 @@ export function normalizePathBatch(
     for (let i = 0; i < segCount; i++) {
       const values = new Set(segArrays.map((s) => s[i]))
       if (values.size <= 1) continue
+      // Require enough distinct values to be confident this is a parameter,
+      // not just two different endpoints (e.g. /feed/ vs /jobs/)
+      if (values.size < MIN_LEARNED_CARDINALITY) continue
 
       const allAlreadyNormalized = group.every((p) => {
         const n = preNormalized.get(p)

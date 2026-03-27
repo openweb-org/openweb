@@ -56,6 +56,12 @@ describe('normalizePath', () => {
     expect(r.template).toBe('/')
     expect(r.normalization).toBeUndefined()
   })
+
+  it('normalizes URN segments', () => {
+    const r = normalizePath('/voyager/api/identity/dash/profiles/urn:li:fsd_profile:ACoAAAbuQnsBejyn4DxOpmqySclK6jFF50pSuMc')
+    expect(r.template).toBe('/voyager/api/identity/dash/profiles/{id}')
+    expect(r.normalization?.normalizedSegments[0].kind).toBe('urn')
+  })
 })
 
 describe('normalizePathBatch', () => {
@@ -80,12 +86,12 @@ describe('normalizePathBatch', () => {
   })
 
   it('does not learn when paths differ in multiple segments', () => {
-    const paths = ['/a/1/x', '/b/2/y']
+    const paths = ['/a/100/x', '/b/200/y']
     const result = normalizePathBatch(paths)
 
     // Multiple segments differ, no learning
-    expect(result.get('/a/1/x')?.template).toBe('/a/{id}/x')
-    expect(result.get('/b/2/y')?.template).toBe('/b/{id}/y')
+    expect(result.get('/a/100/x')?.template).toBe('/a/{id}/x')
+    expect(result.get('/b/200/y')?.template).toBe('/b/{id}/y')
   })
 
   it('does not learn from a single path', () => {
@@ -95,10 +101,10 @@ describe('normalizePathBatch', () => {
   })
 
   it('handles mix of pattern-matched and learned normalization', () => {
-    const paths = ['/api/v1/users/123/posts/abc', '/api/v1/users/456/posts/def']
+    const paths = ['/api/v1/users/123/posts/abc', '/api/v1/users/456/posts/def', '/api/v1/users/789/posts/ghi']
     const result = normalizePathBatch(paths)
 
-    // 123/456 → pattern-matched numeric, abc/def → learned
+    // 123/456/789 → pattern-matched numeric, abc/def/ghi → learned (3 distinct values)
     for (const p of paths) {
       const r = result.get(p)
       expect(r?.template).toBe('/api/v1/users/{id}/posts/{param}')
@@ -106,5 +112,20 @@ describe('normalizePathBatch', () => {
       expect(kinds).toContain('numeric')
       expect(kinds).toContain('learned')
     }
+  })
+
+  it('does not learn with only 2 distinct values (could be separate endpoints)', () => {
+    const paths = ['/feed/timeline', '/jobs/timeline']
+    const result = normalizePathBatch(paths)
+
+    // Only 2 distinct values — not enough to infer parameterization
+    expect(result.get('/feed/timeline')?.template).toBe('/feed/timeline')
+    expect(result.get('/jobs/timeline')?.template).toBe('/jobs/timeline')
+  })
+
+  it('does not normalize short segments (1-2 chars) as IDs', () => {
+    const r = normalizePath('/api/v1/ab')
+    expect(r.template).toBe('/api/v1/ab')
+    expect(r.normalization).toBeUndefined()
   })
 })
