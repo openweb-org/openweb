@@ -6,7 +6,7 @@ import path from 'node:path'
 import Ajv from 'ajv'
 
 import { OpenWebError } from '../lib/errors.js'
-import { CDP_ENDPOINT } from '../lib/config.js'
+import { CDP_ENDPOINT, TIMEOUT } from '../lib/config.js'
 import { buildQueryUrl } from '../lib/openapi.js'
 import { annotateOperation, annotateParameterDescriptions } from '../compiler/analyzer/annotate.js'
 import { clusterSamples } from '../compiler/analyzer/cluster.js'
@@ -69,6 +69,8 @@ function buildExampleInput(parameters: ParameterDescriptor[]): Record<string, un
 }
 
 async function verifyOperation(operation: Omit<AnalyzedOperation, 'verified'>): Promise<boolean> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT.probe)
   try {
     const url = buildQueryUrl(
       `https://${operation.host}`,
@@ -82,8 +84,11 @@ async function verifyOperation(operation: Omit<AnalyzedOperation, 'verified'>): 
       operation.exampleInput,
     )
 
+    const wrappedFetch: typeof fetch = (input, init) =>
+      fetch(input, { ...init, signal: controller.signal })
+
     const response = await fetchWithRedirects(url, operation.method.toUpperCase(), { Accept: 'application/json' }, undefined, {
-      fetchImpl: fetch,
+      fetchImpl: wrappedFetch,
       ssrfValidator: validateSSRF,
     })
 
@@ -95,8 +100,10 @@ async function verifyOperation(operation: Omit<AnalyzedOperation, 'verified'>): 
     const validator = new Ajv({ strict: false }).compile(operation.responseSchema)
     return Boolean(validator(body))
   } catch {
-    // intentional: verification probe failed (network, parse) — treat as unverified
+    // intentional: verification probe failed (network, parse, timeout) — treat as unverified
     return false
+  } finally {
+    clearTimeout(timer)
   }
 }
 

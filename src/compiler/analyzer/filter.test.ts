@@ -102,17 +102,16 @@ describe('filterSamples', () => {
     expect(rejected.every((r) => r.reason === 'non_2xx')).toBe(true)
   })
 
-  it('rejects non-JSON content types', () => {
+  it('keeps all JSON-parseable content types (filtering delegated to recorder)', () => {
     const input = [
       makeSample({ contentType: 'application/json' }),
       makeSample({ contentType: 'text/html' }),
-      makeSample({ contentType: 'image/png' }),
+      makeSample({ contentType: 'application/vnd.linkedin.normalized+json+2.1; charset=utf-8' }),
+      makeSample({ contentType: 'application/graphql; charset=utf-8' }),
     ]
 
-    const { kept, rejected } = filterSamples(input)
-    expect(kept).toHaveLength(1)
-    expect(rejected).toHaveLength(2)
-    expect(rejected.every((r) => r.reason === 'wrong_content_type')).toBe(true)
+    const { kept } = filterSamples(input)
+    expect(kept).toHaveLength(4)
   })
 
   it('allows all hosts when no targetUrl specified (minus blocklist)', () => {
@@ -210,19 +209,17 @@ describe('filterSamples', () => {
       makeSample({ host: 'www.google-analytics.com' }),
       makeSample({ status: 404 }),
       makeSample({ path: '/manifest.json' }),
-      makeSample({ contentType: 'text/html' }),
       makeSample({ host: 'off-domain.com' }),
     ]
 
     const { kept, rejected } = filterSamples(input, { targetUrl: 'https://example.com' })
     expect(kept).toHaveLength(1)
-    expect(rejected).toHaveLength(5)
+    expect(rejected).toHaveLength(4)
 
     const reasons = rejected.map((r) => r.reason)
     expect(reasons).toContain('blocked_host')
     expect(reasons).toContain('non_2xx')
     expect(reasons).toContain('blocked_path')
-    expect(reasons).toContain('wrong_content_type')
     expect(reasons).toContain('off_domain')
   })
 })

@@ -190,7 +190,7 @@ function isBlockedPath(urlPath: string): boolean {
   return BLOCKED_PATH_PATTERNS.some((pattern) => pattern.test(urlPath))
 }
 
-export type FilterReason = 'blocked_host' | 'blocked_path' | 'non_2xx' | 'wrong_content_type' | 'mutation_gated' | 'off_domain'
+export type FilterReason = 'blocked_host' | 'blocked_path' | 'non_2xx' | 'mutation_gated' | 'off_domain'
 
 export interface FilteredSample {
   readonly sample: RecordedRequestSample
@@ -219,8 +219,6 @@ export function filterSamples(samples: RecordedRequestSample[], options: FilterO
       rejected.push({ sample, reason: 'off_domain' })
     } else if (isBlockedPath(sample.path)) {
       rejected.push({ sample, reason: 'blocked_path' })
-    } else if (sample.contentType && !sample.contentType.includes('application/json')) {
-      rejected.push({ sample, reason: 'wrong_content_type' })
     } else {
       kept.push(sample)
     }
