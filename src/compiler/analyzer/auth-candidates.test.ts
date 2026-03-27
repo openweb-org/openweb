@@ -1,6 +1,6 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import { buildAuthCandidates, _resetIdCounter } from './auth-candidates.js'
+import { buildAuthCandidates } from './auth-candidates.js'
 import type { CaptureData } from './classify.js'
 import type { HarEntry, StateSnapshot } from '../../capture/types.js'
 
@@ -60,10 +60,6 @@ function makeSnapshot(overrides?: {
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('buildAuthCandidates', () => {
-  beforeEach(() => {
-    _resetIdCounter()
-  })
-
   // ── Cookie session with coverage ratio ──
 
   describe('cookie session detection', () => {
@@ -580,5 +576,17 @@ describe('buildAuthCandidates', () => {
       expect(c.evidence).toBeDefined()
       expect(c.evidence.notes.length).toBeGreaterThan(0)
     }
+  })
+
+  it('IDs always start from auth-1 on each call (no cross-call leakage)', () => {
+    const data: CaptureData = {
+      harEntries: [makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] })],
+      stateSnapshots: [makeSnapshot({ cookies: [{ name: 'sessionid', value: 'abc' }] })],
+    }
+
+    const first = buildAuthCandidates(data)
+    const second = buildAuthCandidates(data)
+    expect(first[0]?.id).toBe('auth-1')
+    expect(second[0]?.id).toBe('auth-1')
   })
 })

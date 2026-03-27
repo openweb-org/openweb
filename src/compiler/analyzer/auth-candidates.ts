@@ -310,15 +310,9 @@ function buildSigning(sapisidhash: SapisidhashResult | undefined): SigningPrimit
   return { type: 'sapisidhash', origin: sapisidhash.origin, inject: { header: 'Authorization', prefix: 'SAPISIDHASH ' } }
 }
 
-let candidateCounter = 0
-
-function nextId(): string {
-  return `auth-${++candidateCounter}`
-}
-
-/** Reset counter — exposed for tests only. */
-export function _resetIdCounter(): void {
-  candidateCounter = 0
+function makeIdGenerator(): () => string {
+  let counter = 0
+  return () => `auth-${++counter}`
 }
 
 /**
@@ -329,6 +323,7 @@ export function _resetIdCounter(): void {
  * Always returns at least one candidate (confidence 0 "none" if nothing detected).
  */
 export function buildAuthCandidates(data: CaptureData): AuthCandidate[] {
+  const nextId = makeIdGenerator()
   const candidates: AuthCandidate[] = []
 
   // Detect all signals
