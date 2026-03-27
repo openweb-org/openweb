@@ -4,7 +4,7 @@ import { access, mkdtemp, rm, writeFile } from 'node:fs/promises'
 
 import { describe, expect, it } from 'vitest'
 
-import { cleanupRecordingDir, loadRecordedSamples } from './recorder.js'
+import { cleanupRecordingDir, extractSamples, loadHar } from './recorder.js'
 
 describe('recorder helpers', () => {
   it('loads valid samples from HAR and cleans temp directory', async () => {
@@ -34,7 +34,8 @@ describe('recorder helpers', () => {
 
       await writeFile(path.join(recordingDir, 'traffic.har'), `${JSON.stringify(har, null, 2)}\n`, 'utf8')
 
-      const samples = await loadRecordedSamples(recordingDir)
+      const parsedHar = await loadHar(recordingDir)
+      const samples = extractSamples(parsedHar)
       expect(samples).toHaveLength(1)
       expect(samples[0].host).toBe('api.open-meteo.com')
       expect(samples[0].query.latitude).toEqual(['52.52'])
@@ -73,7 +74,8 @@ describe('recorder helpers', () => {
 
       await writeFile(path.join(recordingDir, 'traffic.har'), `${JSON.stringify(har, null, 2)}\n`, 'utf8')
 
-      const samples = await loadRecordedSamples(recordingDir)
+      const parsedHar = await loadHar(recordingDir)
+      const samples = extractSamples(parsedHar)
       expect(samples).toHaveLength(1)
       expect(samples[0].response).toEqual({ kind: 'text', body: 'not-json' })
     } finally {

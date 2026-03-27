@@ -18,7 +18,7 @@ import type { FilteredSample } from '../compiler/analyzer/filter.js'
 import { inferSchema } from '../compiler/analyzer/schema.js'
 import { generatePackage } from '../compiler/generator/index.js'
 import type { GeneratePackageInput } from '../compiler/generator/index.js'
-import { cleanupRecordingDir, loadCaptureData, loadRecordedSamples, runScriptedRecording } from '../compiler/recorder.js'
+import { cleanupRecordingDir, extractSamples, loadCaptureData, loadHar, runScriptedRecording } from '../compiler/recorder.js'
 import { probeOperations, mergeProbeResults } from '../compiler/prober.js'
 import type { ProbeResult } from '../compiler/prober.js'
 import { connectWithRetry } from '../capture/connection.js'
@@ -31,6 +31,24 @@ import { inferWsSchemas } from '../compiler/ws-analyzer/ws-schema.js'
 import type { AnalyzedOperation, ClusteredEndpoint, ParameterDescriptor, RecordedRequestSample } from '../compiler/types.js'
 import { fetchWithRedirects } from '../runtime/redirect.js'
 import { validateSSRF } from '../lib/ssrf.js'
+
+/** Run async tasks with bounded concurrency. */
+async function boundedParallel<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  concurrency: number,
+): Promise<R[]> {
+  const results: R[] = []
+  let index = 0
+  async function worker() {
+    while (index < items.length) {
+      const i = index++
+      results[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker()))
+  return results
+}
 
 interface CompileArgs {
   readonly url: string
@@ -141,7 +159,8 @@ export async function compileSite(
   let wsInput: GeneratePackageInput['ws'] | undefined
   const site = siteSlugFromUrl(args.url)
   try {
-    const recordedSamples = await loadRecordedSamples(recordingDir)
+    const har = await loadHar(recordingDir)
+    const recordedSamples = extractSamples(har)
     totalRecordedCount = recordedSamples.length
     const filterResult = filterSamples(recordedSamples, { targetUrl: args.url })
     filteredSamples = filterResult.kept
@@ -149,7 +168,7 @@ export async function compileSite(
     offDomainSamples = filterResult.offDomain
 
     // Load full capture data for L2 classification
-    const captureData = await loadCaptureData(recordingDir)
+    const captureData = await loadCaptureData(recordingDir, har)
     if (captureData.harEntries.length > 0 || captureData.stateSnapshots.length > 0 || captureData.domHtml) {
       classifyResult = classify(captureData)
     }
@@ -178,9 +197,9 @@ export async function compileSite(
   }
 
   const clusters = clusterSamples(filteredSamples)
-  const analyzedOperations: AnalyzedOperation[] = []
 
-  for (const cluster of clusters) {
+  // Phase 1: sync analysis (no I/O)
+  const operationBases = clusters.map((cluster) => {
     const annotation = annotateOperation(cluster.host, cluster.path, cluster.method)
     const differentiatedParams = differentiateParameters(cluster)
     const annotatedParams = annotateParameterDescriptions(differentiatedParams)
@@ -209,7 +228,7 @@ export async function compileSite(
       }
     }
 
-    const operationBase = {
+    return {
       method: cluster.method.toLowerCase(),
       host: cluster.host,
       path: cluster.path,
@@ -221,17 +240,29 @@ export async function compileSite(
       exampleRequestBody,
       exampleInput: buildExampleInput(annotatedParams),
     }
+  })
 
-    // Only verify GET operations — mutations are not safe to replay
-    const verified = options.verifyReplay === false || cluster.method !== 'GET'
-      ? false
-      : await verifyOperation(operationBase)
+  // Phase 2: parallel verification of GET operations with bounded concurrency
+  const VERIFY_CONCURRENCY = 6
+  const verifyTargets = options.verifyReplay === false
+    ? []
+    : operationBases.filter((op) => op.method === 'get')
+  const verifyResults = await boundedParallel(
+    verifyTargets,
+    (op) => verifyOperation(op),
+    VERIFY_CONCURRENCY,
+  )
+  const verifiedIds = new Set(
+    verifyTargets
+      .filter((_, i) => verifyResults[i])
+      .map((op) => op.operationId),
+  )
 
-    analyzedOperations.push({
-      ...operationBase,
-      verified,
-    })
-  }
+  // Phase 3: merge results
+  const analyzedOperations: AnalyzedOperation[] = operationBases.map((op) => ({
+    ...op,
+    verified: verifiedIds.has(op.operationId),
+  }))
 
   if (analyzedOperations.length === 0 && !classifyResult?.extractions && !hasWsOps) {
     throw new OpenWebError({

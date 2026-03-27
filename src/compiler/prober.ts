@@ -24,8 +24,8 @@ export interface ProbeOptions {
 }
 
 const PROBE_TIMEOUT = TIMEOUT.probe
-const PROBE_DELAY = TIMEOUT.probeDelay
 const MAX_OUTBOUND_REQUESTS = 30
+const PROBE_CONCURRENCY = 3
 
 /** Fetch with per-hop SSRF validation, cross-origin header stripping, and timeout */
 async function probeFetch(
@@ -145,30 +145,27 @@ export async function probeOperations(
   operations: AnalyzedOperation[],
   options: ProbeOptions = {},
 ): Promise<ProbeResult[]> {
+  const getOps = operations.filter((op) => op.method.toLowerCase() === 'get')
+  if (getOps.length === 0) return []
+
   const results: ProbeResult[] = []
-  let totalRequests = 0
+  const budget = { remaining: MAX_OUTBOUND_REQUESTS }
 
-  for (const operation of operations) {
-    if (totalRequests >= MAX_OUTBOUND_REQUESTS) break
-
-    // Skip non-GET early — don't consume probe budget
-    if (operation.method.toLowerCase() !== 'get') continue
-
-    const [result, requestsMade] = await probeOne(
-      operation, options.browser, options, MAX_OUTBOUND_REQUESTS - totalRequests,
-    )
-    totalRequests += requestsMade
-
-    if (result) {
-      results.push(result)
-    }
-
-    // Rate limit between probes
-    if (totalRequests < MAX_OUTBOUND_REQUESTS) {
-      await new Promise((r) => setTimeout(r, PROBE_DELAY))
+  let index = 0
+  async function worker() {
+    while (index < getOps.length && budget.remaining > 0) {
+      const i = index++
+      const [result, requestsMade] = await probeOne(
+        getOps[i], options.browser, options, budget.remaining,
+      )
+      budget.remaining -= requestsMade
+      if (result) results.push(result)
     }
   }
 
+  await Promise.all(
+    Array.from({ length: Math.min(PROBE_CONCURRENCY, getOps.length) }, () => worker()),
+  )
   return results
 }
 

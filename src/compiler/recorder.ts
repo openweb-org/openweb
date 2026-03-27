@@ -102,11 +102,15 @@ export async function runScriptedRecording(scriptPath: string): Promise<string> 
   return recordingDir
 }
 
-export async function loadRecordedSamples(recordingDir: string): Promise<RecordedRequestSample[]> {
+/** Read and parse the HAR file once. Callers share the parsed result. */
+export async function loadHar(recordingDir: string): Promise<HarLog> {
   const harPath = path.join(recordingDir, 'traffic.har')
   const raw = await readFile(harPath, 'utf8')
-  const har = JSON.parse(raw) as HarLog
+  return JSON.parse(raw) as HarLog
+}
 
+/** Extract request samples from a pre-parsed HAR. */
+export function extractSamples(har: HarLog): RecordedRequestSample[] {
   const samples: RecordedRequestSample[] = []
 
   for (const entry of getHarEntries(har)) {
@@ -165,10 +169,7 @@ export async function cleanupRecordingDir(recordingDir: string): Promise<void> {
  * Reads: traffic.har (raw entries), state_snapshots.json, dom.html.
  * Missing files are treated as empty — only traffic.har is required.
  */
-export async function loadCaptureData(recordingDir: string): Promise<CaptureData> {
-  const harPath = path.join(recordingDir, 'traffic.har')
-  const raw = await readFile(harPath, 'utf8')
-  const har = JSON.parse(raw) as HarLog
+export async function loadCaptureData(recordingDir: string, har: HarLog): Promise<CaptureData> {
 
   // Convert local HAR entries to capture module HarEntry format
   const harEntries: CaptureHarEntry[] = []
