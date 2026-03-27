@@ -17,7 +17,7 @@ User wants to...
 │   └── Site does not exist → Read references/discover.md
 ├── Add or expand site coverage (new site OR more ops)
 │   └── Read references/discover.md
-├── Review compile output (HTTP and/or WS)
+├── Curate and verify a compiled site package
 │   └── Read references/compile.md
 ├── Diagnose failures
 │   └── Read references/troubleshooting.md
@@ -74,7 +74,7 @@ Errors on stderr include `failureClass`:
 | File | When |
 |---|---|
 | `references/discover.md` | Adding or expanding a site |
-| `references/compile.md` | Reviewing compile output |
+| `references/compile.md` | Curating, generating, and verifying a site package |
 | `references/site-doc.md` | DOC.md / PROGRESS.md template |
 | `references/cli.md` | CLI reference, browser mgmt |
 | `references/troubleshooting.md` | Debugging errors |

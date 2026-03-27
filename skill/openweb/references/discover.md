@@ -2,6 +2,8 @@
 
 How to add a new site or expand an existing site's operation coverage.
 
+**Responsibility:** Coverage — are all target intents captured? Correctness is `compile.md`'s job.
+
 ## When to Use
 
 - User asks about a site with no site package
@@ -13,6 +15,7 @@ How to add a new site or expand an existing site's operation coverage.
 - Read `references/knowledge/archetypes/index.md` — what type of site is this?
   Archetypes are heuristic starting points, not limiting checklists.
   Define targets based on user needs and actual site capabilities.
+- Read `references/knowledge/bot-detection-patterns.md` — what anti-bot measures to expect?
 - Read `references/knowledge/auth-patterns.md` — what auth do you expect?
 - If the site already has a package, read its DOC.md and openapi.yaml
   to understand current coverage before capturing more
@@ -29,7 +32,7 @@ Why: Bot detection systems (PerimeterX, DataDome, Akamai) track IP reputation ac
 
 When discovering write operations (POST/PUT/PATCH/DELETE), capture the traffic but be cautious about verification:
 
-When documenting write operations in DOC.md, mark each with a safety level: ✅ SAFE (reversible), ⚠️ CAUTION (manageable impact), 🚫 NEVER (irreversible/costly).
+When documenting write operations in DOC.md, mark each with a safety level: SAFE (reversible), CAUTION (manageable impact), NEVER (irreversible/costly).
 
 **Safe to capture and trigger:**
 - Add to cart (without purchasing)
@@ -55,56 +58,37 @@ Verify skips write operations by default. To verify writes, use `--include-write
 ### Overview
 
 ```
-  ┌─────────────────────────────────────────────────────┐
-  │  Step 1: Frame target intents                       │
-  └──────────────┬──────────────────────────────────────┘
-                 ▼
-  ┌─────────────────────────────────────────────────────┐
-  │  Step 2: Capture  ◄──────────────────────┐          │
-  └──────────────┬───────────────────────────│──────────┘
-                 ▼                           │
-  ┌─────────────────────────────────────────────────────┐
-  │  Step 3: Inspect — verify intent coverage │          │
-  └──────────────┬───────────────────────────│──────────┘
-                 ▼                           │
-  ┌─────────────────────────────────────────────────────┐
-  │  Step 4: Fill gaps ──── missing intents? ┘          │
-  └──────────────┬──────────────────────────────────────┘
-                 ▼
-  ┌─────────────────────────────────────────────────────┐
-  │  Step 5: Compile + check compile-report             │
-  └──────────────┬──────────────────────────────────────┘
-                 ▼
-  ┌─────────────────────────────────────────────────────┐
-  │  Step 6: Gap review — map ops to intents  ◄──┐      │
-  │           check filtered.json                 │      │
-  └──────────────┬────────────────────────────────│─────┘
-                 │  gaps remain?                  │
-                 │  filtered → fix filter, recompile
-                 │  not captured → back to Step 2 ┘
-                 ▼
-  ┌─────────────────────────────────────────────────────┐
-  │  Step 7: Verify                                     │
-  └──────────────┬──────────────────────────────────────┘
-                 ▼
-  ┌─────────────────────────────────────────────────────┐
-  │  Step 8: Write artifacts (DOC.md, PROGRESS.md)      │
-  └─────────────────────────────────────────────────────┘
+  Step 1: Frame target intents
+       |
+       v
+  Step 2: Capture  <----------+
+       |                       |
+       v                       |
+  Step 3: Analyze              |
+       |                       |
+       v                       |
+  Step 4: Review analysis      |
+       |                       |
+       v                       |
+  Step 5: Fill gaps -- missing intents?
+       |
+       v  (coverage complete)
+  Step 6: Handoff to compile agent
 ```
 
 ### Step 1: Frame the Target
 
 - Identify the site archetype (read the relevant section in archetypes)
-- Define 3–5 target intents described as **user actions**, not API names
+- Define 3-5 target intents described as **user actions**, not API names
   (Based on user needs and actual site capabilities, not copied from archetype templates)
 - Create or update DOC.md with an initial overview and target-intent checklist
   (Following the `references/site-doc.md` template)
 - If specific operations are requested, those are your targets
 
 **Examples of good target intents:**
-- E-commerce → search products by keyword; get product detail; get reviews
-- Travel → search flights by route and date; get pricing details
-- Social → search posts by keyword; get post detail with comments; get user profile
+- E-commerce: search products by keyword; get product detail; get reviews
+- Travel: search flights by route and date; get pricing details
+- Social: search posts by keyword; get post detail with comments; get user profile
 
 ### Step 2: Capture
 
@@ -112,28 +96,74 @@ Verify skips write operations by default. To verify writes, use `--include-write
 openweb browser start
 openweb capture start --cdp-endpoint http://localhost:9222
 # Browse systematically to trigger target operations:
-#   - Do a search → triggers search API
-#   - Click into a result → triggers detail API
-#   - Scroll/paginate → triggers pagination
+#   - Do a search -> triggers search API
+#   - Click into a result -> triggers detail API
+#   - Scroll/paginate -> triggers pagination
 #   - Check other features (reviews, status, profile)
 # Avoid: logout, delete account, billing, irreversible actions
 openweb capture stop
 ```
 
-### Step 3: Inspect What Was Recorded
+### Step 3: Analyze
 
-This is a first-class step — not just counting requests.
+Run the compile command to produce an analysis report from the captured traffic:
 
-- Check capture summary: how many requests? Which domains? Any WS frames?
-- **Map each target intent to recorded traffic:**
-  Did the target API fire? Was the data source found?
-- If SPA: check whether data comes from API calls or SSR-embedded data
-- Check whether the correct page/tab was recorded
-- Mark missing target intents in DOC.md
+```bash
+openweb compile <site-url> --capture-dir <dir>
+```
 
-### Step 4: Fill Gaps (iterate with Steps 2–3)
+This runs the Analyze phase (code-only) and produces `analysis.json` in `~/.openweb/compile/<site>/`.
 
-If target operations are missing:
+The analysis report labels every captured request (no data is discarded), clusters API requests into candidate operations, detects auth patterns, and identifies extraction signals. It replaces the old split report files.
+
+### Step 4: Review Analysis Report
+
+Read `~/.openweb/compile/<site>/analysis.json`. Focus on coverage — are your target intents represented?
+
+#### 4a. Summary
+
+Check `summary.byCategory`:
+- `api` — requests routed to clustering (these become operations)
+- `static` — CSS/JS/images/fonts (noise, expected)
+- `tracking` — analytics beacons (noise, expected)
+- `off_domain` — requests to different domains
+
+If `api` count is zero or very low, the capture missed the target traffic. Return to Step 2.
+
+If `off_domain` count is high and your target API lives on a different domain (e.g., chatgpt.com calls api.openai.com), re-run with `--allow-host <domain>`.
+
+#### 4b. Navigation Groups
+
+`navigation` shows which page triggered which requests. Use this to map target intents to captured traffic:
+- "I searched for X on the site" -> is there a navigation group for that page with api-labeled requests?
+- "I clicked into a detail page" -> is there a corresponding group?
+
+If a target intent has no matching navigation group, it was not captured.
+
+#### 4c. Clusters
+
+`clusters` shows how API requests were grouped into candidate operations. Check:
+- Does each target intent have at least one matching cluster?
+- `suggestedOperationId` and `suggestedSummary` — do they describe the right action?
+- `sampleCount` — a cluster with 100+ samples on the same path likely indicates a GraphQL single-endpoint pattern. Check for `graphql` sub-cluster info.
+- Are there multiple clusters that look like the same operation? (Path normalization may have split them.)
+
+#### 4d. Auth Candidates
+
+`authCandidates` shows ranked auth detection results with evidence:
+- `confidence` — how certain is the detection?
+- `evidence.matchedCookies` — which cookies were identified?
+- `evidence.matchedEntries` / `totalEntries` — coverage ratio
+
+Note this for the handoff — the compile agent will confirm the final auth choice.
+
+#### 4e. Extraction Signals
+
+`extractionSignals` shows SSR/DOM data detected (Next.js `__NEXT_DATA__`, embedded JSON, etc.). If target intent data comes from SSR rather than API calls, this confirms the data source.
+
+### Step 5: Fill Gaps (iterate Steps 2-4)
+
+If target operations are missing from the analysis:
 - Read page DOM (`page.evaluate`) to look for SSR data (`__NEXT_DATA__`, embedded JSON)
 - Check whether data loads via fetch/XHR or is in the initial HTML
 - Try different user actions (different search terms, scroll for lazy loading, click different detail pages)
@@ -141,61 +171,17 @@ If target operations are missing:
 - If login is required: `openweb login <site>`, restart browser, re-capture
 - Re-capture with more targeted browsing
 
-**Repeat Steps 2–4 until every target intent has at least one credible data source**
-(API call, SSR data, or DOM data).
+**Repeat Steps 2-5 until every target intent has at least one credible data source** (API cluster, SSR extraction signal, or DOM data).
 
-### Step 5: Compile and Check Report
+### Step 6: Handoff
 
-```bash
-openweb compile <site-url> [--capture-dir <dir>] [--probe]
-```
+When coverage is complete, hand off to the compile agent with:
 
-After compile completes, check the compile-report:
-- Read `~/.openweb/compile/<site>/summary.txt` — is operationCount reasonable?
-- If a target intent is missing → read `filtered.json` to determine cause:
-  - **In rejected list** → filter false positive, no need to re-capture
-  - **In off_domain list** → the API uses a different domain (e.g. chatgpt.com → api.openai.com). Re-compile with `--allow-host <domain>` or note the cross-domain dependency.
-  - **Not present** → genuinely not recorded, go back to Step 2
+1. **Capture directory** — the raw capture data
+2. **analysis.json** — the analysis report in `~/.openweb/compile/<site>/`
+3. **Target intents in DOC.md** — the checklist with coverage status
 
-Then follow `references/compile.md` for curation. During curation:
-- Map generated operations back to target intents in DOC.md
-- Update DOC.md with auth, transport, extraction, and known issues
-
-### Step 6: Gap Review
-
-Mark each target intent in DOC.md:
-- Covered by a compiled operation
-- Covered only via DOM/SSR extraction (needs adapter)
-- Still missing
-
-If important gaps remain → return to Step 2 for targeted browsing.
-
-### Step 7: Verify
-
-Two levels of verification:
-
-**7a. API-level**: Does the operation return 200 with data?
-```bash
-openweb verify <site>
-```
-AUTH_FAIL means login needed first. PASS means the API responds — but that's not enough.
-
-**7b. Content-level**: Does the API data match what the user sees?
-
-Browse the site in the browser and compare:
-- Do a search on the website → compare visible results with API response
-- Open a detail page → compare visible info with API detail response
-- If the API returns less data than the page shows, there may be missing endpoints or SSR data not captured via API
-- **Check against target intents**: Does each operation return useful, actionable data?
-
-A 200 response with garbage data is not a working site package.
-
-### Step 8: Write Artifacts
-
-- Finalize DOC.md (per `references/site-doc.md`)
-- Append first PROGRESS.md entry
-- Update cross-site knowledge only when the experience generalizes
-  (per `references/update-knowledge.md`)
+The compile agent takes over from here. It will review the analysis, curate operations, generate specs, and verify correctness. See `references/compile.md`.
 
 ## Incremental Discovery (Existing Sites)
 
@@ -204,15 +190,15 @@ When expanding an existing site package, start from gap review:
 1. Read the site's DOC.md and openapi.yaml — what's already covered?
 2. Identify missing intents (user request or archetype comparison)
 3. Enter the loop at **Step 2** with targeted capture for the gaps
-4. After compile, merge new operations into the existing spec
-5. Update DOC.md and PROGRESS.md with the expansion
+4. After compile produces analysis.json, verify the new intents are covered
+5. Hand off to compile agent for curation and merge into existing spec
+6. Update DOC.md and PROGRESS.md with the expansion
 
 ## Outputs
 
-- Site package: `openapi.yaml` (+ `asyncapi.yaml` if WS traffic present)
-- `DOC.md` in site package directory
-- `PROGRESS.md` in site package directory
-- Knowledge updates (if pattern generalizes)
+- Capture directory with raw traffic data
+- `analysis.json` in `~/.openweb/compile/<site>/`
+- Updated DOC.md with target-intent coverage checklist
 
 ## Multi-Worker Browser Sharing
 
@@ -225,8 +211,9 @@ Multiple workers can share one Chrome browser on the same CDP port. Rules:
 
 ## Related References
 
-- `references/compile.md` — correctness review after compile
+- `references/compile.md` — correctness review after handoff
 - `references/site-doc.md` — DOC.md / PROGRESS.md template
 - `references/update-knowledge.md` — when to write cross-site patterns
 - `references/knowledge/archetypes/index.md` — site type expectations
 - `references/knowledge/auth-patterns.md` — auth primitive detection
+- `references/knowledge/bot-detection-patterns.md` — anti-bot measures
