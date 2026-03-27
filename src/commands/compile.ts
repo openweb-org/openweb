@@ -155,12 +155,15 @@ export async function compileSite(
   let rejectedSamples: FilteredSample[] = []
   let offDomainSamples: RecordedRequestSample[] = []
   let totalRecordedCount = 0
+  let malformedCount = 0
   let classifyResult: ReturnType<typeof classify> | undefined // mutable: probe may override
   let wsInput: GeneratePackageInput['ws'] | undefined
   const site = siteSlugFromUrl(args.url)
   try {
     const har = await loadHar(recordingDir)
-    const recordedSamples = extractSamples(har)
+    const extracted = extractSamples(har)
+    const recordedSamples = extracted.samples
+    malformedCount = extracted.malformedCount
     totalRecordedCount = recordedSamples.length
     const filterResult = filterSamples(recordedSamples, { targetUrl: args.url })
     filteredSamples = filterResult.kept
@@ -317,6 +320,7 @@ export async function compileSite(
   const reportDir = path.join(os.homedir(), '.openweb', 'compile', site)
   await writeCompileReport(reportDir, {
     totalRecorded: totalRecordedCount,
+    malformedCount,
     kept: filteredSamples,
     rejected: rejectedSamples,
     offDomain: offDomainSamples,
@@ -350,6 +354,7 @@ export async function compileSite(
 
 interface CompileReportData {
   readonly totalRecorded: number
+  readonly malformedCount: number
   readonly kept: RecordedRequestSample[]
   readonly rejected: FilteredSample[]
   readonly offDomain: RecordedRequestSample[]
@@ -401,6 +406,7 @@ function buildFilteredJson(data: CompileReportData) {
   return {
     compiled_at: new Date().toISOString(),
     total: data.totalRecorded,
+    malformed: data.malformedCount,
     kept: data.kept.length,
     rejected: data.rejected.length,
     off_domain: data.offDomain.length,

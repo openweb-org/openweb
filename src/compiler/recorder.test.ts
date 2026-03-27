@@ -35,8 +35,9 @@ describe('recorder helpers', () => {
       await writeFile(path.join(recordingDir, 'traffic.har'), `${JSON.stringify(har, null, 2)}\n`, 'utf8')
 
       const parsedHar = await loadHar(recordingDir)
-      const samples = extractSamples(parsedHar)
+      const { samples, malformedCount } = extractSamples(parsedHar)
       expect(samples).toHaveLength(1)
+      expect(malformedCount).toBe(0)
       expect(samples[0].host).toBe('api.open-meteo.com')
       expect(samples[0].query.latitude).toEqual(['52.52'])
       expect(samples[0].response).toEqual({ kind: 'json', body: { latitude: 52.52, longitude: 13.41 } })
@@ -75,7 +76,7 @@ describe('recorder helpers', () => {
       await writeFile(path.join(recordingDir, 'traffic.har'), `${JSON.stringify(har, null, 2)}\n`, 'utf8')
 
       const parsedHar = await loadHar(recordingDir)
-      const samples = extractSamples(parsedHar)
+      const { samples } = extractSamples(parsedHar)
       expect(samples).toHaveLength(1)
       expect(samples[0].response).toEqual({ kind: 'text', body: 'not-json' })
     } finally {

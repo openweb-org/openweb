@@ -109,24 +109,31 @@ export async function loadHar(recordingDir: string): Promise<HarLog> {
   return JSON.parse(raw) as HarLog
 }
 
+export interface ExtractResult {
+  readonly samples: RecordedRequestSample[]
+  readonly malformedCount: number
+}
+
 /** Extract request samples from a pre-parsed HAR. */
-export function extractSamples(har: HarLog): RecordedRequestSample[] {
+export function extractSamples(har: HarLog): ExtractResult {
   const samples: RecordedRequestSample[] = []
+  let malformedCount = 0
 
   for (const entry of getHarEntries(har)) {
     const method = entry.request?.method?.toUpperCase()
     const rawUrl = entry.request?.url
     const status = entry.response?.status
-    const contentType =
-      entry.response?.headers
-        ?.find((header) => header.name?.toLowerCase() === 'content-type')
-        ?.value?.toLowerCase() ?? entry.response?.content?.mimeType?.toLowerCase() ?? ''
 
     if (!method || !rawUrl || status === undefined) {
+      malformedCount++
       continue
     }
 
     const parsedUrl = new URL(rawUrl)
+    const contentType =
+      entry.response?.headers
+        ?.find((header) => header.name?.toLowerCase() === 'content-type')
+        ?.value?.toLowerCase() ?? entry.response?.content?.mimeType?.toLowerCase() ?? ''
     const encodedText = entry.response?.content?.text
 
     let response: SampleResponse
@@ -157,7 +164,7 @@ export function extractSamples(har: HarLog): RecordedRequestSample[] {
     })
   }
 
-  return samples
+  return { samples, malformedCount }
 }
 
 export async function cleanupRecordingDir(recordingDir: string): Promise<void> {
