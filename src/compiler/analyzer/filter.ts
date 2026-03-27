@@ -143,7 +143,7 @@ function isBlockedPath(urlPath: string): boolean {
   return BLOCKED_PATH_PATTERNS.some((pattern) => pattern.test(urlPath))
 }
 
-export type FilterReason = 'blocked_host' | 'blocked_path' | 'non_2xx' | 'mutation_gated' | 'off_domain'
+export type FilterReason = 'blocked_host' | 'blocked_path' | 'mutation_gated'
 
 export interface FilteredSample {
   readonly sample: RecordedRequestSample
@@ -153,6 +153,7 @@ export interface FilteredSample {
 export interface FilterResult {
   readonly kept: RecordedRequestSample[]
   readonly rejected: FilteredSample[]
+  readonly offDomain: RecordedRequestSample[]  // reported but not compiled
 }
 
 export function filterSamples(samples: RecordedRequestSample[], options: FilterOptions = {}): FilterResult {
@@ -160,16 +161,15 @@ export function filterSamples(samples: RecordedRequestSample[], options: FilterO
   const allowMutations = options.allowMutations ?? true
   const kept: RecordedRequestSample[] = []
   const rejected: FilteredSample[] = []
+  const offDomain: RecordedRequestSample[] = []
 
   for (const sample of samples) {
     if (!allowMutations && sample.method !== 'GET') {
       rejected.push({ sample, reason: 'mutation_gated' })
-    } else if (sample.status < 200 || sample.status >= 300) {
-      rejected.push({ sample, reason: 'non_2xx' })
     } else if (isBlockedHost(sample.host)) {
       rejected.push({ sample, reason: 'blocked_host' })
     } else if (!isAllowedHost(sample.host, allowedDomains)) {
-      rejected.push({ sample, reason: 'off_domain' })
+      offDomain.push(sample)
     } else if (isBlockedPath(sample.path)) {
       rejected.push({ sample, reason: 'blocked_path' })
     } else {
@@ -177,5 +177,5 @@ export function filterSamples(samples: RecordedRequestSample[], options: FilterO
     }
   }
 
-  return { kept, rejected }
+  return { kept, rejected, offDomain }
 }

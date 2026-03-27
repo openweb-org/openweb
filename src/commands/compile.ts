@@ -135,6 +135,7 @@ export async function compileSite(
   const recordingDir = userProvidedDir ?? await runScriptedRecording(scriptPath)
   let filteredSamples: RecordedRequestSample[] = []
   let rejectedSamples: FilteredSample[] = []
+  let offDomainSamples: RecordedRequestSample[] = []
   let totalRecordedCount = 0
   let classifyResult: ReturnType<typeof classify> | undefined // mutable: probe may override
   let wsInput: GeneratePackageInput['ws'] | undefined
@@ -145,6 +146,7 @@ export async function compileSite(
     const filterResult = filterSamples(recordedSamples, { targetUrl: args.url })
     filteredSamples = filterResult.kept
     rejectedSamples = filterResult.rejected
+    offDomainSamples = filterResult.offDomain
 
     // Load full capture data for L2 classification
     const captureData = await loadCaptureData(recordingDir)
@@ -286,6 +288,7 @@ export async function compileSite(
     totalRecorded: totalRecordedCount,
     kept: filteredSamples,
     rejected: rejectedSamples,
+    offDomain: offDomainSamples,
     clusters,
     classifyResult,
     probeResults,
@@ -318,6 +321,7 @@ interface CompileReportData {
   readonly totalRecorded: number
   readonly kept: RecordedRequestSample[]
   readonly rejected: FilteredSample[]
+  readonly offDomain: RecordedRequestSample[]
   readonly clusters: ClusteredEndpoint[]
   readonly classifyResult?: ClassifyResult
   readonly probeResults?: ProbeResult[]
@@ -330,6 +334,9 @@ function buildFilteredJson(data: CompileReportData) {
   const byReason: Record<string, number> = {}
   for (const r of data.rejected) {
     byReason[r.reason] = (byReason[r.reason] ?? 0) + 1
+  }
+  if (data.offDomain.length > 0) {
+    byReason.off_domain = data.offDomain.length
   }
 
   const requests = [
@@ -350,6 +357,14 @@ function buildFilteredJson(data: CompileReportData) {
       result: 'rejected' as const,
       reason: r.reason,
     })),
+    ...data.offDomain.map((s) => ({
+      host: s.host,
+      path: s.path,
+      method: s.method,
+      status: s.status,
+      content_type: s.contentType,
+      result: 'off_domain' as const,
+    })),
   ]
 
   return {
@@ -357,6 +372,7 @@ function buildFilteredJson(data: CompileReportData) {
     total: data.totalRecorded,
     kept: data.kept.length,
     rejected: data.rejected.length,
+    off_domain: data.offDomain.length,
     by_reason: byReason,
     requests,
   }

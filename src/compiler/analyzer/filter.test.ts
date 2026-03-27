@@ -88,7 +88,7 @@ describe('filterSamples', () => {
     expect(rejected.every((r) => r.reason === 'mutation_gated')).toBe(true)
   })
 
-  it('rejects non-2xx responses', () => {
+  it('passes all status codes through (non-2xx are not filtered)', () => {
     const input = [
       makeSample({ status: 200 }),
       makeSample({ status: 301 }),
@@ -97,9 +97,19 @@ describe('filterSamples', () => {
     ]
 
     const { kept, rejected } = filterSamples(input)
-    expect(kept).toHaveLength(1)
-    expect(rejected).toHaveLength(3)
-    expect(rejected.every((r) => r.reason === 'non_2xx')).toBe(true)
+    expect(kept).toHaveLength(4)
+    expect(rejected).toHaveLength(0)
+  })
+
+  it('passes 4xx status codes through (auth/rate-limit signals)', () => {
+    const input = [
+      makeSample({ status: 401 }),
+      makeSample({ status: 403 }),
+      makeSample({ status: 429 }),
+    ]
+
+    const { kept } = filterSamples(input)
+    expect(kept).toHaveLength(3)
   })
 
   it('keeps all JSON-parseable content types (filtering delegated to recorder)', () => {
@@ -212,14 +222,30 @@ describe('filterSamples', () => {
       makeSample({ host: 'off-domain.com' }),
     ]
 
-    const { kept, rejected } = filterSamples(input, { targetUrl: 'https://example.com' })
-    expect(kept).toHaveLength(1)
-    expect(rejected).toHaveLength(4)
+    const { kept, rejected, offDomain } = filterSamples(input, { targetUrl: 'https://example.com' })
+    expect(kept).toHaveLength(2) // api.example.com (200) + api.example.com (404)
+    expect(rejected).toHaveLength(2) // blocked_host + blocked_path
+    expect(offDomain).toHaveLength(1) // off-domain.com
 
     const reasons = rejected.map((r) => r.reason)
     expect(reasons).toContain('blocked_host')
-    expect(reasons).toContain('non_2xx')
     expect(reasons).toContain('blocked_path')
-    expect(reasons).toContain('off_domain')
+
+    expect(offDomain[0].host).toBe('off-domain.com')
+  })
+
+  it('reports off-domain samples separately from kept and rejected', () => {
+    const input = [
+      makeSample({ host: 'api.example.com' }),
+      makeSample({ host: 'cdn.other.com' }),
+      makeSample({ host: 'api.third-party.io' }),
+    ]
+
+    const { kept, rejected, offDomain } = filterSamples(input, { targetUrl: 'https://example.com' })
+    expect(kept).toHaveLength(1)
+    expect(kept[0].host).toBe('api.example.com')
+    expect(rejected).toHaveLength(0)
+    expect(offDomain).toHaveLength(2)
+    expect(offDomain.map((s) => s.host)).toEqual(['cdn.other.com', 'api.third-party.io'])
   })
 })
