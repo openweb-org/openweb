@@ -453,7 +453,7 @@ async function writeCompileReport(reportDir: string, data: CompileReportData): P
 // ── WS compiler pipeline ─────────────────────────────────────
 
 /** Minimum JSON-parseable text frames to compile a WS connection. */
-const MIN_WS_FRAMES = 10
+const MIN_WS_FRAMES = 5
 
 /** Executable WS patterns (heartbeat is control, not an operation). */
 const EXECUTABLE_PATTERNS = new Set(['subscribe', 'publish', 'request_reply', 'stream'])
