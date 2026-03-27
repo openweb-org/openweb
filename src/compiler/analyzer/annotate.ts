@@ -5,37 +5,7 @@ interface Annotation {
   readonly summary: string
 }
 
-/** Curated overrides — highest priority */
-const KNOWN: Record<string, Annotation> = {
-  'geocoding-api.open-meteo.com /v1/search': {
-    operationId: 'search_location',
-    summary: 'Search for a location by name (geocoding)',
-  },
-  'api.open-meteo.com /v1/forecast': {
-    operationId: 'get_forecast',
-    summary: 'Get hourly and daily weather forecast for a location',
-  },
-  'archive-api.open-meteo.com /v1/archive': {
-    operationId: 'get_historical',
-    summary: 'Get historical weather data for a location',
-  },
-  'air-quality-api.open-meteo.com /v1/air-quality': {
-    operationId: 'get_air_quality',
-    summary: 'Get air quality data for a location',
-  },
-}
-
 const PARAM_DESCRIPTIONS: Record<string, string> = {
-  latitude: 'Latitude in decimal degrees.',
-  longitude: 'Longitude in decimal degrees.',
-  hourly: 'Hourly variables to include in the response.',
-  daily: 'Daily variables to include in the response.',
-  timezone: 'IANA timezone identifier.',
-  start_date: 'Start date in YYYY-MM-DD format.',
-  end_date: 'End date in YYYY-MM-DD format.',
-  name: 'Location name query.',
-  count: 'Maximum number of matched results.',
-  language: 'Language code for localized names.',
   q: 'Search query string.',
   query: 'Search query string.',
   page: 'Page number for pagination.',
@@ -182,12 +152,7 @@ function heuristicAnnotation(method: string, path: string): Annotation {
   return { operationId: toSnakeCase(operationId), summary }
 }
 
-export function annotateOperation(host: string, path: string, method = 'GET'): Annotation {
-  // Curated override takes priority
-  const key = `${host} ${path}`
-  const known = KNOWN[key]
-  if (known) return known
-
+export function annotateOperation(_host: string, path: string, method = 'GET'): Annotation {
   return heuristicAnnotation(method, path)
 }
 

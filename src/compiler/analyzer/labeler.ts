@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 
-import type { RecordedRequestSample } from '../types.js'
 import type { LabeledSample, SampleCategory } from '../types-v2.js'
+import type { RecordedRequestSample } from '../types.js'
 
 export interface LabelOptions {
   readonly allowHosts?: readonly string[]
@@ -13,12 +13,12 @@ export interface LabelOptions {
 // ---------------------------------------------------------------------------
 
 const BLOCKED_HOST_PATTERNS: readonly string[] = JSON.parse(
-  readFileSync(new URL('../../lib/filters/blocked-domains.json', import.meta.url), 'utf8'),
+  readFileSync(new URL('../../lib/config/blocked-domains.json', import.meta.url), 'utf8'),
 )
 
 const BLOCKED_PATH_PATTERNS: readonly RegExp[] = (
   JSON.parse(
-    readFileSync(new URL('../../lib/filters/blocked-paths.json', import.meta.url), 'utf8'),
+    readFileSync(new URL('../../lib/config/blocked-paths.json', import.meta.url), 'utf8'),
   ) as (string | [string, string])[]
 ).map((entry) =>
   typeof entry === 'string' ? new RegExp(entry) : new RegExp(entry[0], entry[1]),

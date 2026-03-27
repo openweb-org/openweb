@@ -67,11 +67,9 @@ describe('generatePackage', () => {
       })
 
       const manifestRaw = await readFile(path.join(outputRoot, 'manifest.json'), 'utf8')
-      const manifest = JSON.parse(manifestRaw) as { dependencies?: Record<string, string> }
-      expect(manifest.dependencies).toEqual({
-        'search_location.results[].latitude': 'get_forecast.latitude',
-        'search_location.results[].longitude': 'get_forecast.longitude',
-      })
+      const manifest = JSON.parse(manifestRaw) as Record<string, unknown>
+      expect(manifest.name).toBe('sample-site')
+      expect(manifest.dependencies).toBeUndefined()
 
       const openapiRaw = await readFile(path.join(outputRoot, 'openapi.yaml'), 'utf8')
       expect(openapiRaw).toContain('openapi: 3.1.0')

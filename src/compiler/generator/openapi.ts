@@ -1,13 +1,12 @@
 import { createHash } from 'node:crypto'
-import path from 'node:path'
 import { mkdir, writeFile } from 'node:fs/promises'
+import path from 'node:path'
 
 import { stringify } from 'yaml'
 
-import type { AnalyzedOperation } from '../types.js'
-import type { ClassifyResult, ExtractionSignal } from '../analyzer/classify.js'
-import { isObjectSchema, type JsonSchema } from '../../lib/openapi.js'
 import { derivePermissionFromMethod } from '../../lib/permission-derive.js'
+import type { ClassifyResult, ExtractionSignal } from '../analyzer/classify.js'
+import type { AnalyzedOperation } from '../types.js'
 
 export interface GenerateOpenApiInput {
   readonly site: string
@@ -53,58 +52,6 @@ function choosePrimaryServerHost(operations: AnalyzedOperation[], fallbackUrl?: 
   }
 
   return winnerHost
-}
-
-function hasRequiredParameter(operation: AnalyzedOperation, name: string): boolean {
-  return operation.parameters.some((parameter) => parameter.name === name && parameter.required)
-}
-
-function isObjectSchemaWithProperties(schema: JsonSchema | undefined): schema is JsonSchema & { properties: Record<string, JsonSchema> } {
-  return isObjectSchema(schema) && schema.properties !== undefined
-}
-
-function responseContainsResultsLatLon(schema: JsonSchema): boolean {
-  if (!isObjectSchemaWithProperties(schema)) {
-    return false
-  }
-
-  const results = schema.properties.results
-  if (!results || results.type !== 'array' || !results.items) {
-    return false
-  }
-  if (!isObjectSchemaWithProperties(results.items)) {
-    return false
-  }
-
-  return Boolean(results.items.properties.latitude && results.items.properties.longitude)
-}
-
-function buildDependencies(operations: AnalyzedOperation[]): Record<string, string> {
-  const providers = operations.filter((operation) => responseContainsResultsLatLon(operation.responseSchema))
-  if (providers.length !== 1) {
-    return {}
-  }
-  const provider = providers[0]
-  if (!provider) {
-    return {}
-  }
-
-  const consumers = operations.filter(
-    (operation) =>
-      operation.operationId !== provider.operationId &&
-      hasRequiredParameter(operation, 'latitude') &&
-      hasRequiredParameter(operation, 'longitude'),
-  )
-
-  const firstConsumer = consumers[0]
-  if (!firstConsumer) {
-    return {}
-  }
-
-  return {
-    [`${provider.operationId}.results[].latitude`]: `${firstConsumer.operationId}.latitude`,
-    [`${provider.operationId}.results[].longitude`]: `${firstConsumer.operationId}.longitude`,
-  }
 }
 
 /** Derive build.signals from classify result and operation state. */
@@ -325,7 +272,6 @@ export async function generateOpenApi(input: GenerateOpenApiInput): Promise<void
     site_url: input.sourceUrl,
     compiled_at: input.generatedAt,
     requires_auth: requiresAuth,
-    dependencies: buildDependencies(input.operations),
   }
 
   await writeFile(path.join(input.outputRoot, 'openapi.yaml'), stringify(openapi), 'utf8')

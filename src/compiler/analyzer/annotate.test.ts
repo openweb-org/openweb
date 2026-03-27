@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { annotateOperation } from './annotate.js'
 
 describe('annotateOperation', () => {
-  it('returns known mapping for open-meteo endpoints', () => {
+  it('generates heuristic operationId for any endpoint', () => {
     const annotation = annotateOperation('api.open-meteo.com', '/v1/forecast')
     expect(annotation.operationId).toBe('get_forecast')
   })

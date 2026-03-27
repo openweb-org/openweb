@@ -1,8 +1,6 @@
 import type { JsonSchema } from '../../lib/openapi.js'
 import type { ClusteredEndpoint, ParameterDescriptor } from '../types.js'
 
-const ARRAY_LIKE_PARAMETERS = new Set(['hourly', 'daily', 'current'])
-
 function maybeNumber(value: string): number | string {
   if (!/^-?\d+(\.\d+)?$/.test(value)) {
     return value
@@ -50,7 +48,6 @@ export function differentiateParameters(endpoint: ClusteredEndpoint): ParameterD
 
     const required = present.length === endpoint.samples.length
     const isArray =
-      ARRAY_LIKE_PARAMETERS.has(name) ||
       present.some((values) => values.length > 1) ||
       present.some((values) => values.some((value) => value.includes(',')))
 

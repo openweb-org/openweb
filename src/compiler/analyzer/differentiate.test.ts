@@ -49,17 +49,16 @@ describe('differentiateParameters', () => {
     expect(latitude?.location).toBe('query')
     expect(latitude?.schema).toEqual({ type: 'number' })
 
+    // hourly has multiple values in one sample → detected as array
     expect(hourly?.required).toBe(false)
     expect(hourly?.schema).toEqual({
       type: 'array',
       items: { type: 'string' },
     })
 
+    // daily has only single values per sample → detected as string (no hardcoded override)
     expect(daily?.required).toBe(true)
-    expect(daily?.schema).toEqual({
-      type: 'array',
-      items: { type: 'string' },
-    })
+    expect(daily?.schema).toEqual({ type: 'string' })
   })
 
   it('infers integer type when all numeric values are integers', () => {

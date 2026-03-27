@@ -13,7 +13,7 @@ export interface FilterOptions {
 
 /** Tracking / analytics domains to always block — loaded from shared config */
 const BLOCKED_HOST_PATTERNS: readonly string[] = JSON.parse(
-  readFileSync(new URL('../../lib/filters/blocked-domains.json', import.meta.url), 'utf8'),
+  readFileSync(new URL('../../lib/config/blocked-domains.json', import.meta.url), 'utf8'),
 )
 
 /** Known multi-part public suffixes (ccSLD patterns) */
@@ -133,7 +133,7 @@ function isAllowedHost(host: string, allowedDomains: string[]): boolean {
  */
 const BLOCKED_PATH_PATTERNS: readonly RegExp[] = (
   JSON.parse(
-    readFileSync(new URL('../../lib/filters/blocked-paths.json', import.meta.url), 'utf8'),
+    readFileSync(new URL('../../lib/config/blocked-paths.json', import.meta.url), 'utf8'),
   ) as (string | [string, string])[]
 ).map((entry) =>
   typeof entry === 'string' ? new RegExp(entry) : new RegExp(entry[0], entry[1]),
