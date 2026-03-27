@@ -38,6 +38,7 @@ describe('recorder helpers', () => {
       expect(samples).toHaveLength(1)
       expect(samples[0].host).toBe('api.open-meteo.com')
       expect(samples[0].query.latitude).toEqual(['52.52'])
+      expect(samples[0].response).toEqual({ kind: 'json', body: { latitude: 52.52, longitude: 13.41 } })
     } finally {
       await cleanupRecordingDir(recordingDir)
     }
@@ -45,7 +46,7 @@ describe('recorder helpers', () => {
     await expect(access(recordingDir)).rejects.toBeDefined()
   })
 
-  it('returns empty array when HAR has no usable JSON API entries', async () => {
+  it('keeps non-JSON entries as text response', async () => {
     const recordingDir = await mkdtemp(path.join(os.tmpdir(), 'openweb-recorder-test-'))
 
     try {
@@ -73,7 +74,8 @@ describe('recorder helpers', () => {
       await writeFile(path.join(recordingDir, 'traffic.har'), `${JSON.stringify(har, null, 2)}\n`, 'utf8')
 
       const samples = await loadRecordedSamples(recordingDir)
-      expect(samples).toHaveLength(0)
+      expect(samples).toHaveLength(1)
+      expect(samples[0].response).toEqual({ kind: 'text', body: 'not-json' })
     } finally {
       await rm(recordingDir, { recursive: true, force: true })
     }

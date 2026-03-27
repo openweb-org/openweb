@@ -1,5 +1,10 @@
 import type { JsonSchema } from '../lib/openapi.js'
 
+export type SampleResponse =
+  | { readonly kind: 'json'; readonly body: unknown }
+  | { readonly kind: 'text'; readonly body: string }
+  | { readonly kind: 'empty' }
+
 export interface RecordedRequestSample {
   readonly method: string
   readonly host: string
@@ -8,7 +13,7 @@ export interface RecordedRequestSample {
   readonly query: Record<string, string[]>
   readonly status: number
   readonly contentType: string
-  readonly responseJson: unknown
+  readonly response: SampleResponse
   readonly requestBody?: string
 }
 

@@ -182,7 +182,10 @@ export async function compileSite(
     const annotation = annotateOperation(cluster.host, cluster.path, cluster.method)
     const differentiatedParams = differentiateParameters(cluster)
     const annotatedParams = annotateParameterDescriptions(differentiatedParams)
-    const responseSchema = inferSchema(cluster.samples.map((sample) => sample.responseJson))
+    const jsonBodies = cluster.samples
+      .filter((s) => s.response.kind === 'json')
+      .map((s) => (s.response as { kind: 'json'; body: unknown }).body)
+    const responseSchema = jsonBodies.length > 0 ? inferSchema(jsonBodies) : { type: 'object' }
 
     // Infer request body schema from recorded samples (for write operations)
     let requestBodySchema: ReturnType<typeof inferSchema> | undefined

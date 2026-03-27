@@ -13,7 +13,7 @@ describe('clusterSamples', () => {
         query: { latitude: ['52.52'] },
         status: 200,
         contentType: 'application/json',
-        responseJson: { ok: true },
+        response: { kind: 'json', body: { ok: true } },
       },
       {
         method: 'GET',
@@ -23,7 +23,7 @@ describe('clusterSamples', () => {
         query: { latitude: ['35.68'] },
         status: 200,
         contentType: 'application/json',
-        responseJson: { ok: true },
+        response: { kind: 'json', body: { ok: true } },
       },
       {
         method: 'GET',
@@ -33,7 +33,7 @@ describe('clusterSamples', () => {
         query: { name: ['Berlin'] },
         status: 200,
         contentType: 'application/json',
-        responseJson: { ok: true },
+        response: { kind: 'json', body: { ok: true } },
       },
     ]
 

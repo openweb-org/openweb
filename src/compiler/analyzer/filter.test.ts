@@ -12,7 +12,7 @@ function makeSample(overrides: Partial<RecordedRequestSample> = {}): RecordedReq
     query: {},
     status: 200,
     contentType: 'application/json',
-    responseJson: { ok: true },
+    response: { kind: 'json', body: { ok: true } },
     ...overrides,
   }
 }

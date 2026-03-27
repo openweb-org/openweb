@@ -21,7 +21,7 @@ describe('differentiateParameters', () => {
           },
           status: 200,
           contentType: 'application/json',
-          responseJson: {},
+          response: { kind: 'json', body: {} },
         },
         {
           method: 'GET',
@@ -34,7 +34,7 @@ describe('differentiateParameters', () => {
           },
           status: 200,
           contentType: 'application/json',
-          responseJson: {},
+          response: { kind: 'json', body: {} },
         },
       ],
     }
@@ -79,7 +79,7 @@ describe('differentiateParameters', () => {
           },
           status: 200,
           contentType: 'application/json',
-          responseJson: {},
+          response: { kind: 'json', body: {} },
         },
         {
           method: 'GET',
@@ -92,7 +92,7 @@ describe('differentiateParameters', () => {
           },
           status: 200,
           contentType: 'application/json',
-          responseJson: {},
+          response: { kind: 'json', body: {} },
         },
       ],
     }

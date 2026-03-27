@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process'
 
 import { OpenWebError } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
-import type { RecordedRequestSample } from './types.js'
+import type { RecordedRequestSample, SampleResponse } from './types.js'
 import type { CaptureData } from './analyzer/classify.js'
 import type { HarEntry as CaptureHarEntry, StateSnapshot } from '../capture/types.js'
 
@@ -125,20 +125,19 @@ export async function loadRecordedSamples(recordingDir: string): Promise<Recorde
     const parsedUrl = new URL(rawUrl)
     const encodedText = entry.response?.content?.text
 
+    let response: SampleResponse
     if (!encodedText) {
-      continue
-    }
+      response = { kind: 'empty' }
+    } else {
+      const encoding = entry.response?.content?.encoding?.toLowerCase()
+      const responseText =
+        encoding === 'base64' ? Buffer.from(encodedText, 'base64').toString('utf8') : encodedText
 
-    const encoding = entry.response?.content?.encoding?.toLowerCase()
-    const responseText =
-      encoding === 'base64' ? Buffer.from(encodedText, 'base64').toString('utf8') : encodedText
-
-    let responseJson: unknown
-    try {
-      responseJson = JSON.parse(responseText)
-    } catch {
-      // intentional: non-JSON response body — not an API endpoint
-      continue
+      try {
+        response = { kind: 'json', body: JSON.parse(responseText) }
+      } catch {
+        response = { kind: 'text', body: responseText }
+      }
     }
 
     samples.push({
@@ -149,7 +148,7 @@ export async function loadRecordedSamples(recordingDir: string): Promise<Recorde
       query: extractQuery(parsedUrl),
       status,
       contentType,
-      responseJson,
+      response,
       requestBody: entry.request?.postData?.text || undefined,
     })
   }
