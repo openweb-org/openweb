@@ -3,6 +3,9 @@
  * a single AnalysisReport.
  */
 
+import { access } from 'node:fs/promises'
+import path from 'node:path'
+
 import type { ParameterDescriptor, RecordedRequestSample, SampleResponse } from '../types.js'
 import type {
   AnalysisReport,
@@ -14,6 +17,9 @@ import type {
   PathNormalization,
   ResponseVariant,
   SampleCategory,
+  WsConnectionAnalysis,
+  WsHeartbeatCandidate,
+  WsOperationSummary,
 } from '../types-v2.js'
 import type { ExtractionSignal } from './classify.js'
 import { loadHar, extractSamples, loadCaptureData } from '../recorder.js'
@@ -26,6 +32,10 @@ import { annotateOperation } from './annotate.js'
 import { inferSchema } from './schema-v2.js'
 import { buildAuthCandidates } from './auth-candidates.js'
 import { classify } from './classify.js'
+import { loadWsCapture } from '../ws-analyzer/ws-load.js'
+import { analyzeWsConnection } from '../ws-analyzer/ws-cluster.js'
+import { classifyClusters } from '../ws-analyzer/ws-classify.js'
+import { inferWsSchemas } from '../ws-analyzer/ws-schema.js'
 
 // ── Navigation grouping ─────────────────────────────────────────────────────
 
@@ -308,12 +318,98 @@ function computeSummary(
   }
 }
 
+// ── WebSocket analysis ──────────────────────────────────────────────────────
+
+/** Check if a file exists (no throw). */
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Compute mean inter-frame interval for heartbeat candidate extraction. */
+function meanInterval(frames: Array<{ timestamp: number }>): number {
+  if (frames.length < 2) return 0
+  const sorted = [...frames].sort((a, b) => a.timestamp - b.timestamp)
+  let total = 0
+  for (let i = 1; i < sorted.length; i++) {
+    total += sorted[i].timestamp - sorted[i - 1].timestamp
+  }
+  return Math.round(total / (sorted.length - 1))
+}
+
+/**
+ * Run WS analyzer pipeline on websocket_frames.jsonl if present.
+ * Returns connections analysis and global heartbeat candidates.
+ */
+async function analyzeWsCapture(
+  captureDir: string,
+  wsFramesPath?: string,
+): Promise<AnalysisReport['ws']> {
+  const resolvedPath = wsFramesPath ?? path.join(captureDir, 'websocket_frames.jsonl')
+  if (!(await fileExists(resolvedPath))) return undefined
+
+  const connections = await loadWsCapture(resolvedPath)
+  if (connections.length === 0) return undefined
+
+  const allHeartbeatCandidates: WsHeartbeatCandidate[] = []
+  const connectionAnalyses: WsConnectionAnalysis[] = []
+
+  for (const conn of connections) {
+    if (conn.frames.length === 0) continue
+
+    // Cluster → classify → schema
+    const analysis = analyzeWsConnection(conn)
+    const classified = classifyClusters(analysis.clusters)
+    const schemas = inferWsSchemas(classified)
+
+    // Extract heartbeat candidates from classified clusters
+    const connHeartbeats: WsHeartbeatCandidate[] = []
+    for (const cluster of classified) {
+      if (cluster.pattern !== 'heartbeat') continue
+      connHeartbeats.push({
+        direction: cluster.direction === 'sent' ? 'send' : 'receive',
+        intervalMs: meanInterval(cluster.frames),
+        payload: cluster.frames[0]?.payload,
+      })
+    }
+    allHeartbeatCandidates.push(...connHeartbeats)
+
+    // Build operation summaries (non-heartbeat only)
+    const executableSchemas = schemas.filter((s) => s.pattern !== 'heartbeat')
+    const operations: WsOperationSummary[] = executableSchemas.map((s) => ({
+      operationId: s.operationId,
+      pattern: s.pattern as WsOperationSummary['pattern'],
+      direction: s.direction,
+    }))
+
+    connectionAnalyses.push({
+      id: conn.connectionId,
+      url: conn.url,
+      sampleCount: conn.frames.length,
+      executableOperationCount: executableSchemas.length,
+      operations,
+      heartbeatCandidates: connHeartbeats,
+    })
+  }
+
+  if (connectionAnalyses.length === 0) return undefined
+
+  return {
+    connections: connectionAnalyses,
+    heartbeatCandidates: allHeartbeatCandidates,
+  }
+}
+
 // ── Main entry point ─────────────────────────────────────────────────────────
 
 /**
  * Analyze a capture bundle, producing a single AnalysisReport.
  *
- * Orchestrates: extract → label → normalize → cluster → enrich → auth → navigation → report.
+ * Orchestrates: extract → label → normalize → cluster → enrich → auth → navigation → ws → report.
  */
 export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisReport> {
   // 1. Load HAR
@@ -345,7 +441,7 @@ export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisRep
   // 7. Enrich each cluster (graphql, parameters, schema)
   const clusters = enrichClusters(v1Clusters, sampleIdMap, pathNormMap)
 
-  // 8. Load capture data and build auth candidates (parallel with clustering)
+  // 8. Load capture data and build auth candidates
   const captureData = await loadCaptureData(bundle.captureDir, har)
   const authCandidates = buildAuthCandidates(captureData)
 
@@ -356,7 +452,10 @@ export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisRep
   // 10. Build navigation groups
   const navigation = buildNavigationGroups(labeled)
 
-  // 11. Assemble report
+  // 11. Analyze WebSocket capture (if present)
+  const ws = await analyzeWsCapture(bundle.captureDir, bundle.wsFramesPath)
+
+  // 12. Assemble report
   return {
     version: 2,
     site: bundle.site,
@@ -368,5 +467,6 @@ export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisRep
     clusters,
     authCandidates,
     extractionSignals,
+    ws,
   }
 }

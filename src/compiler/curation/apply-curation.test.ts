@@ -253,6 +253,10 @@ describe('applyCuration', () => {
             url: 'wss://example.com/ws',
             sampleCount: 5,
             executableOperationCount: 2,
+            operations: [
+              { operationId: 'ws_send_subscribe_ticker', pattern: 'subscribe', direction: 'sent' },
+              { operationId: 'ws_recv_ticker', pattern: 'stream', direction: 'received' },
+            ],
             heartbeatCandidates: [],
           },
         ],
@@ -265,7 +269,17 @@ describe('applyCuration', () => {
     expect(plan.ws).toBeDefined()
     expect(plan.ws?.serverUrl).toBe('wss://example.com/ws')
     expect(plan.ws?.heartbeat).toEqual({ direction: 'send', intervalMs: 30000, payload: 'ping' })
-    expect(plan.ws?.operations).toHaveLength(1)
+    expect(plan.ws?.operations).toHaveLength(2)
+    expect(plan.ws?.operations[0]).toEqual({
+      id: 'ws_send_subscribe_ticker',
+      name: 'ws_send_subscribe_ticker',
+      pattern: 'subscribe',
+    })
+    expect(plan.ws?.operations[1]).toEqual({
+      id: 'ws_recv_ticker',
+      name: 'ws_recv_ticker',
+      pattern: 'stream',
+    })
   })
 
   it('omits WS plan when not present in report', () => {

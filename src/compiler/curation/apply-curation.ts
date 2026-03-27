@@ -104,11 +104,17 @@ function buildWsPlan(ws: NonNullable<AnalysisReport['ws']>): CuratedWsPlan {
     return { serverUrl: '', operations: [] }
   }
 
-  const operations: CuratedWsOperation[] = ws.connections.map((conn) => ({
-    id: conn.id,
-    name: conn.id,
-    pattern: 'subscribe' as const,
-  }))
+  // Flatten operations from all connections, using analysis-derived pattern/name
+  const operations: CuratedWsOperation[] = []
+  for (const conn of ws.connections) {
+    for (const op of conn.operations) {
+      operations.push({
+        id: op.operationId,
+        name: op.operationId,
+        pattern: op.pattern,
+      })
+    }
+  }
 
   return {
     serverUrl: firstConnection.url,
