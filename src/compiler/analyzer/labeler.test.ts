@@ -115,6 +115,25 @@ describe('labelSamples', () => {
     }
   })
 
+  it('labels LinkedIn-style tracking endpoints as tracking', () => {
+    const input = [
+      makeSample({ path: '/collect/' }),
+      makeSample({ path: '/rest/trackObserveApi/trackObserve' }),
+      makeSample({ path: '/litms/api/events/ext-tag-load' }),
+      makeSample({ path: '/litms/api/events/tms-load' }),
+      makeSample({ path: '/security/csp' }),
+      makeSample({ path: '/li/tscp/sct' }),
+      makeSample({ path: '/px/li_sync' }),
+      makeSample({ path: '/realtime/realtimeFrontendClientConnectivityTracking' }),
+    ]
+
+    const result = labelSamples(input, TARGET)
+    expect(byCategory(result, 'tracking')).toHaveLength(8)
+    for (const ls of result) {
+      expect(ls.reasons[0]).toContain('blocked-paths')
+    }
+  })
+
   // -----------------------------------------------------------------------
   // Rule 4: static content-type → static
   // -----------------------------------------------------------------------

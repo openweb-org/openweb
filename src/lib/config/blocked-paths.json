@@ -15,5 +15,12 @@
   "\\/sw\\.js$",
   "\\/service-worker",
   "\\/workbox-",
-  "\\/csp-report\\b"
+  "\\/csp-report\\b",
+  "\\/collect\\/?$",
+  "\\/trackObserve",
+  "\\/events?\\/(ext-tag|tms)-",
+  "\\/security\\/csp\\b",
+  "\\/px\\/",
+  "\\/tscp\\/",
+  "\\/realtimeFrontendClientConnectivityTracking"
 ]
