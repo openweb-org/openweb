@@ -1,3 +1,30 @@
+## 2026-03-26: Pipeline v2 — compile pipeline refactor from 12 steps to 5 phases
+
+**What changed:**
+- Complete pipeline refactor: 12 ad-hoc steps replaced by 5 typed phases (Capture -> Analyze -> Curate -> Generate -> Verify)
+- New type system: `types-v2.ts` defines contracts for every phase boundary (CaptureBundle, AnalysisReport, CuratedCompilePlan, VerifyReport)
+- Phase 2 (Analyze): unified `analyzeCapture()` orchestrator with new modules:
+  - `labeler.ts` — categorizes every sample (api/static/tracking/off_domain), nothing dropped
+  - `path-normalize.ts` — structural (numeric/uuid/hex) + cross-sample learned normalization
+  - `graphql-cluster.ts` — sub-clusters GraphQL by operationName/queryId/persistedHash/queryShape
+  - `auth-candidates.ts` — ranked auth detection with evidence (localStorage_jwt > exchange_chain > cookie_session)
+  - `schema-v2.ts` — JSON schema inference with enum detection, format detection (date-time/uuid/email/uri), size controls
+- Phase 3 (Curate): NEW phase — `apply-curation.ts` transforms AnalysisReport + decisions into CuratedCompilePlan, `scrub.ts` removes PII from examples
+- Phase 4 (Generate): `generate-v2.ts` consumes CuratedCompilePlan, emits response variants per status code, deduplicates operationIds, includes request body schemas
+- Phase 5 (Verify): `verify-v2.ts` replaces verify+probe with unified auth-first escalation, replaySafety gating, per-attempt diagnostics
+- Report format: analysis.json (stripped) + analysis-full.json + verify-report.json + summary.txt
+- Config files moved from `src/lib/filters/` to `src/lib/config/` (added tracking-cookies.json, static-extensions.json)
+- V1 dead code: prober.ts, generator/openapi.ts, generator/package.ts, generator/asyncapi.ts, generator/index.ts only used by their own tests
+
+**Why:**
+- The v1 pipeline was a linear chain of loosely-typed transforms with no clear phase boundaries. Auth detection was fragile (single-shot classify), no PII scrubbing, no response variant modeling, verify and probe were separate systems. The refactor establishes typed contracts between phases, enables agent-in-the-loop curation, and makes each phase independently testable.
+
+**Key files:** `src/compiler/types-v2.ts`, `src/compiler/analyzer/analyze.ts`, `src/compiler/curation/apply-curation.ts`, `src/compiler/curation/scrub.ts`, `src/compiler/generator/generate-v2.ts`, `src/compiler/verify-v2.ts`, `src/commands/compile.ts`
+**Verification:** Tests pass. LinkedIn compile produces correct operation set through v2 pipeline.
+**Commits:** ff92201..99a52cb (pipeline v2 implementation), plus 6 fix rounds
+**Next:** Clean up v1 dead code (prober.ts, generator/index.ts, generator.test.ts), expand site coverage
+**Blockers:** None
+
 ## 2026-03-26: Filter audit — compile pipeline overhaul
 
 **What changed:**

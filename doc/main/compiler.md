@@ -1,20 +1,18 @@
 # Compiler Pipeline
 
-> Record → Analyze → Classify → Probe → Emit: turning website observations into skill packages.
-> Last updated: 2026-03-26 (filter audit refactor)
+> Capture -> Analyze -> Curate -> Generate -> Verify: turning website observations into skill packages.
+> Last updated: 2026-03-26 (pipeline v2)
 
 ## Overview
 
-The compiler observes a website's behavior and generates skill packages (OpenAPI spec + AsyncAPI spec + manifest + tests). It operates in 6 phases:
+The compiler observes a website's behavior and generates skill packages (OpenAPI spec + AsyncAPI spec + manifest + tests). It operates in 5 phases:
 
 ```
 Phase 1: Capture      Record HTTP traffic, WebSocket frames, state, DOM
-Phase 2: Analyze      Cluster requests, differentiate params, infer schemas
-Phase 3: Classify     Detect L2 primitives, assign risk tier
-Phase 3b: WS Analyze  Cluster WS frames, classify channels, infer schemas (M35)
-Phase 4: Probe        (opt-in) Validate classify heuristics with real requests
-Phase 5: Emit         Generate openapi.yaml + asyncapi.yaml + manifest.json + tests/
-Phase 6: Report       Output compile report (filtered.json, clusters.json, classify.json, probe.json, summary.txt)
+Phase 2: Analyze      Label, normalize, cluster, infer schemas, detect auth
+Phase 3: Curate       Apply decisions, scrub PII, produce compile plan
+Phase 4: Generate     Emit openapi.yaml + asyncapi.yaml + manifest.json + tests/
+Phase 5: Verify       Auth-first escalation, replay safe reads, per-attempt diagnostics
 ```
 
 -> See: `src/compiler/`
@@ -23,7 +21,7 @@ Phase 6: Report       Output compile report (filtered.json, clusters.json, class
 
 ## Phase 1: Capture
 
-Records raw website behavior via CDP. **No content-based filtering at capture time** — all requests are recorded with full metadata. Response bodies > 1MB are omitted (metadata preserved).
+Records raw website behavior via CDP. **No content-based filtering at capture time** — all requests are recorded with full metadata. Response bodies > 1 MB are omitted (metadata preserved).
 
 -> See: [browser-capture.md](browser-capture.md) — full capture module docs
 
@@ -33,92 +31,120 @@ Records raw website behavior via CDP. **No content-based filtering at capture ti
 
 ## Phase 2: Analyze
 
-Transforms raw capture data into structured operation candidates.
+Transforms raw capture data into a single `AnalysisReport`. Orchestrated by `analyzeCapture()`.
 
 ```
 HAR entries
-    │
-    ├── Extract     Parse HAR → SampleResponse union (json | text | empty)
-    ├── Filter      Remove blocked hosts, blocked paths (config-driven)
-    ├── Cluster     Group by (method, host, path)
-    ├── Differentiate  Identify path params vs query params
-    ├── Schema      Infer response JSON schema from json-kind samples
-    └── Annotate    Add metadata (operationId, summary)
+    |
+    +-- Extract       Parse HAR -> RecordedRequestSample with SampleResponse (json|text|empty)
+    +-- Label         Classify each sample: api | static | tracking | off_domain
+    +-- Normalize     Detect path params (numeric, uuid, hex, learned) -> path templates
+    +-- Cluster       Group api samples by (method, host, normalizedPathTemplate)
+    +-- GraphQL       Sub-cluster GraphQL endpoints by operationName/queryId/persistedHash
+    +-- Differentiate Identify query params vs path params per cluster
+    +-- Schema        Infer response JSON schemas with enum/format detection (schema-v2)
+    +-- Auth          Bundle ranked auth candidates with evidence and confidence scores
+    +-- Classify      Detect extraction signals (DOM/SSR patterns)
+    +-- WS Analyze    Cluster WS frames, classify channels, infer message schemas
+    +-- Navigation    Group samples by page-level referer for context
 ```
 
-**Key module:** `src/compiler/analyzer/`
+**Key modules:**
+- `src/compiler/analyzer/labeler.ts` — sample categorization (replaces filter.ts for classification)
+- `src/compiler/analyzer/path-normalize.ts` — structural + cross-sample path normalization
+- `src/compiler/analyzer/graphql-cluster.ts` — GraphQL sub-clustering by discriminator
+- `src/compiler/analyzer/auth-candidates.ts` — ranked auth detection with evidence
+- `src/compiler/analyzer/schema-v2.ts` — schema inference with enum/format/size controls
+- `src/compiler/analyzer/analyze.ts` — orchestrator producing AnalysisReport
 
-**Filter behavior:**
-- Blocked hosts/paths loaded from `src/lib/filters/*.json` (config files, not hardcoded)
+**Labeler behavior (replaces v1 filter):**
+- Blocked hosts/paths loaded from `src/lib/config/*.json` (config files, not hardcoded)
+- Static content-types and file extensions classified as `static`
+- Off-domain requests classified as `off_domain` (not silently dropped)
 - All status codes pass through (4xx = auth signal, not rejected)
-- Off-domain requests reported separately (not silently dropped)
-- HAR parsed once, shared by sample extraction and capture data loading
+- Every sample produces a `LabeledSample` — nothing is dropped
+
+**Auth candidate ranking:** `localStorage_jwt` (rank 1) > `exchange_chain` (rank 2) > `cookie_session` (rank 3). Each candidate bundles auth + CSRF + signing with confidence score and evidence trail.
+
+**Output:** `AnalysisReport` — persisted as `analysis.json` (stripped) + `analysis-full.json`
 
 ---
 
-## Phase 3: Classify
+## Phase 3: Curate
 
-Detects L2 primitives from capture correlations.
+Transforms `AnalysisReport` + `CurationDecisionSet` into a `CuratedCompilePlan`.
 
-Currently detects:
-- `cookie_session` auth (presence of session cookies)
-- `cookie_to_header` CSRF (cookie value appearing in request header)
+**What it does:**
+1. Selects auth candidate (top-ranked by default, or agent-specified)
+2. Excludes unwanted clusters
+3. Applies operation overrides (operationId, summary, permission, replaySafety)
+4. Scrubs PII from example values (tokens, emails, phone numbers, cookies)
+5. Derives permission and replaySafety defaults per operation
 
-**Output:** `ClassifyResult` with detected auth, CSRF, and mode.
+**PII scrubbing** (`src/compiler/curation/scrub.ts`):
+- Sensitive keys (password, secret, token, apikey) -> `<REDACTED>`
+- Cookie values -> `<REDACTED_COOKIE>`
+- JWT-like tokens -> `<REDACTED_TOKEN>`
+- Emails -> `user@example.com`, phone numbers -> `+1-555-0100`
 
--> See: `src/compiler/analyzer/classify`
+**Output:** `CuratedCompilePlan` consumed by Generate
 
----
-
-## Phase 3b: Probe (opt-in)
-
-Validates classify heuristics by making real GET requests through an escalation ladder:
-
-```
-Step 1: node (no auth)  → fetch with Accept: application/json
-  200 → transport=node, authRequired=false
-  401/403 → Step 2
-
-Step 2: node (with auth) → fetch with browser cookies
-  200 → transport=node, authRequired=true
-  fail → fallback to classify heuristic
-
-Step 3: page (deferred) → browser_fetch via CDP
-  Not yet implemented; falls back to classify
-```
-
-**Constraints:**
-- Only probes GET operations (mutations are never replayed)
-- Bounded concurrency: 3 parallel probes, max 30 probes per compile
-- Per-probe timeout: 5s
-- SSRF-validated before every outbound request
-
-**Merge strategy:** Probe results override classify heuristics (ground truth). If probe fails, classify heuristic is preserved as fallback.
-
--> See: `src/compiler/prober.ts`
+-> See: `src/compiler/curation/apply-curation.ts`, `src/compiler/curation/scrub.ts`
 
 ---
 
-## Phase 4: Emit
+## Phase 4: Generate
 
-Generates the skill package from analyzed operations.
+Consumes `CuratedCompilePlan` and emits the skill package.
 
 **Generates:**
 1. `openapi.yaml` — OpenAPI 3.1 spec with x-openweb extensions
 2. `asyncapi.yaml` — AsyncAPI 3.0 spec for WebSocket channels (if WS frames captured)
-3. `manifest.json` — Package metadata (includes `ws_count`)
-4. `tests/<operationId>.test.json` — Test cases from captured samples
+3. `manifest.json` — Package metadata (spec_version 2.0)
+4. `tests/<operationId>.test.json` — Test cases from scrubbed examples
 
-**Risk tier derivation:**
-- DELETE → `high`
-- POST/PUT/PATCH → `medium`
-- GET/HEAD/OPTIONS → `safe`
+**Key behaviors:**
+- Response variants: multiple status codes and content types per operation
+- OperationId deduplication (appends `_2`, `_3` on collision)
+- Per-operation server override when host differs from primary
+- Request body schema emission for POST/PUT/PATCH
+- Extraction signals emitted at info-level x-openweb
 
 **x-openweb extension emission:**
-- Server-level: mode, auth, CSRF (from ClassifyResult)
-- Operation-level: permission, stable_id, signature_id, tool_version
+- Info-level: spec_version, compiled_at, requires_auth, extraction_signals
+- Server-level: transport, auth, CSRF, signing (from CuratedSiteContext)
+- Operation-level: permission, risk_tier, build.stable_id, build.tool_version
 
--> See: `src/compiler/generator/openapi.ts`, `src/compiler/generator/asyncapi.ts`, `src/compiler/generator/package.ts`
+-> See: `src/compiler/generator/generate-v2.ts`
+
+---
+
+## Phase 5: Verify
+
+Unified verification replacing the old verify + probe split. Auth-first escalation with per-attempt diagnostics.
+
+```
+For each safe_read operation:
+  Step 1: with_auth (if cookies available)
+    200 -> authWorks=true, then try without_auth to check if public
+    401/403 -> authWorks=false, try without_auth
+    other error -> stop
+  Step 2: without_auth (if no cookies, or fallback from step 1)
+    200 -> publicWorks=true
+    fail -> publicWorks=false
+
+unsafe_mutation operations -> skipped (never replayed)
+```
+
+**Constraints:**
+- Bounded concurrency: 6 parallel verifications (configurable)
+- Per-attempt timeout (configurable, defaults to probe timeout from config)
+- SSRF-validated before every outbound request
+- Request body replay for POST operations with serialized body
+
+**Output:** `VerifyReport` with per-operation `VerifyResult` containing `VerifyAttempt[]` diagnostics
+
+-> See: `src/compiler/verify-v2.ts`
 
 ---
 
@@ -138,40 +164,31 @@ The script drives browser interactions while the capture module records.
 
 ---
 
-## Compilation Verification
+## Report Format
 
-After emission, the compiler verifies by:
-1. Loading the generated spec
-2. Calling each operation with example params
-3. Validating the response against the inferred schema
+All compile artifacts are written to `~/.openweb/compile/<site>/`:
 
-```bash
-openweb compile <url>
-# → Generates skill package
-# → Runs verification (replay + schema check)
-```
+| File | Content | When |
+|------|---------|------|
+| `analysis.json` | AnalysisReport with response bodies stripped | Always |
+| `analysis-full.json` | Complete AnalysisReport with all data | Always |
+| `verify-report.json` | VerifyReport with per-attempt diagnostics | When verify runs |
+| `summary.txt` | One-line summary (ops, verified, auth status) | Always |
 
 ---
 
 ## CLI Commands
 
 ```bash
-# Interactive capture + compile
-pnpm dev compile <url>
-
 # Scripted recording + compile
-pnpm dev compile <url> --script ./scripts/record-instagram.ts
+pnpm dev compile <url> --script ./scripts/record-site.ts
 
-# Compile with probing (validates classify heuristics via real requests)
-pnpm dev compile <url> --probe
-pnpm dev compile <url> --probe --cdp-endpoint http://localhost:9222
+# Compile with auth verification (--probe connects to managed browser for cookies)
+pnpm dev compile <url> --script ./script.ts --probe
+pnpm dev compile <url> --script ./script.ts --probe --cdp-endpoint http://localhost:9222
 
 # Compile from existing capture directory (skip capture phase)
 pnpm dev compile <url> --capture-dir ./captures/my-site
-
-# Capture only (manual)
-pnpm dev capture start --cdp-endpoint http://localhost:9222
-pnpm dev capture stop
 
 # Test compiled package
 pnpm dev <site> test
@@ -183,25 +200,36 @@ pnpm dev <site> test
 
 ```
 src/compiler/
-├── recorder.ts             # HAR parsing + scripted recording spawn
-├── prober.ts               # Probe escalation ladder + merge
-├── analyzer/               # HTTP analysis pipeline
-│   ├── cluster.ts          # Group requests by path template
-│   ├── filter.ts           # Remove non-API requests
-│   ├── differentiate.ts    # Path params vs query params
-│   ├── schema.ts           # Response JSON Schema inference
-│   ├── annotate.ts         # Metadata attachment
-│   └── classify/           # L2 primitive detection
-├── ws-analyzer/            # WebSocket analysis pipeline (M35)
-│   ├── ws-load.ts          # Load WS frames from capture
-│   ├── ws-cluster.ts       # Cluster frames by channel/topic
-│   ├── ws-classify.ts      # Classify WS message types
-│   └── ws-schema.ts        # Infer message schemas
-└── generator/              # Package emission (M36 split)
-    ├── openapi.ts          # OpenAPI 3.1 spec generation
-    ├── asyncapi.ts         # AsyncAPI 3.0 spec generation
-    └── package.ts          # manifest.json + tests + bundle
++-- types.ts                # Core types (RecordedRequestSample, SampleResponse, etc.)
++-- types-v2.ts             # Pipeline v2 type definitions (all 5-phase contracts)
++-- recorder.ts             # HAR parsing + scripted recording spawn
++-- verify-v2.ts            # Unified verify with auth-first escalation
++-- analyzer/               # Phase 2: Analyze
+|   +-- analyze.ts          # Orchestrator: analyzeCapture() -> AnalysisReport
+|   +-- labeler.ts          # Sample categorization (api/static/tracking/off_domain)
+|   +-- path-normalize.ts   # Structural + cross-sample path normalization
+|   +-- graphql-cluster.ts  # GraphQL sub-clustering by discriminator
+|   +-- auth-candidates.ts  # Ranked auth bundling with evidence
+|   +-- schema-v2.ts        # Schema inference with enum/format/size controls
+|   +-- cluster.ts          # Group requests by path template
+|   +-- filter.ts           # Legacy filter (domain/path filtering, used by labeler logic)
+|   +-- differentiate.ts    # Path params vs query params
+|   +-- annotate.ts         # operationId + summary generation
+|   +-- classify.ts         # L2 primitive detection (extraction signals)
+|   +-- classify/           # Auth/CSRF/signing detection helpers
++-- curation/               # Phase 3: Curate
+|   +-- apply-curation.ts   # AnalysisReport + decisions -> CuratedCompilePlan
+|   +-- scrub.ts            # PII scrubbing for example values
++-- generator/              # Phase 4: Generate
+|   +-- generate-v2.ts      # CuratedCompilePlan -> skill package (OpenAPI + AsyncAPI)
++-- ws-analyzer/            # WebSocket analysis (integrated into Phase 2)
+    +-- ws-load.ts          # Load WS frames from capture
+    +-- ws-cluster.ts       # Cluster frames by channel/topic
+    +-- ws-classify.ts      # Classify WS message types
+    +-- ws-schema.ts        # Infer message schemas
 ```
+
+**Config files:** `src/lib/config/` — blocked-domains.json, blocked-paths.json, tracking-cookies.json, static-extensions.json
 
 ---
 
@@ -210,4 +238,4 @@ src/compiler/
 - [browser-capture.md](browser-capture.md) — Phase 1 capture details
 - [meta-spec.md](meta-spec.md) — Types used in emission
 - [architecture.md](architecture.md) — Where compiler fits
-- `src/compiler/generator/` — Emission implementation
+- [security.md](security.md) — SSRF validation in verify

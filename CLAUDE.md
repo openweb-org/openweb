@@ -26,11 +26,20 @@ pnpm dev <site> exec <op> '{...}'   # execute an operation
 ```
 src/
   compiler/
-    analyzer/       # filter → cluster → differentiate → classify → schema
-    generator/      # openapi.ts, asyncapi.ts, package.ts (M36 split)
-    ws-analyzer/    # WS capture → classify → cluster → schema (M35)
-    recorder.ts     # CDP capture orchestration
-    prober.ts       # Post-compile endpoint verification
+    types.ts          # Core types (RecordedRequestSample, SampleResponse)
+    types-v2.ts       # Pipeline v2 contracts (5-phase type definitions)
+    recorder.ts       # HAR parsing + scripted recording
+    verify-v2.ts      # Unified verify with auth-first escalation
+    analyzer/         # Phase 2: label → normalize → cluster → schema → auth
+      analyze.ts      # Orchestrator: analyzeCapture() → AnalysisReport
+      labeler.ts      # Sample categorization (api/static/tracking/off_domain)
+      path-normalize.ts  # Path template normalization
+      graphql-cluster.ts # GraphQL sub-clustering
+      auth-candidates.ts # Ranked auth bundling with evidence
+      schema-v2.ts    # Schema inference with enum/format controls
+    curation/         # Phase 3: apply-curation.ts, scrub.ts (PII)
+    generator/        # Phase 4: generate-v2.ts (OpenAPI + AsyncAPI emission)
+    ws-analyzer/      # WS capture → classify → cluster → schema
   runtime/
     executor.ts     # Main dispatch (HTTP + WS)
     http-executor.ts, browser-fetch-executor.ts, node-ssr-executor.ts
@@ -38,7 +47,7 @@ src/
     cache-manager.ts, token-cache.ts
     test-runner.ts  # verify command implementation
     primitives/     # Auth/CSRF/signing resolvers
-  capture/          # CDP browser recording
+  capture/          # CDP browser recording (body-size-gate, no content filtering)
   commands/         # CLI command handlers
   types/            # Meta-spec type system
   sites/            # Site packages (openapi.yaml, DOC.md, adapters/)
@@ -47,6 +56,6 @@ src/
     param-validator.ts, permissions.ts, permission-derive.ts
     logger.ts, config.ts, cookies.ts, adapter-params.ts
     errors.ts, ssrf.ts, openapi.ts, asyncapi.ts
-    filters/            # Config files: blocked-domains.json, blocked-paths.json
+    config/             # Config files: blocked-domains, blocked-paths, tracking-cookies, static-extensions
 skill/openweb/      # The shipped skill (references, knowledge)
 ```

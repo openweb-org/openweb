@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-26 (M38)
+> Last updated: 2026-03-26 (pipeline v2)
 
 ## Mission
 
@@ -84,8 +84,8 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 |-----------|-------------|-----------|--------|
 | **Meta-spec** | x-openweb schema: L2 types + L3 interface + package format | `src/types/` | Formalized (M1) |
 | **Runtime** | Reads skill packages, resolves primitives, executes requests (HTTP + WS) | `src/runtime/` | L1 + L2 + L3 + extraction + WS + token cache (M35) |
-| **Compiler** | Captures behavior, detects patterns, emits skill packages (OpenAPI + AsyncAPI) | `src/compiler/` | L1 emit + L2 classify + WS classify + probe + compile report (M38) |
-| **Capture** | CDP browser recording (HAR + WS + state + DOM), dynamic globals detection | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17) |
+| **Compiler** | Captures behavior, analyzes patterns, curates plan, emits skill packages (OpenAPI + AsyncAPI), verifies | `src/compiler/` | Pipeline v2: 5-phase (capture → analyze → curate → generate → verify) |
+| **Capture** | CDP browser recording (HAR + WS + state + DOM), no content filtering, body-size-gate only | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17), unfiltered (v2) |
 | **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skill/openweb/references/` | Reference docs (M19), 7 knowledge files (M38) |
 | **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete — npm binary `openweb` (M33) |
 | **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `~/.openweb/sites/` (installed) | 67 sites with DOC.md + PROGRESS.md (M38) |

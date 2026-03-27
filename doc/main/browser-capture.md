@@ -1,7 +1,7 @@
 # Browser Capture (CDP)
 
 > Passive browser recording via Chrome DevTools Protocol.
-> Last updated: 2026-03-26 (M38)
+> Last updated: 2026-03-26 (pipeline v2)
 
 ## Overview
 
@@ -21,7 +21,7 @@ Chrome (--remote-debugging-port=9222)
 
 | Source | Output file | What it captures |
 |--------|-------------|------------------|
-| HTTP traffic | `traffic.har` | API requests/responses (analytics filtered out) |
+| HTTP traffic | `traffic.har` | All HTTP requests/responses (unfiltered, body-size-gated) |
 | WebSocket frames | `websocket_frames.jsonl` | CDP `Network.webSocket*` events |
 | State snapshots | `state_snapshots/*.json` | localStorage, sessionStorage, cookies |
 | DOM extraction | `dom_extractions/*.json` | Meta tags, hidden inputs, framework globals, webpack chunks |
@@ -49,19 +49,20 @@ capture/
 
 ---
 
-## Traffic Filtering
+## Traffic Recording
 
-HTTP traffic is filtered **during** capture (not post-hoc):
+HTTP traffic is recorded **without content-based filtering**. The capture module records every request/response pair — classification happens later in the Analyze phase (labeler).
 
-| Filter | Rule |
-|--------|------|
-| **Blocked domains** (~30) | google-analytics.com, sentry.io, facebook.net, mixpanel.com, etc. |
-| **Rejected MIME types** | text/html, text/css, image/\*, font/\*, video/\*, application/javascript |
-| **Captured MIME types** | application/json, \*+json variants, text/event-stream (SSE), application/x-www-form-urlencoded |
-| **Unknown MIME types** | Captured (conservative — keep rather than drop) |
-| **Excluded paths** | Static assets (.js, .css, .png, .svg, .woff2, etc.) |
+| Rule | Behavior |
+|------|----------|
+| **All requests** | Recorded with full metadata (method, URL, headers, status, content-type) |
+| **Body-size gate** | Response bodies > 1 MB are omitted; metadata still recorded |
+| **No domain blocking** | Analytics, tracking, off-domain — all captured. Labeler classifies later. |
+| **No content-type filtering** | HTML, CSS, images, JSON — all pass through. Labeler classifies later. |
 
--> See: `src/capture/har-capture.ts` — full filter list
+This design ensures the compiler's Analyze phase has complete data for classification decisions, and no information is silently lost during capture.
+
+-> See: `src/capture/har-capture.ts`, `src/compiler/analyzer/labeler.ts`
 
 ---
 
@@ -122,7 +123,7 @@ cat capture/metadata.json   # requestCount > 0, snapshotCount > 0
 ```
 src/capture/
 ├── session.ts          # Capture lifecycle orchestrator (start/stop, page navigation events)
-├── har-capture.ts      # HTTP traffic capture with domain/content-type filtering
+├── har-capture.ts      # HTTP traffic capture with body-size-gate (no content filtering)
 ├── ws-capture.ts       # WebSocket frame capture via CDP Network events
 ├── state-capture.ts    # localStorage, sessionStorage, cookies snapshots
 ├── dom-capture.ts      # Meta tags, hidden inputs, framework globals detection

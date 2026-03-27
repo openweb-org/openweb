@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-03-26 (M38)
+> Last updated: 2026-03-26 (pipeline v2)
 
 ## Quick Start
 
@@ -33,7 +33,7 @@ doc/main/
 │
 ├── meta-spec.md           # Type system: L2 types, x-openweb extensions, JSON Schema, validation
 │
-├── compiler.md            # Compiler pipeline: record → analyze → classify → emit
+├── compiler.md            # Compiler pipeline: capture → analyze → curate → generate → verify
 ├── browser-capture.md     # CDP capture module: HAR + WS + state + DOM recording
 │
 └── security.md            # SSRF protection, redirect safety, error model
@@ -75,16 +75,25 @@ src/
 │   ├── adapter.ts              #   CodeAdapter interface
 │   └── index.ts                #   Re-exports
 │
-├── compiler/                   # Site compilation
+├── compiler/                   # Site compilation (pipeline v2)
+│   ├── types.ts                #   Core types (RecordedRequestSample, SampleResponse)
+│   ├── types-v2.ts             #   Pipeline v2 contracts (all 5-phase types)
 │   ├── recorder.ts             #   HAR parsing + scripted recording
-│   ├── prober.ts               #   Post-compile endpoint verification
-│   ├── analyzer/               #   filter → cluster → differentiate → classify → schema
-│   ├── generator/              #   openapi.ts, asyncapi.ts, package.ts (split emitters)
+│   ├── verify-v2.ts            #   Unified verify with auth-first escalation
+│   ├── analyzer/               #   Phase 2: label → normalize → cluster → schema → auth
+│   │   ├── analyze.ts          #     Orchestrator: analyzeCapture() → AnalysisReport
+│   │   ├── labeler.ts          #     Sample categorization (api/static/tracking/off_domain)
+│   │   ├── path-normalize.ts   #     Path template normalization
+│   │   ├── graphql-cluster.ts  #     GraphQL sub-clustering
+│   │   ├── auth-candidates.ts  #     Ranked auth bundling with evidence
+│   │   └── schema-v2.ts        #     Schema inference with enum/format controls
+│   ├── curation/               #   Phase 3: apply-curation.ts, scrub.ts (PII)
+│   ├── generator/              #   Phase 4: generate-v2.ts (OpenAPI + AsyncAPI emission)
 │   └── ws-analyzer/            #   WS capture → classify → cluster → schema
 │
 ├── capture/                    # Browser CDP recording
 │   ├── session.ts              #   Capture lifecycle orchestrator
-│   ├── har-capture.ts          #   HTTP traffic capture + filtering
+│   ├── har-capture.ts          #   HTTP traffic capture (body-size-gate, no content filtering)
 │   ├── ws-capture.ts           #   WebSocket frame capture
 │   ├── state-capture.ts        #   localStorage, sessionStorage, cookies
 │   ├── dom-capture.ts          #   Meta tags, hidden inputs, framework globals
@@ -104,7 +113,8 @@ src/
 │   ├── errors.ts               #   OpenWebError structured errors
 │   ├── logger.ts               #   Logger utility
 │   ├── config.ts               #   Configuration
-│   └── cookies.ts              #   Cookie management
+│   ├── cookies.ts              #   Cookie management
+│   └── config/                 #   Config files: blocked-domains, blocked-paths, tracking-cookies, static-extensions
 │
 └── sites/                      # Site packages (67 sites)
     ├── open-meteo/             #   L1 (no x-openweb)
