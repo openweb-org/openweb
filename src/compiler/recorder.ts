@@ -161,6 +161,10 @@ export function extractSamples(har: HarLog): ExtractResult {
       contentType,
       response,
       requestBody: entry.request?.postData?.text || undefined,
+      startedDateTime: entry.startedDateTime || undefined,
+      referer: entry.request?.headers
+        ?.find((h) => h.name?.toLowerCase() === 'referer')
+        ?.value || undefined,
     })
   }
 

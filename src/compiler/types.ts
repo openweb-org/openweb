@@ -15,6 +15,10 @@ export interface RecordedRequestSample {
   readonly contentType: string
   readonly response: SampleResponse
   readonly requestBody?: string
+  /** ISO-8601 timestamp from the HAR entry (for navigation grouping) */
+  readonly startedDateTime?: string
+  /** Referer header value from the request (for navigation grouping) */
+  readonly referer?: string
 }
 
 export interface ClusteredEndpoint {

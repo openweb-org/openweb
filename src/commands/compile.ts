@@ -14,7 +14,7 @@ import { classify } from '../compiler/analyzer/classify.js'
 import type { ClassifyResult } from '../compiler/analyzer/classify.js'
 import { differentiateParameters } from '../compiler/analyzer/differentiate.js'
 import { filterSamples } from '../compiler/analyzer/filter.js'
-import type { FilteredSample } from '../compiler/analyzer/filter.js'
+import type { LabeledSample } from '../compiler/analyzer/filter.js'
 import { inferSchema } from '../compiler/analyzer/schema.js'
 import { generatePackage } from '../compiler/generator/index.js'
 import type { GeneratePackageInput } from '../compiler/generator/index.js'
@@ -29,6 +29,7 @@ import { analyzeWsConnection } from '../compiler/ws-analyzer/ws-cluster.js'
 import { classifyClusters } from '../compiler/ws-analyzer/ws-classify.js'
 import { inferWsSchemas } from '../compiler/ws-analyzer/ws-schema.js'
 import type { AnalyzedOperation, ClusteredEndpoint, ParameterDescriptor, RecordedRequestSample } from '../compiler/types.js'
+import type { StateSnapshot } from '../capture/types.js'
 import { fetchWithRedirects } from '../runtime/redirect.js'
 import { validateSSRF } from '../lib/ssrf.js'
 
@@ -151,9 +152,9 @@ export async function compileSite(
 
   const userProvidedDir = args.captureDir
   const recordingDir = userProvidedDir ?? await runScriptedRecording(scriptPath)
-  let filteredSamples: RecordedRequestSample[] = []
-  let rejectedSamples: FilteredSample[] = []
-  let offDomainSamples: RecordedRequestSample[] = []
+  let labeledSamples: LabeledSample[] = []
+  let keptSamples: RecordedRequestSample[] = []
+  let stateSnapshots: StateSnapshot[] = []
   let totalRecordedCount = 0
   let malformedCount = 0
   let classifyResult: ReturnType<typeof classify> | undefined // mutable: probe may override
@@ -166,12 +167,14 @@ export async function compileSite(
     malformedCount = extracted.malformedCount
     totalRecordedCount = recordedSamples.length
     const filterResult = filterSamples(recordedSamples, { targetUrl: args.url })
-    filteredSamples = filterResult.kept
-    rejectedSamples = filterResult.rejected
-    offDomainSamples = filterResult.offDomain
+    labeledSamples = filterResult.labeled
+    keptSamples = labeledSamples
+      .filter((ls) => ls.label === 'kept')
+      .map((ls) => ls.sample)
 
     // Load full capture data for L2 classification
     const captureData = await loadCaptureData(recordingDir, har)
+    stateSnapshots = captureData.stateSnapshots
     if (captureData.harEntries.length > 0 || captureData.stateSnapshots.length > 0 || captureData.domHtml) {
       classifyResult = classify(captureData)
     }
@@ -188,7 +191,7 @@ export async function compileSite(
   }
 
   const hasWsOps = wsInput && wsInput.operations.length > 0
-  if (filteredSamples.length === 0 && !classifyResult?.extractions && !hasWsOps) {
+  if (keptSamples.length === 0 && !classifyResult?.extractions && !hasWsOps) {
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
@@ -199,7 +202,7 @@ export async function compileSite(
     })
   }
 
-  const clusters = clusterSamples(filteredSamples)
+  const clusters = clusterSamples(keptSamples)
 
   // Phase 1: sync analysis (no I/O)
   const operationBases = clusters.map((cluster) => {
@@ -321,9 +324,8 @@ export async function compileSite(
   await writeCompileReport(reportDir, {
     totalRecorded: totalRecordedCount,
     malformedCount,
-    kept: filteredSamples,
-    rejected: rejectedSamples,
-    offDomain: offDomainSamples,
+    labeled: labeledSamples,
+    stateSnapshots,
     clusters,
     classifyResult,
     probeResults,
@@ -355,9 +357,8 @@ export async function compileSite(
 interface CompileReportData {
   readonly totalRecorded: number
   readonly malformedCount: number
-  readonly kept: RecordedRequestSample[]
-  readonly rejected: FilteredSample[]
-  readonly offDomain: RecordedRequestSample[]
+  readonly labeled: LabeledSample[]
+  readonly stateSnapshots: StateSnapshot[]
   readonly clusters: ClusteredEndpoint[]
   readonly classifyResult?: ClassifyResult
   readonly probeResults?: ProbeResult[]
@@ -366,52 +367,121 @@ interface CompileReportData {
   readonly wsOpCount: number
 }
 
-function buildFilteredJson(data: CompileReportData) {
-  const byReason: Record<string, number> = {}
-  for (const r of data.rejected) {
-    byReason[r.reason] = (byReason[r.reason] ?? 0) + 1
-  }
-  if (data.offDomain.length > 0) {
-    byReason.off_domain = data.offDomain.length
+interface NavigationGroup {
+  readonly page: string
+  readonly timestamp: string
+  readonly requests: Array<{
+    host: string
+    path: string
+    method: string
+    status: number
+    label: string
+  }>
+}
+
+/**
+ * Find the navigation group index for a request by matching its referer
+ * to a snapshot URL (primary), or by timestamp range (fallback).
+ */
+function findNavigationGroup(
+  sample: RecordedRequestSample,
+  snapshots: StateSnapshot[],
+): number {
+  // Primary: match referer to a snapshot URL
+  if (sample.referer) {
+    let refererPath: string | undefined
+    try {
+      refererPath = new URL(sample.referer).pathname
+    } catch {
+      // intentional: malformed referer — fall through to timestamp
+    }
+    if (refererPath) {
+      for (let i = snapshots.length - 1; i >= 0; i--) {
+        try {
+          const snapshotPath = new URL(snapshots[i].url).pathname
+          if (refererPath === snapshotPath) return i
+        } catch {
+          // intentional: skip malformed snapshot URL
+        }
+      }
+    }
   }
 
-  const requests = [
-    ...data.kept.map((s) => ({
-      host: s.host,
-      path: s.path,
-      method: s.method,
-      status: s.status,
-      content_type: s.contentType,
-      result: 'kept' as const,
-    })),
-    ...data.rejected.map((r) => ({
-      host: r.sample.host,
-      path: r.sample.path,
-      method: r.sample.method,
-      status: r.sample.status,
-      content_type: r.sample.contentType,
-      result: 'rejected' as const,
-      reason: r.reason,
-    })),
-    ...data.offDomain.map((s) => ({
-      host: s.host,
-      path: s.path,
-      method: s.method,
-      status: s.status,
-      content_type: s.contentType,
-      result: 'off_domain' as const,
-    })),
-  ]
+  // Fallback: timestamp range
+  if (sample.startedDateTime) {
+    const ts = new Date(sample.startedDateTime).getTime()
+    for (let i = snapshots.length - 1; i >= 0; i--) {
+      const snapTs = new Date(snapshots[i].timestamp).getTime()
+      if (ts >= snapTs) return i
+    }
+  }
+
+  return 0 // before first navigation → initial group
+}
+
+function buildFilteredJson(data: CompileReportData) {
+  const snapshots = [...data.stateSnapshots].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  )
+
+  // Build summary counts by label
+  const summary: Record<string, number> = { kept: 0, blocked_host: 0, blocked_path: 0, off_domain: 0 }
+  for (const ls of data.labeled) {
+    summary[ls.label] = (summary[ls.label] ?? 0) + 1
+  }
+
+  // Group by navigation
+  const groupMap = new Map<number, NavigationGroup>()
+
+  // Pre-create groups from snapshots
+  for (let i = 0; i < snapshots.length; i++) {
+    const snap = snapshots[i]
+    let page: string
+    try {
+      page = new URL(snap.url).pathname + new URL(snap.url).search
+    } catch {
+      page = snap.url
+    }
+    groupMap.set(i, { page, timestamp: snap.timestamp, requests: [] })
+  }
+
+  // If no snapshots, create a single "initial" group
+  if (snapshots.length === 0) {
+    groupMap.set(0, { page: '/', timestamp: new Date().toISOString(), requests: [] })
+  }
+
+  for (const ls of data.labeled) {
+    const groupIdx = snapshots.length > 0
+      ? findNavigationGroup(ls.sample, snapshots)
+      : 0
+
+    const group = groupMap.get(groupIdx)
+    if (group) {
+      group.requests.push({
+        host: ls.sample.host,
+        path: ls.sample.path,
+        method: ls.sample.method,
+        status: ls.sample.status,
+        label: ls.label,
+      })
+    }
+  }
+
+  // Collect groups in order, skip empty groups
+  const groups: NavigationGroup[] = []
+  for (let i = 0; i < Math.max(snapshots.length, 1); i++) {
+    const group = groupMap.get(i)
+    if (group && group.requests.length > 0) {
+      groups.push(group)
+    }
+  }
 
   return {
     compiled_at: new Date().toISOString(),
     total: data.totalRecorded,
     malformed: data.malformedCount,
-    kept: data.kept.length,
-    rejected: data.rejected.length,
-    off_domain: data.offDomain.length,
-    by_reason: byReason,
-    requests,
+    summary,
+    groups,
   }
 }
 
@@ -460,10 +530,11 @@ function buildProbeJson(probeResults: ProbeResult[]) {
 }
 
 function buildSummaryTxt(data: CompileReportData): string {
+  const keptCount = data.labeled.filter((ls) => ls.label === 'kept').length
   const parts = [
     `${data.analyzedOperations.length} HTTP ops`,
     `${data.verifiedCount} verified`,
-    `${data.kept.length}/${data.totalRecorded} requests kept`,
+    `${keptCount}/${data.totalRecorded} requests kept`,
   ]
   if (data.wsOpCount > 0) parts.push(`${data.wsOpCount} WS ops`)
   if (data.classifyResult?.auth) parts.push(`auth=${data.classifyResult.auth.type}`)

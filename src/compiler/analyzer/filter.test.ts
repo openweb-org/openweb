@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { filterSamples } from './filter.js'
 import type { RecordedRequestSample } from '../types.js'
+import { filterSamples } from './filter.js'
+import type { FilterLabel, LabeledSample } from './filter.js'
 
 function makeSample(overrides: Partial<RecordedRequestSample> = {}): RecordedRequestSample {
   return {
@@ -17,8 +18,13 @@ function makeSample(overrides: Partial<RecordedRequestSample> = {}): RecordedReq
   }
 }
 
+/** Extract samples with a specific label from the labeled array. */
+function withLabel(labeled: LabeledSample[], label: FilterLabel): RecordedRequestSample[] {
+  return labeled.filter((ls) => ls.label === label).map((ls) => ls.sample)
+}
+
 describe('filterSamples', () => {
-  it('keeps only GET 2xx json entries on allowed hosts (legacy compat)', () => {
+  it('keeps only GET entries on allowed hosts when mutations disabled', () => {
     const input = [
       makeSample({ host: 'api.open-meteo.com', path: '/v1/forecast', url: 'https://api.open-meteo.com/v1/forecast' }),
       makeSample({
@@ -30,7 +36,8 @@ describe('filterSamples', () => {
       makeSample({ host: 'example.com', path: '/api', url: 'https://example.com/api' }),
     ]
 
-    const { kept } = filterSamples(input, { targetUrl: 'https://open-meteo.com', allowMutations: false })
+    const { labeled } = filterSamples(input, { targetUrl: 'https://open-meteo.com', allowMutations: false })
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(1)
     expect(kept[0].host).toBe('api.open-meteo.com')
   })
@@ -43,7 +50,8 @@ describe('filterSamples', () => {
       makeSample({ host: 'unrelated.com' }),
     ]
 
-    const { kept } = filterSamples(input, { targetUrl: 'https://www.notion.so' })
+    const { labeled } = filterSamples(input, { targetUrl: 'https://www.notion.so' })
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(3)
     expect(kept.map((s) => s.host)).toEqual(['api.notion.so', 'www.notion.so', 'notion.so'])
   })
@@ -57,11 +65,12 @@ describe('filterSamples', () => {
       makeSample({ host: 'js.sentry.io' }),
     ]
 
-    const { kept, rejected } = filterSamples(input, { targetUrl: 'https://example.com' })
+    const { labeled } = filterSamples(input, { targetUrl: 'https://example.com' })
+    const kept = withLabel(labeled, 'kept')
+    const blockedHost = withLabel(labeled, 'blocked_host')
     expect(kept).toHaveLength(1)
     expect(kept[0].host).toBe('api.example.com')
-    expect(rejected).toHaveLength(4)
-    expect(rejected.every((r) => r.reason === 'blocked_host')).toBe(true)
+    expect(blockedHost).toHaveLength(4)
   })
 
   it('allows mutations by default', () => {
@@ -71,7 +80,8 @@ describe('filterSamples', () => {
       makeSample({ method: 'DELETE' }),
     ]
 
-    const { kept } = filterSamples(input, { targetUrl: 'https://example.com' })
+    const { labeled } = filterSamples(input, { targetUrl: 'https://example.com' })
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(3)
   })
 
@@ -82,10 +92,11 @@ describe('filterSamples', () => {
       makeSample({ method: 'PUT' }),
     ]
 
-    const { kept, rejected } = filterSamples(input, { targetUrl: 'https://example.com', allowMutations: false })
+    const { labeled } = filterSamples(input, { targetUrl: 'https://example.com', allowMutations: false })
+    const kept = withLabel(labeled, 'kept')
+    const mutationGated = withLabel(labeled, 'mutation_gated')
     expect(kept).toHaveLength(1)
-    expect(rejected).toHaveLength(2)
-    expect(rejected.every((r) => r.reason === 'mutation_gated')).toBe(true)
+    expect(mutationGated).toHaveLength(2)
   })
 
   it('passes all status codes through (non-2xx are not filtered)', () => {
@@ -96,9 +107,10 @@ describe('filterSamples', () => {
       makeSample({ status: 500 }),
     ]
 
-    const { kept, rejected } = filterSamples(input)
+    const { labeled } = filterSamples(input)
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(4)
-    expect(rejected).toHaveLength(0)
+    expect(labeled.every((ls) => ls.label === 'kept')).toBe(true)
   })
 
   it('passes 4xx status codes through (auth/rate-limit signals)', () => {
@@ -108,7 +120,8 @@ describe('filterSamples', () => {
       makeSample({ status: 429 }),
     ]
 
-    const { kept } = filterSamples(input)
+    const { labeled } = filterSamples(input)
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(3)
   })
 
@@ -120,7 +133,8 @@ describe('filterSamples', () => {
       makeSample({ contentType: 'application/graphql; charset=utf-8' }),
     ]
 
-    const { kept } = filterSamples(input)
+    const { labeled } = filterSamples(input)
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(4)
   })
 
@@ -131,7 +145,8 @@ describe('filterSamples', () => {
       makeSample({ host: 'www.google-analytics.com' }),
     ]
 
-    const { kept } = filterSamples(input)
+    const { labeled } = filterSamples(input)
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(2)
   })
 
@@ -141,7 +156,8 @@ describe('filterSamples', () => {
       makeSample({ host: 'api.example.com' }),
     ]
 
-    const { kept } = filterSamples(input, { allowHosts: ['custom-api.io'] })
+    const { labeled } = filterSamples(input, { allowHosts: ['custom-api.io'] })
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(1)
     expect(kept[0].host).toBe('custom-api.io')
   })
@@ -157,7 +173,8 @@ describe('filterSamples', () => {
       makeSample({ path: '/_/tracking' }),
     ]
 
-    const { kept } = filterSamples(input)
+    const { labeled } = filterSamples(input)
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(1)
     expect(kept[0].path).toBe('/api/v1/users')
   })
@@ -173,7 +190,8 @@ describe('filterSamples', () => {
       makeSample({ path: '/api/v1/pixel/campaigns' }),         // real: marketing pixel mgmt
     ]
 
-    const { kept } = filterSamples(input)
+    const { labeled } = filterSamples(input)
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(7) // all should pass
   })
 
@@ -185,7 +203,8 @@ describe('filterSamples', () => {
       makeSample({ host: 'unrelated.co.uk' }),
     ]
 
-    const { kept } = filterSamples(input, { targetUrl: 'https://www.bbc.co.uk' })
+    const { labeled } = filterSamples(input, { targetUrl: 'https://www.bbc.co.uk' })
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(3)
     expect(kept.map((s) => s.host)).toEqual(['api.bbc.co.uk', 'www.bbc.co.uk', 'bbc.co.uk'])
   })
@@ -197,7 +216,8 @@ describe('filterSamples', () => {
       makeSample({ host: 'github.io' }),
     ]
 
-    const { kept } = filterSamples(input, { targetUrl: 'https://mysite.github.io' })
+    const { labeled } = filterSamples(input, { targetUrl: 'https://mysite.github.io' })
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(1)
     expect(kept[0].host).toBe('mysite.github.io')
   })
@@ -208,12 +228,13 @@ describe('filterSamples', () => {
       makeSample({ path: '/.well-known/openid' }),      // should be blocked
     ]
 
-    const { kept } = filterSamples(input)
+    const { labeled } = filterSamples(input)
+    const kept = withLabel(labeled, 'kept')
     expect(kept).toHaveLength(1)
     expect(kept[0].path).toBe('/xwell-known/something')
   })
 
-  it('returns rejected samples with correct reasons', () => {
+  it('labels samples with correct filter labels', () => {
     const input = [
       makeSample({ host: 'api.example.com' }),
       makeSample({ host: 'www.google-analytics.com' }),
@@ -222,30 +243,45 @@ describe('filterSamples', () => {
       makeSample({ host: 'off-domain.com' }),
     ]
 
-    const { kept, rejected, offDomain } = filterSamples(input, { targetUrl: 'https://example.com' })
+    const { labeled } = filterSamples(input, { targetUrl: 'https://example.com' })
+    const kept = withLabel(labeled, 'kept')
+    const blockedHost = withLabel(labeled, 'blocked_host')
+    const blockedPath = withLabel(labeled, 'blocked_path')
+    const offDomain = withLabel(labeled, 'off_domain')
+
     expect(kept).toHaveLength(2) // api.example.com (200) + api.example.com (404)
-    expect(rejected).toHaveLength(2) // blocked_host + blocked_path
-    expect(offDomain).toHaveLength(1) // off-domain.com
-
-    const reasons = rejected.map((r) => r.reason)
-    expect(reasons).toContain('blocked_host')
-    expect(reasons).toContain('blocked_path')
-
+    expect(blockedHost).toHaveLength(1)
+    expect(blockedPath).toHaveLength(1)
+    expect(offDomain).toHaveLength(1)
     expect(offDomain[0].host).toBe('off-domain.com')
   })
 
-  it('reports off-domain samples separately from kept and rejected', () => {
+  it('labels off-domain samples separately from kept and blocked', () => {
     const input = [
       makeSample({ host: 'api.example.com' }),
       makeSample({ host: 'cdn.other.com' }),
       makeSample({ host: 'api.third-party.io' }),
     ]
 
-    const { kept, rejected, offDomain } = filterSamples(input, { targetUrl: 'https://example.com' })
+    const { labeled } = filterSamples(input, { targetUrl: 'https://example.com' })
+    const kept = withLabel(labeled, 'kept')
+    const offDomain = withLabel(labeled, 'off_domain')
+
     expect(kept).toHaveLength(1)
     expect(kept[0].host).toBe('api.example.com')
-    expect(rejected).toHaveLength(0)
     expect(offDomain).toHaveLength(2)
     expect(offDomain.map((s) => s.host)).toEqual(['cdn.other.com', 'api.third-party.io'])
+  })
+
+  it('preserves all samples in labeled array (nothing dropped)', () => {
+    const input = [
+      makeSample({ host: 'api.example.com' }),
+      makeSample({ host: 'www.google-analytics.com' }),
+      makeSample({ host: 'off-domain.com' }),
+      makeSample({ path: '/manifest.json' }),
+    ]
+
+    const { labeled } = filterSamples(input, { targetUrl: 'https://example.com' })
+    expect(labeled).toHaveLength(input.length)
   })
 })
