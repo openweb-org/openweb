@@ -139,11 +139,15 @@ export function applyCuration(
 
   const ws = report.ws ? buildWsPlan(report.ws) : undefined
 
+  const extractionSignals =
+    report.extractionSignals.length > 0 ? report.extractionSignals : undefined
+
   return {
     site: report.site,
     sourceUrl: report.sourceUrl,
     context,
     operations,
+    extractionSignals,
     ws,
   }
 }

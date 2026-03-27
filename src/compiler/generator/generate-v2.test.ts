@@ -5,7 +5,6 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 
-import type { PermissionCategory } from '../../types/extensions.js'
 import type {
   CuratedCompilePlan,
   CuratedOperation,
@@ -332,6 +331,173 @@ describe('generateFromPlan', () => {
     const { files, tmpDir } = await generateInTmp(plan)
     try {
       expect(files).toEqual([])
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('emits multiple response variants grouped by status', async () => {
+    const plan = makePlan({
+      operations: [
+        makeOperation({
+          responseVariants: [
+            {
+              status: 200,
+              kind: 'json',
+              contentType: 'application/json',
+              sampleCount: 5,
+              schema: { type: 'object', properties: { data: { type: 'array' } } },
+            },
+            {
+              status: 401,
+              kind: 'json',
+              contentType: 'application/json',
+              sampleCount: 1,
+              schema: { type: 'object', properties: { error: { type: 'string' } } },
+            },
+            {
+              status: 403,
+              kind: 'json',
+              contentType: 'application/json',
+              sampleCount: 1,
+            },
+          ],
+        }),
+      ],
+    })
+    const { outputRoot, tmpDir } = await generateInTmp(plan)
+    try {
+      const spec = await readYaml(outputRoot, 'openapi.yaml')
+      const paths = spec.paths as Record<string, Record<string, Record<string, unknown>>>
+      const responses = paths['/v1/items'].get.responses as Record<string, Record<string, unknown>>
+
+      expect(responses['200']).toBeDefined()
+      expect(responses['200'].description).toBe('Success.')
+      expect(responses['401']).toBeDefined()
+      expect(responses['401'].description).toBe('Authentication required.')
+      expect(responses['403']).toBeDefined()
+      expect(responses['403'].description).toBe('Forbidden.')
+
+      // 200 should have the provided schema
+      const content200 = responses['200'].content as Record<string, Record<string, unknown>>
+      expect(content200['application/json'].schema).toEqual({
+        type: 'object',
+        properties: { data: { type: 'array' } },
+      })
+
+      // 403 without schema should fall back to { type: 'object' }
+      const content403 = responses['403'].content as Record<string, Record<string, unknown>>
+      expect(content403['application/json'].schema).toEqual({ type: 'object' })
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('emits extraction signals in info x-openweb', async () => {
+    const signals = [
+      { type: 'ssr_next_data' as const, selector: '#__NEXT_DATA__', estimatedSize: 4096 },
+    ]
+    const plan = makePlan({ extractionSignals: signals })
+    const { outputRoot, tmpDir } = await generateInTmp(plan)
+    try {
+      const spec = await readYaml(outputRoot, 'openapi.yaml')
+      const info = spec.info as Record<string, unknown>
+      const infoExt = info['x-openweb'] as Record<string, unknown>
+      expect(infoExt.extraction_signals).toEqual(signals)
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('omits extraction_signals from info when empty or absent', async () => {
+    const plan = makePlan()
+    const { outputRoot, tmpDir } = await generateInTmp(plan)
+    try {
+      const spec = await readYaml(outputRoot, 'openapi.yaml')
+      const info = spec.info as Record<string, unknown>
+      const infoExt = info['x-openweb'] as Record<string, unknown>
+      expect(infoExt.extraction_signals).toBeUndefined()
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('lowercases method keys in OpenAPI paths', async () => {
+    const plan = makePlan({
+      operations: [
+        makeOperation({ method: 'GET' }),
+        makeOperation({
+          id: 'cluster-2',
+          sourceClusterIds: ['cluster-2'],
+          method: 'POST',
+          pathTemplate: '/v1/items',
+          operationId: 'createItem',
+          permission: 'write',
+          replaySafety: 'unsafe_mutation',
+          exampleInput: {},
+          requestBodySchema: { type: 'object' },
+        }),
+      ],
+    })
+    const { outputRoot, tmpDir } = await generateInTmp(plan)
+    try {
+      const spec = await readYaml(outputRoot, 'openapi.yaml')
+      const paths = spec.paths as Record<string, Record<string, unknown>>
+      const itemsPath = paths['/v1/items']
+
+      // Keys should be lowercase per OpenAPI spec
+      expect(itemsPath.get).toBeDefined()
+      expect(itemsPath.post).toBeDefined()
+      expect(itemsPath.GET).toBeUndefined()
+      expect(itemsPath.POST).toBeUndefined()
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('deduplicates operationIds with _2, _3 suffixes', async () => {
+    const plan = makePlan({
+      operations: [
+        makeOperation({ id: 'c1', operationId: 'getItems', pathTemplate: '/v1/items' }),
+        makeOperation({ id: 'c2', operationId: 'getItems', pathTemplate: '/v2/items' }),
+        makeOperation({ id: 'c3', operationId: 'getItems', pathTemplate: '/v3/items' }),
+      ],
+    })
+    const { outputRoot, files, tmpDir } = await generateInTmp(plan)
+    try {
+      const spec = await readYaml(outputRoot, 'openapi.yaml')
+      const paths = spec.paths as Record<string, Record<string, Record<string, unknown>>>
+
+      expect(paths['/v1/items'].get.operationId).toBe('getItems')
+      expect(paths['/v2/items'].get.operationId).toBe('getItems_2')
+      expect(paths['/v3/items'].get.operationId).toBe('getItems_3')
+
+      // Test files should also use deduplicated names
+      expect(files).toContain('tests/getItems.test.json')
+      expect(files).toContain('tests/getItems_2.test.json')
+      expect(files).toContain('tests/getItems_3.test.json')
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('uses primary 2xx status in test assertions even with error variants', async () => {
+    const plan = makePlan({
+      operations: [
+        makeOperation({
+          responseVariants: [
+            { status: 401, kind: 'json', contentType: 'application/json', sampleCount: 2 },
+            { status: 200, kind: 'json', contentType: 'application/json', sampleCount: 5 },
+          ],
+        }),
+      ],
+    })
+    const { outputRoot, tmpDir } = await generateInTmp(plan)
+    try {
+      const testData = await readJson(path.join(outputRoot, 'tests', 'listItems.test.json'))
+      const cases = testData.cases as Array<Record<string, unknown>>
+      const assertions = cases[0].assertions as Record<string, unknown>
+      expect(assertions.status).toBe(200)
     } finally {
       await rm(tmpDir, { recursive: true, force: true })
     }

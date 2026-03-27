@@ -154,12 +154,20 @@ export interface WsHeartbeatCandidate {
   readonly payload: unknown
 }
 
+/** Summary of a WS operation discovered during analysis. */
+export interface WsOperationSummary {
+  readonly operationId: string
+  readonly pattern: 'subscribe' | 'publish' | 'request_reply' | 'stream'
+  readonly direction: 'sent' | 'received'
+}
+
 /** Analysis summary for a single WebSocket connection. */
 export interface WsConnectionAnalysis {
   readonly id: string
   readonly url: string
   readonly sampleCount: number
   readonly executableOperationCount: number
+  readonly operations: readonly WsOperationSummary[]
   readonly heartbeatCandidates: readonly WsHeartbeatCandidate[]
 }
 
@@ -258,6 +266,7 @@ export interface CuratedCompilePlan {
   readonly sourceUrl: string
   readonly context: CuratedSiteContext
   readonly operations: readonly CuratedOperation[]
+  readonly extractionSignals?: readonly ExtractionSignal[]
   readonly ws?: CuratedWsPlan
 }
 

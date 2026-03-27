@@ -10,7 +10,6 @@ import type { PermissionCategory } from '../../types/extensions.js'
 import type {
   CuratedCompilePlan,
   CuratedOperation,
-  CuratedWsPlan,
   ResponseVariant,
 } from '../types-v2.js'
 
@@ -67,17 +66,70 @@ function wsServerName(host: string): string {
   return host.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_')
 }
 
-/** Pick the primary success response variant from a curated operation. */
-function primaryResponse(variants: readonly ResponseVariant[]): {
-  status: number
-  schema: unknown
-  contentType: string
+/** Describe an HTTP status code for OpenAPI response descriptions. */
+function statusDescription(status: number): string {
+  if (status >= 200 && status < 300) return 'Success.'
+  if (status === 401) return 'Authentication required.'
+  if (status === 403) return 'Forbidden.'
+  if (status === 404) return 'Not found.'
+  if (status === 429) return 'Rate limited.'
+  if (status >= 400 && status < 500) return 'Client error.'
+  if (status >= 500) return 'Server error.'
+  return 'Response.'
+}
+
+/** Build OpenAPI responses object from all response variants. */
+function buildResponses(variants: readonly ResponseVariant[]): {
+  responses: Record<string, unknown>
+  primaryStatus: number
 } {
-  const ok = variants.find((v) => v.status >= 200 && v.status < 300)
-  if (ok) return { status: ok.status, schema: ok.schema ?? { type: 'object' }, contentType: ok.contentType }
-  const first = variants[0]
-  if (first) return { status: first.status, schema: first.schema ?? { type: 'object' }, contentType: first.contentType }
-  return { status: 200, schema: { type: 'object' }, contentType: 'application/json' }
+  if (variants.length === 0) {
+    return {
+      responses: { '200': { description: 'Success.', content: { 'application/json': { schema: { type: 'object' } } } } },
+      primaryStatus: 200,
+    }
+  }
+
+  // Group variants by status code
+  const byStatus = new Map<number, ResponseVariant[]>()
+  for (const v of variants) {
+    const group = byStatus.get(v.status) ?? []
+    group.push(v)
+    byStatus.set(v.status, group)
+  }
+
+  const responses: Record<string, unknown> = {}
+  for (const [status, group] of byStatus) {
+    const content: Record<string, unknown> = {}
+    for (const v of group) {
+      content[v.contentType] = { schema: v.schema ?? { type: 'object' } }
+    }
+    responses[String(status)] = {
+      description: statusDescription(status),
+      content,
+    }
+  }
+
+  // Primary status: prefer 2xx, then lowest status
+  const statuses = [...byStatus.keys()].sort((a, b) => a - b)
+  const primaryStatus = statuses.find((s) => s >= 200 && s < 300) ?? statuses[0] ?? 200
+
+  return { responses, primaryStatus }
+}
+
+/** Ensure every operationId in the list is unique by appending _2, _3, etc. */
+function deduplicateOperationIds(operations: readonly CuratedOperation[]): Map<string, string> {
+  const counts = new Map<string, number>()
+  const result = new Map<string, string>()
+
+  for (const op of operations) {
+    const base = op.operationId
+    const seen = counts.get(base) ?? 0
+    counts.set(base, seen + 1)
+    result.set(op.id, seen === 0 ? base : `${base}_${seen + 1}`)
+  }
+
+  return result
 }
 
 // ── OpenAPI emission ─────────────────────────────────
@@ -98,8 +150,12 @@ async function emitOpenApi(
   const paths: Record<string, Record<string, unknown>> = {}
   const files: string[] = ['openapi.yaml', 'manifest.json']
 
+  const uniqueIds = deduplicateOperationIds(plan.operations)
+
   for (const op of plan.operations) {
-    const stableId = hash16(`${op.operationId}:${op.method}:${op.pathTemplate}`)
+    const operationId = uniqueIds.get(op.id) ?? op.operationId
+    const method = op.method.toLowerCase()
+    const stableId = hash16(`${operationId}:${method}:${op.pathTemplate}`)
 
     const xOpenweb: Record<string, unknown> = {
       permission: op.permission,
@@ -110,10 +166,10 @@ async function emitOpenApi(
       },
     }
 
-    const resp = primaryResponse(op.responseVariants)
+    const { responses, primaryStatus } = buildResponses(op.responseVariants)
 
     const operationObject: Record<string, unknown> = {
-      operationId: op.operationId,
+      operationId,
       summary: op.summary,
       'x-openweb': xOpenweb,
       parameters: op.parameters.map((p) => ({
@@ -123,14 +179,7 @@ async function emitOpenApi(
         schema: p.schema,
         description: p.description,
       })),
-      responses: {
-        [String(resp.status)]: {
-          description: 'Success.',
-          content: {
-            [resp.contentType]: { schema: resp.schema },
-          },
-        },
-      },
+      responses,
     }
 
     if (op.requestBodySchema) {
@@ -149,22 +198,22 @@ async function emitOpenApi(
     }
 
     if (!paths[op.pathTemplate]) paths[op.pathTemplate] = {}
-    ;(paths[op.pathTemplate] as Record<string, unknown>)[op.method] = operationObject
+    ;(paths[op.pathTemplate] as Record<string, unknown>)[method] = operationObject
 
     // Test file — uses scrubbed examples from curation, never raw PII
     const testShape = {
-      operation_id: op.operationId,
-      method: op.method,
+      operation_id: operationId,
+      method,
       ...(op.exampleRequestBody !== undefined ? { request_body: op.exampleRequestBody } : {}),
       cases: [
         {
           input: op.exampleInput,
-          assertions: { status: resp.status, response_schema_valid: true },
+          assertions: { status: primaryStatus, response_schema_valid: true },
         },
       ],
     }
 
-    const testFile = `tests/${op.operationId}.test.json`
+    const testFile = `tests/${operationId}.test.json`
     await writeFile(path.join(outputRoot, testFile), `${JSON.stringify(testShape, null, 2)}\n`, 'utf8')
     files.push(testFile)
   }
@@ -179,16 +228,21 @@ async function emitOpenApi(
     serverEntry['x-openweb'] = serverXOpenWeb
   }
 
+  const infoXOpenweb: Record<string, unknown> = {
+    spec_version: '2.0',
+    compiled_at: generatedAt,
+    requires_auth: requiresAuth,
+  }
+  if (plan.extractionSignals && plan.extractionSignals.length > 0) {
+    infoXOpenweb.extraction_signals = plan.extractionSignals
+  }
+
   const openapi = {
     openapi: '3.1.0',
     info: {
       title: plan.site,
       version: '1.0.0',
-      'x-openweb': {
-        spec_version: '2.0',
-        compiled_at: generatedAt,
-        requires_auth: requiresAuth,
-      },
+      'x-openweb': infoXOpenweb,
     },
     servers: [serverEntry],
     paths,
