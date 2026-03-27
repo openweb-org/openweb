@@ -10,6 +10,7 @@ import type { ParameterDescriptor, RecordedRequestSample, SampleResponse } from 
 import type { JsonSchema } from '../lib/openapi.js'
 import type { PermissionCategory, Transport } from '../types/extensions.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../types/primitives.js'
+import type { WsMessageTemplate } from '../types/ws-primitives.js'
 
 // ---------------------------------------------------------------------------
 // Phase 1: Capture
@@ -159,6 +160,7 @@ export interface WsOperationSummary {
   readonly operationId: string
   readonly pattern: 'subscribe' | 'publish' | 'request_reply' | 'stream'
   readonly direction: 'sent' | 'received'
+  readonly messageTemplate?: WsMessageTemplate
 }
 
 /** Analysis summary for a single WebSocket connection. */
@@ -251,6 +253,7 @@ export interface CuratedWsOperation {
   readonly id: string
   readonly name: string
   readonly pattern: 'subscribe' | 'publish' | 'request_reply' | 'stream'
+  readonly messageTemplate?: WsMessageTemplate
 }
 
 /** Curated WebSocket plan including heartbeat. */

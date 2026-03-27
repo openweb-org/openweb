@@ -53,6 +53,9 @@ export async function compileSite(
   args: CompileArgs,
   options: CompileSiteOptions = {},
 ): Promise<CompileSiteResult> {
+  // Clean up stale recording directories from crashed compiles
+  await cleanupStaleRecordings()
+
   if (args.interactive) {
     throw new OpenWebError({
       error: 'execution_failed',
@@ -254,5 +257,34 @@ function stripResponseBodies(report: AnalysisReport): AnalysisReport {
         },
       }
     }),
+  }
+}
+
+// ── Stale recording cleanup ─────────────────────────────────────
+
+const STALE_THRESHOLD_MS = 60 * 60 * 1000 // 1 hour
+
+/** Remove stale openweb-recording-* directories from tmpdir. */
+async function cleanupStaleRecordings(): Promise<void> {
+  const tmpDir = os.tmpdir()
+  let entries: string[]
+  try {
+    entries = await fs.readdir(tmpDir)
+  } catch {
+    return
+  }
+  const now = Date.now()
+  const stale = entries.filter((e) => e.startsWith('openweb-recording-'))
+  for (const name of stale) {
+    const dirPath = path.join(tmpDir, name)
+    try {
+      const stat = await fs.stat(dirPath)
+      if (!stat.isDirectory()) continue
+      if (now - stat.mtimeMs > STALE_THRESHOLD_MS) {
+        await fs.rm(dirPath, { recursive: true, force: true })
+      }
+    } catch {
+      // Entry disappeared or unreadable — skip
+    }
   }
 }

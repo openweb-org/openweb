@@ -103,9 +103,9 @@ export async function runScriptedRecording(scriptPath: string): Promise<string> 
 }
 
 /** Read and parse the HAR file once. Callers share the parsed result. */
-export async function loadHar(recordingDir: string): Promise<HarLog> {
-  const harPath = path.join(recordingDir, 'traffic.har')
-  const raw = await readFile(harPath, 'utf8')
+export async function loadHar(recordingDir: string, harPath?: string): Promise<HarLog> {
+  const resolved = harPath ?? path.join(recordingDir, 'traffic.har')
+  const raw = await readFile(resolved, 'utf8')
   return JSON.parse(raw) as HarLog
 }
 
@@ -179,8 +179,13 @@ export async function cleanupRecordingDir(recordingDir: string): Promise<void> {
  * Load full capture data from a recording directory for classify().
  * Reads: traffic.har (raw entries), state_snapshots.json, dom.html.
  * Missing files are treated as empty — only traffic.har is required.
+ * Optional explicit paths override conventional directory-based lookups.
  */
-export async function loadCaptureData(recordingDir: string, har: HarLog): Promise<CaptureData> {
+export async function loadCaptureData(
+  recordingDir: string,
+  har: HarLog,
+  opts?: { stateSnapshotDir?: string; domHtmlPath?: string },
+): Promise<CaptureData> {
 
   // Convert local HAR entries to capture module HarEntry format
   const harEntries: CaptureHarEntry[] = []
@@ -223,15 +228,16 @@ export async function loadCaptureData(recordingDir: string, har: HarLog): Promis
   }
 
   // Load state snapshots — supports both single-file (state_snapshots.json)
-  // and bundle directory (state_snapshots/*.json) formats
+  // and bundle directory (state_snapshots/*.json) formats.
+  // Explicit stateSnapshotDir overrides conventional lookup.
   let stateSnapshots: StateSnapshot[] = []
+  const snapshotDir = opts?.stateSnapshotDir ?? path.join(recordingDir, 'state_snapshots')
   try {
     const stateRaw = await readFile(path.join(recordingDir, 'state_snapshots.json'), 'utf8')
     stateSnapshots = JSON.parse(stateRaw) as StateSnapshot[]
   } catch {
     // Try bundle directory format
     try {
-      const snapshotDir = path.join(recordingDir, 'state_snapshots')
       const files = await readdir(snapshotDir)
       const jsonFiles = files.filter((f) => f.endsWith('.json')).sort()
       for (const file of jsonFiles) {
@@ -244,10 +250,12 @@ export async function loadCaptureData(recordingDir: string, har: HarLog): Promis
   }
 
   // Load DOM HTML — supports both single-file (dom.html) and bundle
-  // directory (dom_extractions/*.json) formats
+  // directory (dom_extractions/*.json) formats.
+  // Explicit domHtmlPath overrides conventional lookup.
   let domHtml: string | undefined
+  const domPath = opts?.domHtmlPath ?? path.join(recordingDir, 'dom.html')
   try {
-    domHtml = await readFile(path.join(recordingDir, 'dom.html'), 'utf8')
+    domHtml = await readFile(domPath, 'utf8')
   } catch {
     // Try bundle directory format — extract HTML from first dom extraction
     try {

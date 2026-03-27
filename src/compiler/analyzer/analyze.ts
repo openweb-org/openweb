@@ -384,6 +384,7 @@ async function analyzeWsCapture(
       operationId: s.operationId,
       pattern: s.pattern as WsOperationSummary['pattern'],
       direction: s.direction,
+      messageTemplate: s.messageTemplate,
     }))
 
     connectionAnalyses.push({
@@ -412,8 +413,9 @@ async function analyzeWsCapture(
  * Orchestrates: extract → label → normalize → cluster → enrich → auth → navigation → ws → report.
  */
 export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisReport> {
-  // 1. Load HAR
-  const har = await loadHar(bundle.captureDir)
+  // 1. Load HAR (use explicit harPath, fall back to convention)
+  const harPath = bundle.harPath ?? path.join(bundle.captureDir, 'traffic.har')
+  const har = await loadHar(bundle.captureDir, harPath)
 
   // 2. Extract samples
   const { samples, malformedCount } = extractSamples(har)
@@ -442,7 +444,10 @@ export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisRep
   const clusters = enrichClusters(v1Clusters, sampleIdMap, pathNormMap)
 
   // 8. Load capture data and build auth candidates
-  const captureData = await loadCaptureData(bundle.captureDir, har)
+  const captureData = await loadCaptureData(bundle.captureDir, har, {
+    stateSnapshotDir: bundle.stateSnapshotDir,
+    domHtmlPath: bundle.domHtmlPath,
+  })
   const authCandidates = buildAuthCandidates(captureData)
 
   // 9. Get extraction signals from classify

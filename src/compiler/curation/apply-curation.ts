@@ -16,6 +16,7 @@ import type {
   CuratedWsPlan,
   CurationDecisionSet,
 } from '../types-v2.js'
+import type { WsMessageTemplate } from '../../types/ws-primitives.js'
 import { scrubExamples, scrubRequestBody } from './scrub.js'
 
 function selectAuthCandidate(
@@ -98,6 +99,13 @@ function curateOperation(
   }
 }
 
+function scrubMessageTemplate(tmpl: WsMessageTemplate): WsMessageTemplate {
+  return {
+    constants: scrubRequestBody(tmpl.constants) as Readonly<Record<string, unknown>>,
+    bindings: tmpl.bindings,
+  }
+}
+
 function buildWsPlan(ws: NonNullable<AnalysisReport['ws']>): CuratedWsPlan {
   const firstConnection = ws.connections[0]
   if (!firstConnection) {
@@ -112,6 +120,7 @@ function buildWsPlan(ws: NonNullable<AnalysisReport['ws']>): CuratedWsPlan {
         id: op.operationId,
         name: op.operationId,
         pattern: op.pattern,
+        messageTemplate: op.messageTemplate ? scrubMessageTemplate(op.messageTemplate) : undefined,
       })
     }
   }
