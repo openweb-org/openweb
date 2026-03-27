@@ -1,3 +1,24 @@
+## 2026-03-26: Filter audit — compile pipeline overhaul
+
+**What changed:**
+- Compile pipeline filter audit: 17 filters across 4 layers reviewed, 7 changed
+- `responseJson` replaced with discriminated union `SampleResponse` (json | text | empty) — write ops with empty/non-JSON responses now captured
+- L0 HAR capture: removed all content-based filtering, replaced with 1MB body-size-gate. HAR is now complete raw data.
+- L2 filter: non-2xx status no longer rejected (4xx = auth signal), off-domain reported separately instead of silent drop
+- Filter lists (blocked domains, blocked paths) extracted to config JSON files (`src/lib/filters/`)
+- WS MIN_WS_FRAMES lowered from 10 to 5
+- `verifyOperation()` timeout added (was hanging indefinitely), content-type filter removed (was rejecting 95% of LinkedIn API traffic)
+- HAR deduplication (parsed once, shared), verify + probe parallelized with bounded concurrency
+
+**Why:**
+- LinkedIn compile investigation revealed compile producing 8 infrastructure-noise endpoints instead of 61 real API operations. Root causes: content-type filter, no verify timeout, double HAR parse, sequential execution.
+
+**Key files:** `src/compiler/types.ts`, `src/compiler/recorder.ts`, `src/capture/har-capture.ts`, `src/compiler/analyzer/filter.ts`, `src/commands/compile.ts`, `src/compiler/prober.ts`, `src/lib/filters/*.json`
+**Verification:** 558 tests pass. LinkedIn compile: 8 → 61 operations, 8.7s → 4.4s.
+**Commit:** e8527ba..cdb76cb (8 commits)
+**Next:** Implement remaining filter audit items (F-1.2/F-1.3 union type for WS frames, binary protocol support — future work)
+**Blockers:** None
+
 ## 2026-03-26: Redfin — expand coverage from 3 to 7 ops
 
 **What changed:**

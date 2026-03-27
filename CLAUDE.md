@@ -47,5 +47,6 @@ src/
     param-validator.ts, permissions.ts, permission-derive.ts
     logger.ts, config.ts, cookies.ts, adapter-params.ts
     errors.ts, ssrf.ts, openapi.ts, asyncapi.ts
+    filters/            # Config files: blocked-domains.json, blocked-paths.json
 skill/openweb/      # The shipped skill (references, knowledge)
 ```

@@ -154,6 +154,7 @@ After compile completes, check the compile-report:
 - Read `~/.openweb/compile/<site>/summary.txt` — is operationCount reasonable?
 - If a target intent is missing → read `filtered.json` to determine cause:
   - **In rejected list** → filter false positive, no need to re-capture
+  - **In off_domain list** → the API uses a different domain (e.g. chatgpt.com → api.openai.com). Re-compile with `--allow-host <domain>` or note the cross-domain dependency.
   - **Not present** → genuinely not recorded, go back to Step 2
 
 Then follow `references/compile.md` for curation. During curation:

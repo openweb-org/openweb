@@ -1,7 +1,7 @@
 # Compiler Pipeline
 
 > Record → Analyze → Classify → Probe → Emit: turning website observations into skill packages.
-> Last updated: 2026-03-26 (M38)
+> Last updated: 2026-03-26 (filter audit refactor)
 
 ## Overview
 
@@ -23,7 +23,7 @@ Phase 6: Report       Output compile report (filtered.json, clusters.json, class
 
 ## Phase 1: Capture
 
-Records raw website behavior via CDP.
+Records raw website behavior via CDP. **No content-based filtering at capture time** — all requests are recorded with full metadata. Response bodies > 1MB are omitted (metadata preserved).
 
 -> See: [browser-capture.md](browser-capture.md) — full capture module docs
 
@@ -38,22 +38,21 @@ Transforms raw capture data into structured operation candidates.
 ```
 HAR entries
     │
-    ├── Filter      Remove non-API requests (static assets, analytics)
-    ├── Cluster     Group by path template (e.g., /api/v1/users/{id})
+    ├── Extract     Parse HAR → SampleResponse union (json | text | empty)
+    ├── Filter      Remove blocked hosts, blocked paths (config-driven)
+    ├── Cluster     Group by (method, host, path)
     ├── Differentiate  Identify path params vs query params
-    ├── Schema      Infer response JSON schema from samples
-    └── Annotate    Add metadata (content types, status codes)
+    ├── Schema      Infer response JSON schema from json-kind samples
+    └── Annotate    Add metadata (operationId, summary)
 ```
 
 **Key module:** `src/compiler/analyzer/`
 
-The analyzer pipeline:
-1. **cluster** — Group HAR entries by normalized URL path
-2. **filter** — Remove tracking/analytics/static asset requests
-3. **differentiate** — Detect path parameters vs literal segments
-4. **schema** — Infer JSON Schema from response samples
-5. **annotate** — Attach metadata to each operation
-6. **classify** — Detect L2 primitives from capture data
+**Filter behavior:**
+- Blocked hosts/paths loaded from `src/lib/filters/*.json` (config files, not hardcoded)
+- All status codes pass through (4xx = auth signal, not rejected)
+- Off-domain requests reported separately (not silently dropped)
+- HAR parsed once, shared by sample extraction and capture data loading
 
 ---
 
@@ -90,7 +89,7 @@ Step 3: page (deferred) → browser_fetch via CDP
 
 **Constraints:**
 - Only probes GET operations (mutations are never replayed)
-- Rate limited: 500ms between probes, max 30 probes per compile
+- Bounded concurrency: 3 parallel probes, max 30 probes per compile
 - Per-probe timeout: 5s
 - SSRF-validated before every outbound request
 

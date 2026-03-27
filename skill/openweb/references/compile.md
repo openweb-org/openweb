@@ -139,17 +139,18 @@ The `--probe` flag in the compile step is the **only** safe way to test node tra
 ## Common False Positives
 
 - **Tracking cookies as auth**: Cloudflare, GA, Meta pixel cookies trigger cookie_session. Use `--probe` to catch.
-- **Analytics as operations**: `/collect`, `/beacon`, `/pixel` — filter should catch most.
-- **CDN endpoints**: `/static/`, `/_next/`, `/assets/` — should be filtered.
+- **Analytics as operations**: `/collect`, `/beacon`, `/pixel` — blocked paths filter catches most.
 - **Dashboard noise**: SaaS dashboards (e.g. Stripe) generate heavy noise from internal namespaces. Manual curation must filter these.
 - **Heartbeat-only WS**: WebSocket connections that only carry ping/pong — not useful as operations.
 - **CDN/monitoring WS**: WebSocket endpoints for telemetry or CDN health checks — filter out.
+- **4xx responses as operations**: With all status codes passing through, 401/403/404 responses now produce samples. These are useful as auth signals but may generate operations that need auth to work. Check classify.json for auth detection.
 
 ## Common False Negatives
 
 - **Auth not detected**: User wasn't logged in, or unsupported auth pattern.
 - **CSRF not detected**: Token embedded in JavaScript (not cookie/meta tag) — identify manually.
 - **Operations missing**: Key pages not visited during capture — recapture with targeted browsing.
+- **Cross-domain API**: Site calls a different domain (e.g. chatgpt.com → api.openai.com). Check `filtered.json` off_domain section — use `--allow-host` if needed.
 
 ## Related References
 
