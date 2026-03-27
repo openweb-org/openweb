@@ -502,4 +502,76 @@ describe('generateFromPlan', () => {
       await rm(tmpDir, { recursive: true, force: true })
     }
   })
+
+  it('generates virtual paths for operations sharing the same path+method', async () => {
+    const plan = makePlan({
+      operations: [
+        makeOperation({
+          id: 'gql-1',
+          operationId: 'search_people',
+          pathTemplate: '/voyager/api/graphql',
+          method: 'get',
+          summary: 'Search people',
+        }),
+        makeOperation({
+          id: 'gql-2',
+          operationId: 'get_profile',
+          pathTemplate: '/voyager/api/graphql',
+          method: 'get',
+          summary: 'Get profile',
+        }),
+        makeOperation({
+          id: 'gql-3',
+          operationId: 'get_feed',
+          pathTemplate: '/voyager/api/graphql',
+          method: 'get',
+          summary: 'Get feed',
+        }),
+        // Non-colliding operation should keep its original path
+        makeOperation({
+          id: 'rest-1',
+          operationId: 'list_connections',
+          pathTemplate: '/voyager/api/connections',
+          method: 'get',
+          summary: 'List connections',
+        }),
+      ],
+    })
+    const { outputRoot, files, tmpDir } = await generateInTmp(plan)
+    try {
+      const spec = await readYaml(outputRoot, 'openapi.yaml')
+      const paths = spec.paths as Record<string, Record<string, Record<string, unknown>>>
+
+      // Colliding operations get virtual paths with ~operationId
+      expect(paths['/voyager/api/graphql~search_people']).toBeDefined()
+      expect(paths['/voyager/api/graphql~search_people'].get.operationId).toBe('search_people')
+      expect(paths['/voyager/api/graphql~get_profile']).toBeDefined()
+      expect(paths['/voyager/api/graphql~get_profile'].get.operationId).toBe('get_profile')
+      expect(paths['/voyager/api/graphql~get_feed']).toBeDefined()
+      expect(paths['/voyager/api/graphql~get_feed'].get.operationId).toBe('get_feed')
+
+      // Virtual paths have x-openweb.actual_path
+      const searchExt = paths['/voyager/api/graphql~search_people'].get['x-openweb'] as Record<string, unknown>
+      expect(searchExt.actual_path).toBe('/voyager/api/graphql')
+      const profileExt = paths['/voyager/api/graphql~get_profile'].get['x-openweb'] as Record<string, unknown>
+      expect(profileExt.actual_path).toBe('/voyager/api/graphql')
+
+      // Non-colliding operation keeps its original path
+      expect(paths['/voyager/api/connections']).toBeDefined()
+      expect(paths['/voyager/api/connections'].get.operationId).toBe('list_connections')
+      const connExt = paths['/voyager/api/connections'].get['x-openweb'] as Record<string, unknown>
+      expect(connExt.actual_path).toBeUndefined()
+
+      // The bare colliding path should NOT exist
+      expect(paths['/voyager/api/graphql']).toBeUndefined()
+
+      // All 4 operations produce test files
+      expect(files).toContain('tests/search_people.test.json')
+      expect(files).toContain('tests/get_profile.test.json')
+      expect(files).toContain('tests/get_feed.test.json')
+      expect(files).toContain('tests/list_connections.test.json')
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true })
+    }
+  })
 })

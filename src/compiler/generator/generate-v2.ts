@@ -132,6 +132,20 @@ function deduplicateOperationIds(operations: readonly CuratedOperation[]): Map<s
   return result
 }
 
+/** Detect path+method pairs shared by more than one operation. */
+function detectPathMethodCollisions(operations: readonly CuratedOperation[]): Set<string> {
+  const counts = new Map<string, number>()
+  for (const op of operations) {
+    const key = `${op.pathTemplate}\t${op.method.toLowerCase()}`
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  const collisions = new Set<string>()
+  for (const [key, count] of counts) {
+    if (count > 1) collisions.add(key)
+  }
+  return collisions
+}
+
 // ── OpenAPI emission ─────────────────────────────────
 
 async function emitOpenApi(
@@ -151,6 +165,7 @@ async function emitOpenApi(
   const files: string[] = ['openapi.yaml', 'manifest.json']
 
   const uniqueIds = deduplicateOperationIds(plan.operations)
+  const collisions = detectPathMethodCollisions(plan.operations)
 
   for (const op of plan.operations) {
     const operationId = uniqueIds.get(op.id) ?? op.operationId
@@ -164,6 +179,15 @@ async function emitOpenApi(
         stable_id: stableId,
         tool_version: 2,
       },
+    }
+
+    // Resolve virtual path for collision avoidance
+    const collisionKey = `${op.pathTemplate}\t${method}`
+    const isCollision = collisions.has(collisionKey)
+    const pathKey = isCollision ? `${op.pathTemplate}~${operationId}` : op.pathTemplate
+
+    if (isCollision) {
+      xOpenweb.actual_path = op.pathTemplate
     }
 
     const { responses, primaryStatus } = buildResponses(op.responseVariants)
@@ -197,8 +221,8 @@ async function emitOpenApi(
       operationObject.servers = [{ url: `https://${op.host}` }]
     }
 
-    if (!paths[op.pathTemplate]) paths[op.pathTemplate] = {}
-    ;(paths[op.pathTemplate] as Record<string, unknown>)[method] = operationObject
+    if (!paths[pathKey]) paths[pathKey] = {}
+    ;(paths[pathKey] as Record<string, unknown>)[method] = operationObject
 
     // Test file — uses scrubbed examples from curation, never raw PII
     const testShape = {
