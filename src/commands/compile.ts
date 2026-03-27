@@ -20,6 +20,7 @@ interface CompileArgs {
   readonly interactive?: boolean
   readonly probe?: boolean
   readonly cdpEndpoint?: string
+  readonly curation?: string
 }
 
 interface CompileSiteOptions {
@@ -118,8 +119,12 @@ export async function compileSite(
   )
 
   // Phase 3: Curate (auto-curation — accept all, top auth candidate, suggested names)
-  const autoCurationDecisions: CurationDecisionSet = {}
-  const plan = applyCuration(report, autoCurationDecisions)
+  let curationDecisions: CurationDecisionSet = {}
+  if (args.curation) {
+    const raw = await fs.readFile(args.curation, 'utf-8')
+    curationDecisions = JSON.parse(raw) as CurationDecisionSet
+  }
+  const plan = applyCuration(report, curationDecisions)
 
   // Phase 4: Generate
   const pkg = await generateFromPlan(plan, options.outputBaseDir)

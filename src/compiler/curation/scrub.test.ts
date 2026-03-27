@@ -68,6 +68,57 @@ describe('scrubExamples', () => {
     const result = scrubExamples({ id: 'abc123' })
     expect(result.id).toBe('abc123')
   })
+
+  it('redacts user slugs from profile-like keys', () => {
+    const result = scrubExamples({
+      slug: 'williamhgates',
+      username: 'johndoe42',
+      screenName: 'realuser',
+      profileId: 'someuser.name',
+    })
+    expect(result.slug).toBe('<EXAMPLE_SLUG>')
+    expect(result.username).toBe('<EXAMPLE_SLUG>')
+    expect(result.screenName).toBe('<EXAMPLE_SLUG>')
+    expect(result.profileId).toBe('<EXAMPLE_SLUG>')
+  })
+
+  it('does not redact slugs for non-slug keys', () => {
+    const result = scrubExamples({ query: 'cats', format: 'json' })
+    expect(result.query).toBe('cats')
+    expect(result.format).toBe('json')
+  })
+
+  it('redacts coordinate-like values for geo keys', () => {
+    const result = scrubExamples({
+      lat: '52.52',
+      lng: '13.41',
+      latitude: '-33.8688',
+      longitude: '151.2093',
+    })
+    expect(result.lat).toBe('<EXAMPLE_COORD>')
+    expect(result.lng).toBe('<EXAMPLE_COORD>')
+    expect(result.latitude).toBe('<EXAMPLE_COORD>')
+    expect(result.longitude).toBe('<EXAMPLE_COORD>')
+  })
+
+  it('does not redact numbers for non-geo keys', () => {
+    const result = scrubExamples({ page: '52.52' })
+    expect(result.page).toBe('52.52')
+  })
+
+  it('redacts generic long IDs (>20 chars alphanumeric)', () => {
+    const result = scrubExamples({
+      postId: 'abc123def456ghi789jkl012',
+      contentId: '1234567890abcdefghijklmno',
+    })
+    expect(result.postId).toBe('<EXAMPLE_ID>')
+    expect(result.contentId).toBe('<EXAMPLE_ID>')
+  })
+
+  it('does not redact short IDs as long IDs', () => {
+    const result = scrubExamples({ id: 'abc123' })
+    expect(result.id).toBe('abc123')
+  })
 })
 
 describe('scrubRequestBody', () => {
