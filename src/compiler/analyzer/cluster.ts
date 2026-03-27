@@ -9,13 +9,23 @@ function getOrCreate<K, V>(map: Map<K, V>, key: K, factory: () => V): V {
   return value
 }
 
-export function clusterSamples(samples: RecordedRequestSample[]): ClusteredEndpoint[] {
+/**
+ * Cluster samples by method + host + path key.
+ *
+ * @param pathKeyFn — optional function to derive the grouping key from a sample's path.
+ *   Defaults to `(s) => s.path` (raw path). Pass a normalizer to cluster by template.
+ *   The returned key becomes the cluster's `path` field.
+ */
+export function clusterSamples(
+  samples: RecordedRequestSample[],
+  pathKeyFn: (sample: RecordedRequestSample) => string = (s) => s.path,
+): ClusteredEndpoint[] {
   const groups = new Map<string, Map<string, Map<string, RecordedRequestSample[]>>>()
 
   for (const sample of samples) {
     const byHost = getOrCreate(groups, sample.method, () => new Map())
     const byPath = getOrCreate(byHost, sample.host, () => new Map())
-    getOrCreate(byPath, sample.path, () => []).push(sample)
+    getOrCreate(byPath, pathKeyFn(sample), () => []).push(sample)
   }
 
   const clustered: ClusteredEndpoint[] = []

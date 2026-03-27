@@ -3,7 +3,7 @@
  * a single AnalysisReport.
  */
 
-import type { RecordedRequestSample, SampleResponse } from '../types.js'
+import type { ParameterDescriptor, RecordedRequestSample, SampleResponse } from '../types.js'
 import type {
   AnalysisReport,
   CaptureBundle,
@@ -11,6 +11,7 @@ import type {
   LabeledSample,
   NavigationGroup,
   NavigationRequest,
+  PathNormalization,
   ResponseVariant,
   SampleCategory,
 } from '../types-v2.js'
@@ -18,7 +19,7 @@ import type { ExtractionSignal } from './classify.js'
 import { loadHar, extractSamples, loadCaptureData } from '../recorder.js'
 import { labelSamples } from './labeler.js'
 import { clusterSamples } from './cluster.js'
-import { normalizePath } from './path-normalize.js'
+import { normalizePathBatch } from './path-normalize.js'
 import { detectGraphqlEndpoint, subClusterGraphql } from './graphql-cluster.js'
 import { differentiateParameters } from './differentiate.js'
 import { annotateOperation } from './annotate.js'
@@ -79,6 +80,7 @@ function buildNavigationGroups(samples: LabeledSample[]): NavigationGroup[] {
 function enrichClusters(
   v1Clusters: Array<{ method: string; host: string; path: string; samples: RecordedRequestSample[] }>,
   sampleIdMap: Map<RecordedRequestSample, string>,
+  pathNormMap: Map<string, { template: string; normalization?: PathNormalization }>,
 ): ClusteredEndpoint[] {
   const v2Clusters: ClusteredEndpoint[] = []
   let clusterIdx = 0
@@ -97,6 +99,7 @@ function enrichClusters(
             v1.path,
             sub.samples,
             sampleIdMap,
+            pathNormMap,
             sub.graphql,
           ),
         )
@@ -104,7 +107,7 @@ function enrichClusters(
     } else {
       clusterIdx++
       v2Clusters.push(
-        buildClusteredEndpoint(clusterIdx, v1.method, v1.host, v1.path, v1.samples, sampleIdMap),
+        buildClusteredEndpoint(clusterIdx, v1.method, v1.host, v1.path, v1.samples, sampleIdMap, pathNormMap),
       )
     }
   }
@@ -116,20 +119,27 @@ function buildClusteredEndpoint(
   idx: number,
   method: string,
   host: string,
-  rawPath: string,
+  normalizedTemplate: string,
   samples: RecordedRequestSample[],
   sampleIdMap: Map<RecordedRequestSample, string>,
+  pathNormMap: Map<string, { template: string; normalization?: PathNormalization }>,
   graphql?: ClusteredEndpoint['graphql'],
 ): ClusteredEndpoint {
-  // Path normalization
-  const { template, normalization } = normalizePath(rawPath)
+  // Collect normalization info from all samples in this cluster
+  const normalization = buildClusterNormalization(samples, pathNormMap)
 
-  // Differentiate parameters (v1 cluster format expected)
-  const v1Endpoint = { method, host, path: rawPath, samples }
-  const parameters = differentiateParameters(v1Endpoint)
+  // Build path parameters from normalized segments
+  const pathParams = buildPathParameters(normalizedTemplate, samples, normalization)
+
+  // Differentiate query parameters (v1 cluster format expected)
+  const v1Endpoint = { method, host, path: normalizedTemplate, samples }
+  const queryParams = differentiateParameters(v1Endpoint)
+
+  // Merge path + query parameters
+  const parameters: ParameterDescriptor[] = [...pathParams, ...queryParams]
 
   // Annotate operation
-  const { operationId, summary } = annotateOperation(host, template, method)
+  const { operationId, summary } = annotateOperation(host, normalizedTemplate, method)
 
   // Build response variants
   const responseVariants = buildResponseVariants(samples)
@@ -149,7 +159,7 @@ function buildClusteredEndpoint(
     id: `cluster-${idx}`,
     method,
     host,
-    pathTemplate: template,
+    pathTemplate: normalizedTemplate,
     sampleIds,
     sampleCount: samples.length,
     normalization,
@@ -160,6 +170,73 @@ function buildClusteredEndpoint(
     suggestedOperationId: operationId,
     suggestedSummary: summary,
   }
+}
+
+/** Merge normalization info from all samples in a cluster. */
+function buildClusterNormalization(
+  samples: RecordedRequestSample[],
+  pathNormMap: Map<string, { template: string; normalization?: PathNormalization }>,
+): PathNormalization | undefined {
+  const originalPaths = [...new Set(samples.map((s) => s.path))]
+  // Collect all normalized segments from any sample's normalization
+  const segmentMap = new Map<number, PathNormalization['normalizedSegments'][number]['kind']>()
+  for (const s of samples) {
+    const norm = pathNormMap.get(s.path)?.normalization
+    if (norm) {
+      for (const seg of norm.normalizedSegments) {
+        segmentMap.set(seg.index, seg.kind)
+      }
+    }
+  }
+  if (segmentMap.size === 0) return undefined
+  const normalizedSegments = [...segmentMap.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([index, kind]) => ({ index, kind }))
+  return { originalPaths, normalizedSegments }
+}
+
+/** Build path parameter descriptors from normalized segments. */
+function buildPathParameters(
+  template: string,
+  samples: RecordedRequestSample[],
+  normalization?: PathNormalization,
+): ParameterDescriptor[] {
+  if (!normalization) return []
+
+  const templateSegments = template.split('/')
+  const params: ParameterDescriptor[] = []
+
+  for (const seg of normalization.normalizedSegments) {
+    const paramPlaceholder = templateSegments[seg.index]
+    if (!paramPlaceholder) continue
+
+    // Extract the parameter name from the template (e.g., "{id}" → "id")
+    const nameMatch = paramPlaceholder.match(/^\{(.+)\}$/)
+    if (!nameMatch) continue
+    const name = nameMatch[1]
+
+    // Collect original values from all samples at this segment index
+    const values: string[] = []
+    for (const s of samples) {
+      const rawSegments = s.path.split('/')
+      const val = rawSegments[seg.index]
+      if (val && !values.includes(val)) values.push(val)
+    }
+
+    const numericValues = values.map((v) => Number(v)).filter((n) => !Number.isNaN(n))
+    const allNumeric = numericValues.length === values.length && values.length > 0
+    const allInteger = allNumeric && numericValues.every((n) => Number.isInteger(n))
+
+    params.push({
+      name,
+      location: 'path',
+      required: true,
+      schema: allInteger ? { type: 'integer' } : allNumeric ? { type: 'number' } : { type: 'string' },
+      exampleValue: allInteger ? numericValues[0] : allNumeric ? numericValues[0] : values[0],
+    })
+  }
+
+  return params
 }
 
 function buildResponseVariants(samples: RecordedRequestSample[]): ResponseVariant[] {
@@ -236,7 +313,7 @@ function computeSummary(
 /**
  * Analyze a capture bundle, producing a single AnalysisReport.
  *
- * Orchestrates: extract → label → cluster → enrich → auth → navigation → report.
+ * Orchestrates: extract → label → normalize → cluster → enrich → auth → navigation → report.
  */
 export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisReport> {
   // 1. Load HAR
@@ -257,24 +334,29 @@ export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisRep
     sampleIdMap.set(s.sample, s.id)
   }
 
-  // 5. Cluster api samples (v1 cluster.ts)
-  const v1Clusters = clusterSamples(apiSamples)
+  // 5. Normalize paths BEFORE clustering (structural normalization)
+  const allPaths = apiSamples.map((s) => s.path)
+  const pathNormMap = normalizePathBatch(allPaths)
+  const pathKeyFn = (s: RecordedRequestSample) => pathNormMap.get(s.path)?.template ?? s.path
 
-  // 6. Enrich each cluster (path normalization, graphql, parameters, schema)
-  const clusters = enrichClusters(v1Clusters, sampleIdMap)
+  // 6. Cluster api samples by normalized path template
+  const v1Clusters = clusterSamples(apiSamples, pathKeyFn)
 
-  // 7. Load capture data and build auth candidates (parallel with clustering)
+  // 7. Enrich each cluster (graphql, parameters, schema)
+  const clusters = enrichClusters(v1Clusters, sampleIdMap, pathNormMap)
+
+  // 8. Load capture data and build auth candidates (parallel with clustering)
   const captureData = await loadCaptureData(bundle.captureDir, har)
   const authCandidates = buildAuthCandidates(captureData)
 
-  // 8. Get extraction signals from classify
+  // 9. Get extraction signals from classify
   const classifyResult = classify(captureData)
   const extractionSignals: ExtractionSignal[] = classifyResult.extractions ? [...classifyResult.extractions] : []
 
-  // 9. Build navigation groups
+  // 10. Build navigation groups
   const navigation = buildNavigationGroups(labeled)
 
-  // 10. Assemble report
+  // 11. Assemble report
   return {
     version: 2,
     site: bundle.site,
