@@ -116,10 +116,17 @@ export async function compileSite(
 
   // Persist analysis.json — handoff artifact from discover agent to compile agent.
   // Strip JSON response bodies to keep file size manageable (full bodies in analysis-full.json).
-  await fs.writeFile(
-    path.join(reportDir, 'analysis.json'),
-    `${JSON.stringify(stripResponseBodies(report), null, 2)}\n`,
-  )
+  const strippedReport = stripResponseBodies(report)
+  await Promise.all([
+    fs.writeFile(
+      path.join(reportDir, 'analysis.json'),
+      `${JSON.stringify(strippedReport, null, 2)}\n`,
+    ),
+    fs.writeFile(
+      path.join(reportDir, 'analysis-summary.json'),
+      `${JSON.stringify(buildAnalysisSummary(strippedReport), null, 2)}\n`,
+    ),
+  ])
 
   // Phase 3: Curate (auto-curation — accept all, top auth candidate, suggested names)
   let curationDecisions: CurationDecisionSet = {}
@@ -214,12 +221,23 @@ interface CompileReportV2Data {
 
 function buildSummaryV2(data: CompileReportV2Data): string {
   const { report, verifyReport, plan } = data
-  const verifiedCount = verifyReport
-    ? verifyReport.results.filter((r) => r.overall === 'pass').length
-    : 0
+  const httpCount = plan.operations.length
+
+  let verifyBreakdown: string
+  if (verifyReport) {
+    const pass = verifyReport.results.filter((r) => r.overall === 'pass').length
+    const skipped = verifyReport.results.filter((r) => r.overall === 'skipped').length
+    const fail = verifyReport.results.filter((r) => r.overall === 'fail').length
+    const segments = [`${pass} pass`]
+    if (skipped > 0) segments.push(`${skipped} skipped (write)`)
+    if (fail > 0) segments.push(`${fail} fail (see verify-report.json)`)
+    verifyBreakdown = segments.join(', ')
+  } else {
+    verifyBreakdown = 'verify skipped'
+  }
+
   const parts = [
-    `${plan.operations.length} HTTP ops`,
-    `${verifiedCount} verified`,
+    `${httpCount} HTTP ops: ${verifyBreakdown}`,
     `${report.summary.byCategory.api}/${report.summary.totalSamples} API samples`,
   ]
   const wsOpCount = plan.ws?.operations.length ?? 0
@@ -258,6 +276,13 @@ function stripResponseBodies(report: AnalysisReport): AnalysisReport {
       }
     }),
   }
+}
+
+/** Build agent-friendly summary — same as analysis.json minus samples and navigation arrays.
+ *  Typically <100KB vs multi-MB for the full report. */
+function buildAnalysisSummary(report: AnalysisReport): Omit<AnalysisReport, 'samples' | 'navigation'> {
+  const { samples: _samples, navigation: _navigation, ...summary } = report
+  return summary
 }
 
 // ── Stale recording cleanup ─────────────────────────────────────
