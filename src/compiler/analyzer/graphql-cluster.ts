@@ -62,7 +62,7 @@ function extractDiscriminator(sample: RecordedRequestSample, endpointPath: strin
         discriminator: 'queryId',
         queryId,
         operationType: detectOperationType(queryText, queryId),
-        operationName: queryId,
+        operationName: queryId.includes('.') ? queryId.slice(0, queryId.indexOf('.')) : queryId,
       },
     }
   }

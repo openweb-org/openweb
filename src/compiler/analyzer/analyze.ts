@@ -140,9 +140,10 @@ function graphqlOperationAnnotation(
 ): { operationId: string; summary: string } {
   let rawName: string | undefined
 
-  // 1. operationName directly available
+  // 1. operationName directly available (strip dot+hash suffix if present)
   if (graphql.operationName) {
-    rawName = graphql.operationName
+    const dotIdx = graphql.operationName.indexOf('.')
+    rawName = dotIdx > 0 ? graphql.operationName.slice(0, dotIdx) : graphql.operationName
   }
   // 2. queryId — extract the part before the dot (e.g. "voyagerJobsDashJobCards.abc123" → "voyagerJobsDashJobCards")
   if (!rawName && graphql.queryId) {
