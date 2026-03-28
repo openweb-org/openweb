@@ -225,8 +225,8 @@ describe('executeSessionHttp', () => {
     expect(calledUrl).toContain('https://www.instagram.com/api/v1/feed/timeline/')
     expect(headers['X-IG-App-ID']).toBe('936619743392459')
     expect(headers.Cookie).toBe('sessionid=sess_abc; csrftoken=csrf_xyz')
-    // GET request: no CSRF header
-    expect(headers['X-CSRFToken']).toBeUndefined()
+    // CSRF header is sent on all methods (including GET) by default
+    expect(headers['X-CSRFToken']).toBe('csrf_xyz')
   })
 
   it('injects CSRF header for POST (mutation) request', async () => {

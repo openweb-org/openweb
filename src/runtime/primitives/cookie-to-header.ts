@@ -30,7 +30,7 @@ export async function resolveCookieToHeader(
   }
 
   return {
-    headers: { [config.header]: match.value },
+    headers: { [config.header]: match.value.replace(/^"|"$/g, '') },
   }
 }
 

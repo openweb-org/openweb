@@ -2,6 +2,58 @@ import type { CaptureData } from './classify.js'
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
+/** Headers to skip during CSRF detection — standard non-CSRF headers */
+const SKIP_HEADERS = new Set(['cookie', 'content-type', 'accept', 'user-agent', 'host', 'origin', 'referer'])
+
+/** Well-known CSRF header names — prioritized over random header matches */
+const CSRF_HEADER_NAMES = new Set(['csrf-token', 'x-csrf-token', 'x-csrftoken', '_csrf'])
+
+/** Strip surrounding double quotes from cookie values (e.g. LinkedIn JSESSIONID) */
+function stripQuotes(value: string): string {
+  return value.replace(/^"|"$/g, '')
+}
+
+/** Check if a header is a browser client hint (sec-ch-*) — never CSRF */
+function isClientHint(headerName: string): boolean {
+  return headerName.toLowerCase().startsWith('sec-ch-')
+}
+
+interface CookieHeaderMatch {
+  cookie: string
+  header: string
+  preferred: boolean
+}
+
+/**
+ * Scan mutation entries for cookie→header matches, returning all found.
+ * Each match is tagged `preferred` if the header name is a well-known CSRF name.
+ */
+function findCookieHeaderMatches(
+  mutations: CaptureData['harEntries'],
+  cookieValues: Map<string, string>,
+): CookieHeaderMatch[] {
+  const matches: CookieHeaderMatch[] = []
+  for (const entry of mutations) {
+    for (const header of entry.request.headers) {
+      const name = header.name.toLowerCase()
+      if (SKIP_HEADERS.has(name)) continue
+      if (isClientHint(header.name)) continue
+
+      for (const [cookieName, rawCookieValue] of cookieValues) {
+        const cookieValue = stripQuotes(rawCookieValue)
+        if (cookieValue.length > 0 && header.value === cookieValue) {
+          matches.push({
+            cookie: cookieName,
+            header: header.name,
+            preferred: CSRF_HEADER_NAMES.has(name),
+          })
+        }
+      }
+    }
+  }
+  return matches
+}
+
 /**
  * Detect cookie_to_header CSRF: for mutation requests,
  * find a header value that matches a cookie value from state_snapshots.
@@ -24,22 +76,14 @@ export function detectCookieToHeader(data: CaptureData): { cookie: string; heade
   const mutations = data.harEntries.filter((e) => MUTATION_METHODS.has(e.request.method))
   if (mutations.length === 0) return undefined
 
-  // For each mutation, check if any custom header value matches a cookie value
-  for (const entry of mutations) {
-    for (const header of entry.request.headers) {
-      const name = header.name.toLowerCase()
-      // Skip standard headers
-      if (['cookie', 'content-type', 'accept', 'user-agent', 'host', 'origin', 'referer'].includes(name)) continue
+  const matches = findCookieHeaderMatches(mutations, cookieValues)
+  if (matches.length === 0) return undefined
 
-      for (const [cookieName, cookieValue] of cookieValues) {
-        if (header.value === cookieValue && cookieValue.length > 0) {
-          return { cookie: cookieName, header: header.name }
-        }
-      }
-    }
-  }
-
-  return undefined
+  // Prefer standard CSRF header names, fall back to first match
+  const preferred = matches.find((m) => m.preferred)
+  const best = preferred ?? matches[0]
+  if (!best) return undefined
+  return { cookie: best.cookie, header: best.header }
 }
 
 /**
@@ -63,7 +107,8 @@ export function detectMetaTag(data: CaptureData): { name: string; header: string
   for (const entry of mutations) {
     for (const header of entry.request.headers) {
       const name = header.name.toLowerCase()
-      if (['cookie', 'content-type', 'accept', 'user-agent', 'host', 'origin', 'referer'].includes(name)) continue
+      if (SKIP_HEADERS.has(name)) continue
+      if (isClientHint(header.name)) continue
 
       for (const [metaName, metaValue] of metaTags) {
         if (header.value === metaValue && metaValue.length > 0) {

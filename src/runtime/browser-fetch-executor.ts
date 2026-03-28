@@ -1,21 +1,20 @@
 import type { Browser } from 'playwright-core'
 
+import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
-import { getRequestBodyParameters, validateParams, type OpenApiOperation, type OpenApiSpec } from '../lib/openapi.js'
+import { type OpenApiOperation, type OpenApiSpec, getRequestBodyParameters, validateParams } from '../lib/openapi.js'
 import { validateSSRF } from '../lib/ssrf.js'
-import type { BrowserHandle } from './primitives/types.js'
 import type { ExecutorResult } from './executor-result.js'
+import { getServerXOpenWeb } from './operation-context.js'
+import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
+import type { BrowserHandle } from './primitives/types.js'
+import { buildHeaderParams, buildJsonRequestBody, buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
 import {
+  type SessionHttpDependencies,
+  autoNavigate,
   createNeedsPageError,
   findPageForOrigin,
-  autoNavigate,
-  type SessionHttpDependencies,
 } from './session-executor.js'
-import { getServerXOpenWeb } from './operation-context.js'
-import { buildJsonRequestBody, resolveAllParameters, substitutePath, buildHeaderParams, buildTargetUrl } from './request-builder.js'
-import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
-
-const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 export type { ExecutorResult }
 
@@ -111,14 +110,10 @@ export async function executeBrowserFetch(
     // Note: cookieString is NOT injected — browser handles cookies via credentials:'include'
   }
 
-  // Resolve CSRF (mutations by default, or any method if scope is defined)
+  // Resolve CSRF (always by default, or restricted by explicit scope)
   if (serverExt?.csrf) {
     const csrfScope = (serverExt.csrf as Record<string, unknown>).scope as string[] | undefined
-    const shouldResolveCsrf = csrfScope
-      ? csrfScope.some((s) => s.toUpperCase() === upperMethod)
-      : MUTATION_METHODS.has(upperMethod)
-
-    if (shouldResolveCsrf) {
+    if (shouldApplyCsrf(csrfScope, upperMethod)) {
       const authHeaders: Record<string, string> = {}
       for (const [k, v] of Object.entries(headers)) {
         if (k.toLowerCase() !== 'accept' && k.toLowerCase() !== 'content-type') {

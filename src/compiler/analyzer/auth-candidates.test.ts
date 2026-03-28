@@ -376,6 +376,99 @@ describe('buildAuthCandidates', () => {
         header: 'X-CSRF-Token',
       })
     })
+
+    it('excludes sec-ch-* client hint headers from CSRF detection', () => {
+      // Simulates LinkedIn scenario: CH-prefers-color-scheme cookie → sec-ch-prefers-color-scheme header
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+          makeHarEntry({
+            method: 'POST',
+            headers: [
+              { name: 'Cookie', value: 'sessionid=abc' },
+              { name: 'sec-ch-prefers-color-scheme', value: 'light' },
+            ],
+          }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [
+            { name: 'sessionid', value: 'abc', httpOnly: true },
+            { name: 'CH-prefers-color-scheme', value: 'light', httpOnly: false },
+          ],
+        })],
+      }
+
+      const { candidates } = buildAuthCandidates(data)
+      const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
+      expect(cookieCandidate).toBeDefined()
+      // No CSRF should be detected — the sec-ch- header is a client hint, not CSRF
+      expect(cookieCandidate?.csrf).toBeUndefined()
+    })
+
+    it('strips quotes from cookie values when matching CSRF', () => {
+      // Simulates LinkedIn JSESSIONID with quoted value
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+          makeHarEntry({
+            method: 'POST',
+            headers: [
+              { name: 'Cookie', value: 'sessionid=abc' },
+              { name: 'csrf-token', value: 'ajax:123456' },
+            ],
+          }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [
+            { name: 'sessionid', value: 'abc', httpOnly: true },
+            { name: 'JSESSIONID', value: '"ajax:123456"', httpOnly: false },
+          ],
+        })],
+      }
+
+      const { candidates } = buildAuthCandidates(data)
+      const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
+      expect(cookieCandidate).toBeDefined()
+      expect(cookieCandidate?.csrf).toEqual({
+        type: 'cookie_to_header',
+        cookie: 'JSESSIONID',
+        header: 'csrf-token',
+      })
+    })
+
+    it('prefers standard CSRF header names over random matches', () => {
+      // Both a random header and csrf-token match cookie values
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+          makeHarEntry({
+            method: 'POST',
+            headers: [
+              { name: 'Cookie', value: 'sessionid=abc' },
+              { name: 'x-random-header', value: 'tok123' },
+              { name: 'csrf-token', value: 'csrf_val_456' },
+            ],
+          }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [
+            { name: 'sessionid', value: 'abc', httpOnly: true },
+            { name: 'random_cookie', value: 'tok123', httpOnly: false },
+            { name: 'csrf_cookie', value: 'csrf_val_456', httpOnly: false },
+          ],
+        })],
+      }
+
+      const { candidates } = buildAuthCandidates(data)
+      const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
+      expect(cookieCandidate).toBeDefined()
+      // Should pick the csrf-token header, not x-random-header
+      expect(cookieCandidate?.csrf?.type).toBe('cookie_to_header')
+      if (cookieCandidate?.csrf?.type === 'cookie_to_header') {
+        expect(cookieCandidate.csrf.header).toBe('csrf-token')
+        expect(cookieCandidate.csrf.cookie).toBe('csrf_cookie')
+      }
+    })
   })
 
   // ── Signing bundling ──

@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 
-import type { CaptureData } from './classify.js'
-import type { AuthCandidate, AuthEvidence } from '../types-v2.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../../types/primitives.js'
+import type { AuthCandidate, AuthEvidence } from '../types-v2.js'
+import type { CaptureData } from './classify.js'
 
 // ── Tracking cookies ────────────────────────────────────────────────────────
 // Prefixes/patterns that indicate tracking/analytics, NOT auth.
@@ -21,6 +21,22 @@ const EXCHANGE_URL_PATTERN = /(token|oauth|auth|login|session|authenticate|sso)/
 
 // ── Mutation methods for CSRF detection ─────────────────────────────────────
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
+/** Headers to skip during CSRF detection — standard non-CSRF headers */
+const SKIP_HEADERS = new Set(['cookie', 'content-type', 'accept', 'user-agent', 'host', 'origin', 'referer'])
+
+/** Well-known CSRF header names — prioritized over random header matches */
+const CSRF_HEADER_NAMES = new Set(['csrf-token', 'x-csrf-token', 'x-csrftoken', '_csrf'])
+
+/** Strip surrounding double quotes from cookie values (e.g. LinkedIn JSESSIONID) */
+function stripQuotes(value: string): string {
+  return value.replace(/^"|"$/g, '')
+}
+
+/** Check if a header is a browser client hint (sec-ch-*) — never CSRF */
+function isClientHint(headerName: string): boolean {
+  return headerName.toLowerCase().startsWith('sec-ch-')
+}
 
 // ── Object traversal helpers ────────────────────────────────────────────────
 
@@ -224,18 +240,35 @@ function detectCookieToHeaderEvidence(data: CaptureData): CookieToHeaderResult |
   const mutations = data.harEntries.filter((e) => MUTATION_METHODS.has(e.request.method))
   if (mutations.length === 0) return undefined
 
+  interface Match { cookie: string; header: string; preferred: boolean }
+  const matches: Match[] = []
+
   for (const entry of mutations) {
     for (const header of entry.request.headers) {
       const name = header.name.toLowerCase()
-      if (['cookie', 'content-type', 'accept', 'user-agent', 'host', 'origin', 'referer'].includes(name)) continue
-      for (const [cookieName, cookieValue] of cookieValues) {
-        if (header.value === cookieValue && cookieValue.length > 0) {
-          return { cookie: cookieName, header: header.name }
+      if (SKIP_HEADERS.has(name)) continue
+      if (isClientHint(header.name)) continue
+
+      for (const [cookieName, rawCookieValue] of cookieValues) {
+        const cookieValue = stripQuotes(rawCookieValue)
+        if (cookieValue.length > 0 && header.value === cookieValue) {
+          matches.push({
+            cookie: cookieName,
+            header: header.name,
+            preferred: CSRF_HEADER_NAMES.has(name),
+          })
         }
       }
     }
   }
-  return undefined
+
+  if (matches.length === 0) return undefined
+
+  // Prefer standard CSRF header names, fall back to first match
+  const preferred = matches.find((m) => m.preferred)
+  const best = preferred ?? matches[0]
+  if (!best) return undefined
+  return { cookie: best.cookie, header: best.header }
 }
 
 function detectMetaTagEvidence(data: CaptureData): MetaTagResult | undefined {
@@ -252,7 +285,9 @@ function detectMetaTagEvidence(data: CaptureData): MetaTagResult | undefined {
   for (const entry of mutations) {
     for (const header of entry.request.headers) {
       const name = header.name.toLowerCase()
-      if (['cookie', 'content-type', 'accept', 'user-agent', 'host', 'origin', 'referer'].includes(name)) continue
+      if (SKIP_HEADERS.has(name)) continue
+      if (isClientHint(header.name)) continue
+
       for (const [metaName, metaValue] of metaTags) {
         if (header.value === metaValue && metaValue.length > 0) {
           return { name: metaName, header: header.name }
