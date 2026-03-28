@@ -349,11 +349,62 @@ See `compile.md` for detailed troubleshooting:
 ### Step 8: Install
 
 When all target intents return real data via `exec`, install the package.
-Follow `compile.md` Step 5 for the full install checklist:
-- Copy spec files to `src/sites/<site>/`
-- Write DOC.md and PROGRESS.md
-- Build and test (`pnpm build && pnpm test`)
-- Update knowledge files if you learned something generalizable
+
+#### 8a. Copy spec files
+
+```bash
+mkdir -p src/sites/<site>
+cp ~/.openweb/sites/<site>/openapi.yaml src/sites/<site>/
+cp ~/.openweb/sites/<site>/manifest.json src/sites/<site>/
+# asyncapi.yaml only if WS operations present
+# tests/ directory
+```
+
+If the site already has a package, merge carefully — do not lose existing
+adapter files, DOC.md, or PROGRESS.md.
+
+#### 8b. Write DOC.md
+
+Create or update `src/sites/<site>/DOC.md` per `references/site-doc.md`.
+This is the SOTA memory for the site — the next agent reads this instead
+of re-discovering everything.
+
+Required sections:
+- **Operations table** — map each operation to a target intent
+- **Auth** — type, CSRF config, any non-obvious details (e.g., CSRF on GETs)
+- **Transport** — node or page, and why
+- **Known Issues** — bot detection, rate limits, drift-causing fields
+
+#### 8c. Write PROGRESS.md
+
+Append to `src/sites/<site>/PROGRESS.md` per `references/site-doc.md`:
+
+```markdown
+## YYYY-MM-DD: Initial compile
+
+**What changed:**
+- Compiled N operations for M target intents
+- Auth: <type>, Transport: <type>
+
+**Why:**
+- <user request or coverage goal>
+
+**Verification:** all N target intents return real data via exec
+**Commit:** <short hash>
+```
+
+#### 8d. Build and test
+
+```bash
+pnpm build && pnpm test
+openweb sites          # should list the new site
+openweb <site>         # should show operations
+```
+
+#### 8e. Update knowledge (if applicable)
+
+If you learned something generalizable during this discovery, write it to
+`references/knowledge/` per `references/update-knowledge.md`.
 
 ### Step 9 (dev mode, optional): Pipeline Improvement Report
 
