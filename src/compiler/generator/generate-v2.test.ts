@@ -172,7 +172,7 @@ describe('generateFromPlan', () => {
     }
   })
 
-  it('maps replaySafety to risk_tier in x-openweb', async () => {
+  it('emits permission without risk_tier in x-openweb', async () => {
     const plan = makePlan({
       operations: [
         makeOperation({ operationId: 'safeOp', replaySafety: 'safe_read' }),
@@ -196,11 +196,12 @@ describe('generateFromPlan', () => {
       const paths = spec.paths as Record<string, Record<string, Record<string, unknown>>>
 
       const safeExt = paths['/v1/items'].get['x-openweb'] as Record<string, unknown>
-      expect(safeExt.risk_tier).toBe('safe')
+      expect(safeExt.permission).toBe('read')
+      expect(safeExt.risk_tier).toBeUndefined()
 
       const unsafeExt = paths['/v1/orders'].post['x-openweb'] as Record<string, unknown>
-      expect(unsafeExt.risk_tier).toBe('unsafe')
       expect(unsafeExt.permission).toBe('transact')
+      expect(unsafeExt.risk_tier).toBeUndefined()
     } finally {
       await rm(tmpDir, { recursive: true, force: true })
     }

@@ -26,11 +26,6 @@ function hash16(value: string): string {
   return createHash('sha256').update(value).digest('hex').slice(0, 16)
 }
 
-/** Map replaySafety to x-openweb risk_tier. */
-function riskTier(safety: CuratedOperation['replaySafety']): string {
-  return safety === 'safe_read' ? 'safe' : 'unsafe'
-}
-
 function choosePrimaryHost(operations: readonly CuratedOperation[], fallbackUrl?: string): string {
   const counts = new Map<string, number>()
   for (const op of operations) {
@@ -174,7 +169,6 @@ async function emitOpenApi(
 
     const xOpenweb: Record<string, unknown> = {
       permission: op.permission,
-      risk_tier: riskTier(op.replaySafety),
       build: {
         stable_id: stableId,
         tool_version: 2,
