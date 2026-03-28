@@ -12,6 +12,11 @@ servers:
     protocol: wss
     x-openweb:
       transport: node
+      discriminator:
+        sent:
+          field: type
+        received:
+          field: type
 channels:
   gql_realtime_reddit_com:
     address: /query
