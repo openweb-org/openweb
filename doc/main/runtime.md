@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-03-26 (M38)
+> Last updated: 2026-03-27 (ergo fixes: timeout, auto-navigate)
 
 ## Overview
 
@@ -54,6 +54,8 @@ executeOperation(site, operationId, params, deps)
 
 If an operation has `x-openweb.adapter`, L3 adapter takes priority regardless of transport.
 If an operation has `x-openweb.extraction`, the runtime dispatches to `executeExtraction()` before the HTTP executors.
+
+**Operation timeout:** All operations are wrapped in a 30s timeout (configurable via `OPENWEB_TIMEOUT` env variable in milliseconds). The timer is properly cleaned up on completion to avoid resource leaks.
 
 ---
 
@@ -133,7 +135,7 @@ The primary L2 execution path. Uses a real HTTP client with cookies/headers extr
 ```
 
 **Page matching**: The runtime finds a real browser tab matching the API's origin.
-Worker-like pages (`*.js`, empty content) are ignored. There is no fallback to an unrelated tab. If no matching page is found, the runtime raises `needs_page` with a concrete URL to open.
+Worker-like pages (`*.js`, empty content) are ignored. There is no fallback to an unrelated tab. If no matching page is found, the runtime attempts **auto-navigation**: it opens a new tab to the site's origin URL (with `networkidle` wait, 15s timeout) and re-checks. If auto-navigate also fails, the runtime raises `needs_page` with a concrete URL to open.
 
 -> See: `src/runtime/session-executor.ts`, `src/runtime/redirect.ts`, `src/runtime/request-builder.ts`, `src/runtime/operation-context.ts`
 

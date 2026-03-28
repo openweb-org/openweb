@@ -341,17 +341,18 @@ export async function dispatchOperation(
     ? executeOperation(site, operationId, params, deps)
     : (await import('./ws-cli-executor.js')).executeWsFromCli(site, operationId, params, deps)
 
+  let timer: ReturnType<typeof setTimeout>
   return Promise.race([
     execute,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new OpenWebError({
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new OpenWebError({
         error: 'execution_failed',
         code: 'EXECUTION_FAILED',
         message: `Operation ${operationId} timed out after ${OPERATION_TIMEOUT}ms`,
         action: 'Increase timeout via OPENWEB_TIMEOUT env variable (milliseconds).',
         retriable: true,
         failureClass: 'retriable',
-      })), OPERATION_TIMEOUT),
-    ),
-  ])
+      })), OPERATION_TIMEOUT)
+    }),
+  ]).finally(() => clearTimeout(timer))
 }

@@ -1,3 +1,18 @@
+## 2026-03-27: Runtime ergonomics fixes
+
+**What changed:**
+- Operation timeout in `dispatchOperation` — 30s default, configurable via `OPENWEB_TIMEOUT` env. Fixed timer leak (cleared via `.finally()`)
+- Auto-navigate fallback in session-executor — when no matching page exists, opens a new tab to the site URL before throwing `needs_page`
+- Token cache `withLock` — 10s lock acquisition timeout prevents deadlocks on stale locks
+- JSON auto-stringify in param-validator — object values auto-stringify for string params with `x-openweb-json-schema`
+- Token cache `_unsafe` variants — lock-free `readTokenCacheUnsafe`, `writeTokenCacheUnsafe`, `clearTokenCacheUnsafe` for use inside `withTokenLock` to avoid double-locking
+- Compile skill doc updated: new "Runtime QA" sub-step (4c) in verify step
+
+**Key files:** `src/runtime/http-executor.ts`, `src/runtime/session-executor.ts`, `src/runtime/token-cache.ts`, `src/lib/param-validator.ts`, `skill/openweb/references/compile.md`
+**Verification:** Code review, timer leak fix applied
+**Next:** Runtime QA on real sites
+**Blockers:** None
+
 ## 2026-03-27: Pipeline v2 — design gap fixes
 
 **What changed:**

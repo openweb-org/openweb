@@ -333,6 +333,32 @@ If AsyncAPI operations are present:
 - Does the heartbeat interval match?
 - Do subscribe operations receive expected event types?
 
+#### 4c. Runtime QA — Execute Core Operations
+
+Verify-report tells you IF the spec passes HTTP sanity checks. But the real test
+is whether an agent can get useful data.
+
+Pick 2-3 core operations from different target intents and execute them:
+
+```bash
+openweb <site> exec <operation> '{"param": "value"}'
+```
+
+Check:
+- Does it return data (not an error)?
+- Does the data match what you see on the website?
+- For auth-required operations: is the browser logged in?
+
+Common issues at this stage:
+- `needs_browser` -> run `openweb browser start`
+- `needs_page` -> should auto-navigate now; if it fails, open the site manually
+- `needs_login` -> log in to the site in the managed browser
+- Hangs forever -> check if token cache is stale (restart browser)
+- Empty response -> the API may need different parameters
+
+This step catches problems that compile-time verify cannot: auth failures,
+page-transport issues, incorrect parameters, and API changes since capture.
+
 ### Step 5: Install the Site Package
 
 When all operations pass verification (or failures are understood and documented):
