@@ -484,7 +484,7 @@ components:
           type: integer
         audience:
           type: string
-          description: '"everyone"' or '"only_paid"'
+          description: '"everyone" or "only_paid"'
     PublicationSummary:
       type: object
       properties:
@@ -548,7 +548,7 @@ components:
           type: string
         type:
           type: string
-          description: '"newsletter"' or '"podcast"' or '"thread"'
+          description: '"newsletter" or "podcast" or "thread"'
         description:
           type: [string, 'null']
         body_html:

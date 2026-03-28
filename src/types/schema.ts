@@ -61,10 +61,16 @@ export const buildMetaSchema = {
 
 // ── Operation-level x-openweb ──────────────────────
 
+export const safetySchema = {
+  enum: ['safe', 'caution'],
+} as const
+
 export const xOpenWebOperationSchema = {
   type: 'object',
   properties: {
     permission: permissionSchema,
+    safety: safetySchema,
+    requires_auth: { type: 'boolean' },
     build: buildMetaSchema,
     transport: transportSchema,
     csrf: csrfWithScopeSchema,

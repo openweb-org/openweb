@@ -251,12 +251,14 @@ export const extractionPrimitiveSchema = {
     },
     {
       type: 'object',
-      required: ['type', 'expression'],
+      required: ['type'],
       properties: {
         type: { const: 'page_global_data' },
         page_url: { type: 'string' },
         expression: { type: 'string' },
         path: { type: 'string' },
+        adapter: { type: 'string' },
+        method: { type: 'string' },
       },
       additionalProperties: false,
     },
