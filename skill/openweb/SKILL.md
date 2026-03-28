@@ -35,21 +35,26 @@ If a site has no package, do NOT say "unsupported." Route to the discover flow.
 openweb sites                                      # list available sites
 ```
 
-### 2. Check readiness
+### 2. Read site notes
+Check if `src/sites/<site>/DOC.md` exists and read it before trying operations.
+- DOC.md has: which operations serve which intents, copy-paste example commands, auth requirements, known issues
+- If DOC.md exists, read it BEFORE trying operations — it saves you from guessing params
+
+### 3. Check readiness
 ```bash
 openweb <site>                                     # transport, auth, operations
 ```
 - `Requires browser: yes` → run `openweb browser start` first
 - `Requires login: yes` → user must be logged in
 
-### 3. Inspect the operation
+### 4. Inspect the operation
 ```bash
 openweb <site> <op>                                # params, response shape
 openweb <site> <op> --example                      # real example params from fixtures
 ```
 Operations may be HTTP or WS. Inspect to see the type, parameters, and response shape.
 
-### 4. Execute
+### 5. Execute
 ```bash
 openweb <site> exec <op> '{"key":"value"}'         # stdout=JSON result, stderr=JSON error
 ```

@@ -3,6 +3,29 @@
 ## Overview
 Professional social network. Archetype: social.
 
+## Quick Start
+
+Copy-paste commands for common intents:
+
+```bash
+# Search people by keyword
+openweb linkedin.com exec get_search_results_people '{"keywords":"software engineer"}'
+
+# Search jobs by keyword
+openweb linkedin.com exec search_jobs '{"keywords":"frontend developer"}'
+
+# Search content/posts by keyword
+openweb linkedin.com exec get_search_results_content '{"keywords":"machine learning"}'
+
+# Get a person's profile (replace slug with LinkedIn profile slug)
+openweb linkedin.com exec get_voyager_identity_normalizedprofile '{"id":"satyanadella"}'
+
+# Get job posting details (GraphQL — use openweb linkedin.com voyager_jobs_job_postings --example for queryId)
+openweb linkedin.com exec voyager_jobs_job_postings '{"includeWebMetadata":"true","queryId":"<queryId from --example>","variables":"(jobPostingUrn:urn%3Ali%3Afsd_jobPosting%3A<JOB_ID>)"}'
+```
+
+Note: GraphQL operations (`voyager_*`) require `queryId` hashes that change with LinkedIn deploys. Always run `openweb linkedin.com <op> --example` first to get the current queryId.
+
 ## Operations
 
 | Operation | Intent | Method | Notes |

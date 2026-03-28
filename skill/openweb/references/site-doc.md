@@ -38,6 +38,18 @@ Always reflects current best understanding. Update on every discover/compile/fix
 ## Overview
 One-liner: what this site is, what archetype (e-commerce, travel, social, etc.)
 
+## Quick Start
+
+Copy-paste commands for common intents:
+
+\```bash
+# [Intent 1 description]
+openweb <site> exec <op> '<full JSON params>'
+
+# [Intent 2 description]
+openweb <site> exec <op> '<full JSON params>'
+\```
+
 ## Operations
 | Operation | Intent | Method | Notes |
 |-----------|--------|--------|-------|
@@ -69,7 +81,7 @@ How the site's API works — the non-obvious parts:
 - Dynamic fields that cause verify DRIFT?
 ```
 
-Not every section needs content. If a section has nothing interesting, skip it. The point is to capture **what's non-obvious** about this site — things the next agent (or human) needs to know.
+**Required sections:** Overview, Quick Start, Operations. The rest are optional — if a section has nothing interesting, skip it. The point is to capture **what's non-obvious** about this site — things the next agent (or human) needs to know.
 
 ---
 
