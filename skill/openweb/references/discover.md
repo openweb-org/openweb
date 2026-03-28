@@ -39,6 +39,17 @@ entire capture/compile cycles.
    If you expect auth, log in first -- unauthenticated capture misses auth-required
    endpoints entirely, wasting the capture session.
 
+   **Auth types that CANNOT be auto-detected:**
+   - `page_global` -- API keys embedded in page JavaScript (e.g., YouTube
+     INNERTUBE_API_KEY). Must be manually identified by inspecting page source
+     for global variable assignments containing API keys.
+   - `webpack_module_walk` -- tokens stored in webpack module closures (e.g.,
+     Discord). Must be manually specified. The runtime supports it; the
+     compiler cannot discover it.
+
+   If the existing package uses these auth types, PRESERVE them during merge
+   (see compile.md "Merging with an Existing Package").
+
 4. **If the site already has a package:** read its `DOC.md` and `openapi.yaml`
    (at `src/sites/<site>/`) to understand current coverage before capturing more.
 
@@ -113,6 +124,22 @@ Define 3-5 target intents as **user actions**, not API names.
 - Social: "search posts by keyword", "get post with comments", "get user profile"
 - Travel: "search flights by route and date", "get pricing details"
 
+#### Write Operation Discovery
+
+After framing read intents, add write intents for the site's core interactions:
+
+| Archetype | Typical write intents |
+|-----------|----------------------|
+| Social | like/upvote, follow/unfollow, bookmark/save, repost/share |
+| E-commerce | add to cart, add to wishlist |
+| Messaging | send message (to self/test channel only) |
+| Content | post content (then delete), comment |
+
+These use the same capture flow -- perform the action in the browser during
+Step 2. The safety table above applies. Write intents are secondary to read
+intents but should be captured in the same session when possible, since
+re-capturing is expensive.
+
 ### Step 2: Capture
 
 ```bash
@@ -135,6 +162,22 @@ Browsing tips:
   requires an existing site package. Open the target URL in the managed browser
   and authenticate there. Existing logins from your real Chrome profile may
   already carry over.
+- **Trigger write actions** after browsing read flows: like a post, follow a user,
+  bookmark content. These generate write operation traffic. See the Write Operation
+  Safety table above for which actions are safe to capture.
+- **If you expect auth-required operations:** Log in FIRST, then capture.
+  Auth detection requires seeing auth tokens in the traffic. Specifically:
+  - **exchange_chain (Reddit-like):** The token exchange request must appear
+    in the HAR. Do a COLD page load (clear cookies first or use incognito) to
+    capture the token exchange flow. SPA navigation after initial load may not
+    re-trigger the token request.
+  - **sapisidhash (Google/YouTube):** The SAPISID cookie must be present in
+    state_snapshots and Authorization headers with SAPISIDHASH prefix must
+    appear in HAR entries. Must be logged into a Google account in the managed
+    browser.
+  - **cookie_session with CSRF:** Perform at least one mutation (like, follow)
+    during capture so the CSRF token appears in request headers. CSRF detection
+    requires seeing cookie-to-header matches on POST/PUT/PATCH/DELETE requests.
 - **Avoid** logout, delete account, billing, irreversible actions.
 
 ```bash
@@ -167,8 +210,8 @@ generate, and verify. It produces:
 | `examples/*.example.json` | `~/.openweb/sites/<site>/` | Example fixtures (PII-scrubbed) |
 
 The auto-curation accepts all clusters, picks the top-ranked auth candidate,
-and uses the analyzer's suggested operation names (snake_case by default, e.g.,
-`list_users`, `get_product`). Step 5 is where you review and fix these — see
+and uses the analyzer's suggested operation names (camelCase by default, e.g.,
+`listUsers`, `getProduct`). Step 5 is where you review and fix these — see
 `compile.md`.
 
 ### Step 4: Check Coverage

@@ -165,9 +165,9 @@ echo '{"csrfType": "cookie_to_header"}' > curation.json
 
 Search for `"clusters"` in `analysis.json`. Read that array. For each cluster:
 
-- **`suggestedOperationId`** -- auto-generated names are snake_case heuristics
-  based on HTTP method and path (e.g., `list_users`, `get_product`, `search`).
-  These often need renaming to be meaningful (e.g., `get_x_graph_ql` should
+- **`suggestedOperationId`** -- auto-generated names are camelCase heuristics
+  based on HTTP method and path (e.g., `listUsers`, `getProduct`, `search`).
+  These often need renaming to be meaningful (e.g., `getXGraphQl` should
   become `searchTweets`).
 - **`suggestedSummary`** -- derived from the operationId. Usually needs rewriting
   to describe the user action.
@@ -247,20 +247,39 @@ Delete operations for clusters you identified as noise in Step 2b:
 - Polling/heartbeat-only endpoints
 - 4xx-only clusters (no successful responses)
 
+After removing noise, review ALL remaining non-target clusters. Keep any operation
+that:
+- Returns structured JSON (not HTML)
+- Is on the primary domain (not off-domain)
+- Has clear user value (getMe, getHotSearch, getRecommendFeed, notifications, etc.)
+
+These non-target operations get auto-curated names and schemas, which is acceptable.
+Do not spend time perfecting them, but do not delete them either.
+
 #### 3b. Rename Operations
 
 Replace auto-generated `operationId` values with clear, descriptive names.
-The auto-names are snake_case heuristics (e.g., `list_users`, `get_product`,
-`create_messages`). Rename to match the user action:
+Auto-generated names use camelCase convention (e.g., `listUsers`, `getProduct`)
+but still need semantic review:
 
-- `get_api_v1_search_results` -> `searchProducts`
-- `list_graphql` -> `searchUsers` (for GraphQL, name by the operation, not the endpoint)
-- `get_users_user` -> `getUserProfile`
+- `getApiV1SearchResults` -> `searchProducts`
+- `listGraphql` -> `searchUsers` (for GraphQL, name by the operation, not the endpoint)
+- `getUsersUser` -> `getUserProfile`
 
 Update `summary` to describe the user action, not the URL:
 - "Get api v1 search results" -> "Search products by keyword"
 
 **Convention:** Use camelCase for operationId (`searchProducts`, `getUserProfile`).
+
+#### Parameter Descriptions
+
+Review parameter descriptions for user-facing clarity:
+- Generic names need context: `id` -> "Subreddit name (without r/ prefix)"
+- queryId should note the GraphQL operation name it references
+- Opaque IDs should explain what they reference: "Post ID (base-36, e.g. '1jqk8w')"
+- Include constraints: "Number of results (max 100)"
+- Auto-generated descriptions from `annotate.ts` cover only common names
+  (q, page, limit). All site-specific parameters need manual descriptions.
 
 #### 3c. Fix Auth Configuration
 
@@ -418,6 +437,37 @@ cp ~/.openweb/sites/<site>/manifest.json src/sites/<site>/
 
 If the site already has a package, merge carefully -- do not lose existing
 adapter files, DOC.md, or PROGRESS.md.
+
+#### Merging with an Existing Package
+
+When the site already has a package at `src/sites/<site>/`:
+
+1. **Read the existing package first.** Open `openapi.yaml` and note:
+   - Write operations (permission: write) -- these are manually authored
+   - Adapter references (x-openweb.adapter) -- these have custom code
+   - Complex auth config (exchange_chain, page_global, sapisidhash, webpack_module_walk)
+   - Custom $ref schemas in components/
+
+2. **Copy new spec to a temp location.** Do not overwrite the existing spec.
+
+3. **Merge operations:**
+   - Add genuinely new operations (new paths not in existing spec) from
+     the new spec into the existing spec.
+   - For operations that exist in both: keep existing if it has better
+     schemas, params, or was manually curated. Take new if existing was
+     a stub.
+   - NEVER delete existing write operations.
+   - NEVER delete existing adapter references.
+
+4. **Merge auth:** If existing has complex auth (exchange_chain, page_global,
+   sapisidhash, webpack_module_walk), keep it. If existing has no auth and
+   new detected cookie_session + CSRF, take the new auth config.
+
+5. **Preserve adapters:** Copy no adapter files from the new package. The
+   existing adapter directory is always authoritative.
+
+6. **Update DOC.md:** Add new operations to the operations table. Do not
+   remove existing operation documentation.
 
 #### 5b. Write DOC.md
 
