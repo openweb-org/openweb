@@ -1,0 +1,15 @@
+{
+  "operation_id": "getXActivityComponentsEvaOperationList",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "source_id": "29ERAmwloghvx7600"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

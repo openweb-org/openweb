@@ -1,0 +1,17 @@
+{
+  "operation_id": "getXNoteListArchive",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "csrf": "<REDACTED_TOKEN>",
+        "oid": 1,
+        "oid_type": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

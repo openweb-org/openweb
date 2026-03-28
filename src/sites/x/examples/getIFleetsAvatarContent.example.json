@@ -1,0 +1,16 @@
+{
+  "operation_id": "getIFleetsAvatarContent",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "only_spaces": "true",
+        "user_ids": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

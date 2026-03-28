@@ -1,0 +1,18 @@
+{
+  "operation_id": "getXKvFrontendNamespaceData",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "appKey": 1,
+        "nscode": 1,
+        "unlimit": "true",
+        "versionId": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "operation_id": "get",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "param": "policy"
+      },
+      "assertions": {
+        "status": 204,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

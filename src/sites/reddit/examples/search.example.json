@@ -1,0 +1,16 @@
+{
+  "operation_id": "search",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "q": "javascript",
+        "type": "link"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

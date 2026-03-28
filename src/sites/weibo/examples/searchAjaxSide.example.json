@@ -1,0 +1,15 @@
+{
+  "operation_id": "searchAjaxSide",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "q": "科技"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

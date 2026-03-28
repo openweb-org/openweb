@@ -1,0 +1,18 @@
+{
+  "operation_id": "searchXWebInterfaceSuggest",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "highlight": 1,
+        "spmid": 1,
+        "term": "编程教程",
+        "web_location": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

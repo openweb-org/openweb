@@ -1,0 +1,15 @@
+{
+  "operation_id": "getAjaxIndexbandGetindexband",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "type": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

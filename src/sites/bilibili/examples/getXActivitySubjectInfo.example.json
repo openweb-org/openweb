@@ -1,0 +1,17 @@
+{
+  "operation_id": "getXActivitySubjectInfo",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "bvid": "BV1bscPz1EQW",
+        "sid": 1,
+        "web_location": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "operation_id": "getSYtmainappwebJsK=ytmainappweb.kevlarBase.enUs.vhv3et8k72u.es5.oAm=aaaabaaakaD=1Br=1M=kevlarBaseModule,kevlarMainModule",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": "<REDACTED_TOKEN>"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "operation_id": "ws_send_subscribe_ce43f2bc_7bd8_4c3d_afb8_42b73c81cd76",
+  "protocol": "ws",
+  "mode": "unary",
+  "cases": [
+    {
+      "input": {},
+      "timeout_ms": 10000,
+      "assertions": {
+        "connected": true
+      }
+    }
+  ]
+}

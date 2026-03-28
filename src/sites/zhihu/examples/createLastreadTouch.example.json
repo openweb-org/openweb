@@ -1,0 +1,13 @@
+{
+  "operation_id": "createLastreadTouch",
+  "method": "post",
+  "cases": [
+    {
+      "input": {},
+      "assertions": {
+        "status": 201,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

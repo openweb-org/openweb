@@ -1,0 +1,15 @@
+{
+  "operation_id": "get_5",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "param": "example"
+      },
+      "assertions": {
+        "status": 301,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

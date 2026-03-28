@@ -1,0 +1,180 @@
+{
+  "operation_id": "getLog",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "0000241774721584000https://www.bilibili.com/video/BV1bscPz1EQW/|Default:Ugc:0|4.9.74-855ac69a|116036225473952|35919563307|1|0|0": "",
+        "00111117747215848421774721583630|Default:Ugc:0|4.9.74-855ac69a|high_grade_video|{\"aid\":116036225473952,\"cid\":35919563307,\"dvq\":80,\"isAutoQ\":true,\"tag\":\"\"}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|NaN||3|2|||||||{\"webAbTest\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\",\"in_new_ab\":true,\"ab_version\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\"},\"ab_split_num\":{\"login_dialog_version\":89,\"ai_summary_version\":798,\"rcmd_tab_version\":45,\"enable_shortcut_key\":188,\"enable_live_anime\":188,\"danmaku_report_version\":89,\"enable_strip_ad\":188,\"comment_version_hash\":188},\"pageVersion\":\"new_video\",\"videoGoOldVersion\":-1},\"playerIdle\":\"eg\",\"qn\":80,\"aq\":30232,\"dashLdType\":0,\"dashVersion\":\"1.15.47\",\"hasPatchAdv\":false,\"uaFullVersion\":\"146.0.7680.165\",\"topQn\":80,\"duration\":1815,\"realVideoDuration\":\"1814.933\",\"realAudioDuration\":\"1814.964\",\"viewportKind\":3}": "",
+        "00111117747215848431774721584046|Default:Ugc:0|4.9.74-855ac69a|loaded_time|{\"initErr\":0,\"initial\":1,\"origin\":1418.8,\"approx\":440.1}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|NaN||3|2|||||||{\"webAbTest\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\",\"in_new_ab\":true,\"ab_version\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\"},\"ab_split_num\":{\"login_dialog_version\":89,\"ai_summary_version\":798,\"rcmd_tab_version\":45,\"enable_shortcut_key\":188,\"enable_live_anime\":188,\"danmaku_report_version\":89,\"enable_strip_ad\":188,\"comment_version_hash\":188},\"pageVersion\":\"new_video\",\"videoGoOldVersion\":-1},\"playerIdle\":\"eg\",\"qn\":80,\"aq\":30232,\"dashLdType\":0,\"dashVersion\":\"1.15.47\",\"hasPatchAdv\":false,\"uaFullVersion\":\"146.0.7680.165\",\"topQn\":80,\"duration\":1815,\"realVideoDuration\":\"1814.933\",\"realAudioDuration\":\"1814.964\",\"viewportKind\":3}": "",
+        "00111117747215851401774721584046|Default:Ugc:0|4.9.74-855ac69a|stage|{\"initErr\":0,\"initial\":1,\"renewal\":0,\"visible\":1,\"origin\":1418.8,\"approx\":440.1,\"totalRetries\":0,\"streamRetries\":0,\"mpdRetries\":-1,\"s1\":617.8,\"s2\":378.7,\"s3\":0,\"s4\":5.1,\"s5\":417.2,\"s6\":996.5}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|NaN||3|2|||||||{\"webAbTest\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\",\"in_new_ab\":true,\"ab_version\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\"},\"ab_split_num\":{\"login_dialog_version\":89,\"ai_summary_version\":798,\"rcmd_tab_version\":45,\"enable_shortcut_key\":188,\"enable_live_anime\":188,\"danmaku_report_version\":89,\"enable_strip_ad\":188,\"comment_version_hash\":188},\"pageVersion\":\"new_video\",\"videoGoOldVersion\":-1},\"playerIdle\":\"eg\",\"qn\":80,\"aq\":30232,\"dashLdType\":0,\"dashVersion\":\"1.15.47\",\"hasPatchAdv\":false,\"uaFullVersion\":\"146.0.7680.165\",\"topQn\":80,\"duration\":1815,\"realVideoDuration\":\"1814.933\",\"realAudioDuration\":\"1814.964\",\"viewportKind\":3}": "",
+        "00111117747215851411774721584507|Default:Ugc:0|4.9.74-855ac69a|enter|{\"drm\":0,\"dpr\":2,\"screenW\":1512,\"screenH\":982,\"colorDepth\":30,\"webdriver\":0,\"initErr\":0,\"initial\":1,\"timeout\":0,\"referrer\":\"\",\"frameUrl\":\"https://www.bilibili.com/video/BV1bscPz1EQW/\"}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|NaN||3|2|||||||{\"webAbTest\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\",\"in_new_ab\":true,\"ab_version\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\"},\"ab_split_num\":{\"login_dialog_version\":89,\"ai_summary_version\":798,\"rcmd_tab_version\":45,\"enable_shortcut_key\":188,\"enable_live_anime\":188,\"danmaku_report_version\":89,\"enable_strip_ad\":188,\"comment_version_hash\":188},\"pageVersion\":\"new_video\",\"videoGoOldVersion\":-1},\"playerIdle\":\"eg\",\"qn\":80,\"aq\":30232,\"dashLdType\":0,\"dashVersion\":\"1.15.47\",\"hasPatchAdv\":false,\"uaFullVersion\":\"146.0.7680.165\",\"topQn\":80,\"duration\":1815,\"realVideoDuration\":\"1814.933\",\"realAudioDuration\":\"1814.964\",\"viewportKind\":3}": "",
+        "00111117747215851411774721584523|Default:Ugc:0|4.9.74-855ac69a|frame_time|{\"initErr\":0,\"initial\":1,\"origin\":1879.5,\"approx\":900.8}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|NaN||3|2|||||||{\"webAbTest\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\",\"in_new_ab\":true,\"ab_version\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\"},\"ab_split_num\":{\"login_dialog_version\":89,\"ai_summary_version\":798,\"rcmd_tab_version\":45,\"enable_shortcut_key\":188,\"enable_live_anime\":188,\"danmaku_report_version\":89,\"enable_strip_ad\":188,\"comment_version_hash\":188},\"pageVersion\":\"new_video\",\"videoGoOldVersion\":-1},\"playerIdle\":\"eg\",\"qn\":80,\"aq\":30232,\"dashLdType\":0,\"dashVersion\":\"1.15.47\",\"hasPatchAdv\":false,\"uaFullVersion\":\"146.0.7680.165\",\"topQn\":80,\"duration\":1815,\"realVideoDuration\":\"1814.933\",\"realAudioDuration\":\"1814.964\",\"viewportKind\":3}": "",
+        "00111117747215852491774721584523|Default:Ugc:0|4.9.74-855ac69a|media_canplay|{\"canplaySpeed\":1884.11,\"context\":{\"initial\":1,\"visible\":1,\"renewal\":0,\"initErr\":0,\"mpdRetries\":-1,\"streamRetries\":0,\"totalRetries\":0},\"origin\":{\"metadata\":1418.8,\"firstFrame\":1879.4,\"canplay\":1879.5},\"approx\":{\"metadata\":440.1,\"firstFrame\":900.7,\"canplay\":900.8},\"duration\":{\"s1\":617.8,\"s2\":378.7,\"s3\":0,\"s4\":5.1,\"s5\":417.2,\"s6\":996.5},\"timing\":{\"entryReqStart\":617.8,\"entryResEnd\":640.1,\"indexHead\":787.7,\"instantiate\":978.2,\"connectHead\":978.7,\"storeTail\":999,\"streamGap\":0,\"originStart\":0,\"approxStart\":978.7,\"reloadHead\":null,\"viewHead\":996.5,\"viewTail\":996.5,\"playUrlHead\":996.6,\"playUrlDone\":1001.6,\"loadStart\":1052.2,\"metadata\":1418.8,\"firstFrame\":1879.4,\"canplay\":1879.5,\"drmDetectHead\":null,\"drmDetectDone\":null},\"entry\":{\"size\":0,\"duration\":22.3,\"speed\":0}}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|NaN||3|2|||||||{\"webAbTest\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\",\"in_new_ab\":true,\"ab_version\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\"},\"ab_split_num\":{\"login_dialog_version\":89,\"ai_summary_version\":798,\"rcmd_tab_version\":45,\"enable_shortcut_key\":188,\"enable_live_anime\":188,\"danmaku_report_version\":89,\"enable_strip_ad\":188,\"comment_version_hash\":188},\"pageVersion\":\"new_video\",\"videoGoOldVersion\":-1},\"playerIdle\":\"eg\",\"qn\":80,\"aq\":30232,\"dashLdType\":0,\"dashVersion\":\"1.15.47\",\"hasPatchAdv\":false,\"uaFullVersion\":\"146.0.7680.165\",\"topQn\":80,\"duration\":1815,\"realVideoDuration\":\"1814.933\",\"realAudioDuration\":\"1814.964\",\"viewportKind\":3}": "",
+        "00111117747215852491774721584598|Default:Ugc:0|4.9.74-855ac69a|cdnTime|{\"val\":5.1,\"initErr\":0}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|0|4|3|2|6|0|0|https://upos-sz-mirrorcosov.bilivideo.com/upgcxcode/07/33/35919563307/35919563307-1-100026.m4s?e": "<REDACTED_TOKEN>",
+        "00111117747215852491774721584598|Default:Ugc:0|4.9.74-855ac69a|showTime|{\"val\":417.2,\"initErr\":0,\"tag\":\"\"}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|0|4|3|2|6|0|0|https://upos-sz-mirrorcosov.bilivideo.com/upgcxcode/07/33/35919563307/35919563307-1-100026.m4s?e": "<REDACTED_TOKEN>",
+        "00111117747215856121774721585043|Default:Ugc:0|4.9.74-855ac69a|dm_lol_mask_prepare|{\"bvid\":\"BV1bscPz1EQW\",\"mid\":1695320,\"maskVersion\":\"1.0.7\",\"enabled\":true}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|0|4|3|2|6|0|0|https://upos-sz-mirrorcosov.bilivideo.com/upgcxcode/07/33/35919563307/35919563307-1-100026.m4s?e": "<REDACTED_TOKEN>",
+        "00111117747215898001774721589619|Default:Ugc:0|4.9.74-855ac69a|device_info|{\"freshRate\":123,\"codecInfo\":{\"0\":\";false\",\"1\":\"probably;true\",\"2\":\"probably;true\",\"3\":\"probably;true\",\"4\":\"probably;true\",\"5\":\"probably;true\",\"6\":\"probably;true\",\"7\":\"probably;true\"},\"gpuRenderer\":\"ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)\",\"coreNum\":8,\"hdr\":true,\"p3\":true}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|5|4|3|2|6|0|4|https://upos-sz-mirrorcosov.bilivideo.com/upgcxcode/07/33/35919563307/35919563307-1-100026.m4s?e": "<REDACTED_TOKEN>",
+        "00111417747215848411774721583629|Default:Ugc:0|4.9.74-855ac69a|translation_start_play|{\"lan\":\"\",\"type\":0}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|NaN||3|2|||||||{\"webAbTest\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\",\"in_new_ab\":true,\"ab_version\":{\"login_dialog_version\":\"V0\",\"ai_summary_version\":\"HIDE\",\"rcmd_tab_version\":\"DISABLE\",\"enable_shortcut_key\":\"DISABLE\",\"enable_live_anime\":\"ENABLE\",\"danmaku_report_version\":\"V0\",\"enable_strip_ad\":\"ENABLE\",\"comment_version_hash\":\"e0090ab8af\"},\"ab_split_num\":{\"login_dialog_version\":89,\"ai_summary_version\":798,\"rcmd_tab_version\":45,\"enable_shortcut_key\":188,\"enable_live_anime\":188,\"danmaku_report_version\":89,\"enable_strip_ad\":188,\"comment_version_hash\":188},\"pageVersion\":\"new_video\",\"videoGoOldVersion\":-1},\"playerIdle\":\"eg\",\"qn\":80,\"aq\":30232,\"dashLdType\":0,\"dashVersion\":\"1.15.47\",\"hasPatchAdv\":false,\"uaFullVersion\":\"146.0.7680.165\",\"topQn\":80,\"duration\":1815,\"realVideoDuration\":\"1814.933\",\"realAudioDuration\":\"1814.964\",\"viewportKind\":3}": "",
+        "00111417747215854151774721584745|Default:Ugc:0|4.9.74-855ac69a|codec_prefer_type_init|{\"TBD\":0}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|0|4|3|2|6|0|0|https://upos-sz-mirrorcosov.bilivideo.com/upgcxcode/07/33/35919563307/35919563307-1-100026.m4s?e": "<REDACTED_TOKEN>",
+        "00111417747215854151774721584780|Default:Ugc:0|4.9.74-855ac69a|ctrl_viewpoint_show||524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|0|4|3|2|6|0|0|https://upos-sz-mirrorcosov.bilivideo.com/upgcxcode/07/33/35919563307/35919563307-1-100026.m4s?e": "<REDACTED_TOKEN>",
+        "00111417747215854151774721584788|Default:Ugc:0|4.9.74-855ac69a|loudness_normalization_archive|{\"aid\":116036225473952,\"cid\":35919563307}|524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|0|4|3|2|6|0|0|https://upos-sz-mirrorcosov.bilivideo.com/upgcxcode/07/33/35919563307/35919563307-1-100026.m4s?e": "<REDACTED_TOKEN>",
+        "00111417747215856131774721585113|Default:Ugc:0|4.9.74-855ac69a|ctrl_subtitle_show||524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|0|4|3|2|6|0|0||||": "",
+        "00111417747215868021774721586794|Default:Ugc:0|4.9.74-855ac69a|room_join||524fc34c6027297818191ed8c10d8dcb|||116036225473952|35919563307|1|2|4|3|2|6|0|1|https://upos-sz-mirrorcosov.bilivideo.com/upgcxcode/07/33/35919563307/35919563307-1-100026.m4s?e": "<REDACTED_TOKEN>",
+        "agrr": [
+          1,
+          1
+        ],
+        "build": [
+          0,
+          0
+        ],
+        "buvid": [
+          "<REDACTED_TOKEN>",
+          "<REDACTED_TOKEN>"
+        ],
+        "bvc": [
+          "vod",
+          "vod"
+        ],
+        "bw": [
+          857779,
+          84219
+        ],
+        "deadline": [
+          1774728783,
+          1774728783
+        ],
+        "dl": [
+          0,
+          0
+        ],
+        "f": [
+          "u_0_0",
+          "u_0_0"
+        ],
+        "gen": [
+          "playurlv3",
+          "playurlv3"
+        ],
+        "mid": [
+          1695320,
+          1695320
+        ],
+        "nbs": [
+          1,
+          1
+        ],
+        "nettype": [
+          0,
+          0
+        ],
+        "og": [
+          "hw",
+          "cos"
+        ],
+        "oi": [
+          2926406299,
+          2926406299
+        ],
+        "orderid": [
+          0,
+          2,
+          "https://upos-sz-mirrorcosov.bilivideo.com/upgcxcode/07/33/35919563307/35919563307-1-30232.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=",
+          0,
+          "2|||{\"webAbTest\":{\"login_dialog_version\":\"V0\"",
+          "\"ai_summary_version\":\"HIDE\"",
+          "\"rcmd_tab_version\":\"DISABLE\"",
+          "\"enable_shortcut_key\":\"DISABLE\"",
+          "\"enable_live_anime\":\"ENABLE\"",
+          "\"danmaku_report_version\":\"V0\"",
+          "\"enable_strip_ad\":\"ENABLE\"",
+          "\"comment_version_hash\":\"e0090ab8af\"",
+          "\"in_new_ab\":true",
+          "\"ab_version\":{\"login_dialog_version\":\"V0\"",
+          "\"ai_summary_version\":\"HIDE\"",
+          "\"rcmd_tab_version\":\"DISABLE\"",
+          "\"enable_shortcut_key\":\"DISABLE\"",
+          "\"enable_live_anime\":\"ENABLE\"",
+          "\"danmaku_report_version\":\"V0\"",
+          "\"enable_strip_ad\":\"ENABLE\"",
+          "\"comment_version_hash\":\"e0090ab8af\"}",
+          "\"ab_split_num\":{\"login_dialog_version\":89",
+          "\"ai_summary_version\":798",
+          "\"rcmd_tab_version\":45",
+          "\"enable_shortcut_key\":188",
+          "\"enable_live_anime\":188",
+          "\"danmaku_report_version\":89",
+          "\"enable_strip_ad\":188",
+          "\"comment_version_hash\":188}",
+          "\"pageVersion\":\"new_video\"",
+          "\"videoGoOldVersion\":-1}",
+          "\"playerIdle\":\"eg\"",
+          "\"qn\":80",
+          "\"aq\":30232",
+          "\"dashLdType\":0",
+          "\"dashVersion\":\"1.15.47\"",
+          "\"hasPatchAdv\":false",
+          "\"uaFullVersion\":\"146.0.7680.165\"",
+          "\"topQn\":80",
+          "\"duration\":1815",
+          "\"realVideoDuration\":\"1814.933\"",
+          "\"realAudioDuration\":\"1814.964\"",
+          "\"viewportKind\":3}"
+        ],
+        "os": [
+          "cosovbv",
+          "cosovbv"
+        ],
+        "platform": [
+          "pc",
+          "pc"
+        ],
+        "qn_dyeid": [
+          "<REDACTED_TOKEN>",
+          "<REDACTED_TOKEN>"
+        ],
+        "trid": [
+          "<REDACTED_TOKEN>",
+          "<REDACTED_TOKEN>"
+        ],
+        "uipk": [
+          5,
+          5
+        ],
+        "uparams": [
+          "e",
+          "nbs",
+          "trid",
+          "mid",
+          "oi",
+          "uipk",
+          "gen",
+          "os",
+          "og",
+          "platform",
+          "deadline",
+          "e",
+          "trid",
+          "gen",
+          "mid",
+          "nbs",
+          "os",
+          "og",
+          "oi",
+          "uipk",
+          "deadline",
+          "platform"
+        ],
+        "upsig": [
+          "<REDACTED_TOKEN>",
+          "<REDACTED_TOKEN>"
+        ]
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

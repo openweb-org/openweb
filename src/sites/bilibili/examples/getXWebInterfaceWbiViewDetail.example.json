@@ -1,0 +1,47 @@
+{
+  "operation_id": "getXWebInterfaceWbiViewDetail",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "aid": 1,
+        "dm_cover_img_str": "<REDACTED_TOKEN>",
+        "dm_img_inter": [
+          "{\"ds\":[{\"t\":2",
+          "\"c\":\"YnB4LXBsYXllci12aWRlby1pbnB1dGJhci13cm\"",
+          "\"p\":[2430",
+          100,
+          "2115]",
+          "\"s\":[345",
+          1711,
+          "2298]}",
+          "{\"t\":2",
+          "\"c\":\"YnB4LXBsYXllci1kbS1idG4tc2VuZCBidWkgYnVpLWJ1dHRvbg\"",
+          "\"p\":[3186",
+          62,
+          "1642]",
+          "\"s\":[133",
+          383,
+          "386]}]",
+          "\"wh\":[4576",
+          5317,
+          "18]",
+          "\"of\":[50",
+          100,
+          "50]}"
+        ],
+        "dm_img_list": "[]",
+        "dm_img_str": "<REDACTED_TOKEN>",
+        "isGaiaAvoided": "false",
+        "need_view": 1,
+        "w_rid": "<REDACTED_TOKEN>",
+        "web_location": 1,
+        "wts": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

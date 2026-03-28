@@ -1,0 +1,15 @@
+{
+  "operation_id": "getMomentsRecommendFollowPeople",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "rec_type": "PC_HOME_FEED"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

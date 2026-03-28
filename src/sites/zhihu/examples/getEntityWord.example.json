@@ -1,0 +1,16 @@
+{
+  "operation_id": "getEntityWord",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "token": 1,
+        "type": "answer"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

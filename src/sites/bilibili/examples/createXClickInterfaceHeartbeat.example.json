@@ -1,0 +1,26 @@
+{
+  "operation_id": "createXClickInterfaceHeartbeat",
+  "method": "post",
+  "cases": [
+    {
+      "input": {
+        "w_aid": 1,
+        "w_dt": 1,
+        "w_last_play_progress_time": 1,
+        "w_mid": 1,
+        "w_played_time": 1,
+        "w_real_played_time": 1,
+        "w_realtime": 1,
+        "w_rid": "<REDACTED_TOKEN>",
+        "w_start_ts": 1,
+        "w_video_duration": 1,
+        "web_location": 1,
+        "wts": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "operation_id": "listAnswersFavlists",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": 1,
+        "include": [
+          "data[*].answer_count",
+          "follower_count",
+          "creator"
+        ],
+        "limit": 1,
+        "offset": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "operation_id": "getCommercialApiBannersV3PcAnswerFeed",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "answer_token": 1,
+        "question_token": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

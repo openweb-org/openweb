@@ -1,528 +1,115 @@
-asyncapi: '3.0.0'
+asyncapi: 3.0.0
 info:
-  title: Discord Gateway
-  version: '10'
+  title: discord WebSocket API
+  version: 1.0.0
   x-openweb:
-    spec_version: '2.0'
-    compiled_at: '2026-03-25T00:00:00Z'
-
+    spec_version: "2.0"
+    compiled_at: 2026-03-28T18:55:31.748Z
 servers:
-  gateway:
-    host: gateway.discord.gg
-    pathname: /?v=10&encoding=json
+  remote_auth_gateway_discord_gg:
+    host: remote-auth-gateway.discord.gg
+    pathname: /
     protocol: wss
     x-openweb:
       transport: node
-      discriminator:
-        sent:
-          field: op
-        received:
-          field: op
-          sub_field: t
-          sub_field_on: 0
-      auth:
-        type: ws_first_message
-        discriminator:
-          op: 2
-        token_path: d.token
-        token_source: param
-      heartbeat:
-        send:
-          constants:
-            op: 1
-          bindings:
-            - path: d
-              source: state
-              key: sequence
-        ack_discriminator:
-          op: 11
-        interval_field: d.heartbeat_interval
-        max_missed: 3
-      reconnect:
-        max_retries: 5
-        backoff_ms: 1000
-
 channels:
-  gateway:
-    address: /?v=10&encoding=json
+  remote_auth_gateway_discord_gg:
+    address: /
     servers:
-      - $ref: '#/servers/gateway'
+      - $ref: "#/servers/remote_auth_gateway_discord_gg"
     messages:
-      receive_hello:
-        $ref: '#/components/messages/Hello'
-      receive_heartbeat_ack:
-        $ref: '#/components/messages/HeartbeatAck'
-      receive_ready:
-        $ref: '#/components/messages/DispatchReady'
-      receive_message_create:
-        $ref: '#/components/messages/DispatchMessageCreate'
-      receive_guild_create:
-        $ref: '#/components/messages/DispatchGuildCreate'
-      receive_presence_update:
-        $ref: '#/components/messages/DispatchPresenceUpdate'
-      receive_typing_start:
-        $ref: '#/components/messages/DispatchTypingStart'
-      send_identify:
-        $ref: '#/components/messages/Identify'
-      send_heartbeat:
-        $ref: '#/components/messages/Heartbeat'
-      send_resume:
-        $ref: '#/components/messages/Resume'
-      send_update_presence:
-        $ref: '#/components/messages/UpdatePresence'
-      send_request_guild_members:
-        $ref: '#/components/messages/RequestGuildMembers'
-
+      ws_send_init:
+        $ref: "#/components/messages/WsSendInit"
+      ws_send_nonce_proof:
+        $ref: "#/components/messages/WsSendNonceProof"
+      ws_recv_hello:
+        $ref: "#/components/messages/WsRecvHello"
+      ws_recv_nonce_proof:
+        $ref: "#/components/messages/WsRecvNonceProof"
+      ws_recv_pending_remote_init:
+        $ref: "#/components/messages/WsRecvPendingRemoteInit"
 operations:
-  receive_hello:
-    action: receive
-    channel:
-      $ref: '#/channels/gateway'
-    messages:
-      - $ref: '#/channels/gateway/messages/receive_hello'
-    x-openweb:
-      permission: read
-      pattern: stream
-      build:
-        stable_id: discord_hello
-
-  receive_heartbeat_ack:
-    action: receive
-    channel:
-      $ref: '#/channels/gateway'
-    messages:
-      - $ref: '#/channels/gateway/messages/receive_heartbeat_ack'
-    x-openweb:
-      permission: read
-      pattern: stream
-      build:
-        stable_id: discord_heartbeat_ack
-
-  receive_ready:
-    action: receive
-    channel:
-      $ref: '#/channels/gateway'
-    messages:
-      - $ref: '#/channels/gateway/messages/receive_ready'
-    x-openweb:
-      permission: read
-      pattern: stream
-      build:
-        stable_id: discord_ready
-
-  receive_message_create:
-    action: receive
-    channel:
-      $ref: '#/channels/gateway'
-    messages:
-      - $ref: '#/channels/gateway/messages/receive_message_create'
-    x-openweb:
-      permission: read
-      pattern: stream
-      build:
-        stable_id: discord_msg_create
-
-  receive_guild_create:
-    action: receive
-    channel:
-      $ref: '#/channels/gateway'
-    messages:
-      - $ref: '#/channels/gateway/messages/receive_guild_create'
-    x-openweb:
-      permission: read
-      pattern: stream
-      build:
-        stable_id: discord_guild_create
-
-  receive_presence_update:
-    action: receive
-    channel:
-      $ref: '#/channels/gateway'
-    messages:
-      - $ref: '#/channels/gateway/messages/receive_presence_update'
-    x-openweb:
-      permission: read
-      pattern: stream
-      build:
-        stable_id: discord_presence
-
-  receive_typing_start:
-    action: receive
-    channel:
-      $ref: '#/channels/gateway'
-    messages:
-      - $ref: '#/channels/gateway/messages/receive_typing_start'
-    x-openweb:
-      permission: read
-      pattern: stream
-      build:
-        stable_id: discord_typing
-
-  send_identify:
+  ws_send_init:
     action: send
     channel:
-      $ref: '#/channels/gateway'
-    messages:
-      - $ref: '#/channels/gateway/messages/send_identify'
+      $ref: "#/channels/remote_auth_gateway_discord_gg"
     x-openweb:
       permission: write
       pattern: publish
       build:
-        stable_id: discord_identify
-
-  send_heartbeat:
+        stable_id: f99023b43be74088
+    messages:
+      - $ref: "#/channels/remote_auth_gateway_discord_gg/messages/ws_send_init"
+  ws_send_nonce_proof:
     action: send
     channel:
-      $ref: '#/channels/gateway'
-    messages:
-      - $ref: '#/channels/gateway/messages/send_heartbeat'
+      $ref: "#/channels/remote_auth_gateway_discord_gg"
     x-openweb:
       permission: write
       pattern: publish
       build:
-        stable_id: discord_heartbeat
-
-  send_resume:
-    action: send
-    channel:
-      $ref: '#/channels/gateway'
+        stable_id: 5e2be8f9a7236019
     messages:
-      - $ref: '#/channels/gateway/messages/send_resume'
-    x-openweb:
-      permission: write
-      pattern: publish
-      build:
-        stable_id: discord_resume
-
-  send_update_presence:
-    action: send
+      - $ref: "#/channels/remote_auth_gateway_discord_gg/messages/ws_send_nonce_proof"
+  ws_recv_hello:
+    action: receive
     channel:
-      $ref: '#/channels/gateway'
-    messages:
-      - $ref: '#/channels/gateway/messages/send_update_presence'
+      $ref: "#/channels/remote_auth_gateway_discord_gg"
     x-openweb:
-      permission: write
-      pattern: publish
+      permission: read
+      pattern: stream
       build:
-        stable_id: discord_update_presence
-
-  send_request_guild_members:
-    action: send
+        stable_id: 7380db88d0bbfbeb
+    messages:
+      - $ref: "#/channels/remote_auth_gateway_discord_gg/messages/ws_recv_hello"
+  ws_recv_nonce_proof:
+    action: receive
     channel:
-      $ref: '#/channels/gateway'
-    messages:
-      - $ref: '#/channels/gateway/messages/send_request_guild_members'
+      $ref: "#/channels/remote_auth_gateway_discord_gg"
     x-openweb:
-      permission: write
-      pattern: request_reply
-      correlation:
-        field: nonce
-        source: echo
+      permission: read
+      pattern: stream
       build:
-        stable_id: discord_req_members
-
+        stable_id: bfd2d07a7ddff7e7
+    messages:
+      - $ref: "#/channels/remote_auth_gateway_discord_gg/messages/ws_recv_nonce_proof"
+  ws_recv_pending_remote_init:
+    action: receive
+    channel:
+      $ref: "#/channels/remote_auth_gateway_discord_gg"
+    x-openweb:
+      permission: read
+      pattern: stream
+      build:
+        stable_id: 678a15f6e062b68a
+    messages:
+      - $ref: "#/channels/remote_auth_gateway_discord_gg/messages/ws_recv_pending_remot\
+          e_init"
 components:
   messages:
-    Hello:
+    WsSendInit:
       payload:
-        $ref: '#/components/schemas/HelloPayload'
-    HeartbeatAck:
+        $ref: "#/components/schemas/WsSendInitPayload"
+    WsSendNonceProof:
       payload:
-        $ref: '#/components/schemas/HeartbeatAckPayload'
-    DispatchReady:
+        $ref: "#/components/schemas/WsSendNonceProofPayload"
+    WsRecvHello:
       payload:
-        $ref: '#/components/schemas/DispatchReadyPayload'
-    DispatchMessageCreate:
+        $ref: "#/components/schemas/WsRecvHelloPayload"
+    WsRecvNonceProof:
       payload:
-        $ref: '#/components/schemas/DispatchMessageCreatePayload'
-    DispatchGuildCreate:
+        $ref: "#/components/schemas/WsRecvNonceProofPayload"
+    WsRecvPendingRemoteInit:
       payload:
-        $ref: '#/components/schemas/DispatchGuildCreatePayload'
-    DispatchPresenceUpdate:
-      payload:
-        $ref: '#/components/schemas/DispatchPresenceUpdatePayload'
-    DispatchTypingStart:
-      payload:
-        $ref: '#/components/schemas/DispatchTypingStartPayload'
-    Identify:
-      payload:
-        $ref: '#/components/schemas/IdentifyPayload'
-    Heartbeat:
-      payload:
-        $ref: '#/components/schemas/HeartbeatPayload'
-    Resume:
-      payload:
-        $ref: '#/components/schemas/ResumePayload'
-    UpdatePresence:
-      payload:
-        $ref: '#/components/schemas/UpdatePresencePayload'
-    RequestGuildMembers:
-      payload:
-        $ref: '#/components/schemas/RequestGuildMembersPayload'
-
+        $ref: "#/components/schemas/WsRecvPendingRemoteInitPayload"
   schemas:
-    HelloPayload:
+    WsSendInitPayload:
       type: object
-      required: [op, d]
-      properties:
-        op:
-          const: 10
-        d:
-          type: object
-          required: [heartbeat_interval]
-          properties:
-            heartbeat_interval:
-              type: integer
-
-    HeartbeatAckPayload:
+    WsSendNonceProofPayload:
       type: object
-      required: [op]
-      properties:
-        op:
-          const: 11
-
-    DispatchReadyPayload:
+    WsRecvHelloPayload:
       type: object
-      required: [op, t, s, d]
-      properties:
-        op:
-          const: 0
-        t:
-          const: READY
-        s:
-          type: integer
-        d:
-          type: object
-          required: [v, user, guilds, session_id, resume_gateway_url]
-          properties:
-            v:
-              type: integer
-            user:
-              type: object
-              properties:
-                id:
-                  type: string
-                username:
-                  type: string
-                discriminator:
-                  type: string
-            guilds:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  unavailable:
-                    type: boolean
-            session_id:
-              type: string
-            resume_gateway_url:
-              type: string
-
-    DispatchMessageCreatePayload:
+    WsRecvNonceProofPayload:
       type: object
-      required: [op, t, s, d]
-      properties:
-        op:
-          const: 0
-        t:
-          const: MESSAGE_CREATE
-        s:
-          type: integer
-        d:
-          type: object
-          properties:
-            id:
-              type: string
-            channel_id:
-              type: string
-            content:
-              type: string
-            author:
-              type: object
-              properties:
-                id:
-                  type: string
-                username:
-                  type: string
-
-    DispatchGuildCreatePayload:
+    WsRecvPendingRemoteInitPayload:
       type: object
-      required: [op, t, s, d]
-      properties:
-        op:
-          const: 0
-        t:
-          const: GUILD_CREATE
-        s:
-          type: integer
-        d:
-          type: object
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-            owner_id:
-              type: string
-            member_count:
-              type: integer
-
-    DispatchPresenceUpdatePayload:
-      type: object
-      required: [op, t, s, d]
-      properties:
-        op:
-          const: 0
-        t:
-          const: PRESENCE_UPDATE
-        s:
-          type: integer
-        d:
-          type: object
-          properties:
-            user:
-              type: object
-              properties:
-                id:
-                  type: string
-            status:
-              type: string
-              enum: [online, idle, dnd, offline]
-            activities:
-              type: array
-              items:
-                type: object
-                properties:
-                  name:
-                    type: string
-                  type:
-                    type: integer
-
-    DispatchTypingStartPayload:
-      type: object
-      required: [op, t, s, d]
-      properties:
-        op:
-          const: 0
-        t:
-          const: TYPING_START
-        s:
-          type: integer
-        d:
-          type: object
-          required: [channel_id, user_id, timestamp]
-          properties:
-            channel_id:
-              type: string
-            user_id:
-              type: string
-            timestamp:
-              type: integer
-            guild_id:
-              type: string
-
-    IdentifyPayload:
-      type: object
-      required: [op, d]
-      properties:
-        op:
-          const: 2
-        d:
-          type: object
-          required: [token, intents, properties]
-          properties:
-            token:
-              type: string
-            intents:
-              type: integer
-            properties:
-              type: object
-              properties:
-                os:
-                  type: string
-                browser:
-                  type: string
-                device:
-                  type: string
-
-    HeartbeatPayload:
-      type: object
-      required: [op, d]
-      properties:
-        op:
-          const: 1
-        d:
-          type:
-            - integer
-            - 'null'
-
-    ResumePayload:
-      type: object
-      required: [op, d]
-      properties:
-        op:
-          const: 6
-        d:
-          type: object
-          required: [token, session_id, seq]
-          properties:
-            token:
-              type: string
-            session_id:
-              type: string
-            seq:
-              type: integer
-
-    UpdatePresencePayload:
-      type: object
-      required: [op, d]
-      properties:
-        op:
-          const: 3
-        d:
-          type: object
-          required: [since, activities, status, afk]
-          properties:
-            since:
-              type:
-                - integer
-                - 'null'
-            activities:
-              type: array
-              items:
-                type: object
-                properties:
-                  name:
-                    type: string
-                  type:
-                    type: integer
-            status:
-              type: string
-              enum: [online, dnd, idle, invisible, offline]
-            afk:
-              type: boolean
-
-    RequestGuildMembersPayload:
-      type: object
-      required: [op, d]
-      properties:
-        op:
-          const: 8
-        d:
-          type: object
-          required: [guild_id]
-          properties:
-            guild_id:
-              type: string
-            query:
-              type: string
-            limit:
-              type: integer
-            presences:
-              type: boolean
-            user_ids:
-              type: array
-              items:
-                type: string

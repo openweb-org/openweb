@@ -1,0 +1,15 @@
+{
+  "operation_id": "getConfig",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "type": "push_active"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

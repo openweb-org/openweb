@@ -1,0 +1,15 @@
+{
+  "operation_id": "getSvcShredditHeaderActionItemInbox",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "render-mode": "partial"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

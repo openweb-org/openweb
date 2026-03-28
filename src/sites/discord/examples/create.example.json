@@ -1,0 +1,15 @@
+{
+  "operation_id": "create",
+  "method": "post",
+  "cases": [
+    {
+      "input": {
+        "param": "science"
+      },
+      "assertions": {
+        "status": 204,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

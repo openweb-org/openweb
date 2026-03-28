@@ -1,0 +1,17 @@
+{
+  "operation_id": "get",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "param": "RotateCookiesPage",
+        "origin": "https://www.youtube.com",
+        "yt_pid": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

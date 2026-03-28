@@ -1,0 +1,17 @@
+{
+  "operation_id": "listMeSwitches",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "include": [
+          "oppose_right"
+        ]
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

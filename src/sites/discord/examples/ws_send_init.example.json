@@ -1,0 +1,14 @@
+{
+  "operation_id": "ws_send_init",
+  "protocol": "ws",
+  "mode": "unary",
+  "cases": [
+    {
+      "input": {},
+      "timeout_ms": 10000,
+      "assertions": {
+        "connected": true
+      }
+    }
+  ]
+}

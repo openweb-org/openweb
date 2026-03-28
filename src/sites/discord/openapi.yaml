@@ -1,278 +1,311 @@
-openapi: '3.1.0'
+openapi: 3.1.0
 info:
-  title: Discord API
-  version: '9'
+  title: discord
+  version: 1.0.0
   x-openweb:
-    spec_version: '2.0'
+    spec_version: "2.0"
+    compiled_at: 2026-03-28T18:55:31.748Z
+    requires_auth: true
 servers:
   - url: https://discord.com
     x-openweb:
-      transport: page
+      transport: node
       auth:
-        type: webpack_module_walk
-        chunk_global: webpackChunkdiscord_app
-        module_test: getToken
-        call: getToken
-        inject:
-          header: Authorization
+        type: cookie_session
+      csrf:
+        type: cookie_to_header
+        cookie: browser_timezone
+        header: x-discord-timezone
 paths:
-  /api/v10/gateway:
+  /api/v9/{param}:
     get:
-      operationId: get_gateway
-      summary: Get the WebSocket gateway URL
-      servers:
-        - url: https://discord.com/public-api
+      operationId: get
+      summary: Get
       x-openweb:
         permission: read
-        transport: node
-        requires_auth: false
         build:
-          stable_id: discord_gateway
+          stable_id: 8a9f326c5def27b8
           tool_version: 2
-          verified: true
-          signals:
-            - status-match
-      responses:
-        '200':
-          description: Gateway URL for WebSocket connections
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  url:
-                    type: string
-                required:
-                  - url
-  /api/v9/invites/{invite_code}:
-    get:
-      operationId: get_invite
-      summary: Get server info via invite code
-      servers:
-        - url: https://discord.com/public-api
-      x-openweb:
-        permission: read
-        transport: node
-        requires_auth: false
-        build:
-          stable_id: discord_invite
-          tool_version: 2
-          verified: true
-          signals:
-            - status-match
       parameters:
-        - name: invite_code
+        - name: param
           in: path
           required: true
           schema:
             type: string
-          description: The invite code or vanity URL
-        - name: with_counts
+          example: experiments
+        - name: locale
           in: query
+          required: false
           schema:
-            type: boolean
-            default: true
-          description: Include approximate member counts
-        - name: with_expiration
+            type: string
+          example: en-US
+        - name: platform
           in: query
+          required: false
           schema:
-            type: boolean
-            default: true
-          description: Include expiration info
+            type: integer
+          example: 1
+        - name: with_guild_experiments
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "true"
       responses:
-        '200':
-          description: Invite object with guild and channel info
+        "200":
+          description: Success.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  type:
-                    type: integer
+                  assignments:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        anyOf:
+                          - type: integer
+                          - type: "null"
+                  guild_experiments:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                            enum:
+                              - 2022-01_guild_role_subscription_trials
+                              - 2022-11_creator_monetization_onboarding_waitlist
+                          - type: array
+                            items:
+                              anyOf:
+                                - type: array
+                                  items:
+                                    type: array
+                                    items:
+                                      type: array
+                                      items:
+                                        anyOf:
+                                          - type: integer
+                                          - type: array
+                                            items:
+                                              anyOf:
+                                                - type: object
+                                                  properties:
+                                                    s:
+                                                      type: integer
+                                                    e:
+                                                      type: integer
+                                                  required:
+                                                    - s
+                                                    - e
+                                                - type: array
+                                                  items:
+                                                    anyOf:
+                                                      - type: integer
+                                                      - type: object
+                                                        properties:
+                                                          s:
+                                                            type: integer
+                                                          e:
+                                                            type: integer
+                                                        required:
+                                                          - s
+                                                          - e
+                                                      - type: array
+                                                        items:
+                                                          anyOf:
+                                                            - type: integer
+                                                            - type: array
+                                                            - type: string
+                                                              enum:
+                                                                - COMMUNITY
+                                                                - PARTNERED
+                                                                - VOICE_IN_THREADS
+                                                - type: integer
+                                - type: object
+                                  properties:
+                                    b:
+                                      type: integer
+                                    k:
+                                      type: array
+                                      items:
+                                        type: string
+                                  required:
+                                    - b
+                                    - k
+                          - type: "null"
+                required:
+                  - assignments
+                  - guild_experiments
+        "401":
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    enum:
+                      - "401: Unauthorized"
                   code:
-                    type: string
-                  expires_at:
-                    type:
-                      - string
-                      - 'null'
-                  guild:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                      name:
-                        type: string
-                      description:
-                        type:
-                          - string
-                          - 'null'
-                      icon:
-                        type:
-                          - string
-                          - 'null'
-                      banner:
-                        type:
-                          - string
-                          - 'null'
-                      features:
-                        type: array
-                        items:
-                          type: string
-                      verification_level:
-                        type: integer
-                      vanity_url_code:
-                        type:
-                          - string
-                          - 'null'
-                      nsfw_level:
-                        type: integer
-                      premium_subscription_count:
-                        type: integer
-                    required:
-                      - id
-                      - name
-                  channel:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                      type:
-                        type: integer
-                      name:
-                        type: string
-                    required:
-                      - id
-                      - type
-                      - name
-                  approximate_member_count:
-                    type: integer
-                  approximate_presence_count:
                     type: integer
                 required:
-                  - type
+                  - message
                   - code
-                  - guild
-                  - channel
-  /api/v9/users/@me:
-    get:
-      operationId: get_me
-      summary: Get the current user
+    post:
+      operationId: create
+      summary: Create
       x-openweb:
-        permission: read
+        permission: write
         build:
-          stable_id: discord0001
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
+          stable_id: 6e61a55814bf1d47
+          tool_version: 2
+      parameters:
+        - name: param
+          in: path
+          required: true
+          schema:
+            type: string
+          example: science
       responses:
-        '200':
-          description: Current user object
+        "204":
+          description: Success.
+          content:
+            "":
+              schema:
+                type: object
+  /api/v9/auth/conditional/start:
+    post:
+      operationId: createAuthConditionalStart
+      summary: Create auth conditional start
+      x-openweb:
+        permission: write
+        build:
+          stable_id: 869fd21c4986ccd2
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  id:
+                  challenge:
                     type: string
-                  username:
+                    enum:
+                      - '{"publicKey":{"challenge":"4BSR9N1Tj_rVqAzUDapItO_9kBSxLKhuhPsg5jWvTM4","timeout":300000,"rpId":"discord.com","allowCredentials":[],"userVerification":"required","extensions":{"uvm":true}},"mediation":"conditional"}'
+                  ticket:
                     type: string
-                  discriminator:
-                    type: string
-                  avatar:
-                    type:
-                      - string
-                      - 'null'
-                  email:
-                    type: string
+                    format: uuid
                 required:
-                  - id
-                  - username
-  /api/v9/users/@me/guilds:
+                  - challenge
+                  - ticket
+  /api/v9/auth/location-metadata:
     get:
-      operationId: get_guilds
-      summary: List guilds the user belongs to
+      operationId: getAuthLocationMetadata
+      summary: Get auth location-metadata
       x-openweb:
         permission: read
         build:
-          stable_id: discord0002
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 200
-          description: Max number of guilds to return (1-200)
+          stable_id: 21958ffa3cbb953f
+          tool_version: 2
+      parameters: []
       responses:
-        '200':
-          description: Array of guild objects
+        "200":
+          description: Success.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    icon:
-                      type: string
-                    owner:
-                      type: boolean
-                  required:
-                    - id
-                    - name
-  /api/v9/channels/{channel_id}/messages:
+                type: object
+                properties:
+                  consent_required:
+                    type: boolean
+                  country_code:
+                    type: string
+                    enum:
+                      - US
+                  promotional_email_opt_in:
+                    type: object
+                    properties:
+                      required:
+                        type: boolean
+                      pre_checked:
+                        type: boolean
+                    required:
+                      - required
+                      - pre_checked
+                required:
+                  - consent_required
+                  - country_code
+                  - promotional_email_opt_in
+  /assets/8cd44e13e08a252f.module.wasm:
     get:
-      operationId: get_channel_messages
-      summary: Get messages from a channel
+      operationId: getAssets8cd44e13e08a252f.module.wasm
+      summary: Get assets 8cd44e13e08a252f.module.wasm
       x-openweb:
         permission: read
         build:
-          stable_id: discord0003
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
+          stable_id: 0a245902aacbfbf2
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/wasm:
+              schema:
+                type: object
+  /cdn-cgi/challenge-platform/h/g/jsd/oneshot/{id}/0.36707159097325237:1774424211:9_pSV23kWGmNtldQToc5YDBzJFUfKD8QS_h75YB-Zx0/{id}:
+    post:
+      operationId: createCdnCgiChallengePlatformHGJsdOneshot0.36707159097325237:1774424211:9Psv23kwgmntldqtoc5ydbzjfufkd8qsH75ybZx0
+      summary: Create cdn-cgi challenge-platform h g jsd oneshot
+        0.36707159097325237:1774424211:9 psv23kwgmntldqtoc5ydbzjfufkd8qs
+        h75yb-zx0
+      x-openweb:
+        permission: write
+        build:
+          stable_id: a6d06f0f95fedf3a
+          tool_version: 2
       parameters:
-        - name: channel_id
+        - name: id
           in: path
           required: true
           schema:
             type: string
-          description: The channel ID to fetch messages from
-        - name: limit
-          in: query
+          example: 9e38d0501980e62d
+        - name: id
+          in: path
+          required: true
           schema:
-            type: integer
-            default: 50
-          description: Max number of messages to return (1-100)
+            type: string
+          example: 9e38d0501980e62d
       responses:
-        '200':
-          description: Array of message objects
+        "200":
+          description: Success.
           content:
-            application/json:
+            text/plain; charset=utf-8:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    content:
-                      type: string
-                    author:
-                      type: object
-                    timestamp:
-                      type: string
-                  required:
-                    - id
-                    - content
-                    - author
-                    - timestamp
+                type: object
+  /channels/@me:
+    get:
+      operationId: getChannels@me
+      summary: Get channels @me
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ed798c4271fde137
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/html:
+              schema:
+                type: object

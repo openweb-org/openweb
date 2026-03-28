@@ -1,0 +1,18 @@
+{
+  "operation_id": "createAjaxQm",
+  "method": "post",
+  "cases": [
+    {
+      "input": {
+        "__a": 1,
+        "__comet_req": 1,
+        "__user": 1,
+        "jazoest": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

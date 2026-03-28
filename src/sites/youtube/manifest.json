@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.youtube.com",
-  "compiled_at": "2026-03-28T08:09:47.642Z",
-  "requires_auth": false
+  "compiled_at": "2026-03-28T18:26:11.829Z",
+  "requires_auth": true
 }

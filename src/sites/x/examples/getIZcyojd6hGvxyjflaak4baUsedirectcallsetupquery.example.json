@@ -1,0 +1,16 @@
+{
+  "operation_id": "getIZcyojd6hGvxyjflaak4baUsedirectcallsetupquery",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": "<EXAMPLE_ID>",
+        "variables": "{}"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

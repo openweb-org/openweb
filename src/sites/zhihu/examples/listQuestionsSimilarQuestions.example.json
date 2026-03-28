@@ -1,0 +1,22 @@
+{
+  "operation_id": "listQuestionsSimilarQuestions",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": 1,
+        "answer_id": 1,
+        "include": [
+          "data[*].answer_count",
+          "author",
+          "follower_count"
+        ],
+        "limit": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

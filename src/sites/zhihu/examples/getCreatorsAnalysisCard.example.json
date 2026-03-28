@@ -1,0 +1,13 @@
+{
+  "operation_id": "getCreatorsAnalysisCard",
+  "method": "get",
+  "cases": [
+    {
+      "input": {},
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

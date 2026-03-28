@@ -1,0 +1,15 @@
+{
+  "operation_id": "getCorrespond1",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": "<REDACTED_TOKEN>"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

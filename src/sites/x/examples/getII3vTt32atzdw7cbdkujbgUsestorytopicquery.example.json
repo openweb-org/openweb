@@ -1,0 +1,19 @@
+{
+  "operation_id": "getII3vTt32atzdw7cbdkujbgUsestorytopicquery",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": "<EXAMPLE_ID>",
+        "variables": [
+          "{\"rest_id\":\"For You\"",
+          "\"limit\":3}"
+        ]
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "operation_id": "getCreatorApply",
+  "method": "get",
+  "cases": [
+    {
+      "input": {},
+      "assertions": {
+        "status": 403,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

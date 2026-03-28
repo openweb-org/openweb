@@ -1,574 +1,830 @@
-openapi: "3.1.0"
+openapi: 3.1.0
 info:
-  title: Douban
-  version: "2.0"
+  title: douban
+  version: 1.0.0
   x-openweb:
     spec_version: "2.0"
+    compiled_at: 2026-03-28T17:56:58.601Z
+    requires_auth: true
 servers:
-  - url: https://www.douban.com
+  - url: https://m.douban.com
     x-openweb:
-      transport: page
+      transport: node
+      auth:
+        type: cookie_session
+      csrf:
+        type: cookie_to_header
+        cookie: CURRENT_QUALITY
+        header: content-length
 paths:
-  /internal/searchMovies:
+  /~get:
     get:
-      operationId: searchMovies
-      summary: Search movies by keyword
+      operationId: get
+      summary: Get
       x-openweb:
         permission: read
         build:
-          stable_id: douban0001
+          stable_id: a83abdd78194d2fe
           tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: douban-dom
-          operation: searchMovies
+        actual_path: /
       parameters:
-        - name: query
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search keyword.
-          example: Inception
-        - name: start
+        - name: ad_id
           in: query
           required: false
           schema:
             type: integer
-            default: 0
-          description: Pagination offset (increments of 15).
+          example: 1
+        - name: bid
+          in: query
+          required: true
+          schema:
+            type: string
+          example: yTdmMwcpws8
+        - name: callback
+          in: query
+          required: true
+          schema:
+            type: string
+          example: <REDACTED_TOKEN>
+        - name: crtr
+          in: query
+          required: true
+          schema:
+            type: string
+          example: 7:克里斯托弗·诺兰|7:艾利奥特·佩吉|7:渡边谦|7:动作|7:汤姆·贝伦杰|7:梦|7:剧情|7:迪利普·劳|7:约瑟夫·高登-莱维特|7:克莱尔·吉尔蕾|7:迈克尔·凯恩|7:经典|7:乔纳森·吉尔|7:2010|7:心理|7:冈本玉二|7:基里安·墨菲|7:莱昂纳多·迪卡普里奥|7:美国|7:水源士郎|7:悬疑|7:冒险|7:李太力|7:皮特·波斯尔思韦特|7:泰勒·吉蕾|7:科幻|7:卢卡斯·哈斯|7:马格努斯·诺兰|7:玛丽昂·歌迪亚|7:汤姆·哈迪|7:哲学|3:/subject/3541415/
+        - name: failback_count
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 1
+        - name: ts
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: uid
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: unit
+          in: query
+          required: true
+          schema:
+            type: string
+          example: <EXAMPLE_ID>
       responses:
         "200":
-          description: Movie search results.
+          description: Success.
           content:
-            application/json:
+            application/javascript:
+              schema:
+                type: object
+      servers:
+        - url: https://erebor.douban.com
+  /count/:
+    get:
+      operationId: getCount
+      summary: Get count
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 8691b912feeeaad6
+          tool_version: 2
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+          example: ""
+        - name: ad
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: ad_type
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: al
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: bid
+          in: query
+          required: true
+          schema:
+            type: string
+          example: yTdmMwcpws8
+        - name: bid_type
+          in: query
+          required: true
+          schema:
+            type: string
+          example: __BID_TYPE__
+        - name: brand
+          in: query
+          required: true
+          schema:
+            type: string
+          example: ""
+        - name: chicken
+          in: query
+          required: true
+          schema:
+            type: string
+          example: <REDACTED_TOKEN>
+        - name: creative
+          in: query
+          required: true
+          schema:
+            type: string
+          example: unknown_300x250
+        - name: crtr
+          in: query
+          required: true
+          schema:
+            type: string
+          example: 3:/
+        - name: device
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: disable_creative
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "false"
+        - name: disable_third
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "false"
+        - name: high_value
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "false"
+        - name: hn
+          in: query
+          required: true
+          schema:
+            type: string
+          example: nob81
+        - name: imp_type
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: is_cache
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "false"
+        - name: is_cmp
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "false"
+        - name: is_core
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "false"
+        - name: is_ht
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "false"
+        - name: is_short
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "false"
+        - name: item_type
+          in: query
+          required: true
+          schema:
+            type: string
+          example: CPD
+        - name: mark
+          in: query
+          required: true
+          schema:
+            type: string
+          example: ""
+        - name: model
+          in: query
+          required: true
+          schema:
+            type: string
+          example: ""
+        - name: net
+          in: query
+          required: true
+          schema:
+            type: string
+          example: ""
+        - name: ns
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: os
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: osv
+          in: query
+          required: true
+          schema:
+            type: string
+          example: 10_15_7
+        - name: p
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: posid
+          in: query
+          required: true
+          schema:
+            type: string
+          example: ""
+        - name: price
+          in: query
+          required: true
+          schema:
+            type: string
+          example: <EXAMPLE_ID>
+        - name: priority
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: punit
+          in: query
+          required: true
+          schema:
+            type: string
+          example: yuan
+        - name: region
+          in: query
+          required: true
+          schema:
+            type: string
+          example: f6beb801f3d8618a
+        - name: t_mode
+          in: query
+          required: true
+          schema:
+            type: string
+          example: ""
+        - name: ts
+          in: query
+          required: true
+          schema:
+            type: string
+          example: __TIMESTAMP__
+        - name: ts_ms
+          in: query
+          required: true
+          schema:
+            type: string
+          example: __TIMESTAMP_MS__
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+          example: impression
+        - name: uid
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: unit
+          in: query
+          required: true
+          schema:
+            type: string
+          example: <REDACTED_TOKEN>
+        - name: vendor
+          in: query
+          required: true
+          schema:
+            type: string
+          example: Apple
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/javascript:
+              schema:
+                type: "null"
+      servers:
+        - url: https://erebor.douban.com
+  /rohirrim/video_tracking/impression:
+    get:
+      operationId: getRohirrimVideoTrackingImpression
+      summary: Get rohirrim video tracking impression
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 8cecd6182fb7b20c
+          tool_version: 2
+      parameters:
+        - name: bid
+          in: query
+          required: true
+          schema:
+            type: string
+          example: yTdmMwcpws8
+        - name: location
+          in: query
+          required: true
+          schema:
+            type: string
+          example: vendor_subject
+        - name: platform
+          in: query
+          required: true
+          schema:
+            type: string
+          example: pc
+        - name: source
+          in: query
+          required: true
+          schema:
+            type: string
+          example: miguvideo
+        - name: subject_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: video_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: video_type
+          in: query
+          required: true
+          schema:
+            type: string
+          example: movie
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/html; charset=utf-8:
+              schema:
+                type: object
+      servers:
+        - url: https://frodo.douban.com
+  /feedback_popup:
+    get:
+      operationId: getFeedbackPopup
+      summary: Get feedback popup
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 3168a2e161132ed5
+          tool_version: 2
+      parameters:
+        - name: link
+          in: query
+          required: true
+          schema:
+            type: string
+          example: https://search.douban.com/movie/subject_search?search_text=Matrix&cat=1002
+        - name: qtype
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: tags
+          in: query
+          required: true
+          schema:
+            type: string
+          example: 电影
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/html; charset=utf-8:
+              schema:
+                type: object
+      servers:
+        - url: https://help.douban.com
+  /j/puppy/frodo_landing:
+    get:
+      operationId: getJPuppyFrodoLanding
+      summary: Get j puppy frodo landing
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 682c5cdce5d57832
+          tool_version: 2
+      parameters:
+        - name: include
+          in: query
+          required: true
+          schema:
+            type: string
+          example: anony_home
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
-                  query:
-                    type: string
+                  data:
+                    type: object
+                    properties:
+                      anony_home:
+                        type: object
+                        properties:
+                          version:
+                            type: string
+                            enum:
+                              - "6.0"
+                          banner:
+                            type: object
+                            properties:
+                              url:
+                                type: string
+                                format: uri
+                              width:
+                                type: integer
+                              height:
+                                type: integer
+                            required:
+                              - url
+                              - width
+                              - height
+                          shire_nav_tips:
+                            type: boolean
+                          title:
+                            type: string
+                            enum:
+                              - 豆瓣
+                        required:
+                          - version
+                          - banner
+                          - shire_nav_tips
+                          - title
+                    required:
+                      - anony_home
+                  is_preview:
+                    type: boolean
+                required:
+                  - data
+                  - is_preview
+  /rexxar/api/v2/movie/{id}/verify_users:
+    get:
+      operationId: listRexxarMovieVerifyUsers
+      summary: List rexxar movie verify users
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 7921d7433f17f74c
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: ck
+          in: query
+          required: true
+          schema:
+            type: string
+          example: eOOK
+        - name: count
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+                properties:
                   count:
                     type: integer
-                  items:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type:
-                            - integer
-                            - "null"
-                        title:
-                          type:
-                            - string
-                            - "null"
-                        url:
-                          type:
-                            - string
-                            - "null"
-                        rating:
-                          type:
-                            - string
-                            - "null"
-                        ratingCount:
-                          type:
-                            - string
-                            - "null"
-                        abstract:
-                          type:
-                            - string
-                            - "null"
-                        cover:
-                          type:
-                            - string
-                            - "null"
-
-  /internal/getMovieDetail:
-    get:
-      operationId: getMovieDetail
-      summary: Get movie detail — rating, cast, synopsis, genres
-      x-openweb:
-        permission: read
-        build:
-          stable_id: douban0002
-          tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: douban-dom
-          operation: getMovieDetail
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: integer
-          description: Douban movie subject ID.
-          example: 3541415
-      responses:
-        "200":
-          description: Movie detail with rating, cast, and metadata.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type:
-                      - integer
-                      - "null"
-                  title:
-                    type:
-                      - string
-                      - "null"
-                  year:
-                    type:
-                      - string
-                      - "null"
-                  rating:
-                    type:
-                      - number
-                      - "null"
-                  ratingCount:
-                    type:
-                      - integer
-                      - "null"
-                  genres:
-                    type: array
-                    items:
-                      type: string
-                  directors:
-                    type: array
-                    items:
-                      type: string
-                  actors:
-                    type: array
-                    items:
-                      type: string
-                  duration:
-                    type:
-                      - string
-                      - "null"
-                  datePublished:
-                    type:
-                      - string
-                      - "null"
-                  description:
-                    type:
-                      - string
-                      - "null"
-                  poster:
-                    type:
-                      - string
-                      - "null"
-                  url:
-                    type:
-                      - string
-                      - "null"
-
-  /internal/getMovieComments:
-    get:
-      operationId: getMovieComments
-      summary: Get user comments and ratings for a movie
-      x-openweb:
-        permission: read
-        build:
-          stable_id: douban0003
-          tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: douban-dom
-          operation: getMovieComments
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: integer
-          description: Douban movie subject ID.
-          example: 3541415
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Pagination offset.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of comments per page.
-        - name: status
-          in: query
-          required: false
-          schema:
-            type: string
-            default: P
-            enum:
-              - P
-              - F
-          description: "Filter: P = watched, F = want to watch."
-      responses:
-        "200":
-          description: Movie comments list.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  movieTitle:
-                    type:
-                      - string
-                      - "null"
-                  commentCount:
-                    type: integer
-                  comments:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        author:
-                          type:
-                            - string
-                            - "null"
-                        rating:
-                          type:
-                            - number
-                            - "null"
-                          description: "Star rating 1-5."
-                        ratingLabel:
-                          type:
-                            - string
-                            - "null"
-                        time:
-                          type:
-                            - string
-                            - "null"
-                        content:
-                          type:
-                            - string
-                            - "null"
-                        votes:
-                          type: integer
-
-  /internal/getTopMovies:
-    get:
-      operationId: getTopMovies
-      summary: Get Douban Top 250 movies
-      x-openweb:
-        permission: read
-        build:
-          stable_id: douban0004
-          tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: douban-dom
-          operation: getTopMovies
-      parameters:
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Pagination offset (increments of 25).
-      responses:
-        "200":
-          description: Top 250 movies list.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
                   start:
                     type: integer
-                  count:
+                  total:
                     type: integer
-                  movies:
+                  verify_users:
                     type: array
                     items:
                       type: object
-                      properties:
-                        rank:
-                          type: integer
-                        id:
-                          type:
-                            - integer
-                            - "null"
-                        title:
-                          type:
-                            - string
-                            - "null"
-                        otherTitle:
-                          type:
-                            - string
-                            - "null"
-                        rating:
-                          type: number
-                        ratingCount:
-                          type:
-                            - integer
-                            - "null"
-                        quote:
-                          type:
-                            - string
-                            - "null"
-                        url:
-                          type:
-                            - string
-                            - "null"
-                        cover:
-                          type:
-                            - string
-                            - "null"
-
-  /internal/searchBooks:
+                required:
+                  - count
+                  - start
+                  - total
+                  - verify_users
+  /rexxar/api/v2/search/hots:
     get:
-      operationId: searchBooks
-      summary: Search books by keyword
+      operationId: listRexxarSearchHots
+      summary: List rexxar search hots
       x-openweb:
         permission: read
         build:
-          stable_id: douban0005
+          stable_id: 044f29bb5e7baf2d
           tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: douban-dom
-          operation: searchBooks
       parameters:
-        - name: query
+        - name: ck
           in: query
           required: true
           schema:
             type: string
-          description: Search keyword.
-          example: Python
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Pagination offset (increments of 15).
+          example: eOOK
       responses:
         "200":
-          description: Book search results.
+          description: Success.
           content:
-            application/json:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
-                  query:
-                    type: string
-                  count:
-                    type: integer
-                  items:
+                  gallery_topics:
                     type: array
                     items:
                       type: object
                       properties:
-                        id:
-                          type:
-                            - integer
-                            - "null"
-                        title:
-                          type:
-                            - string
-                            - "null"
-                        url:
-                          type:
-                            - string
-                            - "null"
-                        rating:
-                          type:
-                            - string
-                            - "null"
-                        ratingCount:
-                          type:
-                            - string
-                            - "null"
-                        abstract:
-                          type:
-                            - string
-                            - "null"
-                        cover:
-                          type:
-                            - string
-                            - "null"
-
-  /internal/getBookDetail:
-    get:
-      operationId: getBookDetail
-      summary: Get book detail — rating, author, publisher, summary
-      x-openweb:
-        permission: read
-        build:
-          stable_id: douban0006
-          tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: douban-dom
-          operation: getBookDetail
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: integer
-          description: Douban book subject ID.
-          example: 1084336
-      responses:
-        "200":
-          description: Book detail with rating, author, publisher info.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type:
-                      - integer
-                      - "null"
-                  title:
-                    type:
-                      - string
-                      - "null"
-                  authors:
-                    type: array
-                    items:
-                      type: string
-                  isbn:
-                    type:
-                      - string
-                      - "null"
-                  rating:
-                    type:
-                      - number
-                      - "null"
-                  ratingCount:
-                    type:
-                      - integer
-                      - "null"
-                  publisher:
-                    type:
-                      - string
-                      - "null"
-                  publishDate:
-                    type:
-                      - string
-                      - "null"
-                  pages:
-                    type:
-                      - string
-                      - "null"
-                  price:
-                    type:
-                      - string
-                      - "null"
-                  binding:
-                    type:
-                      - string
-                      - "null"
-                  translator:
-                    type:
-                      - string
-                      - "null"
-                  summary:
-                    type:
-                      - string
-                      - "null"
-                  cover:
-                    type:
-                      - string
-                      - "null"
-                  url:
-                    type:
-                      - string
-                      - "null"
-
-  /internal/getBookComments:
-    get:
-      operationId: getBookComments
-      summary: Get user comments for a book
-      x-openweb:
-        permission: read
-        build:
-          stable_id: douban0007
-          tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: douban-dom
-          operation: getBookComments
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: integer
-          description: Douban book subject ID.
-          example: 1084336
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Pagination offset.
-      responses:
-        "200":
-          description: Book comments list.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  bookTitle:
-                    type:
-                      - string
-                      - "null"
-                  commentCount:
-                    type: integer
-                  comments:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        author:
-                          type:
-                            - string
-                            - "null"
-                        rating:
-                          type:
-                            - number
-                            - "null"
-                          description: "Star rating 1-5."
-                        ratingLabel:
-                          type:
-                            - string
-                            - "null"
-                        time:
-                          type:
-                            - string
-                            - "null"
-                        content:
-                          type:
-                            - string
-                            - "null"
-                        votes:
+                        read_count:
                           type: integer
+                        title:
+                          type: string
+                        url:
+                          type: string
+                          format: uri
+                        show_icon:
+                          type: boolean
+                        uri:
+                          type: string
+                        label:
+                          type: "null"
+                        card_subtitle:
+                          type: string
+                        type:
+                          type: string
+                          enum:
+                            - gallery_topic
+                            - search_term
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        tail_icon:
+                          type: "null"
+                        is_public:
+                          type: boolean
+                        sharing_url:
+                          type: string
+                          format: uri
+                        footer:
+                          type: object
+                          properties:
+                            color_type:
+                              type: string
+                              enum:
+                                - orange_s
+                            subtitle:
+                              type: string
+                              enum:
+                                - NO.15 讨论榜
+                            uri:
+                              type: string
+                              enum:
+                                - douban://douban.com/subject_collection/hot_search_board?source=%E5%89%A7%E7%89%88%E3%80%8A%E5%93%88%E5%88%A9%C2%B7%E6%B3%A2%E7%89%B9%E3%80%8B%E5%8F%91%E5%B8%83%E9%A6%96%E6%94%AF%E9%A2%84%E5%91%8A%E5%B9%B6%E5%AE%9A%E6%A1%A3
+                            read_count:
+                              type: integer
+                          required:
+                            - color_type
+                            - subtitle
+                            - uri
+                            - read_count
+                      required:
+                        - read_count
+                        - title
+                        - url
+                        - show_icon
+                        - uri
+                        - label
+                        - card_subtitle
+                        - type
+                        - id
+                required:
+                  - gallery_topics
+  /subject/{id}/:
+    get:
+      operationId: getSubject
+      summary: Get subject
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 66b1ad24fd10a2cf
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/html; charset=utf-8:
+              schema:
+                type: object
+      servers:
+        - url: https://movie.douban.com
+  /book/subject_search:
+    get:
+      operationId: getBookSubjectSearch
+      summary: Get book subject search
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 504703721bdcad08
+          tool_version: 2
+      parameters:
+        - name: cat
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: search_text
+          in: query
+          required: true
+          schema:
+            type: string
+          example: Python
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/html; charset=utf-8:
+              schema:
+                type: object
+      servers:
+        - url: https://search.douban.com
+  /movie/subject_search:
+    get:
+      operationId: getMovieSubjectSearch
+      summary: Get movie subject search
+      x-openweb:
+        permission: read
+        build:
+          stable_id: bbc5391a7b121575
+          tool_version: 2
+      parameters:
+        - name: cat
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: search_text
+          in: query
+          required: true
+          schema:
+            type: string
+          example: Matrix
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/html; charset=utf-8:
+              schema:
+                type: object
+      servers:
+        - url: https://search.douban.com
+  /~get_2:
+    get:
+      operationId: get_2
+      summary: Get
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 5a882fb62bbea696
+          tool_version: 2
+        actual_path: /
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/html; charset=utf-8:
+              schema:
+                type: object
+      servers:
+        - url: https://www.douban.com
+  /j/doumail/num:
+    get:
+      operationId: getJDoumailNum
+      summary: Get j doumail num
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 3630b48a8ad96aec
+          tool_version: 2
+      parameters:
+        - name: callback
+          in: query
+          required: true
+          schema:
+            type: string
+          example: <EXAMPLE_ID>
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/javascript; charset=utf-8:
+              schema:
+                type: object
+      servers:
+        - url: https://www.douban.com
+  /j/notification/num:
+    get:
+      operationId: getJNotificationNum
+      summary: Get j notification num
+      x-openweb:
+        permission: read
+        build:
+          stable_id: f34f7240a7512e16
+          tool_version: 2
+      parameters:
+        - name: callback
+          in: query
+          required: true
+          schema:
+            type: string
+          example: <EXAMPLE_ID>
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/javascript; charset=utf-8:
+              schema:
+                type: object
+      servers:
+        - url: https://www.douban.com

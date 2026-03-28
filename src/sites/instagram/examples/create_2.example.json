@@ -1,0 +1,13 @@
+{
+  "operation_id": "create_2",
+  "method": "post",
+  "cases": [
+    {
+      "input": {},
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "operation_id": "get",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "param": "all",
+        "keyword": "编程教程"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

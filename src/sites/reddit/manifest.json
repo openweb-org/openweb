@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.reddit.com",
-  "compiled_at": "2026-03-28T06:02:07.999Z",
-  "requires_auth": false
+  "compiled_at": "2026-03-28T17:49:18.076Z",
+  "requires_auth": true
 }

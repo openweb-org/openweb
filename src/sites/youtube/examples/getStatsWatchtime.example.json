@@ -1,0 +1,69 @@
+{
+  "operation_id": "getStatsWatchtime",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "afmt": 1,
+        "au": [
+          "zh.3"
+        ],
+        "c": "WEB",
+        "cbr": "Chrome",
+        "cbrand": "apple",
+        "cbrver": "+1-555-0100",
+        "cc": ".en",
+        "cl": 1,
+        "cmt": 1,
+        "cos": "Macintosh",
+        "cosver": "10_15_7",
+        "cplatform": "DESKTOP",
+        "cplayer": "UNIPLAYER",
+        "cpn": "nzOLnaCocEZ-4Him",
+        "cr": "US",
+        "cver": "+1-555-0100",
+        "docid": "W6NZfCO5SIk",
+        "ei": "<EXAMPLE_ID>",
+        "el": "detailpage",
+        "et": [
+          19.173,
+          22.983
+        ],
+        "euri": "",
+        "final": 1,
+        "fmt": 1,
+        "fs": 1,
+        "hl": "en_US",
+        "idpj": 1,
+        "lact": 1,
+        "ldpj": 1,
+        "len": 1,
+        "muted": [
+          0
+        ],
+        "ns": "yt",
+        "of": "<EXAMPLE_ID>",
+        "osid": "AAAAAa8Sgio:AOeUNAbPSO5f7cMCSwmVDUo2fGQmZ0Yy1Q",
+        "plid": "AAZOGasF_Rzf5uAG",
+        "rt": 1,
+        "rti": 1,
+        "rtn": 1,
+        "st": [
+          19.049,
+          19.173
+        ],
+        "state": "playing",
+        "uga": "m33",
+        "ver": 1,
+        "vm": "<REDACTED_TOKEN>",
+        "volume": [
+          100
+        ]
+      },
+      "assertions": {
+        "status": 204,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "operation_id": "get_2",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "param": "generate_204"
+      },
+      "assertions": {
+        "status": 204,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

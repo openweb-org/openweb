@@ -1,0 +1,15 @@
+{
+  "operation_id": "createYoutubeiBrowse",
+  "method": "post",
+  "cases": [
+    {
+      "input": {
+        "prettyPrint": "false"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

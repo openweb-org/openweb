@@ -1,0 +1,20 @@
+{
+  "operation_id": "getXWebInterfaceViewConclusionJudge",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "bvid": "BV1bscPz1EQW",
+        "cid": 1,
+        "up_mid": 1,
+        "w_rid": "<REDACTED_TOKEN>",
+        "web_location": 1,
+        "wts": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

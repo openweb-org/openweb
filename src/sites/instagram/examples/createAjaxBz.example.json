@@ -1,0 +1,33 @@
+{
+  "operation_id": "createAjaxBz",
+  "method": "post",
+  "cases": [
+    {
+      "input": {
+        "__a": 1,
+        "__ccg": "EXCELLENT",
+        "__comet_req": 1,
+        "__crn": "comet.igweb.PolarisExploreRoute",
+        "__d": "www",
+        "__hs": "20540.HYP:instagram_web_pkg.2.1...0",
+        "__hsi": 1,
+        "__req": 1,
+        "__rev": 1,
+        "__s": "x00roc:lup64r:b4psmj",
+        "__spin_b": "trunk",
+        "__spin_r": 1,
+        "__spin_t": 1,
+        "__user": 1,
+        "dpr": 1,
+        "fb_dtsg": "NAfvTob9sfvmywSPzK8RK8Qs0MwFat4TmXSfdbrnSJ-5J9pvHROMYnw:17853599968089360:1774582395",
+        "jazoest": 1,
+        "lsd": "<EXAMPLE_ID>",
+        "ph": "C3"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

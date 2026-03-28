@@ -1,0 +1,18 @@
+{
+  "operation_id": "getXWebInterfaceDynamicEntrance",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "alltype_offset": 1,
+        "article_offset": 1,
+        "video_offset": 1,
+        "web_location": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

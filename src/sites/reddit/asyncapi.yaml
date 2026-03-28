@@ -1,0 +1,158 @@
+asyncapi: 3.0.0
+info:
+  title: reddit WebSocket API
+  version: 1.0.0
+  x-openweb:
+    spec_version: "2.0"
+    compiled_at: 2026-03-28T17:49:18.076Z
+servers:
+  gql_realtime_reddit_com:
+    host: gql-realtime.reddit.com
+    pathname: /query
+    protocol: wss
+    x-openweb:
+      transport: node
+channels:
+  gql_realtime_reddit_com:
+    address: /query
+    servers:
+      - $ref: "#/servers/gql_realtime_reddit_com"
+    messages:
+      ws_send_connection_init:
+        $ref: "#/components/messages/WsSendConnectionInit"
+      ws_send_subscribe:
+        $ref: "#/components/messages/WsSendSubscribe"
+      ws_recv__:
+        $ref: "#/components/messages/WsRecv"
+      ws_send_subscribe_87c9b303_46f6_4846_a0bf_7fa76e08b13a:
+        $ref: "#/components/messages/WsSendSubscribe87c9b30346f64846A0bf7fa76e08b13a"
+      ws_send_subscribe_93807f99_d98c_4597_903a_7f8599732577:
+        $ref: "#/components/messages/WsSendSubscribe93807f99D98c4597903a7f8599732577"
+      ws_send_subscribe_13b29268_d063_49bc_88b6_ebdba604a47e:
+        $ref: "#/components/messages/WsSendSubscribe13b29268D06349bc88b6Ebdba604a47e"
+      ws_send_subscribe_ce43f2bc_7bd8_4c3d_afb8_42b73c81cd76:
+        $ref: "#/components/messages/WsSendSubscribeCe43f2bc7bd84c3dAfb842b73c81cd76"
+operations:
+  ws_send_connection_init:
+    action: send
+    channel:
+      $ref: "#/channels/gql_realtime_reddit_com"
+    x-openweb:
+      permission: write
+      pattern: publish
+      build:
+        stable_id: d84153fa7f655171
+    messages:
+      - $ref: "#/channels/gql_realtime_reddit_com/messages/ws_send_connection_init"
+  ws_send_subscribe:
+    action: send
+    channel:
+      $ref: "#/channels/gql_realtime_reddit_com"
+    x-openweb:
+      permission: write
+      pattern: publish
+      build:
+        stable_id: 6b4fb4d0036f153d
+    messages:
+      - $ref: "#/channels/gql_realtime_reddit_com/messages/ws_send_subscribe"
+  ws_recv__:
+    action: receive
+    channel:
+      $ref: "#/channels/gql_realtime_reddit_com"
+    x-openweb:
+      permission: read
+      pattern: stream
+      build:
+        stable_id: dd71d7df59b2db8b
+    messages:
+      - $ref: "#/channels/gql_realtime_reddit_com/messages/ws_recv__"
+  ws_send_subscribe_87c9b303_46f6_4846_a0bf_7fa76e08b13a:
+    action: send
+    channel:
+      $ref: "#/channels/gql_realtime_reddit_com"
+    x-openweb:
+      permission: write
+      pattern: publish
+      build:
+        stable_id: b2cea795e06c6a47
+    messages:
+      - $ref: "#/channels/gql_realtime_reddit_com/messages/ws_send_subscribe_87c9b303_4\
+          6f6_4846_a0bf_7fa76e08b13a"
+  ws_send_subscribe_93807f99_d98c_4597_903a_7f8599732577:
+    action: send
+    channel:
+      $ref: "#/channels/gql_realtime_reddit_com"
+    x-openweb:
+      permission: write
+      pattern: publish
+      build:
+        stable_id: d037dfb46a0853b3
+    messages:
+      - $ref: "#/channels/gql_realtime_reddit_com/messages/ws_send_subscribe_93807f99_d\
+          98c_4597_903a_7f8599732577"
+  ws_send_subscribe_13b29268_d063_49bc_88b6_ebdba604a47e:
+    action: send
+    channel:
+      $ref: "#/channels/gql_realtime_reddit_com"
+    x-openweb:
+      permission: write
+      pattern: publish
+      build:
+        stable_id: c08d2d84ca2d4a31
+    messages:
+      - $ref: "#/channels/gql_realtime_reddit_com/messages/ws_send_subscribe_13b29268_d\
+          063_49bc_88b6_ebdba604a47e"
+  ws_send_subscribe_ce43f2bc_7bd8_4c3d_afb8_42b73c81cd76:
+    action: send
+    channel:
+      $ref: "#/channels/gql_realtime_reddit_com"
+    x-openweb:
+      permission: write
+      pattern: publish
+      build:
+        stable_id: fa1fddbb43e1245e
+    messages:
+      - $ref: "#/channels/gql_realtime_reddit_com/messages/ws_send_subscribe_ce43f2bc_7\
+          bd8_4c3d_afb8_42b73c81cd76"
+components:
+  messages:
+    WsSendConnectionInit:
+      payload:
+        $ref: "#/components/schemas/WsSendConnectionInitPayload"
+    WsSendSubscribe:
+      payload:
+        $ref: "#/components/schemas/WsSendSubscribePayload"
+    WsRecv:
+      payload:
+        $ref: "#/components/schemas/WsRecvPayload"
+    WsSendSubscribe87c9b30346f64846A0bf7fa76e08b13a:
+      payload:
+        $ref: "#/components/schemas/WsSendSubscribe87c9b30346f64846A0bf7fa76e08b13aPayl\
+          oad"
+    WsSendSubscribe93807f99D98c4597903a7f8599732577:
+      payload:
+        $ref: "#/components/schemas/WsSendSubscribe93807f99D98c4597903a7f8599732577Payl\
+          oad"
+    WsSendSubscribe13b29268D06349bc88b6Ebdba604a47e:
+      payload:
+        $ref: "#/components/schemas/WsSendSubscribe13b29268D06349bc88b6Ebdba604a47ePayl\
+          oad"
+    WsSendSubscribeCe43f2bc7bd84c3dAfb842b73c81cd76:
+      payload:
+        $ref: "#/components/schemas/WsSendSubscribeCe43f2bc7bd84c3dAfb842b73c81cd76Payl\
+          oad"
+  schemas:
+    WsSendConnectionInitPayload:
+      type: object
+    WsSendSubscribePayload:
+      type: object
+    WsRecvPayload:
+      type: object
+    WsSendSubscribe87c9b30346f64846A0bf7fa76e08b13aPayload:
+      type: object
+    WsSendSubscribe93807f99D98c4597903a7f8599732577Payload:
+      type: object
+    WsSendSubscribe13b29268D06349bc88b6Ebdba604a47ePayload:
+      type: object
+    WsSendSubscribeCe43f2bc7bd84c3dAfb842b73c81cd76Payload:
+      type: object

@@ -1,0 +1,28 @@
+{
+  "operation_id": "getAjaxLogDetectvideocodecsupport",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "data": [
+          "{\"h264\":{\"supported\":true",
+          "\"details\":{\"hardwareAccelerated\":true",
+          "\"supportedProfiles\":[\"video/mp4; codecs=\\\"avc1.42E01E\\\"\"",
+          "\"video/mp4; codecs=\\\"avc1.4D401E\\\"\"",
+          "\"video/mp4; codecs=\\\"avc1.64001E\\\"\"]",
+          "\"canDecode\":true}}",
+          "\"hevc\":{\"supported\":true",
+          "\"details\":{\"hardwareAccelerated\":false",
+          "\"canDecode\":true}}",
+          "\"browser\":{\"name\":\"Chrome\"",
+          "\"version\":\"146\"",
+          "\"os\":\"macOS\"}}"
+        ]
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

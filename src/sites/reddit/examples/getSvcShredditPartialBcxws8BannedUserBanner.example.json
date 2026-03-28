@@ -1,0 +1,19 @@
+{
+  "operation_id": "getSvcShredditPartialBcxws8BannedUserBanner",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "params": "prefix=r&subredditName=programming",
+        "query": [
+          "{\"seeker-session\":\"true\"}"
+        ],
+        "sig": "v1.iK7dVIdF6YZP7BU6-oVV_rzA5CMl6d6DjF0wAaXLSGo"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

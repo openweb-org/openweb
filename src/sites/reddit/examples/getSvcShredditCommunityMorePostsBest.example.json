@@ -1,0 +1,21 @@
+{
+  "operation_id": "getSvcShredditCommunityMorePostsBest",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "adDistance": 1,
+        "ad_posts_served": 1,
+        "after": "dDNfMXMyaDhsdA==",
+        "feedLength": 1,
+        "name": "programming",
+        "navigationSessionId": "<REDACTED_TOKEN>",
+        "t": "DAY"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

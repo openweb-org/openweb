@@ -4,769 +4,808 @@ info:
   version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-03-28T06:02:07.999Z
-    requires_auth: false
+    compiled_at: 2026-03-28T17:49:18.076Z
+    requires_auth: true
 servers:
   - url: https://www.reddit.com
     x-openweb:
       transport: node
+      auth:
+        type: localStorage_jwt
+        key: chat:access-token
+        path: token
+        inject:
+          header: Authorization
+          prefix: "Bearer "
+      csrf:
+        type: cookie_to_header
+        cookie: loid
+        header: x-reddit-loid
 paths:
-  /.json:
-    get:
-      operationId: getHomeFeed
-      summary: Get Reddit homepage feed (popular posts across all subreddits)
+  /{param}:
+    post:
+      operationId: create
+      summary: Create
       x-openweb:
-        permission: read
+        permission: write
         build:
-          stable_id: 36630a20a9babfb5
+          stable_id: 3a6a1d4047b04554
           tool_version: 2
       parameters:
-        - name: limit
-          in: query
-          required: false
-          description: Number of posts to return (max 100)
-          schema:
-            type: integer
-        - name: after
-          in: query
-          required: false
-          description: Fullname of post for pagination (e.g. t3_abc123)
+        - name: param
+          in: path
+          required: true
           schema:
             type: string
-        - name: before
-          in: query
-          required: false
-          description: Fullname of post for reverse pagination
-          schema:
-            type: string
+          example: reports
       responses:
         "200":
-          description: A listing of posts.
+          description: Success.
           content:
-            application/json:
+            "":
               schema:
                 type: object
-                properties:
-                  kind:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      after:
-                        type: string
-                      dist:
-                        type: integer
-                      children:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            kind:
-                              type: string
-                            data:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                name:
-                                  type: string
-                                title:
-                                  type: string
-                                selftext:
-                                  type: string
-                                author:
-                                  type: string
-                                subreddit:
-                                  type: string
-                                score:
-                                  type: integer
-                                num_comments:
-                                  type: integer
-                                created_utc:
-                                  type: number
-                                permalink:
-                                  type: string
-                                url:
-                                  type: string
-                                thumbnail:
-                                  type: string
-                                is_self:
-                                  type: boolean
-                                over_18:
-                                  type: boolean
-                                domain:
-                                  type: string
-                                upvote_ratio:
-                                  type: number
-
-  /r/{subreddit}.json:
+      servers:
+        - url: https://w3-reporting.reddit.com
+  /{param}~get:
     get:
-      operationId: getSubredditPosts
-      summary: Get posts from a subreddit (default sort is hot)
+      operationId: get
+      summary: Get
       x-openweb:
         permission: read
         build:
-          stable_id: 7a1b2c3d4e5f6789
+          stable_id: 5f27cd77c4a16fd7
+          tool_version: 2
+        actual_path: /{param}
+      parameters:
+        - name: param
+          in: path
+          required: true
+          schema:
+            type: string
+          example: policy
+      responses:
+        "204":
+          description: Success.
+          content:
+            "":
+              schema:
+                type: object
+      servers:
+        - url: https://w3-reporting.reddit.com
+  /{param}~get_2:
+    get:
+      operationId: get_2
+      summary: Get
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 5fbe94698664b295
+          tool_version: 2
+        actual_path: /{param}
+      parameters:
+        - name: param
+          in: path
+          required: true
+          schema:
+            type: string
+          example: example
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/html; charset=utf-8:
+              schema:
+                type: object
+  /r/programming/:
+    get:
+      operationId: getRProgramming
+      summary: Get r programming
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 4199b7761b667d2a
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/html; charset=utf-8:
+              schema:
+                type: object
+  /r/programming/comments/1qoxwdt/{id}/:
+    get:
+      operationId: getRProgrammingComments1qoxwdt
+      summary: Get r programming comments 1qoxwdt
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ba16a506bd7e4bfb
           tool_version: 2
       parameters:
-        - name: subreddit
+        - name: id
           in: path
           required: true
-          description: Subreddit name (e.g. technology, programming)
           schema:
             type: string
-          exampleValue: technology
-        - name: limit
-          in: query
-          required: false
-          description: Number of posts to return (max 100)
-          schema:
-            type: integer
-        - name: after
-          in: query
-          required: false
-          description: Fullname of post for pagination
-          schema:
-            type: string
-        - name: before
-          in: query
-          required: false
-          description: Fullname of post for reverse pagination
-          schema:
-            type: string
+          example: <REDACTED_TOKEN>
       responses:
         "200":
-          description: A listing of subreddit posts.
+          description: Success.
           content:
-            application/json:
+            text/html; charset=utf-8:
               schema:
                 type: object
-                properties:
-                  kind:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      after:
-                        type: string
-                      dist:
-                        type: integer
-                      children:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            kind:
-                              type: string
-                            data:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                name:
-                                  type: string
-                                title:
-                                  type: string
-                                selftext:
-                                  type: string
-                                author:
-                                  type: string
-                                subreddit:
-                                  type: string
-                                score:
-                                  type: integer
-                                num_comments:
-                                  type: integer
-                                created_utc:
-                                  type: number
-                                permalink:
-                                  type: string
-                                url:
-                                  type: string
-                                thumbnail:
-                                  type: string
-                                is_self:
-                                  type: boolean
-                                over_18:
-                                  type: boolean
-                                domain:
-                                  type: string
-                                upvote_ratio:
-                                  type: number
-
-  /r/{subreddit}/{sort}.json:
+  /r/technology/:
     get:
-      operationId: getSubredditSorted
-      summary: Get sorted posts from a subreddit (hot, new, top, rising)
+      operationId: getRTechnology
+      summary: Get r technology
       x-openweb:
         permission: read
         build:
-          stable_id: 8b2c3d4e5f6a7890
+          stable_id: c5125e6407b081cb
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/html; charset=utf-8:
+              schema:
+                type: object
+  /r/technology/comments/1s5yfpx/{id}/:
+    get:
+      operationId: getRTechnologyComments1s5yfpx
+      summary: Get r technology comments 1s5yfpx
+      x-openweb:
+        permission: read
+        build:
+          stable_id: f86944d5c1215f2d
           tool_version: 2
       parameters:
-        - name: subreddit
+        - name: id
           in: path
           required: true
-          description: Subreddit name
           schema:
             type: string
-          exampleValue: technology
-        - name: sort
-          in: path
-          required: true
-          description: Sort order
-          schema:
-            type: string
-            enum:
-              - hot
-              - new
-              - top
-              - rising
-          exampleValue: top
-        - name: t
-          in: query
-          required: false
-          description: Time period for top sort (hour, day, week, month, year, all)
-          schema:
-            type: string
-            enum:
-              - hour
-              - day
-              - week
-              - month
-              - year
-              - all
-        - name: limit
-          in: query
-          required: false
-          description: Number of posts to return (max 100)
-          schema:
-            type: integer
-        - name: after
-          in: query
-          required: false
-          description: Fullname of post for pagination
-          schema:
-            type: string
+          example: <REDACTED_TOKEN>
       responses:
         "200":
-          description: A sorted listing of subreddit posts.
+          description: Success.
           content:
-            application/json:
+            text/html; charset=utf-8:
               schema:
                 type: object
-                properties:
-                  kind:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      after:
-                        type: string
-                      dist:
-                        type: integer
-                      children:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            kind:
-                              type: string
-                            data:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                name:
-                                  type: string
-                                title:
-                                  type: string
-                                selftext:
-                                  type: string
-                                author:
-                                  type: string
-                                subreddit:
-                                  type: string
-                                score:
-                                  type: integer
-                                num_comments:
-                                  type: integer
-                                created_utc:
-                                  type: number
-                                permalink:
-                                  type: string
-                                url:
-                                  type: string
-                                is_self:
-                                  type: boolean
-                                over_18:
-                                  type: boolean
-                                domain:
-                                  type: string
-                                upvote_ratio:
-                                  type: number
-
-  /r/{subreddit}/about.json:
+  /search/:
     get:
-      operationId: getSubredditAbout
-      summary: Get subreddit metadata (description, subscribers, rules)
+      operationId: search
+      summary: Search
       x-openweb:
         permission: read
         build:
-          stable_id: 9c3d4e5f6a7b8901
-          tool_version: 2
-      parameters:
-        - name: subreddit
-          in: path
-          required: true
-          description: Subreddit name
-          schema:
-            type: string
-          exampleValue: technology
-      responses:
-        "200":
-          description: Subreddit metadata.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  kind:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      display_name:
-                        type: string
-                      title:
-                        type: string
-                      public_description:
-                        type: string
-                      description:
-                        type: string
-                      subscribers:
-                        type: integer
-                      active_user_count:
-                        type: integer
-                      created_utc:
-                        type: number
-                      over18:
-                        type: boolean
-                      icon_img:
-                        type: string
-                      banner_img:
-                        type: string
-                      subreddit_type:
-                        type: string
-                      header_title:
-                        type: string
-                      url:
-                        type: string
-                      name:
-                        type: string
-                      id:
-                        type: string
-                      community_icon:
-                        type: string
-
-  /search.json:
-    get:
-      operationId: searchPosts
-      summary: Search Reddit posts by keyword
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ad4e5f6a7b8c9012
+          stable_id: 2c3d7a7c71f0c7ea
           tool_version: 2
       parameters:
         - name: q
           in: query
           required: true
-          description: Search query
           schema:
             type: string
-          exampleValue: typescript
+          example: javascript
         - name: type
           in: query
-          required: false
-          description: Filter by type (link, sr, user)
+          required: true
           schema:
             type: string
-            enum:
-              - link
-              - sr
-              - user
-        - name: sort
-          in: query
-          required: false
-          description: Sort results
-          schema:
-            type: string
-            enum:
-              - relevance
-              - hot
-              - top
-              - new
-              - comments
-        - name: t
-          in: query
-          required: false
-          description: Time period filter
-          schema:
-            type: string
-            enum:
-              - hour
-              - day
-              - week
-              - month
-              - year
-              - all
-        - name: limit
-          in: query
-          required: false
-          description: Number of results (max 100)
-          schema:
-            type: integer
-        - name: after
-          in: query
-          required: false
-          description: Fullname for pagination
-          schema:
-            type: string
+          example: link
       responses:
         "200":
-          description: Search results.
+          description: Success.
           content:
-            application/json:
+            text/html; charset=utf-8:
               schema:
                 type: object
-                properties:
-                  kind:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      after:
-                        type: string
-                      dist:
-                        type: integer
-                      children:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            kind:
-                              type: string
-                            data:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                name:
-                                  type: string
-                                title:
-                                  type: string
-                                selftext:
-                                  type: string
-                                author:
-                                  type: string
-                                subreddit:
-                                  type: string
-                                score:
-                                  type: integer
-                                num_comments:
-                                  type: integer
-                                created_utc:
-                                  type: number
-                                permalink:
-                                  type: string
-                                url:
-                                  type: string
-                                is_self:
-                                  type: boolean
-                                over_18:
-                                  type: boolean
-                                domain:
-                                  type: string
-                                upvote_ratio:
-                                  type: number
-
-  /user/{username}/about.json:
+  /svc/shreddit/comments/r/programming/1qoxwdt:
     get:
-      operationId: getUserAbout
-      summary: Get user profile information
+      operationId: getSvcShredditCommentsRProgramming1qoxwdt
+      summary: Get svc shreddit comments r programming 1qoxwdt
       x-openweb:
         permission: read
         build:
-          stable_id: be5f6a7b8c9d0123
+          stable_id: d5fdc9b9334ebb56
           tool_version: 2
       parameters:
-        - name: username
-          in: path
+        - name: referer
+          in: query
           required: true
-          description: Reddit username
           schema:
             type: string
-          exampleValue: spez
+          example: ""
+        - name: render-mode
+          in: query
+          required: true
+          schema:
+            type: string
+          example: partial
+        - name: seeker-session
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "true"
       responses:
         "200":
-          description: User profile data.
+          description: Success.
           content:
-            application/json:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/comments/r/technology/1s5yfpx:
+    get:
+      operationId: getSvcShredditCommentsRTechnology1s5yfpx
+      summary: Get svc shreddit comments r technology 1s5yfpx
+      x-openweb:
+        permission: read
+        build:
+          stable_id: f175ff6ba2d83d9b
+          tool_version: 2
+      parameters:
+        - name: referer
+          in: query
+          required: true
+          schema:
+            type: string
+          example: ""
+        - name: render-mode
+          in: query
+          required: true
+          schema:
+            type: string
+          example: partial
+        - name: seeker-session
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "true"
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/community-more-posts/best/:
+    get:
+      operationId: getSvcShredditCommunityMorePostsBest
+      summary: Get svc shreddit community-more-posts best
+      x-openweb:
+        permission: read
+        build:
+          stable_id: f2da01a48a7efd05
+          tool_version: 2
+      parameters:
+        - name: adDistance
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 1
+        - name: ad_posts_served
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 1
+        - name: after
+          in: query
+          required: true
+          schema:
+            type: string
+          example: dDNfMXMyaDhsdA==
+        - name: feedLength
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+          example: programming
+        - name: navigationSessionId
+          in: query
+          required: true
+          schema:
+            type: string
+          example: <REDACTED_TOKEN>
+        - name: t
+          in: query
+          required: true
+          schema:
+            type: string
+          example: DAY
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/data-protection-consent:
+    get:
+      operationId: getSvcShredditDataProtectionConsent
+      summary: Get svc shreddit data-protection-consent
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 46afa3ed10fc8392
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/devvit-left-nav-badge:
+    get:
+      operationId: getSvcShredditDevvitLeftNavBadge
+      summary: Get svc shreddit devvit-left-nav-badge
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 476d2013333f9f83
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/events:
+    post:
+      operationId: createSvcShredditEvents
+      summary: Create svc shreddit events
+      x-openweb:
+        permission: write
+        build:
+          stable_id: 5be785f36941065c
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/graphql:
+    post:
+      operationId: createSvcShreddit
+      summary: Create svc shreddit
+      x-openweb:
+        permission: write
+        build:
+          stable_id: 7b3159bbed6cc9c8
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
-                  kind:
-                    type: string
                   data:
                     type: object
                     properties:
-                      name:
-                        type: string
-                      id:
-                        type: string
-                      icon_img:
-                        type: string
-                      link_karma:
-                        type: integer
-                      comment_karma:
-                        type: integer
-                      total_karma:
-                        type: integer
-                      created_utc:
-                        type: number
-                      is_gold:
-                        type: boolean
-                      is_mod:
-                        type: boolean
-                      verified:
-                        type: boolean
-                      has_verified_email:
-                        type: boolean
-                      subreddit:
+                      exposeExperiment:
                         type: object
                         properties:
-                          display_name:
+                          ok:
+                            type: boolean
+                          errors:
+                            type: "null"
+                        required:
+                          - ok
+                          - errors
+                      enrollInGamification:
+                        type: object
+                        properties:
+                          ok:
+                            type: boolean
+                          status:
                             type: string
-                          title:
+                            enum:
+                              - ENROLLED
+                          errors:
+                            type: "null"
+                        required:
+                          - ok
+                          - status
+                          - errors
+                      createCaptchaToken:
+                        type: object
+                        properties:
+                          ok:
+                            type: boolean
+                        required:
+                          - ok
+                      redditorInfoByName:
+                        type: object
+                        properties:
+                          __typename:
                             type: string
-                          public_description:
-                            type: string
-                          subscribers:
-                            type: integer
-
-  /user/{username}/submitted.json:
+                            enum:
+                              - Redditor
+                          trophyCase:
+                            type: object
+                            properties:
+                              totalUnlocked:
+                                type: integer
+                              trophiesBySubredditId:
+                                type: "null"
+                            required:
+                              - totalUnlocked
+                              - trophiesBySubredditId
+                        required:
+                          - __typename
+                          - trophyCase
+                    required: []
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                  operation:
+                    type: string
+                    enum:
+                      - CreateCaptchaToken
+                      - EnrollInStreaks
+                      - ExposeVariant
+                      - UserCommunityAchievements
+                required:
+                  - data
+                  - errors
+                  - operation
+  /svc/shreddit/header-action-item-chat:
     get:
-      operationId: getUserSubmitted
-      summary: Get posts submitted by a user
+      operationId: getSvcShredditHeaderActionItemChat
+      summary: Get svc shreddit header-action-item-chat
       x-openweb:
         permission: read
         build:
-          stable_id: cf6a7b8c9d0e1234
+          stable_id: d932ae52073c7b56
           tool_version: 2
-      parameters:
-        - name: username
-          in: path
-          required: true
-          description: Reddit username
-          schema:
-            type: string
-          exampleValue: spez
-        - name: sort
-          in: query
-          required: false
-          description: Sort order
-          schema:
-            type: string
-            enum:
-              - hot
-              - new
-              - top
-              - controversial
-        - name: t
-          in: query
-          required: false
-          description: Time period for top/controversial
-          schema:
-            type: string
-            enum:
-              - hour
-              - day
-              - week
-              - month
-              - year
-              - all
-        - name: limit
-          in: query
-          required: false
-          description: Number of posts (max 100)
-          schema:
-            type: integer
-        - name: after
-          in: query
-          required: false
-          description: Fullname for pagination
-          schema:
-            type: string
+      parameters: []
       responses:
         "200":
-          description: Listing of user's submitted posts.
+          description: Success.
           content:
-            application/json:
+            text/vnd.reddit.partial+html; charset=utf-8:
               schema:
                 type: object
-                properties:
-                  kind:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      after:
-                        type: string
-                      dist:
-                        type: integer
-                      children:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            kind:
-                              type: string
-                            data:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                name:
-                                  type: string
-                                title:
-                                  type: string
-                                selftext:
-                                  type: string
-                                author:
-                                  type: string
-                                subreddit:
-                                  type: string
-                                score:
-                                  type: integer
-                                num_comments:
-                                  type: integer
-                                created_utc:
-                                  type: number
-                                permalink:
-                                  type: string
-                                url:
-                                  type: string
-                                is_self:
-                                  type: boolean
-                                over_18:
-                                  type: boolean
-                                domain:
-                                  type: string
-                                upvote_ratio:
-                                  type: number
-
-  /user/{username}/comments.json:
+  /svc/shreddit/header-action-item-inbox:
     get:
-      operationId: getUserComments
-      summary: Get comments made by a user
+      operationId: getSvcShredditHeaderActionItemInbox
+      summary: Get svc shreddit header-action-item-inbox
       x-openweb:
         permission: read
         build:
-          stable_id: d07b8c9d0e1f2345
+          stable_id: 5f4673eac1ed6e7c
           tool_version: 2
       parameters:
-        - name: username
-          in: path
+        - name: render-mode
+          in: query
           required: true
-          description: Reddit username
           schema:
             type: string
-          exampleValue: spez
-        - name: sort
-          in: query
-          required: false
-          description: Sort order
-          schema:
-            type: string
-            enum:
-              - hot
-              - new
-              - top
-              - controversial
-        - name: t
-          in: query
-          required: false
-          description: Time period for top/controversial
-          schema:
-            type: string
-            enum:
-              - hour
-              - day
-              - week
-              - month
-              - year
-              - all
-        - name: limit
-          in: query
-          required: false
-          description: Number of comments (max 100)
-          schema:
-            type: integer
-        - name: after
-          in: query
-          required: false
-          description: Fullname for pagination
-          schema:
-            type: string
+          example: partial
       responses:
         "200":
-          description: Listing of user's comments.
+          description: Success.
           content:
-            application/json:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/left-nav-multireddits-section:
+    get:
+      operationId: getSvcShredditLeftNavMultiredditsSection
+      summary: Get svc shreddit left-nav-multireddits-section
+      x-openweb:
+        permission: read
+        build:
+          stable_id: aa6d265bb5b4ea6b
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/partial/BCxws8/banned-user-banner:
+    get:
+      operationId: getSvcShredditPartialBcxws8BannedUserBanner
+      summary: Get svc shreddit partial bcxws8 banned-user-banner
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ce87897dceb1e4f6
+          tool_version: 2
+      parameters:
+        - name: params
+          in: query
+          required: false
+          schema:
+            type: string
+          example: prefix=r&subredditName=programming
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          example:
+            - '{"seeker-session":"true"}'
+        - name: sig
+          in: query
+          required: false
+          schema:
+            type: string
+          example: v1.iK7dVIdF6YZP7BU6-oVV_rzA5CMl6d6DjF0wAaXLSGo
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/partial/J7VVLM/common-left-nav:
+    get:
+      operationId: getSvcShredditPartialJ7vvlmCommonLeftNav
+      summary: Get svc shreddit partial j7vvlm common-left-nav
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 56c2368500b9a415
+          tool_version: 2
+      parameters:
+        - name: data
+          in: query
+          required: true
+          schema:
+            type: string
+          example: '{"selectedPageType":"search_results"}'
+        - name: params
+          in: query
+          required: false
+          schema:
+            type: string
+          example: prefix=r&subredditName=programming
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          example:
+            - '{"seeker-session":"true"}'
+        - name: sig
+          in: query
+          required: true
+          schema:
+            type: string
+          example: v1.mDo75GGMusmB4rTRXVUK1SJU6X2ftGo3EZ6b7Fcxpbg
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/partial/kvBblQ/mod-content-actions:
+    get:
+      operationId: listSvcShredditPartialKvbblqModContentActions
+      summary: List svc shreddit partial kvbblq mod-content-actions
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 40b7a94853e29f13
+          tool_version: 2
+      parameters:
+        - name: params
+          in: query
+          required: false
+          schema:
+            type: string
+          example: prefix=r&subredditName=programming
+        - name: sig
+          in: query
+          required: false
+          schema:
+            type: string
+          example: v1.iK7dVIdF6YZP7BU6-oVV_rzA5CMl6d6DjF0wAaXLSGo
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/perfMetrics:
+    post:
+      operationId: createSvcShredditPerfmetrics
+      summary: Create svc shreddit perfmetrics
+      x-openweb:
+        permission: write
+        build:
+          stable_id: 2657566bb395ca7b
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: object
+        "201":
+          description: Success.
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/reddit-chat:
+    get:
+      operationId: getSvcShredditRedditChat
+      summary: Get svc shreddit reddit-chat
+      x-openweb:
+        permission: read
+        build:
+          stable_id: f7ff32d2d5d4d0f9
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/styling-overrides/:
+    get:
+      operationId: listSvcShredditStylingOverrides
+      summary: List svc shreddit styling-overrides
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 8d4d5faee7c786a0
+          tool_version: 2
+      parameters:
+        - name: v
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: array
+                items:
+                  type: object
+  /svc/shreddit/subreddit-posting-eligibility-modal/programming/:
+    get:
+      operationId: getSvcShredditSubredditPostingEligibilityModalProgramming
+      summary: Get svc shreddit subreddit-posting-eligibility-modal programming
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 9aae3007371cbbf5
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/subreddit-posting-eligibility-modal/technology/:
+    get:
+      operationId: getSvcShredditSubredditPostingEligibilityModalTechnology
+      summary: Get svc shreddit subreddit-posting-eligibility-modal technology
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 7a632b2af39a90eb
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/token:
+    post:
+      operationId: createSvcShredditToken
+      summary: Create svc shreddit token
+      x-openweb:
+        permission: write
+        build:
+          stable_id: ac9ae87b9d8dc177
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
-                  kind:
+                  token:
                     type: string
-                  data:
-                    type: object
-                    properties:
-                      after:
-                        type: string
-                      dist:
-                        type: integer
-                      children:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            kind:
-                              type: string
-                            data:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                name:
-                                  type: string
-                                body:
-                                  type: string
-                                body_html:
-                                  type: string
-                                author:
-                                  type: string
-                                subreddit:
-                                  type: string
-                                score:
-                                  type: integer
-                                ups:
-                                  type: integer
-                                created_utc:
-                                  type: number
-                                permalink:
-                                  type: string
-                                link_title:
-                                  type: string
-                                link_permalink:
-                                  type: string
+                    enum:
+                      - eyJhbGciOiJSUzI1NiIsImtpZCI6IlNIQTI1NjpzS3dsMnlsV0VtMjVmcXhwTU40cWY4MXE2OWFFdWFyMnpLMUdhVGxjdWNZIiwidHlwIjoiSldUIn0.eyJzdWIiOiJ1c2VyIiwiZXhwIjoxNzc0ODA2NDk1LjE2ODQyMiwiaWF0IjoxNzc0NzIwMDk1LjE2ODQyMSwianRpIjoiSDZRdkZ1S0lMeHZMaU5tVzFDQjVRY2w2NXVFc3lnIiwiY2lkIjoiMFItV0FNaHVvby1NeVEiLCJsaWQiOiJ0Ml90ZThiczM1bCIsImFpZCI6InQyX3RlOGJzMzVsIiwiYXQiOjEsImxjYSI6MTY2NTg3Mzg0NjAwMCwic2NwIjoiZUp4a2tkR090REFJaGQtRmE1X2dmNVVfbTAxdGNZYXNMUWFvazNuN0RWb2NrNzA3Y0Q0cEhQOURLb3FGRENaWGdxbkFCRmdUclREQlJ1VDluTG0zZzJpTmU4dFlzWm5DQkZtd0ZEcmttTEdzaVFRbWVKSWF5eHNtb0lMTnlGeXV0R05OTFQwUUpxaGNNcmVGSHBjMm9ia2JpNTZkR0ZXNXJEeW9zVmZsMHRqR0ZMWW54amNicXcycHVDNm5Na25MUXZrc1h2VGpOOVczOXZtel9TYTBKOE9LcXVtQjNobEpDRzRzZnBpbTNkOVRrNTZ0Q3hhMTkzcVEydWQ2M0s1OTFpdzBPN2VmNl9sckl4bVhZMmgtSnZ0MzF5LWhBNDg4THpQcUFFYXM0VWNaZG1RZF9sVUhVTG1nSkdNSjR0TUk1TXJsMjM4SnRtdlR2OGJ0RXo5OE0tS21OX3pXRE5SekNlTFFwX0gxR3dBQV9fOFExZVRSIiwicmNpZCI6IlZpSVVNSUhSWHF4RDd1WGlJODNvc0VZcjd3b21FSnA4MXZfVXBpM0Y2S0UiLCJmbG8iOjJ9.YyhygrV94L3t0Nb1VE8lVJc-rt5jeqGzq6HyXwu4p6WvuoWaj9v05MVtaBWQgUcMt1zdWIS-4gLVKHefiPn_C5bcwsljXc1B8EJkYiSdWPvREYPIncYmVU3Jcn9nb7yR7FE5W8ZXmxpo1sZR9xy-R8sx_WWkx5OaXgTr0JBx9tDUV7pyxVqJLEAuEEEKMDHoBeE7P820ylAGrP99NJu5EZD1GCOwGDCqfLm522dDDk1TwGJqqE-Kc9lkvGzqg-JijS-2JT79sX89HpnrOklVfQHJa3aIoN0rRKmIvozTJJ9QrzZQtSDJp2kwLYGllQlo4lM91qkw5nXDgaYMyRjULg
+                  expires:
+                    type: integer
+                required:
+                  - token
+                  - expires
+  /svc/shreddit/update-recaptcha:
+    get:
+      operationId: getSvcShredditUpdateRecaptcha
+      summary: Get svc shreddit update-recaptcha
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 71c39ca650ecaf62
+          tool_version: 2
+      parameters:
+        - name: k
+          in: query
+          required: true
+          schema:
+            type: string
+          example: <REDACTED_TOKEN>
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: object
+  /svc/shreddit/user-drawer-button-logged-in:
+    get:
+      operationId: getSvcShredditUserDrawerButtonLoggedIn
+      summary: Get svc shreddit user-drawer-button-logged-in
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 8350d610d2400389
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            text/vnd.reddit.partial+html; charset=utf-8:
+              schema:
+                type: object

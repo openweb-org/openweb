@@ -1,0 +1,15 @@
+{
+  "operation_id": "getAiTaskShow",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "content_type": "answer"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

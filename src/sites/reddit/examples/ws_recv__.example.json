@@ -1,0 +1,16 @@
+{
+  "operation_id": "ws_recv__",
+  "protocol": "ws",
+  "mode": "stream",
+  "cases": [
+    {
+      "input": {},
+      "timeout_ms": 10000,
+      "assertions": {
+        "connected": true,
+        "first_message_within_ms": 5000,
+        "message_schema_valid": true
+      }
+    }
+  ]
+}
