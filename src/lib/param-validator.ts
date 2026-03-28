@@ -59,6 +59,15 @@ export function validateParams(
       })
     }
     if (result[param.name] !== undefined && result[param.name] !== null) {
+      // RC3: Auto-stringify object values for string params with x-openweb-json-schema
+      const val = result[param.name]
+      if (
+        typeof val === 'object' && val !== null &&
+        getSchemaTypes(param.schema).includes('string') &&
+        (param as Record<string, unknown>)['x-openweb-json-schema']
+      ) {
+        result[param.name] = JSON.stringify(val)
+      }
       validateType(param.name, result[param.name], param.schema)
     }
   }

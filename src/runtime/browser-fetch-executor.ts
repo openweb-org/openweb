@@ -8,6 +8,7 @@ import type { ExecutorResult } from './executor-result.js'
 import {
   createNeedsPageError,
   findPageForOrigin,
+  autoNavigate,
   type SessionHttpDependencies,
 } from './session-executor.js'
 import { getServerXOpenWeb } from './operation-context.js'
@@ -58,7 +59,10 @@ export async function executeBrowserFetch(
     })
   }
 
-  const page = await findPageForOrigin(context, serverUrl)
+  let page = await findPageForOrigin(context, serverUrl)
+  if (!page) {
+    page = await autoNavigate(context, serverUrl)
+  }
   if (!page) {
     throw createNeedsPageError(serverUrl)
   }

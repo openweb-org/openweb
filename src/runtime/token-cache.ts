@@ -157,12 +157,17 @@ function decrypt(envelope: VaultEnvelope, key: Buffer): CachedTokens {
 
 const locks = new Map<string, Promise<void>>()
 
-async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+async function withLock<T>(key: string, fn: () => Promise<T>, timeoutMs = 10_000): Promise<T> {
   const prev = locks.get(key) ?? Promise.resolve()
   let release: () => void
   const next = new Promise<void>(resolve => { release = resolve })
   locks.set(key, next)
-  await prev
+  await Promise.race([
+    prev,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Lock acquisition timed out for ${key} after ${timeoutMs}ms`)), timeoutMs),
+    ),
+  ])
   try {
     return await fn()
   } finally {
@@ -189,50 +194,56 @@ function siteDir(site: string, baseDir?: string): string {
   return join(tokenRoot(baseDir), site)
 }
 
-export async function readTokenCache(site: string, baseDir?: string): Promise<CachedTokens | null> {
-  return withLock(site, async () => {
-    const root = tokenRoot(baseDir)
-    const dir = siteDir(site, baseDir)
-    const vaultPath = join(dir, 'vault.json')
+/** Internal read — caller must hold the lock */
+async function readTokenCacheUnsafe(site: string, baseDir?: string): Promise<CachedTokens | null> {
+  const root = tokenRoot(baseDir)
+  const dir = siteDir(site, baseDir)
+  const vaultPath = join(dir, 'vault.json')
 
-    try {
-      const raw = await readFile(vaultPath, 'utf8')
-      const envelope = JSON.parse(raw) as VaultEnvelope
-      const key = await deriveKey(root)
-      const tokens = decrypt(envelope, key)
-      if (isExpired(tokens)) {
-        await clearTokenCacheUnsafe(site, baseDir)
-        return null
-      }
-      return tokens
-    } catch (err: unknown) {
-      // vault.json missing → EMPTY state, return null silently
-      if (isFileNotFoundError(err)) return null
-      // decrypt failure / corrupt / malformed → clear and return null
-      await clearTokenCacheUnsafe(site, baseDir).catch(() => {}) // intentional: best-effort cleanup of corrupt vault
+  try {
+    const raw = await readFile(vaultPath, 'utf8')
+    const envelope = JSON.parse(raw) as VaultEnvelope
+    const key = await deriveKey(root)
+    const tokens = decrypt(envelope, key)
+    if (isExpired(tokens)) {
+      await clearTokenCacheUnsafe(site, baseDir)
       return null
     }
-  })
+    return tokens
+  } catch (err: unknown) {
+    // vault.json missing → EMPTY state, return null silently
+    if (isFileNotFoundError(err)) return null
+    // decrypt failure / corrupt / malformed → clear and return null
+    await clearTokenCacheUnsafe(site, baseDir).catch(() => {}) // intentional: best-effort cleanup of corrupt vault
+    return null
+  }
+}
+
+export async function readTokenCache(site: string, baseDir?: string): Promise<CachedTokens | null> {
+  return withLock(site, () => readTokenCacheUnsafe(site, baseDir))
 }
 
 function isFileNotFoundError(err: unknown): boolean {
   return err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT'
 }
 
+/** Internal write — caller must hold the lock */
+async function writeTokenCacheUnsafe(site: string, tokens: CachedTokens, baseDir?: string): Promise<void> {
+  const root = tokenRoot(baseDir)
+  const dir = siteDir(site, baseDir)
+  await mkdir(dir, { recursive: true, mode: 0o700 })
+
+  const key = await deriveKey(root)
+  const envelope = encrypt(tokens, key)
+
+  const tmpPath = join(dir, 'vault.json.tmp')
+  const vaultPath = join(dir, 'vault.json')
+  await writeFile(tmpPath, JSON.stringify(envelope, null, 2), { mode: 0o600 })
+  await rename(tmpPath, vaultPath)
+}
+
 export async function writeTokenCache(site: string, tokens: CachedTokens, baseDir?: string): Promise<void> {
-  return withLock(site, async () => {
-    const root = tokenRoot(baseDir)
-    const dir = siteDir(site, baseDir)
-    await mkdir(dir, { recursive: true, mode: 0o700 })
-
-    const key = await deriveKey(root)
-    const envelope = encrypt(tokens, key)
-
-    const tmpPath = join(dir, 'vault.json.tmp')
-    const vaultPath = join(dir, 'vault.json')
-    await writeFile(tmpPath, JSON.stringify(envelope, null, 2), { mode: 0o600 })
-    await rename(tmpPath, vaultPath)
-  })
+  return withLock(site, () => writeTokenCacheUnsafe(site, tokens, baseDir))
 }
 
 /** Internal clear — caller must hold the lock */
@@ -251,6 +262,9 @@ export async function clearAllTokenCache(baseDir?: string): Promise<void> {
 }
 
 export { DEFAULT_TTL_SECONDS }
+
+/** Lock-free variants for use inside withTokenLock — caller must already hold the lock */
+export { readTokenCacheUnsafe, clearTokenCacheUnsafe, writeTokenCacheUnsafe }
 
 /** Exposed for testing — number of active site locks */
 export function _activeLockCount(): number {

@@ -13,6 +13,7 @@ import { getServerXOpenWeb } from './operation-context.js'
 import type { ExecutorResult } from './executor-result.js'
 import { fetchWithRedirects } from './redirect.js'
 import { listCandidatePages } from './page-candidates.js'
+import { logger } from '../lib/logger.js'
 
 function getPageHintUrl(serverUrl: string): string {
   try {
@@ -75,6 +76,20 @@ export function createNeedsPageError(serverUrl: string): OpenWebError {
   })
 }
 
+/** Auto-navigate to site URL when no matching page exists */
+export async function autoNavigate(context: BrowserContext, serverUrl: string): Promise<Page | undefined> {
+  const siteUrl = getPageHintUrl(serverUrl)
+  try {
+    logger.debug(`auto-navigating to ${siteUrl}`)
+    const newPage = await context.newPage()
+    await newPage.goto(siteUrl, { waitUntil: 'networkidle', timeout: 15_000 })
+    return await findPageForOrigin(context, serverUrl)
+  } catch (err) {
+    logger.debug(`auto-navigation failed: ${err instanceof Error ? err.message : String(err)}`)
+    return undefined
+  }
+}
+
 export interface SessionHttpDependencies {
   readonly fetchImpl?: typeof fetch
   readonly ssrfValidator?: (url: string) => Promise<void>
@@ -121,7 +136,10 @@ export async function executeSessionHttp(
     })
   }
 
-  const page = await findPageForOrigin(context, serverUrl)
+  let page = await findPageForOrigin(context, serverUrl)
+  if (!page) {
+    page = await autoNavigate(context, serverUrl)
+  }
   if (!page) throw createNeedsPageError(serverUrl)
   const handle: BrowserHandle = { page, context }
 

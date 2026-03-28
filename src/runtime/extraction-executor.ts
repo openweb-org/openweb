@@ -10,7 +10,7 @@ import { resolveSsrNextData } from './primitives/ssr-next-data.js'
 import type { BrowserHandle } from './primitives/types.js'
 import type { ExecutorResult } from './executor-result.js'
 import { listCandidatePages } from './page-candidates.js'
-import { findPageForOrigin } from './session-executor.js'
+import { findPageForOrigin, autoNavigate } from './session-executor.js'
 
 export type { ExecutorResult }
 
@@ -115,7 +115,10 @@ export async function executeExtraction(
 
   const extraction = getExtraction(operation)
   const targetPageUrl = resolvePageUrl(serverUrl, extraction)
-  const page = await findPageForTarget(context, targetPageUrl, 'page_url' in extraction && !!extraction.page_url)
+  let page = await findPageForTarget(context, targetPageUrl, 'page_url' in extraction && !!extraction.page_url)
+  if (!page) {
+    page = await autoNavigate(context, serverUrl)
+  }
   if (!page) {
     throw createExtractionNeedsPageError(targetPageUrl)
   }

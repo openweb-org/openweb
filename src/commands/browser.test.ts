@@ -38,3 +38,67 @@ describe('browser command helpers', () => {
     expect(result).toBeUndefined()
   })
 })
+
+describe('RC6: getOpenTabUrls', () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it('returns page URLs from CDP /json/list, filtering chrome:// and about:', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      new Response(JSON.stringify([
+        { type: 'page', url: 'https://www.reddit.com/' },
+        { type: 'page', url: 'https://x.com/home' },
+        { type: 'page', url: 'chrome://newtab/' },
+        { type: 'page', url: 'about:blank' },
+        { type: 'service_worker', url: 'https://www.reddit.com/sw.js' },
+      ]), { status: 200 }),
+    ) as unknown as typeof fetch
+
+    const { getOpenTabUrls } = await import('./browser.js')
+    const urls = await getOpenTabUrls(9222)
+    expect(urls).toEqual(['https://www.reddit.com/', 'https://x.com/home'])
+  })
+
+  it('returns empty array when CDP is unavailable', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('connection refused'))
+
+    const { getOpenTabUrls } = await import('./browser.js')
+    const urls = await getOpenTabUrls(9222)
+    expect(urls).toEqual([])
+  })
+})
+
+describe('RC6: restoreTabs', () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it('creates new tabs via CDP PUT /json/new', async () => {
+    const calls: string[] = []
+    globalThis.fetch = vi.fn(async (url: string) => {
+      calls.push(url)
+      return new Response('{}', { status: 200 })
+    }) as unknown as typeof fetch
+
+    const { restoreTabs } = await import('./browser.js')
+    await restoreTabs(9222, ['https://www.reddit.com/', 'https://x.com/home'])
+
+    expect(calls).toHaveLength(2)
+    expect(calls[0]).toContain('/json/new?')
+    expect(calls[0]).toContain(encodeURIComponent('https://www.reddit.com/'))
+    expect(calls[1]).toContain(encodeURIComponent('https://x.com/home'))
+  })
+
+  it('does not throw when tab restoration fails', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('failed'))
+
+    const { restoreTabs } = await import('./browser.js')
+    // Should not throw
+    await restoreTabs(9222, ['https://example.com'])
+  })
+})

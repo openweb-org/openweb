@@ -65,6 +65,7 @@ export const xOpenWebOperationSchema = {
   type: 'object',
   properties: {
     permission: permissionSchema,
+    risk_tier: { type: 'string', enum: ['safe', 'unsafe'] },
     build: buildMetaSchema,
     transport: transportSchema,
     csrf: csrfWithScopeSchema,

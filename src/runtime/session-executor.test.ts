@@ -5,6 +5,7 @@ import {
   createNeedsPageError,
   findPageForOrigin,
   executeSessionHttp,
+  autoNavigate,
 } from './session-executor.js'
 import { substitutePath, buildHeaderParams } from './request-builder.js'
 import type { OpenApiSpec, OpenApiOperation, OpenApiParameter } from '../lib/openapi.js'
@@ -1138,5 +1139,55 @@ describe('executeSessionHttp', () => {
     ).rejects.toMatchObject({
       payload: { message: expect.stringContaining('not valid JSON') },
     })
+  })
+})
+
+describe('RC2: autoNavigate', () => {
+  it('creates a new page and navigates to the site URL', async () => {
+    const gotoFn = vi.fn(async () => {})
+    let newPageCreated = false
+    const context = {
+      pages: () => {
+        // After newPage + goto, the page list includes the navigated page
+        if (newPageCreated) {
+          return [
+            {
+              url: () => 'https://www.instagram.com/',
+              content: vi.fn(async () => '<html><body>instagram</body></html>'),
+            },
+          ]
+        }
+        return [] // Initially no pages
+      },
+      newPage: vi.fn(async () => {
+        newPageCreated = true
+        return {
+          goto: gotoFn,
+          url: () => 'https://www.instagram.com/',
+          content: vi.fn(async () => '<html><body>instagram</body></html>'),
+        }
+      }),
+    } as unknown as import('playwright').BrowserContext
+
+    const page = await autoNavigate(context, 'https://www.instagram.com/api/v1')
+    expect(page).toBeDefined()
+    expect(gotoFn).toHaveBeenCalledWith(
+      'https://www.instagram.com/',
+      expect.objectContaining({ waitUntil: 'networkidle', timeout: 15_000 }),
+    )
+  })
+
+  it('returns undefined when navigation fails', async () => {
+    const context = {
+      pages: () => [],
+      newPage: vi.fn(async () => ({
+        goto: vi.fn(async () => { throw new Error('net::ERR_CONNECTION_REFUSED') }),
+        url: () => 'about:blank',
+        content: vi.fn(async () => ''),
+      })),
+    } as unknown as import('playwright').BrowserContext
+
+    const page = await autoNavigate(context, 'https://unreachable.example.com/api')
+    expect(page).toBeUndefined()
   })
 })

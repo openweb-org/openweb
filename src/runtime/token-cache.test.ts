@@ -11,6 +11,9 @@ import {
   clearAllTokenCache,
   extractJwtExp,
   _activeLockCount,
+  withTokenLock,
+  readTokenCacheUnsafe,
+  clearTokenCacheUnsafe,
   type CachedTokens,
 } from './token-cache.js'
 
@@ -365,4 +368,70 @@ describe('token cache race condition', () => {
     // All locks should be released
     expect(_activeLockCount()).toBe(0)
   })
+})
+
+describe('RC1: withTokenLock + readTokenCacheUnsafe must not deadlock', () => {
+  const dirs: string[] = []
+
+  afterEach(() => {
+    for (const d of dirs) rmSync(d, { recursive: true, force: true })
+    dirs.length = 0
+  })
+
+  it('readTokenCacheUnsafe inside withTokenLock does not deadlock', async () => {
+    const dir = makeTempDir()
+    dirs.push(dir)
+    await writeTokenCache('deadlock-test', sampleTokens(), dir)
+
+    // This would deadlock with the old readTokenCache (which re-acquires the lock)
+    const result = await withTokenLock('deadlock-test', async () => {
+      return readTokenCacheUnsafe('deadlock-test', dir)
+    })
+
+    expect(result).not.toBeNull()
+    expect(result?.cookies[0]?.name).toBe('session')
+  })
+
+  it('clearTokenCacheUnsafe inside withTokenLock does not deadlock', async () => {
+    const dir = makeTempDir()
+    dirs.push(dir)
+    await writeTokenCache('clear-deadlock', sampleTokens(), dir)
+
+    await withTokenLock('clear-deadlock', async () => {
+      await clearTokenCacheUnsafe('clear-deadlock', dir)
+    })
+
+    const result = await readTokenCache('clear-deadlock', dir)
+    expect(result).toBeNull()
+  })
+})
+
+describe('RC5: lock acquisition timeout', () => {
+  it('withTokenLock times out if lock cannot be acquired', async () => {
+    // Simulate a held lock by calling withTokenLock with a long-running callback
+    // then trying a second lock acquisition that should time out
+    let releaseOuter: (() => void) | undefined
+    const outerPromise = withTokenLock('timeout-site', () =>
+      new Promise<void>((resolve) => { releaseOuter = resolve }),
+    )
+
+    // Try to acquire the same lock with a very short timeout — re-use withTokenLock
+    // which calls withLock internally. We need to test lock timeout directly.
+    // Import the module to test withLock timeout behavior via readTokenCache
+    // which will try to acquire the same lock
+    const timeoutPromise = readTokenCache('timeout-site', '/nonexistent')
+
+    // readTokenCache should eventually resolve (after outer releases) or the lock times out
+    // Since the outer lock is held indefinitely, the inner should time out
+    await expect(
+      Promise.race([
+        timeoutPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('test timeout')), 15_000)),
+      ]),
+    ).rejects.toThrow(/timed out/)
+
+    // Release the outer lock to clean up
+    releaseOuter?.()
+    await outerPromise
+  }, 20_000)
 })

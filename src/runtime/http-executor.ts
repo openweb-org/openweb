@@ -22,6 +22,7 @@ import {
   createNeedsPageError,
   executeSessionHttp,
   findPageForOrigin,
+  autoNavigate,
 } from './session-executor.js'
 import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
@@ -30,7 +31,7 @@ import { loadAdapter, executeAdapter } from './adapter-executor.js'
 import { executeExtraction } from './extraction-executor.js'
 import { executeNodeSsr } from './node-ssr-executor.js'
 import { derivePermissionFromMethod } from '../lib/permission-derive.js'
-import { executeCachedFetch, writeBrowserCookiesToCache, readTokenCache, clearTokenCache, withTokenLock } from './cache-manager.js'
+import { executeCachedFetch, writeBrowserCookiesToCache, readTokenCache, clearTokenCache, withTokenLock, readTokenCacheUnsafe, clearTokenCacheUnsafe } from './cache-manager.js'
 import { logger } from '../lib/logger.js'
 import { CDP_ENDPOINT } from '../lib/config.js'
 import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types/extensions.js'
@@ -114,7 +115,10 @@ export async function executeOperation(
         })
       }
       const serverUrl = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
-      const page = await findPageForOrigin(context, serverUrl)
+      let page = await findPageForOrigin(context, serverUrl)
+      if (!page) {
+        page = await autoNavigate(context, serverUrl)
+      }
       if (!page) {
         throw createNeedsPageError(serverUrl)
       }
@@ -197,7 +201,7 @@ export async function executeOperation(
     if (needsBrowser) {
       // Token cache: serialize read→try→fallback→write per site to prevent race conditions
       const cacheResult = await withTokenLock(site, async () => {
-        const cached = await readTokenCache(site, deps.tokenCacheDir)
+        const cached = await readTokenCacheUnsafe(site, deps.tokenCacheDir)
 
         if (cached && (cached.cookies.length > 0 || Object.keys(cached.localStorage).length > 0)) {
           try {
@@ -205,7 +209,7 @@ export async function executeOperation(
           } catch (err) {
             // 401/403 means cache is stale — clear and fall through to browser
             if (err instanceof OpenWebError && err.payload.failureClass === 'needs_login') {
-              await clearTokenCache(site, deps.tokenCacheDir)
+              await clearTokenCacheUnsafe(site, deps.tokenCacheDir)
             } else {
               throw err
             }
@@ -316,6 +320,8 @@ export async function executeOperation(
 
 // ── Unified Protocol Dispatch ───────────────────────
 
+const OPERATION_TIMEOUT = Number(process.env.OPENWEB_TIMEOUT) || 30_000
+
 /**
  * Route an operation to the correct executor based on protocol.
  * HTTP operations go through the existing executeOperation path.
@@ -331,11 +337,21 @@ export async function dispatchOperation(
   const pkg = await loadSitePackage(site)
   const entry = findOperationEntry(pkg, operationId)
 
-  if (entry.protocol === 'http') {
-    return executeOperation(site, operationId, params, deps)
-  }
+  const execute = entry.protocol === 'http'
+    ? executeOperation(site, operationId, params, deps)
+    : (await import('./ws-cli-executor.js')).executeWsFromCli(site, operationId, params, deps)
 
-  // WS operations — delegate to WS CLI executor
-  const { executeWsFromCli } = await import('./ws-cli-executor.js')
-  return executeWsFromCli(site, operationId, params, deps)
+  return Promise.race([
+    execute,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `Operation ${operationId} timed out after ${OPERATION_TIMEOUT}ms`,
+        action: 'Increase timeout via OPENWEB_TIMEOUT env variable (milliseconds).',
+        retriable: true,
+        failureClass: 'retriable',
+      })), OPERATION_TIMEOUT),
+    ),
+  ])
 }

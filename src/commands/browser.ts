@@ -269,7 +269,38 @@ export async function browserStopCommand(): Promise<void> {
   // If not stopped, killManaged already printed the warning
 }
 
+/** Get open tab URLs from managed Chrome via CDP /json/list. Exported for testing. */
+export async function getOpenTabUrls(port: number): Promise<string[]> {
+  try {
+    const response = await fetch(`http://localhost:${port}/json/list`)
+    if (!response.ok) return []
+    const tabs = await response.json() as Array<{ type: string; url: string }>
+    return tabs
+      .filter((t) => t.type === 'page' && t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('about:'))
+      .map((t) => t.url)
+  } catch {
+    // intentional: CDP unavailable — no tabs to save
+    return []
+  }
+}
+
+/** Restore tabs by creating new tabs via CDP. Exported for testing. */
+export async function restoreTabs(port: number, urls: string[]): Promise<void> {
+  for (const url of urls) {
+    try {
+      await fetch(`http://localhost:${port}/json/new?${encodeURIComponent(url)}`, { method: 'PUT' })
+    } catch {
+      // intentional: best-effort tab restoration
+    }
+  }
+}
+
 export async function browserRestartCommand(options: { headless?: boolean; port?: number } = {}): Promise<void> {
+  const port = options.port ?? (await readPort()) ?? DEFAULT_PORT
+
+  // Save open tab URLs before killing
+  const tabUrls = await getOpenTabUrls(port)
+
   const stopped = await killManaged()
   if (!stopped) {
     throw new OpenWebError({
@@ -286,6 +317,13 @@ export async function browserRestartCommand(options: { headless?: boolean; port?
   await rm(tokensDir, { recursive: true, force: true })
 
   await browserStartCommand(options)
+
+  // Restore previously open tabs
+  if (tabUrls.length > 0) {
+    const activePort = options.port ?? (await readPort()) ?? DEFAULT_PORT
+    await restoreTabs(activePort, tabUrls)
+    process.stdout.write(`Restored ${tabUrls.length} tab(s).\n`)
+  }
 }
 
 export async function browserStatusCommand(): Promise<void> {
@@ -351,7 +389,19 @@ export async function loginCommand(site: string): Promise<void> {
     })
   }
 
-  // Open in default browser using execFile with argv (no shell)
+  // Prefer opening in managed Chrome; fall back to system browser
+  const port = await readPort()
+  if (port && await isCdpReady(port)) {
+    try {
+      await fetch(`http://localhost:${port}/json/new?${encodeURIComponent(url)}`, { method: 'PUT' })
+      process.stdout.write(`Opened ${url} in managed browser.\nLogin there, then run: openweb browser restart\n`)
+      return
+    } catch {
+      // intentional: CDP tab creation failed — fall through to system browser
+    }
+  }
+
+  // Fall back to system default browser
   const os = platform()
   await new Promise<void>((resolve, reject) => {
     const cmd = os === 'darwin' ? 'open' : os === 'linux' ? 'xdg-open' : 'cmd'
