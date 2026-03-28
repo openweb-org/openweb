@@ -71,14 +71,14 @@ Verify skips write operations by default (`replaySafety: unsafe_mutation`).
 
 ```mermaid
 flowchart TD
-    S1["Step 1: Frame target intents"]
-    S2["Step 2: Capture"]
-    S3["Step 3: Compile"]
-    S4{"Step 4: Check coverage"}
-    S5["Step 5: Curate<br/>(review auth, fix spec — see compile.md)"]
-    S6{"Step 6: Runtime verify<br/>openweb exec returns real data?"}
-    S7["Step 7: Diagnose + fix"]
-    S8["Step 8: Install site package"]
+    S1["Step 1: Frame target intents<br/><i>agent-only</i>"]
+    S2["Step 2: Capture<br/><i>agent browses, code records</i>"]
+    S3["Step 3: Compile<br/><i>code-only</i>"]
+    S4{"Step 4: Check coverage<br/><i>agent reviews code output</i>"}
+    S5["Step 5: Curate<br/><i>agent reviews + edits spec</i><br/>(see compile.md)"]
+    S6{"Step 6: Runtime verify<br/><i>agent runs exec, checks data</i>"}
+    S7["Step 7: Diagnose + fix<br/><i>agent-only</i>"]
+    S8["Step 8: Install<br/><i>agent + code</i>"]
 
     S1 --> S2
     S2 --> S3
@@ -90,7 +90,18 @@ flowchart TD
     S6 -->|"failures"| S7
     S7 -->|"fix spec → re-verify"| S6
     S7 -->|"re-capture needed"| S2
+
+    style S1 fill:#e1f5fe
+    style S2 fill:#e1f5fe
+    style S3 fill:#e8f5e9
+    style S4 fill:#fff3e0
+    style S5 fill:#fff3e0
+    style S6 fill:#fff3e0
+    style S7 fill:#e1f5fe
+    style S8 fill:#e1f5fe
 ```
+
+**Legend:** 🟦 blue = agent-driven | 🟩 green = code-only | 🟧 orange = agent reviews code output
 
 ### Step 1: Frame the Target
 
