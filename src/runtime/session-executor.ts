@@ -155,7 +155,7 @@ export async function executeSessionHttp(
     { ...params, ...authResult?.queryParams },
   )
   const resolvedPath = substitutePath(operationPath, allParams, inputParams)
-  const target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams)
+  let target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams)
 
   const upperMethod = method.toUpperCase()
   let jsonBody: string | undefined
@@ -163,9 +163,10 @@ export async function executeSessionHttp(
     jsonBody = buildJsonRequestBody(operation, inputParams)
   }
 
+  const serverOrigin = new URL(serverUrl).origin
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    Referer: `${target.origin}/`,
+    Referer: `${serverOrigin}/`,
     ...buildHeaderParams(allParams, inputParams),
   }
   if (jsonBody) headers['Content-Type'] = 'application/json'
@@ -175,7 +176,10 @@ export async function executeSessionHttp(
     Object.assign(headers, authResult.headers)
     cookieString = authResult.cookieString
     if (authResult.queryParams) {
-      for (const [key, value] of Object.entries(authResult.queryParams)) target.searchParams.set(key, value)
+      for (const [key, value] of Object.entries(authResult.queryParams)) {
+        const sep = target.includes('?') ? '&' : '?'
+        target = `${target}${sep}${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+      }
     }
   }
 
@@ -202,7 +206,7 @@ export async function executeSessionHttp(
   if (cookieString) headers.Cookie = cookieString
 
   // 5. Fetch with redirects
-  const response = await fetchWithRedirects(target.toString(), upperMethod, headers, jsonBody, { fetchImpl, ssrfValidator })
+  const response = await fetchWithRedirects(target, upperMethod, headers, jsonBody, { fetchImpl, ssrfValidator })
 
   if (!response.ok) {
     const httpFailure = getHttpFailure(response.status)

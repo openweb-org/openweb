@@ -128,23 +128,47 @@ export function resolveAllParameters(spec: OpenApiSpec, operation: OpenApiOperat
   })
 }
 
-/** Build a URL from server base, resolved path, and query parameters. */
+/**
+ * Minimal query-param encoder: only encode characters that break URL
+ * structure (&, =, #, space, +) while preserving sub-delimiters like
+ * ( ) : , that many APIs expect unencoded.
+ * Any existing percent-encoding in the value (e.g., %3A in URNs) is preserved.
+ */
+function encodeQueryValue(value: string): string {
+  // Temporarily protect existing %XX sequences
+  const protected_ = value.replace(/%([0-9A-Fa-f]{2})/g, '\0$1')
+  const encoded = protected_
+    .replace(/%/g, '%25')   // encode bare % signs
+    .replace(/ /g, '%20')
+    .replace(/\t/g, '%09')
+    .replace(/&/g, '%26')
+    .replace(/=/g, '%3D')
+    .replace(/#/g, '%23')
+    .replace(/\+/g, '%2B')
+  // Restore protected %XX sequences
+  return encoded.replace(/\0([0-9A-Fa-f]{2})/g, '%$1')
+}
+
+/** Build a URL from server base, resolved path, and query parameters.
+ *  Returns a raw URL string with minimal query encoding — preserves
+ *  sub-delimiters ( ) : , and any pre-existing percent-encoding in values. */
 export function buildTargetUrl(
   serverUrl: string,
   resolvedPath: string,
   allParams: OpenApiParameter[],
   inputParams: Record<string, unknown>,
-): URL {
+): string {
   const baseUrl = new URL(serverUrl)
-  const target = new URL(baseUrl.pathname.replace(/\/$/, '') + resolvedPath, baseUrl.origin)
+  const basePath = baseUrl.origin + baseUrl.pathname.replace(/\/$/, '') + resolvedPath
+  const pairs: string[] = []
   for (const param of allParams.filter((p) => p.in === 'query')) {
     const value = inputParams[param.name]
     if (value === undefined || value === null) continue
     if (Array.isArray(value)) {
-      for (const item of value) target.searchParams.append(param.name, String(item))
+      for (const item of value) pairs.push(`${encodeQueryValue(param.name)}=${encodeQueryValue(String(item))}`)
     } else {
-      target.searchParams.set(param.name, String(value))
+      pairs.push(`${encodeQueryValue(param.name)}=${encodeQueryValue(String(value))}`)
     }
   }
-  return target
+  return pairs.length > 0 ? `${basePath}?${pairs.join('&')}` : basePath
 }

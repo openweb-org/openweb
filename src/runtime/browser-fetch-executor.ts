@@ -80,8 +80,8 @@ export async function executeBrowserFetch(
   const resolvedPath = substitutePath(operationPath, allParams, inputParams)
   const headerParams = buildHeaderParams(allParams, inputParams)
 
-  // Build URL
-  const target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams)
+  // Build URL (returns raw string with minimal encoding)
+  let target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams)
 
   // Build request body
   let jsonBody: string | undefined
@@ -104,7 +104,8 @@ export async function executeBrowserFetch(
     Object.assign(headers, authResult.headers)
     if (authResult.queryParams) {
       for (const [key, value] of Object.entries(authResult.queryParams)) {
-        target.searchParams.set(key, value)
+        const sep = target.includes('?') ? '&' : '?'
+        target = `${target}${sep}${encodeURIComponent(key)}=${encodeURIComponent(value)}`
       }
     }
     // Note: cookieString is NOT injected — browser handles cookies via credentials:'include'
@@ -141,7 +142,7 @@ export async function executeBrowserFetch(
   // validation. This is the correct model: browser_fetch exists precisely
   // because we need browser-native request behavior.
   const ssrfValidator = deps.ssrfValidator ?? validateSSRF
-  await ssrfValidator(target.toString())
+  await ssrfValidator(target)
 
   // Execute fetch inside the browser page context
   let fetchResult: { status: number; headers: Record<string, string>; text: string }
@@ -159,7 +160,7 @@ export async function executeBrowserFetch(
         const text = await resp.text()
         return { status: resp.status, headers: respHeaders, text }
       },
-      { url: target.toString(), method: upperMethod, headers, body: jsonBody },
+      { url: target, method: upperMethod, headers, body: jsonBody },
     )
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
