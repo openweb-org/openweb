@@ -195,10 +195,14 @@ Note which clusters to exclude and which operation names to change -- you will
 apply these edits to the generated spec in Step 3.
 
 **Noise clusters to look for:**
-- Analytics: paths containing `/collect`, `/beacon`, `/pixel`, `/analytics`
-- CDN: paths containing `/static/`, `/_next/`, `/assets/`
-- Telemetry: WebSocket-only monitoring endpoints
+- Analytics/tracking: paths containing `/collect`, `/beacon`, `/pixel`, `/analytics`
+- CDN/static: paths containing `/static/`, `/_next/`, `/assets/`
+- Telemetry/logging: paths or names containing `collector`, `log`, `batch`,
+  `telemetry`, `apm`, `tracking`, `zlab`, `commercial`, `impression`, `feedback`, `popup`
+- Internal framework: `rsc-action`, `flagship-web`, `_next` endpoints
+- POST-to-void: POST endpoints returning empty or 204 (logging, not user actions)
 - 4xx-only: clusters where all responseVariants are 4xx status codes
+- Unnamed generics: operationId is just `get` or `create` with no noun
 
 #### 2c. Extraction Signals
 
@@ -241,20 +245,43 @@ Read it. This is the spec that becomes the site package.
 
 #### 3a. Remove Noise Operations
 
-Delete operations for clusters you identified as noise in Step 2b:
+Delete operations for clusters you identified as noise in Step 2b.
+
+**Noise exclusion criteria — delete any operation matching these:**
 - Analytics/tracking endpoints
-- CDN/static asset endpoints
+- CDN/static asset endpoints (`/static/`, `/_next/`, `/assets/`)
 - Polling/heartbeat-only endpoints
 - 4xx-only clusters (no successful responses)
+- Paths or names containing: `collector`, `log`, `batch`, `telemetry`, `apm`,
+  `tracking`, `beacon`, `zlab`, `commercial`, `impression`, `feedback`, `popup`
+- POST endpoints that return empty or 204 responses (likely logging/telemetry)
+- Operations where the operationId is just `get` or `create` with no noun
+  (path normalization artifact — meaningless)
+- Internal framework endpoints: `rsc-action`, `flagship-web`, `_next`
 
-After removing noise, review ALL remaining non-target clusters. Keep any operation
-that:
-- Returns structured JSON (not HTML)
-- Is on the primary domain (not off-domain)
-- Has clear user value (getMe, getHotSearch, getRecommendFeed, notifications, etc.)
+**Write op quality bar — not every POST is a write op.** Real write ops are
+user-facing actions a user would knowingly trigger:
+- Like/upvote, follow/unfollow, bookmark/save, post/comment, vote, repost
+- NOT: `createCollectorApm`, `createZaLogsBatch`, `createCommercialEcommerce`
+- Test: "would a user knowingly trigger this action?" If no, it is
+  infrastructure noise — exclude it.
 
-These non-target operations get auto-curated names and schemas, which is acceptable.
-Do not spend time perfecting them, but do not delete them either.
+After removing noise, review ALL remaining non-target operations. Keep an
+operation only if it meets ALL of:
+- Returns structured JSON (not HTML, not empty)
+- Is on the primary domain (not off-domain CDN/analytics)
+- Has clear user value (e.g., `getMe`, `getHotSearch`, `getRecommendFeed`)
+- Can be given a meaningful name — if you cannot name it, it is probably noise
+
+**Same quality bar for all kept ops.** Non-target operations have lower PRIORITY
+than target ops, but the same STANDARD. Every kept operation must have:
+- A meaningful, descriptive `operationId` (not URL-derived gibberish like
+  `getXWebInterfaceWbiViewDetail`)
+- A useful `summary` describing the user action
+- Noise excluded — no telemetry, logging, or framework internals
+
+If an auto-curated name is not meaningful and you cannot determine what the
+operation does, it is noise — exclude it.
 
 #### 3b. Rename Operations
 
@@ -540,7 +567,8 @@ useful protocols are curated.
   for tracking cookie names (`__cf_bm`, `_ga`, `__gads`). If you see these,
   the auth candidate is a false positive. Check if a lower-ranked candidate
   is better, or if the site is actually public (no auth needed).
-- **Analytics as operations**: `/collect`, `/beacon`, `/pixel` -- remove in Step 3a.
+- **Analytics as operations**: `/collect`, `/beacon`, `/pixel`, telemetry, logging
+  POSTs -- see full noise exclusion list in Step 3a.
 - **Dashboard noise**: SaaS dashboards generate heavy internal namespace traffic.
   Manual curation must filter these.
 - **Heartbeat-only WS**: WebSocket connections with only ping/pong -- not operations.
