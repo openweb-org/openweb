@@ -258,6 +258,18 @@ Missing context here directly causes bad curation decisions.
    file research (see "Before You Start"). This lets the compile agent validate the auto-detected
    auth against your prior.
 
+Use this template for structured handoff notes (paste into the handoff message):
+
+```markdown
+## Handoff Notes
+- **Target intents:** <what the user asked to discover>
+- **Login:** required / not required; performed / not performed
+- **Bot detection:** none / suspected (evidence) / confirmed (evidence)
+- **Auth type:** cookie_session / localStorage_jwt / exchange_chain / unknown
+- **Cross-domain API:** <domains to pass via --allow-host>
+- **Observations:** <anything unusual>
+```
+
 ## Fill Gaps (iterate Steps 2-4)
 
 If target operations are missing from the analysis:

@@ -25,6 +25,7 @@ export interface CaptureBundle {
   readonly wsFramesPath?: string
   readonly stateSnapshotDir?: string
   readonly domHtmlPath?: string
+  readonly allowHosts?: readonly string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -194,6 +195,7 @@ export interface AnalysisReport {
   readonly samples: readonly LabeledSample[]
   readonly clusters: readonly ClusteredEndpoint[]
   readonly authCandidates: readonly AuthCandidate[]
+  readonly csrfOptions: readonly CsrfPrimitive[]
   readonly extractionSignals: readonly ExtractionSignal[]
   readonly ws?: {
     readonly connections: readonly WsConnectionAnalysis[]
@@ -209,6 +211,7 @@ export interface AnalysisReport {
 export interface CurationDecisionSet {
   readonly selectedAuthCandidateId?: string
   readonly excludedClusterIds?: readonly string[]
+  readonly csrfType?: 'cookie_to_header' | 'meta_tag'
   readonly operationOverrides?: ReadonlyArray<{
     readonly clusterId: string
     readonly operationId?: string
@@ -289,6 +292,7 @@ export type VerifyReason =
   | 'non_json_response'
   | 'missing_example'
   | 'skipped_unsafe'
+  | 'needs_browser'
 
 /** A single verification attempt with diagnostics. */
 export interface VerifyAttempt {

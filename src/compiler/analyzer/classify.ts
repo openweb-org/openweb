@@ -7,10 +7,11 @@ import { detectCookieToHeader, detectMetaTag } from './csrf-detect.js'
 import { detectSapisidhash } from './signing-detect.js'
 
 export interface ExtractionSignal {
-  readonly type: 'ssr_next_data' | 'script_json'
+  readonly type: 'ssr_next_data' | 'script_json' | 'page_global'
   readonly selector?: string
   readonly id?: string
   readonly dataType?: string
+  readonly globalName?: string
   readonly estimatedSize?: number
 }
 
@@ -87,6 +88,26 @@ function detectScriptJson(data: CaptureData): ExtractionSignal[] {
   return signals
 }
 
+/**
+ * Detect page_global: HTML contains window.__VAR__ = ... assignments.
+ * Matches common SSR patterns like __INITIAL_STATE__, __NUXT__, __NUXT_DATA__, etc.
+ */
+function detectPageGlobals(data: CaptureData): ExtractionSignal[] {
+  const html = data.domHtml ?? getHtmlFromHar(data)
+  if (!html) return []
+
+  const signals: ExtractionSignal[] = []
+  const regex = /window\.((__[A-Z][A-Z0-9_]*__?))\s*=/g
+  const seen = new Set<string>()
+  for (let m = regex.exec(html); m; m = regex.exec(html)) {
+    const name = m[1]
+    if (!name || seen.has(name)) continue
+    seen.add(name)
+    signals.push({ type: 'page_global', globalName: name })
+  }
+  return signals
+}
+
 /** Extract HTML from HAR entries (for sites where domHtml isn't provided separately). */
 function getHtmlFromHar(data: CaptureData): string | undefined {
   for (const entry of data.harEntries) {
@@ -121,6 +142,7 @@ export function classify(data: CaptureData): ClassifyResult {
   const ssrNextData = detectSsrNextData(data)
   if (ssrNextData) extractionSignals.push(ssrNextData)
   extractionSignals.push(...detectScriptJson(data))
+  extractionSignals.push(...detectPageGlobals(data))
   const extractions = extractionSignals.length > 0 ? extractionSignals : undefined
 
   // Build signing primitive if detected

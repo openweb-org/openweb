@@ -71,18 +71,28 @@ Errors on stderr include `failureClass`:
 
 ## References (load on demand)
 
+### Process docs (load the one matching your task)
+
 | File | When |
 |---|---|
 | `references/discover.md` | Adding or expanding a site |
 | `references/compile.md` | Curating, generating, and verifying a site package |
-| `references/site-doc.md` | DOC.md / PROGRESS.md template |
+| `references/site-doc.md` | Writing DOC.md / PROGRESS.md |
 | `references/cli.md` | CLI reference, browser mgmt |
 | `references/troubleshooting.md` | Debugging errors |
 | `references/update-knowledge.md` | After learning something new |
-| `references/knowledge/archetypes/index.md` | Before discover — identify site type and expected operations |
-| `references/knowledge/auth-patterns.md` | Before compile — auth primitive detection |
-| `references/knowledge/bot-detection-patterns.md` | Before discover — anticipate anti-bot measures |
-| `references/knowledge/extraction-patterns.md` | Before compile — SSR/DOM extraction techniques |
-| `references/knowledge/graphql-patterns.md` | Before GraphQL compile — persisted queries, batching |
-| `references/knowledge/ws-patterns.md` | Before WS compile — connection/message/heartbeat patterns |
-| `references/knowledge/troubleshooting-patterns.md` | During debug — known failure patterns |
+
+### Knowledge files (load when the process doc tells you to)
+
+Do NOT preload all knowledge files. The process docs (`discover.md`, `compile.md`)
+specify exactly which knowledge file to read at each step and what to look for.
+
+| File | Loaded by | What to extract |
+|---|---|---|
+| `references/knowledge/archetypes/index.md` | discover "Before You Start" | Site archetype, expected ops, auth/transport |
+| `references/knowledge/auth-patterns.md` | discover "Before You Start", compile Step 2a | Expected auth type for this site category |
+| `references/knowledge/bot-detection-patterns.md` | discover "Before You Start" | Whether to use real Chrome profile, session length |
+| `references/knowledge/extraction-patterns.md` | compile Step 2c | When extraction beats API replay |
+| `references/knowledge/graphql-patterns.md` | compile Step 2b (GraphQL sites only) | Persisted queries, batching, sub-cluster patterns |
+| `references/knowledge/ws-patterns.md` | compile Step 2d (WS sites only) | Operation vs noise signal classification |
+| `references/knowledge/troubleshooting-patterns.md` | troubleshooting Step 2 | Known failure cause/fix patterns |

@@ -1,3 +1,22 @@
+## 2026-03-27: Pipeline v2 — design gap fixes
+
+**What changed:**
+- `--allow-host` CLI flag wired through compile → analyze → labeler for cross-domain API support (e.g., chatgpt.com → api.openai.com)
+- Page-transport operations now skip cleanly in verify with `needs_browser` reason instead of failing
+- Verify summary breakdown distinguishes write-skips from page-skips: `5 pass, 13 skipped (write), 12 skipped (page), 58 fail`
+- Extraction signal detection expanded: new `page_global` type detects `window.__INITIAL_STATE__`, `__NUXT__`, `__NUXT_DATA__` etc. via regex on DOM HTML
+- CSRF alternatives surfaced: `csrfOptions: CsrfPrimitive[]` on AnalysisReport, `csrfType` override in CurationDecisionSet
+- Tiered example value selection: schema-derived (enum/format/type) → most frequent observed (PII-scrubbed) → fallback. Replaces naive `values[0]`
+- Discover → compile handoff checklist added to skill doc (markdown template, no JSON schema)
+
+**Why:**
+- Round 3 compliance review identified 7 design gaps blocking architecture-complete sign-off. These were the bounded, implementable fixes (KISS design). Report tier slimming and browser-based verify deferred pending real site testing.
+
+**Key files:** `src/compiler/verify-v2.ts`, `src/compiler/types-v2.ts`, `src/compiler/analyzer/classify.ts`, `src/compiler/analyzer/auth-candidates.ts`, `src/compiler/analyzer/example-select.ts` (new), `src/compiler/analyzer/analyze.ts`, `src/compiler/curation/apply-curation.ts`, `src/commands/compile.ts`, `skill/openweb/references/discover.md`
+**Verification:** 704 tests pass, no lint errors
+**Next:** Run sites through updated pipeline to validate; defer report tier slimming and browser-verify until real patterns observed
+**Blockers:** None
+
 ## 2026-03-26: Pipeline v2 — compile pipeline refactor from 12 steps to 5 phases
 
 **What changed:**

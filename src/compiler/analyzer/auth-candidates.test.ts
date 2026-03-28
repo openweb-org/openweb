@@ -72,7 +72,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [makeSnapshot({ cookies: [{ name: 'sessionid', value: 'abc' }] })],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
       expect(cookieCandidate).toBeDefined()
       expect(cookieCandidate?.confidence).toBe(1)
@@ -91,7 +91,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [makeSnapshot({ cookies: [{ name: 'sessionid', value: 'abc' }] })],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
       expect(cookieCandidate).toBeDefined()
       expect(cookieCandidate?.confidence).toBe(0.5)
@@ -112,7 +112,7 @@ describe('buildAuthCandidates', () => {
         })],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
       expect(cookieCandidate?.evidence.matchedCookies).toContain('sessionid')
       expect(cookieCandidate?.evidence.matchedCookies).toContain('token')
@@ -131,7 +131,7 @@ describe('buildAuthCandidates', () => {
         })],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       // Only tracking cookies → no cookie_session candidate
       expect(candidates.find(c => c.auth?.type === 'cookie_session')).toBeUndefined()
     })
@@ -149,7 +149,7 @@ describe('buildAuthCandidates', () => {
         })],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
       expect(cookieCandidate).toBeDefined()
       expect(cookieCandidate?.evidence.matchedCookies).toContain('ct0')
@@ -176,7 +176,7 @@ describe('buildAuthCandidates', () => {
         })],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       const jwtCandidate = candidates.find(c => c.auth?.type === 'localStorage_jwt')
       expect(jwtCandidate).toBeDefined()
       expect(jwtCandidate?.confidence).toBe(0.95)
@@ -204,7 +204,7 @@ describe('buildAuthCandidates', () => {
         })],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       expect(candidates.length).toBeGreaterThanOrEqual(2)
       expect(candidates[0]?.auth?.type).toBe('localStorage_jwt')
       expect(candidates[0]?.rank).toBe(1)
@@ -231,7 +231,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       const exchangeCandidate = candidates.find(c => c.auth?.type === 'exchange_chain')
       expect(exchangeCandidate).toBeDefined()
       expect(exchangeCandidate?.confidence).toBe(0.9)
@@ -254,7 +254,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       expect(candidates.find(c => c.auth?.type === 'exchange_chain')).toBeDefined()
     })
 
@@ -273,7 +273,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       expect(candidates.find(c => c.auth?.type === 'exchange_chain')).toBeDefined()
     })
 
@@ -292,7 +292,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       expect(candidates.find(c => c.auth?.type === 'exchange_chain')).toBeDefined()
     })
 
@@ -311,7 +311,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       expect(candidates.find(c => c.auth?.type === 'exchange_chain')).toBeDefined()
     })
   })
@@ -339,7 +339,7 @@ describe('buildAuthCandidates', () => {
         })],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
       expect(cookieCandidate).toBeDefined()
       expect(cookieCandidate?.csrf).toEqual({
@@ -367,7 +367,7 @@ describe('buildAuthCandidates', () => {
         domHtml: '<html><head><meta name="csrf-token" content="meta_csrf_value_abc"></head></html>',
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
       expect(cookieCandidate).toBeDefined()
       expect(cookieCandidate?.csrf).toEqual({
@@ -399,7 +399,7 @@ describe('buildAuthCandidates', () => {
         })],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
       expect(cookieCandidate).toBeDefined()
       expect(cookieCandidate?.signing).toEqual({
@@ -422,7 +422,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       expect(candidates).toHaveLength(1)
       expect(candidates[0]?.auth).toBeUndefined()
       expect(candidates[0]?.confidence).toBe(0)
@@ -459,7 +459,7 @@ describe('buildAuthCandidates', () => {
         })],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       expect(candidates.length).toBe(3) // localStorage_jwt, exchange_chain, cookie_session
       expect(candidates[0]?.auth?.type).toBe('localStorage_jwt')
       expect(candidates[0]?.rank).toBe(1)
@@ -493,7 +493,7 @@ describe('buildAuthCandidates', () => {
         })],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       const jwt = candidates.find(c => c.auth?.type === 'localStorage_jwt')
       const exchange = candidates.find(c => c.auth?.type === 'exchange_chain')
       const cookie = candidates.find(c => c.auth?.type === 'cookie_session')
@@ -514,7 +514,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [makeSnapshot()],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       expect(candidates).toHaveLength(1)
       expect(candidates[0]?.auth).toBeUndefined()
       expect(candidates[0]?.confidence).toBe(0)
@@ -528,7 +528,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [makeSnapshot()],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       expect(candidates[0]?.evidence.rejectedSignals).toBeDefined()
       expect(candidates[0]?.evidence.rejectedSignals?.length).toBeGreaterThan(0)
     })
@@ -539,7 +539,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       expect(candidates).toHaveLength(1)
       expect(candidates[0]?.confidence).toBe(0)
       expect(candidates[0]?.evidence.rejectedSignals).toContain('No state snapshots available')
@@ -551,7 +551,7 @@ describe('buildAuthCandidates', () => {
         stateSnapshots: [makeSnapshot()],
       }
 
-      const candidates = buildAuthCandidates(data)
+      const { candidates } = buildAuthCandidates(data)
       expect(candidates).toHaveLength(1)
       expect(candidates[0]?.confidence).toBe(0)
       expect(candidates[0]?.evidence.rejectedSignals).toContain('No HAR entries available')
@@ -568,7 +568,7 @@ describe('buildAuthCandidates', () => {
       stateSnapshots: [makeSnapshot({ cookies: [{ name: 'sessionid', value: 'abc' }] })],
     }
 
-    const candidates = buildAuthCandidates(data)
+    const { candidates } = buildAuthCandidates(data)
     for (const c of candidates) {
       expect(c.id).toBeDefined()
       expect(c.rank).toBeDefined()
@@ -584,8 +584,8 @@ describe('buildAuthCandidates', () => {
       stateSnapshots: [makeSnapshot({ cookies: [{ name: 'sessionid', value: 'abc' }] })],
     }
 
-    const first = buildAuthCandidates(data)
-    const second = buildAuthCandidates(data)
+    const { candidates: first } = buildAuthCandidates(data)
+    const { candidates: second } = buildAuthCandidates(data)
     expect(first[0]?.id).toBe('auth-1')
     expect(second[0]?.id).toBe('auth-1')
   })

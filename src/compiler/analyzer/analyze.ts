@@ -30,6 +30,7 @@ import { detectGraphqlEndpoint, subClusterGraphql } from './graphql-cluster.js'
 import { differentiateParameters } from './differentiate.js'
 import { annotateOperation } from './annotate.js'
 import { inferSchema } from './schema-v2.js'
+import { selectExample } from './example-select.js'
 import { buildAuthCandidates } from './auth-candidates.js'
 import { classify } from './classify.js'
 import { loadWsCapture } from '../ws-analyzer/ws-load.js'
@@ -278,12 +279,15 @@ function buildPathParameters(
     const allNumeric = numericValues.length === values.length && values.length > 0
     const allInteger = allNumeric && numericValues.every((n) => Number.isInteger(n))
 
+    const schema = allInteger ? { type: 'integer' } : allNumeric ? { type: 'number' } : { type: 'string' }
+    const observed: unknown[] = allNumeric ? numericValues : values
+
     params.push({
       name,
       location: 'path',
       required: true,
-      schema: allInteger ? { type: 'integer' } : allNumeric ? { type: 'number' } : { type: 'string' },
-      exampleValue: allInteger ? numericValues[0] : allNumeric ? numericValues[0] : values[0],
+      schema,
+      exampleValue: selectExample(schema, observed),
     })
   }
 
@@ -462,7 +466,7 @@ export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisRep
   const { samples, malformedCount } = extractSamples(har)
 
   // 3. Label samples
-  const labeled = labelSamples(samples, bundle.sourceUrl)
+  const labeled = labelSamples(samples, bundle.sourceUrl, { allowHosts: bundle.allowHosts })
 
   // 4. Filter for api-labeled samples
   const apiSamples = labeled.filter((s) => s.category === 'api').map((s) => s.sample)
@@ -489,7 +493,7 @@ export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisRep
     stateSnapshotDir: bundle.stateSnapshotDir,
     domHtmlPath: bundle.domHtmlPath,
   })
-  const authCandidates = buildAuthCandidates(captureData)
+  const { candidates: authCandidates, csrfOptions } = buildAuthCandidates(captureData)
 
   // 9. Get extraction signals from classify
   const classifyResult = classify(captureData)
@@ -512,6 +516,7 @@ export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisRep
     samples: labeled,
     clusters,
     authCandidates,
+    csrfOptions,
     extractionSignals,
     ws,
   }

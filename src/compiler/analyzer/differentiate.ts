@@ -1,5 +1,6 @@
 import type { JsonSchema } from '../../lib/openapi.js'
 import type { ClusteredEndpoint, ParameterDescriptor } from '../types.js'
+import { selectExample } from './example-select.js'
 
 function maybeNumber(value: string): number | string {
   if (!/^-?\d+(\.\d+)?$/.test(value)) {
@@ -59,27 +60,27 @@ export function differentiateParameters(endpoint: ClusteredEndpoint): ParameterD
 
     if (isArray) {
       const flat = typedValues.flat()
+      const itemSchema = inferPrimitiveSchema(flat)
+      const schema: JsonSchema = { type: 'array', items: itemSchema }
       descriptors.push({
         name,
         location: 'query',
         required,
-        schema: {
-          type: 'array',
-          items: inferPrimitiveSchema(flat),
-        },
-        exampleValue: typedValues[0],
+        schema,
+        exampleValue: selectExample(schema, typedValues),
       })
       continue
     }
 
     const primitiveValues = typedValues.map((values) => values[0]).filter((value): value is number | string => value !== undefined)
+    const schema = inferPrimitiveSchema(primitiveValues)
 
     descriptors.push({
       name,
       location: 'query',
       required,
-      schema: inferPrimitiveSchema(primitiveValues),
-      exampleValue: primitiveValues[0],
+      schema,
+      exampleValue: selectExample(schema, primitiveValues),
     })
   }
 

@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-03-26 (pipeline v2)
+> Last updated: 2026-03-27 (design gap fixes)
 
 ## Quick Start
 
@@ -85,8 +85,10 @@ src/
 │   │   ├── labeler.ts          #     Sample categorization (api/static/tracking/off_domain)
 │   │   ├── path-normalize.ts   #     Path template normalization
 │   │   ├── graphql-cluster.ts  #     GraphQL sub-clustering
-│   │   ├── auth-candidates.ts  #     Ranked auth bundling with evidence
-│   │   └── schema-v2.ts        #     Schema inference with enum/format controls
+│   │   ├── auth-candidates.ts  #     Ranked auth bundling with evidence + CSRF options
+│   │   ├── schema-v2.ts        #     Schema inference with enum/format controls
+│   │   ├── example-select.ts   #     Tiered example value selection with PII scrub
+│   │   └── classify.ts         #     Extraction signal detection (SSR, script_json, page_global)
 │   ├── curation/               #   Phase 3: apply-curation.ts, scrub.ts (PII)
 │   ├── generator/              #   Phase 4: generate-v2.ts (OpenAPI + AsyncAPI emission)
 │   └── ws-analyzer/            #   WS capture → classify → cluster → schema

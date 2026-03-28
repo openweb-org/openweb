@@ -1,7 +1,7 @@
 # Compiler Pipeline
 
 > Capture -> Analyze -> Curate -> Generate -> Verify: turning website observations into skill packages.
-> Last updated: 2026-03-26 (pipeline v2)
+> Last updated: 2026-03-27 (design gap fixes)
 
 ## Overview
 
@@ -43,8 +43,10 @@ HAR entries
     +-- GraphQL       Sub-cluster GraphQL endpoints by operationName/queryId/persistedHash
     +-- Differentiate Identify query params vs path params per cluster
     +-- Schema        Infer response JSON schemas with enum/format detection (schema-v2)
+    +-- Example       Select PII-safe example values (schema-derived > frequent observed > fallback)
     +-- Auth          Bundle ranked auth candidates with evidence and confidence scores
-    +-- Classify      Detect extraction signals (DOM/SSR patterns)
+    +-- CSRF          Surface all detected CSRF mechanisms (cookie_to_header, meta_tag)
+    +-- Classify      Detect extraction signals (SSR, script_json, page_global patterns)
     +-- WS Analyze    Cluster WS frames, classify channels, infer message schemas
     +-- Navigation    Group samples by page-level referer for context
 ```
@@ -55,18 +57,23 @@ HAR entries
 - `src/compiler/analyzer/graphql-cluster.ts` — GraphQL sub-clustering by discriminator
 - `src/compiler/analyzer/auth-candidates.ts` — ranked auth detection with evidence
 - `src/compiler/analyzer/schema-v2.ts` — schema inference with enum/format/size controls
+- `src/compiler/analyzer/example-select.ts` — tiered example value selection with PII scrub
+- `src/compiler/analyzer/classify.ts` — extraction signal detection (ssr_next_data, script_json, page_global)
 - `src/compiler/analyzer/analyze.ts` — orchestrator producing AnalysisReport
 
 **Labeler behavior (replaces v1 filter):**
 - Blocked hosts/paths loaded from `src/lib/config/*.json` (config files, not hardcoded)
 - Static content-types and file extensions classified as `static`
 - Off-domain requests classified as `off_domain` (not silently dropped)
+- Cross-domain API hosts included via `--allow-host` flag (e.g., `chatgpt.com` → `api.openai.com`)
 - All status codes pass through (4xx = auth signal, not rejected)
 - Every sample produces a `LabeledSample` — nothing is dropped
 
-**Auth candidate ranking:** `localStorage_jwt` (rank 1) > `exchange_chain` (rank 2) > `cookie_session` (rank 3). Each candidate bundles auth + CSRF + signing with confidence score and evidence trail.
+**Auth candidate ranking:** `localStorage_jwt` (rank 1) > `exchange_chain` (rank 2) > `cookie_session` (rank 3). Each candidate bundles auth + CSRF + signing with confidence score and evidence trail. All detected CSRF mechanisms also surfaced via `csrfOptions` on the report for agent override.
 
-**Output:** `AnalysisReport` — persisted as `analysis.json` (stripped) + `analysis-full.json`
+**Example value selection:** Tiered strategy replaces naive first-observed — schema-derived (enum/format/type) > most frequent observed value (PII-scrubbed) > generic fallback.
+
+**Output:** `AnalysisReport` — persisted as `analysis-summary.json` (no samples/navigation), `analysis.json` (stripped bodies), `analysis-full.json` (complete)
 
 ---
 
@@ -76,7 +83,8 @@ Transforms `AnalysisReport` + `CurationDecisionSet` into a `CuratedCompilePlan`.
 
 **What it does:**
 1. Selects auth candidate (top-ranked by default, or agent-specified)
-2. Excludes unwanted clusters
+2. Selects CSRF mechanism (top-ranked by default, or agent-specified via `csrfType`)
+3. Excludes unwanted clusters
 3. Applies operation overrides (operationId, summary, permission, replaySafety)
 4. Scrubs PII from example values (tokens, emails, phone numbers, cookies)
 5. Derives permission and replaySafety defaults per operation
@@ -134,6 +142,7 @@ For each safe_read operation:
     fail -> publicWorks=false
 
 unsafe_mutation operations -> skipped (never replayed)
+page-transport operations -> skipped with needs_browser reason (no browser in verify)
 ```
 
 **Constraints:**
@@ -170,10 +179,11 @@ All compile artifacts are written to `~/.openweb/compile/<site>/`:
 
 | File | Content | When |
 |------|---------|------|
+| `analysis-summary.json` | AnalysisReport without samples/navigation (agent-first) | Always |
 | `analysis.json` | AnalysisReport with response bodies stripped | Always |
 | `analysis-full.json` | Complete AnalysisReport with all data | Always |
 | `verify-report.json` | VerifyReport with per-attempt diagnostics | When verify runs |
-| `summary.txt` | One-line summary (ops, verified, auth status) | Always |
+| `summary.txt` | One-line summary: pass/skip(write)/skip(page)/fail breakdown | Always |
 
 ---
 
@@ -182,6 +192,9 @@ All compile artifacts are written to `~/.openweb/compile/<site>/`:
 ```bash
 # Scripted recording + compile
 pnpm dev compile <url> --script ./scripts/record-site.ts
+
+# Compile with cross-domain API support
+pnpm dev compile <url> --allow-host api.openai.com
 
 # Compile with auth verification (--probe connects to managed browser for cookies)
 pnpm dev compile <url> --script ./script.ts --probe
@@ -209,13 +222,13 @@ src/compiler/
 |   +-- labeler.ts          # Sample categorization (api/static/tracking/off_domain)
 |   +-- path-normalize.ts   # Structural + cross-sample path normalization
 |   +-- graphql-cluster.ts  # GraphQL sub-clustering by discriminator
-|   +-- auth-candidates.ts  # Ranked auth bundling with evidence
+|   +-- auth-candidates.ts  # Ranked auth bundling with evidence + CSRF options
 |   +-- schema-v2.ts        # Schema inference with enum/format/size controls
+|   +-- example-select.ts   # Tiered example value selection with PII scrub
 |   +-- cluster.ts          # Group requests by path template
-|   +-- filter.ts           # Legacy filter (domain/path filtering, used by labeler logic)
 |   +-- differentiate.ts    # Path params vs query params
 |   +-- annotate.ts         # operationId + summary generation
-|   +-- classify.ts         # L2 primitive detection (extraction signals)
+|   +-- classify.ts         # Extraction signal detection (ssr_next_data, script_json, page_global)
 |   +-- classify/           # Auth/CSRF/signing detection helpers
 +-- curation/               # Phase 3: Curate
 |   +-- apply-curation.ts   # AnalysisReport + decisions -> CuratedCompilePlan

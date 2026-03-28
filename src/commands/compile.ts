@@ -21,6 +21,7 @@ interface CompileArgs {
   readonly probe?: boolean
   readonly cdpEndpoint?: string
   readonly curation?: string
+  readonly allowHosts?: readonly string[]
 }
 
 interface CompileSiteOptions {
@@ -96,6 +97,7 @@ export async function compileSite(
       sourceUrl: args.url,
       captureDir: recordingDir,
       harPath: path.join(recordingDir, 'traffic.har'),
+      allowHosts: args.allowHosts,
     })
   } finally {
     if (!userProvidedDir) {
@@ -226,10 +228,16 @@ function buildSummaryV2(data: CompileReportV2Data): string {
   let verifyBreakdown: string
   if (verifyReport) {
     const pass = verifyReport.results.filter((r) => r.overall === 'pass').length
-    const skipped = verifyReport.results.filter((r) => r.overall === 'skipped').length
+    const skippedWrite = verifyReport.results.filter(
+      (r) => r.overall === 'skipped' && !r.attempts.some((a) => a.reason === 'needs_browser'),
+    ).length
+    const skippedPage = verifyReport.results.filter(
+      (r) => r.overall === 'skipped' && r.attempts.some((a) => a.reason === 'needs_browser'),
+    ).length
     const fail = verifyReport.results.filter((r) => r.overall === 'fail').length
     const segments = [`${pass} pass`]
-    if (skipped > 0) segments.push(`${skipped} skipped (write)`)
+    if (skippedWrite > 0) segments.push(`${skippedWrite} skipped (write)`)
+    if (skippedPage > 0) segments.push(`${skippedPage} skipped (page)`)
     if (fail > 0) segments.push(`${fail} fail (see verify-report.json)`)
     verifyBreakdown = segments.join(', ')
   } else {

@@ -31,15 +31,22 @@ function selectAuthCandidate(
 
 function buildSiteContext(
   candidate: AuthCandidate | undefined,
-  selectedId?: string,
+  report: AnalysisReport,
+  decisions: CurationDecisionSet,
 ): CuratedSiteContext {
   if (!candidate) return { transport: 'node' }
+
+  // If csrfType is explicitly set, pick from report.csrfOptions instead of auto-picked
+  const csrf = decisions.csrfType
+    ? report.csrfOptions.find((o) => o.type === decisions.csrfType) ?? candidate.csrf
+    : candidate.csrf
+
   return {
     transport: candidate.transport,
     auth: candidate.auth,
-    csrf: candidate.csrf,
+    csrf,
     signing: candidate.signing,
-    selectedAuthCandidateId: selectedId ?? candidate.id,
+    selectedAuthCandidateId: decisions.selectedAuthCandidateId ?? candidate.id,
   }
 }
 
@@ -146,7 +153,7 @@ export function applyCuration(
     report.authCandidates,
     decisions.selectedAuthCandidateId,
   )
-  const context = buildSiteContext(candidate, decisions.selectedAuthCandidateId)
+  const context = buildSiteContext(candidate, report, decisions)
 
   const operations = report.clusters
     .filter((c) => !excluded.has(c.id))

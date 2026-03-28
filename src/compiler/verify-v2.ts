@@ -25,6 +25,7 @@ export interface VerifyOperationInput {
   readonly replaySafety: 'safe_read' | 'unsafe_mutation'
   readonly requestBody?: unknown
   readonly requestBodyContentType?: string
+  readonly transport?: 'node' | 'page'
 }
 
 export interface VerifyInput {
@@ -194,6 +195,17 @@ async function verifyOne(
       authWorks: null,
       publicWorks: null,
       attempts: [],
+    }
+  }
+
+  // Skip page-transport ops — no browser available in verify
+  if (op.transport === 'page') {
+    return {
+      operationId: op.operationId,
+      overall: 'skipped',
+      authWorks: null,
+      publicWorks: null,
+      attempts: [{ mode: 'without_auth', transport: 'node', durationMs: 0, reason: 'needs_browser' }],
     }
   }
 

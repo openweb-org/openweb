@@ -294,6 +294,17 @@ function buildCsrf(
   return undefined
 }
 
+/** Return all detected CSRF primitives, ordered by preference (cookie_to_header first). */
+function buildCsrfOptions(
+  cookieToHeader: CookieToHeaderResult | undefined,
+  metaTag: MetaTagResult | undefined,
+): CsrfPrimitive[] {
+  const options: CsrfPrimitive[] = []
+  if (cookieToHeader) options.push({ type: 'cookie_to_header', cookie: cookieToHeader.cookie, header: cookieToHeader.header })
+  if (metaTag) options.push({ type: 'meta_tag', name: metaTag.name, header: metaTag.header })
+  return options
+}
+
 function buildSigning(sapisidhash: SapisidhashResult | undefined): SigningPrimitive | undefined {
   if (!sapisidhash) return undefined
   return { type: 'sapisidhash', origin: sapisidhash.origin, inject: { header: 'Authorization', prefix: 'SAPISIDHASH ' } }
@@ -304,6 +315,11 @@ function makeIdGenerator(): () => string {
   return () => `auth-${++counter}`
 }
 
+export interface AuthCandidatesResult {
+  readonly candidates: AuthCandidate[]
+  readonly csrfOptions: CsrfPrimitive[]
+}
+
 /**
  * Build ranked auth candidates with evidence from capture data.
  *
@@ -311,7 +327,7 @@ function makeIdGenerator(): () => string {
  * Priority: localStorage_jwt > exchange_chain > cookie_session.
  * Always returns at least one candidate (confidence 0 "none" if nothing detected).
  */
-export function buildAuthCandidates(data: CaptureData): AuthCandidate[] {
+export function buildAuthCandidates(data: CaptureData): AuthCandidatesResult {
   const nextId = makeIdGenerator()
   const candidates: AuthCandidate[] = []
 
@@ -324,6 +340,7 @@ export function buildAuthCandidates(data: CaptureData): AuthCandidate[] {
   const sapisidhash = detectSapisidhashEvidence(data)
 
   const csrf = buildCsrf(cookieToHeader, metaTag)
+  const csrfOptions = buildCsrfOptions(cookieToHeader, metaTag)
   const signing = buildSigning(sapisidhash)
 
   // Build evidence helpers
@@ -438,5 +455,5 @@ export function buildAuthCandidates(data: CaptureData): AuthCandidate[] {
     })
   }
 
-  return candidates
+  return { candidates, csrfOptions }
 }
