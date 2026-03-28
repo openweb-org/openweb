@@ -1,15 +1,16 @@
-# Compile Process
+# Compile Reference
 
-How to review and curate a compiled site package into a correct, production-ready spec.
+How to review, curate, and troubleshoot a compiled site package.
 
-**Responsibility:** Correctness -- is each operation spec correct, properly named,
-and verified? Coverage is `discover.md`'s job.
+Self-contained — use during `discover.md` Steps 5-7 (curate, verify, diagnose),
+or standalone when reviewing an existing site package.
 
 ## When to Use
 
-- After discovery -- reviewing the generated package and producing the final site spec
+- During discovery Step 5 — curating the auto-generated spec
+- During discovery Step 7 — diagnosing and fixing runtime failures
+- Standalone — reviewing or editing an existing site package
 - Recompiling an existing site with new traffic
-- Reviewing and editing an existing site package
 
 ## What Compile Already Did
 

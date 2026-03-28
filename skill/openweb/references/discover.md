@@ -2,8 +2,10 @@
 
 How to add a new site or expand an existing site's operation coverage.
 
-**Responsibility:** Coverage -- are all target intents captured in browser traffic?
-Correctness (auth, naming, spec quality) is `compile.md`'s job.
+**Responsibility:** Full journey — from target intents to working operations.
+Coverage (are target intents in the traffic?) AND correctness (do ops return
+real data at runtime?). `compile.md` is the reference guide for spec curation
+and troubleshooting — used during Steps 5-7 below.
 
 ## When to Use
 
@@ -71,17 +73,25 @@ Verify skips write operations by default (`replaySafety: unsafe_mutation`).
   Step 1: Frame target intents
        |
        v
-  Step 2: Capture  <-----------+
-       |                        |
-       v                        |
-  Step 3: Compile (produces     |
-          analysis + package)   |
-       |                        |
-       v                        |
-  Step 4: Check coverage -------+  (missing intents? re-capture)
+  Step 2: Capture  <------------------------------------+
+       |                                                 |
+       v                                                 |
+  Step 3: Compile                                        |
+       |                                                 |
+       v                                                 |
+  Step 4: Check coverage -------(missing intents?)-------+
        |
-       v  (coverage complete)
-  Step 5: Continue to compile review, or hand off
+       v  (clusters exist for all intents)
+  Step 5: Curate (review auth, fix spec — see compile.md)
+       |
+       v
+  Step 6: Runtime verify  <---+
+       |                       |
+       v                       |
+  Step 7: Diagnose + fix -----+  (fix spec → re-verify,
+       |                          or re-capture → Step 2)
+       v  (all intents return real data)
+  Step 8: Install site package
 ```
 
 ### Step 1: Frame the Target
@@ -153,8 +163,8 @@ generate, and verify. It produces:
 
 The auto-curation accepts all clusters, picks the top-ranked auth candidate,
 and uses the analyzer's suggested operation names (snake_case by default, e.g.,
-`list_users`, `get_product`). The compile review (Step 5 or `compile.md`) is
-where you refine these defaults.
+`list_users`, `get_product`). Step 5 (curate) is where you refine these defaults — see `compile.md`
+for detailed review guidance.
 
 ### Step 4: Check Coverage
 
@@ -232,45 +242,108 @@ If your target intent's data is in SSR HTML rather than API calls, this confirms
 **Note:** The analyzer only auto-detects these two patterns. Other patterns
 (`page_global`, `html_selector`, `__NUXT__`) require manual inspection during
 compile review. If you saw the data in SSR during browsing but no extraction
-signal appears, note this for the compile agent.
+signal appears, note this for Step 5 (curate).
 
-### Step 5: Continue or Hand Off
+### Step 5: Curate
 
-**If you are doing both discover and compile** (same agent), continue directly
-to `references/compile.md` Step 1. You already have everything you need.
+Review the auto-generated spec and fix what auto-curation got wrong.
+`compile.md` has detailed guidance for each sub-step — this is the quick checklist.
 
-**If handing off to a separate compile agent**, provide all of the following.
-Missing context here directly causes bad curation decisions.
+#### 5a. Cross-reference auth with knowledge files
 
-1. **Site URL** -- the exact URL passed to `openweb compile`
-2. **Capture directory path** -- in case re-compile is needed
-3. **Report directory** -- `~/.openweb/compile/<site>/`
-4. **Target intents** -- the checklist from DOC.md with coverage status
-   (which intents map to which clusters, which are missing)
-5. **Observations** -- critical context from browsing:
-   - Did the site require login? (If yes, compile agent must ensure auth is configured)
-   - Did you see CAPTCHAs or bot detection? (Affects transport choice)
-   - Did you notice the API was on a different domain? (Compile agent should check)
-   - Did data come from SSR rather than XHR? (Compile agent may need extraction)
-   - Any GraphQL patterns (single /graphql endpoint)? (Compile agent should check sub-clustering)
-   - Were there write operations captured? (Compile agent needs safety classification)
-6. **Auth expectation** -- what auth type you expect based on your knowledge
-   file research (see "Before You Start"). This lets the compile agent validate the auto-detected
-   auth against your prior.
+Compare auto-detected `authCandidates[0]` against your expectation from
+`references/knowledge/auth-patterns.md`. Common mismatches:
+- CSRF cookie/header names wrong (e.g., client hint header instead of real CSRF)
+- Auth confidence low because denominator includes off-domain traffic
+- httpOnly cookies excluded from CSRF candidate pool
 
-Use this template for structured handoff notes (paste into the handoff message):
+If auth or CSRF looks wrong, fix in `openapi.yaml` `servers[0].x-openweb`.
+See `compile.md` Steps 2a and 3c for details.
 
-```markdown
-## Handoff Notes
-- **Target intents:** <what the user asked to discover>
-- **Login:** required / not required; performed / not performed
-- **Bot detection:** none / suspected (evidence) / confirmed (evidence)
-- **Auth type:** cookie_session / localStorage_jwt / exchange_chain / unknown
-- **Cross-domain API:** <domains to pass via --allow-host>
-- **Observations:** <anything unusual>
+#### 5b. Remove noise operations
+
+Delete tracking, analytics, CDN, 4xx-only, and polling clusters.
+Keep only operations that map to your target intents (plus useful supporting ops).
+See `compile.md` Step 3a for the noise checklist.
+
+#### 5c. Rename operations and fix summaries
+
+Replace auto-generated snake_case names with descriptive camelCase names.
+See `compile.md` Step 3b.
+
+#### 5d. Set transport
+
+If bot detection is suspected (status 999, heavy fingerprinting, PerimeterX/Akamai
+cookies), switch to `page` transport. See `compile.md` "Transport Selection".
+
+#### 5e. Check for missing required headers
+
+Some sites need extra headers beyond auth/CSRF (e.g., `x-restli-protocol-version`
+for LinkedIn). Inspect captured request headers for consistent custom headers
+that the pipeline didn't auto-configure.
+
+### Step 6: Runtime Verify
+
+**This is the exit gate.** Compile-time verify (`verify-report.json`) only checks
+HTTP sanity. Runtime verify proves an agent can get usable data.
+
+For each target intent, exec the best operation:
+
+```bash
+openweb <site> exec <operation> '{"param": "value"}'
 ```
 
-## Fill Gaps (iterate Steps 2-4)
+**Pass criteria per intent:**
+- HTTP 2xx status (not 403, 401, 999)
+- Response is JSON (not HTML)
+- Response body contains real data (not empty array, not error object)
+- Data matches what you see on the website
+
+If all target intents pass → continue to Step 8 (install).
+If any fail → continue to Step 7 (diagnose).
+
+**Tip:** Also run `openweb verify <site>` for a batch sanity check across all
+operations. But the per-intent `exec` is what matters for exit.
+
+### Step 7: Diagnose + Fix
+
+When runtime verify fails, diagnose the root cause and fix it. Do not re-capture
+unless the problem is missing traffic — most failures are spec-level fixes.
+
+#### Diagnosis by HTTP response
+
+| Response | Likely cause | Fix |
+|----------|-------------|-----|
+| 403 | Wrong CSRF config, missing headers, expired session | Check CSRF cookie/header names. Check if CSRF scope excludes GET. Check for extra required headers. If cookies missing: `openweb login <site>` |
+| 401 | Session expired | `openweb login <site>`, restart browser |
+| 999 / bot block | Node transport hitting bot detection | Switch to `page` transport |
+| 200 HTML (not JSON) | SSR page endpoint, not API | Remove op and use API equivalent, or add extraction config |
+| 404 | Wrong path template | Fix path parameter normalization in spec |
+| 400 | Bad param examples or missing required params | Update `exampleValue` fields in spec |
+| 200 empty/wrong data | Wrong query variables or response schema | Check captured request params vs what you're sending |
+| Timeout / hang | Stale token cache, browser not running | `openweb browser restart`, clear token cache |
+| Redirect loop | Auth-gated endpoint, not logged in | Log in, or remove endpoint |
+
+#### Fix → re-verify loop
+
+After fixing the spec, go back to Step 6. If the fix requires re-compilation
+(e.g., wrong API domain, missing traffic), go back to Step 2.
+
+See `compile.md` for detailed troubleshooting:
+- Auth/CSRF fixes: Steps 2a, 3c, and "Common False Positives"
+- Transport selection: "Execution Model Decision"
+- Cluster issues: Step 2b and "Common False Negatives"
+
+### Step 8: Install
+
+When all target intents return real data via `exec`, install the package.
+Follow `compile.md` Step 5 for the full install checklist:
+- Copy spec files to `src/sites/<site>/`
+- Write DOC.md and PROGRESS.md
+- Build and test (`pnpm build && pnpm test`)
+- Update knowledge files if you learned something generalizable
+
+## Fill Gaps (iterate Steps 2-7)
 
 If target operations are missing from the analysis:
 
@@ -289,7 +362,7 @@ If target operations are missing from the analysis:
   to help path normalization (e.g., `/search/shoes` and `/search/hats`
   normalize to `/search/{query}`).
 
-Repeat Steps 2-4 until every target intent has a credible data source.
+Repeat Steps 2-7 until every target intent returns real data via `exec`.
 
 ## Incremental Discovery (Existing Sites)
 
@@ -299,7 +372,7 @@ When expanding an existing site package:
 2. Identify missing intents (from user request or archetype comparison)
 3. Enter at Step 2 with targeted capture for only the gaps
 4. After compile, verify the new intents appear as clusters
-5. Continue to compile review to merge new operations into the existing spec
+5. Continue to Step 5 (curate) to merge new operations into the existing spec
 6. Update DOC.md and PROGRESS.md
 
 ## Multi-Worker Browser Sharing
@@ -316,9 +389,10 @@ Multiple workers can share one Chrome browser on the same CDP port:
 
 ## Related References
 
-- `references/compile.md` -- correctness review and spec curation
+- `references/compile.md` -- spec curation, auth troubleshooting, transport selection (self-contained reference)
 - `references/site-doc.md` -- DOC.md / PROGRESS.md template
 - `references/update-knowledge.md` -- when to write cross-site patterns
 - `references/knowledge/archetypes/index.md` -- site type expectations
 - `references/knowledge/auth-patterns.md` -- auth primitive detection
 - `references/knowledge/bot-detection-patterns.md` -- anti-bot measures
+- `references/knowledge/troubleshooting-patterns.md` -- failure diagnosis patterns
