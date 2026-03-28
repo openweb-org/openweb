@@ -79,6 +79,7 @@ flowchart TD
     S6{"Step 6: Runtime verify<br/><i>agent runs exec, checks data</i>"}
     S7["Step 7: Diagnose + fix<br/><i>agent-only</i>"]
     S8["Step 8: Install<br/><i>agent + code</i>"]
+    S9["Step 9: Pipeline improvement report<br/><i>agent-only, dev mode optional</i>"]
 
     S1 --> S2
     S2 --> S3
@@ -90,6 +91,7 @@ flowchart TD
     S6 -->|"failures"| S7
     S7 -->|"fix spec → re-verify"| S6
     S7 -->|"re-capture needed"| S2
+    S8 -.->|"dev mode"| S9
 
     style S1 fill:#e1f5fe
     style S2 fill:#e1f5fe
@@ -99,9 +101,10 @@ flowchart TD
     style S6 fill:#fff3e0
     style S7 fill:#e1f5fe
     style S8 fill:#e1f5fe
+    style S9 fill:#f3e5f5
 ```
 
-**Legend:** 🟦 blue = agent-driven | 🟩 green = code-only | 🟧 orange = agent reviews code output
+**Legend:** 🟦 blue = agent-driven | 🟩 green = code-only | 🟧 orange = agent reviews code output | 🟪 purple = dev mode optional
 
 ### Step 1: Frame the Target
 
@@ -351,6 +354,45 @@ Follow `compile.md` Step 5 for the full install checklist:
 - Write DOC.md and PROGRESS.md
 - Build and test (`pnpm build && pnpm test`)
 - Update knowledge files if you learned something generalizable
+
+### Step 9 (dev mode, optional): Pipeline Improvement Report
+
+If you hit friction during Steps 5-7 that wasn't site-specific — a rule too
+tight, a heuristic too loose, a doc gap that wasted a cycle — write it up.
+
+Create `src/sites/<site>/pipeline-gaps.md`. The goal is NOT to overfit to this
+site, but to surface systematic issues that make ALL site discoveries less
+efficient.
+
+**What to cover:**
+
+| Category | What to write |
+|----------|--------------|
+| **Doc gaps** | Missing guidance in discover.md or compile.md that caused you to waste a cycle. What should the doc have told you? |
+| **Code gaps** | Pipeline heuristics that produced wrong results (e.g., CSRF auto-detection picked wrong cookie, transport always defaults to node). Include file:line references. |
+| **Rules too tight** | Filters or gates that rejected valid data (e.g., httpOnly cookies excluded from CSRF candidates, off-domain APIs silently dropped). |
+| **Rules too loose** | Heuristics that let noise through (e.g., tracking cookies scored as auth, client hint headers matched as CSRF). |
+| **Missing automation** | Manual steps that should be automated (e.g., no bot-detection signal → transport recommendation, no target-intent filtering during auto-curation). |
+
+**Format per issue:**
+
+```markdown
+## <Short title>
+
+**Problem:** What happened during this discovery.
+**Root cause:** Why the pipeline/doc behaved this way (file:line if code).
+**Suggested fix:** What would make this better for all sites (not just this one).
+```
+
+**Examples from LinkedIn discovery:**
+- CSRF detection picked `CH-prefers-color-scheme` → code gap in `auth-candidates.ts`
+- Transport always `node` even with status 999 → missing bot-detection signal in `classify.ts`
+- Auth confidence 0.40 because denominator includes off-domain traffic → formula issue
+- No doc guidance on CSRF scope (GET vs mutations only) → doc gap in compile.md
+
+**Not in scope:** Site-specific workarounds, one-off parameter fixes, or issues
+already resolved during Steps 5-7. If you fixed it in the spec, it's done.
+This report is for upstream improvements only.
 
 ## Fill Gaps (iterate Steps 2-7)
 
