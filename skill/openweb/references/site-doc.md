@@ -81,7 +81,7 @@ How the site's API works — the non-obvious parts:
 - Dynamic fields that cause verify DRIFT?
 ```
 
-**Required sections:** Overview, Quick Start, Operations. The rest are optional — if a section has nothing interesting, skip it. The point is to capture **what's non-obvious** about this site — things the next agent (or human) needs to know.
+**Required sections:** Overview, Quick Start, Operations, Auth, Transport, Known Issues. The rest (API Architecture, Extraction) are optional — include them when they capture something non-obvious. If a required section has nothing interesting (e.g., Auth for a public API), a one-liner is enough: `No auth required.`
 
 ---
 

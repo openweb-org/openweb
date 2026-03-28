@@ -60,7 +60,7 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 
 ### Rate Limiting (429)
 
-- **Symptoms:** `ERROR` on verify with `429` status, especially when running `--all`
+- **Symptoms:** `FAIL` on verify with `429` status, especially when running `--all`
 - **Detection signals:** `429 Too Many Requests`, `Retry-After` header
 - **Action:** add delays between operations. Check if the site documents rate limits. Consider reducing verify frequency.
 

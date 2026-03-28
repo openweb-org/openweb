@@ -26,13 +26,15 @@ openweb <site> <op> --json       # {id, method, path, permission, parameters}
 openweb <site> <op> --example    # real example params from fixtures
 ```
 
-### `<site> <operation> '<params>'` — Execute
+### `<site> exec <operation> '<params>'` — Execute
 
 ```bash
-openweb <site> <op> '{"key":"value"}'
-openweb <site> <op> '{}' --cdp-endpoint http://localhost:9222
-openweb <site> <op> '{}' --output file
+openweb <site> exec <op> '{"key":"value"}'
+openweb <site> exec <op> '{}' --cdp-endpoint http://localhost:9222
+openweb <site> exec <op> '{}' --output file
 ```
+
+**Shorthand:** `openweb <site> <op> '{"key":"value"}'` (passing a JSON argument as the third positional arg triggers exec automatically).
 
 - **stdout**: JSON result (success)
 - **stderr**: JSON error with `failureClass` (failure)
@@ -74,20 +76,33 @@ Records all browser traffic for later compilation. One capture session at a time
 ## Compile
 
 ```bash
-openweb compile <site-url> [--probe] [--capture-dir <dir>]
+openweb compile <site-url> --capture-dir <dir>
+openweb compile <site-url> --script ./record.ts
+openweb compile <site-url> --capture-dir <dir> --probe
+openweb compile <site-url> --capture-dir <dir> --curation <file>
 ```
 
-Transforms captured traffic into a site package. `--probe` tests endpoints during compile. `--capture-dir` loads from an existing capture bundle instead of launching a new recording.
+Transforms captured traffic into a site package. Requires `--capture-dir` (manual capture) or `--script` (scripted recording).
+
+| Flag | Purpose |
+|------|---------|
+| `--capture-dir <dir>` | Load from an existing capture bundle |
+| `--script <file>` | Use a scripted recording workflow |
+| `--probe` | Test endpoints with browser cookies during compile |
+| `--curation <file>` | Apply manual curation overrides (CSRF type, excluded ops, etc.) |
 
 ## Verify
 
 ```bash
-openweb verify <site>            # single site: PASS/DRIFT/AUTH_FAIL/ERROR per op
-openweb verify --all             # all sites sequentially
-openweb verify --all --report    # JSON drift report
+openweb verify <site>                        # single site
+openweb verify --all                         # all sites sequentially
+openweb verify --all --report json           # machine-readable drift report
+openweb verify --all --report markdown       # reviewable markdown report
 ```
 
-Status vocabulary: `PASS` | `DRIFT` | `AUTH_FAIL` | `ERROR`
+Site-level status vocabulary: `PASS` | `DRIFT` | `FAIL` | `auth_expired`
+
+`--report` is only valid with `--all`.
 
 ## Registry
 

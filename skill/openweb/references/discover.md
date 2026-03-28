@@ -76,7 +76,7 @@ be cautious. Mark each write in DOC.md with a safety level.
 | CAUTION | send message (to self), post (then delete) | Only in safe contexts |
 | NEVER | purchase, delete account, send to others | Do not trigger during discovery |
 
-Verify skips write operations by default (`replaySafety: unsafe_mutation`).
+Verify skips write operations by default (internally `replaySafety: unsafe_mutation`).
 
 ## Process
 
@@ -84,9 +84,9 @@ Verify skips write operations by default (`replaySafety: unsafe_mutation`).
 flowchart TD
     S1["Step 1: Frame target intents<br/><i>agent-only</i>"]
     S2["Step 2: Capture<br/><i>agent browses, code records</i>"]
-    S3["Step 3: Compile<br/><i>code-only</i>"]
+    S3["Step 3: Run the Compiler<br/><i>code-only</i>"]
     S4{"Step 4: Check coverage<br/><i>agent reviews code output</i>"}
-    S5["Step 5: Compile, Curate & Verify<br/><i>agent + code (follow compile.md)</i>"]
+    S5["Step 5: Curate &amp; Verify<br/><i>agent + code (follow compile.md)</i>"]
     S6["Step 6: Install<br/><i>agent + code</i>"]
     S7["Step 7: Pipeline improvement report<br/><i>agent-only, dev mode optional</i>"]
 
@@ -94,7 +94,7 @@ flowchart TD
     S2 --> S3
     S3 --> S4
     S4 -->|"missing intents"| S2
-    S4 -->|"clusters exist"| S5
+    S4 -->|"all target intents mapped"| S5
     S5 -->|"all intents work"| S6
     S5 -->|"need more traffic"| S2
     S6 -.->|"dev mode"| S7
@@ -187,7 +187,7 @@ openweb capture stop
 The capture directory (default `./capture/`) now contains `traffic.har`,
 `state_snapshots/`, and optionally `websocket_frames.jsonl`.
 
-### Step 3: Compile
+### Step 3: Run the Compiler
 
 Run the compile command on the captured traffic:
 
@@ -271,30 +271,58 @@ features in the UI.
 
 #### 4c. Check auth candidates (brief)
 
-Glance at `authCandidates` -- the top candidate (lowest `rank`) is what
-auto-curation selected. Note the `auth.type` and `confidence`. You will
-confirm or override this during compile review.
+Note the `authCandidates` top candidate's `auth.type` and `confidence`. You will
+confirm or override this during compile review — see compile.md Step 2a for
+detailed auth analysis.
 
-If `authCandidates` has only one entry with `confidence: 0` and no `auth`,
-the analyzer found no auth. This is expected for public APIs but a red flag
-for sites that should require login.
+If `authCandidates` is empty or has only `confidence: 0` entries, no auth was
+detected. Expected for public APIs; a red flag for sites that require login.
 
-#### 4d. Check extraction signals (if relevant)
+#### 4d. Check extraction signals (brief)
 
-`extractionSignals` lists detected SSR data sources:
-- `type: "ssr_next_data"` -- Next.js `__NEXT_DATA__` tag found
-- `type: "script_json"` -- `<script type="application/json">` tags found
-
+Note whether `extractionSignals` contains entries (`ssr_next_data`, `script_json`).
 If your target intent's data is in SSR HTML rather than API calls, this confirms it.
 
-**Note:** The analyzer only auto-detects these two patterns. Other patterns
-(`page_global`, `html_selector`, `__NUXT__`) require manual inspection during
-compile review. If you saw the data in SSR during browsing but no extraction
-signal appears, note this for Step 5.
+For detailed extraction analysis, see compile.md Step 2c.
 
-### Step 5: Compile, Curate & Verify
+#### 4e. When to stop
 
-Run the compile pipeline and iterate until target intents work at runtime.
+> **When to stop iterating:**
+> - After 2 capture iterations with no new clusters for a target intent, the
+>   intent may be infeasible with the current pipeline.
+> - If the site is flagged as BLOCKED in the archetype profile, stop immediately
+>   and tell the user.
+> - If bot detection blocks all transports (node returns 403, page returns
+>   challenge pages), document the blocker in DOC.md Known Issues and tell
+>   the user which intents could not be fulfilled.
+
+#### 4f. Fill gaps (if coverage is incomplete)
+
+If target operations are missing from the analysis:
+
+- **No API calls for a feature?** Check if data comes from SSR. In the browser,
+  view page source or use `page.evaluate(() => document.querySelector('#__NEXT_DATA__')?.textContent)`
+  to check for embedded JSON.
+- **API calls on a different domain?** Check `summary.byCategory.off_domain`.
+  Re-compile with the API domain as the site URL.
+- **Login required?** Open the target URL in the managed browser, log in there,
+  then re-capture with authenticated browsing. For net-new sites, do not use
+  `openweb login <site>` -- that command requires an existing site package.
+- **GraphQL single endpoint?** Try different queries in the UI -- the analyzer
+  needs varied `operationName` or `queryId` values to sub-cluster correctly.
+- **Lazy loading?** Scroll down, click "load more", wait for content to appear.
+- **Different search terms** produce different API paths? Capture multiple searches
+  to help path normalization (e.g., `/search/shoes` and `/search/hats`
+  normalize to `/search/{query}`).
+
+Repeat Steps 2-5 until every target intent returns real data via `exec`.
+
+### Step 5: Curate & Verify (follow compile.md)
+
+Review and curate the compiled package until target intents work at runtime.
+
+**You already compiled in Step 3.** This step uses compile.md as a
+review/curation reference, not a second compile run.
 
 **Follow `compile.md` for this entire step.** It covers:
 - How to read analysis.json (auth candidates, CSRF options, clusters)
@@ -311,63 +339,11 @@ wrong API domain), return to Step 2 (Capture).
 
 ### Step 6: Install
 
-When all target intents return real data via `exec`, install the package.
+Follow **compile.md Step 5 (Install the Site Package)** for the full install
+process: copy spec files, merge with existing package, write DOC.md per
+`references/site-doc.md`, write PROGRESS.md, build and test, update knowledge.
 
-#### 6a. Copy spec files
-
-```bash
-mkdir -p src/sites/<site>
-cp ~/.openweb/sites/<site>/openapi.yaml src/sites/<site>/
-cp ~/.openweb/sites/<site>/manifest.json src/sites/<site>/
-# asyncapi.yaml only if WS operations present
-# examples/ directory
-```
-
-If the site already has a package, merge carefully — do not lose existing
-adapter files, DOC.md, or PROGRESS.md.
-
-#### 6b. Write DOC.md
-
-Create or update `src/sites/<site>/DOC.md` per `references/site-doc.md`.
-This is the SOTA memory for the site — the next agent reads this instead
-of re-discovering everything.
-
-Required sections:
-- **Operations table** — map each operation to a target intent
-- **Auth** — type, CSRF config, any non-obvious details (e.g., CSRF on GETs)
-- **Transport** — node or page, and why
-- **Known Issues** — bot detection, rate limits, drift-causing fields
-
-#### 6c. Write PROGRESS.md
-
-Append to `src/sites/<site>/PROGRESS.md` per `references/site-doc.md`:
-
-```markdown
-## YYYY-MM-DD: Initial compile
-
-**What changed:**
-- Compiled N operations for M target intents
-- Auth: <type>, Transport: <type>
-
-**Why:**
-- <user request or coverage goal>
-
-**Verification:** all N target intents return real data via exec
-**Commit:** <short hash>
-```
-
-#### 6d. Build and test
-
-```bash
-pnpm build && pnpm test
-openweb sites          # should list the new site
-openweb <site>         # should show operations
-```
-
-#### 6e. Update knowledge (if applicable)
-
-If you learned something generalizable during this discovery, write it to
-`references/knowledge/` per `references/update-knowledge.md`.
+Then continue to Step 7.
 
 ### Step 7 (dev mode, optional): Pipeline Improvement Report
 
@@ -407,27 +383,6 @@ efficient.
 **Not in scope:** Site-specific workarounds, one-off parameter fixes, or issues
 already resolved during Step 5. If you fixed it in the spec, it's done.
 This report is for upstream improvements only.
-
-## Fill Gaps (iterate Steps 2-5)
-
-If target operations are missing from the analysis:
-
-- **No API calls for a feature?** Check if data comes from SSR. In the browser,
-  view page source or use `page.evaluate(() => document.querySelector('#__NEXT_DATA__')?.textContent)`
-  to check for embedded JSON.
-- **API calls on a different domain?** Check `summary.byCategory.off_domain`.
-  Re-compile with the API domain as the site URL.
-- **Login required?** Open the target URL in the managed browser, log in there,
-  then re-capture with authenticated browsing. For net-new sites, do not use
-  `openweb login <site>` -- that command requires an existing site package.
-- **GraphQL single endpoint?** Try different queries in the UI -- the analyzer
-  needs varied `operationName` or `queryId` values to sub-cluster correctly.
-- **Lazy loading?** Scroll down, click "load more", wait for content to appear.
-- **Different search terms** produce different API paths? Capture multiple searches
-  to help path normalization (e.g., `/search/shoes` and `/search/hats`
-  normalize to `/search/{query}`).
-
-Repeat Steps 2-5 until every target intent returns real data via `exec`.
 
 ## Incremental Discovery (Existing Sites)
 

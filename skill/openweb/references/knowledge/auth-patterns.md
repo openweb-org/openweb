@@ -4,6 +4,11 @@ Guide to authentication primitives detected by `classify.ts`. Organized by primi
 
 ## Routing Table
 
+**Note:** Archetype docs and DOC.md files may use high-level auth labels (e.g.,
+`oauth2`, `bearer_token`) that map to one of the primitives below. Example:
+`oauth2` often manifests as `exchange_chain`, `localStorage_jwt`, or
+`sessionStorage_msal` in captured browser traffic.
+
 | Primitive | Category | Quick Signal |
 |---|---|---|
 | cookie_session | Auth | Session cookies correlated across requests |

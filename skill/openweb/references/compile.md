@@ -151,11 +151,14 @@ How to identify the real CSRF:
 - Look for cookies named `JSESSIONID`, `csrftoken`, `_csrf`
 - Real CSRF tokens are long random strings (>10 chars), not short words
 
-To override: re-compile with `--curation` specifying `csrfType`:
+To override: create a curation file and re-compile:
 ```bash
 echo '{"csrfType": "cookie_to_header"}' > curation.json
-# Then manually edit the generated spec's csrf section if needed
+openweb compile <site-url> --capture-dir <dir> --curation curation.json
 ```
+
+If re-compiling is not needed, manually edit the generated spec's `csrf` section
+in `openapi.yaml` directly (see Step 3c).
 
 #### 2b. Clusters
 
@@ -200,7 +203,10 @@ apply these edits to the generated spec in Step 3.
 - Telemetry/logging: paths or names containing `collector`, `log`, `batch`,
   `telemetry`, `apm`, `tracking`, `zlab`, `commercial`, `impression`, `feedback`, `popup`
 - Internal framework: `rsc-action`, `flagship-web`, `_next` endpoints
-- POST-to-void: POST endpoints returning empty or 204 (logging, not user actions)
+- POST-to-void: POST endpoints returning empty or 204 that are clearly
+  telemetry/logging (e.g., `/collect`, `/beacon`, `/analytics`). **Exception:**
+  user-facing mutations (like, follow, bookmark, add-to-cart) often return
+  204/empty on success — do NOT delete these. Apply the write-op quality bar below.
 - 4xx-only: clusters where all responseVariants are 4xx status codes
 - Unnamed generics: operationId is just `get` or `create` with no noun
 
@@ -352,19 +358,21 @@ servers:
 Refer to `references/knowledge/auth-patterns.md` for the exact structure
 of each auth primitive type.
 
-#### 3d. Set Permissions and Replay Safety
+#### 3d. Set Permissions
 
-For each operation, check `x-openweb.permission` and `x-openweb.risk_tier`:
-- GET/HEAD -> `permission: read`, `risk_tier: safe`
-- GraphQL queries -> `permission: read`, `risk_tier: safe`
-- POST/PUT/PATCH (mutations) -> `permission: write`, `risk_tier: unsafe`
-- DELETE -> `permission: delete`, `risk_tier: unsafe`
-- GraphQL mutations -> `permission: write`, `risk_tier: unsafe`
+For each operation, check `x-openweb.permission`:
+- GET/HEAD → `permission: read`
+- GraphQL queries (even via POST) → `permission: read`
+- POST/PUT/PATCH (mutations) → `permission: write`
+- DELETE → `permission: delete`
+- GraphQL mutations → `permission: write`
 
-Auto-curation defaults are usually correct, but check GraphQL queries that use
-POST method -- they should be `read` + `safe`, not `write` + `unsafe`. The
-auto-curation already handles this (checks `graphql.operationType === 'query'`),
-but verify.
+The compiler also sets `replaySafety` internally (`safe_read` or `unsafe_mutation`)
+to control verify behavior — write ops are skipped during verify by default.
+
+Auto-curation defaults are usually correct, but verify that GraphQL queries using
+POST method have `permission: read`, not `permission: write`. The auto-curation
+already handles this (checks `graphql.operationType === 'query'`), but double-check.
 
 #### 3e. Review Examples for PII
 
@@ -392,6 +400,22 @@ x-openweb:
 
 **Inline is OK for:** simple `ssr_next_data`, `page_global`, short `html_selector` (1-3 lines).
 **Adapter is required for:** multi-line DOM queries, regex parsing, complex data transformation.
+
+#### 3g. Curate Write Operations
+
+Write operations require extra attention beyond read ops:
+
+1. **Naming:** Use verb form matching the user action: `likePost`, `followUser`,
+   `addToCart` — not URL-derived names.
+2. **Permission:** Set `x-openweb.permission` to `write` (or `delete`/`transact` for
+   destructive actions). See discover.md's Write Operation Safety table for levels.
+3. **Replay safety:** The compiler sets `replaySafety: unsafe_mutation` internally,
+   which causes `openweb verify` to skip write ops by default.
+4. **Safety level:** Document the safety level (SAFE/CAUTION/NEVER) in DOC.md's
+   operations table.
+5. **Verify:** Write ops are NOT verified by `openweb verify`. To test, use
+   `openweb <site> exec <op> '{...}'` manually in a safe context (e.g., like a
+   post you own, then unlike it).
 
 ### Step 4: Verify
 
@@ -464,6 +488,14 @@ After fixing the spec, return to Step 4a. If the fix requires more captured
 traffic (missing endpoints, wrong API domain), return to `discover.md` Step 2
 for re-capture.
 
+> **When to stop iterating:**
+> - After 2 fix-and-verify cycles with no progress, the issue is likely
+>   missing traffic (return to discover.md Step 2) or a blocked site.
+> - If bot detection blocks all transports and no workaround exists,
+>   document the blocker in DOC.md Known Issues and tell the user.
+> - If the only failing ops are non-target bonus operations, proceed to
+>   install — document the failures in Known Issues.
+
 #### 4d. WS Verification
 
 If AsyncAPI operations are present:
@@ -523,11 +555,10 @@ When the site already has a package at `src/sites/<site>/`:
 
 #### 5b. Write DOC.md
 
-Create or update `src/sites/<site>/DOC.md` per `references/site-doc.md`:
-- Auth type, transport, extraction patterns
-- Map operations to target intents
-- Write operation safety levels
-- Known issues (bot detection, rate limits, dynamic fields causing drift)
+Create or update `src/sites/<site>/DOC.md` per `references/site-doc.md`.
+
+Required sections: **Overview, Quick Start, Operations, Auth, Transport, Known Issues.**
+See `references/site-doc.md` for the canonical template.
 
 #### 5c. Write PROGRESS.md
 
@@ -539,7 +570,11 @@ Append the first entry (or a new entry) to `src/sites/<site>/PROGRESS.md`:
 - Compiled N HTTP operations, M WS operations
 - Auth: <type>, Transport: <type>
 
+**Why:**
+- <user request or coverage goal>
+
 **Verification:** N/M passed
+**Commit:** <short hash>
 ```
 
 #### 5d. Build and test
@@ -548,11 +583,16 @@ Append the first entry (or a new entry) to `src/sites/<site>/PROGRESS.md`:
 pnpm build && pnpm test
 ```
 
-Ensure the new site package is recognized by the CLI:
+Verify the source-tree copy (not just the CLI cache):
 ```bash
-openweb sites          # should list the new site
-openweb <site>         # should show operations
+ls src/sites/<site>/openapi.yaml     # confirm spec file exists in repo
+openweb sites                        # confirm CLI recognizes the site
+openweb <site>                       # confirm operations are listed
 ```
+
+**Note:** `openweb sites` resolves from `~/.openweb/sites/` first (the compile
+cache), so it can succeed even if the `src/sites/` copy is missing. Always
+verify the repo files directly.
 
 #### 5e. Update knowledge (if applicable)
 

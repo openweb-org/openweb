@@ -108,27 +108,37 @@ Session limits, rate limit headers, shard info. Useful for transport config, not
 
 ## Site Package Modeling
 
-WS operations map to the same openapi.yaml structure as REST:
+WS operations are modeled in `asyncapi.yaml` (separate from the HTTP `openapi.yaml`).
 
 ```yaml
-/ws/ticker:
-  x-transport: page
-  x-ws-subscribe: '{"type":"subscribe","channels":[{"name":"ticker","product_ids":["$product_id"]}]}'
-  get:
-    operationId: subscribeTicker
-    parameters:
-      - name: product_id
-        in: query
-        required: true
-    responses:
-      '200':
-        description: Stream of ticker messages
+# asyncapi.yaml
+channels:
+  ticker:
+    address: wss://ws-feed.example.com
+    messages:
+      tickerUpdate:
+        payload:
+          type: object
+          properties:
+            product_id:
+              type: string
+            price:
+              type: string
+
+operations:
+  subscribeTicker:
+    action: send
+    channel:
+      $ref: '#/channels/ticker'
+    x-openweb:
+      permission: read
+      pattern: subscribe
 ```
 
-The `x-ws-subscribe` extension holds the subscription template. The adapter sends it after connecting and yields incoming messages as the response stream.
+The `x-openweb` extension on operations specifies permission and message pattern.
 
 ## Related References
 
-- `references/compile.md` — Track B: WS/AsyncAPI curation
+- `references/compile.md` — WS curation in Step 2d and Step 4d
 - `references/discover.md` — WS traffic inspection during capture
 - `references/knowledge/troubleshooting-patterns.md` — WS failure patterns
