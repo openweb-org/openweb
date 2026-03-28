@@ -126,12 +126,13 @@ function enrichClusters(
   return v2Clusters
 }
 
-/** Convert camelCase/PascalCase to snake_case. */
-function toSnakeCase(str: string): string {
+/** Convert camelCase/PascalCase or underscore-separated strings to camelCase. */
+function toCamelCase(str: string): string {
   return str
     .replace(/([a-z])([A-Z])/g, '$1_$2')
-    .replace(/[-\s]+/g, '_')
     .toLowerCase()
+    .replace(/[-_\s]+(.)/g, (_, c) => c.toUpperCase())
+    .replace(/^(.)/, (_, c) => c.toLowerCase())
 }
 
 /** Derive operationId + summary from GraphQL cluster info. */
@@ -159,8 +160,10 @@ function graphqlOperationAnnotation(
 
   // Convert "Dash" in LinkedIn-style names to underscore (e.g. voyagerJobsDashJobCards → voyager_jobs_job_cards)
   const cleaned = rawName.replace(/Dash/g, '_')
-  const operationId = toSnakeCase(cleaned)
-  const summary = operationId.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+  const operationId = toCamelCase(cleaned)
+  const summary = operationId
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/^\w/, (c) => c.toUpperCase())
 
   return { operationId, summary }
 }

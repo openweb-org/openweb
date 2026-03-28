@@ -30,14 +30,14 @@ const VERSION_PATTERN = /^v\d+(\.\d+)?$/
 const NOISE_SEGMENTS = new Set(['api', 'rest', 'web', 'public', 'internal', 'graphql'])
 
 /**
- * Convert camelCase or PascalCase to snake_case.
- * e.g. "listRepoIssues" → "list_repo_issues"
+ * Convert a string with underscores, hyphens, or spaces to camelCase.
+ * e.g. "list_repo_issues" -> "listRepoIssues"
+ *      "get-user" -> "getUser"
  */
-function toSnakeCase(str: string): string {
+function toCamelCase(str: string): string {
   return str
-    .replace(/([a-z])([A-Z])/g, '$1_$2')
-    .replace(/[-\s]+/g, '_')
-    .toLowerCase()
+    .replace(/[-_\s]+(.)/g, (_, c) => c.toUpperCase())
+    .replace(/^(.)/, (_, c) => c.toLowerCase())
 }
 
 /**
@@ -53,10 +53,16 @@ function isLikelyPlural(word: string): boolean {
 
 /**
  * Generate a human-friendly summary from an operationId.
- * e.g. "listRepoIssues" → "List repo issues"
+ * Handles both camelCase and underscore-separated inputs.
+ * e.g. "listRepoIssues" -> "List repo issues"
+ *      "list_repo_issues" -> "List repo issues"
  */
 function summaryFromId(operationId: string): string {
-  const words = operationId.replace(/_/g, ' ').trim()
+  const words = operationId
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .trim()
   return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
@@ -149,7 +155,7 @@ function heuristicAnnotation(method: string, path: string): Annotation {
   const operationId = nounPart ? `${verb}_${nounPart}` : verb
   const summary = summaryFromId(operationId)
 
-  return { operationId: toSnakeCase(operationId), summary }
+  return { operationId: toCamelCase(operationId), summary }
 }
 
 export function annotateOperation(_host: string, path: string, method = 'GET'): Annotation {
