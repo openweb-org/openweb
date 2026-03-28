@@ -25,9 +25,6 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 /** Headers to skip during CSRF detection — standard non-CSRF headers */
 const SKIP_HEADERS = new Set(['cookie', 'content-type', 'accept', 'user-agent', 'host', 'origin', 'referer'])
 
-/** Well-known CSRF header names — prioritized over random header matches */
-const CSRF_HEADER_NAMES = new Set(['csrf-token', 'x-csrf-token', 'x-csrftoken', '_csrf'])
-
 /** Strip surrounding double quotes from cookie values (e.g. LinkedIn JSESSIONID) */
 function stripQuotes(value: string): string {
   return value.replace(/^"|"$/g, '')
@@ -98,9 +95,11 @@ interface ExchangeChainResult {
   tokenEndpoints: string[]
 }
 
-interface CookieToHeaderResult {
+interface CookieToHeaderMatch {
   cookie: string
   header: string
+  cookieValue: string
+  confidence: number
 }
 
 interface MetaTagResult {
@@ -226,7 +225,35 @@ function detectExchangeChainWithEvidence(data: CaptureData): ExchangeChainResult
   return undefined
 }
 
-function detectCookieToHeaderEvidence(data: CaptureData): CookieToHeaderResult | undefined {
+/** Well-known CSRF cookie names — scored higher */
+const CSRF_COOKIE_NAMES = new Set(['jsessionid', 'csrftoken', '_csrf', 'session', 'ct0', 'csrf', 'xsrf-token'])
+
+/** Score a cookie→header match for CSRF likelihood. Higher = more likely real CSRF. */
+export function scoreCsrfMatch(cookie: string, header: string, cookieValue: string): number {
+  let score = 0
+  const headerLower = header.toLowerCase()
+  const cookieLower = cookie.toLowerCase()
+
+  // Header name contains 'csrf' or 'token' → strong signal
+  if (headerLower.includes('csrf') || headerLower.includes('xsrf')) score += 10
+  else if (headerLower.includes('token')) score += 10
+
+  // Well-known CSRF cookie names
+  if (CSRF_COOKIE_NAMES.has(cookieLower)) score += 5
+
+  // Cookie name contains csrf/xsrf
+  if (cookieLower.includes('csrf') || cookieLower.includes('xsrf')) score += 5
+
+  // Long values are more likely tokens
+  if (cookieValue.length > 10) score += 3
+
+  // Short values (locales like 'en_US', 'light') are likely NOT CSRF
+  if (cookieValue.length < 6) score -= 5
+
+  return score
+}
+
+function detectAllCookieToHeaderMatches(data: CaptureData): CookieToHeaderMatch[] {
   const cookieValues = new Map<string, string>()
   for (const snapshot of data.stateSnapshots) {
     for (const cookie of snapshot.cookies) {
@@ -235,13 +262,14 @@ function detectCookieToHeaderEvidence(data: CaptureData): CookieToHeaderResult |
       }
     }
   }
-  if (cookieValues.size === 0) return undefined
+  if (cookieValues.size === 0) return []
 
   const mutations = data.harEntries.filter((e) => MUTATION_METHODS.has(e.request.method))
-  if (mutations.length === 0) return undefined
+  if (mutations.length === 0) return []
 
-  interface Match { cookie: string; header: string; preferred: boolean }
-  const matches: Match[] = []
+  // Deduplicate by cookie+header pair
+  const seen = new Set<string>()
+  const matches: CookieToHeaderMatch[] = []
 
   for (const entry of mutations) {
     for (const header of entry.request.headers) {
@@ -252,23 +280,23 @@ function detectCookieToHeaderEvidence(data: CaptureData): CookieToHeaderResult |
       for (const [cookieName, rawCookieValue] of cookieValues) {
         const cookieValue = stripQuotes(rawCookieValue)
         if (cookieValue.length > 0 && header.value === cookieValue) {
+          const key = `${cookieName}::${header.name}`
+          if (seen.has(key)) continue
+          seen.add(key)
           matches.push({
             cookie: cookieName,
             header: header.name,
-            preferred: CSRF_HEADER_NAMES.has(name),
+            cookieValue,
+            confidence: scoreCsrfMatch(cookieName, header.name, cookieValue),
           })
         }
       }
     }
   }
 
-  if (matches.length === 0) return undefined
-
-  // Prefer standard CSRF header names, fall back to first match
-  const preferred = matches.find((m) => m.preferred)
-  const best = preferred ?? matches[0]
-  if (!best) return undefined
-  return { cookie: best.cookie, header: best.header }
+  // Sort by confidence descending
+  matches.sort((a, b) => b.confidence - a.confidence)
+  return matches
 }
 
 function detectMetaTagEvidence(data: CaptureData): MetaTagResult | undefined {
@@ -317,7 +345,7 @@ function detectSapisidhashEvidence(data: CaptureData): SapisidhashResult | undef
 // ── Candidate builder ───────────────────────────────────────────────────────
 
 function buildCsrf(
-  cookieToHeader: CookieToHeaderResult | undefined,
+  cookieToHeader: { cookie: string; header: string } | undefined,
   metaTag: MetaTagResult | undefined,
 ): CsrfPrimitive | undefined {
   if (cookieToHeader) {
@@ -329,13 +357,16 @@ function buildCsrf(
   return undefined
 }
 
-/** Return all detected CSRF primitives, ordered by preference (cookie_to_header first). */
+/** Return all detected CSRF primitives, scored and sorted by confidence. */
 function buildCsrfOptions(
-  cookieToHeader: CookieToHeaderResult | undefined,
+  cookieToHeaderMatches: CookieToHeaderMatch[],
   metaTag: MetaTagResult | undefined,
 ): CsrfPrimitive[] {
-  const options: CsrfPrimitive[] = []
-  if (cookieToHeader) options.push({ type: 'cookie_to_header', cookie: cookieToHeader.cookie, header: cookieToHeader.header })
+  const options: CsrfPrimitive[] = cookieToHeaderMatches.map((m) => ({
+    type: 'cookie_to_header' as const,
+    cookie: m.cookie,
+    header: m.header,
+  }))
   if (metaTag) options.push({ type: 'meta_tag', name: metaTag.name, header: metaTag.header })
   return options
 }
@@ -370,12 +401,13 @@ export function buildAuthCandidates(data: CaptureData): AuthCandidatesResult {
   const cookieSession = detectCookieSessionWithCoverage(data)
   const localStorageJwt = detectLocalStorageJwtWithEvidence(data)
   const exchangeChain = detectExchangeChainWithEvidence(data)
-  const cookieToHeader = detectCookieToHeaderEvidence(data)
+  const cookieToHeaderMatches = detectAllCookieToHeaderMatches(data)
+  const cookieToHeader = cookieToHeaderMatches[0]
   const metaTag = detectMetaTagEvidence(data)
   const sapisidhash = detectSapisidhashEvidence(data)
 
   const csrf = buildCsrf(cookieToHeader, metaTag)
-  const csrfOptions = buildCsrfOptions(cookieToHeader, metaTag)
+  const csrfOptions = buildCsrfOptions(cookieToHeaderMatches, metaTag)
   const signing = buildSigning(sapisidhash)
 
   // Build evidence helpers

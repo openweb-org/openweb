@@ -286,4 +286,50 @@ describe('applyCuration', () => {
     const plan = applyCuration(makeReport(), {})
     expect(plan.ws).toBeUndefined()
   })
+
+  it('uses csrfOverride to pick specific CSRF option by cookie+header', () => {
+    const report = makeReport({
+      authCandidates: [
+        makeAuthCandidate({
+          csrf: { type: 'cookie_to_header', cookie: 'lc-main', header: 'x-li-lang' },
+        }),
+      ],
+      csrfOptions: [
+        { type: 'cookie_to_header', cookie: 'JSESSIONID', header: 'csrf-token' },
+        { type: 'cookie_to_header', cookie: 'lc-main', header: 'x-li-lang' },
+      ],
+    })
+    const plan = applyCuration(report, {
+      csrfOverride: { cookie: 'JSESSIONID', header: 'csrf-token' },
+    })
+    expect(plan.context.csrf).toEqual({
+      type: 'cookie_to_header',
+      cookie: 'JSESSIONID',
+      header: 'csrf-token',
+    })
+  })
+
+  it('csrfOverride takes precedence over csrfType', () => {
+    const report = makeReport({
+      authCandidates: [
+        makeAuthCandidate({
+          csrf: { type: 'cookie_to_header', cookie: 'wrong', header: 'wrong-header' },
+        }),
+      ],
+      csrfOptions: [
+        { type: 'cookie_to_header', cookie: 'correct', header: 'x-csrf-token' },
+        { type: 'meta_tag', name: 'csrf', header: 'X-CSRF' },
+      ],
+    })
+    const plan = applyCuration(report, {
+      csrfType: 'meta_tag',
+      csrfOverride: { cookie: 'correct', header: 'x-csrf-token' },
+    })
+    // csrfOverride wins over csrfType
+    expect(plan.context.csrf).toEqual({
+      type: 'cookie_to_header',
+      cookie: 'correct',
+      header: 'x-csrf-token',
+    })
+  })
 })

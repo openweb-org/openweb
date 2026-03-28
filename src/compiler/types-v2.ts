@@ -212,6 +212,8 @@ export interface CurationDecisionSet {
   readonly selectedAuthCandidateId?: string
   readonly excludedClusterIds?: readonly string[]
   readonly csrfType?: 'cookie_to_header' | 'meta_tag'
+  /** Explicit CSRF override — pick by cookie+header name from csrfOptions */
+  readonly csrfOverride?: { readonly cookie: string; readonly header: string }
   readonly operationOverrides?: ReadonlyArray<{
     readonly clusterId: string
     readonly operationId?: string

@@ -36,10 +36,19 @@ function buildSiteContext(
 ): CuratedSiteContext {
   if (!candidate) return { transport: 'node' }
 
-  // If csrfType is explicitly set, pick from report.csrfOptions instead of auto-picked
-  const csrf = decisions.csrfType
-    ? report.csrfOptions.find((o) => o.type === decisions.csrfType) ?? candidate.csrf
-    : candidate.csrf
+  // Priority: explicit csrfOverride > csrfType filter > auto-picked from candidate
+  let csrf = candidate.csrf
+  if (decisions.csrfOverride) {
+    const match = report.csrfOptions.find(
+      (o) =>
+        o.type === 'cookie_to_header' &&
+        o.cookie === decisions.csrfOverride!.cookie &&
+        o.header === decisions.csrfOverride!.header,
+    )
+    if (match) csrf = match
+  } else if (decisions.csrfType) {
+    csrf = report.csrfOptions.find((o) => o.type === decisions.csrfType) ?? candidate.csrf
+  }
 
   return {
     transport: candidate.transport,

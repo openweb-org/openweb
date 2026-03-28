@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildAuthCandidates } from './auth-candidates.js'
+import { buildAuthCandidates, scoreCsrfMatch } from './auth-candidates.js'
 import type { CaptureData } from './classify.js'
 import type { HarEntry, StateSnapshot } from '../../capture/types.js'
 
@@ -681,5 +681,109 @@ describe('buildAuthCandidates', () => {
     const { candidates: second } = buildAuthCandidates(data)
     expect(first[0]?.id).toBe('auth-1')
     expect(second[0]?.id).toBe('auth-1')
+  })
+
+  // ── CSRF candidate ranking ──
+
+  describe('CSRF candidate ranking', () => {
+    it('returns multiple CSRF candidates in csrfOptions, ranked by confidence', () => {
+      // Two cookies match two different headers on a POST request
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+          makeHarEntry({
+            method: 'POST',
+            headers: [
+              { name: 'Cookie', value: 'sessionid=abc' },
+              { name: 'x-li-lang', value: 'en_US' },
+              { name: 'csrf-token', value: 'ajax:long-csrf-token-value-1234567890' },
+            ],
+          }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [
+            { name: 'sessionid', value: 'abc', httpOnly: true },
+            { name: 'lc-main', value: 'en_US', httpOnly: false },
+            { name: 'JSESSIONID', value: '"ajax:long-csrf-token-value-1234567890"', httpOnly: false },
+          ],
+        })],
+      }
+
+      const { csrfOptions, candidates } = buildAuthCandidates(data)
+      // Both matches should appear in csrfOptions
+      expect(csrfOptions.length).toBeGreaterThanOrEqual(2)
+      // The JSESSIONID→csrf-token match should be ranked first (higher confidence)
+      expect(csrfOptions[0]).toEqual({
+        type: 'cookie_to_header',
+        cookie: 'JSESSIONID',
+        header: 'csrf-token',
+      })
+      // The lc-main→x-li-lang match should be ranked last (low confidence — short value)
+      const lcMainOption = csrfOptions.find(
+        (o) => o.type === 'cookie_to_header' && o.cookie === 'lc-main',
+      )
+      expect(lcMainOption).toBeDefined()
+
+      // candidate.csrf should be the top-scored one
+      const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
+      expect(cookieCandidate?.csrf).toEqual({
+        type: 'cookie_to_header',
+        cookie: 'JSESSIONID',
+        header: 'csrf-token',
+      })
+    })
+
+    it('scores standard CSRF header name highest', () => {
+      // csrf-token header → +10, csrftoken cookie → +5+5, long value → +3 = 23
+      const csrfScore = scoreCsrfMatch('csrftoken', 'csrf-token', 'long-token-value-12345')
+      // random header, random cookie, long value → 0+0+3 = 3
+      const randomScore = scoreCsrfMatch('lc-main', 'x-li-lang', 'long-token-value-12345')
+      expect(csrfScore).toBeGreaterThan(randomScore)
+    })
+
+    it('penalizes short values (locale, color scheme)', () => {
+      // Short value like 'en_US' (5 chars) → -5
+      const shortScore = scoreCsrfMatch('lc-main', 'x-li-lang', 'en_US')
+      expect(shortScore).toBeLessThan(0)
+    })
+
+    it('ranks LinkedIn JSESSIONID quoted → csrf-token highest', () => {
+      // JSESSIONID → known cookie (+5), csrf-token → contains 'csrf' (+10),
+      // long quoted value → +3 = 18
+      const jsessionScore = scoreCsrfMatch('JSESSIONID', 'csrf-token', 'ajax:1234567890abcdef')
+      // lc-main → unknown cookie (0), x-li-lang → no csrf/token (0),
+      // short value 'en_US' → -5 = -5
+      const langScore = scoreCsrfMatch('lc-main', 'x-li-lang', 'en_US')
+      expect(jsessionScore).toBeGreaterThan(langScore)
+      expect(jsessionScore).toBeGreaterThan(10) // should be high confidence
+    })
+
+    it('skips sec-ch-* headers entirely (not included in csrfOptions)', () => {
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+          makeHarEntry({
+            method: 'POST',
+            headers: [
+              { name: 'Cookie', value: 'sessionid=abc' },
+              { name: 'sec-ch-prefers-color-scheme', value: 'light' },
+            ],
+          }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [
+            { name: 'sessionid', value: 'abc', httpOnly: true },
+            { name: 'CH-prefers-color-scheme', value: 'light', httpOnly: false },
+          ],
+        })],
+      }
+
+      const { csrfOptions } = buildAuthCandidates(data)
+      // sec-ch- headers should not appear in csrfOptions at all
+      const secChOption = csrfOptions.find(
+        (o) => o.type === 'cookie_to_header' && o.header.startsWith('sec-ch-'),
+      )
+      expect(secChOption).toBeUndefined()
+    })
   })
 })
