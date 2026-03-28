@@ -23,7 +23,7 @@ openweb <site> --json            # {name, operations: [{id, method, path, permis
 ```bash
 openweb <site> <op>              # text: method, path, params, response shape
 openweb <site> <op> --json       # {id, method, path, permission, parameters}
-openweb <site> <op> --example    # generate example params JSON
+openweb <site> <op> --example    # real example params from fixtures
 ```
 
 ### `<site> <operation> '<params>'` — Execute

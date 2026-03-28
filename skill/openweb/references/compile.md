@@ -297,7 +297,7 @@ but verify.
 
 #### 3e. Review Examples for PII
 
-Check parameter examples in the spec and test fixtures (`tests/*.test.json`):
+Check parameter examples in the spec and example fixtures (`examples/*.example.json`):
 - Real usernames, emails, phone numbers, addresses? Replace with generic values.
 - Auth tokens or session IDs in examples? Remove.
 - The scrubber catches common patterns, but flag anything it might miss.
@@ -413,7 +413,7 @@ mkdir -p src/sites/<site>
 cp ~/.openweb/sites/<site>/openapi.yaml src/sites/<site>/
 cp ~/.openweb/sites/<site>/manifest.json src/sites/<site>/
 # Copy asyncapi.yaml only if WS operations are present
-# Copy tests/ directory
+# Copy examples/ directory
 ```
 
 If the site already has a package, merge carefully -- do not lose existing

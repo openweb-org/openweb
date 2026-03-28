@@ -11,7 +11,7 @@ The compiler observes a website's behavior and generates skill packages (OpenAPI
 Phase 1: Capture      Record HTTP traffic, WebSocket frames, state, DOM
 Phase 2: Analyze      Label, normalize, cluster, infer schemas, detect auth
 Phase 3: Curate       Apply decisions, scrub PII, produce compile plan
-Phase 4: Generate     Emit openapi.yaml + asyncapi.yaml + manifest.json + tests/
+Phase 4: Generate     Emit openapi.yaml + asyncapi.yaml + manifest.json + examples/
 Phase 5: Verify       Auth-first escalation, replay safe reads, per-attempt diagnostics
 ```
 
@@ -109,7 +109,7 @@ Consumes `CuratedCompilePlan` and emits the skill package.
 1. `openapi.yaml` — OpenAPI 3.1 spec with x-openweb extensions
 2. `asyncapi.yaml` — AsyncAPI 3.0 spec for WebSocket channels (if WS frames captured)
 3. `manifest.json` — Package metadata (spec_version 2.0)
-4. `tests/<operationId>.test.json` — Test cases from scrubbed examples
+4. `examples/<operationId>.example.json` — Example params from scrubbed captures (used by `--example`)
 
 **Key behaviors:**
 - Response variants: multiple status codes and content types per operation

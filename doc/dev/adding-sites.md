@@ -203,9 +203,9 @@ const adapter: CodeAdapter = {
 export default adapter;
 ```
 
-## Step 6: Write Tests
+## Step 6: Write Examples
 
-Create `tests/<operationId>.test.json`:
+Create `examples/<operationId>.example.json`:
 
 ```json
 {
@@ -254,7 +254,7 @@ pnpm --silent dev registry install <site>
 - [ ] `openapi.yaml` with correct x-openweb extensions
 - [ ] `manifest.json` with correct metadata
 - [ ] Adapter file (L3 only)
-- [ ] Test cases in `tests/`
+- [ ] Example fixtures in `examples/`
 - [ ] `pnpm test` passes
 - [ ] Real browser E2E verification
 - [ ] Validated against benchmark suite (`tests/benchmark/`) if adding a new execution mode or auth pattern

@@ -164,7 +164,7 @@ generate, and verify. It produces:
 | `openapi.yaml` | `~/.openweb/sites/<site>/` | Generated HTTP spec |
 | `asyncapi.yaml` | `~/.openweb/sites/<site>/` | Generated WS spec (if WS traffic) |
 | `manifest.json` | `~/.openweb/sites/<site>/` | Package metadata |
-| `tests/*.test.json` | `~/.openweb/sites/<site>/` | Test fixtures |
+| `examples/*.example.json` | `~/.openweb/sites/<site>/` | Example fixtures (PII-scrubbed) |
 
 The auto-curation accepts all clusters, picks the top-ranked auth candidate,
 and uses the analyzer's suggested operation names (snake_case by default, e.g.,
@@ -277,7 +277,7 @@ mkdir -p src/sites/<site>
 cp ~/.openweb/sites/<site>/openapi.yaml src/sites/<site>/
 cp ~/.openweb/sites/<site>/manifest.json src/sites/<site>/
 # asyncapi.yaml only if WS operations present
-# tests/ directory
+# examples/ directory
 ```
 
 If the site already has a package, merge carefully — do not lose existing

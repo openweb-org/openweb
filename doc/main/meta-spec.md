@@ -218,8 +218,8 @@ sites/<site>/
 ├── manifest.json         # Package metadata
 ├── adapters/             # L3 code (optional)
 │   └── <name>.js
-└── tests/
-    └── <operationId>.test.json
+└── examples/
+    └── <operationId>.example.json
 ```
 
 ### manifest.json

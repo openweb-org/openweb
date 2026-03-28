@@ -21,7 +21,7 @@ src/sites/<site>/
 ├── DOC.md          ← SOTA: what this site is and how it works
 ├── PROGRESS.md     ← History: what happened and when
 ├── adapters/       (optional)
-└── tests/          (optional)
+└── examples/       (optional)
 ```
 
 ---

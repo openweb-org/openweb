@@ -165,7 +165,7 @@ src/
 | **Execution Mode** | `direct_http`, `session_http`, `browser_fetch` — how requests reach the server | [runtime.md](runtime.md) |
 | **Primitive** | Declarative config unit for auth, CSRF, signing, pagination, extraction | [primitives/](primitives/README.md) |
 | **CodeAdapter** | L3 escape hatch — arbitrary JS running in browser context | [adapters.md](adapters.md) |
-| **Skill Package** | Per-site artifact: openapi.yaml + manifest.json + adapters/ + tests/ | [compiler.md](compiler.md) |
+| **Skill Package** | Per-site artifact: openapi.yaml + manifest.json + adapters/ + examples/ | [compiler.md](compiler.md) |
 | **AsyncAPI Package** | Per-site WS artifact: asyncapi.yaml for real-time event channels | [compiler.md](compiler.md) |
 | **Capture Bundle** | Raw recording: traffic.har + websocket_frames.jsonl + state + DOM | [browser-capture.md](browser-capture.md) |
 | **SSRF Protection** | DNS-resolved IP validation on every outgoing request | [security.md](security.md) |

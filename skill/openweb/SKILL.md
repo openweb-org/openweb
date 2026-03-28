@@ -45,7 +45,7 @@ openweb <site>                                     # transport, auth, operations
 ### 3. Inspect the operation
 ```bash
 openweb <site> <op>                                # params, response shape
-openweb <site> <op> --example                      # example params JSON
+openweb <site> <op> --example                      # real example params from fixtures
 ```
 Operations may be HTTP or WS. Inspect to see the type, parameters, and response shape.
 

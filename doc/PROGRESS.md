@@ -1,3 +1,21 @@
+## 2026-03-28: Fix --example flag, rename tests→examples
+
+**What changed:**
+- `--example` in `exec` path was silently ignored (routed to exec, not show) — now intercepted correctly
+- `renderExample` loads real params from `examples/*.example.json` fixtures instead of generating useless `<paramName>` placeholders from schema
+- Generator now writes `example:` field on OpenAPI parameters from compile-time `exampleInput`
+- Renamed `tests/` → `examples/` across entire pipeline (generators, verify, navigator) — backward compat preserved for installed packages with legacy `tests/` dirs
+- Dropped schema-based fallback in renderExample — if no fixture exists, says so clearly
+
+**Why:**
+- QA agent spent 6 minutes on LinkedIn because `--example` was broken — every operation failed on first try. With working `--example`, same QA takes ~30 seconds.
+
+**Key files:** `src/cli.ts`, `src/runtime/navigator.ts`, `src/compiler/generator/generate-v2.ts`, `src/compiler/generator/openapi.ts`, `src/compiler/generator/asyncapi.ts`, `src/lifecycle/verify.ts`
+**Verification:** 735/735 tests pass, `pnpm dev linkedin exec voyager_identity_profiles --example` returns real queryId hash
+**Commit:** 162c78f
+**Next:** Copy LinkedIn `examples/` into `src/sites/linkedin.com/` source package
+**Blockers:** None
+
 ## 2026-03-27: Runtime ergonomics fixes
 
 **What changed:**

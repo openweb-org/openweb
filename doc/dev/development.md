@@ -42,7 +42,7 @@ pnpm dev sites
 pnpm dev instagram
 pnpm dev instagram getTimeline
 pnpm dev instagram getTimeline --json     # Machine-readable
-pnpm dev instagram getTimeline --example  # Generate example params
+pnpm dev instagram getTimeline --example  # Show example params from fixtures
 
 # Execute (auto-exec: JSON arg triggers exec mode)
 pnpm dev instagram getTimeline '{}'
@@ -147,7 +147,7 @@ src/sites/instagram/
 ├── openapi.yaml          # OpenAPI spec with x-openweb extensions
 ├── manifest.json         # Package metadata
 ├── adapters/             # L3 code (WhatsApp, Telegram only)
-└── tests/                # Per-operation test JSON
+└── examples/              # Per-operation example params (PII-scrubbed)
 ```
 
 ## Test Structure
@@ -155,10 +155,10 @@ src/sites/instagram/
 ```
 src/**/*.test.ts                      # Unit tests (pnpm test)
 tests/integration/                    # Integration tests (requires CDP)
-src/sites/*/tests/*.test.json      # Per-site tests
+src/sites/*/examples/*.example.json  # Per-site example fixtures
 ```
 
-Test JSON format:
+Example fixture format (used by `--example` and `verify`):
 
 ```json
 {
