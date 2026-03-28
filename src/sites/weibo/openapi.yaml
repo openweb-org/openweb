@@ -12,49 +12,11 @@ servers:
       transport: node
       auth:
         type: cookie_session
-      csrf:
-        type: cookie_to_header
-        cookie: _s_tentry
-        header: :authority
 paths:
-  /api/llm/action_log.json:
-    post:
-      operationId: createLlmActionLog.json
-      summary: Create llm action log.json
-      x-openweb:
-        permission: write
-        build:
-          stable_id: 02789884a45e27ca
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties: {}
-                    required: []
-                  code:
-                    type: integer
-                  msg:
-                    type: string
-                    enum:
-                      - ""
-                required:
-                  - data
-                  - code
-                  - msg
-      servers:
-        - url: https://ai.s.weibo.com
   /2/remind/push_count.json:
     get:
-      operationId: get2RemindPushCount.json
-      summary: Get 2 remind push count.json
+      operationId: getUnreadCount
+      summary: Get unread notification count
       x-openweb:
         permission: read
         build:
@@ -132,8 +94,8 @@ paths:
         - url: https://rm.api.weibo.com
   /ajax_Indexband/getIndexBand:
     get:
-      operationId: getAjaxIndexbandGetindexband
-      summary: Get ajax indexband getindexband
+      operationId: getIndexBand
+      summary: Get index banner/band info
       x-openweb:
         permission: read
         build:
@@ -323,17 +285,13 @@ paths:
                                 icon_info:
                                   type: string
                                   enum:
-                                    - <i class="icon-txt
-                                      icon-txt-len-1"  style="background-color:#ff3852;">新</i>
-                                    - <i class="icon-txt
-                                      icon-txt-len-1"  style="background-color:#ff9406;">热</i>
+                                    - <i class="icon-txt icon-txt-len-1"  style="background-color:#ff3852;">新</i>
+                                    - <i class="icon-txt icon-txt-len-1"  style="background-color:#ff9406;">热</i>
                                 small_icon_info:
                                   type: string
                                   enum:
-                                    - <i
-                                      class="icon-txt"  style="background-color:#ff3852;">新</i>
-                                    - <i
-                                      class="icon-txt"  style="background-color:#ff9406;">热</i>
+                                    - <i class="icon-txt"  style="background-color:#ff3852;">新</i>
+                                    - <i class="icon-txt"  style="background-color:#ff9406;">热</i>
                               required:
                                 - word_scheme
                                 - query
@@ -361,109 +319,10 @@ paths:
                   - data
       servers:
         - url: https://s.weibo.com
-  /weibo:
-    get:
-      operationId: getWeibo
-      summary: Get weibo
-      x-openweb:
-        permission: read
-        build:
-          stable_id: b512a54ef4ca83da
-          tool_version: 2
-      parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          example: 科技
-      responses:
-        "200":
-          description: Success.
-          content:
-            text/html; charset=utf-8:
-              schema:
-                type: object
-      servers:
-        - url: https://s.weibo.com
-  /:
-    get:
-      operationId: get
-      summary: Get
-      x-openweb:
-        permission: read
-        build:
-          stable_id: a83abdd78194d2fe
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            text/html; charset=utf-8:
-              schema:
-                type: object
-  //weibo.com/u/{id}:
-    get:
-      operationId: getWeibo.comU
-      summary: Get weibo.com u
-      x-openweb:
-        permission: read
-        build:
-          stable_id: b4dc65d0647f21a8
-          tool_version: 2
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          example: 1
-      responses:
-        "200":
-          description: Success.
-          content:
-            text/html; charset=utf-8:
-              schema:
-                type: object
-  /ajax/common/getCopyright:
-    get:
-      operationId: getAjaxCommonGetcopyright
-      summary: Get ajax common getcopyright
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ea80f478beb8aac4
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-  /ajax/config/get_config:
-    get:
-      operationId: getAjaxConfigGetConfig
-      summary: Get ajax config get config
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 1e773aff9e9464b0
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
   /ajax/feed/allGroups:
     get:
-      operationId: listAjaxFeedAllgroups
-      summary: List ajax feed allgroups
+      operationId: getFeedGroups
+      summary: Get feed groups for the user
       x-openweb:
         permission: read
         build:
@@ -477,39 +336,10 @@ paths:
             application/json; charset=utf-8:
               schema:
                 type: object
-  /ajax/feed/getTipsAd:
-    get:
-      operationId: getAjaxFeedGettipsad
-      summary: Get ajax feed gettipsad
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 4c64ad7a7aee707f
-          tool_version: 2
-      parameters:
-        - name: page
-          in: query
-          required: true
-          schema:
-            type: string
-          example: home
-        - name: posid
-          in: query
-          required: true
-          schema:
-            type: string
-          example: pc_login_banner_top
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
   /ajax/feed/unreadfriendstimeline:
     get:
-      operationId: getAjaxFeedUnreadfriendstimeline
-      summary: Get ajax feed unreadfriendstimeline
+      operationId: getUnreadFriendsFeed
+      summary: Get unread friends feed count
       x-openweb:
         permission: read
         build:
@@ -765,8 +595,7 @@ paths:
                           type: string
                           enum:
                             - ""
-                            - <a target="_blank" href="https://t.sina.com.cn"
-                              rel="nofollow">微博视频号</a>
+                            - <a target="_blank" href="https://t.sina.com.cn" rel="nofollow">微博视频号</a>
                             - AI博主
                             - Mac客户端
                             - iPhone 12
@@ -2065,31 +1894,11 @@ paths:
                                     - contribution:0|source:ad|from:1|author_mid:5280669458762728|st_video:1|ua:iPhone13%2C2__weibo__13.0.0__iphone__os16.0|authorid:2157238653|objectid:1034%3A5280334061961312|object_duration:69.196|detail:native|is_album:0|video_orientation:vertical|mid:5280669458762728|sceneid:feed|is_ad_count:1|analysis_card:page_info|ad_log_ext_source:ad|is_ad_weibo:3_reallog_mark_ad%3A8%7C3_1774721133142213879908000033745826|short_video:0|rootuid:2157238653|uuid:5280334190215521|miduid:2157238653|uid:1918530507|is_contribution:0|rootmid:5280669458762728|isfan:0
                                     - contribution:0|source:ad|from:1|author_mid:5281150300062284|st_video:0|ua:iPhone13%2C2__weibo__13.0.0__iphone__os16.0|authorid:1763831941|objectid:1034%3A5281148889137170|object_duration:1460.071|is_ad_count:1|analysis_card:page_info|isfan:0|detail:native|is_album:1|video_orientation:horizontal|mid:5281150300062284|sceneid:feed|t_name:%E5%8A%B3%E5%8A%A8%E4%BA%BA%E6%B0%91%E7%9A%84%E5%B0%8F%E6%99%BA%E6%85%A7|t_id:4836908749226122|ad_log_ext_source:ad|is_ad_weibo:8_reallog_mark_ad%3A8%7C8_1774721133142213879908000033737379|short_video:1|rootuid:1763831941|uuid:5281149303128328|miduid:1763831941|uid:1918530507|is_contribution:0|rootmid:5281150300062284|type:2
                                     - mid:5281494708786125|rid:18_n262_8_2023019850863849092_0_0_1|short_url:http://t.cn/AXIAdmZT|long_url:https://photos.caixin.com/2026-03-28/102428625.html?originReferrer=caixinweibo|comment_id:|miduid:1663937380|rootmid:5281494708786125|rootuid:1663937380|authorid:|uuid:5281494716645704|is_ad_weibo:0|oid:3000000491:dc4afe14af2e41d8c84faf77a3b6f065
-                                    - uid:1918530507|mid:5281399261367469|objectid:1034%3A5281399171645480|from:1|object_duration:16.068|miduid:3505975850|rootuid:3505975850|rootmid:5281399261367469|authorid:3505975850|video_orientation:vertical|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0
-                                      (Macintosh%3B Intel Mac OS X 10_15_7)
-                                      AppleWebKit/537.36 (KHTML, like Gecko)
-                                      Chrome/146.0.0.0 Safari/537.36
-                                      WeiboPro/1.0.0|sceneid:feed|uuid:5281399182983202|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281399261367469|cluster_type_status:|is_ad_weibo:0|analysis_card:page_info
-                                    - uid:1918530507|mid:5281414401755224|objectid:1034%3A5281412832493573|from:1|object_duration:40.472|miduid:1604159432|rootuid:1604159432|rootmid:5281414401755224|authorid:1644114654|video_orientation:horizontal|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0
-                                      (Macintosh%3B Intel Mac OS X 10_15_7)
-                                      AppleWebKit/537.36 (KHTML, like Gecko)
-                                      Chrome/146.0.0.0 Safari/537.36
-                                      WeiboPro/1.0.0|sceneid:feed|uuid:5281412839375176|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281412920902180|cluster_type_status:|is_ad_weibo:0|analysis_card:page_info
-                                    - uid:1918530507|mid:5281421872597226|objectid:1034%3A5281147882766415|from:1|object_duration:116.866|miduid:1639498782|rootuid:1639498782|rootmid:5281421872597226|authorid:2656274875|video_orientation:horizontal|third_vid:|is_album:1|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0
-                                      (Macintosh%3B Intel Mac OS X 10_15_7)
-                                      AppleWebKit/537.36 (KHTML, like Gecko)
-                                      Chrome/146.0.0.0 Safari/537.36
-                                      WeiboPro/1.0.0|sceneid:feed|uuid:5281148011020469|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281148327691250|cluster_type_status:|is_ad_weibo:0|type:52_4|analysis_card:page_info
-                                    - uid:1918530507|mid:5281565162079864|objectid:1034%3A5281396886011960|from:1|object_duration:279.242|miduid:1871474290|rootuid:1304881564|rootmid:5281398811529519|authorid:1304881564|video_orientation:horizontal|third_vid:|is_album:1|is_contribution:0|video_tags:|isfan:0|ua:Mozilla/5.0
-                                      (Macintosh%3B Intel Mac OS X 10_15_7)
-                                      AppleWebKit/537.36 (KHTML, like Gecko)
-                                      Chrome/146.0.0.0 Safari/537.36
-                                      WeiboPro/1.0.0|sceneid:feed|uuid:5281397106540583|detail:native|contribution:0|short_video:1|st_video:0|author_mid:5281398811529519|cluster_type_status:|is_ad_weibo:0|container_mid:5281565162079864|analysis_card:page_info
-                                    - uid:1918530507|mid:5281597834399256|objectid:1034%3A5281597524475946|from:1|object_duration:433.5|miduid:5867737487|rootuid:5867737487|rootmid:5281597834399256|authorid:5867737487|video_orientation:vertical|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0
-                                      (Macintosh%3B Intel Mac OS X 10_15_7)
-                                      AppleWebKit/537.36 (KHTML, like Gecko)
-                                      Chrome/146.0.0.0 Safari/537.36
-                                      WeiboPro/1.0.0|sceneid:feed|uuid:5281597619437746|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281597834399256|cluster_type_status:|is_ad_weibo:0|analysis_card:page_info
+                                    - uid:1918530507|mid:5281399261367469|objectid:1034%3A5281399171645480|from:1|object_duration:16.068|miduid:3505975850|rootuid:3505975850|rootmid:5281399261367469|authorid:3505975850|video_orientation:vertical|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0 (Macintosh%3B Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 WeiboPro/1.0.0|sceneid:feed|uuid:5281399182983202|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281399261367469|cluster_type_status:|is_ad_weibo:0|analysis_card:page_info
+                                    - uid:1918530507|mid:5281414401755224|objectid:1034%3A5281412832493573|from:1|object_duration:40.472|miduid:1604159432|rootuid:1604159432|rootmid:5281414401755224|authorid:1644114654|video_orientation:horizontal|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0 (Macintosh%3B Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 WeiboPro/1.0.0|sceneid:feed|uuid:5281412839375176|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281412920902180|cluster_type_status:|is_ad_weibo:0|analysis_card:page_info
+                                    - uid:1918530507|mid:5281421872597226|objectid:1034%3A5281147882766415|from:1|object_duration:116.866|miduid:1639498782|rootuid:1639498782|rootmid:5281421872597226|authorid:2656274875|video_orientation:horizontal|third_vid:|is_album:1|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0 (Macintosh%3B Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 WeiboPro/1.0.0|sceneid:feed|uuid:5281148011020469|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281148327691250|cluster_type_status:|is_ad_weibo:0|type:52_4|analysis_card:page_info
+                                    - uid:1918530507|mid:5281565162079864|objectid:1034%3A5281396886011960|from:1|object_duration:279.242|miduid:1871474290|rootuid:1304881564|rootmid:5281398811529519|authorid:1304881564|video_orientation:horizontal|third_vid:|is_album:1|is_contribution:0|video_tags:|isfan:0|ua:Mozilla/5.0 (Macintosh%3B Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 WeiboPro/1.0.0|sceneid:feed|uuid:5281397106540583|detail:native|contribution:0|short_video:1|st_video:0|author_mid:5281398811529519|cluster_type_status:|is_ad_weibo:0|container_mid:5281565162079864|analysis_card:page_info
+                                    - uid:1918530507|mid:5281597834399256|objectid:1034%3A5281597524475946|from:1|object_duration:433.5|miduid:5867737487|rootuid:5867737487|rootmid:5281597834399256|authorid:5867737487|video_orientation:vertical|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0 (Macintosh%3B Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 WeiboPro/1.0.0|sceneid:feed|uuid:5281597619437746|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281597834399256|cluster_type_status:|is_ad_weibo:0|analysis_card:page_info
                                 mark:
                                   type: string
                                   enum:
@@ -2178,8 +1987,7 @@ paths:
                               type: string
                               enum:
                                 - 2026年3月28日早上7点，苏州殡仪馆，张雪峰追悼会暨遗体告别仪式举行，凌晨起，已有数千至上万名来自全国各地的...
-                                - 【#鲁比奥驳斥泽连斯基涉顿巴斯说法#：谎言
-                                  他被告知的是安保在战争结束后生效】#鲁比奥称泽连斯基涉顿巴斯说法是谎言#3月27日，鲁比奥驳斥泽连斯基涉顿巴斯说法，称那是谎言。鲁比奥说，“我看到他说了那番话，很遗憾他会这么说，因为他知道那不是事实”。他还说，泽连斯基被告知的事情显而易
+                                - 【#鲁比奥驳斥泽连斯基涉顿巴斯说法#：谎言 他被告知的是安保在战争结束后生效】#鲁比奥称泽连斯基涉顿巴斯说法是谎言#3月27日，鲁比奥驳斥泽连斯基涉顿巴斯说法，称那是谎言。鲁比奥说，“我看到他说了那番话，很遗憾他会这么说，因为他知道那不是事实”。他还说，泽连斯基被告知的事情显而易
                                 - 【一个冷知识！#土壤的土腥味从何而来#[上课了]】在广东鼎湖山，科考队员捧起一把黄壤，闻到了一股“土腥味”。这正是土壤活着的证明，独特的味道来自无数微生物的次生代谢活动。土壤是怎样形成的？岩石在风蚀、水蚀与温度变化的共同作用下，化作细碎颗粒，迁移低洼处形成沉积层。在土壤动物和细菌
                                 - 张雪峰经典名场面：7分钟解读34所985高校。
                                 - |-
@@ -2280,8 +2088,7 @@ paths:
                                 next_title:
                                   type: string
                                   enum:
-                                    - 【#鲁比奥驳斥泽连斯基涉顿巴斯说法#：谎言
-                                      他被告知的是安保在战争结束后生效】#鲁比奥称泽连斯基涉顿巴斯说法是谎言#3月27日，鲁比奥驳斥泽连斯基涉顿巴斯说法，称那是谎言。鲁比奥说，“我看到他说了那番话，很遗憾他会这么说，因为他知道那不是事实”。他还说，泽连斯基被告知的事情显而易见，即安
+                                    - 【#鲁比奥驳斥泽连斯基涉顿巴斯说法#：谎言 他被告知的是安保在战争结束后生效】#鲁比奥称泽连斯基涉顿巴斯说法是谎言#3月27日，鲁比奥驳斥泽连斯基涉顿巴斯说法，称那是谎言。鲁比奥说，“我看到他说了那番话，很遗憾他会这么说，因为他知道那不是事实”。他还说，泽连斯基被告知的事情显而易见，即安
                                     - 【一个冷知识！#土壤的土腥味从何而来#】在广东鼎湖山，科考队员捧起一把黄壤，闻到了一股“土腥味”。这正是土壤活着的证明，独特的味道来自无数微生物的次生代谢活动。土壤是怎样形成的？岩石在风蚀、水蚀与温度变化的共同作用下，化作细碎颗粒，迁移低洼处形成沉积层。在土壤动物和细菌、真菌共同努
                                     - 张雪峰经典名场面：7分钟解读34所985高校。
                                     - |-
@@ -2465,8 +2272,7 @@ paths:
                                               - mid:5281398811529519|oid:1034:5281396886011960|muid:1304881564|authorid:1304881564
                                               - mid:5281414401755224|oid:1034:5281412832493573|muid:1604159432|authorid:1644114654
                                               - mid:5281421872597226|oid:1034:5281147882766415|muid:1639498782|authorid:2656274875
-                                              - uid:1763831941|user_name:全嘻嘻微博|followers_count:945282|verified:1|verified_type:0|verified_type_ext:1|verified_reason:2025微博年度新知博主
-                                                微博原创视频博主|level:3
+                                              - uid:1763831941|user_name:全嘻嘻微博|followers_count:945282|verified:1|verified_type:0|verified_type_ext:1|verified_reason:2025微博年度新知博主 微博原创视频博主|level:3
                                               - uid:2157238653|user_name:麦蒂Tracy_McGrady|followers_count:6197805|verified:1|verified_type:0|verified_type_ext:2|verified_reason:前NBA休斯敦火箭队球星|level:3
                                           mid:
                                             type: string
@@ -2649,8 +2455,7 @@ paths:
                                   type: string
                                   enum:
                                     - ""
-                                    - 【#鲁比奥驳斥泽连斯基涉顿巴斯说法#：谎言
-                                      他被告知的是安保在战争结束后生效】#鲁比奥称泽连斯基涉顿巴斯说法是谎言#3月27日，鲁比奥驳斥泽连斯基涉顿巴斯说法，称那是谎言。鲁比奥说，“我看到他说了那番话，很遗憾他会这么说，因为他知道那不是事实”。他还说，泽连斯基被告知的事情显而易见，即安
+                                    - 【#鲁比奥驳斥泽连斯基涉顿巴斯说法#：谎言 他被告知的是安保在战争结束后生效】#鲁比奥称泽连斯基涉顿巴斯说法是谎言#3月27日，鲁比奥驳斥泽连斯基涉顿巴斯说法，称那是谎言。鲁比奥说，“我看到他说了那番话，很遗憾他会这么说，因为他知道那不是事实”。他还说，泽连斯基被告知的事情显而易见，即安
                                     - 土壤的土腥味从何而来
                                     - |-
                                       网友在车上录的，将近5分钟都没看到队伍尽头。没多少名人能有这排面。张雪峰为这个社会做的，大家心里都记着。一路走好，张雪峰老师。
@@ -2853,16 +2658,13 @@ paths:
                                     description:
                                       type: string
                                       enum:
-                                        - 13IN35 品牌拥有者
-                                          商业合作请联系nihao@eastgoesglobal.com
+                                        - 13IN35 品牌拥有者 商业合作请联系nihao@eastgoesglobal.com
                                         - “央视新闻”是中央广播电视总台新闻新媒体旗舰账号，是总台重大新闻、突发事件和重要报道的首发平台。
-                                        - ⠒̫⃝ ∵⃝ ⍢⃝ ⍤⃝  ⍨⃝ ◡̈⃝ ̫⃝ ∵⃝ ⍢⃝ ⍤⃝  ⍨⃝
-                                          ◡̈⃝
+                                        - ⠒̫⃝ ∵⃝ ⍢⃝ ⍤⃝  ⍨⃝ ◡̈⃝ ̫⃝ ∵⃝ ⍢⃝ ⍤⃝  ⍨⃝ ◡̈⃝
                                         - 一份以责任为灵魂的报纸；一份致力于记录时代步伐的报纸；一份进步、美好的报纸。新京报，品质源于责任。
                                         - 你看，人间也不过如此嘛。
                                         - 发现世界 感受生活 欢迎来到《环球纪录频道》
-                                        - 💡北大元培，互联网打工人，每周五更新睡前聊天。每个月做电商主播。  💛
-                                          Xiangjiaqi2022
+                                        - 💡北大元培，互联网打工人，每周五更新睡前聊天。每个月做电商主播。  💛 Xiangjiaqi2022
                                     location:
                                       type: string
                                       enum:
@@ -7602,35 +7404,18 @@ paths:
                             text:
                               type: string
                               enum:
-                                - 每月最新外刊分享：纽约客(3月最新3期)等下载及介绍 <a target="_blank"
-                                  href="https://weibo.cn/sinaurl?u=https%3A%2F%2Fmp.weixin.qq.com%2Fs%2FDDoRlH3c5YgpzrSNLWD5WQ"><img
-                                  class="icon-link" title="http://t.cn/AXcJjFky"
-                                  src="https://h5.sinaimg.cn/upload/2015/09/25/3/timeline_card_small_web_default.png"/>网页链接</a>
-                                  ​​​​
-                                - 网友在车上录的，将近5分钟都没看到队伍尽头。没多少名人能有这排面。张雪峰为这个社会做的，大家心里都记着。一路走好，张雪峰老师。<br
-                                  /><br /> <a
-                                  href="//s.weibo.com/weibo?q=%23%E9%80%81%E5%88%AB%E5%BC%A0%E9%9B%AA%E5%B3%B0%23"
-                                  target="_blank">#送别张雪峰#</a><a
-                                  href="//s.weibo.com/weibo?q=%23%E5%BC%A0%E9%9B%AA%E5%B3%B0%E8%BF%BD%E6%82%BC%E4%BC%9A%E7%8E%B0%E5%9C%BA%23"
-                                  target="_blank">#张雪峰追悼会现场#</a> <a
-                                  target="_blank"
-                                  href="https://video.weibo.com/show?fid=1034:5281396886011960"><img
-                                  class="icon-link" title="http://t.cn/AXIwjlS2"
-                                  src="https://h5.sinaimg.cn/upload/2015/09/25/3/timeline_card_small_video_default.png"/>诗人老王的微博视频</a>
-                                  ​​​
-                                - 辅助注册的账号，安全信息无法进行修改，如果不记得手机号码，建议可以进入账号与安全，根据部分手机号回想完整注册时的手机号。
-                                  ​​​
+                                - 每月最新外刊分享：纽约客(3月最新3期)等下载及介绍 <a target="_blank" href="https://weibo.cn/sinaurl?u=https%3A%2F%2Fmp.weixin.qq.com%2Fs%2FDDoRlH3c5YgpzrSNLWD5WQ"><img class="icon-link" title="http://t.cn/AXcJjFky" src="https://h5.sinaimg.cn/upload/2015/09/25/3/timeline_card_small_web_default.png"/>网页链接</a> ​​​​
+                                - 网友在车上录的，将近5分钟都没看到队伍尽头。没多少名人能有这排面。张雪峰为这个社会做的，大家心里都记着。一路走好，张雪峰老师。<br /><br /> <a href="//s.weibo.com/weibo?q=%23%E9%80%81%E5%88%AB%E5%BC%A0%E9%9B%AA%E5%B3%B0%23" target="_blank">#送别张雪峰#</a><a href="//s.weibo.com/weibo?q=%23%E5%BC%A0%E9%9B%AA%E5%B3%B0%E8%BF%BD%E6%82%BC%E4%BC%9A%E7%8E%B0%E5%9C%BA%23" target="_blank">#张雪峰追悼会现场#</a> <a target="_blank" href="https://video.weibo.com/show?fid=1034:5281396886011960"><img class="icon-link" title="http://t.cn/AXIwjlS2" src="https://h5.sinaimg.cn/upload/2015/09/25/3/timeline_card_small_video_default.png"/>诗人老王的微博视频</a> ​​​
+                                - 辅助注册的账号，安全信息无法进行修改，如果不记得手机号码，建议可以进入账号与安全，根据部分手机号回想完整注册时的手机号。 ​​​
                             text_raw:
                               type: string
                               enum:
-                                - 每月最新外刊分享：纽约客(3月最新3期)等下载及介绍
-                                  http://t.cn/AXcJjFky ​​​​
+                                - 每月最新外刊分享：纽约客(3月最新3期)等下载及介绍 http://t.cn/AXcJjFky ​​​​
                                 - |-
                                   网友在车上录的，将近5分钟都没看到队伍尽头。没多少名人能有这排面。张雪峰为这个社会做的，大家心里都记着。一路走好，张雪峰老师。
 
                                    #送别张雪峰##张雪峰追悼会现场# http://t.cn/AXIwjlS2 ​​​
-                                - 辅助注册的账号，安全信息无法进行修改，如果不记得手机号码，建议可以进入账号与安全，根据部分手机号回想完整注册时的手机号。
-                                  ​​​
+                                - 辅助注册的账号，安全信息无法进行修改，如果不记得手机号码，建议可以进入账号与安全，根据部分手机号回想完整注册时的手机号。 ​​​
                             region_name:
                               type: string
                               enum:
@@ -7719,10 +7504,7 @@ paths:
                                       ext:
                                         type: string
                                         enum:
-                                          - "common_struct:topic|containerid:10\
-                                            0808|uid:1918530507|mid:52755700617\
-                                            05687|analysis_card:common_struct|s\
-                                            ceneComments:"
+                                          - "common_struct:topic|containerid:100808|uid:1918530507|mid:5275570061705687|analysis_card:common_struct|sceneComments:"
                                       source:
                                         type: string
                                         enum:
@@ -8305,18 +8087,8 @@ paths:
                                           ext:
                                             type: string
                                             enum:
-                                              - uid:1918530507|mid:5281527324743809|objectid:1034%3A5281527228203018|from:1|object_duration:25.217|miduid:6974787068|rootuid:6974787068|rootmid:5281527324743809|authorid:6974787068|video_orientation:vertical|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0
-                                                (Macintosh%3B Intel Mac OS X
-                                                10_15_7) AppleWebKit/537.36
-                                                (KHTML, like Gecko)
-                                                Chrome/146.0.0.0 Safari/537.36
-                                                WeiboPro/1.0.0|sceneid:feed|uuid:5281527243210941|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281527324743809|cluster_type_status:|is_ad_weibo:0|source_info:all_mix_1|analysis_card:page_info
-                                              - uid:1918530507|mid:5281527324743809|objectid:1034%3A5281528935284807|from:1|object_duration:128.011|miduid:6974787068|rootuid:6974787068|rootmid:5281527324743809|authorid:6974787068|video_orientation:horizontal|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0
-                                                (Macintosh%3B Intel Mac OS X
-                                                10_15_7) AppleWebKit/537.36
-                                                (KHTML, like Gecko)
-                                                Chrome/146.0.0.0 Safari/537.36
-                                                WeiboPro/1.0.0|sceneid:feed|uuid:5281528958943889|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281527324743809|cluster_type_status:|is_ad_weibo:0|source_info:all_mix_1|analysis_card:page_info
+                                              - uid:1918530507|mid:5281527324743809|objectid:1034%3A5281527228203018|from:1|object_duration:25.217|miduid:6974787068|rootuid:6974787068|rootmid:5281527324743809|authorid:6974787068|video_orientation:vertical|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0 (Macintosh%3B Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 WeiboPro/1.0.0|sceneid:feed|uuid:5281527243210941|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281527324743809|cluster_type_status:|is_ad_weibo:0|source_info:all_mix_1|analysis_card:page_info
+                                              - uid:1918530507|mid:5281527324743809|objectid:1034%3A5281528935284807|from:1|object_duration:128.011|miduid:6974787068|rootuid:6974787068|rootmid:5281527324743809|authorid:6974787068|video_orientation:horizontal|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0 (Macintosh%3B Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 WeiboPro/1.0.0|sceneid:feed|uuid:5281528958943889|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281527324743809|cluster_type_status:|is_ad_weibo:0|source_info:all_mix_1|analysis_card:page_info
                                         required:
                                           - act_type
                                           - act_code
@@ -8471,18 +8243,8 @@ paths:
                                       ext:
                                         type: string
                                         enum:
-                                          - uid:1918530507|mid:5281527324743809|objectid:1034%3A5281527228203018|from:1|object_duration:25.217|miduid:6974787068|rootuid:6974787068|rootmid:5281527324743809|authorid:6974787068|video_orientation:vertical|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0
-                                            (Macintosh%3B Intel Mac OS X
-                                            10_15_7) AppleWebKit/537.36 (KHTML,
-                                            like Gecko) Chrome/146.0.0.0
-                                            Safari/537.36
-                                            WeiboPro/1.0.0|sceneid:feed|uuid:5281527243210941|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281527324743809|cluster_type_status:|is_ad_weibo:0|source_info:all_mix_1|analysis_card:page_info
-                                          - uid:1918530507|mid:5281527324743809|objectid:1034%3A5281528935284807|from:1|object_duration:128.011|miduid:6974787068|rootuid:6974787068|rootmid:5281527324743809|authorid:6974787068|video_orientation:horizontal|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0
-                                            (Macintosh%3B Intel Mac OS X
-                                            10_15_7) AppleWebKit/537.36 (KHTML,
-                                            like Gecko) Chrome/146.0.0.0
-                                            Safari/537.36
-                                            WeiboPro/1.0.0|sceneid:feed|uuid:5281528958943889|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281527324743809|cluster_type_status:|is_ad_weibo:0|source_info:all_mix_1|analysis_card:page_info
+                                          - uid:1918530507|mid:5281527324743809|objectid:1034%3A5281527228203018|from:1|object_duration:25.217|miduid:6974787068|rootuid:6974787068|rootmid:5281527324743809|authorid:6974787068|video_orientation:vertical|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0 (Macintosh%3B Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 WeiboPro/1.0.0|sceneid:feed|uuid:5281527243210941|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281527324743809|cluster_type_status:|is_ad_weibo:0|source_info:all_mix_1|analysis_card:page_info
+                                          - uid:1918530507|mid:5281527324743809|objectid:1034%3A5281528935284807|from:1|object_duration:128.011|miduid:6974787068|rootuid:6974787068|rootmid:5281527324743809|authorid:6974787068|video_orientation:horizontal|third_vid:|is_album:0|is_contribution:0|video_tags:|isfan:1|ua:Mozilla/5.0 (Macintosh%3B Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 WeiboPro/1.0.0|sceneid:feed|uuid:5281528958943889|detail:native|contribution:0|short_video:0|st_video:1|author_mid:5281527324743809|cluster_type_status:|is_ad_weibo:0|source_info:all_mix_1|analysis_card:page_info
                                     required:
                                       - act_type
                                       - act_code
@@ -8572,249 +8334,10 @@ paths:
                   - max_id
                   - since_id_str
                   - max_id_str
-  /ajax/getbubbleflag:
-    get:
-      operationId: getAjaxGetbubbleflag
-      summary: Get ajax getbubbleflag
-      x-openweb:
-        permission: read
-        build:
-          stable_id: b122199e803c96ae
-          tool_version: 2
-      parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-          example: dark_bubble
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: integer
-                  data:
-                    type: integer
-                required:
-                  - ok
-                  - data
-  /ajax/getClientMessageSettings:
-    get:
-      operationId: listAjaxGetclientmessagesettings
-      summary: List ajax getclientmessagesettings
-      x-openweb:
-        permission: read
-        build:
-          stable_id: def690b0e099cb59
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      message:
-                        type: object
-                        properties:
-                          at_me:
-                            type: integer
-                          comment:
-                            type: integer
-                          in_like:
-                            type: integer
-                          groupchat_notify_receive:
-                            type: integer
-                          chat_group_notify:
-                            type: integer
-                          get_unfollow_message:
-                            type: boolean
-                        required:
-                          - at_me
-                          - comment
-                          - in_like
-                          - groupchat_notify_receive
-                          - chat_group_notify
-                          - get_unfollow_message
-                    required:
-                      - message
-                  ok:
-                    type: integer
-                required:
-                  - data
-                  - ok
-  /ajax/getNavConfig:
-    get:
-      operationId: getAjaxGetnavconfig
-      summary: Get ajax getnavconfig
-      x-openweb:
-        permission: read
-        build:
-          stable_id: a4ca819b5b32153d
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-  /ajax/log/action:
-    get:
-      operationId: getAjaxLogAction
-      summary: Get ajax log action
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 82152448a193cfde
-          tool_version: 2
-      parameters:
-        - name: act_code
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1
-        - name: ext
-          in: query
-          required: true
-          schema:
-            type: string
-          example: module:01
-        - name: fid
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 1
-        - name: luicode
-          in: query
-          required: true
-          schema:
-            type: string
-          example: ""
-        - name: t
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1
-        - name: type
-          in: query
-          required: true
-          schema:
-            type: string
-          example: pic
-        - name: uicode
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-  /ajax/log/detectVideoCodecSupport:
-    get:
-      operationId: getAjaxLogDetectvideocodecsupport
-      summary: Get ajax log detectvideocodecsupport
-      x-openweb:
-        permission: read
-        build:
-          stable_id: cc09792de9f64fad
-          tool_version: 2
-      parameters:
-        - name: data
-          in: query
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-          example:
-            - '{"h264":{"supported":true'
-            - '"details":{"hardwareAccelerated":true'
-            - '"supportedProfiles":["video/mp4; codecs=\"avc1.42E01E\""'
-            - '"video/mp4; codecs=\"avc1.4D401E\""'
-            - '"video/mp4; codecs=\"avc1.64001E\""]'
-            - '"canDecode":true}}'
-            - '"hevc":{"supported":true'
-            - '"details":{"hardwareAccelerated":false'
-            - '"canDecode":true}}'
-            - '"browser":{"name":"Chrome"'
-            - '"version":"146"'
-            - '"os":"macOS"}}'
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-  /ajax/log/read:
-    post:
-      operationId: createAjaxLogRead
-      summary: Create ajax log read
-      x-openweb:
-        permission: write
-        build:
-          stable_id: 5e019a8c1c9177c2
-          tool_version: 2
-      parameters:
-        - name: _csrf
-          in: query
-          required: true
-          schema:
-            type: string
-          example: <EXAMPLE_ID>
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-  /ajax/log/rum:
-    post:
-      operationId: createAjaxLogRum
-      summary: Create ajax log rum
-      x-openweb:
-        permission: write
-        build:
-          stable_id: 2a775bd6952d539a
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: integer
-                required:
-                  - ok
   /ajax/message/unreadHint:
     get:
-      operationId: getAjaxMessageUnreadhint
-      summary: Get ajax message unreadhint
+      operationId: getUnreadMessageHint
+      summary: Get unread message hints
       x-openweb:
         permission: read
         build:
@@ -8932,8 +8455,8 @@ paths:
                   - ok
   /ajax/side/cards:
     get:
-      operationId: listAjaxSideCards
-      summary: List ajax side cards
+      operationId: getSideCards
+      summary: Get sidebar cards
       x-openweb:
         permission: read
         build:
@@ -8953,50 +8476,10 @@ paths:
             application/json; charset=utf-8:
               schema:
                 type: object
-  /ajax/side/cards/sideBusiness:
-    get:
-      operationId: getAjaxSideCardsSidebusiness
-      summary: Get ajax side cards sidebusiness
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ba99e6232ca66e7e
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-  /ajax/side/cards/sideInterested:
-    get:
-      operationId: getAjaxSideCardsSideinterested
-      summary: Get ajax side cards sideinterested
-      x-openweb:
-        permission: read
-        build:
-          stable_id: cf1099737405adce
-          tool_version: 2
-      parameters:
-        - name: count
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
   /ajax/side/hotSearch:
     get:
-      operationId: getAjaxSideHotsearch
-      summary: Get ajax side hotsearch
+      operationId: getHotSearch
+      summary: Get hot search topics
       x-openweb:
         permission: read
         build:
@@ -9234,10 +8717,7 @@ paths:
                       ext:
                         type: string
                         enum:
-                          - cate:2008|words:消毒,#高三学生请求拆除鸟巢校长写信回应#,#清朗网络空间汇聚向上向善#,徐良方致歉声明,#王俊凯蹦迪版心引力#,#迪丽热巴有高度近视#,#伊朗正式回应美国15点停火协议#,#以军参谋长说以军常规部队已崩溃#,小狗
-                            是表哥吗,低精力人群的周末安排belike,#站姐愚人节团建预告#,#徐良演唱会时薪4000#,#R1SE任豪回来了#,#鞠婧祎你在不在高音#,代旭
-                            男主剧,#伊朗连遭重创绝地反击#,#AG战胜JDG#,#女子断碳水2月确诊糖尿病前期#,#世上顶好顶好的老太婆走了#,#幼儿园自理比赛女孩靠佛系速度获胜#,#女子在家被流浪狗咬伤3天后狗死了#,你好1983,#张凌赫大一曾分享暗恋细节#,#时代少年团奔跑吧直播就出现了17秒#,#没有人比R1SE更爱R1SE#,#女顾客打印后要求归类被拒当场崩溃#,#金价急速飙涨#,#杨臣刚自曝因老鼠爱大米收入1.7亿#,迪丽热巴女鬼一来了,#鞠婧祎获巅峰流行女歌手#,#泰国与伊朗达成协议#,#丁禹兮领奖时宣传白日提灯#,#太原一商圈起火现场浓烟滚滚#,#伊朗称无人机大规模打击以色列目标#,#美国最强导弹击落了美国最强战机#,Angelababy梦回贝微微,JDG对战AG,#俄罗斯4月1日起禁止汽油出口#,#金价又涨了#,#也门胡塞武装发射导弹#,陈哲远锁凶正确率百分百,白日提灯,#伊朗军方称击中美军舰艇#,#王俊凯比心#,穿上春装被误认为是保洁,一念江南,郝熠然
-                            翻牌,11岁的我觉得这顿饭夯爆了,#吴镇宇说郭晓婷脸上有故事了#,#氦气价格暴涨50%#
+                          - cate:2008|words:消毒,#高三学生请求拆除鸟巢校长写信回应#,#清朗网络空间汇聚向上向善#,徐良方致歉声明,#王俊凯蹦迪版心引力#,#迪丽热巴有高度近视#,#伊朗正式回应美国15点停火协议#,#以军参谋长说以军常规部队已崩溃#,小狗 是表哥吗,低精力人群的周末安排belike,#站姐愚人节团建预告#,#徐良演唱会时薪4000#,#R1SE任豪回来了#,#鞠婧祎你在不在高音#,代旭 男主剧,#伊朗连遭重创绝地反击#,#AG战胜JDG#,#女子断碳水2月确诊糖尿病前期#,#世上顶好顶好的老太婆走了#,#幼儿园自理比赛女孩靠佛系速度获胜#,#女子在家被流浪狗咬伤3天后狗死了#,你好1983,#张凌赫大一曾分享暗恋细节#,#时代少年团奔跑吧直播就出现了17秒#,#没有人比R1SE更爱R1SE#,#女顾客打印后要求归类被拒当场崩溃#,#金价急速飙涨#,#杨臣刚自曝因老鼠爱大米收入1.7亿#,迪丽热巴女鬼一来了,#鞠婧祎获巅峰流行女歌手#,#泰国与伊朗达成协议#,#丁禹兮领奖时宣传白日提灯#,#太原一商圈起火现场浓烟滚滚#,#伊朗称无人机大规模打击以色列目标#,#美国最强导弹击落了美国最强战机#,Angelababy梦回贝微微,JDG对战AG,#俄罗斯4月1日起禁止汽油出口#,#金价又涨了#,#也门胡塞武装发射导弹#,陈哲远锁凶正确率百分百,白日提灯,#伊朗军方称击中美军舰艇#,#王俊凯比心#,穿上春装被误认为是保洁,一念江南,郝熠然 翻牌,11岁的我觉得这顿饭夯爆了,#吴镇宇说郭晓婷脸上有故事了#,#氦气价格暴涨50%#
                     required:
                       - act_code
                       - ext
@@ -9260,8 +8740,8 @@ paths:
                   - topLogs
   /ajax/side/search:
     get:
-      operationId: searchAjaxSide
-      summary: Search ajax side
+      operationId: search
+      summary: Search Weibo content
       x-openweb:
         permission: read
         build:
@@ -10186,62 +9666,10 @@ paths:
                 required:
                   - ok
                   - data
-  /ajax/side/searchBand:
-    get:
-      operationId: getAjaxSideSearchband
-      summary: Get ajax side searchband
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 2911c9f66b741133
-          tool_version: 2
-      parameters:
-        - name: last_tab
-          in: query
-          required: true
-          schema:
-            type: string
-          example: hot
-        - name: last_tab_time
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-  /ajax/statuses/config:
-    get:
-      operationId: getConfig
-      summary: Get config
-      x-openweb:
-        permission: read
-        build:
-          stable_id: e406b582b3c7c64d
-          tool_version: 2
-      parameters:
-        - name: type
-          in: query
-          required: false
-          schema:
-            type: string
-          example: push_active
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
   /hot/search:
     get:
-      operationId: searchHot
-      summary: Search hot
+      operationId: getHotTrending
+      summary: Get hot trending topics
       x-openweb:
         permission: read
         build:
