@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-26 (pipeline v2)
+> Last updated: 2026-03-28 (pipeline v2 session)
 
 ## Mission
 
@@ -88,7 +88,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 | **Capture** | CDP browser recording (HAR + WS + state + DOM), no content filtering, body-size-gate only | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17), unfiltered (v2) |
 | **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skill/openweb/references/` | Reference docs (M19), 7 knowledge files (M38) |
 | **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete — npm binary `openweb` (M33) |
-| **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `~/.openweb/sites/` (installed) | 67 sites with DOC.md + PROGRESS.md (M38) |
+| **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `~/.openweb/sites/` (installed) | 68 sites with DOC.md + PROGRESS.md |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `skill/openweb/SKILL.md` | 5-intent router (M38) |
 
 ---
@@ -204,10 +204,11 @@ Token cache at `~/.openweb/vault.json` stores cookies + localStorage + sessionSt
 | ChatGPT | L2 | exchange_chain | — | — | — | node |
 | X | L2 | cookie_session | cookie_to_header | — | — | page |
 | Coinbase | WS | — | — | — | — | ws |
+| LinkedIn | L2 | cookie_session | cookie_to_header | — | — | node |
 | WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |
 | Telegram | L3 | adapter | — | — | adapter | adapter (L3) |
 
-67 total sites. Full list: `pnpm dev sites`
+68 total sites. Full list: `pnpm dev sites`
 
 **Note:** The GitHub public fixture also includes a `graphqlQuery` operation (POST `/graphql`, `permission: write`) demonstrating POST-based GraphQL on a public API.
 

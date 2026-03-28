@@ -1,3 +1,65 @@
+## 2026-03-28: Pipeline v2 session — full audit, refactor, and site expansion
+
+**Scope:** ~70 commits (e8527ba..f8e0e8c), covering pipeline v2 implementation, full audit cycle, runtime ergo fixes, LinkedIn discovery, workflow redesign, and regression testing.
+
+**Pipeline v2 (core refactor):**
+- Compile pipeline refactored from 12 ad-hoc steps to 5 typed phases: Capture → Analyze → Curate → Generate → Verify
+- New type system (`types-v2.ts`) defines contracts at every phase boundary (CaptureBundle, AnalysisReport, CuratedCompilePlan, VerifyReport)
+- Labeler replaces filter — every sample categorized (api/static/tracking/off_domain), nothing silently dropped
+- Path normalization structural (numeric/uuid/hex) + cross-sample learned, runs before clustering
+- GraphQL sub-clustering by operationName/queryId/persistedHash/queryShape with virtual paths for collision avoidance
+- Auth candidate ranking with evidence: localStorage_jwt > exchange_chain > cookie_session
+- Schema-v2 inference with enum detection, format annotation (date-time/uuid/email/uri), size controls
+- Curation phase (NEW): AnalysisReport + CurationDecisionSet → CuratedCompilePlan with PII scrubbing
+- Generate-v2: response variants per status code, operationId deduplication, request body schemas
+- Verify-v2: unified auth-first escalation replacing verify+probe split, per-attempt diagnostics
+
+**Full pipeline audit:**
+- Filter audit: 17 filters across 4 layers reviewed, 7 changed. Content-type filter removed, body-size-gate only at capture.
+- Cluster/classify audit: path normalization, GraphQL clustering, extraction signals
+- Generator audit: response variants, x-openweb emission, operationId uniqueness
+- Verify audit: auth-first escalation, page-transport skip, bounded concurrency
+- Schema inference audit: enum/format detection, size controls
+- PII exposure audit: scrub.ts removes tokens, emails, phone numbers, cookies from examples
+- `risk_tier` removed from generator and schema (unused)
+
+**Runtime ergonomics:**
+- Operation timeout (30s default, `OPENWEB_TIMEOUT` configurable) with timer leak fix
+- Token cache deadlock fix: 10s lock acquisition timeout, `_unsafe` lock-free variants
+- Auto-navigate fallback: opens new tab when no matching page exists
+- JSON auto-stringify: object values auto-stringify for string params with `x-openweb-json-schema`
+
+**LinkedIn:**
+- Discovered and working: 5/5 target intents, 71 operations via Voyager API
+- All read operations verified through runtime QA
+
+**CSRF detection:**
+- Code proposes candidates ranked by confidence; agent disposes (selects or overrides)
+- Client hints excluded, quote-stripping, sends on all methods
+
+**--example fix:**
+- `--example` flag now loads real params from `examples/*.example.json` fixtures
+- `tests/` renamed to `examples/` across entire pipeline
+
+**SKILL.md:**
+- Exec flow reads DOC.md first before trying operations
+- Site-doc template adds Quick Start section
+
+**Workflow redesign:**
+- Unified discover loop with runtime verify as exit criterion
+- Compile skill doc Step 5 delegates to compile.md, clear pipeline improvement report
+
+**Regression test:**
+- 0 regressions across 41 sites after pipeline v2, 15 verified end-to-end
+
+**Site count:** 68 sites (67 + LinkedIn), 735 tests passing
+
+**Key commits:** e8527ba..f8e0e8c (~70 commits)
+**Next:** Site coverage expansion, compile real sites through v2 pipeline
+**Blockers:** None
+
+---
+
 ## 2026-03-28: Fix --example flag, rename tests→examples
 
 **What changed:**

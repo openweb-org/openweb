@@ -1,7 +1,7 @@
 # Compiler Pipeline
 
 > Capture -> Analyze -> Curate -> Generate -> Verify: turning website observations into skill packages.
-> Last updated: 2026-03-27 (design gap fixes)
+> Last updated: 2026-03-28 (pipeline v2 session)
 
 ## Overview
 
@@ -121,7 +121,7 @@ Consumes `CuratedCompilePlan` and emits the skill package.
 **x-openweb extension emission:**
 - Info-level: spec_version, compiled_at, requires_auth, extraction_signals
 - Server-level: transport, auth, CSRF, signing (from CuratedSiteContext)
-- Operation-level: permission, risk_tier, build.stable_id, build.tool_version
+- Operation-level: permission, build.stable_id, build.tool_version
 
 -> See: `src/compiler/generator/generate-v2.ts`
 
@@ -229,7 +229,9 @@ src/compiler/
 |   +-- differentiate.ts    # Path params vs query params
 |   +-- annotate.ts         # operationId + summary generation
 |   +-- classify.ts         # Extraction signal detection (ssr_next_data, script_json, page_global)
-|   +-- classify/           # Auth/CSRF/signing detection helpers
+|   +-- auth-detect.ts      # Auth primitive detection helpers
+|   +-- csrf-detect.ts      # CSRF primitive detection helpers
+|   +-- signing-detect.ts   # Signing primitive detection helpers
 +-- curation/               # Phase 3: Curate
 |   +-- apply-curation.ts   # AnalysisReport + decisions -> CuratedCompilePlan
 |   +-- scrub.ts            # PII scrubbing for example values

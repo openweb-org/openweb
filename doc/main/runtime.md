@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-03-27 (ergo fixes: timeout, auto-navigate)
+> Last updated: 2026-03-28 (pipeline v2 session)
 
 ## Overview
 
@@ -311,12 +311,14 @@ src/runtime/
 ├── navigator.ts              # CLI navigation helper (render site/operation info)
 ├── cache-manager.ts          # Response cache
 ├── token-cache.ts            # AES-256-GCM encrypted vault (M34)
-├── test-runner.ts            # verify command implementation
 ├── ws-executor.ts            # WebSocket operation execution (M35)
 ├── ws-connection.ts          # WS connection manager (7-state machine)
 ├── ws-router.ts              # WS message routing
 ├── ws-runtime.ts             # WS runtime lifecycle
 ├── ws-pool.ts                # WS connection pooling
+├── ws-socket.ts              # WS socket abstraction
+├── ws-cli-executor.ts        # WS CLI integration
+├── page-candidates.ts        # Browser page matching for session executor
 └── primitives/               # L2 primitive resolvers
     ├── registry.ts           # Primitive type registry
     ├── index.ts              # Primitive pipeline orchestration

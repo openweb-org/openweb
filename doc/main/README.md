@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-03-27 (design gap fixes)
+> Last updated: 2026-03-28 (pipeline v2 session)
 
 ## Quick Start
 
@@ -65,7 +65,7 @@ src/
 │   ├── ws-runtime.ts           #   WS runtime lifecycle
 │   ├── cache-manager.ts        #   Response cache
 │   ├── token-cache.ts          #   Auth token cache (AES-256-GCM vault)
-│   ├── test-runner.ts          #   verify command implementation
+│   ├── navigator.ts            #   CLI navigation helper (render site/operation info)
 │   └── primitives/             #   L2 primitive resolvers (14 handlers)
 │
 ├── types/                      # Meta-spec type system
@@ -102,6 +102,11 @@ src/
 │   ├── bundle.ts               #   Write capture bundle to disk
 │   └── connection.ts           #   CDP connection with retry
 │
+├── lifecycle/                   # Site lifecycle management
+│   ├── verify.ts               #   Verify command (execute examples, check drift)
+│   ├── fingerprint.ts          #   Response fingerprinting for drift detection
+│   └── registry.ts             #   Site registry (archive, install, rollback)
+│
 ├── lib/                        # Shared utilities
 │   ├── site-resolver.ts        #   Site resolution (bundled + user-installed)
 │   ├── spec-loader.ts          #   OpenAPI/AsyncAPI spec loading
@@ -118,7 +123,7 @@ src/
 │   ├── cookies.ts              #   Cookie management
 │   └── config/                 #   Config files: blocked-domains, blocked-paths, tracking-cookies, static-extensions
 │
-└── sites/                      # Site packages (67 sites)
+└── sites/                      # Site packages (68 sites)
     ├── open-meteo/             #   L1 (no x-openweb)
     ├── instagram/              #   L2 (cookie_session + cookie_to_header)
     ├── youtube/                #   L2 (page_global + sapisidhash)
@@ -126,7 +131,7 @@ src/
     ├── coinbase/               #   WS (AsyncAPI, compiler-generated)
     ├── whatsapp/               #   L3 adapter (Meta require() module system)
     ├── telegram/               #   L3 adapter (teact global state)
-    └── ...                     #   64 more sites
+    └── ...                     #   65 more sites
 ```
 
 ---
