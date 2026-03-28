@@ -2,13 +2,12 @@
 
 How to review, curate, and troubleshoot a compiled site package.
 
-Self-contained — use during `discover.md` Steps 5-7 (curate, verify, diagnose),
-or standalone when reviewing an existing site package.
+Self-contained — use during `discover.md` Step 5, or standalone when
+reviewing an existing site package.
 
 ## When to Use
 
-- During discovery Step 5 — curating the auto-generated spec
-- During discovery Step 7 — diagnosing and fixing runtime failures
+- During discovery Step 5 — compile, curate, verify, diagnose loop
 - Standalone — reviewing or editing an existing site package
 - Recompiling an existing site with new traffic
 
@@ -44,21 +43,28 @@ Your job is to review these outputs and fix what auto-curation got wrong.
 
 ## Process
 
+```mermaid
+flowchart TD
+    S1["Step 1: Quick check<br/><i>summary + compile-time verify</i>"]
+    S2["Step 2: Review analysis<br/><i>auth, clusters, extraction</i>"]
+    S3["Step 3: Edit the spec<br/><i>fix auth, rename ops, remove noise</i>"]
+    S4{"Step 4: Verify<br/><i>runtime exec per target intent</i>"}
+    S5["Step 5: Install"]
+
+    S1 --> S2
+    S2 --> S3
+    S3 --> S4
+    S4 -->|"failures → fix spec"| S3
+    S4 -->|"need more traffic"| RECAPTURE["Return to discover.md Step 2"]
+    S4 -->|"all intents work"| S5
+
+    style S3 fill:#fff3e0
+    style S4 fill:#fff3e0
+    style RECAPTURE fill:#ffebee
 ```
-  Step 1: Read summary + compile-time verify report
-       |
-       v
-  Step 2: Review analysis (auth, clusters, extraction)
-       |
-       v
-  Step 3: Review and edit the generated spec  <---+
-       |                                           |
-       v                                           |
-  Step 4: Verify -- failures? fix spec, retry -----+
-       |
-       v  (all pass or failures understood)
-  Step 5: Install the site package
-```
+
+**Exit criterion:** For each target intent, at least one operation returns
+real data via `openweb <site> exec <op> '{...}'`.
 
 ### Step 1: Quick Check (summary + compile-time verify)
 
@@ -91,6 +97,7 @@ spec bug.
 | `missing_example` | No example params available to build request. Add `exampleValue` to parameters in the spec. |
 | `skipped_unsafe` | Write operation skipped. Not a failure. |
 | `ssrf_blocked` | URL resolved to private/internal IP. Check the host. |
+| 403 with cookies present | Most operations return 403 even though auth cookies are available. Likely wrong CSRF detection. Check `authCandidates[0].csrfOptions` in analysis.json -- see CSRF Troubleshooting in Step 2a. |
 
 If everything passes and the operation count matches expectations, you may have a
 clean compile. Continue to Step 2 for a quality review before installing. If the
@@ -129,6 +136,26 @@ top candidate (rank 1):
 
 **If auth looks wrong:** You will edit the generated `openapi.yaml`'s
 `servers[0].x-openweb` section manually in Step 3. Note what needs changing now.
+
+#### CSRF Troubleshooting
+
+The auto-detected CSRF may be wrong. Check `authCandidates[0].csrfOptions` in analysis.json --
+it lists ALL cookie-to-header matches ranked by confidence.
+
+Common false positives:
+- Locale cookies (e.g., `lc-main=en_US` -> `x-li-lang: en_US`) -- short values, not tokens
+- Preference cookies -- browser settings forwarded as headers
+
+How to identify the real CSRF:
+- Look for headers named `csrf-token`, `x-csrf-token`, `x-csrftoken`
+- Look for cookies named `JSESSIONID`, `csrftoken`, `_csrf`
+- Real CSRF tokens are long random strings (>10 chars), not short words
+
+To override: re-compile with `--curation` specifying `csrfType`:
+```bash
+echo '{"csrfType": "cookie_to_header"}' > curation.json
+# Then manually edit the generated spec's csrf section if needed
+```
 
 #### 2b. Clusters
 
@@ -297,7 +324,10 @@ x-openweb:
 
 ### Step 4: Verify
 
-After editing the spec, verify the site package:
+After editing the spec, verify it works at runtime. Two levels: batch verify
+(sanity check) and runtime exec (the real exit gate).
+
+#### 4a. Batch verify
 
 ```bash
 openweb verify <site>
@@ -306,59 +336,69 @@ openweb verify <site>
 This runs the lifecycle verifier against the installed site package. Its output
 format is different from `verify-report.json`.
 
-#### Post-edit verify output (`openweb verify <site>`)
-
-`openweb verify <site>` reports lifecycle statuses, not v2 `VerifyReason` values:
+`openweb verify <site>` reports lifecycle statuses:
 - `PASS` -- operation/site verified successfully
 - `DRIFT` -- the site still works, but the response shape changed
 - `FAIL` -- execution failed
 - `auth_expired` -- auth-only failures (login/session issue)
 
-#### Decision Table for `openweb verify <site>`
-
 | Status | What it means | What to do |
 |--------|----------------|------------|
-| `PASS` | The installed site package works for the tested operations. | Continue to install/docs cleanup. |
-| `DRIFT` | The endpoint still works, but the live response shape differs from the stored fingerprint. | Inspect the operation. If the site changed intentionally, re-compile or update fixtures/spec. If transient, document it in DOC.md. |
-| `auth_expired` | Verification failed because login/session state is no longer valid. | Run `openweb login <site>`, then `openweb browser restart`, then rerun `openweb verify <site>`. |
-| `FAIL` | The operation did not execute successfully. | Read the per-operation detail line. Common causes: stale path, bad example input, missing browser tab for page transport, or runtime execution errors. Fix the spec or environment and rerun verify. |
+| `PASS` | Works. Continue to runtime exec. | |
+| `DRIFT` | Works but response shape changed. | Re-compile or update fixtures if intentional. Document if transient. |
+| `auth_expired` | Login/session expired. | `openweb login <site>`, `openweb browser restart`, rerun verify. |
+| `FAIL` | Execution failed. | Read detail line. Fix spec or environment and rerun. |
+| `FAIL` (403 with cookies) | Most ops return 403 even with valid cookies. | Wrong CSRF -- check `authCandidates[0].csrfOptions` in analysis.json. See CSRF Troubleshooting in Step 2a. |
 
-For persistent failures: fix the spec, then rerun `openweb verify <site>`. If
-the root cause is wrong capture coverage, wrong API domain, or missing auth
-evidence, return to `discover.md` and re-capture.
+#### 4b. Runtime exec — the exit gate
 
-#### WS Verification
+Batch verify checks HTTP sanity. Runtime exec proves an agent can get usable data.
 
-If AsyncAPI operations are present:
-- Can the WebSocket connect with the detected auth?
-- Does the heartbeat interval match?
-- Do subscribe operations receive expected event types?
-
-#### 4c. Runtime QA — Execute Core Operations
-
-Verify-report tells you IF the spec passes HTTP sanity checks. But the real test
-is whether an agent can get useful data.
-
-Pick 2-3 core operations from different target intents and execute them:
+For each target intent, exec the best operation:
 
 ```bash
 openweb <site> exec <operation> '{"param": "value"}'
 ```
 
-Check:
-- Does it return data (not an error)?
-- Does the data match what you see on the website?
-- For auth-required operations: is the browser logged in?
+**Exit criterion:** Each target intent has at least one operation that returns
+real data — HTTP 2xx, valid JSON, non-empty response with expected fields.
+
+If all pass → continue to Step 5 (install).
+If any fail → diagnose below.
 
 Common issues at this stage:
-- `needs_browser` -> run `openweb browser start`
-- `needs_page` -> should auto-navigate now; if it fails, open the site manually
-- `needs_login` -> log in to the site in the managed browser
-- Hangs forever -> check if token cache is stale (restart browser)
-- Empty response -> the API may need different parameters
+- `needs_browser` → run `openweb browser start`
+- `needs_login` → log in to the site in the managed browser
+- Hangs → check if token cache is stale (restart browser)
+- Empty response → the API may need different parameters
 
-This step catches problems that compile-time verify cannot: auth failures,
-page-transport issues, incorrect parameters, and API changes since capture.
+#### 4c. Diagnose + fix
+
+When runtime exec fails, diagnose the root cause and fix the spec.
+Do not re-capture unless the problem is missing traffic.
+
+| Response | Likely cause | Fix |
+|----------|-------------|-----|
+| 403 | Wrong CSRF config, missing headers, expired session | Check CSRF cookie/header names. Check if CSRF scope excludes GET. Check for extra required headers. If cookies missing: `openweb login <site>` |
+| 401 | Session expired | `openweb login <site>`, restart browser |
+| 999 / bot block | Node transport hitting bot detection | Switch to `page` transport |
+| 200 HTML (not JSON) | SSR page endpoint, not API | Remove op and use API equivalent, or add extraction config |
+| 404 | Wrong path template | Fix path parameter normalization in spec |
+| 400 | Bad param examples or missing required params | Update `exampleValue` fields in spec |
+| 200 empty/wrong data | Wrong query variables or response schema | Check captured request params vs what you're sending |
+| Timeout / hang | Stale token cache, browser not running | `openweb browser restart`, clear token cache |
+| Redirect loop | Auth-gated endpoint, not logged in | Log in, or remove endpoint |
+
+After fixing the spec, return to Step 4a. If the fix requires more captured
+traffic (missing endpoints, wrong API domain), return to `discover.md` Step 2
+for re-capture.
+
+#### 4d. WS Verification
+
+If AsyncAPI operations are present:
+- Can the WebSocket connect with the detected auth?
+- Does the heartbeat interval match?
+- Do subscribe operations receive expected event types?
 
 ### Step 5: Install the Site Package
 

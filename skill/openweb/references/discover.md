@@ -5,7 +5,7 @@ How to add a new site or expand an existing site's operation coverage.
 **Responsibility:** Full journey — from target intents to working operations.
 Coverage (are target intents in the traffic?) AND correctness (do ops return
 real data at runtime?). `compile.md` is the reference guide for spec curation
-and troubleshooting — used during Steps 5-7 below.
+and troubleshooting — used in Step 5 below.
 
 ## When to Use
 
@@ -75,33 +75,26 @@ flowchart TD
     S2["Step 2: Capture<br/><i>agent browses, code records</i>"]
     S3["Step 3: Compile<br/><i>code-only</i>"]
     S4{"Step 4: Check coverage<br/><i>agent reviews code output</i>"}
-    S5["Step 5: Curate<br/><i>agent reviews + edits spec</i><br/>(see compile.md)"]
-    S6{"Step 6: Runtime verify<br/><i>agent runs exec, checks data</i>"}
-    S7["Step 7: Diagnose + fix<br/><i>agent-only</i>"]
-    S8["Step 8: Install<br/><i>agent + code</i>"]
-    S9["Step 9: Pipeline improvement report<br/><i>agent-only, dev mode optional</i>"]
+    S5["Step 5: Compile, Curate & Verify<br/><i>agent + code (follow compile.md)</i>"]
+    S6["Step 6: Install<br/><i>agent + code</i>"]
+    S7["Step 7: Pipeline improvement report<br/><i>agent-only, dev mode optional</i>"]
 
     S1 --> S2
     S2 --> S3
     S3 --> S4
     S4 -->|"missing intents"| S2
     S4 -->|"clusters exist"| S5
-    S5 --> S6
-    S6 -->|"all pass"| S8
-    S6 -->|"failures"| S7
-    S7 -->|"fix spec → re-verify"| S6
-    S7 -->|"re-capture needed"| S2
-    S8 -.->|"dev mode"| S9
+    S5 -->|"all intents work"| S6
+    S5 -->|"need more traffic"| S2
+    S6 -.->|"dev mode"| S7
 
     style S1 fill:#e1f5fe
     style S2 fill:#e1f5fe
     style S3 fill:#e8f5e9
     style S4 fill:#fff3e0
     style S5 fill:#fff3e0
-    style S6 fill:#fff3e0
-    style S7 fill:#e1f5fe
-    style S8 fill:#e1f5fe
-    style S9 fill:#f3e5f5
+    style S6 fill:#e1f5fe
+    style S7 fill:#f3e5f5
 ```
 
 **Legend:** 🟦 blue = agent-driven | 🟩 green = code-only | 🟧 orange = agent reviews code output | 🟪 purple = dev mode optional
@@ -175,8 +168,8 @@ generate, and verify. It produces:
 
 The auto-curation accepts all clusters, picks the top-ranked auth candidate,
 and uses the analyzer's suggested operation names (snake_case by default, e.g.,
-`list_users`, `get_product`). Step 5 (curate) is where you refine these defaults — see `compile.md`
-for detailed review guidance.
+`list_users`, `get_product`). Step 5 is where you review and fix these — see
+`compile.md`.
 
 ### Step 4: Check Coverage
 
@@ -254,103 +247,30 @@ If your target intent's data is in SSR HTML rather than API calls, this confirms
 **Note:** The analyzer only auto-detects these two patterns. Other patterns
 (`page_global`, `html_selector`, `__NUXT__`) require manual inspection during
 compile review. If you saw the data in SSR during browsing but no extraction
-signal appears, note this for Step 5 (curate).
+signal appears, note this for Step 5.
 
-### Step 5: Curate
+### Step 5: Compile, Curate & Verify
 
-Review the auto-generated spec and fix what auto-curation got wrong.
-`compile.md` has detailed guidance for each sub-step — this is the quick checklist.
+Run the compile pipeline and iterate until target intents work at runtime.
 
-#### 5a. Cross-reference auth with knowledge files
+**Follow `compile.md` for this entire step.** It covers:
+- How to read analysis.json (auth candidates, CSRF options, clusters)
+- How to curate the spec (fix auth/CSRF, rename ops, exclude noise, set transport)
+- How to verify (runtime exec, not just verify-report.json)
+- How to diagnose and fix failures (decision table by HTTP status)
+- When to re-compile with `--curation`
 
-Compare auto-detected `authCandidates[0]` against your expectation from
-`references/knowledge/auth-patterns.md`. Common mismatches:
-- CSRF cookie/header names wrong (e.g., client hint header instead of real CSRF)
-- Auth confidence low because denominator includes off-domain traffic
-- httpOnly cookies excluded from CSRF candidate pool
+**Exit criterion:** For each target intent, at least one operation returns
+real data via `openweb <site> exec <op> '{...}'`.
 
-If auth or CSRF looks wrong, fix in `openapi.yaml` `servers[0].x-openweb`.
-See `compile.md` Steps 2a and 3c for details.
+If compile.md's verify loop determines you need more traffic (missing endpoints,
+wrong API domain), return to Step 2 (Capture).
 
-#### 5b. Remove noise operations
-
-Delete tracking, analytics, CDN, 4xx-only, and polling clusters.
-Keep only operations that map to your target intents (plus useful supporting ops).
-See `compile.md` Step 3a for the noise checklist.
-
-#### 5c. Rename operations and fix summaries
-
-Replace auto-generated snake_case names with descriptive camelCase names.
-See `compile.md` Step 3b.
-
-#### 5d. Set transport
-
-If bot detection is suspected (status 999, heavy fingerprinting, PerimeterX/Akamai
-cookies), switch to `page` transport. See `compile.md` "Transport Selection".
-
-#### 5e. Check for missing required headers
-
-Some sites need extra headers beyond auth/CSRF (e.g., `x-restli-protocol-version`
-for LinkedIn). Inspect captured request headers for consistent custom headers
-that the pipeline didn't auto-configure.
-
-### Step 6: Runtime Verify
-
-**This is the exit gate.** Compile-time verify (`verify-report.json`) only checks
-HTTP sanity. Runtime verify proves an agent can get usable data.
-
-For each target intent, exec the best operation:
-
-```bash
-openweb <site> exec <operation> '{"param": "value"}'
-```
-
-**Pass criteria per intent:**
-- HTTP 2xx status (not 403, 401, 999)
-- Response is JSON (not HTML)
-- Response body contains real data (not empty array, not error object)
-- Data matches what you see on the website
-
-If all target intents pass → continue to Step 8 (install).
-If any fail → continue to Step 7 (diagnose).
-
-**Tip:** Also run `openweb verify <site>` for a batch sanity check across all
-operations. But the per-intent `exec` is what matters for exit.
-
-### Step 7: Diagnose + Fix
-
-When runtime verify fails, diagnose the root cause and fix it. Do not re-capture
-unless the problem is missing traffic — most failures are spec-level fixes.
-
-#### Diagnosis by HTTP response
-
-| Response | Likely cause | Fix |
-|----------|-------------|-----|
-| 403 | Wrong CSRF config, missing headers, expired session | Check CSRF cookie/header names. Check if CSRF scope excludes GET. Check for extra required headers. If cookies missing: `openweb login <site>` |
-| 401 | Session expired | `openweb login <site>`, restart browser |
-| 999 / bot block | Node transport hitting bot detection | Switch to `page` transport |
-| 200 HTML (not JSON) | SSR page endpoint, not API | Remove op and use API equivalent, or add extraction config |
-| 404 | Wrong path template | Fix path parameter normalization in spec |
-| 400 | Bad param examples or missing required params | Update `exampleValue` fields in spec |
-| 200 empty/wrong data | Wrong query variables or response schema | Check captured request params vs what you're sending |
-| Timeout / hang | Stale token cache, browser not running | `openweb browser restart`, clear token cache |
-| Redirect loop | Auth-gated endpoint, not logged in | Log in, or remove endpoint |
-
-#### Fix → re-verify loop
-
-After fixing the spec, go back to Step 6. If the fix requires re-compilation
-(e.g., wrong API domain, missing traffic), go back to Step 2.
-
-See `compile.md` for detailed troubleshooting:
-- Auth/CSRF fixes: Steps 2a, 3c, and "Common False Positives"
-- Transport selection: "Execution Model Decision"
-- Cluster issues: Step 2b and "Common False Negatives"
-
-### Step 8: Install
+### Step 6: Install
 
 When all target intents return real data via `exec`, install the package.
 
-#### 8a. Copy spec files
+#### 6a. Copy spec files
 
 ```bash
 mkdir -p src/sites/<site>
@@ -363,7 +283,7 @@ cp ~/.openweb/sites/<site>/manifest.json src/sites/<site>/
 If the site already has a package, merge carefully — do not lose existing
 adapter files, DOC.md, or PROGRESS.md.
 
-#### 8b. Write DOC.md
+#### 6b. Write DOC.md
 
 Create or update `src/sites/<site>/DOC.md` per `references/site-doc.md`.
 This is the SOTA memory for the site — the next agent reads this instead
@@ -375,7 +295,7 @@ Required sections:
 - **Transport** — node or page, and why
 - **Known Issues** — bot detection, rate limits, drift-causing fields
 
-#### 8c. Write PROGRESS.md
+#### 6c. Write PROGRESS.md
 
 Append to `src/sites/<site>/PROGRESS.md` per `references/site-doc.md`:
 
@@ -393,7 +313,7 @@ Append to `src/sites/<site>/PROGRESS.md` per `references/site-doc.md`:
 **Commit:** <short hash>
 ```
 
-#### 8d. Build and test
+#### 6d. Build and test
 
 ```bash
 pnpm build && pnpm test
@@ -401,14 +321,14 @@ openweb sites          # should list the new site
 openweb <site>         # should show operations
 ```
 
-#### 8e. Update knowledge (if applicable)
+#### 6e. Update knowledge (if applicable)
 
 If you learned something generalizable during this discovery, write it to
 `references/knowledge/` per `references/update-knowledge.md`.
 
-### Step 9 (dev mode, optional): Pipeline Improvement Report
+### Step 7 (dev mode, optional): Pipeline Improvement Report
 
-If you hit friction during Steps 5-7 that wasn't site-specific — a rule too
+If you hit friction during Step 5 that wasn't site-specific — a rule too
 tight, a heuristic too loose, a doc gap that wasted a cycle — write it up.
 
 Create `src/sites/<site>/pipeline-gaps.md`. The goal is NOT to overfit to this
@@ -442,10 +362,10 @@ efficient.
 - No doc guidance on CSRF scope (GET vs mutations only) → doc gap in compile.md
 
 **Not in scope:** Site-specific workarounds, one-off parameter fixes, or issues
-already resolved during Steps 5-7. If you fixed it in the spec, it's done.
+already resolved during Step 5. If you fixed it in the spec, it's done.
 This report is for upstream improvements only.
 
-## Fill Gaps (iterate Steps 2-7)
+## Fill Gaps (iterate Steps 2-5)
 
 If target operations are missing from the analysis:
 
@@ -464,7 +384,7 @@ If target operations are missing from the analysis:
   to help path normalization (e.g., `/search/shoes` and `/search/hats`
   normalize to `/search/{query}`).
 
-Repeat Steps 2-7 until every target intent returns real data via `exec`.
+Repeat Steps 2-5 until every target intent returns real data via `exec`.
 
 ## Incremental Discovery (Existing Sites)
 
@@ -474,7 +394,7 @@ When expanding an existing site package:
 2. Identify missing intents (from user request or archetype comparison)
 3. Enter at Step 2 with targeted capture for only the gaps
 4. After compile, verify the new intents appear as clusters
-5. Continue to Step 5 (curate) to merge new operations into the existing spec
+5. Continue to Step 5 to review and verify the merged operations
 6. Update DOC.md and PROGRESS.md
 
 ## Multi-Worker Browser Sharing
