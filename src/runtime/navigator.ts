@@ -290,34 +290,22 @@ export async function renderOperationJson(site: string, operationId: string): Pr
 
 /** Generate example params JSON from schema defaults and parameter names */
 export async function renderExample(site: string, operationId: string): Promise<string> {
-  const spec = await loadOpenApi(site)
-  const { operation } = findOperation(spec, operationId)
-  const allParams = resolveAllParameters(spec, operation)
-  const bodyParams = getRequestBodyParameters(operation)
+  const siteRoot = await resolveSiteRoot(site)
 
-  const example: Record<string, unknown> = {}
-
-  for (const p of [...allParams, ...bodyParams]) {
-    // Skip header params with defaults (auto-injected)
-    if (p.in === 'header' && p.schema?.default !== undefined) continue
-
-    if (p.schema?.default !== undefined) {
-      example[p.name] = p.schema.default
-    } else if (p.schema?.const !== undefined) {
-    } else {
-      // Generate a placeholder based on type
-      const type = typeof p.schema?.type === 'string' ? p.schema.type : 'string'
-      if (type === 'integer' || type === 'number') {
-        example[p.name] = 0
-      } else if (type === 'boolean') {
-        example[p.name] = false
-      } else if (type === 'array') {
-        example[p.name] = []
-      } else {
-        example[p.name] = `<${p.name}>`
+  // Try examples/ first, then legacy tests/ for backward compat
+  for (const [dir, ext] of [['examples', '.example.json'], ['tests', '.test.json']] as const) {
+    const fixturePath = path.join(siteRoot, dir, `${operationId}${ext}`)
+    try {
+      const raw = await readFile(fixturePath, 'utf8')
+      const fixture = JSON.parse(raw) as { cases?: Array<{ input?: Record<string, unknown> }> }
+      const input = fixture.cases?.[0]?.input
+      if (input && Object.keys(input).length > 0) {
+        return JSON.stringify(input, null, 2)
       }
+    } catch {
+      continue
     }
   }
 
-  return JSON.stringify(example, null, 2)
+  return `No example available for "${operationId}". Run \`openweb ${site} ${operationId}\` to see parameters.`
 }

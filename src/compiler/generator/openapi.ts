@@ -73,8 +73,8 @@ function extractionOperationId(signal: ExtractionSignal, index: number): string 
 }
 
 export async function generateOpenApi(input: GenerateOpenApiInput): Promise<void> {
-  const testsDir = path.join(input.outputRoot, 'tests')
-  await mkdir(testsDir, { recursive: true })
+  const examplesDir = path.join(input.outputRoot, 'examples')
+  await mkdir(examplesDir, { recursive: true })
 
   const primaryHost = choosePrimaryServerHost(input.operations, input.sourceUrl)
   const transport = input.classify?.transport ?? 'node'
@@ -165,7 +165,7 @@ export async function generateOpenApi(input: GenerateOpenApiInput): Promise<void
     }
 
     await writeFile(
-      path.join(testsDir, `${operation.operationId}.test.json`),
+      path.join(examplesDir, `${operation.operationId}.example.json`),
       `${JSON.stringify(testShape, null, 2)}\n`,
       'utf8',
     )
@@ -233,7 +233,7 @@ export async function generateOpenApi(input: GenerateOpenApiInput): Promise<void
       }
 
       await writeFile(
-        path.join(testsDir, `${opId}.test.json`),
+        path.join(examplesDir, `${opId}.example.json`),
         `${JSON.stringify(testShape, null, 2)}\n`,
         'utf8',
       )

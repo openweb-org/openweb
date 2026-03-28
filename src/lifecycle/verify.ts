@@ -98,12 +98,21 @@ export async function verifySite(
     ? parseStoredFingerprints(manifest.fingerprint.response_shape_hash)
     : new Map<string, string>()
 
-  const testsDir = path.join(siteRoot, 'tests')
-  let testFiles: string[]
+  const examplesDir = path.join(siteRoot, 'examples')
+  // Backward compat: fall back to legacy 'tests/' directory
+  const legacyTestsDir = path.join(siteRoot, 'tests')
+  let exampleFiles: string[]
+  let activeDir: string
   try {
-    testFiles = (await readdir(testsDir)).filter((f) => f.endsWith('.test.json'))
+    exampleFiles = (await readdir(examplesDir)).filter((f) => f.endsWith('.example.json'))
+    activeDir = examplesDir
   } catch {
-    return { site, operations: [], overallStatus: 'FAIL', shouldQuarantine: false }
+    try {
+      exampleFiles = (await readdir(legacyTestsDir)).filter((f) => f.endsWith('.test.json'))
+      activeDir = legacyTestsDir
+    } catch {
+      return { site, operations: [], overallStatus: 'FAIL', shouldQuarantine: false }
+    }
   }
 
   const operations: OperationVerifyResult[] = []
@@ -119,8 +128,8 @@ export async function verifySite(
     } catch { /* asyncapi load failure — WS ops will FAIL individually */ }
   }
 
-  for (const fileName of testFiles) {
-    const raw = await readFile(path.join(testsDir, fileName), 'utf8')
+  for (const fileName of exampleFiles) {
+    const raw = await readFile(path.join(activeDir, fileName), 'utf8')
     const testFile = JSON.parse(raw) as TestFile
 
     // Only verify GET operations — mutations are not safe to replay

@@ -150,8 +150,8 @@ async function emitOpenApi(
 ): Promise<string[]> {
   if (plan.operations.length === 0) return []
 
-  const testsDir = path.join(outputRoot, 'tests')
-  await mkdir(testsDir, { recursive: true })
+  const examplesDir = path.join(outputRoot, 'examples')
+  await mkdir(examplesDir, { recursive: true })
 
   const primaryHost = choosePrimaryHost(plan.operations, plan.sourceUrl)
   const requiresAuth = !!(plan.context.auth || plan.context.csrf || plan.context.signing)
@@ -190,13 +190,18 @@ async function emitOpenApi(
       operationId,
       summary: op.summary,
       'x-openweb': xOpenweb,
-      parameters: op.parameters.map((p) => ({
-        name: p.name,
-        in: p.location,
-        required: p.required,
-        schema: p.schema,
-        description: p.description,
-      })),
+      parameters: op.parameters.map((p) => {
+        const param: Record<string, unknown> = {
+          name: p.name,
+          in: p.location,
+          required: p.required,
+          schema: p.schema,
+          description: p.description,
+        }
+        const exVal = op.exampleInput[p.name]
+        if (exVal !== undefined) param.example = exVal
+        return param
+      }),
       responses,
     }
 
@@ -231,9 +236,9 @@ async function emitOpenApi(
       ],
     }
 
-    const testFile = `tests/${operationId}.test.json`
-    await writeFile(path.join(outputRoot, testFile), `${JSON.stringify(testShape, null, 2)}\n`, 'utf8')
-    files.push(testFile)
+    const exampleFile = `examples/${operationId}.example.json`
+    await writeFile(path.join(outputRoot, exampleFile), `${JSON.stringify(testShape, null, 2)}\n`, 'utf8')
+    files.push(exampleFile)
   }
 
   // Server entry with auth/csrf/signing from CuratedSiteContext
@@ -291,8 +296,8 @@ async function emitAsyncApi(
   const wsPlan = plan.ws
   if (!wsPlan || wsPlan.operations.length === 0) return []
 
-  const testsDir = path.join(outputRoot, 'tests')
-  await mkdir(testsDir, { recursive: true })
+  const examplesDir = path.join(outputRoot, 'examples')
+  await mkdir(examplesDir, { recursive: true })
 
   const { host, pathname } = parseWsUrl(wsPlan.serverUrl)
   const srvName = wsServerName(host)
@@ -356,9 +361,9 @@ async function emitAsyncApi(
       cases: [{ input: {}, timeout_ms: TIMEOUT.asyncapiDefault, assertions }],
     }
 
-    const testFile = `tests/${op.id}.test.json`
-    await writeFile(path.join(outputRoot, testFile), `${JSON.stringify(testShape, null, 2)}\n`, 'utf8')
-    files.push(testFile)
+    const exampleFile = `examples/${op.id}.example.json`
+    await writeFile(path.join(outputRoot, exampleFile), `${JSON.stringify(testShape, null, 2)}\n`, 'utf8')
+    files.push(exampleFile)
   }
 
   channels[srvName] = {

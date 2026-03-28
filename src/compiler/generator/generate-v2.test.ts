@@ -273,8 +273,8 @@ describe('generateFromPlan', () => {
     })
     const { outputRoot, files, tmpDir } = await generateInTmp(plan)
     try {
-      expect(files).toContain('tests/getUser.test.json')
-      const testData = await readJson(path.join(outputRoot, 'tests', 'getUser.test.json'))
+      expect(files).toContain('examples/getUser.example.json')
+      const testData = await readJson(path.join(outputRoot, 'examples', 'getUser.example.json'))
       expect(testData.operation_id).toBe('getUser')
       expect(testData.request_body).toEqual({ name: 'SCRUBBED_NAME' })
 
@@ -316,12 +316,12 @@ describe('generateFromPlan', () => {
       // HTTP files
       expect(files).toContain('openapi.yaml')
       expect(files).toContain('manifest.json')
-      expect(files).toContain('tests/listItems.test.json')
+      expect(files).toContain('examples/listItems.example.json')
 
       // WS files
       expect(files).toContain('asyncapi.yaml')
-      expect(files).toContain('tests/ws_recv_ticker.test.json')
-      expect(files).toContain('tests/ws_send_subscribe.test.json')
+      expect(files).toContain('examples/ws_recv_ticker.example.json')
+      expect(files).toContain('examples/ws_send_subscribe.example.json')
     } finally {
       await rm(tmpDir, { recursive: true, force: true })
     }
@@ -474,9 +474,9 @@ describe('generateFromPlan', () => {
       expect(paths['/v3/items'].get.operationId).toBe('getItems_3')
 
       // Test files should also use deduplicated names
-      expect(files).toContain('tests/getItems.test.json')
-      expect(files).toContain('tests/getItems_2.test.json')
-      expect(files).toContain('tests/getItems_3.test.json')
+      expect(files).toContain('examples/getItems.example.json')
+      expect(files).toContain('examples/getItems_2.example.json')
+      expect(files).toContain('examples/getItems_3.example.json')
     } finally {
       await rm(tmpDir, { recursive: true, force: true })
     }
@@ -495,7 +495,7 @@ describe('generateFromPlan', () => {
     })
     const { outputRoot, tmpDir } = await generateInTmp(plan)
     try {
-      const testData = await readJson(path.join(outputRoot, 'tests', 'listItems.test.json'))
+      const testData = await readJson(path.join(outputRoot, 'examples', 'listItems.example.json'))
       const cases = testData.cases as Array<Record<string, unknown>>
       const assertions = cases[0].assertions as Record<string, unknown>
       expect(assertions.status).toBe(200)
@@ -567,10 +567,10 @@ describe('generateFromPlan', () => {
       expect(paths['/voyager/api/graphql']).toBeUndefined()
 
       // All 4 operations produce test files
-      expect(files).toContain('tests/search_people.test.json')
-      expect(files).toContain('tests/get_profile.test.json')
-      expect(files).toContain('tests/get_feed.test.json')
-      expect(files).toContain('tests/list_connections.test.json')
+      expect(files).toContain('examples/search_people.example.json')
+      expect(files).toContain('examples/get_profile.example.json')
+      expect(files).toContain('examples/get_feed.example.json')
+      expect(files).toContain('examples/list_connections.example.json')
     } finally {
       await rm(tmpDir, { recursive: true, force: true })
     }

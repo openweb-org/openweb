@@ -115,6 +115,11 @@ if (argv.length > 0 && !passthroughTopLevel.has(firstArg)) {
           failureClass: 'fatal',
         })
       }
+      // --example in exec context → show example params (same as show --example)
+      if (argv.includes('--example')) {
+        await showCommand(site, third, { example: true })
+        return
+      }
       const opts = parseExecOptions(argv)
       const paramsJson = fourth && !fourth.startsWith('--') ? fourth : undefined
       await execCommand(site, third, paramsJson, opts)

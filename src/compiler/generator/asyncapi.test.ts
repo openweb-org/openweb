@@ -208,7 +208,7 @@ describe('generateAsyncApi', () => {
     const { outputBaseDir, outputRoot } = await generateAndParse()
     try {
       const testRaw = await readFile(
-        path.join(outputRoot, 'tests', 'ws_recv_message_create.test.json'),
+        path.join(outputRoot, 'examples', 'ws_recv_message_create.example.json'),
         'utf8',
       )
       const testData = JSON.parse(testRaw) as Record<string, unknown>

@@ -75,7 +75,7 @@ describe('generatePackage', () => {
       expect(openapiRaw).toContain('openapi: 3.1.0')
       expect(openapiRaw).toContain('operationId: search_location')
 
-      const testRaw = await readFile(path.join(outputRoot, 'tests', 'get_forecast.test.json'), 'utf8')
+      const testRaw = await readFile(path.join(outputRoot, 'examples', 'get_forecast.example.json'), 'utf8')
       expect(testRaw).toContain('"operation_id": "get_forecast"')
     } finally {
       await rm(outputBaseDir, { recursive: true, force: true })
@@ -176,7 +176,7 @@ describe('generatePackage', () => {
       expect(openapiRaw).toContain('extraction_detected')
 
       // Test file should exist but not assert response_schema_valid
-      const testRaw = await readFile(path.join(outputRoot, 'tests', 'extract_next_data.test.json'), 'utf8')
+      const testRaw = await readFile(path.join(outputRoot, 'examples', 'extract_next_data.example.json'), 'utf8')
       const testData = JSON.parse(testRaw) as { cases: Array<{ assertions: Record<string, unknown> }> }
       expect(testData.cases[0]?.assertions.status).toBe(200)
       expect(testData.cases[0]?.assertions).not.toHaveProperty('response_schema_valid')

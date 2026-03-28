@@ -47,8 +47,8 @@ function serverName(host: string): string {
 // ── Main entry ──────────────────────────────────────────────
 
 export async function generateAsyncApi(input: GenerateAsyncApiInput): Promise<void> {
-  const testsDir = path.join(input.outputRoot, 'tests')
-  await mkdir(testsDir, { recursive: true })
+  const examplesDir = path.join(input.outputRoot, 'examples')
+  await mkdir(examplesDir, { recursive: true })
 
   const { host, pathname } = parseWsUrl(input.serverUrl)
   const srvName = serverName(host)
@@ -143,7 +143,7 @@ export async function generateAsyncApi(input: GenerateAsyncApiInput): Promise<vo
     }
 
     await writeFile(
-      path.join(testsDir, `${op.operationId}.test.json`),
+      path.join(examplesDir, `${op.operationId}.example.json`),
       `${JSON.stringify(testShape, null, 2)}\n`,
       'utf8',
     )
