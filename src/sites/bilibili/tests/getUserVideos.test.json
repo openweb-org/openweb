@@ -1,9 +1,0 @@
-{
-  "operation_id": "getUserVideos",
-  "cases": [
-    {
-      "input": { "mid": 30222764, "pn": 1, "ps": 5 },
-      "assertions": { "status": 200, "response_schema_valid": true }
-    }
-  ]
-}

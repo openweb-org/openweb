@@ -1,140 +1,137 @@
-openapi: '3.1.0'
+openapi: 3.1.0
 info:
-  title: Instagram API
-  version: '1.0'
+  title: instagram
+  version: 1.0.0
   x-openweb:
-    spec_version: '2.0'
+    spec_version: "2.0"
+    compiled_at: 2026-03-28T08:53:52.108Z
+    requires_auth: true
 servers:
-  - url: https://www.instagram.com/api/v1
+  - url: https://www.instagram.com
     x-openweb:
-      transport: node
+      transport: page
       auth:
         type: cookie_session
       csrf:
         type: cookie_to_header
         cookie: csrftoken
-        header: X-CSRFToken
-components:
-  parameters:
-    X-IG-App-ID:
-      name: X-IG-App-ID
-      in: header
-      required: true
-      schema:
-        type: string
-        default: '936619743392459'
-      description: Instagram app identifier (constant).
+        header: x-csrftoken
 paths:
-  /feed/timeline/:
-    get:
-      operationId: getTimeline
-      summary: Get the authenticated user's feed
-      x-openweb:
-        permission: read
-        build:
-          stable_id: a1b2c3d4
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
-            - schema-match
-        pagination:
-          type: cursor
-          response_field: next_max_id
-          request_param: max_id
-      parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
-        - name: max_id
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Pagination cursor for next page.
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  feed_items:
-                    type: array
-                    items:
-                      type: object
-                  next_max_id:
-                    type: string
-                  more_available:
-                    type: boolean
-  /users/{user_id}/info/:
+  /api/v1/users/web_profile_info/:
     get:
       operationId: getUserProfile
-      summary: Get a user's profile information
+      summary: Get user profile info by username
       x-openweb:
         permission: read
         build:
-          stable_id: e5f6a7b8
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
+          stable_id: ig_user_profile_info
+          tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
-        - name: user_id
-          in: path
+        - name: username
+          in: query
           required: true
           schema:
             type: string
-          description: Numeric user ID.
+          example: natgeo
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+          example: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+          example: XMLHttpRequest
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  user:
+                  data:
                     type: object
                     properties:
-                      pk:
-                        type: string
-                      username:
-                        type: string
-                      full_name:
-                        type: string
-  /feed/user/{user_id}/:
+                      user:
+                        type: object
+                        properties:
+                          biography:
+                            type: string
+                          edge_followed_by:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                          edge_follow:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                          full_name:
+                            type: string
+                          id:
+                            type: string
+                          is_private:
+                            type: boolean
+                          is_verified:
+                            type: boolean
+                          profile_pic_url_hd:
+                            type: string
+                          username:
+                            type: string
+                          edge_owner_to_timeline_media:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                  status:
+                    type: string
+  /api/v1/feed/user/{user_id}/:
     get:
       operationId: getUserPosts
-      summary: Get a user's media posts
+      summary: Get a user's recent posts by user ID
       x-openweb:
         permission: read
         build:
-          stable_id: d3e4f5a6
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
-        pagination:
-          type: cursor
-          response_field: next_max_id
-          request_param: max_id
+          stable_id: ig_user_feed
+          tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
         - name: user_id
           in: path
           required: true
           schema:
             type: string
-          description: Numeric user ID.
+          example: "787132"
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 12
         - name: max_id
           in: query
           required: false
           schema:
             type: string
-          description: Pagination cursor for next page.
+          description: Pagination cursor
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+          example: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+          example: XMLHttpRequest
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
@@ -145,32 +142,69 @@ paths:
                     type: array
                     items:
                       type: object
-                  next_max_id:
-                    type: string
+                      properties:
+                        id:
+                          type: string
+                        pk:
+                          type: string
+                        code:
+                          type: string
+                        media_type:
+                          type: integer
+                        caption:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                        like_count:
+                          type: integer
+                        comment_count:
+                          type: integer
+                        image_versions2:
+                          type: object
+                        user:
+                          type: object
+                          properties:
+                            username:
+                              type: string
+                            full_name:
+                              type: string
                   more_available:
                     type: boolean
-  /media/{media_id}/info/:
+                  next_max_id:
+                    type: string
+                  status:
+                    type: string
+  /api/v1/media/{media_id}/info/:
     get:
       operationId: getMediaInfo
-      summary: Get detailed information about a media post
+      summary: Get detailed info about a specific media post
       x-openweb:
         permission: read
         build:
-          stable_id: b7c8d9e0
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
+          stable_id: ig_media_info
+          tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
         - name: media_id
           in: path
           required: true
           schema:
             type: string
-          description: Numeric media ID.
+          example: "3854796740277763042"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+          example: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+          example: XMLHttpRequest
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
@@ -181,45 +215,73 @@ paths:
                     type: array
                     items:
                       type: object
-  /media/{media_id}/comments/:
+                      properties:
+                        id:
+                          type: string
+                        pk:
+                          type: string
+                        code:
+                          type: string
+                        media_type:
+                          type: integer
+                        caption:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                        like_count:
+                          type: integer
+                        comment_count:
+                          type: integer
+                        image_versions2:
+                          type: object
+                        user:
+                          type: object
+                          properties:
+                            username:
+                              type: string
+                            full_name:
+                              type: string
+                            is_verified:
+                              type: boolean
+                  status:
+                    type: string
+  /api/v1/media/{media_id}/comments/:
     get:
       operationId: getMediaComments
       summary: Get comments on a media post
       x-openweb:
         permission: read
         build:
-          stable_id: f1a2b3c4
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
-        pagination:
-          type: cursor
-          response_field: next_min_id
-          request_param: min_id
+          stable_id: ig_media_comments
+          tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
         - name: media_id
           in: path
           required: true
           schema:
             type: string
-          description: Numeric media ID.
-        - name: can_support_threading
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: true
-          description: Enable threaded comment replies.
+          example: "3854796740277763042"
         - name: min_id
           in: query
           required: false
           schema:
             type: string
-          description: Pagination cursor for next page.
+          description: Pagination cursor
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+          example: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+          example: XMLHttpRequest
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
@@ -230,10 +292,28 @@ paths:
                     type: array
                     items:
                       type: object
-                  next_min_id:
-                    type: string
+                      properties:
+                        pk:
+                          type: string
+                        text:
+                          type: string
+                        user:
+                          type: object
+                          properties:
+                            username:
+                              type: string
+                            full_name:
+                              type: string
+                        created_at:
+                          type: integer
+                        comment_like_count:
+                          type: integer
                   has_more_comments:
                     type: boolean
+                  next_min_id:
+                    type: string
+                  status:
+                    type: string
   /web/search/topsearch/:
     get:
       operationId: searchUsers
@@ -241,28 +321,17 @@ paths:
       x-openweb:
         permission: read
         build:
-          stable_id: a5b6c7d8
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
+          stable_id: b1f32a3d9844a8f8
+          tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
         - name: query
           in: query
           required: true
           schema:
             type: string
-          description: Search query.
-        - name: context
-          in: query
-          required: false
-          schema:
-            type: string
-            default: blended
-          description: Search context (blended, user, hashtag, place).
+          example: nature
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
@@ -273,30 +342,232 @@ paths:
                     type: array
                     items:
                       type: object
-                  hashtags:
-                    type: array
-                    items:
-                      type: object
+                      properties:
+                        position:
+                          type: integer
+                        user:
+                          type: object
+                          properties:
+                            pk:
+                              type: string
+                            id:
+                              type: string
+                            full_name:
+                              type: string
+                            is_private:
+                              type: boolean
+                            is_verified:
+                              type: boolean
+                            profile_pic_url:
+                              type: string
+                            username:
+                              type: string
+                            friendship_status:
+                              type: object
+                              properties:
+                                following:
+                                  type: boolean
+                            social_context:
+                              type: string
+                          required:
+                            - pk
+                            - id
+                            - full_name
+                            - is_private
+                            - is_verified
+                            - profile_pic_url
+                            - username
+                      required:
+                        - position
+                        - user
                   places:
                     type: array
                     items:
                       type: object
-  /feed/reels_tray/:
+                  hashtags:
+                    type: array
+                    items:
+                      type: object
+                  has_more:
+                    type: boolean
+                  clear_client_cache:
+                    type: boolean
+                  status:
+                    type: string
+                required:
+                  - users
+                  - places
+                  - hashtags
+                  - has_more
+                  - status
+  /api/v1/fbsearch/web/top_serp/:
     get:
-      operationId: getReelsTray
-      summary: Get stories tray for followed users
+      operationId: searchContent
+      summary: Search for content (posts, reels) by keyword
       x-openweb:
         permission: read
         build:
-          stable_id: e9f0a1b2
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
+          stable_id: 8e6f5e7249c37ed7
+          tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          example: nature
+        - name: enable_metadata
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "true"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+          example: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+          example: XMLHttpRequest
       responses:
-        '200':
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rank_token:
+                    type: string
+                  clear_client_cache:
+                    type: boolean
+                  media_grid:
+                    type: object
+                    properties:
+                      sections:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            layout_type:
+                              type: string
+                            feed_type:
+                              type: string
+                            layout_content:
+                              type: object
+                      more_available:
+                        type: boolean
+                      next_max_id:
+                        type: string
+                  status:
+                    type: string
+  /api/v1/discover/web/explore_grid/:
+    get:
+      operationId: getExploreGrid
+      summary: Get the explore page grid of popular content
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 8ecb3230041e5ec0
+          tool_version: 2
+      parameters:
+        - name: is_prefetch
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "false"
+        - name: omit_cover_media
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "false"
+        - name: module
+          in: query
+          required: false
+          schema:
+            type: string
+          example: explore_popular
+        - name: max_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+          example: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+          example: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sectional_items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        layout_type:
+                          type: string
+                        feed_type:
+                          type: string
+                        explore_item_info:
+                          type: object
+                          properties:
+                            num_columns:
+                              type: integer
+                            aspect_ratio:
+                              type: number
+                        layout_content:
+                          type: object
+                  more_available:
+                    type: boolean
+                  next_max_id:
+                    type: string
+                  status:
+                    type: string
+  /api/v1/feed/reels_tray/:
+    get:
+      operationId: getReelsTray
+      summary: Get the stories/reels tray for the logged-in user
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ig_reels_tray
+          tool_version: 2
+      parameters:
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+          example: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+          example: XMLHttpRequest
+      responses:
+        "200":
           description: Success.
           content:
             application/json:
@@ -307,159 +578,83 @@ paths:
                     type: array
                     items:
                       type: object
+                      properties:
+                        id:
+                          type: string
+                        user:
+                          type: object
+                          properties:
+                            pk:
+                              type: string
+                            username:
+                              type: string
+                            profile_pic_url:
+                              type: string
                   status:
                     type: string
-  /feed/user/{user_id}/story/:
-    get:
-      operationId: getUserStories
-      summary: Get a user's active stories
+  /api/v1/feed/timeline/:
+    post:
+      operationId: getTimeline
+      summary: Get the home feed timeline for the logged-in user
       x-openweb:
         permission: read
         build:
-          stable_id: c3d4e5f6
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
+          stable_id: ig_timeline
+          tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
-        - name: user_id
-          in: path
+        - name: x-ig-app-id
+          in: header
           required: true
           schema:
             type: string
-          description: Numeric user ID.
+          example: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+          example: XMLHttpRequest
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  reel:
-                    type: object
-                  status:
+                  feed_items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        media_or_ad:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            code:
+                              type: string
+                            media_type:
+                              type: integer
+                            caption:
+                              type: object
+                              properties:
+                                text:
+                                  type: string
+                            user:
+                              type: object
+                              properties:
+                                username:
+                                  type: string
+                                full_name:
+                                  type: string
+                            like_count:
+                              type: integer
+                            comment_count:
+                              type: integer
+                  more_available:
+                    type: boolean
+                  next_max_id:
                     type: string
-  /media/{media_id}/like/:
-    post:
-      operationId: likeMedia
-      summary: Like a media post
-      x-openweb:
-        permission: write
-        build:
-          stable_id: c9d0e1f2
-          tool_version: 1
-          verified: false
-          signals:
-            - status-match
-      parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
-        - name: media_id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Media ID to like.
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-  /media/{media_id}/unlike/:
-    post:
-      operationId: unlikeMedia
-      summary: Unlike a media post
-      x-openweb:
-        permission: write
-        build:
-          stable_id: d1e2f3a4
-          tool_version: 1
-          verified: false
-          signals:
-            - status-match
-      parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
-        - name: media_id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Media ID to unlike.
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-  /friendships/create/{user_id}/:
-    post:
-      operationId: followUser
-      summary: Follow a user
-      x-openweb:
-        permission: write
-        build:
-          stable_id: b5c6d7e8
-          tool_version: 1
-          verified: false
-          signals:
-            - status-match
-      parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
-        - name: user_id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric user ID to follow.
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  friendship_status:
-                    type: object
-                  status:
-                    type: string
-  /media/{media_id}/save/:
-    post:
-      operationId: bookmarkMedia
-      summary: Save/bookmark a media post
-      x-openweb:
-        permission: write
-        build:
-          stable_id: f9a0b1c2
-          tool_version: 1
-          verified: false
-          signals:
-            - status-match
-      parameters:
-        - $ref: '#/components/parameters/X-IG-App-ID'
-        - name: media_id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Media ID to save/bookmark.
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
                   status:
                     type: string

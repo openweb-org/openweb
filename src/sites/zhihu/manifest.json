@@ -1,34 +1,8 @@
 {
   "name": "zhihu",
-  "display_name": "Zhihu (知乎)",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.zhihu.com",
-  "description": "Zhihu Q&A search, user profiles, topic feeds, trending — page transport with cookie session via L3 adapter",
-  "requires_auth": false,
-  "dependencies": {
-    "searchContent → getUserProfile": "searchContent returns author url_token used by getUserProfile",
-    "searchContent → getSimilarQuestions": "searchContent returns question IDs used by getSimilarQuestions",
-    "getUserProfile → getUserAnswers": "getUserProfile returns url_token used by getUserAnswers",
-    "getUserProfile → getUserActivities": "getUserProfile returns url_token used by getUserActivities",
-    "getUserProfile → followUser": "getUserProfile returns url_token used by followUser",
-    "getTopicIntro → getTopicFeed": "getTopicIntro confirms topic_id used by getTopicFeed",
-    "getTopicIntro → getTopicChildren": "getTopicIntro confirms topic_id used by getTopicChildren",
-    "getTopicIntro → followTopic": "getTopicIntro confirms topic_id used by followTopic",
-    "searchContent → upvoteAnswer": "searchContent returns answer IDs used by upvoteAnswer",
-    "searchContent → followQuestion": "searchContent returns question IDs used by followQuestion"
-  },
-  "stats": {
-    "operation_count": 14,
-    "l1_count": 0,
-    "l2_count": 0,
-    "l3_count": 14,
-    "ws_count": 0
-  },
-  "last_verified": "2026-03-24T17:20:00.000Z",
-  "quarantined": true,
-  "fingerprint": {
-    "response_shape_hash": "searchContent:pending,getUserProfile:pending,getUserAnswers:pending,getHotSearch:pending,getTopicIntro:pending,getTopicFeed:pending,getSimilarQuestions:pending,getRecommendFeed:pending,getUserActivities:pending,getTopicChildren:pending,upvoteAnswer:pending,followUser:pending,followQuestion:pending,followTopic:pending",
-    "last_validated": "2026-03-24T17:20:00.000Z"
-  }
+  "compiled_at": "2026-03-28T06:55:56.794Z",
+  "requires_auth": true
 }

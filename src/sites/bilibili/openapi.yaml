@@ -1,275 +1,55 @@
-openapi: '3.1.0'
+openapi: 3.1.0
 info:
-  title: Bilibili API
-  version: '1.0'
+  title: bilibili
+  version: 1.0.0
   x-openweb:
-    spec_version: '2.0'
+    spec_version: "2.0"
+    compiled_at: 2026-03-28T07:37:36.309Z
     requires_auth: false
 servers:
   - url: https://api.bilibili.com
     x-openweb:
-      transport: page
-      auth:
-        type: cookie_session
+      transport: node
 paths:
-  /x/web-interface/search/all/v2:
-    get:
-      operationId: searchVideos
-      summary: Search videos and content by keyword — returns titles, authors, play counts, thumbnails
-      x-openweb:
-        permission: read
-        build:
-          stable_id: bili0001
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
-        adapter:
-          name: bilibili-web
-          operation: searchVideos
-      parameters:
-        - name: keyword
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search keyword (e.g. "编程", "美食", "vlog").
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number (starts from 1).
-        - name: page_size
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 42
-          description: Results per page.
-      responses:
-        '200':
-          description: Search results.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                  data:
-                    type: object
-                    properties:
-                      numResults:
-                        type: integer
-                        description: Total result count.
-                      page:
-                        type: integer
-                      pagesize:
-                        type: integer
-                      result:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            result_type:
-                              type: string
-                            data:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  bvid:
-                                    type: string
-                                    description: Video BV ID.
-                                  title:
-                                    type: string
-                                    description: Video title (may contain <em> highlight tags).
-                                  author:
-                                    type: string
-                                  mid:
-                                    type: integer
-                                    description: Uploader user ID.
-                                  pic:
-                                    type: string
-                                    description: Thumbnail URL.
-                                  play:
-                                    type:
-                                      - integer
-                                      - string
-                                      - 'null'
-                                    description: Play count (integer, "--" when hidden, or null).
-                                  danmaku:
-                                    type: integer
-                                    description: Danmaku (bullet comment) count.
-                                  like:
-                                    type: integer
-                                  favorites:
-                                    type: integer
-                                  duration:
-                                    type: string
-                                    description: Duration string (e.g. "10:30").
-                                  pubdate:
-                                    type: integer
-                                    description: Publish timestamp (Unix seconds).
-                                  description:
-                                    type: string
-  /x/web-interface/view:
-    get:
-      operationId: getVideoDetail
-      summary: Get video detail — title, description, play count, likes, coins, favorites, danmaku count, uploader info
-      x-openweb:
-        permission: read
-        build:
-          stable_id: bili0002
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
-        adapter:
-          name: bilibili-web
-          operation: getVideoDetail
-      parameters:
-        - name: bvid
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Video BV ID (e.g. "BV1GJ411x7h7").
-      responses:
-        '200':
-          description: Video detail.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                  data:
-                    type: object
-                    properties:
-                      bvid:
-                        type: string
-                      aid:
-                        type: integer
-                      title:
-                        type: string
-                      pic:
-                        type: string
-                        description: Cover image URL.
-                      desc:
-                        type: string
-                        description: Video description.
-                      pubdate:
-                        type: integer
-                      ctime:
-                        type: integer
-                      duration:
-                        type: integer
-                        description: Duration in seconds.
-                      videos:
-                        type: integer
-                        description: Number of video parts.
-                      tname:
-                        type: string
-                        description: Category name.
-                      tid:
-                        type: integer
-                        description: Category ID.
-                      stat:
-                        type: object
-                        properties:
-                          view:
-                            type: integer
-                            description: Play count.
-                          danmaku:
-                            type: integer
-                            description: Danmaku count.
-                          reply:
-                            type: integer
-                            description: Comment count.
-                          favorite:
-                            type: integer
-                          coin:
-                            type: integer
-                          share:
-                            type: integer
-                          like:
-                            type: integer
-                          now_rank:
-                            type: integer
-                      owner:
-                        type: object
-                        properties:
-                          mid:
-                            type: integer
-                            description: Uploader user ID.
-                          name:
-                            type: string
-                          face:
-                            type: string
-                            description: Uploader avatar URL.
-                      pages:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            cid:
-                              type: integer
-                            page:
-                              type: integer
-                            part:
-                              type: string
-                              description: Part title.
-                            duration:
-                              type: integer
   /x/web-interface/popular:
     get:
       operationId: getPopularVideos
-      summary: Get trending/popular videos — paginated list of hot videos with stats
+      summary: Get popular/trending videos (paginated)
       x-openweb:
         permission: read
         build:
-          stable_id: bili0003
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
-        adapter:
-          name: bilibili-web
-          operation: getPopularVideos
+          stable_id: fb6e2e485d17f57f
+          tool_version: 2
       parameters:
         - name: pn
           in: query
           required: false
           schema:
             type: integer
-            default: 1
-          description: Page number.
+          description: Page number (starts at 1)
+          example: 1
         - name: ps
           in: query
           required: false
           schema:
             type: integer
-            default: 20
-          description: Page size.
+          description: Page size (default 20)
+          example: 20
       responses:
-        '200':
-          description: Popular video list.
+        "200":
+          description: Success.
           content:
-            application/json:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
                   code:
                     type: integer
+                  message:
+                    type: string
                   data:
                     type: object
                     properties:
-                      no_more:
-                        type: boolean
                       list:
                         type: array
                         items:
@@ -283,14 +63,21 @@ paths:
                               type: string
                             pic:
                               type: string
+                              format: uri
                             desc:
                               type: string
                             duration:
                               type: integer
                             pubdate:
                               type: integer
+                            ctime:
+                              type: integer
+                            tid:
+                              type: integer
                             tname:
                               type: string
+                            cid:
+                              type: integer
                             owner:
                               type: object
                               properties:
@@ -300,9 +87,12 @@ paths:
                                   type: string
                                 face:
                                   type: string
+                                  format: uri
                             stat:
                               type: object
                               properties:
+                                aid:
+                                  type: integer
                                 view:
                                   type: integer
                                 danmaku:
@@ -322,47 +112,47 @@ paths:
                               properties:
                                 content:
                                   type: string
-                                  description: Reason for recommendation.
+                      no_more:
+                        type: boolean
   /x/web-interface/ranking/v2:
     get:
       operationId: getRanking
-      summary: Get video ranking by category — top 100 videos by score
+      summary: Get video ranking by category
       x-openweb:
         permission: read
-        build:
-          stable_id: bili0004
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
         adapter:
           name: bilibili-web
           operation: getRanking
+        build:
+          stable_id: 169934b21bee2f69
+          tool_version: 2
       parameters:
         - name: rid
           in: query
           required: false
           schema:
             type: integer
-            default: 0
-          description: Category ID (0=all, 1=anime, 3=music, 4=game, 5=entertainment, 36=tech, 188=digital).
+          description: Region ID (0=all, 1=animation, 3=music, 4=game, etc.)
+          example: 0
         - name: type
           in: query
           required: false
           schema:
             type: string
-            default: all
-          description: Ranking type (all, origin, rookie).
+          description: Ranking type
+          example: all
       responses:
-        '200':
-          description: Ranking list.
+        "200":
+          description: Success.
           content:
-            application/json:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
                   code:
                     type: integer
+                  message:
+                    type: string
                   data:
                     type: object
                     properties:
@@ -381,14 +171,21 @@ paths:
                               type: string
                             pic:
                               type: string
+                              format: uri
                             desc:
                               type: string
                             duration:
                               type: integer
                             pubdate:
                               type: integer
+                            tid:
+                              type: integer
                             tname:
                               type: string
+                            cid:
+                              type: integer
+                            score:
+                              type: integer
                             owner:
                               type: object
                               properties:
@@ -398,9 +195,12 @@ paths:
                                   type: string
                                 face:
                                   type: string
+                                  format: uri
                             stat:
                               type: object
                               properties:
+                                aid:
+                                  type: integer
                                 view:
                                   type: integer
                                 danmaku:
@@ -415,141 +215,60 @@ paths:
                                   type: integer
                                 like:
                                   type: integer
-                            score:
-                              type: integer
-                              description: Ranking score.
-  /x/v2/reply/main:
-    get:
-      operationId: getVideoComments
-      summary: Get video comments — top-level replies with author info, likes, sub-comment counts
-      x-openweb:
-        permission: read
-        build:
-          stable_id: bili0005
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
-        adapter:
-          name: bilibili-web
-          operation: getVideoComments
-      parameters:
-        - name: oid
-          in: query
-          required: true
-          schema:
-            type: integer
-          description: Video aid (from getVideoDetail).
-        - name: type
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Comment area type (1=video, 12=article, 17=dynamic).
-        - name: mode
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 3
-          description: Sort mode (2=time, 3=hot).
-      responses:
-        '200':
-          description: Comment list.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                  data:
-                    type: object
-                    properties:
-                      cursor:
-                        type: object
-                        properties:
-                          all_count:
-                            type: integer
-                            description: Total comment count.
-                          is_end:
-                            type: boolean
-                          mode:
-                            type: integer
-                      replies:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            rpid:
-                              type: integer
-                              description: Reply ID.
-                            oid:
-                              type: integer
-                            mid:
-                              type: integer
-                              description: Commenter user ID.
-                            count:
-                              type: integer
-                              description: Sub-reply count.
-                            like:
-                              type: integer
-                            ctime:
-                              type: integer
-                              description: Comment timestamp (Unix seconds).
-                            content:
-                              type: object
-                              properties:
-                                message:
-                                  type: string
-                                  description: Comment text.
-                            member:
-                              type: object
-                              properties:
-                                mid:
-                                  type: string
-                                uname:
-                                  type: string
-                                avatar:
-                                  type: string
-                                level_info:
-                                  type: object
-                                  properties:
-                                    current_level:
-                                      type: integer
+                            others:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  aid:
+                                    type: integer
+                                  bvid:
+                                    type: string
+                                  title:
+                                    type: string
+                                  pic:
+                                    type: string
+                                    format: uri
+                                  score:
+                                    type: integer
   /x/space/wbi/acc/info:
     get:
       operationId: getUserInfo
-      summary: Get user profile — name, bio, avatar, level, VIP status, fans badge
+      summary: Get user profile information by mid
       x-openweb:
         permission: read
-        build:
-          stable_id: bili0006
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
         adapter:
           name: bilibili-web
           operation: getUserInfo
+        build:
+          stable_id: 37f1c6b07250d027
+          tool_version: 2
       parameters:
         - name: mid
           in: query
           required: true
           schema:
             type: integer
-          description: User ID.
+          description: User ID
+          example: 546195
+        - name: platform
+          in: query
+          required: false
+          schema:
+            type: string
+          example: web
       responses:
-        '200':
-          description: User profile info.
+        "200":
+          description: Success.
           content:
-            application/json:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
                   code:
                     type: integer
+                  message:
+                    type: string
                   data:
                     type: object
                     properties:
@@ -559,23 +278,15 @@ paths:
                         type: string
                       sex:
                         type: string
-                        description: Gender (男/女/保密).
                       face:
                         type: string
-                        description: Avatar URL.
+                        format: uri
                       sign:
                         type: string
-                        description: User bio/signature.
                       rank:
                         type: integer
                       level:
                         type: integer
-                        description: User level (0-6).
-                      silence:
-                        type: integer
-                        description: Whether user is banned (0=no, 1=yes).
-                      fans_badge:
-                        type: boolean
                       official:
                         type: object
                         properties:
@@ -583,20 +294,17 @@ paths:
                             type: integer
                           title:
                             type: string
-                            description: Official verification title.
+                          desc:
+                            type: string
+                          type:
+                            type: integer
                       vip:
                         type: object
                         properties:
                           type:
                             type: integer
-                            description: VIP type (0=none, 1=monthly, 2=annual).
                           status:
                             type: integer
-                          label:
-                            type: object
-                            properties:
-                              text:
-                                type: string
                       live_room:
                         type: object
                         properties:
@@ -604,43 +312,43 @@ paths:
                             type: integer
                           liveStatus:
                             type: integer
-                            description: Whether currently live streaming.
                           url:
                             type: string
                           title:
                             type: string
+                          cover:
+                            type: string
+                          roomid:
+                            type: integer
   /x/relation/stat:
     get:
       operationId: getUserFollowStats
-      summary: Get user follower and following counts
+      summary: Get user follow/follower counts
       x-openweb:
         permission: read
         build:
-          stable_id: bili0007
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
-        adapter:
-          name: bilibili-web
-          operation: getUserFollowStats
+          stable_id: 25938f152c3c23d3
+          tool_version: 2
       parameters:
         - name: vmid
           in: query
           required: true
           schema:
             type: integer
-          description: User ID.
+          description: User ID
+          example: 546195
       responses:
-        '200':
-          description: Follow stats.
+        "200":
+          description: Success.
           content:
-            application/json:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
                   code:
                     type: integer
+                  message:
+                    type: string
                   data:
                     type: object
                     properties:
@@ -648,42 +356,41 @@ paths:
                         type: integer
                       following:
                         type: integer
-                        description: Number of users this user follows.
                       follower:
                         type: integer
-                        description: Number of fans/followers.
+                      whisper:
+                        type: integer
+                      black:
+                        type: integer
   /x/space/upstat:
     get:
       operationId: getUploaderStats
-      summary: Get uploader stats — total video views and article views
+      summary: Get uploader view/article/like counts
       x-openweb:
         permission: read
         build:
-          stable_id: bili0008
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
-        adapter:
-          name: bilibili-web
-          operation: getUploaderStats
+          stable_id: ea54b686cec73f56
+          tool_version: 2
       parameters:
         - name: mid
           in: query
           required: true
           schema:
             type: integer
-          description: User ID.
+          description: User ID
+          example: 546195
       responses:
-        '200':
-          description: Uploader stats.
+        "200":
+          description: Success.
           content:
-            application/json:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
                   code:
                     type: integer
+                  message:
+                    type: string
                   data:
                     type: object
                     properties:
@@ -692,69 +399,80 @@ paths:
                         properties:
                           view:
                             type: integer
-                            description: Total video view count.
                       article:
                         type: object
                         properties:
                           view:
                             type: integer
-                            description: Total article view count.
                       likes:
                         type: integer
-                        description: Total likes received.
   /x/space/wbi/arc/search:
     get:
       operationId: getUserVideos
-      summary: Search user's uploaded videos — paginated list with stats
+      summary: Get a user's uploaded videos
       x-openweb:
         permission: read
-        build:
-          stable_id: bili0009
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
         adapter:
           name: bilibili-web
           operation: getUserVideos
+        build:
+          stable_id: d15da5e5f17afc8a
+          tool_version: 2
       parameters:
         - name: mid
           in: query
           required: true
           schema:
             type: integer
-          description: User ID.
+          description: User ID
+          example: 546195
         - name: pn
           in: query
           required: false
           schema:
             type: integer
-            default: 1
-          description: Page number.
+          description: Page number
+          example: 1
         - name: ps
           in: query
           required: false
           schema:
             type: integer
-            default: 30
-          description: Page size.
+          description: Page size
+          example: 25
         - name: order
           in: query
           required: false
           schema:
             type: string
-            default: pubdate
-          description: Sort order (pubdate=newest, click=most viewed, stow=most favorited).
+          description: Sort order (pubdate or click)
+          example: pubdate
+        - name: tid
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Category filter (0=all)
+          example: 0
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search within user's videos
+          example: ""
       responses:
-        '200':
-          description: User video list.
+        "200":
+          description: Success.
           content:
-            application/json:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
                   code:
                     type: integer
+                  message:
+                    type: string
                   data:
                     type: object
                     properties:
@@ -778,14 +496,14 @@ paths:
                                   type: string
                                 length:
                                   type: string
-                                  description: Duration string (e.g. "10:30").
+                                created:
+                                  type: integer
                                 play:
                                   type: integer
                                 comment:
                                   type: integer
-                                created:
+                                video_review:
                                   type: integer
-                                  description: Publish timestamp (Unix seconds).
                       page:
                         type: object
                         properties:
@@ -795,230 +513,297 @@ paths:
                             type: integer
                           count:
                             type: integer
-                            description: Total video count.
-  /x/web-interface/wbi/index/top/feed/rcmd:
+  /x/v2/reply/wbi/main:
     get:
-      operationId: getRecommendedFeed
-      summary: Get homepage recommended videos — personalized feed with play stats and uploader info
+      operationId: getVideoComments
+      summary: Get comments for a video
       x-openweb:
         permission: read
-        build:
-          stable_id: bili0010
-          tool_version: 1
-          verified: true
-          signals:
-            - status-match
         adapter:
           name: bilibili-web
-          operation: getRecommendedFeed
+          operation: getVideoComments
+        build:
+          stable_id: 0fe3c94a979ddf7d
+          tool_version: 2
       parameters:
-        - name: ps
+        - name: oid
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Video AID (avid)
+          example: 170001
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Content type (1=video)
+          example: 1
+        - name: mode
           in: query
           required: false
           schema:
             type: integer
-            default: 12
-          description: Number of items to return.
-        - name: fresh_type
+          description: Sort mode (2=by time, 3=by likes)
+          example: 3
+        - name: pagination_str
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor (JSON string)
+          example: '{"offset":""}'
+        - name: plat
           in: query
           required: false
           schema:
             type: integer
-            default: 4
-          description: Feed refresh type.
+          example: 1
       responses:
-        '200':
-          description: Recommended feed.
+        "200":
+          description: Success.
           content:
-            application/json:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
                   code:
                     type: integer
+                  message:
+                    type: string
                   data:
                     type: object
                     properties:
-                      item:
+                      cursor:
+                        type: object
+                        properties:
+                          is_begin:
+                            type: boolean
+                          is_end:
+                            type: boolean
+                          prev:
+                            type: integer
+                          next:
+                            type: integer
+                          all_count:
+                            type: integer
+                          pagination_reply:
+                            type: object
+                            properties:
+                              next_offset:
+                                type: string
+                      replies:
                         type: array
                         items:
                           type: object
                           properties:
-                            id:
+                            rpid:
                               type: integer
-                              description: Video aid.
-                            bvid:
-                              type: string
-                            title:
-                              type: string
-                            pic:
-                              type: string
-                            duration:
+                            oid:
                               type: integer
-                            pubdate:
+                            mid:
                               type: integer
-                            owner:
+                            ctime:
+                              type: integer
+                            like:
+                              type: integer
+                            rcount:
+                              type: integer
+                            content:
+                              type: object
+                              properties:
+                                message:
+                                  type: string
+                            member:
                               type: object
                               properties:
                                 mid:
-                                  type: integer
-                                name:
                                   type: string
-                                face:
+                                uname:
                                   type: string
-                            stat:
-                              type: object
-                              properties:
-                                view:
-                                  type: integer
-                                like:
-                                  type: integer
-                                danmaku:
-                                  type: integer
-                            rcmd_reason:
-                              type: object
-                              properties:
-                                content:
+                                avatar:
                                   type: string
-                                  description: Reason text (e.g. "百万播放").
-  /x/web-interface/archive/like:
-    post:
-      operationId: likeVideo
-      summary: Like or unlike a video — reversible, requires auth
+                                  format: uri
+                                level_info:
+                                  type: object
+                                  properties:
+                                    current_level:
+                                      type: integer
+  /x/web-interface/archive/related:
+    get:
+      operationId: getRelatedVideos
+      summary: Get related/recommended videos for a video
       x-openweb:
-        permission: write
-        safety: safe
-        requires_auth: true
+        permission: read
         build:
-          stable_id: bili0011
-          tool_version: 1
-          verified: false
-          signals:
-            - adapter-verified
-        adapter:
-          name: bilibili-web
-          operation: likeVideo
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              required:
-                - aid
-              properties:
-                aid:
-                  type: integer
-                  description: Video aid (from getVideoDetail).
-                like:
-                  type: integer
-                  default: 1
-                  description: 1 = like, 2 = unlike.
+          stable_id: 7490cca7b9d772b5
+          tool_version: 2
+      parameters:
+        - name: bvid
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Video BV ID
+          example: BV1xx411c7mD
+        - name: aid
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Video AV ID (alternative to bvid)
+          example: ""
       responses:
-        '200':
-          description: Like result.
+        "200":
+          description: Success.
           content:
-            application/json:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
                   code:
                     type: integer
-                    description: 0 = success, 65006 = already liked/unliked.
                   message:
                     type: string
-  /x/v3/fav/resource/deal:
-    post:
-      operationId: addToFavorites
-      summary: Add or remove a video from favorites folder — reversible, requires auth
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        aid:
+                          type: integer
+                        bvid:
+                          type: string
+                        title:
+                          type: string
+                        pic:
+                          type: string
+                          format: uri
+                        desc:
+                          type: string
+                        duration:
+                          type: integer
+                        pubdate:
+                          type: integer
+                        owner:
+                          type: object
+                          properties:
+                            mid:
+                              type: integer
+                            name:
+                              type: string
+                            face:
+                              type: string
+                              format: uri
+                        stat:
+                          type: object
+                          properties:
+                            view:
+                              type: integer
+                            danmaku:
+                              type: integer
+                            reply:
+                              type: integer
+                            like:
+                              type: integer
+  /x/player/online/total:
+    get:
+      operationId: getVideoOnlineCount
+      summary: Get number of users currently watching a video
       x-openweb:
-        permission: write
-        safety: safe
-        requires_auth: true
+        permission: read
         build:
-          stable_id: bili0012
-          tool_version: 1
-          verified: false
-          signals:
-            - adapter-verified
-        adapter:
-          name: bilibili-web
-          operation: addToFavorites
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              required:
-                - rid
-                - add_media_ids
-              properties:
-                rid:
-                  type: integer
-                  description: Video aid (from getVideoDetail).
-                add_media_ids:
-                  type: string
-                  description: Comma-separated favorite folder IDs to add to.
-                del_media_ids:
-                  type: string
-                  description: Comma-separated favorite folder IDs to remove from.
+          stable_id: aa48b40a33b316d4
+          tool_version: 2
+      parameters:
+        - name: bvid
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Video BV ID
+          example: BV1xx411c7mD
+        - name: cid
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Video part CID
+          example: 62131
+        - name: aid
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Video AV ID
+          example: 2
       responses:
-        '200':
-          description: Favorites result.
+        "200":
+          description: Success.
           content:
-            application/json:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
                   code:
                     type: integer
-                    description: 0 = success.
                   message:
                     type: string
-  /x/relation/modify:
-    post:
-      operationId: followUploader
-      summary: Follow or unfollow a user — reversible, requires auth
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: string
+                      count:
+                        type: string
+                      show_switch:
+                        type: object
+                        properties:
+                          total:
+                            type: boolean
+                          count:
+                            type: boolean
+  /x/web-interface/nav:
+    get:
+      operationId: getNavInfo
+      summary: Get current user navigation info (login status, profile)
       x-openweb:
-        permission: write
-        safety: safe
-        requires_auth: true
+        permission: read
         build:
-          stable_id: bili0013
-          tool_version: 1
-          verified: false
-          signals:
-            - adapter-verified
-        adapter:
-          name: bilibili-web
-          operation: followUploader
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              required:
-                - fid
-              properties:
-                fid:
-                  type: integer
-                  description: Target user ID (mid).
-                act:
-                  type: integer
-                  default: 1
-                  description: 1 = follow, 2 = unfollow.
+          stable_id: 8a19527a3b57dedc
+          tool_version: 2
+      parameters: []
       responses:
-        '200':
-          description: Follow result.
+        "200":
+          description: Success.
           content:
-            application/json:
+            application/json; charset=utf-8:
               schema:
                 type: object
                 properties:
                   code:
                     type: integer
-                    description: 0 = success.
                   message:
                     type: string
+                  data:
+                    type: object
+                    properties:
+                      isLogin:
+                        type: boolean
+                      mid:
+                        type: integer
+                      face:
+                        type: string
+                        format: uri
+                      level_info:
+                        type: object
+                        properties:
+                          current_level:
+                            type: integer
+                      money:
+                        type: integer
+                      uname_certified:
+                        type: boolean
+                      vipStatus:
+                        type: integer

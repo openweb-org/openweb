@@ -1,17 +1,8 @@
 {
   "name": "reddit",
-  "display_name": "Reddit",
-  "version": "1.1.0",
+  "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.reddit.com",
-  "description": "Reddit API — cookie_session + exchange_chain (OAuth bearer via csrf cookie extraction)",
-  "requires_auth": true,
-  "dependencies": {},
-  "stats": {
-    "operation_count": 10,
-    "l1_count": 0,
-    "l2_count": 10,
-    "l3_count": 0,
-    "ws_count": 0
-  }
+  "compiled_at": "2026-03-28T06:02:07.999Z",
+  "requires_auth": false
 }

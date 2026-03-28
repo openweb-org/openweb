@@ -1,54 +1,62 @@
-# Zhihu (知乎)
+# Zhihu
 
 ## Overview
+Zhihu (知乎) — China's largest Q&A knowledge platform. Chinese Web archetype.
 
-Zhihu is China's largest Q&A platform (comparable to Quora). Users ask questions, write answers, publish articles, and follow topics. The platform has a rich internal API used by its SPA frontend.
+## Quick Start
+
+```bash
+# Search for content
+openweb zhihu exec searchContent '{"q": "人工智能", "t": "general", "limit": 10}'
+
+# Get trending search terms
+openweb zhihu exec getHotSearches '{}'
+
+# Get homepage recommended feed
+openweb zhihu exec getRecommendFeed '{"limit": 10}'
+
+# Get answers for a question
+openweb zhihu exec getQuestionAnswers '{"id": 19551424, "limit": 5}'
+
+# Get similar questions
+openweb zhihu exec getSimilarQuestions '{"id": 19551424}'
+
+# Get user profile
+openweb zhihu exec getUserProfile '{"username": "excited-vczh"}'
+
+# Get current user (requires auth)
+openweb zhihu exec getMe '{}'
+```
 
 ## Operations
-
-| Operation | Intent | Method | Path | Notes |
-|-----------|--------|--------|------|-------|
-| searchContent | Search questions/answers/articles | GET | /api/v4/search_v3 | Returns paginated results with excerpts |
-| getUserProfile | Get user profile details | GET | /api/v4/members/{url_token} | Follower count, answer count, headline |
-| getUserAnswers | List user's answers | GET | /api/v4/members/{url_token}/answers | Paginated, sortable by created/voteups |
-| getHotSearch | Get trending search topics | GET | /api/v4/search/hot_search | Current hot keywords with heat scores |
-| getTopicIntro | Get topic description | GET | /api/v4/topics/{topic_id}/intro | Topic abstract, categories, modules |
-| getTopicFeed | Get topic's best content | GET | /api/v5.1/topics/{topic_id}/feeds/essence/v2 | Top-voted answers and articles |
-| getSimilarQuestions | Get related questions | GET | /api/v4/questions/{question_id}/similar-questions | Questions with answer/follower counts |
-| getRecommendFeed | Get homepage feed | GET | /api/v3/feed/topstory/recommend | Personalized recommendation feed |
-| getUserActivities | Get user's recent activity | GET | /api/v3/moments/{url_token}/activities | Answers, upvotes, follows timeline |
-| getTopicChildren | Get sub-topics | GET | /api/v3/topics/{topic_id}/children | Child topics under a parent |
-| upvoteAnswer | Upvote an answer | POST | /api/v4/answers/{answer_id}/voters | ✅ SAFE — reversible (send "neutral" to undo) |
-| followUser | Follow a user | POST | /api/v4/members/{url_token}/followers | ✅ SAFE — reversible (DELETE to unfollow) |
-| followQuestion | Follow a question | POST | /api/v4/questions/{question_id}/followers | ✅ SAFE — reversible (DELETE to unfollow) |
-| followTopic | Follow a topic | POST | /api/v4/topics/{topic_id}/followers | ✅ SAFE — reversible (DELETE to unfollow) |
+| Operation | Intent | Method | Notes |
+|-----------|--------|--------|-------|
+| searchContent | Search by keyword | GET /api/v4/search_v3 | Returns answers, articles, topics. Param `t` controls type (general/topic/people) |
+| getHotSearches | Trending searches | GET /api/v4/search/hot_search | No params needed, returns ranked hot queries |
+| getRecommendFeed | Homepage feed | GET /api/v3/feed/topstory/recommend | Paginated with `page_number` or `after_id` |
+| getQuestionAnswers | Question answers | GET /api/v4/questions/{id}/feeds | Paginated, `order`: default or updated |
+| getSimilarQuestions | Related questions | GET /api/v4/questions/{id}/similar-questions | Small result set |
+| getUserProfile | User profile | GET /api/v4/members/{username} | `include` param controls extra fields |
+| getMe | Current user | GET /api/v4/me | Requires auth cookies |
 
 ## API Architecture
-
-- **Base URL**: `https://www.zhihu.com`
-- **API versions**: v3, v4, v5.1 coexist — newer endpoints use higher versions
-- **Response format**: JSON with consistent `{ data, paging }` envelope for lists
-- **Pagination**: Cursor-based via `offset` + `limit` or `paging.next` URL
-- **Path parameters**: `url_token` for users (e.g. "excited-vczh"), numeric IDs for questions/topics
+- REST JSON APIs on `www.zhihu.com/api/v3/` and `www.zhihu.com/api/v4/`
+- Paginated responses use `paging.next` URL or `offset`/`limit` params
+- SSR HTML pages exist at `/question/{id}`, `/people/{username}` but we use the JSON APIs instead
+- Some endpoints (topics) require additional `x-zse-93`/`x-zse-96` custom signing headers
 
 ## Auth
-
-- `requires_auth: false` — APIs work with active browser session cookies
-- Auth type: `cookie_session` — the browser maintains session cookies automatically
-- No explicit API key or OAuth token needed for read operations
-- Some endpoints return reduced data without login (e.g. fewer feed items)
+- Type: `cookie_session` with CSRF (`_xsrf` cookie → `x-xsrftoken` header)
+- Most read operations work without auth (search, feed, answers, profile)
+- `getMe` requires auth cookies
+- Topic detail/feed/answerer endpoints require auth + custom x-zse signing (not yet supported)
 
 ## Transport
-
-- `transport: page` — all operations use browser-mediated fetch (L3)
-- Zhihu uses cookie-based session auth; direct HTTP calls without cookies return 401 or redirects
-- All API calls are made via `page.evaluate(fetch(...))` to inherit browser cookies and headers
-- No explicit bot detection (Cloudflare, etc.) observed, but cookies are required
+- `node` — works for the 7 curated operations
+- Topic API endpoints need custom request signing (`x-zse-93`, `x-zse-96`) that only the browser can compute. These are excluded pending adapter implementation.
 
 ## Known Issues
-
-- Question detail page (`/question/{id}`) uses SSR + client-side hydration; no clean API endpoint for full question data — question text is embedded in the page HTML
-- Answer content is HTML-rich with inline images; the API returns sanitized HTML
-- Rate limiting may apply to rapid sequential requests
-- Some user profiles may be private, returning 403
-- `include` parameter controls which fields are returned — omitting it returns minimal data
+- **x-zse signing**: Zhihu uses proprietary `x-zse-93` and `x-zse-96` headers on topic endpoints. These are computed client-side and cannot be replicated in node transport. Requires page transport with adapter extraction.
+- **Rate limiting**: Aggressive — avoid high request rates
+- **ID types**: Zhihu returns IDs as strings in JSON even for numeric question/answer IDs
+- **Search results**: Include gaokao (college exam) and ad cards mixed with real results — filter by `type: "search_result"` for clean results

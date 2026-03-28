@@ -1,28 +1,8 @@
 {
   "name": "weibo",
-  "display_name": "Weibo",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://weibo.com",
-  "description": "China Twitter — trending topics, post search, post detail with comments, user profiles and timelines via Weibo internal AJAX APIs",
-  "requires_auth": true,
-  "dependencies": {
-    "getHotTimeline → getPostDetail": "hottimeline returns post mid used by getPostDetail",
-    "getPostDetail → getPostComments": "post detail shows comments_count; getPostComments fetches them by mid",
-    "getUserProfile → getUserTimeline": "profile returns uid used by getUserTimeline",
-    "getHotSearch → searchPosts": "hot search shows trending keywords usable as search queries"
-  },
-  "stats": {
-    "operation_count": 10,
-    "l1_count": 0,
-    "l2_count": 0,
-    "l3_count": 10,
-    "ws_count": 0
-  },
-  "last_verified": "2026-03-24T21:30:00.000Z",
-  "quarantined": false,
-  "fingerprint": {
-    "response_shape_hash": "",
-    "last_validated": "2026-03-24T21:30:00.000Z"
-  }
+  "compiled_at": "2026-03-28T07:19:35.759Z",
+  "requires_auth": true
 }

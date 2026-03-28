@@ -1,9 +1,0 @@
-{
-  "operation_id": "getUserFollowStats",
-  "cases": [
-    {
-      "input": { "vmid": 1 },
-      "assertions": { "status": 200, "response_schema_valid": true }
-    }
-  ]
-}

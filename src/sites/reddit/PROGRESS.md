@@ -1,24 +1,12 @@
-## 2026-03-26: Expand coverage from 3 to 10 operations
+## 2026-03-28: Initial compile (clean rediscovery)
 
 **What changed:**
-- Added 7 new operations: getPost, searchPosts, getSubredditAbout, getUserProfile, getUserHistory, getPopular, savePost
-- All new read ops use www.reddit.com `.json` suffix pattern (same as existing getSubreddit)
-- Updated manifest.json operation count (3 → 10)
-- Updated DOC.md with full operation table
+- Compiled 8 HTTP operations covering 5 target intents
+- Auth: none (public JSON API), Transport: node
+- Operations: getHomeFeed, getSubredditPosts, getSubredditSorted, getSubredditAbout, searchPosts, getUserAbout, getUserSubmitted, getUserComments
 
 **Why:**
-- Expand Reddit coverage for post detail, search, user profiles, subreddit info, and bookmarking
+- Clean rediscovery for pipeline v2 comparison — no prior site package used
+- Discovered that Reddit's modern frontend (shreddit) uses SSR, so navigated to `.json` URLs directly
 
-**Verification:** Manual spec authoring based on Reddit's well-known `.json` API convention. Compile hung on large 38MB HAR capture — operations not yet verified via `openweb verify`.
-
----
-
-## 2026-03-26: Initial documentation
-
-**What changed:**
-- Created DOC.md and PROGRESS.md from existing openapi.yaml spec
-
-**Why:**
-- Document 3 operations with dual-server auth architecture
-
-**Verification:** spec review only — no new capture or compilation
+**Verification:** all 8 operations return HTTP 200 with valid JSON data via exec

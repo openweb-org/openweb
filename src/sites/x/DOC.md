@@ -1,56 +1,70 @@
 # X (Twitter)
 
 ## Overview
-X (Twitter) — social media platform. GraphQL API (v2) + REST API (v1.1). Page transport with multi-layer auth.
+Social media platform (x.com). GraphQL-heavy API with persisted query hashes, bearer token auth, and CSRF on all HTTP methods.
+
+## Quick Start
+
+```bash
+# Search tweets
+openweb x exec searchTweets '{"variables":"%7B%22rawQuery%22%3A%22your+search%22%2C%22count%22%3A20%2C%22querySource%22%3A%22typed_query%22%2C%22product%22%3A%22Top%22%2C%22withGrokTranslatedBio%22%3Afalse%7D"}'
+
+# Get user profile
+openweb x exec getUserProfile '{}'
+
+# Get user tweets (userId 44196397 = @elonmusk)
+openweb x exec getUserTweets '{}'
+
+# Get tweet detail by focal tweet ID
+openweb x exec getTweetDetail '{}'
+
+# Get explore/trending page
+openweb x exec getExplorePage '{}'
+
+# Get home timeline
+openweb x exec getHomeTimeline '{}'
+```
+
+Note: Query parameters (`variables`, `features`, `fieldToggles`) must be URL-encoded JSON strings. Defaults are pre-encoded in the spec.
 
 ## Operations
-| Operation | Intent | Method | Path | Notes |
-|-----------|--------|--------|------|-------|
-| listFollowing | accounts user follows | GET | /1.1/friends/list.json | cursor pagination, REST v1.1 |
-| listFollowers | user's followers | GET | /1.1/followers/list.json | cursor pagination, REST v1.1 |
-| getHomeTimeline | view home feed | GET | /graphql/.../HomeTimeline | GraphQL, returns tweet entries |
-| searchTweets | search tweets by keyword | GET | /graphql/.../SearchTimeline | GraphQL, rawQuery + product filter |
-| getUserTweets | browse user's tweets | GET | /graphql/.../UserTweets | GraphQL, requires userId |
-| getTweetDetail | tweet with reply thread | GET | /graphql/.../TweetDetail | GraphQL, focalTweetId + replies |
-| getTweetById | get single tweet by ID | GET | /graphql/.../TweetResultByRestId | GraphQL, single tweet |
-| getExplorePage | trending topics/explore | GET | /graphql/.../ExplorePage | GraphQL, cursor pagination |
-| getUserProfile | user profile by handle | GET | /graphql/.../UserByScreenName | GraphQL, screen_name param |
-| getBookmarks | saved/bookmarked tweets | GET | /graphql/.../Bookmarks | GraphQL, authenticated user only |
-| likeTweet | like a tweet | POST | /graphql/.../FavoriteTweet | write, tweet_id in body |
-| unlikeTweet | unlike a tweet | POST | /graphql/.../UnfavoriteTweet | write, tweet_id in body |
-| retweet | retweet a tweet | POST | /graphql/.../CreateRetweet | write, tweet_id in body |
-| undoRetweet | undo a retweet | POST | /graphql/.../DeleteRetweet | write, source_tweet_id in body |
-| bookmarkTweet | bookmark a tweet | POST | /graphql/.../CreateBookmark | write, tweet_id in body |
-| unbookmarkTweet | remove bookmark | POST | /graphql/.../DeleteBookmark | write, tweet_id in body |
+
+| Operation | Intent | Endpoint | Notes |
+|-----------|--------|----------|-------|
+| searchTweets | Search tweets by keyword | GET /i/api/graphql/.../SearchTimeline | May return 404 intermittently (rate-limited) |
+| getUserProfile | Get user profile by screen name | GET /i/api/graphql/.../UserByScreenName | Returns full profile, followers, bio |
+| getUserTweets | Get tweets by a user | GET /i/api/graphql/.../UserTweets | Requires userId (numeric) |
+| getTweetDetail | Get tweet with conversation thread | GET /i/api/graphql/.../TweetDetail | Requires focalTweetId |
+| getTweetById | Get single tweet by ID | GET /i/api/graphql/.../TweetResultByRestId | Requires tweetId |
+| getExplorePage | Get explore/trending content | GET /i/api/graphql/.../ExplorePage | No required params |
+| getHomeTimeline | Get authenticated home feed | GET /i/api/graphql/.../HomeTimeline | Returns followed accounts' tweets |
 
 ## API Architecture
-- **GraphQL** at `x.com/i/api/graphql/<hash>/<OperationName>` for most operations
-- **REST v1.1** at `x.com/i/api/1.1/` for legacy endpoints (friends/followers)
-- GraphQL read ops use GET with `variables` and `features` as URL-encoded JSON query params
-- GraphQL write ops use POST with `{"variables": {...}, "queryId": "..."}` JSON body
-- GraphQL hashes are semi-stable but can rotate on X deployments
-- `features` parameter is a large JSON object of feature flags — required for most GraphQL ops
+
+- **GraphQL with persisted query hashes**: All API calls go to `/i/api/graphql/{hash}/{OperationName}` via GET
+- **Query hashes rotate on deploy**: Hashes are baked into X's JavaScript bundles and change when code deploys. Re-capture needed when hashes expire (404 responses).
+- **Parameters are URL-encoded JSON**: `variables`, `features`, and `fieldToggles` are query params whose values are URL-encoded JSON objects
+- **Heavy feature flags**: The `features` param contains 30+ boolean flags that control response shape. Must match current expectations.
 
 ## Auth
-- `cookie_session` — browser session cookies required
-- **CSRF**: `cookie_to_header` — reads `ct0` cookie, sends as `x-csrf-token` header on **all methods** (including GET)
-- **Static bearer token**: fixed `Authorization: Bearer AAAA...` header (X web app constant, same for all users)
-- Additional headers: `x-twitter-auth-type: OAuth2Session`, `x-twitter-active-user: yes`
+
+- **Type**: `cookie_session` + bearer token
+- **Bearer token**: Fixed app-level token `AAAAAAAAAAAAAAAAAAAAANRILgA...` (not user-specific, embedded in JS bundle)
+- **CSRF**: `cookie_to_header` — `ct0` cookie value sent as `x-csrf-token` header
+- **CSRF scope**: ALL methods including GET (unusual — most sites only CSRF on mutations)
+- **Additional headers**: `x-twitter-auth-type: OAuth2Session`, `x-twitter-active-user: yes`, `x-twitter-client-language: en`
 
 ## Transport
-- `page` — requires X/Twitter page loaded in browser tab
-- All API calls go through `fetch()` in browser context to inherit cookies
 
-## Write Operations Safety
-| Operation | Safety | Notes |
-|-----------|--------|-------|
-| likeTweet / unlikeTweet | SAFE | reversible |
-| retweet / undoRetweet | SAFE | reversible |
-| bookmarkTweet / unbookmarkTweet | SAFE | reversible |
+- **page** transport required
+- X uses TLS fingerprinting — node transport returns 400/403
+- Requires an open x.com tab in the managed browser
+- `credentials: 'include'` sends cookies automatically via browser context
 
 ## Known Issues
-- CSRF token required on GET requests (unusual — most sites only require on mutating methods)
-- GraphQL hashes may rotate on X deployments — if operations return 404, re-capture to get updated hashes
-- `searchTweets` may intermittently return 404 — suspected hash rotation or rate limiting
-- Response schemas are deeply nested GraphQL structures; `required` constraints removed to avoid drift
-- `features` parameter values are X-specific and may change over time
+
+- **SearchTimeline intermittent 404**: The search endpoint appears to be more aggressively protected than other endpoints. May return 404 even with correct hashes and auth.
+- **Query hash rotation**: Persisted query hashes rotate on X code deploys (frequency varies). When operations start returning 404, re-capture is needed to get fresh hashes.
+- **URL encoding required**: The `buildTargetUrl` function uses minimal encoding, so JSON query param defaults must be pre-URL-encoded in the spec.
+- **Feature flag drift**: The `features` JSON object changes as X adds/removes feature flags. Stale feature flags may cause 400 errors.
+- **Rate limiting**: Heavy API usage from the same session may trigger rate limits (429) or temporary blocks.

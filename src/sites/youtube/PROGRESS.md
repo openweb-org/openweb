@@ -1,29 +1,18 @@
-## 2026-03-26: Initial documentation
+## 2026-03-28: Initial compile — clean rediscovery
 
 **What changed:**
-- Created DOC.md and PROGRESS.md from existing openapi.yaml spec
+- Compiled 5 HTTP operations for 5 target intents
+- Auth: none required (public InnerTube API), Transport: node
+- Operations: searchVideos, getVideoDetail, getVideoPlayer, browseContent, getGuide
+- Manually curated spec — auto-generated spec had 23 ops (18 noise: stats, ads, JS bundles, log_event)
+- Added request body schemas manually (gzip-compressed bodies in HAR prevented auto-extraction)
 
 **Why:**
-- Document 2 verified operations with InnerTube POST pattern and SAPISIDHASH signing
+- Clean rediscovery as part of openweb site pipeline improvement
 
-**Verification:** spec review only — no new capture or compilation
-
-## 2026-03-26: Expand from 2 to 8 operations
-
-**What changed:**
-- Added 6 new operations: searchVideos, browseContent, getTranscript, likeVideo, unlikeVideo, subscribeChannel
-- Renamed getComments → getRelatedAndComments (returns both comments and related videos)
-- Updated clientVersion to 2.20260324.05.00
-- Documented browseId patterns (channel UC..., playlist VL..., home FEwhat_to_watch)
-- Updated manifest.json to version 2.0.0 with 8 operations
-
-**Why:**
-- YouTube had only 2 ops (getVideoInfo, getComments), missing search, channel, playlist, like/subscribe
-- Confirmed all InnerTube endpoints via browser-context fetch from youtube.com
-
-**Verification:**
-- API-level: all new endpoints tested from browser context with 200 responses (search, browse channel, browse playlist, browse home, like/like, subscription/subscribe)
-- Like/like requires SAPISIDHASH auth header (confirmed working with crypto.subtle hash)
-- Trending browseId (FEtrending) returns 400 — excluded from spec
-- spec validation passes (openweb validates x-openweb schema)
-- Verify command skips POST-only sites by default — documented as known limitation
+**Verification:** all 5 target intents return real data via exec
+- searchVideos: returns video titles, IDs, view counts
+- getVideoDetail: returns full metadata (title, views, channel, comments, recommendations)
+- getVideoPlayer: returns player config and streaming data
+- browseContent: returns channel pages and home feed
+- getGuide: returns sidebar navigation

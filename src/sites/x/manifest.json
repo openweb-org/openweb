@@ -1,17 +1,8 @@
 {
   "name": "x",
-  "display_name": "X (Twitter)",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://x.com",
-  "description": "X (Twitter) API — GraphQL + REST v1.1. cookie_session + cookie_to_header CSRF (all methods) + static bearer signing",
-  "requires_auth": true,
-  "dependencies": {},
-  "stats": {
-    "operation_count": 16,
-    "l1_count": 0,
-    "l2_count": 10,
-    "l3_count": 6,
-    "ws_count": 0
-  }
+  "compiled_at": "2026-03-28T09:19:20.580Z",
+  "requires_auth": true
 }

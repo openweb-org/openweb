@@ -1,30 +1,8 @@
 {
   "name": "bilibili",
-  "display_name": "Bilibili (哔哩哔哩)",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.bilibili.com",
-  "description": "Bilibili video search, detail, trending/ranking, comments, user profiles — page transport with Wbi signing via L3 adapter",
-  "requires_auth": false,
-  "dependencies": {
-    "searchVideos → getVideoDetail": "searchVideos returns bvid used by getVideoDetail",
-    "getVideoDetail → getVideoComments": "getVideoDetail returns aid (as oid) used by getVideoComments",
-    "searchVideos → getUserInfo": "searchVideos returns mid used by getUserInfo",
-    "getUserInfo → getUserFollowStats": "getUserInfo returns mid used by getUserFollowStats (as vmid)",
-    "getUserInfo → getUploaderStats": "getUserInfo returns mid used by getUploaderStats",
-    "getUserInfo → getUserVideos": "getUserInfo returns mid used by getUserVideos"
-  },
-  "stats": {
-    "operation_count": 13,
-    "l1_count": 0,
-    "l2_count": 0,
-    "l3_count": 13,
-    "ws_count": 0
-  },
-  "last_verified": "2026-03-24T16:21:01.718Z",
-  "quarantined": false,
-  "fingerprint": {
-    "response_shape_hash": "getPopularVideos:d67efde299e573f5,getRanking:a4b8c8c0fc91f881,getRecommendedFeed:c5770a188d11e0a0,getUploaderStats:c00f1718b82b1860,getUserFollowStats:a2e209baf2790be7,getUserInfo:d3085107049f8066,getUserVideos:1f1768d65c73d582,getVideoComments:5110ca9b5556d177,getVideoDetail:f35f97e69960a8d0,searchVideos:7ab87361616d9c70",
-    "last_validated": "2026-03-24T16:21:01.719Z"
-  }
+  "compiled_at": "2026-03-28T07:37:36.309Z",
+  "requires_auth": false
 }

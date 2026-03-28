@@ -1,42 +1,70 @@
 # YouTube
 
 ## Overview
-YouTube InnerTube API — video platform. POST-based internal API with SAPISIDHASH signing.
+Video sharing and streaming platform (Content Platform archetype). Powered by Google's InnerTube API.
+
+## Quick Start
+
+```bash
+# Search videos
+pnpm dev youtube exec searchVideos '{"query": "javascript tutorial"}'
+
+# Get video detail (metadata, comments, recommendations)
+pnpm dev youtube exec getVideoDetail '{"videoId": "dQw4w9WgXcQ"}'
+
+# Get video player info (streams, captions)
+pnpm dev youtube exec getVideoPlayer '{"videoId": "dQw4w9WgXcQ"}'
+
+# Browse channel page
+pnpm dev youtube exec browseContent '{"browseId": "UCX6OQ3DkcsbYNE6H8uQQuVA"}'
+
+# Browse home feed
+pnpm dev youtube exec browseContent '{"browseId": "FEwhat_to_watch"}'
+
+# Get sidebar navigation
+pnpm dev youtube exec getGuide '{}'
+```
+
+Context defaults to `{client: {clientName: "WEB", clientVersion: "2.20260325", hl: "en", gl: "US"}}`. Override by passing `context` explicitly.
 
 ## Operations
-| Operation | Intent | Method | Permission | Notes |
-|-----------|--------|--------|------------|-------|
-| searchVideos | search videos by keyword | POST /search | read | query in request body |
-| getVideoInfo | video player info | POST /player | read | videoId in request body |
-| getRelatedAndComments | video comments and related videos | POST /next | read | videoId in request body |
-| browseContent | browse channel, playlist, or home feed | POST /browse | read | browseId selects content type |
-| getTranscript | video transcript/subtitles | POST /get_transcript | read | params token from engagement panel |
-| likeVideo | like a video | POST /like/like | write | SAFE (reversible via unlikeVideo) |
-| unlikeVideo | remove like from a video | POST /like/removelike | write | SAFE |
-| subscribeChannel | subscribe to a channel | POST /subscription/subscribe | write | SAFE (reversible) |
-
-### browseId Patterns
-- **Channel:** `UC...` (e.g. `UCsBjURrPoezykLs9EqgamOA`)
-- **Playlist:** `VL` + playlist ID (e.g. `VLPLWKjhJtqVAbkArDMaJhn2XB080UlFNRCt`)
-- **Home feed:** `FEwhat_to_watch`
+| Operation | Intent | Method | Notes |
+|-----------|--------|--------|-------|
+| searchVideos | Search videos by keyword | POST /youtubei/v1/search | Returns videoRenderer items with title, viewCount, videoId |
+| getVideoDetail | Get video metadata + comments + recommendations | POST /youtubei/v1/next | Rich response: primary info, secondary info, comments, related videos |
+| getVideoPlayer | Get video player config + streaming URLs | POST /youtubei/v1/player | Returns streamingData, videoDetails, captions |
+| browseContent | Browse channels, home feed, playlists | POST /youtubei/v1/browse | browseId: UC... for channels, FEwhat_to_watch for home |
+| getGuide | Get sidebar navigation | POST /youtubei/v1/guide | Categories and subscriptions sidebar |
 
 ## API Architecture
-- InnerTube API v1 at `www.youtube.com/youtubei/v1/`
-- **All endpoints are POST** — parameters in JSON request body, not query string
-- Every request requires `context.client` object with `clientName`, `clientVersion`, `hl`, `gl`
-- API key injected as `key` query parameter
-- Single `/browse` endpoint serves channels, playlists, and home feed via `browseId`
+YouTube uses the **InnerTube API** — all operations are POST requests to `/youtubei/v1/{endpoint}` with a JSON body containing a `context` object:
+```json
+{
+  "context": {
+    "client": {
+      "clientName": "WEB",
+      "clientVersion": "2.20260325"
+    }
+  },
+  "videoId": "..."
+}
+```
+- `clientVersion` should match the current YouTube web client version (check ytcfg for latest)
+- All endpoints accept the same `context` structure
+- Responses are large nested JSON (hundreds of KB) with renderer objects
 
 ## Auth
-- `page_global` — extracts InnerTube API key from `ytcfg.data_.INNERTUBE_API_KEY` on YouTube page
-- **SAPISIDHASH signing**: reads `SAPISID` cookie, computes SHA-1 hash with origin, injects as `Authorization: SAPISIDHASH <timestamp>_<hash>`
-- Write operations (like, subscribe) require SAPISIDHASH auth
+- **No auth required** for public operations (search, video detail, player, browse)
+- Authenticated features (subscriptions, history, liked videos) require Google cookies + `sapisidhash` signing
+- `sapisidhash`: SHA-1 of `timestamp + " " + SAPISID cookie + " " + origin` — only needed for authenticated operations
 
 ## Transport
-- `node` — direct HTTP (with cookies forwarded for signing)
+- **node** — all 5 operations work via plain HTTP POST without cookies or browser
+- No bot detection for InnerTube API (it's designed for the web client)
 
 ## Known Issues
-- `clientVersion` in context body may need updating as YouTube deploys new versions (currently `2.20260324.05.00`)
-- `/get_transcript` requires a `params` token from the engagement panel in the `/next` response; not directly callable with just a videoId
-- Trending browse (`FEtrending`) returns 400 — YouTube may have deprecated this browseId
-- All endpoints are POST, so `openweb verify` skips them by default (verify needs `--include-writes` or manual testing)
+- `clientVersion` in the context may need updating as YouTube deploys new versions
+- `FEtrending` browseId returns 400 — use `FEwhat_to_watch` for home/recommendations instead
+- Request bodies were gzip-compressed in captured traffic, preventing automatic schema extraction by the pipeline
+- Response payloads are very large (500KB+) due to deeply nested renderer structures
+- Some browse IDs (like trending categories) may require additional `params` field with encoded continuation tokens

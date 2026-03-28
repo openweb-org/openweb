@@ -1,9 +1,0 @@
-{
-  "operation_id": "getRanking",
-  "cases": [
-    {
-      "input": { "rid": 0, "type": "all" },
-      "assertions": { "status": 200, "response_schema_valid": true }
-    }
-  ]
-}

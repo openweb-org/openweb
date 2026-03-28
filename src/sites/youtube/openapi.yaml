@@ -1,68 +1,52 @@
-openapi: '3.1.0'
+openapi: 3.1.0
 info:
-  title: YouTube InnerTube API
-  version: '2.0'
+  title: youtube
+  version: 1.0.0
   x-openweb:
-    spec_version: '2.0'
+    spec_version: "2.0"
+    compiled_at: 2026-03-28T08:09:47.642Z
+    requires_auth: false
 servers:
-  - url: https://www.youtube.com/youtubei/v1
+  - url: https://www.youtube.com
     x-openweb:
       transport: node
-      auth:
-        type: page_global
-        expression: 'ytcfg.data_.INNERTUBE_API_KEY'
-        inject:
-          query: key
-      signing:
-        type: sapisidhash
-        cookie: SAPISID
-        origin: https://www.youtube.com
-        inject:
-          header: Authorization
-          prefix: 'SAPISIDHASH '
 paths:
-  /search:
+  /youtubei/v1/search:
     post:
       operationId: searchVideos
       summary: Search videos by keyword
       x-openweb:
         permission: read
-        build:
-          stable_id: yt0003
-          tool_version: 1
-          verified: false
-          signals:
-            - status-match
       parameters:
-        - name: key
+        - name: prettyPrint
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: InnerTube API key (injected by auth).
+            default: "false"
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - query
               properties:
                 query:
                   type: string
-                  description: Search query string.
+                  description: Search query string
                 context:
                   type: object
                   default:
                     client:
                       clientName: WEB
-                      clientVersion: '2.20260324.05.00'
+                      clientVersion: "2.20260325"
                       hl: en
                       gl: US
+              required:
+                - query
       responses:
-        '200':
-          description: Success.
+        "200":
+          description: Search results
           content:
             application/json:
               schema:
@@ -70,50 +54,89 @@ paths:
                 properties:
                   contents:
                     type: object
-                    description: Search results in twoColumnSearchResultsRenderer.
+                    description: Search results in twoColumnSearchResultsRenderer
                   estimatedResults:
                     type: string
-  /player:
+  /youtubei/v1/next:
     post:
-      operationId: getVideoInfo
-      summary: Get video player info
+      operationId: getVideoDetail
+      summary: Get video detail including metadata, comments, and recommendations
       x-openweb:
         permission: read
-        build:
-          stable_id: yt0001
-          tool_version: 2
-          verified: true
-          signals:
-            - status-match
       parameters:
-        - name: key
+        - name: prettyPrint
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: InnerTube API key (injected by auth).
+            default: "false"
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - videoId
               properties:
                 videoId:
                   type: string
+                  description: YouTube video ID (e.g. dQw4w9WgXcQ)
                 context:
                   type: object
                   default:
                     client:
                       clientName: WEB
-                      clientVersion: '2.20260324.05.00'
+                      clientVersion: "2.20260325"
                       hl: en
                       gl: US
+              required:
+                - videoId
       responses:
-        '200':
-          description: Success.
+        "200":
+          description: Video detail with comments and recommendations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contents:
+                    type: object
+                    description: Video info, comments, and related videos
+  /youtubei/v1/player:
+    post:
+      operationId: getVideoPlayer
+      summary: Get video player configuration and streaming info
+      x-openweb:
+        permission: read
+      parameters:
+        - name: prettyPrint
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "false"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                videoId:
+                  type: string
+                  description: YouTube video ID
+                context:
+                  type: object
+                  default:
+                    client:
+                      clientName: WEB
+                      clientVersion: "2.20260325"
+                      hl: en
+                      gl: US
+              required:
+                - videoId
+      responses:
+        "200":
+          description: Player configuration with streaming data
           content:
             application/json:
               schema:
@@ -123,107 +146,49 @@ paths:
                     type: object
                   streamingData:
                     type: object
-  /next:
-    post:
-      operationId: getRelatedAndComments
-      summary: Get video comments and related videos
-      x-openweb:
-        permission: read
-        build:
-          stable_id: yt0002
-          tool_version: 2
-          verified: false
-          signals:
-            - status-match
-      parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-          description: InnerTube API key (injected by auth).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - videoId
-              properties:
-                videoId:
-                  type: string
-                context:
-                  type: object
-                  default:
-                    client:
-                      clientName: WEB
-                      clientVersion: '2.20260324.05.00'
-                      hl: en
-                      gl: US
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  contents:
-                    type: object
-                    description: Comments and related videos.
-  /browse:
+  /youtubei/v1/browse:
     post:
       operationId: browseContent
-      summary: Browse channel, playlist, or home feed
+      summary: Browse YouTube content (channels, home feed, playlists)
       description: >
         Generic browse endpoint. Pass a browseId to select content type:
         channel ID (UC...) for channel page, VL + playlist ID for playlist,
         FEwhat_to_watch for home feed.
       x-openweb:
         permission: read
-        build:
-          stable_id: yt0004
-          tool_version: 1
-          verified: false
-          signals:
-            - status-match
       parameters:
-        - name: key
+        - name: prettyPrint
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: InnerTube API key (injected by auth).
+            default: "false"
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - browseId
               properties:
                 browseId:
                   type: string
-                  description: >
-                    Content ID to browse. Channel: UC... (e.g. UCsBjURrPoezykLs9EqgamOA).
-                    Playlist: VL + playlist ID (e.g. VLPLWKjhJtqVAbkArDMaJhn2XB080UlFNRCt).
-                    Home feed: FEwhat_to_watch.
+                  description: "Browse endpoint ID. Use FEwhat_to_watch for home feed, UC... channel IDs for channels (e.g. UCX6OQ3DkcsbYNE6H8uQQuVA for MrBeast)"
                 params:
                   type: string
-                  description: Optional tab/filter params (e.g. for channel Videos tab).
+                  description: Optional encoded params for pagination or sub-tabs
                 context:
                   type: object
                   default:
                     client:
                       clientName: WEB
-                      clientVersion: '2.20260324.05.00'
+                      clientVersion: "2.20260325"
                       hl: en
                       gl: US
+              required:
+                - browseId
       responses:
-        '200':
-          description: Success.
+        "200":
+          description: Browse page content
           content:
             application/json:
               schema:
@@ -235,200 +200,37 @@ paths:
                     type: object
                   metadata:
                     type: object
-  /get_transcript:
+  /youtubei/v1/guide:
     post:
-      operationId: getTranscript
-      summary: Get video transcript/subtitles
+      operationId: getGuide
+      summary: Get YouTube sidebar navigation guide
       x-openweb:
         permission: read
-        build:
-          stable_id: yt0009
-          tool_version: 1
-          verified: false
-          signals:
-            - status-match
       parameters:
-        - name: key
+        - name: prettyPrint
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: InnerTube API key (injected by auth).
+            default: "false"
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - params
               properties:
-                params:
-                  type: string
-                  description: Transcript params token (from getRelatedAndComments engagement panel).
                 context:
                   type: object
                   default:
                     client:
                       clientName: WEB
-                      clientVersion: '2.20260324.05.00'
+                      clientVersion: "2.20260325"
                       hl: en
                       gl: US
       responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  actions:
-                    type: array
-                    description: Transcript segments.
-  /like/like:
-    post:
-      operationId: likeVideo
-      summary: Like a video
-      x-openweb:
-        permission: write
-        build:
-          stable_id: yt0007
-          tool_version: 1
-          verified: false
-          signals:
-            - status-match
-      parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-          description: InnerTube API key (injected by auth).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - target
-              properties:
-                target:
-                  type: object
-                  required:
-                    - videoId
-                  properties:
-                    videoId:
-                      type: string
-                context:
-                  type: object
-                  default:
-                    client:
-                      clientName: WEB
-                      clientVersion: '2.20260324.05.00'
-                      hl: en
-                      gl: US
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-  /like/removelike:
-    post:
-      operationId: unlikeVideo
-      summary: Remove like from a video
-      x-openweb:
-        permission: write
-        build:
-          stable_id: yt0010
-          tool_version: 1
-          verified: false
-          signals:
-            - status-match
-      parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-          description: InnerTube API key (injected by auth).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - target
-              properties:
-                target:
-                  type: object
-                  required:
-                    - videoId
-                  properties:
-                    videoId:
-                      type: string
-                context:
-                  type: object
-                  default:
-                    client:
-                      clientName: WEB
-                      clientVersion: '2.20260324.05.00'
-                      hl: en
-                      gl: US
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-  /subscription/subscribe:
-    post:
-      operationId: subscribeChannel
-      summary: Subscribe to a channel
-      x-openweb:
-        permission: write
-        build:
-          stable_id: yt0008
-          tool_version: 1
-          verified: false
-          signals:
-            - status-match
-      parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-          description: InnerTube API key (injected by auth).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - channelIds
-              properties:
-                channelIds:
-                  type: array
-                  items:
-                    type: string
-                  description: Channel IDs to subscribe to.
-                context:
-                  type: object
-                  default:
-                    client:
-                      clientName: WEB
-                      clientVersion: '2.20260324.05.00'
-                      hl: en
-                      gl: US
-      responses:
-        '200':
-          description: Success.
+        "200":
+          description: Guide navigation items
           content:
             application/json:
               schema:

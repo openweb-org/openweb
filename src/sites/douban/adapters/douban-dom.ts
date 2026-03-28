@@ -1,349 +1,253 @@
-/**
- * Douban L3 adapter — DOM extraction from SSR pages.
- *
- * Douban is a traditional server-rendered site. All data is extracted
- * from the DOM via page navigation + evaluate. Covers movie, book,
- * and music across movie.douban.com, book.douban.com, music.douban.com.
- */
-import type { CodeAdapter } from '../../../types/adapter.js'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import type { Page } from 'playwright-core'
+import type { CodeAdapter } from '../../../types/adapter.js'
 
-/* ---------- helpers ---------- */
+const MOVIE_ORIGIN = 'https://movie.douban.com'
+const BOOK_ORIGIN = 'https://book.douban.com'
+const SEARCH_ORIGIN = 'https://search.douban.com'
 
-async function navigateAndWait(page: Page, url: string): Promise<void> {
-  await page.goto(url, { waitUntil: 'load', timeout: 60000 })
-  await page.waitForTimeout(2000)
-}
-
-function parseInfoField(text: string, field: string): string {
-  const re = new RegExp(`${field}:\\s*(.+?)\\n`)
-  return re.exec(text)?.[1]?.trim() ?? ''
-}
-
-/* ---------- operation handlers ---------- */
-
-async function searchMovies(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchMovies(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const query = String(params.query ?? '')
-  const url = `https://search.douban.com/movie/subject_search?search_text=${encodeURIComponent(query)}&cat=1002`
-  await navigateAndWait(page, url)
-
-  return page.evaluate(() => {
-    const items = Array.from(document.querySelectorAll('.item-root')).map(el => {
-      const titleEl = el.querySelector('.title a')
-      const ratingEl = el.querySelector('.rating_nums')
-      const metaEl = el.querySelector('.meta')
-      const imgEl = el.querySelector('img')
-      const href = titleEl?.getAttribute('href') ?? ''
-      const idMatch = href.match(/\/subject\/(\d+)/)
-      return {
-        subjectId: idMatch?.[1] ?? '',
-        title: titleEl?.textContent?.trim() ?? '',
-        rating: ratingEl?.textContent?.trim() ?? '',
-        meta: metaEl?.textContent?.trim() ?? '',
-        url: href,
-        coverImage: imgEl?.getAttribute('src') ?? '',
-      }
-    })
-    return { results: items, totalResults: items.length }
-  })
-}
-
-async function getMovieDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const subjectId = String(params.subjectId ?? params.id ?? '')
-  await navigateAndWait(page, `https://movie.douban.com/subject/${subjectId}/`)
-
-  return page.evaluate(() => {
-    const infoEl = document.getElementById('info')
-    const infoText = infoEl?.textContent ?? ''
-    const title = document.querySelector('#content h1 span')?.textContent?.trim() ?? ''
-    const year = document.querySelector('#content h1 .year')?.textContent?.trim()?.replace(/[()（）]/g, '') ?? ''
-    const rating = document.querySelector('.rating_num')?.textContent?.trim() ?? ''
-    const ratingCount = document.querySelector('.rating_people span')?.textContent?.trim() ?? ''
-    const summary = document.querySelector('[property="v:summary"]')?.textContent?.trim() ??
-      document.querySelector('.related-info .indent span')?.textContent?.trim() ?? ''
-    const poster = document.querySelector('#mainpic img')?.getAttribute('src') ?? ''
-
-    const director = Array.from(infoEl?.querySelectorAll('[rel="v:directedBy"]') ?? []).map(e => e.textContent?.trim() ?? '')
-    const actors = Array.from(infoEl?.querySelectorAll('[rel="v:starring"]') ?? []).map(e => e.textContent?.trim() ?? '')
-    const genre = Array.from(infoEl?.querySelectorAll('[property="v:genre"]') ?? []).map(e => e.textContent?.trim() ?? '')
-    const runtime = infoEl?.querySelector('[property="v:runtime"]')?.textContent?.trim() ?? ''
-    const releaseDate = Array.from(infoEl?.querySelectorAll('[property="v:initialReleaseDate"]') ?? []).map(e => e.textContent?.trim() ?? '')
-
-    const countryMatch = infoText.match(/制片国家\/地区:\s*(.+?)\n/)
-    const langMatch = infoText.match(/语言:\s*(.+?)\n/)
-    const aliasMatch = infoText.match(/又名:\s*(.+?)\n/)
-    const imdbMatch = infoText.match(/IMDb:\s*(tt\d+)/)
-    const writerMatch = infoText.match(/编剧:\s*(.+?)\n/)
-
-    const stars = Array.from(document.querySelectorAll('.ratings-on-weight .item')).map(el => {
-      const label = el.querySelector('span')?.textContent?.trim() ?? ''
-      const pct = el.querySelector('.rating_per')?.textContent?.trim() ?? ''
-      return { label, percentage: pct }
-    })
-
-    const recommendations = Array.from(document.querySelectorAll('.recommendations-bd dl')).map(el => {
-      const name = el.querySelector('dd a')?.textContent?.trim() ?? ''
-      const link = el.querySelector('dd a')?.getAttribute('href') ?? ''
-      const idMatch = link.match(/\/subject\/(\d+)/)
-      return { title: name, subjectId: idMatch?.[1] ?? '' }
-    })
-
-    const subjectIdMatch = window.location.pathname.match(/\/subject\/(\d+)/)
-    return {
-      subjectId: subjectIdMatch?.[1] ?? '',
-      title, year, rating, ratingCount: Number(ratingCount) || 0,
-      poster, summary,
-      director, writer: writerMatch?.[1]?.trim() ?? '', actors, genre, runtime, releaseDate,
-      country: countryMatch?.[1]?.trim() ?? '',
-      language: langMatch?.[1]?.trim() ?? '',
-      alias: aliasMatch?.[1]?.trim() ?? '',
-      imdb: imdbMatch?.[1] ?? '',
-      ratingDistribution: stars,
-      recommendations,
-    }
-  })
-}
-
-async function getMovieReviews(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const subjectId = String(params.subjectId ?? params.id ?? '')
-  await navigateAndWait(page, `https://movie.douban.com/subject/${subjectId}/reviews`)
-
-  return page.evaluate(() => {
-    const items = Array.from(document.querySelectorAll('.review-item')).map(el => {
-      const title = el.querySelector('h2 a')?.textContent?.trim() ?? ''
-      const author = el.querySelector('.name')?.textContent?.trim() ?? ''
-      const ratingEl = el.querySelector('[class*="rating"]')
-      const rating = ratingEl?.getAttribute('title') ?? ratingEl?.className?.match(/allstar(\d+)/)?.[1] ?? ''
-      const content = el.querySelector('.short-content')?.textContent?.trim() ?? ''
-      const useful = el.querySelector('.action-btn')?.textContent?.trim() ?? ''
-      const link = el.querySelector('h2 a')?.getAttribute('href') ?? ''
-      return { title, author, rating, content, usefulCount: useful, url: link }
-    })
-    return { subjectId: window.location.pathname.match(/\/subject\/(\d+)/)?.[1] ?? '', reviews: items, totalReviews: items.length }
-  })
-}
-
-async function getMoviePhotos(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const subjectId = String(params.subjectId ?? params.id ?? '')
-  const type = String(params.type ?? 'S')
-  await navigateAndWait(page, `https://movie.douban.com/subject/${subjectId}/photos?type=${type}`)
-
-  return page.evaluate(() => {
-    const items = Array.from(document.querySelectorAll('.poster-col3 li')).map(el => {
-      const img = el.querySelector('img')?.getAttribute('src') ?? ''
-      const link = el.querySelector('a')?.getAttribute('href') ?? ''
-      const info = el.querySelector('.name')?.textContent?.trim() ?? ''
-      return { imageUrl: img, pageUrl: link, info }
-    })
-    return { subjectId: window.location.pathname.match(/\/subject\/(\d+)/)?.[1] ?? '', photos: items, totalPhotos: items.length }
-  })
-}
-
-async function getTop250(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  if (!query) throw new Error('query parameter is required')
   const start = Number(params.start ?? 0)
-  await navigateAndWait(page, `https://movie.douban.com/top250?start=${start}`)
+
+  const url = `${SEARCH_ORIGIN}/movie/subject_search?search_text=${encodeURIComponent(query)}&cat=1002&start=${start}`
+  await page.goto(url, { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('.item-root', { timeout: 8000 }).catch(() => null)
 
   return page.evaluate(() => {
-    const items = Array.from(document.querySelectorAll('.item')).map(el => {
-      const rank = el.querySelector('em')?.textContent?.trim() ?? ''
-      const titleEl = el.querySelector('.title')
-      const title = titleEl?.textContent?.trim() ?? ''
-      const rating = el.querySelector('.rating_num')?.textContent?.trim() ?? ''
-      const ratingCount = el.querySelector('.star span:last-child')?.textContent?.trim()?.replace(/[^\d]/g, '') ?? ''
-      const quote = el.querySelector('.inq')?.textContent?.trim() ?? ''
-      const link = el.querySelector('.hd a')?.getAttribute('href') ?? ''
-      const idMatch = link.match(/\/subject\/(\d+)/)
-      const info = el.querySelector('.bd p')?.textContent?.trim() ?? ''
-      return {
-        rank: Number(rank),
-        subjectId: idMatch?.[1] ?? '',
-        title, rating, ratingCount: Number(ratingCount) || 0, quote, info, url: link,
-      }
-    })
-    return { movies: items, start, pageSize: 25 }
-  })
-}
-
-async function searchBooks(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const query = String(params.query ?? '')
-  const url = `https://search.douban.com/book/subject_search?search_text=${encodeURIComponent(query)}&cat=1001`
-  await navigateAndWait(page, url)
-
-  return page.evaluate(() => {
-    const items = Array.from(document.querySelectorAll('.item-root')).map(el => {
+    const items = Array.from(document.querySelectorAll('.item-root')).map((el) => {
       const titleEl = el.querySelector('.title a')
-      const ratingEl = el.querySelector('.rating_nums')
-      const metaEl = el.querySelector('.meta')
-      const imgEl = el.querySelector('img')
       const href = titleEl?.getAttribute('href') ?? ''
-      const idMatch = href.match(/\/subject\/(\d+)/)
+      const idMatch = href.match(/\/subject\/(\d+)\//)
       return {
-        subjectId: idMatch?.[1] ?? '',
-        title: titleEl?.textContent?.trim() ?? '',
-        rating: ratingEl?.textContent?.trim() ?? '',
-        meta: metaEl?.textContent?.trim() ?? '',
-        url: href,
-        coverImage: imgEl?.getAttribute('src') ?? '',
+        id: idMatch ? Number(idMatch[1]) : null,
+        title: titleEl?.textContent?.trim() ?? null,
+        url: href || null,
+        rating: el.querySelector('.rating_nums')?.textContent?.trim() || null,
+        ratingCount: el.querySelector('.rating .pl')?.textContent?.trim() || null,
+        abstract: el.querySelector('.abstract')?.textContent?.trim() || null,
+        cover: el.querySelector('img')?.getAttribute('src') ?? null,
       }
     })
-    return { results: items, totalResults: items.length }
+    return { query: new URLSearchParams(window.location.search).get('search_text'), count: items.length, items }
   })
 }
 
-async function getBookDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const subjectId = String(params.subjectId ?? params.id ?? '')
-  await navigateAndWait(page, `https://book.douban.com/subject/${subjectId}/`)
+async function getMovieDetail(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const id = params.id
+  if (!id) throw new Error('id parameter is required')
+
+  await page.goto(`${MOVIE_ORIGIN}/subject/${id}/`, { waitUntil: 'domcontentloaded' })
 
   return page.evaluate(() => {
-    const title = document.querySelector('#wrapper h1 span')?.textContent?.trim() ?? ''
-    const rating = document.querySelector('.rating_num')?.textContent?.trim() ?? ''
-    const ratingCount = document.querySelector('.rating_people span')?.textContent?.trim() ?? ''
-    const poster = document.querySelector('#mainpic img')?.getAttribute('src') ?? ''
-    const summary = document.querySelector('.related_info .intro')?.textContent?.trim() ?? ''
+    // Prefer JSON-LD for structured data
+    const ldScript = document.querySelector('script[type="application/ld+json"]')
+    const ld = ldScript ? (() => { try { return JSON.parse(ldScript.textContent!) } catch { return null } })() : null
 
-    const infoEl = document.getElementById('info')
-    const infoText = infoEl?.textContent ?? ''
+    const rating = ld?.aggregateRating
+    const idMatch = window.location.pathname.match(/\/subject\/(\d+)/)
 
-    const author = Array.from(infoEl?.querySelectorAll('a[href*="/author/"], span a') ?? [])
-      .filter(el => {
-        const prev = el.parentElement?.previousElementSibling?.textContent ?? el.parentElement?.textContent ?? ''
-        return prev.includes('作者')
-      })
-      .map(e => e.textContent?.trim() ?? '')
-
-    const authorFallback = infoText.match(/作者:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-    const publisher = infoText.match(/出版社:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-    const pubDate = infoText.match(/出版年:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-    const pages = infoText.match(/页数:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-    const price = infoText.match(/定价:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-    const isbn = infoText.match(/ISBN:\s*(\d+)/)?.[1] ?? ''
-    const binding = infoText.match(/装帧:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-
-    const subjectIdMatch = window.location.pathname.match(/\/subject\/(\d+)/)
     return {
-      subjectId: subjectIdMatch?.[1] ?? '',
-      title, rating, ratingCount: Number(ratingCount) || 0,
-      poster, summary,
-      author: author.length > 0 ? author : authorFallback.split('/').map(s => s.trim()),
-      publisher, pubDate, pages, price, isbn, binding,
+      id: idMatch ? Number(idMatch[1]) : null,
+      title: ld?.name ?? document.querySelector('#content h1 span')?.textContent?.trim() ?? null,
+      year: document.querySelector('#content h1 .year')?.textContent?.replace(/[()]/g, '').trim() || null,
+      rating: rating?.ratingValue ? Number(rating.ratingValue) : null,
+      ratingCount: rating?.ratingCount ? Number(rating.ratingCount) : null,
+      genres: ld?.genre ?? Array.from(document.querySelectorAll('[property="v:genre"]')).map((e) => e.textContent),
+      directors: (ld?.director ?? []).map((d: Record<string, string>) => d.name),
+      actors: (ld?.actor ?? []).slice(0, 10).map((a: Record<string, string>) => a.name),
+      duration: ld?.duration ?? null,
+      datePublished: ld?.datePublished ?? null,
+      description: ld?.description ?? document.querySelector('[property="v:summary"]')?.textContent?.trim() ?? null,
+      poster: ld?.image ?? document.querySelector('#mainpic img')?.getAttribute('src') ?? null,
+      url: ld?.url ? `https://movie.douban.com${ld.url}` : window.location.href,
     }
   })
 }
 
-async function getBookReviews(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const subjectId = String(params.subjectId ?? params.id ?? '')
-  await navigateAndWait(page, `https://book.douban.com/subject/${subjectId}/reviews`)
+async function getMovieComments(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const id = params.id
+  if (!id) throw new Error('id parameter is required')
+  const start = Number(params.start ?? 0)
+  const limit = Number(params.limit ?? 20)
+  const status = String(params.status ?? 'P')
 
-  return page.evaluate(() => {
-    const items = Array.from(document.querySelectorAll('.review-item')).map(el => {
-      const title = el.querySelector('h2 a')?.textContent?.trim() ?? ''
-      const author = el.querySelector('.name')?.textContent?.trim() ?? ''
-      const ratingEl = el.querySelector('[class*="rating"]')
-      const rating = ratingEl?.getAttribute('title') ?? ''
-      const content = el.querySelector('.short-content')?.textContent?.trim() ?? ''
-      const useful = el.querySelector('.action-btn')?.textContent?.trim() ?? ''
-      const link = el.querySelector('h2 a')?.getAttribute('href') ?? ''
-      return { title, author, rating, content, usefulCount: useful, url: link }
-    })
-    return { subjectId: window.location.pathname.match(/\/subject\/(\d+)/)?.[1] ?? '', reviews: items, totalReviews: items.length }
+  await page.goto(`${MOVIE_ORIGIN}/subject/${id}/comments?start=${start}&limit=${limit}&status=${status}&sort=new_score`, {
+    waitUntil: 'domcontentloaded',
   })
-}
-
-async function searchMusic(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const query = String(params.query ?? '')
-  const url = `https://search.douban.com/music/subject_search?search_text=${encodeURIComponent(query)}&cat=1003`
-  await navigateAndWait(page, url)
 
   return page.evaluate(() => {
-    const items = Array.from(document.querySelectorAll('.item-root')).map(el => {
-      const titleEl = el.querySelector('.title a')
-      const ratingEl = el.querySelector('.rating_nums')
-      const metaEl = el.querySelector('.meta')
-      const imgEl = el.querySelector('img')
-      const href = titleEl?.getAttribute('href') ?? ''
-      const idMatch = href.match(/\/subject\/(\d+)/)
+    const movieTitle = document.querySelector('#content h1')?.textContent?.trim()?.replace(/\s*短评$/, '') ?? null
+    const comments = Array.from(document.querySelectorAll('.comment-item')).map((el) => {
+      const ratingClass = el.querySelector('.comment-info .rating')?.className ?? ''
+      const starMatch = ratingClass.match(/allstar(\d+)/)
+      const stars = starMatch ? Number(starMatch[1]) / 10 : null
       return {
-        subjectId: idMatch?.[1] ?? '',
-        title: titleEl?.textContent?.trim() ?? '',
-        rating: ratingEl?.textContent?.trim() ?? '',
-        meta: metaEl?.textContent?.trim() ?? '',
-        url: href,
-        coverImage: imgEl?.getAttribute('src') ?? '',
+        author: el.querySelector('.comment-info a')?.textContent?.trim() ?? null,
+        rating: stars,
+        ratingLabel: el.querySelector('.comment-info .rating')?.getAttribute('title') ?? null,
+        time: el.querySelector('.comment-info .comment-time')?.textContent?.trim() ?? null,
+        content: el.querySelector('.short')?.textContent?.trim() ?? null,
+        votes: Number(el.querySelector('.comment-vote .votes')?.textContent?.trim() ?? '0'),
       }
     })
-    return { results: items, totalResults: items.length }
+    return { movieTitle, commentCount: comments.length, comments }
   })
 }
 
-async function getMusicDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const subjectId = String(params.subjectId ?? params.id ?? '')
-  await navigateAndWait(page, `https://music.douban.com/subject/${subjectId}/`)
+async function getTopMovies(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const start = Number(params.start ?? 0)
+
+  await page.goto(`${MOVIE_ORIGIN}/top250?start=${start}`, { waitUntil: 'domcontentloaded' })
 
   return page.evaluate(() => {
-    const title = document.querySelector('#wrapper h1 span')?.textContent?.trim() ?? ''
-    const rating = document.querySelector('.rating_num')?.textContent?.trim() ?? ''
-    const ratingCount = document.querySelector('.rating_people span')?.textContent?.trim() ?? ''
-    const poster = document.querySelector('#mainpic img')?.getAttribute('src') ?? ''
+    const movies = Array.from(document.querySelectorAll('.item')).map((el) => {
+      const href = el.querySelector('.hd a')?.getAttribute('href') ?? ''
+      const idMatch = href.match(/\/subject\/(\d+)\//)
+      const ratingCountText = el.querySelector('.bd div span:nth-child(4)')?.textContent?.trim() ?? ''
+      const countMatch = ratingCountText.match(/([\d]+)/)
+      return {
+        rank: Number(el.querySelector('.pic em')?.textContent?.trim() ?? '0'),
+        id: idMatch ? Number(idMatch[1]) : null,
+        title: el.querySelector('.hd a .title')?.textContent?.trim() ?? null,
+        otherTitle: el.querySelector('.hd a .other')?.textContent?.trim()?.replace(/^\s*\/\s*/, '') || null,
+        rating: Number(el.querySelector('.rating_num')?.textContent?.trim() ?? '0'),
+        ratingCount: countMatch ? Number(countMatch[1]) : null,
+        quote: el.querySelector('.quote span')?.textContent?.trim() || null,
+        url: href || null,
+        cover: el.querySelector('.pic img')?.getAttribute('src') ?? null,
+      }
+    })
+    return { start: Number(new URLSearchParams(window.location.search).get('start') ?? '0'), count: movies.length, movies }
+  })
+}
 
-    const infoEl = document.getElementById('info')
+async function searchBooks(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const query = String(params.query ?? '')
+  if (!query) throw new Error('query parameter is required')
+  const start = Number(params.start ?? 0)
+
+  const url = `${SEARCH_ORIGIN}/book/subject_search?search_text=${encodeURIComponent(query)}&cat=1001&start=${start}`
+  await page.goto(url, { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('.item-root', { timeout: 8000 }).catch(() => null)
+
+  return page.evaluate(() => {
+    const items = Array.from(document.querySelectorAll('.item-root')).map((el) => {
+      const titleEl = el.querySelector('.title a')
+      const href = titleEl?.getAttribute('href') ?? ''
+      const idMatch = href.match(/\/subject\/(\d+)\//)
+      return {
+        id: idMatch ? Number(idMatch[1]) : null,
+        title: titleEl?.textContent?.trim() ?? null,
+        url: href || null,
+        rating: el.querySelector('.rating_nums')?.textContent?.trim() || null,
+        ratingCount: el.querySelector('.rating .pl')?.textContent?.trim() || null,
+        abstract: el.querySelector('.abstract')?.textContent?.trim() || null,
+        cover: el.querySelector('img')?.getAttribute('src') ?? null,
+      }
+    })
+    return { query: new URLSearchParams(window.location.search).get('search_text'), count: items.length, items }
+  })
+}
+
+async function getBookDetail(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const id = params.id
+  if (!id) throw new Error('id parameter is required')
+
+  await page.goto(`${BOOK_ORIGIN}/subject/${id}/`, { waitUntil: 'domcontentloaded' })
+
+  return page.evaluate(() => {
+    const ldScript = document.querySelector('script[type="application/ld+json"]')
+    const ld = ldScript ? (() => { try { return JSON.parse(ldScript.textContent!) } catch { return null } })() : null
+
+    const infoEl = document.querySelector('#info')
     const infoText = infoEl?.textContent ?? ''
+    const extractInfo = (label: string): string | null => {
+      const re = new RegExp(`${label}:\\s*(.+?)\\n`)
+      const match = infoText.match(re)
+      return match ? match[1].trim() : null
+    }
 
-    const artist = infoText.match(/表演者:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-    const genre = infoText.match(/流派:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-    const albumType = infoText.match(/专辑类型:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-    const medium = infoText.match(/介质:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-    const releaseDate = infoText.match(/发行时间:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-    const publisher = infoText.match(/出版者:\s*(.+?)\n/)?.[1]?.trim() ?? ''
-    const alias = infoText.match(/又名:\s*(.+?)\n/)?.[1]?.trim() ?? ''
+    const idMatch = window.location.pathname.match(/\/subject\/(\d+)/)
 
-    const tracks = Array.from(document.querySelectorAll('.track-list li')).map(el => el.textContent?.trim() ?? '')
-
-    const subjectIdMatch = window.location.pathname.match(/\/subject\/(\d+)/)
     return {
-      subjectId: subjectIdMatch?.[1] ?? '',
-      title, rating, ratingCount: Number(ratingCount) || 0,
-      poster, artist, genre, albumType, medium, releaseDate, publisher, alias, tracks,
+      id: idMatch ? Number(idMatch[1]) : null,
+      title: ld?.name ?? document.querySelector('#wrapper h1 span')?.textContent?.trim() ?? null,
+      authors: (ld?.author ?? []).map((a: Record<string, string>) => a.name),
+      isbn: ld?.isbn ?? null,
+      rating: Number(document.querySelector('[property="v:average"]')?.textContent?.trim() ?? '0') || null,
+      ratingCount: Number(document.querySelector('[property="v:votes"]')?.textContent?.trim() ?? '0') || null,
+      publisher: extractInfo('出版社'),
+      publishDate: extractInfo('出版年'),
+      pages: extractInfo('页数'),
+      price: extractInfo('定价'),
+      binding: extractInfo('装帧'),
+      translator: extractInfo('译者'),
+      summary:
+        (document.querySelector('#link-report .all .intro') || document.querySelector('#link-report .intro'))?.textContent?.trim() ?? null,
+      cover: document.querySelector('#mainpic img')?.getAttribute('src') ?? null,
+      url: window.location.href,
     }
   })
 }
 
-/* ---------- adapter export ---------- */
+async function getBookComments(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const id = params.id
+  if (!id) throw new Error('id parameter is required')
+  const start = Number(params.start ?? 0)
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+  await page.goto(`${BOOK_ORIGIN}/subject/${id}/comments/?start=${start}&status=P&sort=new_score`, {
+    waitUntil: 'domcontentloaded',
+  })
+
+  return page.evaluate(() => {
+    const bookTitle = document.querySelector('#content h1')?.textContent?.trim()?.replace(/\s*短评$/, '') ?? null
+    const comments = Array.from(document.querySelectorAll('.comment-item')).map((el) => {
+      const ratingClass = el.querySelector('.comment-info .rating')?.className ?? ''
+      const starMatch = ratingClass.match(/allstar(\d+)/)
+      const stars = starMatch ? Number(starMatch[1]) / 10 : null
+      return {
+        author: el.querySelector('.comment-info a')?.textContent?.trim() ?? null,
+        rating: stars,
+        ratingLabel: el.querySelector('.comment-info .rating')?.getAttribute('title') ?? null,
+        time: el.querySelector('.comment-info .comment-time')?.textContent?.trim() ?? null,
+        content: el.querySelector('.short')?.textContent?.trim() ?? null,
+        votes: Number(el.querySelector('.comment-vote .votes')?.textContent?.trim() ?? '0'),
+      }
+    })
+    return { bookTitle, commentCount: comments.length, comments }
+  })
+}
+
+const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, unknown>>) => Promise<unknown>> = {
   searchMovies,
   getMovieDetail,
-  getMovieReviews,
-  getMoviePhotos,
-  getTop250,
+  getMovieComments,
+  getTopMovies,
   searchBooks,
   getBookDetail,
-  getBookReviews,
-  searchMusic,
-  getMusicDetail,
+  getBookComments,
 }
 
 const adapter: CodeAdapter = {
   name: 'douban-dom',
-  description: 'Douban — movie/book/music search, details, reviews via DOM extraction',
+  description: 'Douban DOM extraction — movies, books, search, comments, top charts',
 
   async init(page: Page): Promise<boolean> {
-    return page.url().includes('douban.com')
+    const url = page.url()
+    return url.includes('douban.com') || url === 'about:blank'
   },
 
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies('https://www.douban.com')
-    return cookies.some(c => c.name === 'dbcl2')
+  async isAuthenticated(): Promise<boolean> {
+    return true // Douban public data requires no auth
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    try {
-      const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
-      return handler(page, { ...params })
-    } catch (error) {
-      throw toOpenWebError(error)
+    const handler = OPERATIONS[operation]
+    if (!handler) {
+      throw new Error(`Unknown operation: ${operation}. Available: ${Object.keys(OPERATIONS).join(', ')}`)
     }
+    return handler(page, params)
   },
 }
 

@@ -1,42 +1,63 @@
 # Weibo
 
 ## Overview
+Chinese microblogging platform (China's Twitter equivalent). Social media archetype, Chinese web.
 
-Chinese microblogging platform (China's Twitter/X). Trending topics, post search, post detail with comments, user profiles and timelines. All operations use Weibo's internal AJAX APIs (`/ajax/*`) accessed via page transport with cookie-based authentication.
+## Quick Start
+
+```bash
+# Get trending hot search topics
+openweb weibo exec getHotSearch '{}'
+
+# Get hot timeline feed
+openweb weibo exec getHotTimeline '{"group_id": 102803, "containerid": 102803, "count": 10}'
+
+# Get user profile
+openweb weibo exec getUserProfile '{"uid": 1699432410}'
+
+# Get user's posts (page 1)
+openweb weibo exec getUserPosts '{"uid": 1699432410, "page": 1}'
+
+# Get a specific post
+openweb weibo exec getPostDetail '{"id": "5281459511232930"}'
+
+# Get search suggestions
+openweb weibo exec getSearchSuggestions '{"q": "科技"}'
+```
 
 ## Operations
-
 | Operation | Intent | Method | Notes |
 |-----------|--------|--------|-------|
-| getHotSearch | hot search ranking (top 50) | GET /ajax/side/hotSearch | realtime trending with heat scores, labels (新/热/沸/爆) |
-| getSearchBand | trending sidebar band | GET /ajax/side/searchBand | similar to hotSearch, shown on homepage sidebar |
-| getHotTimeline | hot/trending posts feed | GET /ajax/feed/hottimeline | popular posts with cursor pagination (since_id/max_id) |
-| getPostDetail | single post full content | GET /ajax/statuses/show?id= | text, images, repost/comment/like counts, author info, long text |
-| getPostComments | comments on a post | GET /ajax/statuses/buildComments?id= | paginated via max_id, sort by hot or time |
-| getUserProfile | user profile info | GET /ajax/profile/info?uid= | name, bio, followers, verification, avatar |
-| getUserDetail | user extended detail | GET /ajax/profile/detail?uid= | IP location, birthday, registration date, education |
-| getUserTimeline | user's posts | GET /ajax/statuses/mymblog?uid= | page-based pagination, filter by type (all/original/image/video) |
-| searchPosts | search posts by keyword | GET /ajax/side/search?q= | returns matching posts from sidebar search |
-| getIndexBand | categorized trending lists | GET s.weibo.com/ajax_Indexband/getIndexBand | trending topics by category |
-| likePost | like a post | POST /ajax/statuses/setLike | ✅ SAFE — reversible via cancelLike |
-| repost | repost/retweet a post | POST /ajax/statuses/repost | ✅ SAFE — reversible via destroy |
-| followUser | follow a user | POST /ajax/friendships/create | ✅ SAFE — reversible via unfollow |
-| bookmarkPost | bookmark/favorite a post | POST /ajax/statuses/createFavorites | ✅ SAFE — reversible via destoryFavorites |
+| getHotSearch | Trending topics | GET /ajax/side/hotSearch | Returns realtime[] with 50 trending items + hotgovs[] |
+| getHotBand | Hot band trending | GET /ajax/statuses/hot_band | Categorized trending with band_list[] |
+| getHotTimeline | Hot timeline feed | GET /ajax/feed/hottimeline | Paginated via max_id, group_id=102803 |
+| getUserProfile | User profile | GET /ajax/profile/info | Basic info: name, followers, verified status |
+| getUserDetail | User extended detail | GET /ajax/profile/detail | Birthday, created_at, description, sunshine_credit |
+| getUserPosts | User's posts | GET /ajax/statuses/mymblog | Paginated by page number, filterable by feature type |
+| getPostDetail | Post detail | GET /ajax/statuses/show | Full post with user, counts, media IDs |
+| getSearchSuggestions | Search suggestions | GET /ajax/side/search | Related hot queries for a keyword |
 
 ## API Architecture
+- REST JSON APIs on `weibo.com/ajax/*` namespace
+- All API endpoints require authentication (return 403 without cookies)
+- Responses wrap data in `{ok: 1, data: {...}}` pattern (getHotTimeline is an exception with root-level `statuses`)
+- User IDs are numeric integers (e.g., 1699432410 = Xinhua News)
 
-- **Single API host**: `weibo.com` — all AJAX endpoints under `/ajax/` path
-- **Secondary host**: `s.weibo.com` for index band (search page trending data)
-- **Auth**: cookie_session — `SUB` cookie for session, `XSRF-TOKEN` cookie → `X-XSRF-TOKEN` header for CSRF
-- **Transport**: page (L3) — browser fetch required due to cookie auth and potential bot detection
-- **Pagination**: cursor-based (`since_id`/`max_id`) for feeds, page-based for user timeline
+## Auth
+- **Type:** cookie_session
+- **CSRF:** cookie_to_header (`XSRF-TOKEN` cookie -> `x-xsrf-token` header)
+- **Key cookies:** SUB, SUBP, ALF, XSRF-TOKEN, WBPSESS
+- XSRF-TOKEN rotates — the browser handles this automatically via page transport
+
+## Transport
+- **page** — all Weibo APIs require browser cookie context
+- Node transport returns 403 on all /ajax/* endpoints
+- The browser page URL is weibo.com (any page)
 
 ## Known Issues
-
-- **Login required** — all operations need an active Weibo session (SUB cookie)
-- **Rate limiting** — aggressive rate limits on search and feed APIs; may return 418 or empty data
-- **CSRF token rotation** — XSRF-TOKEN cookie rotates; the adapter fetches within the browser context so this is handled automatically
-- **CSRF on writes** — write operations require X-XSRF-TOKEN header derived from the XSRF-TOKEN cookie; the adapter handles this automatically
-- **search endpoint** — `/ajax/side/search` returns sidebar-style results; the full search at `s.weibo.com/weibo?q=` returns server-rendered HTML (not JSON API) and is not covered
-- **Long text truncation** — posts over ~140 chars are truncated unless `isGetLongText=true` is set in getPostDetail
-- **API typos** — Weibo's API has known typos: `/ajax/friendships/destory` (not "destroy"), `/ajax/statuses/destoryFavorites` (not "destroy")
+- **Login required:** All /ajax/* APIs return 403 without valid session cookies. Must be logged in.
+- **XSRF token rotation:** The XSRF-TOKEN cookie rotates. Page transport handles this automatically.
+- **Rate limiting:** Weibo is aggressive about rate limiting. Avoid rapid sequential requests.
+- **Post IDs are ephemeral:** Old post IDs may return "该微博不存在" (post doesn't exist) if deleted.
+- **s.weibo.com cross-origin:** Search pages live on s.weibo.com; APIs there need JSONP or direct node access. The main /ajax/* APIs on weibo.com cover all core intents.
+- **Search not available as API:** Weibo's full text search (s.weibo.com/weibo?q=) returns HTML, not JSON. Use getSearchSuggestions for keyword-based discovery; getHotSearch for trending.
