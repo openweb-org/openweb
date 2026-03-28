@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { OpenWebError } from './errors.js'
 import { buildQueryUrl, findOperation, getRequestBodyParameters, loadOpenApi, validateParams } from './openapi.js'
+import type { OpenApiSpec } from './openapi.js'
 
 describe('buildQueryUrl', () => {
   it('builds query string for scalar and array params', () => {
@@ -175,5 +176,38 @@ describe('validateParams', () => {
         { query: 'DROP TABLE users' },
       ),
     ).toThrow('Parameter query is fixed and cannot be overridden')
+  })
+})
+
+describe('findOperation — actual_path', () => {
+  const spec: OpenApiSpec = {
+    openapi: '3.0.0',
+    info: { title: 'test', version: '1.0.0' },
+    servers: [{ url: 'https://api.example.com' }],
+    paths: {
+      '/graphql~search_people': {
+        get: {
+          operationId: 'search_people',
+          'x-openweb': { actual_path: '/graphql' },
+          responses: { '200': { content: { 'application/json': { schema: { type: 'object' } } } } },
+        },
+      },
+      '/plain/path': {
+        get: {
+          operationId: 'plain_op',
+          responses: { '200': { content: { 'application/json': { schema: { type: 'object' } } } } },
+        },
+      },
+    },
+  }
+
+  it('uses actual_path when present in x-openweb', () => {
+    const ref = findOperation(spec, 'search_people')
+    expect(ref.path).toBe('/graphql')
+  })
+
+  it('uses the spec key when actual_path is absent', () => {
+    const ref = findOperation(spec, 'plain_op')
+    expect(ref.path).toBe('/plain/path')
   })
 })

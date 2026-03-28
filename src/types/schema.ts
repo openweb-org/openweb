@@ -71,6 +71,7 @@ export const xOpenWebOperationSchema = {
     pagination: paginationPrimitiveSchema,
     extraction: extractionPrimitiveSchema,
     adapter: adapterRefSchema,
+    actual_path: { type: 'string' },
   },
   additionalProperties: false,
 } as const

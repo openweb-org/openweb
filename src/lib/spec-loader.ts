@@ -138,6 +138,14 @@ export function findOperation(spec: OpenApiSpec, operationId: string): Operation
       failureClass: 'fatal',
     })
   }
+
+  // Virtual path support: when the spec key is a virtual path (e.g. GraphQL
+  // dedup), the real URL path is stored in x-openweb.actual_path.
+  const actualPath = (operation.operation['x-openweb'] as Record<string, unknown> | undefined)?.actual_path
+  if (typeof actualPath === 'string') {
+    return { ...operation, path: actualPath }
+  }
+
   return operation
 }
 

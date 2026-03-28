@@ -41,4 +41,6 @@ export interface XOpenWebOperation {
   readonly pagination?: PaginationPrimitive
   readonly extraction?: ExtractionPrimitive
   readonly adapter?: AdapterRef
+  /** Real URL path when the spec key is a virtual path (e.g. GraphQL dedup) */
+  readonly actual_path?: string
 }
