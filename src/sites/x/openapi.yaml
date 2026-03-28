@@ -17,29 +17,10 @@ servers:
         cookie: ct0
         header: x-csrf-token
 paths:
-  /12/measurement/dcm_local_id:
-    post:
-      operationId: create12MeasurementDcmLocalId
-      summary: Create 12 measurement dcm local id
-      x-openweb:
-        permission: write
-        build:
-          stable_id: 6438ff9caf7ddd55
-          tool_version: 2
-      parameters: []
-      responses:
-        "503":
-          description: Server error.
-          content:
-            text/html;charset=utf-8:
-              schema:
-                type: object
-      servers:
-        - url: https://ads-api.x.com
   /1.1/account/multi/list.json:
     get:
-      operationId: get1.1AccountMultiList.json
-      summary: Get 1.1 account multi list.json
+      operationId: getAccountLists
+      summary: Get Twitter lists for the account
       x-openweb:
         permission: read
         build:
@@ -100,8 +81,8 @@ paths:
         - url: https://api.x.com
   /1.1/account/settings.json:
     get:
-      operationId: get1.1AccountSettings.json
-      summary: Get 1.1 account settings.json
+      operationId: getAccountSettings
+      summary: Get account settings
       x-openweb:
         permission: read
         build:
@@ -177,76 +158,10 @@ paths:
                 type: object
       servers:
         - url: https://api.x.com
-  /1.1/live_pipeline/update_subscriptions:
-    post:
-      operationId: create1.1LivePipelineUpdateSubscriptions
-      summary: Create 1.1 live pipeline update subscriptions
-      x-openweb:
-        permission: write
-        build:
-          stable_id: 7d507ed42bdbba2d
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-                properties:
-                  subscriptions:
-                    type: object
-                    properties:
-                      errors:
-                        type: array
-                        items:
-                          type: object
-                    required:
-                      - errors
-                required:
-                  - subscriptions
-      servers:
-        - url: https://api.x.com
-  /{param}:
-    get:
-      operationId: get
-      summary: Get
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 5f27cd77c4a16fd7
-          tool_version: 2
-      parameters:
-        - name: param
-          in: path
-          required: true
-          schema:
-            type: string
-          example: search
-        - name: q
-          in: query
-          required: false
-          schema:
-            type: string
-          example: javascript
-        - name: src
-          in: query
-          required: false
-          schema:
-            type: string
-          example: typed_query
-      responses:
-        "200":
-          description: Success.
-          content:
-            text/html; charset=utf-8:
-              schema:
-                type: object
   /i/api/1.1/friends/following/list.json:
     get:
-      operationId: getI1.1FriendsFollowingList.json
-      summary: Get i 1.1 friends following list.json
+      operationId: getFollowingList
+      summary: Get following list
       x-openweb:
         permission: read
         build:
@@ -390,14 +305,9 @@ paths:
                         description:
                           type: string
                           enum:
-                            - An applied research company building at the
-                              frontier of AI
-                            - EBM reasoning and AGI ecosystem. CEO and founder
-                              of @logic_int
-                            - Exploring what AI actually is and sharing my
-                              learnings. Building @shapeworkspace, prev
-                              @standardnotes. Talking at https://t.co/814DpgwSzr
-                              and https://t.co/vlHyF3gEjn.
+                            - An applied research company building at the frontier of AI
+                            - EBM reasoning and AGI ecosystem. CEO and founder of @logic_int
+                            - Exploring what AI actually is and sharing my learnings. Building @shapeworkspace, prev @standardnotes. Talking at https://t.co/814DpgwSzr and https://t.co/vlHyF3gEjn.
                         url:
                           anyOf:
                             - type: string
@@ -701,27 +611,10 @@ paths:
                   - previous_cursor
                   - previous_cursor_str
                   - total_count
-  /i/api/1.1/graphql/user_flow.json:
-    post:
-      operationId: createI1.1UserFlow.json
-      summary: Create i 1.1 user flow.json
-      x-openweb:
-        permission: write
-        build:
-          stable_id: 66d1ee24f80f96bb
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            "":
-              schema:
-                type: object
   /i/api/1.1/hashflags.json:
     get:
-      operationId: getI1.1Hashflags.json
-      summary: Get i 1.1 hashflags.json
+      operationId: getHashflags
+      summary: Get hashflags (special hashtag icons)
       x-openweb:
         permission: read
         build:
@@ -735,217 +628,10 @@ paths:
             application/json; charset=utf-8:
               schema:
                 type: object
-  /i/api/1.1/promoted_content/log.json:
-    post:
-      operationId: createI1.1PromotedContentLog.json
-      summary: Create i 1.1 promoted content log.json
-      x-openweb:
-        permission: write
-        build:
-          stable_id: fa2afb4d59ca87d3
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json;charset=utf-8:
-              schema:
-                type: object
-                properties: {}
-                required: []
-  /i/api/1.1/videoads/v2/prerolls.json:
-    post:
-      operationId: createI1.1VideoadsPrerolls.json
-      summary: Create i 1.1 videoads prerolls.json
-      x-openweb:
-        permission: write
-        build:
-          stable_id: fb324e313b1ab2bf
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-                properties:
-                  video_analytics_scribe:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        tweet_id:
-                          type: string
-                          enum:
-                            - "2034315401438580953"
-                        video_analytics_scribe_passthrough:
-                          type: string
-                          enum:
-                            - eyIxIjp7InRmIjowfX0=
-                      required:
-                        - tweet_id
-                        - video_analytics_scribe_passthrough
-                required:
-                  - video_analytics_scribe
-  /i/api/2/badge_count/badge_count.json:
-    get:
-      operationId: getI2BadgeCountBadgeCount.json
-      summary: Get i 2 badge count badge count.json
-      x-openweb:
-        permission: read
-        build:
-          stable_id: a1268e65576c21e2
-          tool_version: 2
-      parameters:
-        - name: include_xchat_count
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1
-        - name: supports_ntab_urt
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json; charset=utf-8:
-              schema:
-                type: object
-                properties:
-                  ntab_unread_count:
-                    type: integer
-                  dm_unread_count:
-                    type: integer
-                  total_unread_count:
-                    type: integer
-                  is_from_urt:
-                    type: boolean
-                  xchat_unread_count:
-                    type: integer
-                required:
-                  - ntab_unread_count
-                  - dm_unread_count
-                  - total_unread_count
-                  - is_from_urt
-                  - xchat_unread_count
-  /i/api/fleets/v1/avatar_content:
-    get:
-      operationId: getIFleetsAvatarContent
-      summary: Get i fleets avatar content
-      x-openweb:
-        permission: read
-        build:
-          stable_id: b391b92c0d591388
-          tool_version: 2
-      parameters:
-        - name: only_spaces
-          in: query
-          required: true
-          schema:
-            type: string
-          example: "true"
-        - name: user_ids
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  users:
-                    type: object
-                    properties: {}
-                    required: []
-                  refresh_delay_secs:
-                    type: integer
-                required:
-                  - users
-                  - refresh_delay_secs
-  /i/api/fleets/v1/fleetline:
-    get:
-      operationId: getIFleetsFleetline
-      summary: Get i fleets fleetline
-      x-openweb:
-        permission: read
-        build:
-          stable_id: d905da2d757a388b
-          tool_version: 2
-      parameters:
-        - name: only_spaces
-          in: query
-          required: true
-          schema:
-            type: string
-          example: "true"
-      responses:
-        "200":
-          description: Success.
-          content:
-            "":
-              schema:
-                type: object
-                properties:
-                  threads:
-                    type: array
-                    items:
-                      type: object
-                  hydrated_threads:
-                    type: array
-                    items:
-                      type: object
-                  refresh_delay_secs:
-                    type: integer
-                required:
-                  - threads
-                  - hydrated_threads
-                  - refresh_delay_secs
-  /i/api/graphql/{id}/DataSaverMode:
-    get:
-      operationId: getIXf6sxnkjfs2aoylzxrjf6aDatasavermode
-      summary: Get i xf6sxnkjfs2aoylzxrjf6a datasavermode
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 2ea7de0209c0e952
-          tool_version: 2
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: <EXAMPLE_ID>
-        - name: variables
-          in: query
-          required: true
-          schema:
-            type: string
-          example: '{"device_id":"Mac/Chrome"}'
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
   /i/api/graphql/{id}/ExploreSidebar:
     get:
-      operationId: getIG1ak9vxw0opq4r0oqfrdqExploresidebar
-      summary: Get i  g1ak9vxw0opq4r0oqfrdq exploresidebar
+      operationId: getExploreSidebar
+      summary: Get explore sidebar content
       x-openweb:
         permission: read
         build:
@@ -1165,8 +851,7 @@ paths:
                                             confirmation:
                                               type: string
                                               enum:
-                                                - Thanks. Refresh this page to
-                                                  update these trends.
+                                                - Thanks. Refresh this page to update these trends.
                                             confirmationDisplayType:
                                               type: string
                                               enum:
@@ -1193,11 +878,9 @@ paths:
                                               enum:
                                                 - Don't want to see this ad
                                                 - Not interested in this
-                                                - The associated content is not
-                                                  relevant
+                                                - The associated content is not relevant
                                                 - This trend is a duplicate
-                                                - This trend is abusive or
-                                                  harmful
+                                                - This trend is abusive or harmful
                                                 - This trend is harmful or spammy
                                                 - This trend is spam
                                             clientEventInfo:
@@ -1236,8 +919,8 @@ paths:
                   - data
   /i/api/graphql/{id}/FavoriteTweet:
     post:
-      operationId: createILi07n6otwv1phnegxilm7aFavoritetweet
-      summary: Create i li07n6otwv1phnegxilm7a favoritetweet
+      operationId: likeTweet
+      summary: Like a tweet
       x-openweb:
         permission: write
         build:
@@ -1269,39 +952,10 @@ paths:
                       - favorite_tweet
                 required:
                   - data
-  /i/api/graphql/{id}/getAltTextPromptPreference:
-    get:
-      operationId: getIPfixtk8owmozgimccp0r4gGetalttextpromptpreference
-      summary: Get i pfixtk8owmozgimccp0r4g getalttextpromptpreference
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 78b270524faa0b31
-          tool_version: 2
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: <EXAMPLE_ID>
-        - name: variables
-          in: query
-          required: true
-          schema:
-            type: string
-          example: "{}"
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
   /i/api/graphql/{id}/HomeTimeline:
     get:
-      operationId: getIXhybf94fpsp8ey64ffyxiaHometimeline
-      summary: Get i xhybf94fpsp8ey64ffyxia hometimeline
+      operationId: getHomeTimeline
+      summary: Get home timeline tweets
       x-openweb:
         permission: read
         build:
@@ -1379,8 +1033,8 @@ paths:
                 type: object
   /i/api/graphql/{id}/PinnedTimelines:
     get:
-      operationId: listIU3t27pzyhyjkkyooddrtegPinnedtimelines
-      summary: List i u3t27pzyhyjkkyooddrteg pinnedtimelines
+      operationId: getPinnedTimelines
+      summary: Get pinned timelines
       x-openweb:
         permission: read
         build:
@@ -1422,8 +1076,8 @@ paths:
                 type: object
   /i/api/graphql/{id}/ProfileSpotlightsQuery:
     get:
-      operationId: getIMzoqrvgwkYtsgme1drfxqProfilespotlightsquery
-      summary: Get i mzoqrvgwk-ytsgme1drfxq profilespotlightsquery
+      operationId: getProfileSpotlights
+      summary: Get profile spotlight data
       x-openweb:
         permission: read
         build:
@@ -1541,8 +1195,8 @@ paths:
                   - data
   /i/api/graphql/{id}/SearchTimeline:
     get:
-      operationId: getIGcxk9vnD1jufhnqlacxqaSearchtimeline
-      summary: Get i gcxk9vn d1jufhnqlacxqa searchtimeline
+      operationId: searchTweets
+      summary: Search tweets by keyword
       x-openweb:
         permission: read
         build:
@@ -1619,520 +1273,10 @@ paths:
             application/json:
               schema:
                 type: object
-  /i/api/graphql/{id}/SidebarUserRecommendations:
-    get:
-      operationId: listISujwk2vjPg3t8dvlkgwdwSidebaruserrecommendations
-      summary: List i sujwk2vj-pg3t8dvlkgwdw sidebaruserrecommendations
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 90bc24d119b97456
-          tool_version: 2
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: <EXAMPLE_ID>
-        - name: features
-          in: query
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-          example:
-            - '{"profile_label_improvements_pcf_label_in_post_enabled":true'
-            - '"responsive_web_profile_redirect_enabled":false'
-            - '"rweb_tipjar_consumption_enabled":false'
-            - '"verified_phone_label_enabled":false'
-            - '"responsive_web_graphql_skip_user_profile_image_extensions_enabled":false'
-            - '"responsive_web_graphql_timeline_navigation_enabled":true}'
-        - name: variables
-          in: query
-          required: true
-          schema:
-            type: string
-          example: '{"profileUserId":"4211243893"}'
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      sidebar_user_recommendations:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            token:
-                              type: string
-                              enum:
-                                - CgAB1pwm9i8ojy0IAAIAAAAACAAEAAAB+AA=
-                                - CgAB1pwm9i8ojy0IAAIAAAAACAAEAAAH0AA=
-                                - CgABlOCK51jA858IAAIAAAAACAAEAAAB+AA=
-                                - CgABlOCK51jA858IAAIAAAAACAAEAAAH0AA=
-                                - CgABmqxHnA1KlaUIAAIAAAAACAAEAAAH0AA=
-                                - CgABobUWfGWgvsYIAAIAAAACCAAEAAAAgwA=
-                            user_results:
-                              type: object
-                              properties:
-                                result:
-                                  type: object
-                                  properties:
-                                    __typename:
-                                      type: string
-                                      enum:
-                                        - User
-                                    affiliates_highlighted_label:
-                                      type: object
-                                      properties:
-                                        label:
-                                          type: object
-                                          properties:
-                                            badge:
-                                              type: object
-                                              properties:
-                                                url:
-                                                  type: string
-                                                  format: uri
-                                              required:
-                                                - url
-                                            description:
-                                              type: string
-                                              enum:
-                                                - AMI Labs
-                                            url:
-                                              type: object
-                                              properties:
-                                                url:
-                                                  type: string
-                                                  format: uri
-                                                urlType:
-                                                  type: string
-                                                  enum:
-                                                    - DeepLink
-                                              required:
-                                                - url
-                                                - urlType
-                                            userLabelDisplayType:
-                                              type: string
-                                              enum:
-                                                - Badge
-                                            userLabelType:
-                                              type: string
-                                              enum:
-                                                - BusinessLabel
-                                          required:
-                                            - badge
-                                            - description
-                                            - url
-                                            - userLabelDisplayType
-                                            - userLabelType
-                                      required: []
-                                    avatar:
-                                      type: object
-                                      properties:
-                                        image_url:
-                                          type: string
-                                          format: uri
-                                      required:
-                                        - image_url
-                                    core:
-                                      type: object
-                                      properties:
-                                        created_at:
-                                          type: string
-                                        name:
-                                          type: string
-                                        screen_name:
-                                          type: string
-                                      required:
-                                        - created_at
-                                        - name
-                                        - screen_name
-                                    dm_permissions:
-                                      type: object
-                                      properties:
-                                        can_dm:
-                                          type: boolean
-                                      required:
-                                        - can_dm
-                                    follow_request_sent:
-                                      type: boolean
-                                    has_graduated_access:
-                                      type: boolean
-                                    id:
-                                      type: string
-                                    is_blue_verified:
-                                      type: boolean
-                                    legacy:
-                                      type: object
-                                      properties:
-                                        default_profile:
-                                          type: boolean
-                                        default_profile_image:
-                                          type: boolean
-                                        description:
-                                          type: string
-                                        entities:
-                                          type: object
-                                          properties:
-                                            description:
-                                              type: object
-                                              properties:
-                                                urls:
-                                                  type: array
-                                                  items:
-                                                    type: object
-                                              required:
-                                                - urls
-                                            url:
-                                              type: object
-                                              properties:
-                                                urls:
-                                                  type: array
-                                                  items:
-                                                    type: object
-                                              required:
-                                                - urls
-                                          required:
-                                            - description
-                                            - url
-                                        fast_followers_count:
-                                          type: integer
-                                        favourites_count:
-                                          type: integer
-                                        follow_request_sent:
-                                          type: boolean
-                                        followers_count:
-                                          type: integer
-                                        friends_count:
-                                          type: integer
-                                        has_custom_timelines:
-                                          type: boolean
-                                        is_translator:
-                                          type: boolean
-                                        listed_count:
-                                          type: integer
-                                        media_count:
-                                          type: integer
-                                        normal_followers_count:
-                                          type: integer
-                                        notifications:
-                                          type: boolean
-                                        pinned_tweet_ids_str:
-                                          type: array
-                                          items:
-                                            type: string
-                                            enum:
-                                              - "1045689551304282112"
-                                              - "1829355007814054069"
-                                              - "1846613374169501766"
-                                              - "1898100950813811121"
-                                              - "1917244243120111695"
-                                              - "1971496707587489840"
-                                              - "1988610034692161760"
-                                              - "2029239760301035549"
-                                              - "2032615500065419763"
-                                        possibly_sensitive:
-                                          type: boolean
-                                        profile_banner_url:
-                                          type: string
-                                          format: uri
-                                        profile_interstitial_type:
-                                          type: string
-                                          enum:
-                                            - ""
-                                        statuses_count:
-                                          type: integer
-                                        translator_type:
-                                          type: string
-                                          enum:
-                                            - none
-                                        url:
-                                          type: string
-                                          format: uri
-                                        want_retweets:
-                                          type: boolean
-                                        withheld_in_countries:
-                                          type: array
-                                          items:
-                                            type: object
-                                      required:
-                                        - default_profile
-                                        - default_profile_image
-                                        - description
-                                        - entities
-                                        - fast_followers_count
-                                        - favourites_count
-                                        - follow_request_sent
-                                        - followers_count
-                                        - friends_count
-                                        - has_custom_timelines
-                                        - is_translator
-                                        - listed_count
-                                        - media_count
-                                        - normal_followers_count
-                                        - notifications
-                                        - pinned_tweet_ids_str
-                                        - possibly_sensitive
-                                        - profile_interstitial_type
-                                        - statuses_count
-                                        - translator_type
-                                        - url
-                                        - want_retweets
-                                        - withheld_in_countries
-                                    location:
-                                      type: object
-                                      properties:
-                                        location:
-                                          type: string
-                                          enum:
-                                            - ""
-                                            - "Amstelveen "
-                                            - California, USA
-                                            - New York
-                                            - New York City
-                                            - San Francisco
-                                            - San Francisco, CA
-                                            - Singapore
-                                            - Sunnyvale, CA
-                                            - Washington, DC
-                                      required:
-                                        - location
-                                    media_permissions:
-                                      type: object
-                                      properties:
-                                        can_media_tag:
-                                          type: boolean
-                                      required:
-                                        - can_media_tag
-                                    parody_commentary_fan_label:
-                                      type: string
-                                      enum:
-                                        - None
-                                    privacy:
-                                      type: object
-                                      properties:
-                                        protected:
-                                          type: boolean
-                                      required:
-                                        - protected
-                                    professional:
-                                      type: object
-                                      properties:
-                                        category:
-                                          type: array
-                                          items:
-                                            type: object
-                                            properties:
-                                              icon_name:
-                                                type: string
-                                                enum:
-                                                  - IconBriefcaseStroke
-                                              id:
-                                                type: integer
-                                              name:
-                                                type: string
-                                                enum:
-                                                  - Computer scientist
-                                                  - Science & Technology
-                                            required:
-                                              - icon_name
-                                              - id
-                                              - name
-                                        professional_type:
-                                          type: string
-                                          enum:
-                                            - Business
-                                            - Creator
-                                        rest_id:
-                                          type: string
-                                          enum:
-                                            - "1671149282735587329"
-                                            - "1681461028054532100"
-                                            - "1846165509722472605"
-                                            - "1992856315107152370"
-                                      required:
-                                        - category
-                                        - professional_type
-                                        - rest_id
-                                    profile_bio:
-                                      type: object
-                                      properties:
-                                        description:
-                                          type: string
-                                      required:
-                                        - description
-                                    profile_image_shape:
-                                      type: string
-                                      enum:
-                                        - Circle
-                                        - Square
-                                    relationship_perspectives:
-                                      type: object
-                                      properties:
-                                        blocked_by:
-                                          type: boolean
-                                        blocking:
-                                          type: boolean
-                                        followed_by:
-                                          type: boolean
-                                        following:
-                                          type: boolean
-                                        muting:
-                                          type: boolean
-                                      required:
-                                        - blocked_by
-                                        - blocking
-                                        - followed_by
-                                        - following
-                                        - muting
-                                    rest_id:
-                                      type: string
-                                    super_follow_eligible:
-                                      type: boolean
-                                    super_followed_by:
-                                      type: boolean
-                                    super_following:
-                                      type: boolean
-                                    verification:
-                                      type: object
-                                      properties:
-                                        verified:
-                                          type: boolean
-                                        verified_type:
-                                          type: string
-                                          enum:
-                                            - Business
-                                      required:
-                                        - verified
-                                    profile_description_language:
-                                      type: string
-                                      enum:
-                                        - en
-                                        - qam
-                                  required:
-                                    - __typename
-                                    - affiliates_highlighted_label
-                                    - avatar
-                                    - core
-                                    - dm_permissions
-                                    - follow_request_sent
-                                    - has_graduated_access
-                                    - id
-                                    - is_blue_verified
-                                    - legacy
-                                    - location
-                                    - media_permissions
-                                    - parody_commentary_fan_label
-                                    - privacy
-                                    - profile_bio
-                                    - profile_image_shape
-                                    - relationship_perspectives
-                                    - rest_id
-                                    - super_follow_eligible
-                                    - super_followed_by
-                                    - super_following
-                                    - verification
-                              required:
-                                - result
-                          required:
-                            - token
-                            - user_results
-                    required:
-                      - sidebar_user_recommendations
-                required:
-                  - data
-  /i/api/graphql/{id}/useDirectCallSetupQuery:
-    get:
-      operationId: getIZcyojd6hGvxyjflaak4baUsedirectcallsetupquery
-      summary: Get i zcyojd6h gvxyjflaak4ba usedirectcallsetupquery
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 0ba0f3b07348c6c8
-          tool_version: 2
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: <EXAMPLE_ID>
-        - name: variables
-          in: query
-          required: true
-          schema:
-            type: string
-          example: "{}"
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      authenticate_periscope:
-                        type: string
-                        enum:
-                          - eyJraWQiOiIxNjcxOTc2ODU4IiwiYWxnIjoiUlMyNTYifQ.eyJleHAiOjE3NzQ3MjM2MjIsInVzZXJJZCI6IjQyMTEyNDM4OTMifQ.mIPeJ4wfOZVwOOABBg-n2icD5-krykVj1t3q1gaNDZyPYncqUi-fGRYXSntddpyCo5GoJRzWEAJiSsgOIQgRez1e-O0WrABgLlQR8nK2WaMhzWixF9SrM1f0mFwxT7evG4w-fGt4ze1tRVXssAaBP-O94aDzskwZeBZz6rT_8BIRtK9yegZUbQ93n4vVaipw-YU181-uCOAECC6WYauziKlUn4taU5bnF8O0NwYROojhbQdW5LUGljh9PdEMhmJK_HTzJxmgJIdNtK0pIBejg0kyQYXdhriR8fRzDXLcrlH-zdssARGdnd86ub7sqo5L5bkbOt_6x3CFfsTwfab5tQ
-                          - eyJraWQiOiIxNjcxOTc2ODU4IiwiYWxnIjoiUlMyNTYifQ.eyJleHAiOjE3NzQ3MjM2MjgsInVzZXJJZCI6IjQyMTEyNDM4OTMifQ.ALBLVWGKNRZZZLhJU4Rdtlnz0Con6CtbZgexXMweUd5TwnrJbjSvVY9dml2WkA7c6BF_ivXhKGkfS9UtEuS5KbaP_AVcAHHCRxbaY77GSryVR16PLsmqI8atbycRo4HH2-PyeIX9-rstz6UZlmuH7HjB7-I2eqGthSlF_Owj9vreFOXz76D87AJVPssP53iNG6UP0W63GpSSHVQF2XSjNtVHJoy7P3ankeqVt0QUjyoZ_5__5vJymMD4f65qzNB8i_k-eJCtEdiQxEL9lL9ljml4TMSEH6042WHX_6bh_NDiNviBMfl59xySMkCPaTLFR8CHjdfoeQUDGXXZ9SyqJw
-                          - eyJraWQiOiIxNjcxOTc2ODU4IiwiYWxnIjoiUlMyNTYifQ.eyJleHAiOjE3NzQ3MjM2NDMsInVzZXJJZCI6IjQyMTEyNDM4OTMifQ.FixziG5qpEm4KaSL8ICHdLKHZJYj2LwicmecYAzuREfknVByFFeSp8_ngRvTrRiL5z-pAP6rvzsAelk7T9gT1tfLt2GpZ8-c_K-g0SfK9lMqLgqOHS7zInfgTC205qMEF9rpKUNjIbxbif2dkWWSgrUX0GDiOff6e4C_JXLezXI6P4nRk-qZFKNwwEpH-JMqBSlvboV9jqcU-6GJPW6yQBOObxnKl8_R7DDW77Y2Okt1l4DPRJ4v3n9eELb7FbvBhb3bk66Vm3ZmEOpJyx6hFp84Pclw-2EI81-n-PHwr03UlyHt7FCxSaFu0xQuaw6mTppDZJbScvBWL6drnoO0UA
-                    required:
-                      - authenticate_periscope
-                required:
-                  - data
-  /i/api/graphql/{id}/useFetchProductSubscriptionsQuery:
-    get:
-      operationId: getISpj9o9qzek2l1bh1vcgx6aUsefetchproductsubscriptionsquery
-      summary: Get i spj9o9qzek2l1bh1vcgx6a usefetchproductsubscriptionsquery
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 0f5f7dd5af8331a1
-          tool_version: 2
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: <EXAMPLE_ID>
-        - name: features
-          in: query
-          required: true
-          schema:
-            type: string
-          example: '{"subscriptions_management_fetch_next_billing_time":true}'
-        - name: variables
-          in: query
-          required: true
-          schema:
-            type: string
-          example: '{"fetchPrices":false}'
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
   /i/api/graphql/{id}/UserByScreenName:
     get:
-      operationId: getIIggvgiox4qznddhud3x9tqUserbyscreenname
-      summary: Get i iggvgiox4qznddhud3x9tq userbyscreenname
+      operationId: getUserByScreenName
+      summary: Get user profile by screen name
       x-openweb:
         permission: read
         build:
@@ -2297,10 +1441,7 @@ paths:
                                   description:
                                     type: string
                                     enum:
-                                      - "OpenAI’s mission is to ensure that
-                                        artificial general intelligence benefits
-                                        all of humanity. We’re hiring:
-                                        https://t.co/dJGr6LgzPA"
+                                      - "OpenAI’s mission is to ensure that artificial general intelligence benefits all of humanity. We’re hiring: https://t.co/dJGr6LgzPA"
                                   entities:
                                     type: object
                                     properties:
@@ -2481,10 +1622,7 @@ paths:
                                   description:
                                     type: string
                                     enum:
-                                      - "OpenAI’s mission is to ensure that
-                                        artificial general intelligence benefits
-                                        all of humanity. We’re hiring:
-                                        https://t.co/dJGr6LgzPA"
+                                      - "OpenAI’s mission is to ensure that artificial general intelligence benefits all of humanity. We’re hiring: https://t.co/dJGr6LgzPA"
                                 required:
                                   - description
                               profile_description_language:
@@ -2580,9 +1718,7 @@ paths:
                                           text:
                                             type: string
                                             enum:
-                                              - This account is verified because
-                                                it's an official organization on
-                                                X. Learn more
+                                              - This account is verified because it's an official organization on X. Learn more
                                         required:
                                           - entities
                                           - text
@@ -2637,97 +1773,10 @@ paths:
                       - user
                 required:
                   - data
-  /i/api/graphql/{id}/UsersVerifiedAvatars:
-    get:
-      operationId: listIX3jzonx9ubszocihoyo2naUsersverifiedavatars
-      summary: List i x3jzonx9ubszocihoyo2na usersverifiedavatars
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 21c84d60ec586706
-          tool_version: 2
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: <EXAMPLE_ID>
-        - name: features
-          in: query
-          required: true
-          schema:
-            type: string
-          example: '{"responsive_web_graphql_timeline_navigation_enabled":true}'
-        - name: variables
-          in: query
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-          example:
-            - '{"userIds":["4211243893"'
-            - '"2009809627744247808"]}'
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      usersResults:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            result:
-                              type: object
-                              properties:
-                                __typename:
-                                  type: string
-                                  enum:
-                                    - User
-                                affiliates_highlighted_label:
-                                  type: object
-                                  properties: {}
-                                  required: []
-                                is_blue_verified:
-                                  type: boolean
-                                profile_image_shape:
-                                  type: string
-                                  enum:
-                                    - Circle
-                                rest_id:
-                                  type: string
-                                  enum:
-                                    - "2009809627744247808"
-                                    - "4211243893"
-                                verification:
-                                  type: object
-                                  properties: {}
-                                  required: []
-                              required:
-                                - __typename
-                                - affiliates_highlighted_label
-                                - is_blue_verified
-                                - profile_image_shape
-                                - rest_id
-                                - verification
-                          required:
-                            - result
-                    required:
-                      - usersResults
-                required:
-                  - data
   /i/api/graphql/{id}/UserTweets:
     get:
-      operationId: listIFolovqsihgdls3c0qHasqUsertweets
-      summary: List i folovqsihgdls3c0q hasq usertweets
+      operationId: getUserTweets
+      summary: Get tweets by a specific user
       x-openweb:
         permission: read
         build:
@@ -2919,291 +1968,5 @@ paths:
                           - result
                     required:
                       - user
-                required:
-                  - data
-  /i/api/graphql/{id}/useStoryTopicQuery:
-    get:
-      operationId: getII3vTt32atzdw7cbdkujbgUsestorytopicquery
-      summary: Get i i3v tt32atzdw7cbdkujbg usestorytopicquery
-      x-openweb:
-        permission: read
-        build:
-          stable_id: b7897a01edd58549
-          tool_version: 2
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: <EXAMPLE_ID>
-        - name: variables
-          in: query
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-          example:
-            - '{"rest_id":"For You"'
-            - '"limit":3}'
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      story_topic:
-                        type: object
-                        properties:
-                          id:
-                            type: string
-                            enum:
-                              - U3RvcnlUb3BpYzpGb3IgWW91
-                          stories:
-                            type: object
-                            properties:
-                              items:
-                                type: array
-                                items:
-                                  type: object
-                                  properties:
-                                    trend_results:
-                                      type: object
-                                      properties:
-                                        id:
-                                          type: string
-                                          enum:
-                                            - QWlUcmVuZFJlc3VsdHM6MjAzNzM3Mjk4NTQzOTY2MjQwMg==
-                                            - QWlUcmVuZFJlc3VsdHM6MjAzNzY1MDI4ODU4MTE4NTcyNw==
-                                            - QWlUcmVuZFJlc3VsdHM6MjAzNzc0MzAxNTg0MzAzNzM2MA==
-                                        result:
-                                          type: object
-                                          properties:
-                                            __typename:
-                                              type: string
-                                              enum:
-                                                - AiTrend
-                                            core:
-                                              type: object
-                                              properties:
-                                                category:
-                                                  type: string
-                                                  enum:
-                                                    - News
-                                                    - Other
-                                                created_at_ms:
-                                                  type: integer
-                                                hook:
-                                                  type: string
-                                                  enum:
-                                                    - "A simple data storage
-                                                      slip-up exposed
-                                                      Anthropic's secret weapon:
-                                                      an AI model far ahead in
-                                                      cybersecurity, coding, and
-                                                      reasoning that sent stock
-                                                      markets tumbling."
-                                                    - Cheng Lou, React veteran
-                                                      from Meta, just dropped
-                                                      Pretext—a tiny TypeScript
-                                                      tool that measures text
-                                                      blazingly fast without
-                                                      touching the DOM.
-                                                    - Jianyang Gao watched
-                                                      Google's TurboQuant paper
-                                                      gain massive buzz, only to
-                                                      spot what he saw as key
-                                                      omissions from his own
-                                                      RaBitQ method. His public
-                                                      call-out has researchers
-                                                      debating credit and
-                                                      fairness.
-                                                name:
-                                                  type: string
-                                                  enum:
-                                                    - Anthropic's Leaked Docs
-                                                      Reveal Powerful Claude
-                                                      Mythos AI Model
-                                                    - Pretext Library Ends DOM
-                                                      Text Measurement
-                                                      Bottlenecks
-                                                    - Researcher Accuses Google
-                                                      TurboQuant Paper of
-                                                      Misrepresenting RaBitQ
-                                                      Work
-                                              required:
-                                                - category
-                                                - created_at_ms
-                                                - hook
-                                                - name
-                                            id:
-                                              type: string
-                                              enum:
-                                                - QWlUcmVuZDoyMDM3MzcyOTg1NDM5NjYyNDAy
-                                                - QWlUcmVuZDoyMDM3NjUwMjg4NTgxMTg1NzI3
-                                                - QWlUcmVuZDoyMDM3NzQzMDE1ODQzMDM3MzYw
-                                            post_count:
-                                              type: string
-                                              enum:
-                                                - "1017"
-                                                - "4064"
-                                                - "59555"
-                                            rest_id:
-                                              type: string
-                                              enum:
-                                                - "2037372985439662402"
-                                                - "2037650288581185727"
-                                                - "2037743015843037360"
-                                            social_proof:
-                                              type: array
-                                              items:
-                                                type: object
-                                                properties:
-                                                  img_url:
-                                                    type: string
-                                                    format: uri
-                                                required:
-                                                  - img_url
-                                          required:
-                                            - __typename
-                                            - core
-                                            - id
-                                            - post_count
-                                            - rest_id
-                                            - social_proof
-                                      required:
-                                        - id
-                                        - result
-                                  required:
-                                    - trend_results
-                            required:
-                              - items
-                        required:
-                          - id
-                          - stories
-                    required:
-                      - story_topic
-                required:
-                  - data
-  /i/api/graphql/{id}/useSubscriptionProductDetailsQuery:
-    get:
-      operationId: getI8dj2Ar5lfia1beiposzpwUsesubscriptionproductdetailsquery
-      summary: Get i 8dj2 ar5lfia1beiposzpw usesubscriptionproductdetailsquery
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 0ad5d61febde8188
-          tool_version: 2
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: <EXAMPLE_ID>
-        - name: features
-          in: query
-          required: true
-          schema:
-            type: string
-          example: '{"subscriptions_marketing_page_fetch_promotions":true}'
-        - name: variables
-          in: query
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-          example:
-            - '{"stripeId":"V2ViU3Vic2NyaXB0aW9uUHJvZHVjdERldGFpbHM6cHJvZF9PY3g3RkJHVGlWemYwUA=="'
-            - '"for_moment":null'
-            - '"fetchPricesFromStripe":false}'
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-  /i/api/graphql/{id}/XChatDmSettingsQuery:
-    get:
-      operationId: getIZzeldglb0zn6hioyuipdcqXchatdmsettingsquery
-      summary: Get i zzeldglb0zn6hioyuipdcq xchatdmsettingsquery
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ae977997ed941e48
-          tool_version: 2
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: <EXAMPLE_ID>
-        - name: variables
-          in: query
-          required: true
-          schema:
-            type: string
-          example: "{}"
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      dm_settings:
-                        type: object
-                        properties:
-                          allow_dms_from:
-                            type: string
-                            enum:
-                              - following
-                          av_settings:
-                            type: object
-                            properties:
-                              av_call_permissions:
-                                type: object
-                                properties:
-                                  accept_calls_from_addressbook:
-                                    type: boolean
-                                  accept_calls_from_everyone:
-                                    type: boolean
-                                  accept_calls_from_following:
-                                    type: boolean
-                                  accept_calls_from_verified:
-                                    type: boolean
-                                required:
-                                  - accept_calls_from_addressbook
-                                  - accept_calls_from_everyone
-                                  - accept_calls_from_following
-                                  - accept_calls_from_verified
-                              has_av_calls_enabled:
-                                type: boolean
-                            required:
-                              - av_call_permissions
-                              - has_av_calls_enabled
-                          dm_quality_filter:
-                            type: string
-                            enum:
-                              - enabled
-                        required:
-                          - allow_dms_from
-                          - av_settings
-                          - dm_quality_filter
-                    required:
-                      - dm_settings
                 required:
                   - data
