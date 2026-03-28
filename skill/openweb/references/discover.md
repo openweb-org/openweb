@@ -69,29 +69,27 @@ Verify skips write operations by default (`replaySafety: unsafe_mutation`).
 
 ## Process
 
-```
-  Step 1: Frame target intents
-       |
-       v
-  Step 2: Capture  <------------------------------------+
-       |                                                 |
-       v                                                 |
-  Step 3: Compile                                        |
-       |                                                 |
-       v                                                 |
-  Step 4: Check coverage -------(missing intents?)-------+
-       |
-       v  (clusters exist for all intents)
-  Step 5: Curate (review auth, fix spec — see compile.md)
-       |
-       v
-  Step 6: Runtime verify  <---+
-       |                       |
-       v                       |
-  Step 7: Diagnose + fix -----+  (fix spec → re-verify,
-       |                          or re-capture → Step 2)
-       v  (all intents return real data)
-  Step 8: Install site package
+```mermaid
+flowchart TD
+    S1["Step 1: Frame target intents"]
+    S2["Step 2: Capture"]
+    S3["Step 3: Compile"]
+    S4{"Step 4: Check coverage"}
+    S5["Step 5: Curate<br/>(review auth, fix spec — see compile.md)"]
+    S6{"Step 6: Runtime verify<br/>openweb exec returns real data?"}
+    S7["Step 7: Diagnose + fix"]
+    S8["Step 8: Install site package"]
+
+    S1 --> S2
+    S2 --> S3
+    S3 --> S4
+    S4 -->|"missing intents"| S2
+    S4 -->|"clusters exist"| S5
+    S5 --> S6
+    S6 -->|"all pass"| S8
+    S6 -->|"failures"| S7
+    S7 -->|"fix spec → re-verify"| S6
+    S7 -->|"re-capture needed"| S2
 ```
 
 ### Step 1: Frame the Target
