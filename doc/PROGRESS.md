@@ -1,3 +1,21 @@
+## 2026-03-29: Fix N1/N2/N3/N4 — v5 capture and write-op discovery gaps
+
+**What changed:**
+- N1 (7/7): Added Capture Troubleshooting table after Step 2 (symptom/cause/fix for 5 common failures)
+- N2 (5/7): Added Capture Target Binding section explaining CDP single-target behavior — the #1 silent failure mode
+- N3 (5/7): Added write-op execution guidance: click UI buttons (with selector patterns) + call write APIs via page.evaluate(fetch())
+- N4 (4/7): Elevated page.evaluate(fetch()) from one-line fallback to primary capture strategy with own subsection
+- Token-budget cuts: removed Mermaid flowchart (-25 lines), Incremental Discovery section (-5), Step 7 LinkedIn examples (-12), compressed auth bullets (-5)
+
+**Why:**
+- V5 rediscovery analysis (7 sites) showed: all 7 lost time to capture failures, 5/7 had silent HAR misses from wrong CDP target, 5/7 captured zero/minimal write ops despite guidance saying "do writes"
+
+**Key files:** `skill/openweb/references/discover.md`
+**Verification:** git diff shows +75/-67 lines (net +8, token-neutral)
+**Commit:** 0d3ec46
+**Next:** Consider N5 (fast-path git recovery), N6 (tab switching), N7 (SPA search), N8 (mixed-traffic auth warning in compile.md)
+**Blockers:** None
+
 ## 2026-03-29: Fix top 3 discovery doc problems (P1/P3/P4)
 
 **What changed:**
