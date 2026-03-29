@@ -1,3 +1,20 @@
+## 2026-03-29: Fix N5/N6/N7 — git recovery fast-path, tab switching, SPA search
+
+**What changed:**
+- N5 (4/7): Expanded rediscovery fast-path with 3-tier file recovery: worktree → compile cache → `git show HEAD:` for deleted files
+- N6 (3/7): Added tab switching guidance to browsing tips (profile sub-tabs, feed tabs, sort tabs)
+- N7 (3/7): Added SPA search box rule — use on-page search widget, not URL navigation (avoids SSR HTML)
+- Token-budget cuts: trimmed login tip, removed SSR fast-fail check (redundant with Step 4a), removed "Different search terms" (covered by "Vary inputs"), compressed multi-worker section
+
+**Why:**
+- V5 analysis: 4/7 agents lost prior-round knowledge when files were deleted from worktree, 3/7 missed tab-specific endpoints, 3/7 got SSR HTML instead of JSON search API
+
+**Key files:** `skill/openweb/references/discover.md`
+**Verification:** git diff shows +21/-20 lines (token-neutral)
+**Commit:** 8697bb1
+**Next:** N8 (mixed-traffic auth warning in compile.md), N9 (ops checklist per archetype), N10 (multi-worker stop warning)
+**Blockers:** None
+
 ## 2026-03-29: Fix N1/N2/N3/N4 — v5 capture and write-op discovery gaps
 
 **What changed:**
