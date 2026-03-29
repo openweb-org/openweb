@@ -1,3 +1,20 @@
+## 2026-03-29: Fix top 3 discovery doc problems (P1/P3/P4)
+
+**What changed:**
+- P1: discover.md "Before You Start" now scales reading to context — existing sites read DOC.md/openapi.yaml instead of 3 knowledge files
+- P3: Strengthened write-action mandate in discover.md Step 1; added write-op recovery guidance in compile.md Step 3a (prevents deleting real write ops with auto-curated names)
+- P4: Added SPA navigation rule + SSR fast-fail check to discover.md Step 2
+- Token-budget cuts: deduplicated 2b noise list (→ pointer to 3a), compressed anti-pattern section, removed redundant items
+
+**Why:**
+- V4 rediscovery analysis showed 7/8 agents wasted context on knowledge reading, 6/8 missed write ops, 5/8 used wrong navigation pattern
+
+**Key files:** `skill/openweb/references/discover.md`, `skill/openweb/references/compile.md`
+**Verification:** git diff shows +38/-34 lines (token-neutral)
+**Commit:** 45a9d0d
+**Next:** Consider fixing P2 (capture troubleshooting table), P7 (lazy-load/tabs guidance)
+**Blockers:** None
+
 ## 2026-03-28: Pipeline v2 session — full audit, refactor, and site expansion
 
 **Scope:** ~70 commits (e8527ba..f8e0e8c), covering pipeline v2 implementation, full audit cycle, runtime ergo fixes, LinkedIn discovery, workflow redesign, and regression testing.
