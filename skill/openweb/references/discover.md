@@ -15,9 +15,14 @@ and troubleshooting — used in Step 5 below.
 
 ## Before You Start
 
-Read these knowledge files in order. Each one produces a concrete decision that
-shapes your capture strategy. Do not skip this -- wrong assumptions here waste
-entire capture/compile cycles.
+Read these knowledge files in order — but scale depth to context:
+
+- **Existing site (rediscovery/update):** Read the site's existing `DOC.md` and
+  `openapi.yaml` instead — they already capture auth, transport, and known issues.
+  Skim the archetype row for anything the DOC.md missed. Skip bot-detection unless
+  you hit blocks.
+- **Net-new site:** Read all three files below. Each produces a concrete decision
+  that shapes your capture strategy.
 
 1. **`references/knowledge/archetypes/index.md`** -- identify the archetype row.
    Then read the linked profile (e.g., `social.md`, `commerce.md`).
@@ -49,9 +54,6 @@ entire capture/compile cycles.
 
    If the existing package uses these auth types, PRESERVE them during merge
    (see compile.md "Merging with an Existing Package").
-
-4. **If the site already has a package:** read its `DOC.md` and `openapi.yaml`
-   (at `src/sites/<site>/`) to understand current coverage before capturing more.
 
 ## Critical Rule: Browser First, No Direct HTTP
 
@@ -136,9 +138,10 @@ After framing read intents, add write intents for the site's core interactions:
 | Content | post content (then delete), comment |
 
 These use the same capture flow -- perform the action in the browser during
-Step 2. The safety table above applies. Write intents are secondary to read
-intents but should be captured in the same session when possible, since
-re-capturing is expensive.
+Step 2. The safety table above applies. Perform ALL safe write actions during
+capture: like, follow, bookmark, repost/share. Each triggers a different API
+endpoint. Missing a write action means missing that operation entirely — write
+endpoints cannot be inferred from read traffic.
 
 ### Step 2: Capture
 
@@ -179,6 +182,16 @@ Browsing tips:
     during capture so the CSRF token appears in request headers. CSRF detection
     requires seeing cookie-to-header matches on POST/PUT/PATCH/DELETE requests.
 - **Avoid** logout, delete account, billing, irreversible actions.
+
+**SPA navigation rule:** Use **in-app navigation** (click links in the UI), not
+address-bar navigation or `window.location.href`. Full-page reloads deliver data
+via SSR — JSON API calls only fire during SPA client-side routing. For
+programmatic browsing: `element.click()` on links, not `Page.navigate`. Or call
+the API directly via `page.evaluate(() => fetch('/api/...'))` — the page's
+`fetch()` inherits auth context and appears in the HAR.
+
+**SSR fast-fail check:** If `summary.byCategory.api` is very low despite many
+page visits, switch to SPA navigation or direct in-page fetch calls.
 
 ```bash
 openweb capture stop
@@ -386,14 +399,9 @@ This report is for upstream improvements only.
 
 ## Incremental Discovery (Existing Sites)
 
-When expanding an existing site package:
-
-1. Read `src/sites/<site>/DOC.md` and `openapi.yaml` -- what is already covered?
-2. Identify missing intents (from user request or archetype comparison)
-3. Enter at Step 2 with targeted capture for only the gaps
-4. After compile, verify the new intents appear as clusters
-5. Continue to Step 5 to review and verify the merged operations
-6. Update DOC.md and PROGRESS.md
+Follow the "Before You Start" fast-path (reads existing DOC.md + openapi.yaml),
+identify gaps, then enter at Step 2 for targeted capture. Continue through
+Steps 3-6, updating DOC.md and PROGRESS.md at install.
 
 ## Multi-Worker Browser Sharing
 

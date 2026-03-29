@@ -197,18 +197,8 @@ Search for `"clusters"` in `analysis.json`. Read that array. For each cluster:
 Note which clusters to exclude and which operation names to change -- you will
 apply these edits to the generated spec in Step 3.
 
-**Noise clusters to look for:**
-- Analytics/tracking: paths containing `/collect`, `/beacon`, `/pixel`, `/analytics`
-- CDN/static: paths containing `/static/`, `/_next/`, `/assets/`
-- Telemetry/logging: paths or names containing `collector`, `log`, `batch`,
-  `telemetry`, `apm`, `tracking`, `zlab`, `commercial`, `impression`, `feedback`, `popup`
-- Internal framework: `rsc-action`, `flagship-web`, `_next` endpoints
-- POST-to-void: POST endpoints returning empty or 204 that are clearly
-  telemetry/logging (e.g., `/collect`, `/beacon`, `/analytics`). **Exception:**
-  user-facing mutations (like, follow, bookmark, add-to-cart) often return
-  204/empty on success — do NOT delete these. Apply the write-op quality bar below.
-- 4xx-only: clusters where all responseVariants are 4xx status codes
-- Unnamed generics: operationId is just `get` or `create` with no noun
+**Noise clusters to look for:** See Step 3a noise exclusion criteria. Note
+clusters that match — you will delete them in Step 3.
 
 #### 2c. Extraction Signals
 
@@ -271,6 +261,15 @@ user-facing actions a user would knowingly trigger:
 - NOT: `createCollectorApm`, `createZaLogsBatch`, `createCommercialEcommerce`
 - Test: "would a user knowingly trigger this action?" If no, it is
   infrastructure noise — exclude it.
+
+**Recovering write ops from auto-curated names:** The compiler generates names
+like `createAnswersVoters` (upvote), `createMembersFollowers` (follow),
+`createStatusesSetlike` (like). These look like noise but are real write ops.
+Before deleting any POST operation, cross-reference against your write intents
+from Step 1. Check the URL path:
+- `/answers/{id}/voters` or `/like` → upvote/like
+- `/members/{id}/followers` or `/friendships/create` → follow
+- `/{resource}/{id}/favorites` → bookmark/save
 
 After removing noise, review ALL remaining non-target operations. Keep an
 operation only if it meets ALL of:
@@ -658,11 +657,8 @@ useful protocols are curated.
 
 ## Anti-pattern: Probing with curl/fetch
 
-**NEVER** test endpoints with curl, wget, fetch, or any direct HTTP tool.
-This poisons IP reputation with bot detection systems and can block even
-real browser sessions on the same IP. See `discover.md` "Browser First" rule.
-
-Use `openweb verify <site>` instead -- it uses the proper transport and auth.
+**NEVER** test with curl/wget/fetch — poisons IP reputation. See discover.md
+"Browser First" rule. Use `openweb verify <site>` instead.
 
 ## Related References
 
