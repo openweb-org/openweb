@@ -53,6 +53,7 @@ function toPascalCase(s: string): string {
 }
 
 function parseWsUrl(url: string): { host: string; pathname: string } {
+  if (!url) throw new Error(`Empty WebSocket URL — capture may include connections without URLs`)
   const parsed = new URL(url)
   return { host: parsed.host, pathname: parsed.pathname || '/' }
 }
@@ -236,7 +237,8 @@ async function emitOpenApi(
       ],
     }
 
-    const exampleFile = `examples/${operationId}.example.json`
+    const safeOpId = operationId.length > 200 ? `${operationId.slice(0, 180)}_${hash16(operationId)}` : operationId
+    const exampleFile = `examples/${safeOpId}.example.json`
     await writeFile(path.join(outputRoot, exampleFile), `${JSON.stringify(testShape, null, 2)}\n`, 'utf8')
     files.push(exampleFile)
   }
@@ -361,7 +363,8 @@ async function emitAsyncApi(
       cases: [{ input: {}, timeout_ms: TIMEOUT.asyncapiDefault, assertions }],
     }
 
-    const exampleFile = `examples/${op.id}.example.json`
+    const safeWsId = op.id.length > 200 ? `${op.id.slice(0, 180)}_${hash16(op.id)}` : op.id
+    const exampleFile = `examples/${safeWsId}.example.json`
     await writeFile(path.join(outputRoot, exampleFile), `${JSON.stringify(testShape, null, 2)}\n`, 'utf8')
     files.push(exampleFile)
   }

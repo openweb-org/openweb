@@ -123,8 +123,8 @@ function scrubMessageTemplate(tmpl: WsMessageTemplate): WsMessageTemplate {
 }
 
 function buildWsPlan(ws: NonNullable<AnalysisReport['ws']>): CuratedWsPlan {
-  const firstConnection = ws.connections[0]
-  if (!firstConnection) {
+  const firstConnection = ws.connections.find((c) => c.url) ?? ws.connections[0]
+  if (!firstConnection || !firstConnection.url) {
     return { serverUrl: '', operations: [] }
   }
 

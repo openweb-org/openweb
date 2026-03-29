@@ -22,7 +22,7 @@ describe('navigator', () => {
   it('renders site with auth requirements', async () => {
     const output = await renderSite('instagram')
     expect(output).toContain('Instagram')
-    expect(output).toContain('Transport:        node')
+    expect(output).toContain('Transport:        page')
     expect(output).toContain('Requires browser: yes')
     expect(output).toContain('Requires login:   yes')
   })
