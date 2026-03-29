@@ -17,10 +17,14 @@ and troubleshooting — used in Step 5 below.
 
 Read these knowledge files in order — but scale depth to context:
 
-- **Existing site (rediscovery/update):** Read the site's existing `DOC.md` and
-  `openapi.yaml` instead — they already capture auth, transport, and known issues.
-  Skim the archetype row for anything the DOC.md missed. Skip bot-detection unless
-  you hit blocks.
+- **Existing site (rediscovery/update):** Read the site's prior-round `DOC.md`
+  and `openapi.yaml` from the first available source:
+  1. `src/sites/<site>/` (worktree)
+  2. `~/.openweb/sites/<site>/` (compile cache)
+  3. `git show HEAD:src/sites/<site>/DOC.md` (if files deleted from worktree)
+  Focus on: auth config, write endpoint paths, adapter/transport requirements,
+  known issues (signing, SSR-only endpoints). Skim the archetype row for anything
+  the DOC.md missed. Skip bot-detection unless you hit blocks.
 - **Net-new site:** Read all three files below. Each produces a concrete decision
   that shapes your capture strategy.
 
@@ -133,11 +137,15 @@ Browsing tips:
 - **Vary your inputs** -- use 2-3 different search terms to give the analyzer
   multiple samples per operation (helps schema inference and path normalization).
 - **Wait for content to load** before navigating away -- some sites lazy-load.
-- **If the site requires login**, log in manually in the managed browser. For
-  net-new sites, `openweb login <site>` does not work because that command
-  requires an existing site package. Open the target URL in the managed browser
-  and authenticate there. Existing logins from your real Chrome profile may
-  already carry over.
+- **Click through UI tabs** on profiles and feeds — each tab triggers a different
+  API endpoint. Profile sub-tabs (Answers / Articles / Favorites), feed tabs
+  (Following / Hot / Latest), sort tabs (Hot / New / Top). Hit the top 2-3 tabs.
+- **Search: use the on-page search box**, not URL navigation. `page.goto()` to
+  a search URL delivers SSR HTML; typing in the SPA search widget triggers the
+  JSON API endpoint.
+- **If the site requires login**, log in in the managed browser. For net-new
+  sites, `openweb login <site>` won't work — authenticate via the target URL
+  directly. Existing Chrome profile logins may carry over.
 - **Trigger write actions** after browsing read flows: like a post, follow a user,
   bookmark content. These generate write operation traffic. See the Write Operation
   Safety table above for which actions are safe to capture.
@@ -209,9 +217,6 @@ To ensure API calls are captured:
 
 **Verification:** After capture, check `summary.byCategory.api`. If it's 0
 despite browsing, the capture was attached to the wrong target.
-
-**SSR fast-fail check:** If `summary.byCategory.api` is very low despite many
-page visits, switch to SPA navigation or direct in-page fetch calls.
 
 ```bash
 openweb capture stop
@@ -354,9 +359,6 @@ If target operations are missing from the analysis:
 - **GraphQL single endpoint?** Try different queries in the UI -- the analyzer
   needs varied `operationName` or `queryId` values to sub-cluster correctly.
 - **Lazy loading?** Scroll down, click "load more", wait for content to appear.
-- **Different search terms** produce different API paths? Capture multiple searches
-  to help path normalization (e.g., `/search/shoes` and `/search/hats`
-  normalize to `/search/{query}`).
 
 Repeat Steps 2-5 until every target intent returns real data via `exec`.
 
@@ -415,13 +417,12 @@ Only upstream improvements — skip site-specific workarounds already resolved i
 
 Multiple workers can share one Chrome browser on the same CDP port:
 - **Open a new tab** for your site. Do NOT close or navigate other workers' tabs.
-- **Capture is browser-wide**, not per-tab. All tabs' traffic merges into one
-  capture session. The compile command filters by site URL, so different-site
-  captures do not interfere.
+- **Capture is browser-wide**, not per-tab. Traffic from all tabs merges into one
+  session. The compile command filters by site URL.
 - For **same-site parallel capture**, use separate browser instances on different
   CDP ports, or capture sequentially.
-- If `capture start` is already running (another worker started it), skip it --
-  your traffic is already being recorded. Just browse your site in a new tab.
+- If `capture start` is already running, skip it — your traffic is already
+  being recorded.
 
 ## Related References
 
