@@ -1,0 +1,17 @@
+{
+  "operation_id": "getUserStatuses",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "feature": 0,
+        "page": 1,
+        "uid": 1918530507
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -4,24 +4,112 @@ info:
   version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-03-28T17:49:18.076Z
-    requires_auth: true
+    compiled_at: 2026-03-29T06:39:38.584Z
+    requires_auth: false
 servers:
   - url: https://www.reddit.com
     x-openweb:
       transport: node
-      auth:
-        type: localStorage_jwt
-        key: chat:access-token
-        path: token
-        inject:
-          header: Authorization
-          prefix: "Bearer "
 paths:
-  /search/:
+  /r/{subreddit}.json:
     get:
-      operationId: search
-      summary: Search Reddit posts and comments
+      operationId: getSubredditPosts
+      summary: >-
+        Get subreddit posts — title, author, score, comment count, URL,
+        created timestamp, thumbnail, selftext, flair, awards
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 9534943fee0ebe7a
+          tool_version: 2
+      parameters:
+        - name: subreddit
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Subreddit name without r/ prefix (e.g. "programming", "technology")
+          example: programming
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - hot
+              - new
+              - top
+              - rising
+          description: Sort order for posts
+          example: hot
+        - name: t
+          in: query
+          schema:
+            type: string
+            enum:
+              - hour
+              - day
+              - week
+              - month
+              - year
+              - all
+          description: Time filter (only used with sort=top)
+          example: day
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of posts to return (max 100)
+          example: 25
+        - name: after
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor — fullname of the last item (e.g. "t3_1s5ja3a")
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /r/popular.json:
+    get:
+      operationId: getPopularPosts
+      summary: >-
+        Get popular posts across all subreddits — title, author, score,
+        comment count, subreddit, URL, created timestamp
+      x-openweb:
+        permission: read
+        build:
+          stable_id: a134943fee0ebe7b
+          tool_version: 2
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of posts to return (max 100)
+          example: 25
+        - name: after
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor — fullname of the last item
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /search.json:
+    get:
+      operationId: searchPosts
+      summary: >-
+        Search posts by keyword — title, author, score, comment count,
+        subreddit, URL, selftext snippet, created timestamp
       x-openweb:
         permission: read
         build:
@@ -33,165 +121,301 @@ paths:
           required: true
           schema:
             type: string
-          example: javascript
-        - name: type
+          description: Search query
+          example: typescript
+        - name: sort
           in: query
-          required: true
           schema:
             type: string
-          example: link
+            enum:
+              - relevance
+              - hot
+              - top
+              - new
+              - comments
+          description: Sort order for search results
+          example: relevance
+        - name: t
+          in: query
+          schema:
+            type: string
+            enum:
+              - hour
+              - day
+              - week
+              - month
+              - year
+              - all
+          description: Time filter
+          example: all
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of results to return (max 100)
+          example: 25
+        - name: after
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - link
+              - sr
+              - user
+          description: "Filter by type: link (posts), sr (subreddits), user (users)"
       responses:
         "200":
           description: Success.
           content:
-            text/html; charset=utf-8:
+            application/json:
               schema:
                 type: object
-  /svc/shreddit/community-more-posts/best/:
+
+  /r/{subreddit}/comments/{post_id}.json:
     get:
-      operationId: getSubredditPosts
-      summary: Get subreddit posts (paginated)
+      operationId: getPostComments
+      summary: >-
+        Get post with comments — post title, selftext, author, score,
+        comment tree with author, body, score, replies, created timestamp
       x-openweb:
         permission: read
         build:
-          stable_id: f2da01a48a7efd05
+          stable_id: 361929b38dce67b4
           tool_version: 2
       parameters:
-        - name: adDistance
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 1
-        - name: ad_posts_served
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 1
-        - name: after
-          in: query
+        - name: subreddit
+          in: path
           required: true
           schema:
             type: string
-          example: dDNfMXMyaDhsdA==
-        - name: feedLength
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1
-        - name: name
-          in: query
-          required: true
-          schema:
-            type: string
+          description: Subreddit name without r/ prefix
           example: programming
-        - name: navigationSessionId
-          in: query
+        - name: post_id
+          in: path
           required: true
           schema:
             type: string
-          example: <REDACTED_TOKEN>
-        - name: t
+          description: Post ID (base-36 alphanumeric, e.g. "1s5ja3a")
+          example: 1s5ja3a
+        - name: sort
           in: query
+          schema:
+            type: string
+            enum:
+              - confidence
+              - top
+              - new
+              - controversial
+              - old
+              - qa
+          description: Comment sort order
+          example: confidence
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of top-level comments to return
+          example: 50
+      responses:
+        "200":
+          description: Success. Returns array of two Listings — [0] is the post, [1] is the comment tree.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /user/{username}/about.json:
+    get:
+      operationId: getUserProfile
+      summary: >-
+        Get user profile — display name, karma (link + comment), account
+        created date, description, avatar URL, is_gold, verified
+      x-openweb:
+        permission: read
+        build:
+          stable_id: b234567890abcdef
+          tool_version: 2
+      parameters:
+        - name: username
+          in: path
           required: true
           schema:
             type: string
-          example: DAY
+          description: Reddit username (without u/ prefix)
+          example: spez
       responses:
         "200":
           description: Success.
           content:
-            text/vnd.reddit.partial+html; charset=utf-8:
+            application/json:
               schema:
                 type: object
-  /svc/shreddit/graphql:
+
+  /user/{username}.json:
+    get:
+      operationId: getUserPosts
+      summary: >-
+        Get user's recent posts and comments — title, body, score, subreddit,
+        created timestamp, type (post or comment)
+      x-openweb:
+        permission: read
+        build:
+          stable_id: c345678901abcdef
+          tool_version: 2
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Reddit username (without u/ prefix)
+          example: spez
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - new
+              - hot
+              - top
+          description: Sort order
+          example: new
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of items to return (max 100)
+          example: 25
+        - name: after
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /r/{subreddit}/about.json:
+    get:
+      operationId: getSubredditAbout
+      summary: >-
+        Get subreddit metadata — display name, title, description, subscriber
+        count, active users, created date, rules
+      x-openweb:
+        permission: read
+        build:
+          stable_id: rd0006
+          tool_version: 1
+      parameters:
+        - name: subreddit
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Subreddit name (without r/ prefix)
+          example: programming
+      responses:
+        "200":
+          description: Subreddit metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/vote:
     post:
-      operationId: graphqlQuery
-      summary: Execute a Reddit GraphQL query
+      operationId: vote
+      summary: Vote on a post or comment (upvote, downvote, or unvote)
       x-openweb:
         permission: write
         build:
-          stable_id: 7b3159bbed6cc9c8
-          tool_version: 2
+          stable_id: rd0002
+          tool_version: 1
       parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+                - dir
+              properties:
+                id:
+                  type: string
+                  description: Fullname of the thing to vote on (e.g. "t3_abc123").
+                dir:
+                  type: integer
+                  description: "Vote direction: 1 = upvote, 0 = unvote, -1 = downvote."
       responses:
         "200":
           description: Success.
           content:
-            application/json; charset=utf-8:
+            application/json:
               schema:
                 type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      exposeExperiment:
-                        type: object
-                        properties:
-                          ok:
-                            type: boolean
-                          errors:
-                            type: "null"
-                        required:
-                          - ok
-                          - errors
-                      enrollInGamification:
-                        type: object
-                        properties:
-                          ok:
-                            type: boolean
-                          status:
-                            type: string
-                            enum:
-                              - ENROLLED
-                          errors:
-                            type: "null"
-                        required:
-                          - ok
-                          - status
-                          - errors
-                      createCaptchaToken:
-                        type: object
-                        properties:
-                          ok:
-                            type: boolean
-                        required:
-                          - ok
-                      redditorInfoByName:
-                        type: object
-                        properties:
-                          __typename:
-                            type: string
-                            enum:
-                              - Redditor
-                          trophyCase:
-                            type: object
-                            properties:
-                              totalUnlocked:
-                                type: integer
-                              trophiesBySubredditId:
-                                type: "null"
-                            required:
-                              - totalUnlocked
-                              - trophiesBySubredditId
-                        required:
-                          - __typename
-                          - trophyCase
-                    required: []
-                  errors:
-                    type: array
-                    items:
-                      type: object
-                  operation:
-                    type: string
-                    enum:
-                      - CreateCaptchaToken
-                      - EnrollInStreaks
-                      - ExposeVariant
-                      - UserCommunityAchievements
-                required:
-                  - data
-                  - errors
-                  - operation
+
+  /api/save:
+    post:
+      operationId: savePost
+      summary: Save (bookmark) a post or comment
+      x-openweb:
+        permission: write
+        build:
+          stable_id: rd0010
+          tool_version: 1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+                  description: Fullname of the thing to save (e.g. "t3_abc123").
+                category:
+                  type: string
+                  description: Optional save category (Reddit Gold feature).
+      responses:
+        "200":
+          description: Success (empty JSON object).
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/v1/me:
+    get:
+      operationId: getMe
+      summary: Get authenticated user profile via OAuth
+      servers:
+        - url: https://oauth.reddit.com
+      x-openweb:
+        permission: read
+        build:
+          stable_id: rd0003
+          tool_version: 1
+      parameters: []
+      responses:
+        "200":
+          description: Authenticated user profile.
+          content:
+            application/json:
+              schema:
+                type: object

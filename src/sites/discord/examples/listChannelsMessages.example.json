@@ -1,0 +1,17 @@
+{
+  "operation_id": "listChannelsMessages",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": 1,
+        "before": 1,
+        "limit": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

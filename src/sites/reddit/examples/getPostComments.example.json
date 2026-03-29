@@ -1,0 +1,16 @@
+{
+  "operation_id": "getPostComments",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "subreddit": "technology",
+        "postId": "1s5yfpx"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

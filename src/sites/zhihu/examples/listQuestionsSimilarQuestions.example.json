@@ -5,7 +5,6 @@
     {
       "input": {
         "id": 1,
-        "answer_id": 1,
         "include": [
           "data[*].answer_count",
           "author",

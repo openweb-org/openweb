@@ -1,8 +1,27 @@
 {
   "name": "zhihu",
+  "display_name": "Zhihu (知乎)",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.zhihu.com",
-  "compiled_at": "2026-03-28T18:04:28.343Z",
-  "requires_auth": true
+  "description": "Zhihu Q&A search, user profiles, topic feeds, trending — page transport with cookie session via L3 adapter",
+  "requires_auth": true,
+  "dependencies": {
+    "searchContent → getMember": "searchContent returns author url_token used by getMember",
+    "searchContent → listSimilarQuestions": "searchContent returns question IDs used by listSimilarQuestions",
+    "getMember → getUserAnswers": "getMember returns url_token used by getUserAnswers",
+    "getMember → listMemberActivities": "getMember returns url_token used by listMemberActivities",
+    "getMember → listMemberMutuals": "getMember returns url_token used by listMemberMutuals",
+    "getMember → followUser": "getMember returns url_token used by followUser",
+    "searchContent → upvoteAnswer": "searchContent returns answer IDs used by upvoteAnswer",
+    "searchContent → followQuestion": "searchContent returns question IDs used by followQuestion"
+  },
+  "stats": {
+    "operation_count": 16,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 16,
+    "ws_count": 0
+  },
+  "last_verified": "2026-03-29T00:00:00.000Z"
 }

@@ -1,0 +1,17 @@
+{
+  "operation_id": "listComments",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "count": 20,
+        "flow": 0,
+        "id": "Qyj0ifs0m"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

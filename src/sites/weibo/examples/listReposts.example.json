@@ -1,0 +1,17 @@
+{
+  "operation_id": "listReposts",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "count": 10,
+        "id": 1,
+        "page": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

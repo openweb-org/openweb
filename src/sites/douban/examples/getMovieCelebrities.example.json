@@ -1,0 +1,15 @@
+{
+  "operation_id": "getMovieCelebrities",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

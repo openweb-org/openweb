@@ -1,0 +1,19 @@
+{
+  "operation_id": "getOgvRecommend",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "brush": 1,
+        "fresh_type": 1,
+        "request_cnt": 1,
+        "season_type": 1,
+        "web_location": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

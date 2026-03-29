@@ -1,0 +1,15 @@
+{
+  "operation_id": "listUsers@meScheduledEvents",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "guild_ids": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

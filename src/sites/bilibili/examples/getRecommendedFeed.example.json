@@ -1,0 +1,44 @@
+{
+  "operation_id": "getRecommendedFeed",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "brush": 1,
+        "device": "mac",
+        "feed_version": "V8",
+        "fetch_row": 1,
+        "fresh_idx": 1,
+        "fresh_idx_1h": 1,
+        "fresh_type": 1,
+        "homepage_ver": 1,
+        "last_showlist": [
+          "av_116306439309010",
+          "av_116070098671492",
+          "av_116180660526935",
+          "av_116300768610532",
+          "av_116294326161111",
+          "av_116199618776182",
+          "av_n_116235991783549",
+          "av_n_116278740130317",
+          "av_n_116304090499594",
+          "av_n_116209785773519"
+        ],
+        "last_y_num": 1,
+        "ps": 1,
+        "screen": "+1-555-0100",
+        "seo_info": "",
+        "tt_exp": "",
+        "uniq_id": 1,
+        "w_rid": "<REDACTED_TOKEN>",
+        "web_location": 1,
+        "wts": 1,
+        "y_num": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

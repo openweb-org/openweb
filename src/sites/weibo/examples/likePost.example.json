@@ -1,0 +1,15 @@
+{
+  "operation_id": "likePost",
+  "method": "post",
+  "cases": [
+    {
+      "input": {
+        "id": "Qyj0ifs0m"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

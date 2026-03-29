@@ -1,0 +1,47 @@
+{
+  "operation_id": "getVideoDetail",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "aid": 1,
+        "dm_cover_img_str": "<REDACTED_TOKEN>",
+        "dm_img_inter": [
+          "{\"ds\":[{\"t\":2",
+          "\"c\":\"YnB4LXBsYXllci12aWRlby1pbnB1dGJhci13cm\"",
+          "\"p\":[2317",
+          47,
+          "2039]",
+          "\"s\":[302",
+          1599,
+          "2120]}",
+          "{\"t\":2",
+          "\"c\":\"YnB4LXBsYXllci1kbS1idG4tc2VuZCBidWkgYnVpLWJ1dHRvbg\"",
+          "\"p\":[3252",
+          84,
+          "1664]",
+          "\"s\":[405",
+          655,
+          "930]}]",
+          "\"wh\":[4771",
+          5382,
+          "83]",
+          "\"of\":[442",
+          884,
+          "442]}"
+        ],
+        "dm_img_list": "[]",
+        "dm_img_str": "<REDACTED_TOKEN>",
+        "isGaiaAvoided": "false",
+        "need_view": 1,
+        "w_rid": "<REDACTED_TOKEN>",
+        "web_location": 1,
+        "wts": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

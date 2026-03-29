@@ -9,7 +9,6 @@
         "after_id": 1,
         "desktop": "true",
         "end_offset": 1,
-        "limit": 1,
         "page_number": 1,
         "session_token": "<REDACTED_TOKEN>"
       },

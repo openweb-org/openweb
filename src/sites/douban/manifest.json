@@ -1,8 +1,17 @@
 {
   "name": "douban",
+  "display_name": "Douban",
   "version": "1.0.0",
   "spec_version": "2.0",
-  "site_url": "https://www.douban.com",
-  "compiled_at": "2026-03-28T17:56:58.601Z",
-  "requires_auth": true
+  "site_url": "https://m.douban.com",
+  "description": "Movie/book/music reviews and ratings — search, details, reviews, Top 250, trending, photo galleries via mobile JSON API and DOM adapters",
+  "requires_auth": false,
+  "compiled_at": "2026-03-29T12:00:00Z",
+  "stats": {
+    "operation_count": 14,
+    "l1_count": 10,
+    "l2_count": 0,
+    "l3_count": 4,
+    "ws_count": 0
+  }
 }

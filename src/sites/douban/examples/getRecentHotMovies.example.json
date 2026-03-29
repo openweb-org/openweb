@@ -1,0 +1,15 @@
+{
+  "operation_id": "getRecentHotMovies",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "limit": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

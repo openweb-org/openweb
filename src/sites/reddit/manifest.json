@@ -1,8 +1,9 @@
 {
   "name": "reddit",
+  "display_name": "Reddit",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.reddit.com",
-  "compiled_at": "2026-03-28T17:49:18.076Z",
-  "requires_auth": true
+  "compiled_at": "2026-03-29T06:39:38.584Z",
+  "requires_auth": false
 }

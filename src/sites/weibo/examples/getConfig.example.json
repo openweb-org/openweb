@@ -3,9 +3,7 @@
   "method": "get",
   "cases": [
     {
-      "input": {
-        "type": "push_active"
-      },
+      "input": {},
       "assertions": {
         "status": 200,
         "response_schema_valid": true

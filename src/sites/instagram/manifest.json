@@ -1,8 +1,23 @@
 {
   "name": "instagram",
-  "version": "1.0.0",
+  "display_name": "Instagram",
+  "version": "1.1.0",
   "spec_version": "2.0",
   "site_url": "https://www.instagram.com",
-  "compiled_at": "2026-03-28T18:40:46.351Z",
-  "requires_auth": true
+  "description": "Instagram API — cookie_session + cookie_to_header CSRF, page transport",
+  "requires_auth": true,
+  "dependencies": {
+    "searchTopSearch": ["getUserProfile"],
+    "getTimeline": ["getUserProfile", "getMediaInfo", "getMediaComments"],
+    "getUserProfile": ["getUserById", "getUserFeed", "getUserStories"],
+    "getUserFeed": ["getMediaInfo", "getMediaComments"],
+    "getReelsTray": ["getUserStories"]
+  },
+  "stats": {
+    "operation_count": 15,
+    "l1_count": 9,
+    "l2_count": 9,
+    "l3_count": 6,
+    "ws_count": 0
+  }
 }

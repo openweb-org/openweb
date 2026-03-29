@@ -1,8 +1,9 @@
 {
   "name": "youtube",
+  "display_name": "YouTube",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.youtube.com",
-  "compiled_at": "2026-03-28T18:26:11.829Z",
-  "requires_auth": true
+  "description": "YouTube InnerTube API — page_global auth + sapisidhash signing",
+  "requires_auth": false
 }

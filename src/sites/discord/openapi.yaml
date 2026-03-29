@@ -4,52 +4,163 @@ info:
   version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-03-28T18:55:31.748Z
+    compiled_at: 2026-03-29T04:25:45.868Z
     requires_auth: true
 servers:
   - url: https://discord.com
     x-openweb:
-      transport: node
+      transport: page
       auth:
-        type: cookie_session
-      csrf:
-        type: cookie_to_header
-        cookie: browser_timezone
-        header: x-discord-timezone
+        type: webpack_module_walk
+        chunk_global: webpackChunkdiscord_app
+        module_test: getToken
+        call: getToken
+        inject:
+          header: Authorization
 paths:
-  /api/v9/{param}:
+  /api/v9/channels/{channelId}:
     get:
-      operationId: get
-      summary: Get
+      operationId: getChannelInfo
+      summary: "Get channel details — name, type, topic, guild ID, position, permission overwrites, rate limit"
       x-openweb:
         permission: read
         build:
-          stable_id: 8a9f326c5def27b8
+          stable_id: c680f0f6f388df44
           tool_version: 2
       parameters:
-        - name: param
+        - name: channelId
           in: path
           required: true
           schema:
             type: string
-          example: experiments
-        - name: locale
-          in: query
-          required: false
+          description: "Discord channel snowflake ID"
+          example: "1280234300012494862"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  type:
+                    type: integer
+                  guild_id:
+                    type: string
+                  name:
+                    type: string
+                  topic:
+                    type: string
+                  position:
+                    type: integer
+                  last_message_id:
+                    type: string
+  /api/v9/channels/{channelId}/messages:
+    get:
+      operationId: getChannelMessages
+      summary: "Get messages in a channel — content, author, attachments, embeds, reactions, timestamps"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: d4c95404d9be792f
+          tool_version: 2
+      parameters:
+        - name: channelId
+          in: path
+          required: true
           schema:
             type: string
-          example: en-US
-        - name: platform
+          description: "Discord channel snowflake ID"
+          example: "1280234300012494862"
+        - name: limit
           in: query
           required: false
           schema:
             type: integer
-          example: 1
-        - name: with_guild_experiments
+          description: "Number of messages to return (1-100, default 50)"
+          example: 50
+        - name: before
           in: query
           required: false
           schema:
             type: string
+          description: "Get messages before this message snowflake ID (for pagination)"
+        - name: after
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Get messages after this message snowflake ID"
+        - name: around
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Get messages around this message snowflake ID"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    content:
+                      type: string
+                    author:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        username:
+                          type: string
+                        global_name:
+                          type: string
+                        avatar:
+                          type: string
+                    timestamp:
+                      type: string
+                    attachments:
+                      type: array
+                      items:
+                        type: object
+                    embeds:
+                      type: array
+                      items:
+                        type: object
+                    reactions:
+                      type: array
+                      items:
+                        type: object
+  /api/v9/users/@me/entitlements:
+    get:
+      operationId: getMyEntitlements
+      summary: "Get current user's entitlements — Nitro subscriptions, boosts, premium features"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 05b926f7a81ef9ef
+          tool_version: 2
+      parameters:
+        - name: entitlement_type
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Filter by entitlement type"
+          example: 1
+        - name: exclude_ended
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Exclude expired entitlements"
           example: "true"
       responses:
         "200":
@@ -57,135 +168,17 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  assignments:
-                    type: array
-                    items:
-                      type: array
-                      items:
-                        anyOf:
-                          - type: integer
-                          - type: "null"
-                  guild_experiments:
-                    type: array
-                    items:
-                      type: array
-                      items:
-                        anyOf:
-                          - type: integer
-                          - type: string
-                            enum:
-                              - 2022-01_guild_role_subscription_trials
-                              - 2022-11_creator_monetization_onboarding_waitlist
-                          - type: array
-                            items:
-                              anyOf:
-                                - type: array
-                                  items:
-                                    type: array
-                                    items:
-                                      type: array
-                                      items:
-                                        anyOf:
-                                          - type: integer
-                                          - type: array
-                                            items:
-                                              anyOf:
-                                                - type: object
-                                                  properties:
-                                                    s:
-                                                      type: integer
-                                                    e:
-                                                      type: integer
-                                                  required:
-                                                    - s
-                                                    - e
-                                                - type: array
-                                                  items:
-                                                    anyOf:
-                                                      - type: integer
-                                                      - type: object
-                                                        properties:
-                                                          s:
-                                                            type: integer
-                                                          e:
-                                                            type: integer
-                                                        required:
-                                                          - s
-                                                          - e
-                                                      - type: array
-                                                        items:
-                                                          anyOf:
-                                                            - type: integer
-                                                            - type: array
-                                                            - type: string
-                                                              enum:
-                                                                - COMMUNITY
-                                                                - PARTNERED
-                                                                - VOICE_IN_THREADS
-                                                - type: integer
-                                - type: object
-                                  properties:
-                                    b:
-                                      type: integer
-                                    k:
-                                      type: array
-                                      items:
-                                        type: string
-                                  required:
-                                    - b
-                                    - k
-                          - type: "null"
-                required:
-                  - assignments
-                  - guild_experiments
-        "401":
-          description: Authentication required.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    enum:
-                      - "401: Unauthorized"
-                  code:
-                    type: integer
-                required:
-                  - message
-                  - code
-    post:
-      operationId: create
-      summary: Create
+                type: array
+                items:
+                  type: object
+  /api/v9/users/@me/scheduled-events:
+    get:
+      operationId: getMyScheduledEvents
+      summary: "Get current user's scheduled events across guilds"
       x-openweb:
-        permission: write
+        permission: read
         build:
-          stable_id: 6e61a55814bf1d47
-          tool_version: 2
-      parameters:
-        - name: param
-          in: path
-          required: true
-          schema:
-            type: string
-          example: science
-      responses:
-        "204":
-          description: Success.
-          content:
-            "":
-              schema:
-                type: object
-  /api/v9/auth/conditional/start:
-    post:
-      operationId: createAuthConditionalStart
-      summary: Create auth conditional start
-      x-openweb:
-        permission: write
-        build:
-          stable_id: 869fd21c4986ccd2
+          stable_id: 7994b7c3e1e5ea5d
           tool_version: 2
       parameters: []
       responses:
@@ -194,118 +187,6 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  challenge:
-                    type: string
-                    enum:
-                      - '{"publicKey":{"challenge":"4BSR9N1Tj_rVqAzUDapItO_9kBSxLKhuhPsg5jWvTM4","timeout":300000,"rpId":"discord.com","allowCredentials":[],"userVerification":"required","extensions":{"uvm":true}},"mediation":"conditional"}'
-                  ticket:
-                    type: string
-                    format: uuid
-                required:
-                  - challenge
-                  - ticket
-  /api/v9/auth/location-metadata:
-    get:
-      operationId: getAuthLocationMetadata
-      summary: Get auth location-metadata
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 21958ffa3cbb953f
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  consent_required:
-                    type: boolean
-                  country_code:
-                    type: string
-                    enum:
-                      - US
-                  promotional_email_opt_in:
-                    type: object
-                    properties:
-                      required:
-                        type: boolean
-                      pre_checked:
-                        type: boolean
-                    required:
-                      - required
-                      - pre_checked
-                required:
-                  - consent_required
-                  - country_code
-                  - promotional_email_opt_in
-  /assets/8cd44e13e08a252f.module.wasm:
-    get:
-      operationId: getAssets8cd44e13e08a252f.module.wasm
-      summary: Get assets 8cd44e13e08a252f.module.wasm
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 0a245902aacbfbf2
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/wasm:
-              schema:
-                type: object
-  /cdn-cgi/challenge-platform/h/g/jsd/oneshot/{id}/0.36707159097325237:1774424211:9_pSV23kWGmNtldQToc5YDBzJFUfKD8QS_h75YB-Zx0/{id}:
-    post:
-      operationId: createCdnCgiChallengePlatformHGJsdOneshot0.36707159097325237:1774424211:9Psv23kwgmntldqtoc5ydbzjfufkd8qsH75ybZx0
-      summary: Create cdn-cgi challenge-platform h g jsd oneshot
-        0.36707159097325237:1774424211:9 psv23kwgmntldqtoc5ydbzjfufkd8qs
-        h75yb-zx0
-      x-openweb:
-        permission: write
-        build:
-          stable_id: a6d06f0f95fedf3a
-          tool_version: 2
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: 9e38d0501980e62d
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: 9e38d0501980e62d
-      responses:
-        "200":
-          description: Success.
-          content:
-            text/plain; charset=utf-8:
-              schema:
-                type: object
-  /channels/@me:
-    get:
-      operationId: getChannels@me
-      summary: Get channels @me
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ed798c4271fde137
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            text/html:
-              schema:
-                type: object
+                type: array
+                items:
+                  type: object

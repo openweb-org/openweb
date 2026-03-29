@@ -1,0 +1,21 @@
+{
+  "operation_id": "getHotFeed",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "containerid": 1,
+        "count": 1,
+        "extparam": "discover|new_feed",
+        "group_id": 1,
+        "max_id": 1,
+        "refresh": 1,
+        "since_id": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

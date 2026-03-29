@@ -1,8 +1,10 @@
 {
   "name": "bilibili",
+  "display_name": "Bilibili (哔哩哔哩)",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.bilibili.com",
-  "compiled_at": "2026-03-28T18:18:59.791Z",
-  "requires_auth": true
+  "compiled_at": "2026-03-29T06:42:56.596Z",
+  "requires_auth": false,
+  "transport": "node"
 }

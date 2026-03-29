@@ -1,0 +1,24 @@
+{
+  "operation_id": "getDanmakuSegment",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "oid": 1,
+        "pe": 1,
+        "pid": 1,
+        "ps": 1,
+        "pull_mode": 1,
+        "segment_index": 1,
+        "type": 1,
+        "w_rid": "<REDACTED_TOKEN>",
+        "web_location": 1,
+        "wts": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

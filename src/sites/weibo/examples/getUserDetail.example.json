@@ -1,0 +1,15 @@
+{
+  "operation_id": "getUserDetail",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "uid": 1918530507
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

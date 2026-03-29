@@ -5,7 +5,7 @@
     {
       "input": {
         "content_token": 1,
-        "content_type": "answer"
+        "content_type": "question"
       },
       "assertions": {
         "status": 200,

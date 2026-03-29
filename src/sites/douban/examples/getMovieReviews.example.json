@@ -1,0 +1,17 @@
+{
+  "operation_id": "getMovieReviews",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": 1,
+        "count": 1,
+        "start": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
