@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-03-28 (pipeline v2 session)
+> Last updated: 2026-03-29 (v1+v5 site merge)
 
 ## Quick Start
 
@@ -127,11 +127,11 @@ src/
     ├── open-meteo/             #   L1 (no x-openweb)
     ├── instagram/              #   L2 (cookie_session + cookie_to_header)
     ├── youtube/                #   L2 (page_global + sapisidhash)
-    ├── discord/                #   L2 + WS (webpack_module_walk + gateway)
+    ├── discord/                #   L2 (webpack_module_walk, page transport)
     ├── coinbase/               #   WS (AsyncAPI, compiler-generated)
     ├── whatsapp/               #   L3 adapter (Meta require() module system)
     ├── telegram/               #   L3 adapter (teact global state)
-    └── ...                     #   65 more sites
+    └── ...                     #   61 more sites
 ```
 
 ---

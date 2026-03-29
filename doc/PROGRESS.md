@@ -1,3 +1,40 @@
+## 2026-03-29: Merge v1+v5 site packages for 8 hard sites
+
+**What changed:**
+- Merged hand-crafted v1 packages (write ops, adapters, curated auth) with auto-discovered v5 packages (broad API coverage) for 8 sites
+- Sites: zhihu(16 ops), bilibili(32), weibo(21), reddit(10), instagram(15), youtube(10), amazon(6), douban(14) — 124 total ops, 24 write ops
+- 5 L3 adapters retained: zhihu-web, bilibili-web, weibo-web, amazon-cart, douban-dom
+- Instagram transport changed from node to page (browser context required for API headers)
+- Reddit simplified to public L1 JSON endpoints (no auth required)
+- Discord trimmed to 4 HTTP ops (WS/AsyncAPI coverage removed pending re-discovery)
+- X site package removed (DOC.md retained for future re-discovery)
+- All 124 operations verified
+
+**Why:**
+- V5 rediscovery produced broader API coverage than v1 hand-crafted packages, but missed write ops and adapters. Merging preserves the best of both: v5 coverage + v1 write ops + v1 adapters.
+
+**Key files:** `src/sites/{zhihu,bilibili,weibo,reddit,instagram,youtube,amazon,douban}/`
+**Commit:** 4751b13
+**Next:** Re-discover x, discord WS, additional write ops
+**Blockers:** None
+
+## 2026-03-29: Fix WS empty-URL guard, ENAMETOOLONG prevention, instagram transport
+
+**What changed:**
+- `apply-curation.ts`: WS empty-URL guard — find first connection with a URL instead of blindly taking `connections[0]`; return empty plan if no URL found
+- `generate-v2.ts`: ENAMETOOLONG prevention — truncate operation IDs > 200 chars in example filenames with hash suffix; empty WS URL guard throws descriptive error
+- `navigator.test.ts`: Instagram transport assertion updated from `node` to `page` to match merged spec
+
+**Why:**
+- Some captured WS connections have empty URLs (browser internals). Without the guard, the compiler crashes on `new URL('')`.
+- Auto-generated operation IDs from long API paths can exceed filesystem filename limits (255 bytes), causing ENOENT/ENAMETOOLONG on example file write.
+
+**Key files:** `src/compiler/curation/apply-curation.ts`, `src/compiler/generator/generate-v2.ts`, `src/runtime/navigator.test.ts`
+**Verification:** `pnpm test` passes; compile pipeline handles edge cases gracefully
+**Commit:** 023f77c
+**Next:** None (bug fixes complete)
+**Blockers:** None
+
 ## 2026-03-29: Fix capture model, restore flowchart & incremental discovery
 
 **What changed:**

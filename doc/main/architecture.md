@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-28 (pipeline v2 session)
+> Last updated: 2026-03-29 (v1+v5 site merge)
 
 ## Mission
 
@@ -192,17 +192,16 @@ Token cache at `~/.openweb/vault.json` stores cookies + localStorage + sessionSt
 | Site | Layer | Auth | CSRF | Signing | Extraction | Transport |
 |------|-------|------|------|---------|------------|-----------|
 | Open-Meteo | L1 | — | — | — | — | node |
-| Instagram | L2 | cookie_session | cookie_to_header | — | — | node |
+| Instagram | L2 | cookie_session | cookie_to_header | — | — | page |
 | Bluesky | L2 | localStorage_jwt | — | — | — | node |
 | YouTube | L2 | page_global | — | sapisidhash | — | node |
 | GitHub | L2 | cookie_session | meta_tag | — | script_json | node |
-| Reddit | L2 | cookie_session | — | — | — | node |
+| Reddit | L1 | — | — | — | — | node |
 | Walmart | L2 | — | — | — | ssr_next_data | node |
 | Hacker News | L2 | — | — | — | html_selector | node |
 | Microsoft Word | L2 | sessionStorage_msal | — | — | — | node |
-| Discord | L2+WS | webpack_module_walk | — | — | — | page + ws |
+| Discord | L2 | webpack_module_walk | — | — | — | page |
 | ChatGPT | L2 | exchange_chain | — | — | — | node |
-| X | L2 | cookie_session | cookie_to_header | — | — | page |
 | Coinbase | WS | — | — | — | — | ws |
 | LinkedIn | L2 | cookie_session | cookie_to_header | — | — | node |
 | WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |

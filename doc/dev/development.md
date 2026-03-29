@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-26 (M38)
+> Last updated: 2026-03-29 (v1+v5 site merge)
 
 ## Prerequisites
 
@@ -127,7 +127,7 @@ src/
 │   └── ws-analyzer/          #   WS capture → classify → cluster → schema
 ├── capture/                  # Browser CDP recording
 ├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, AsyncAPI, permissions, logger)
-└── sites/                    # Site packages (67 sites)
+└── sites/                    # Site packages (68 sites)
 ```
 
 -> See: [doc/main/README.md](../main/README.md) -- full code structure with per-file annotations

@@ -1,7 +1,7 @@
 # Adding a New Site
 
 > How to create a new site — from capture to verified skill package.
-> Last updated: 2026-03-17 (commit: M12)
+> Last updated: 2026-03-29 (v1+v5 site merge)
 
 ## Decision Tree
 
@@ -93,7 +93,7 @@ info:
 servers:
   - url: https://i.instagram.com
     x-openweb:
-      transport: node
+      transport: page
       auth:
         type: cookie_session
       csrf:
@@ -264,15 +264,14 @@ pnpm --silent dev registry install <site>
 
 | Site | Layer | Auth | Key pattern |
 |---------|-------|------|-------------|
-| instagram | L2 | cookie_session + cookie_to_header CSRF | Classic cookie auth |
+| instagram | L2 | cookie_session + cookie_to_header CSRF | page transport, classic cookie auth |
 | bluesky | L2 | localStorage_jwt | JWT from localStorage |
 | youtube | L2 | page_global + sapisidhash signing | Window global + signing |
 | github | L2 | cookie_session + meta_tag CSRF | SSR extraction |
-| reddit | L2 | cookie_session + exchange_chain | OAuth bearer |
-| discord | L2 | webpack_module_walk | Webpack module cache |
+| reddit | L1 | — (public JSON) | .json suffix endpoints |
+| discord | L2 | webpack_module_walk | page transport, Webpack module cache |
 | microsoft-word | L2 | sessionStorage_msal | MSAL cache |
 | chatgpt | L2 | exchange_chain (GET) | Next-auth session |
-| x | L2 | cookie_session + cookie_to_header | browser_fetch + static bearer |
 | whatsapp | L3 | adapter | Meta require() module |
 | telegram | L3 | adapter | teact global state |
 
