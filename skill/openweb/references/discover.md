@@ -82,35 +82,8 @@ Verify skips write operations by default (internally `replaySafety: unsafe_mutat
 
 ## Process
 
-```mermaid
-flowchart TD
-    S1["Step 1: Frame target intents<br/><i>agent-only</i>"]
-    S2["Step 2: Capture<br/><i>agent browses, code records</i>"]
-    S3["Step 3: Run the Compiler<br/><i>code-only</i>"]
-    S4{"Step 4: Check coverage<br/><i>agent reviews code output</i>"}
-    S5["Step 5: Curate &amp; Verify<br/><i>agent + code (follow compile.md)</i>"]
-    S6["Step 6: Install<br/><i>agent + code</i>"]
-    S7["Step 7: Pipeline improvement report<br/><i>agent-only, dev mode optional</i>"]
-
-    S1 --> S2
-    S2 --> S3
-    S3 --> S4
-    S4 -->|"missing intents"| S2
-    S4 -->|"all target intents mapped"| S5
-    S5 -->|"all intents work"| S6
-    S5 -->|"need more traffic"| S2
-    S6 -.->|"dev mode"| S7
-
-    style S1 fill:#e1f5fe
-    style S2 fill:#e1f5fe
-    style S3 fill:#e8f5e9
-    style S4 fill:#fff3e0
-    style S5 fill:#fff3e0
-    style S6 fill:#e1f5fe
-    style S7 fill:#f3e5f5
-```
-
-**Legend:** 🟦 blue = agent-driven | 🟩 green = code-only | 🟧 orange = agent reviews code output | 🟪 purple = dev mode optional
+**Steps:** 1 (Frame) → 2 (Capture) → 3 (Compile) → 4 (Check coverage) → 5 (Curate & Verify) → 6 (Install), optional 7 (Pipeline report).
+**Loops:** Step 4 → 2 if target intents missing. Step 5 → 2 if more traffic needed.
 
 ### Step 1: Frame the Target
 
@@ -168,27 +141,74 @@ Browsing tips:
 - **Trigger write actions** after browsing read flows: like a post, follow a user,
   bookmark content. These generate write operation traffic. See the Write Operation
   Safety table above for which actions are safe to capture.
+
+  **Executing write actions programmatically:**
+
+  *Approach 1 — Click UI buttons* (when selectors are findable):
+  Navigate to a content detail page. Find the button using common selectors
+  (`[class*="like"]`, `[aria-label*="like"]`, `[data-action="like"]`), scroll it
+  into view, click, wait 2s for the POST to fire. If `.click()` doesn't trigger
+  the API call, try `dispatchEvent(new MouseEvent('click', {bubbles: true}))`.
+
+  *Approach 2 — Call write APIs directly* (preferred — see Direct API Calls below):
+  Use `page.evaluate(fetch('/api/endpoint', {method:'POST', credentials:'same-origin'}))`.
+  Read the CSRF token from `document.cookie` if the site uses CSRF. Find write
+  endpoint paths in the site's prior-round DOC.md or openapi.yaml — write
+  endpoints cannot be discovered from read traffic alone.
+
+  After each write action, trigger the reverse to capture both sides (like/unlike,
+  follow/unfollow, bookmark/unbookmark).
 - **If you expect auth-required operations:** Log in FIRST, then capture.
   Auth detection requires seeing auth tokens in the traffic. Specifically:
-  - **exchange_chain (Reddit-like):** The token exchange request must appear
-    in the HAR. Do a COLD page load (clear cookies first or use incognito) to
-    capture the token exchange flow. SPA navigation after initial load may not
-    re-trigger the token request.
-  - **sapisidhash (Google/YouTube):** The SAPISID cookie must be present in
-    state_snapshots and Authorization headers with SAPISIDHASH prefix must
-    appear in HAR entries. Must be logged into a Google account in the managed
-    browser.
+  - **exchange_chain (Reddit-like):** Do a COLD page load (clear cookies or
+    incognito) so the token exchange request appears in the HAR.
+  - **sapisidhash (Google/YouTube):** Must be logged into a Google account.
+    SAPISID cookie and `SAPISIDHASH` Authorization headers must appear in HAR.
   - **cookie_session with CSRF:** Perform at least one mutation (like, follow)
-    during capture so the CSRF token appears in request headers. CSRF detection
-    requires seeing cookie-to-header matches on POST/PUT/PATCH/DELETE requests.
+    so the CSRF token appears in POST request headers.
 - **Avoid** logout, delete account, billing, irreversible actions.
 
 **SPA navigation rule:** Use **in-app navigation** (click links in the UI), not
 address-bar navigation or `window.location.href`. Full-page reloads deliver data
 via SSR — JSON API calls only fire during SPA client-side routing. For
-programmatic browsing: `element.click()` on links, not `Page.navigate`. Or call
-the API directly via `page.evaluate(() => fetch('/api/...'))` — the page's
-`fetch()` inherits auth context and appears in the HAR.
+programmatic browsing: `element.click()` on links, not `Page.navigate`.
+
+#### Direct API Calls via page.evaluate(fetch)
+
+Calling APIs directly from the page context is often the most reliable capture
+method — more reliable than hoping UI clicks trigger the right requests:
+
+```javascript
+await page.evaluate(() => fetch('/api/endpoint?param=value', {
+  credentials: 'same-origin'
+}));
+```
+
+**When to prefer direct fetch over SPA navigation:**
+- POST-based APIs (Innertube, GraphQL) — clicks may not send the right body
+- You know the API pattern but can't find the UI button
+- You want multiple samples with varied parameters for better schema inference
+- REST endpoints are more stable than GraphQL `doc_id` hashes
+
+**Combine with UI browsing:** Direct calls fill known coverage gaps; UI browsing
+discovers endpoints you don't know about. Use both in each capture session.
+
+**Same-origin only.** `page.evaluate(fetch(...))` is blocked by CORS for
+cross-origin URLs. Navigate to the target subdomain first, then use relative paths.
+
+#### Capture Target Binding
+
+`capture start` attaches to ONE CDP target (the first page in the browser
+context). Network events from other tabs or CDP connections are NOT captured —
+including `page.evaluate(fetch(...))` calls on a different tab.
+
+To ensure API calls are captured:
+1. **Close all non-target tabs** before starting capture.
+2. **Navigate the captured tab** to your site — don't open a new tab.
+3. **Run `page.evaluate(fetch(...))` on the SAME page** the capture monitors.
+
+**Verification:** After capture, check `summary.byCategory.api`. If it's 0
+despite browsing, the capture was attached to the wrong target.
 
 **SSR fast-fail check:** If `summary.byCategory.api` is very low despite many
 page visits, switch to SPA navigation or direct in-page fetch calls.
@@ -199,6 +219,16 @@ openweb capture stop
 
 The capture directory (default `./capture/`) now contains `traffic.har`,
 `state_snapshots/`, and optionally `websocket_frames.jsonl`.
+
+#### Capture Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| HAR has 0 API entries for target site | Capture connected to wrong tab | Close other tabs, start capture, open target in a NEW tab |
+| `page.evaluate(fetch())` not in HAR | Fetch ran on different CDP target | Run fetch on the capture's page (see Capture Target Binding) |
+| `No active capture session` on stop | Stale PID file or process killed | `pkill -f "capture start"`, delete PID file, restart |
+| HAR empty / truncated | Process killed before flush | Stop with `openweb capture stop`, never `kill -9` |
+| Another worker's stop kills your data | Global capture stop | Use Playwright `context.recordHar()` for isolated capture |
 
 ### Step 3: Run the Compiler
 
@@ -377,31 +407,9 @@ efficient.
 | **Rules too loose** | Heuristics that let noise through (e.g., tracking cookies scored as auth, client hint headers matched as CSRF). |
 | **Missing automation** | Manual steps that should be automated (e.g., no bot-detection signal → transport recommendation, no target-intent filtering during auto-curation). |
 
-**Format per issue:**
-
-```markdown
-## <Short title>
-
-**Problem:** What happened during this discovery.
-**Root cause:** Why the pipeline/doc behaved this way (file:line if code).
-**Suggested fix:** What would make this better for all sites (not just this one).
-```
-
-**Examples from LinkedIn discovery:**
-- CSRF detection picked `CH-prefers-color-scheme` → code gap in `auth-candidates.ts`
-- Transport always `node` even with status 999 → missing bot-detection signal in `classify.ts`
-- Auth confidence 0.40 because denominator includes off-domain traffic → formula issue
-- No doc guidance on CSRF scope (GET vs mutations only) → doc gap in compile.md
-
-**Not in scope:** Site-specific workarounds, one-off parameter fixes, or issues
-already resolved during Step 5. If you fixed it in the spec, it's done.
-This report is for upstream improvements only.
-
-## Incremental Discovery (Existing Sites)
-
-Follow the "Before You Start" fast-path (reads existing DOC.md + openapi.yaml),
-identify gaps, then enter at Step 2 for targeted capture. Continue through
-Steps 3-6, updating DOC.md and PROGRESS.md at install.
+**Format:** For each issue, write: **Problem** (what happened), **Root cause**
+(file:line if code), **Suggested fix** (what would help all sites, not just this one).
+Only upstream improvements — skip site-specific workarounds already resolved in Step 5.
 
 ## Multi-Worker Browser Sharing
 
