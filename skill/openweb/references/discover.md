@@ -86,8 +86,35 @@ Verify skips write operations by default (internally `replaySafety: unsafe_mutat
 
 ## Process
 
-**Steps:** 1 (Frame) → 2 (Capture) → 3 (Compile) → 4 (Check coverage) → 5 (Curate & Verify) → 6 (Install), optional 7 (Pipeline report).
-**Loops:** Step 4 → 2 if target intents missing. Step 5 → 2 if more traffic needed.
+```mermaid
+flowchart TD
+    S1["Step 1: Frame target intents<br/><i>agent-only</i>"]
+    S2["Step 2: Capture<br/><i>agent browses, code records</i>"]
+    S3["Step 3: Run the Compiler<br/><i>code-only</i>"]
+    S4{"Step 4: Check coverage<br/><i>agent reviews code output</i>"}
+    S5["Step 5: Curate &amp; Verify<br/><i>agent + code (follow compile.md)</i>"]
+    S6["Step 6: Install<br/><i>agent + code</i>"]
+    S7["Step 7: Pipeline improvement report<br/><i>agent-only, dev mode optional</i>"]
+
+    S1 --> S2
+    S2 --> S3
+    S3 --> S4
+    S4 -->|"missing intents"| S2
+    S4 -->|"all target intents mapped"| S5
+    S5 -->|"all intents work"| S6
+    S5 -->|"need more traffic"| S2
+    S6 -.->|"dev mode"| S7
+
+    style S1 fill:#e1f5fe
+    style S2 fill:#e1f5fe
+    style S3 fill:#e8f5e9
+    style S4 fill:#fff3e0
+    style S5 fill:#fff3e0
+    style S6 fill:#e1f5fe
+    style S7 fill:#f3e5f5
+```
+
+**Legend:** blue = agent-driven | green = code-only | orange = agent reviews code output | purple = dev mode optional
 
 ### Step 1: Frame the Target
 
@@ -206,17 +233,25 @@ cross-origin URLs. Navigate to the target subdomain first, then use relative pat
 
 #### Capture Target Binding
 
-`capture start` attaches to ONE CDP target (the first page in the browser
-context). Network events from other tabs or CDP connections are NOT captured —
-including `page.evaluate(fetch(...))` calls on a different tab.
+Capture is **browser-wide**, not single-tab. On start, it attaches HAR + WS
+recording to `pages()[0]`, then auto-attaches to every new tab opened
+afterwards via `context.on('page')`. Pre-existing tabs (opened before capture
+started) are NOT monitored, except `pages()[0]`.
 
-To ensure API calls are captured:
-1. **Close all non-target tabs** before starting capture.
-2. **Navigate the captured tab** to your site — don't open a new tab.
-3. **Run `page.evaluate(fetch(...))` on the SAME page** the capture monitors.
+What this means in practice:
+1. **Start capture FIRST**, then open new tabs — they auto-attach.
+2. **Pre-existing tabs are blind spots.** If you opened tabs before capture,
+   their traffic won't appear in the HAR.
+3. **`page.evaluate(fetch(...))` works** on any monitored page — the initial
+   page or any tab opened after capture started.
+4. **Separate Playwright connections don't work.** A `page.evaluate(fetch())`
+   on a Page from a different Playwright `connect()` call uses a Page object
+   that capture doesn't monitor. Use CDP on the existing browser context, or
+   navigate in a tab that capture already tracks.
 
 **Verification:** After capture, check `summary.byCategory.api`. If it's 0
-despite browsing, the capture was attached to the wrong target.
+despite browsing, traffic likely came from a pre-existing tab or a separate
+Playwright connection.
 
 ```bash
 openweb capture stop
@@ -229,8 +264,8 @@ The capture directory (default `./capture/`) now contains `traffic.har`,
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| HAR has 0 API entries for target site | Capture connected to wrong tab | Close other tabs, start capture, open target in a NEW tab |
-| `page.evaluate(fetch())` not in HAR | Fetch ran on different CDP target | Run fetch on the capture's page (see Capture Target Binding) |
+| HAR has 0 API entries for target site | Browsing happened in a pre-existing tab (opened before capture) | Start capture first, then open a NEW tab for the site |
+| `page.evaluate(fetch())` not in HAR | Fetch ran on a Page from a separate Playwright connection | Use CDP on the capture's browser context, or navigate a monitored tab |
 | `No active capture session` on stop | Stale PID file or process killed | `pkill -f "capture start"`, delete PID file, restart |
 | HAR empty / truncated | Process killed before flush | Stop with `openweb capture stop`, never `kill -9` |
 | Another worker's stop kills your data | Global capture stop | Use Playwright `context.recordHar()` for isolated capture |
@@ -413,16 +448,25 @@ efficient.
 (file:line if code), **Suggested fix** (what would help all sites, not just this one).
 Only upstream improvements — skip site-specific workarounds already resolved in Step 5.
 
+## Incremental Discovery (Existing Sites)
+
+Follow the "Before You Start" fast-path (reads existing DOC.md + openapi.yaml),
+identify gaps, then enter at Step 2 for targeted capture. Continue through
+Steps 3-6, updating DOC.md and PROGRESS.md at install.
+
 ## Multi-Worker Browser Sharing
 
 Multiple workers can share one Chrome browser on the same CDP port:
-- **Open a new tab** for your site. Do NOT close or navigate other workers' tabs.
-- **Capture is browser-wide**, not per-tab. Traffic from all tabs merges into one
-  session. The compile command filters by site URL.
-- For **same-site parallel capture**, use separate browser instances on different
-  CDP ports, or capture sequentially.
-- If `capture start` is already running, skip it — your traffic is already
-  being recorded.
+1. **ONE worker starts capture** — it's browser-wide, not per-tab.
+2. **Each worker opens a NEW tab** after capture starts (auto-attached via
+   `context.on('page')`). Do NOT close or navigate other workers' tabs.
+3. **Workers browse in their own tabs.** All tabs' traffic merges into one
+   HAR. The compile command filters by site URL.
+4. **Last worker to finish** triggers `capture stop`.
+5. For **same-site parallel capture**, use separate browser instances on different
+   CDP ports, or capture sequentially.
+6. If `capture start` is already running (another worker started it), skip it —
+   your new tabs are auto-attached and traffic is already being recorded.
 
 ## Related References
 
