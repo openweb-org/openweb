@@ -1,3 +1,22 @@
+## 2026-03-29: Fix capture model, restore flowchart & incremental discovery
+
+**What changed:**
+- Capture Target Binding: rewrote to reflect actual browser-wide capture behavior (auto-attaches new tabs via `context.on('page')`), replacing incorrect single-target model
+- Capture Troubleshooting: updated causes/fixes to match corrected capture model (pre-existing tabs, separate Playwright connections)
+- Multi-Worker: rewritten as explicit numbered rules (one worker starts capture, each opens new tab, last worker stops)
+- Restored Mermaid flowchart deleted in 0d3ec46 (token-budget cut was too aggressive)
+- Restored Incremental Discovery section deleted in 0d3ec46
+
+**Why:**
+- Capture Target Binding was wrong: said capture attaches to ONE target, advised closing other tabs. Actual code (`src/capture/session.ts:247-270`) attaches to `pages()[0]` + all new tabs via `context.on('page')`. The real failure mode is pre-existing tabs or separate Playwright connections, not "wrong tab".
+- Flowchart and Incremental Discovery provide high value relative to token cost.
+
+**Key files:** `skill/openweb/references/discover.md`
+**Verification:** git diff shows +64/-20 lines; all 4 sections updated surgically
+**Commit:** a3537cc
+**Next:** N8 (mixed-traffic auth warning in compile.md), N9 (ops checklist per archetype), N10 (multi-worker stop warning)
+**Blockers:** None
+
 ## 2026-03-29: Fix N5/N6/N7 — git recovery fast-path, tab switching, SPA search
 
 **What changed:**
