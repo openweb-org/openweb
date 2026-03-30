@@ -1,3 +1,21 @@
+## 2026-03-30: Rediscovery — expanded to 10 ops, all PASS
+
+**What changed:**
+- Recaptured Discord traffic with auth token extraction via webpack_module_walk
+- Used page.evaluate(fetch) with extracted token to hit 12 API endpoints across 3 guilds
+- Compiled 11 clusters from 31 API samples, curated to 10 high-quality read ops
+- New operations: getCurrentUser, listGuilds, getDirectMessages, getGuildInfo, listGuildChannels, getGuildRoles, searchMessages, getPinnedMessages
+- Kept existing: getChannelInfo, getChannelMessages (enriched schemas from prior QA)
+- Dropped: getMyEntitlements, getMyScheduledEvents (low value for messaging archetype)
+- Dropped from compile: createScience (tracking noise), searchGuildMembers (returns 400)
+- Enriched response schemas for all ops from live response data
+- Updated DOC.md with full 10-op coverage, corrected auth documentation
+
+**Why:**
+- Rediscovery to expand from 4 to ~10 ops covering messaging archetype: guilds, channels, messages, DMs, user info, search
+
+**Verification:** All 10 ops verify PASS with --browser. Auth working via webpack_module_walk getToken.
+
 ## 2026-03-30: Release QA — example fixes and param alignment
 
 **What changed:**

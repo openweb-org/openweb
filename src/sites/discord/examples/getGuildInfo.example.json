@@ -1,10 +1,10 @@
 {
-  "operation_id": "getMyScheduledEvents",
+  "operation_id": "getGuildInfo",
   "method": "get",
   "cases": [
     {
       "input": {
-        "guild_ids": "1280234299949449216"
+        "guildId": "1216071219120439316"
       },
       "assertions": {
         "status": 200,

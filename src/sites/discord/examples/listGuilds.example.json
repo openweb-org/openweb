@@ -1,12 +1,9 @@
 {
-  "operation_id": "getMyEntitlements",
+  "operation_id": "listGuilds",
   "method": "get",
   "cases": [
     {
-      "input": {
-        "entitlement_type": 1,
-        "exclude_ended": "true"
-      },
+      "input": {},
       "assertions": {
         "status": 200,
         "response_schema_valid": true

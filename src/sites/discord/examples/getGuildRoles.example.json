@@ -1,0 +1,15 @@
+{
+  "operation_id": "getGuildRoles",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "guildId": "1216071219120439316"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

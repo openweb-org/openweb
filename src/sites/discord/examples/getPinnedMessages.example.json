@@ -1,0 +1,15 @@
+{
+  "operation_id": "getPinnedMessages",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "channelId": "1280234300012494862"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

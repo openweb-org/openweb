@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-03-29T04:25:45.868Z
+    compiled_at: 2026-03-30T23:15:01.161Z
     requires_auth: true
 servers:
   - url: https://discord.com
@@ -18,6 +18,367 @@ servers:
         inject:
           header: Authorization
 paths:
+  /api/v9/users/@me:
+    get:
+      operationId: getCurrentUser
+      summary: "Get current user profile — username, avatar, email, Nitro status, flags"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: a1b2c3d4e5f6a7b8
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  username:
+                    type: string
+                  global_name:
+                    type:
+                      - string
+                      - "null"
+                  avatar:
+                    type:
+                      - string
+                      - "null"
+                  discriminator:
+                    type: string
+                  public_flags:
+                    type: integer
+                  flags:
+                    type: integer
+                  banner:
+                    type:
+                      - string
+                      - "null"
+                  accent_color:
+                    type:
+                      - integer
+                      - "null"
+                  mfa_enabled:
+                    type: boolean
+                  locale:
+                    type: string
+                  premium_type:
+                    type: integer
+                  email:
+                    type: string
+                  verified:
+                    type: boolean
+                  bio:
+                    type: string
+  /api/v9/users/@me/guilds:
+    get:
+      operationId: listGuilds
+      summary: "List current user's guilds — name, icon, owner status, permissions"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: b2c3d4e5f6a7b8c9
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    icon:
+                      type:
+                        - string
+                        - "null"
+                    banner:
+                      type:
+                        - string
+                        - "null"
+                    owner:
+                      type: boolean
+                    permissions:
+                      type: string
+                    features:
+                      type: array
+                      items:
+                        type: string
+  /api/v9/users/@me/channels:
+    get:
+      operationId: getDirectMessages
+      summary: "List DM channels — recipients, last message, flags"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: c3d4e5f6a7b8c9d0
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    type:
+                      type: integer
+                    last_message_id:
+                      type:
+                        - string
+                        - "null"
+                    flags:
+                      type: integer
+                    recipients:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          username:
+                            type: string
+                          global_name:
+                            type:
+                              - string
+                              - "null"
+                          avatar:
+                            type:
+                              - string
+                              - "null"
+  /api/v9/guilds/{guildId}:
+    get:
+      operationId: getGuildInfo
+      summary: "Get guild details — name, icon, owner, roles, member count, features, premium tier"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: d4e5f6a7b8c9d0e1
+          tool_version: 2
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Discord guild (server) snowflake ID"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  icon:
+                    type:
+                      - string
+                      - "null"
+                  description:
+                    type:
+                      - string
+                      - "null"
+                  owner_id:
+                    type: string
+                  region:
+                    type: string
+                  afk_timeout:
+                    type: integer
+                  verification_level:
+                    type: integer
+                  max_members:
+                    type: integer
+                  premium_tier:
+                    type: integer
+                  premium_subscription_count:
+                    type: integer
+                  preferred_locale:
+                    type: string
+                  nsfw:
+                    type: boolean
+                  nsfw_level:
+                    type: integer
+                  features:
+                    type: array
+                    items:
+                      type: string
+                  roles:
+                    type: array
+                    items:
+                      type: object
+                  emojis:
+                    type: array
+                    items:
+                      type: object
+                  stickers:
+                    type: array
+                    items:
+                      type: object
+  /api/v9/guilds/{guildId}/channels:
+    get:
+      operationId: listGuildChannels
+      summary: "List channels in a guild — name, type, position, topic, permission overwrites"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: e5f6a7b8c9d0e1f2
+          tool_version: 2
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Discord guild (server) snowflake ID"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    type:
+                      type: integer
+                    name:
+                      type: string
+                    guild_id:
+                      type: string
+                    position:
+                      type: integer
+                    parent_id:
+                      type:
+                        - string
+                        - "null"
+                    topic:
+                      type:
+                        - string
+                        - "null"
+                    nsfw:
+                      type: boolean
+                    rate_limit_per_user:
+                      type: integer
+                    flags:
+                      type: integer
+                    permission_overwrites:
+                      type: array
+                      items:
+                        type: object
+                    last_message_id:
+                      type:
+                        - string
+                        - "null"
+  /api/v9/guilds/{guildId}/roles:
+    get:
+      operationId: getGuildRoles
+      summary: "List roles in a guild — name, permissions, color, position, hoisted"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: f6a7b8c9d0e1f2a3
+          tool_version: 2
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Discord guild (server) snowflake ID"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    description:
+                      type:
+                        - string
+                        - "null"
+                    permissions:
+                      type: string
+                    position:
+                      type: integer
+                    color:
+                      type: integer
+                    hoist:
+                      type: boolean
+                    managed:
+                      type: boolean
+                    mentionable:
+                      type: boolean
+                    flags:
+                      type: integer
+  /api/v9/guilds/{guildId}/messages/search:
+    get:
+      operationId: searchMessages
+      summary: "Search messages in a guild — matches with context, total results count"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: a7b8c9d0e1f2a3b4
+          tool_version: 2
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Discord guild (server) snowflake ID"
+        - name: content
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Search query text"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_results:
+                    type: integer
+                  messages:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: object
+                  analytics_id:
+                    type: string
   /api/v9/channels/{channelId}:
     get:
       operationId: getChannelInfo
@@ -169,18 +530,6 @@ paths:
                             - "null"
                         public_flags:
                           type: integer
-                        banner:
-                          type:
-                            - string
-                            - "null"
-                        accent_color:
-                          type:
-                            - integer
-                            - "null"
-                        banner_color:
-                          type:
-                            - string
-                            - "null"
                     timestamp:
                       type: string
                     edited_timestamp:
@@ -219,30 +568,22 @@ paths:
                       type: array
                       items:
                         type: object
-  /api/v9/users/@me/entitlements:
+  /api/v9/channels/{channelId}/pins:
     get:
-      operationId: getMyEntitlements
-      summary: "Get current user's entitlements — Nitro subscriptions, boosts, premium features"
+      operationId: getPinnedMessages
+      summary: "Get pinned messages in a channel"
       x-openweb:
         permission: read
         build:
-          stable_id: 05b926f7a81ef9ef
+          stable_id: b8c9d0e1f2a3b4c5
           tool_version: 2
       parameters:
-        - name: entitlement_type
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Filter by entitlement type"
-          example: 1
-        - name: exclude_ended
-          in: query
-          required: false
+        - name: channelId
+          in: path
+          required: true
           schema:
             type: string
-          description: "Exclude expired entitlements"
-          example: "true"
+          description: "Discord channel snowflake ID"
       responses:
         "200":
           description: Success.
@@ -252,92 +593,3 @@ paths:
                 type: array
                 items:
                   type: object
-                  properties:
-                    id:
-                      type: string
-                    sku_id:
-                      type: string
-                    application_id:
-                      type: string
-                    user_id:
-                      type: string
-                    type:
-                      type: integer
-                    deleted:
-                      type: boolean
-                    starts_at:
-                      type:
-                        - string
-                        - "null"
-                    ends_at:
-                      type:
-                        - string
-                        - "null"
-                    guild_id:
-                      type:
-                        - string
-                        - "null"
-                    subscription_id:
-                      type:
-                        - string
-                        - "null"
-  /api/v9/users/@me/scheduled-events:
-    get:
-      operationId: getMyScheduledEvents
-      summary: "Get current user's scheduled events across guilds"
-      x-openweb:
-        permission: read
-        build:
-          stable_id: 7994b7c3e1e5ea5d
-          tool_version: 2
-      parameters:
-        - name: guild_ids
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Comma-separated guild snowflake IDs to filter events"
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    guild_id:
-                      type: string
-                    channel_id:
-                      type:
-                        - string
-                        - "null"
-                    creator_id:
-                      type: string
-                    name:
-                      type: string
-                    description:
-                      type:
-                        - string
-                        - "null"
-                    scheduled_start_time:
-                      type: string
-                    scheduled_end_time:
-                      type:
-                        - string
-                        - "null"
-                    privacy_level:
-                      type: integer
-                    status:
-                      type: integer
-                    entity_type:
-                      type: integer
-                    entity_id:
-                      type:
-                        - string
-                        - "null"
-                    user_count:
-                      type: integer

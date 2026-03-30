@@ -1,0 +1,16 @@
+{
+  "operation_id": "searchMessages",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "guildId": "1216071219120439316",
+        "content": "hello"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
