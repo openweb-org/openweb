@@ -1,3 +1,14 @@
+## 2026-03-30: Add --write flag to verify, safe_mutation TODO
+
+**What changed:**
+- `openweb verify <site> --write` includes write/delete ops (transact always excluded)
+- For developer use during compile QA and pre-release testing
+- TODO comments for future `safe_mutation` value (idempotent writes like/follow/bookmark)
+
+**Key files:** `src/lifecycle/verify.ts`, `src/commands/verify.ts`, `src/cli.ts`, `src/compiler/types-v2.ts`
+**Commit:** a93ef5b
+**Blockers:** None
+
 ## 2026-03-30: Add --browser flag to verify command
 
 **What changed:**

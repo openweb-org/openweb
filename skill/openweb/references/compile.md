@@ -356,7 +356,9 @@ For each operation, check `x-openweb.permission`:
 
 The compiler sets `replaySafety` per operation (`safe_read` or `unsafe_mutation`)
 and writes it to `examples/*.example.json` as `replay_safety`. This controls
-verify behavior — write ops are skipped during verify by default.
+verify behavior — write ops are skipped during verify by default. Use
+`openweb verify <site> --write` to include write/delete ops during QA
+(transact ops are always excluded).
 
 Auto-curation defaults are usually correct, but verify that GraphQL queries using
 POST method have `permission: read`, not `permission: write`. The auto-curation
@@ -401,9 +403,10 @@ Write operations require extra attention beyond read ops:
    which causes `openweb verify` to skip write ops by default.
 4. **Safety level:** Document the safety level (SAFE/CAUTION/NEVER) in DOC.md's
    operations table.
-5. **Verify:** Write ops are NOT verified by `openweb verify`. To test, use
-   `openweb <site> exec <op> '{...}'` manually in a safe context (e.g., like a
-   post you own, then unlike it).
+5. **Verify:** Use `openweb verify <site> --write` to include write/delete ops
+   during QA (transact ops are always excluded). Alternatively, test manually:
+   `openweb <site> exec <op> '{...}'` in a safe context (e.g., like a post you
+   own, then unlike it).
 
 ### Step 4: Verify
 
