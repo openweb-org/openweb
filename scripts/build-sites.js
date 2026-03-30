@@ -25,7 +25,7 @@ for (const site of sites) {
   const dstSite = path.join(outDir, site.name)
 
   // Top-level files to copy
-  const topFiles = ['openapi.yaml', 'manifest.json', 'DOC.md', 'PROGRESS.md']
+  const topFiles = ['openapi.yaml', 'asyncapi.yaml', 'manifest.json', 'DOC.md', 'PROGRESS.md']
   const filesToCopy = topFiles.filter((f) => existsSync(path.join(srcSite, f)))
 
   // Check for compiled .js adapters
@@ -61,6 +61,18 @@ for (const site of sites) {
     for (const f of readdirSync(testsDir)) {
       if (!f.endsWith('.test.json')) continue
       cpSync(path.join(testsDir, f), path.join(dstTests, f))
+      copied++
+    }
+  }
+
+  // Copy example files
+  const examplesDir = path.join(srcSite, 'examples')
+  if (existsSync(examplesDir)) {
+    const dstExamples = path.join(dstSite, 'examples')
+    mkdirSync(dstExamples, { recursive: true })
+    for (const f of readdirSync(examplesDir)) {
+      if (!f.endsWith('.example.json')) continue
+      cpSync(path.join(examplesDir, f), path.join(dstExamples, f))
       copied++
     }
   }
