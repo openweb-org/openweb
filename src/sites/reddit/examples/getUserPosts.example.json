@@ -1,0 +1,15 @@
+{
+  "operation_id": "getUserPosts",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "username": "spez"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
