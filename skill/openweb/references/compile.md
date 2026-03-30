@@ -414,10 +414,13 @@ After editing the spec, verify it works at runtime. Two levels: batch verify
 
 ```bash
 openweb verify <site>
+openweb verify <site> --browser   # also verify page-transport ops (auto-starts browser)
 ```
 
-This runs the lifecycle verifier against the installed site package. Its output
-format is different from `verify-report.json`.
+This runs the lifecycle verifier against the installed site package.
+
+For sites that use `transport: page`, use `--browser` — it auto-starts the managed
+browser if not already running and verifies page-transport ops that would otherwise fail.
 
 `openweb verify <site>` reports lifecycle statuses:
 - `PASS` -- operation/site verified successfully

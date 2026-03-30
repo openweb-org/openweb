@@ -1,3 +1,19 @@
+## 2026-03-30: Add --browser flag to verify command
+
+**What changed:**
+- `openweb verify <site> --browser` auto-starts managed browser and verifies page-transport ops
+- Browser connection shared across all ops, disconnected after verify
+- Managed browser process left running (user may want it for subsequent commands)
+
+**Why:**
+- 29 sites use page transport and always FAIL verify without browser. No way to verify them without manual `openweb browser start` first.
+
+**Key files:** `src/commands/verify.ts`, `src/cli.ts`
+**Verification:** `pnpm build` passes, `pnpm dev verify stackoverflow` PASS
+**Commit:** 79483f1
+**Next:** None
+**Blockers:** None
+
 ## 2026-03-30: Unify verify — single verify system for compile + health check
 
 **What changed:**

@@ -92,14 +92,17 @@ Transforms captured traffic into a site package. Requires `--capture-dir` (manua
 ## Verify
 
 ```bash
-openweb verify <site>                        # single site
+openweb verify <site>                        # single site (node-transport ops only)
+openweb verify <site> --browser              # include page-transport ops (auto-starts browser)
 openweb verify --all                         # all sites sequentially
+openweb verify --all --browser               # all sites with browser support
 openweb verify --all --report json           # machine-readable drift report
 openweb verify --all --report markdown       # reviewable markdown report
 ```
 
 Site-level status vocabulary: `PASS` | `DRIFT` | `FAIL` | `auth_expired`
 
+`--browser` auto-starts the managed browser if not already running.
 `--report` is only valid with `--all`.
 
 ## Registry
