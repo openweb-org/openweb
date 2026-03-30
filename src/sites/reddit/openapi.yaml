@@ -72,6 +72,28 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  kind:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      after:
+                        type: string
+                        nullable: true
+                      dist:
+                        type: integer
+                      modhash:
+                        type: string
+                      children:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            kind:
+                              type: string
+                            data:
+                              type: object
 
   /r/popular.json:
     get:
@@ -103,6 +125,28 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  kind:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      after:
+                        type: string
+                        nullable: true
+                      dist:
+                        type: integer
+                      modhash:
+                        type: string
+                      children:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            kind:
+                              type: string
+                            data:
+                              type: object
 
   /search.json:
     get:
@@ -175,6 +219,28 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  kind:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      after:
+                        type: string
+                        nullable: true
+                      dist:
+                        type: integer
+                      facets:
+                        type: object
+                      children:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            kind:
+                              type: string
+                            data:
+                              type: object
 
   /r/{subreddit}/comments/{post_id}.json:
     get:
@@ -230,6 +296,27 @@ paths:
                 type: array
                 items:
                   type: object
+                  properties:
+                    kind:
+                      type: string
+                    data:
+                      type: object
+                      properties:
+                        after:
+                          type: string
+                          nullable: true
+                        dist:
+                          type: integer
+                          nullable: true
+                        children:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              kind:
+                                type: string
+                              data:
+                                type: object
 
   /user/{username}/about.json:
     get:
@@ -257,6 +344,40 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  kind:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      id:
+                        type: string
+                      verified:
+                        type: boolean
+                      is_gold:
+                        type: boolean
+                      is_mod:
+                        type: boolean
+                      is_employee:
+                        type: boolean
+                      link_karma:
+                        type: integer
+                      comment_karma:
+                        type: integer
+                      total_karma:
+                        type: integer
+                      created:
+                        type: number
+                      created_utc:
+                        type: number
+                      icon_img:
+                        type: string
+                      has_verified_email:
+                        type: boolean
+                      subreddit:
+                        type: object
 
   /user/{username}.json:
     get:
@@ -305,6 +426,28 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  kind:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      after:
+                        type: string
+                        nullable: true
+                      dist:
+                        type: integer
+                      modhash:
+                        type: string
+                      children:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            kind:
+                              type: string
+                            data:
+                              type: object
 
   /r/{subreddit}/about.json:
     get:
@@ -332,6 +475,44 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  kind:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      display_name:
+                        type: string
+                      display_name_prefixed:
+                        type: string
+                      title:
+                        type: string
+                      public_description:
+                        type: string
+                      description:
+                        type: string
+                      subscribers:
+                        type: integer
+                      accounts_active:
+                        type: integer
+                        nullable: true
+                      created:
+                        type: number
+                      created_utc:
+                        type: number
+                      icon_img:
+                        type: string
+                      community_icon:
+                        type: string
+                      header_img:
+                        type: string
+                        nullable: true
+                      quarantine:
+                        type: boolean
+                      over18:
+                        type: boolean
+                      subreddit_type:
+                        type: string
 
   /api/vote:
     post:
@@ -419,3 +600,32 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  name:
+                    type: string
+                  id:
+                    type: string
+                  is_employee:
+                    type: boolean
+                  verified:
+                    type: boolean
+                  is_gold:
+                    type: boolean
+                  is_mod:
+                    type: boolean
+                  link_karma:
+                    type: integer
+                  comment_karma:
+                    type: integer
+                  total_karma:
+                    type: integer
+                  created:
+                    type: number
+                  created_utc:
+                    type: number
+                  icon_img:
+                    type: string
+                  has_verified_email:
+                    type: boolean
+                  features:
+                    type: object
