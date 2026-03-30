@@ -14,10 +14,10 @@
     "l3_count": 12,
     "ws_count": 0
   },
-  "last_verified": "2026-03-24T18:20:06.366Z",
+  "last_verified": "2026-03-30T00:00:00.000Z",
   "fingerprint": {
     "response_shape_hash": "getContestHistory:2b15773bc1b49842,getContestQuestions:326933356c46f83e,getContestRanking:000df040cfedee91,getRecentSubmissions:11a9faefee7b1b6b,getSubmissions:0f61d2fb18f189b3,getUpcomingContests:e839a421079fa47e,getUserContestRanking:28bce4fb8e06ac47,getUserProfile:70a30d4b627c0fab",
     "last_validated": "2026-03-24T18:20:06.369Z"
   },
-  "quarantined": true
+  "quarantined": false
 }

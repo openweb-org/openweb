@@ -1,0 +1,15 @@
+{
+  "operation_id": "getContestQuestions",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "contestSlug": "weekly-contest-438"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "operation_id": "getProblemList",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "limit": 3,
+        "difficulty": "EASY"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

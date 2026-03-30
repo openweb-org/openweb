@@ -3,6 +3,28 @@
 ## Overview
 Coding challenge and competitive programming platform. Search problems, get daily challenges, browse contests, view user profiles and contest rankings via LeetCode's GraphQL API.
 
+## Quick Start
+```bash
+# Today's daily challenge
+openweb leetcode exec getDailyChallenge '{}'
+
+# Browse easy problems
+openweb leetcode exec getProblemList '{"limit": 5, "difficulty": "EASY"}'
+
+# User profile and contest rating
+openweb leetcode exec getUserProfile '{"username": "lee215"}'
+openweb leetcode exec getUserContestRanking '{"username": "lee215"}'
+
+# Community solutions for a problem
+openweb leetcode exec getSolutionArticles '{"questionSlug": "two-sum", "first": 5}'
+
+# Upcoming contests
+openweb leetcode exec getUpcomingContests '{}'
+
+# Contest leaderboard
+openweb leetcode exec getContestRanking '{"contestSlug": "weekly-contest-438", "page": 1}'
+```
+
 ## Operations
 | Operation | Intent | Method | Notes |
 |-----------|--------|--------|-------|
@@ -43,6 +65,7 @@ Coding challenge and competitive programming platform. Search problems, get dail
 - Contest ranking uses REST endpoint with JSON response, transformed in adapter
 
 ## Known Issues
+- **Search requires login**: `searchProblems` now requires auth (LEETCODE_SESSION cookie) — use `getProblemList` for unauthenticated browsing
 - **Submissions require login**: `getSubmissions` returns `null` submissions array when not authenticated
 - **Rate limiting**: LeetCode may rate-limit heavy GraphQL usage; no explicit headers documented
 - **Premium problems**: `paidOnly: true` problems have restricted content

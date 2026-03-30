@@ -1,0 +1,16 @@
+{
+  "operation_id": "searchProblems",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "keyword": "binary search",
+        "limit": 3
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

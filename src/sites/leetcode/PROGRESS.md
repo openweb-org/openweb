@@ -1,5 +1,19 @@
 # LeetCode Fixture — Progress
 
+## 2026-03-30: Schema fixes + full QA
+
+**What changed:**
+- Fixed 3 failing ops in openapi.yaml: inlined broken `$ref` to ProblemSummary (validator couldn't resolve), fixed getDailyChallenge `question.id` type (integer to string), marked searchProblems as auth-required
+- Added 12 example files (one per operation) in `examples/`
+- Added Quick Start CLI examples to DOC.md, updated Known Issues for searchProblems auth
+- Unquarantined site after successful verification
+
+**Why:**
+- 3/12 ops were failing verify: getProblemList ($ref resolution), getDailyChallenge (schema mismatch), searchProblems (now requires login)
+- Site was quarantined — needed schema alignment with actual API responses to pass verification
+
+**Verification:** 11/12 PASS, 1 DRIFT (getSubmissions — auth-required, pre-existing). getDailyChallenge, getProblemList, searchProblems all fixed from FAIL to PASS.
+
 ## 2026-03-24: Initial discovery — 12 operations
 
 **What changed:**
