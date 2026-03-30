@@ -364,14 +364,35 @@ Auto-curation defaults are usually correct, but verify that GraphQL queries usin
 POST method have `permission: read`, not `permission: write`. The auto-curation
 already handles this (checks `graphql.operationType === 'query'`), but double-check.
 
-#### 3e. Review Examples for PII
+#### 3e. Review Response Schemas
+
+Check the 200 response schemas in openapi.yaml. The compiler infers schemas from
+captured responses, but hand-crafted or under-sampled specs may have bare schemas.
+
+**Bare schemas to fix:** `type: object` with no `properties` for responses that
+return non-empty JSON. This means the schema carries no information — agents can't
+know what fields the response contains.
+
+**How to enrich:**
+1. For each read op with a bare `type: object` response, exec it:
+   `openweb <site> exec <op> '{"param":"value"}'`
+2. From the actual JSON response, infer a schema (properties, types, nested objects)
+3. Replace the bare schema in openapi.yaml
+
+**Keep schemas concise** — max 2-3 levels deep. Use `type: object` for deeply nested
+sub-objects. For arrays, describe the item schema. Mark nullable fields.
+
+**Acceptable bare schemas:** operations that return truly opaque objects (e.g., raw
+API proxy responses) or empty 204 responses.
+
+#### 3f. Review Examples for PII
 
 Check parameter examples in the spec and example fixtures (`examples/*.example.json`):
 - Real usernames, emails, phone numbers, addresses? Replace with generic values.
 - Auth tokens or session IDs in examples? Remove.
 - The scrubber catches common patterns, but flag anything it might miss.
 
-#### 3f. Extraction Complexity Rule
+#### 3g. Extraction Complexity Rule
 
 If an operation uses SSR extraction and the `expression` exceeds ~5 lines,
 extract it into an adapter file:
@@ -391,7 +412,7 @@ x-openweb:
 **Inline is OK for:** simple `ssr_next_data`, `page_global`, short `html_selector` (1-3 lines).
 **Adapter is required for:** multi-line DOM queries, regex parsing, complex data transformation.
 
-#### 3g. Curate Write Operations
+#### 3h. Curate Write Operations
 
 Write operations require extra attention beyond read ops:
 
