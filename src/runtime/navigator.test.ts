@@ -35,7 +35,7 @@ describe('navigator', () => {
   })
 
   it('renders request body fields for JSON operations', async () => {
-    const output = await renderOperation('youtube', 'getVideoInfo', false)
+    const output = await renderOperation('youtube', 'getVideoDetail', false)
 
     expect(output).toContain('Body:')
     expect(output).toMatch(/videoId.*\[required\]/)
