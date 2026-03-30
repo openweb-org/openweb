@@ -1,12 +1,10 @@
 {
-  "operation_id": "listChannelsMessages",
+  "operation_id": "getMyScheduledEvents",
   "method": "get",
   "cases": [
     {
       "input": {
-        "id": 1,
-        "before": 1,
-        "limit": 1
+        "guild_ids": 1
       },
       "assertions": {
         "status": 200,

@@ -1,10 +1,10 @@
 {
-  "operation_id": "listUsers@meScheduledEvents",
+  "operation_id": "getChannelInfo",
   "method": "get",
   "cases": [
     {
       "input": {
-        "guild_ids": 1
+        "id": 1
       },
       "assertions": {
         "status": 200,

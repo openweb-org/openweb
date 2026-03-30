@@ -1,10 +1,12 @@
 {
-  "operation_id": "getChannel",
+  "operation_id": "getChannelMessages",
   "method": "get",
   "cases": [
     {
       "input": {
-        "id": 1
+        "id": 1,
+        "before": 1,
+        "limit": 1
       },
       "assertions": {
         "status": 200,
