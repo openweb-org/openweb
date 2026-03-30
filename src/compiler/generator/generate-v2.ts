@@ -228,6 +228,7 @@ async function emitOpenApi(
     const testShape = {
       operation_id: operationId,
       method,
+      replay_safety: op.replaySafety,
       ...(op.exampleRequestBody !== undefined ? { request_body: op.exampleRequestBody } : {}),
       cases: [
         {

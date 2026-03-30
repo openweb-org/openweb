@@ -2,7 +2,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 
 import { executeOperation, type ExecuteDependencies } from '../runtime/executor.js'
-import { listSites, resolveSiteRoot } from '../lib/openapi.js'
+import { listSites, resolveSiteRoot, loadOpenApi, listOperations, pathExists } from '../lib/openapi.js'
 import { OpenWebError } from '../lib/errors.js'
 import { computeResponseFingerprint } from './fingerprint.js'
 import { loadManifest, saveManifest } from '../lib/manifest.js'
@@ -12,7 +12,6 @@ import { WsConnectionPool } from '../runtime/ws-pool.js'
 import { openWsSession } from '../runtime/ws-runtime.js'
 import { executeWsOperation, streamWsOperation } from '../runtime/ws-executor.js'
 import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
-import { pathExists } from '../lib/openapi.js'
 
 export type DriftType = 'schema_drift' | 'auth_drift' | 'endpoint_removed' | 'error'
 
@@ -61,6 +60,7 @@ interface HttpTestFile {
   readonly operation_id: string
   readonly protocol?: 'http'
   readonly method?: string
+  readonly replay_safety?: 'safe_read' | 'unsafe_mutation'
   readonly cases: HttpTestCase[]
 }
 
@@ -85,6 +85,20 @@ function isRetriable(error: unknown): boolean {
   return error instanceof OpenWebError && error.payload.failureClass === 'retriable'
 }
 
+function resolveReplaySafety(
+  testFile: TestFile,
+  permissionMap: Map<string, string>,
+): 'safe_read' | 'unsafe_mutation' {
+  if ('replay_safety' in testFile && testFile.replay_safety) {
+    return testFile.replay_safety === 'unsafe_mutation' ? 'unsafe_mutation' : 'safe_read'
+  }
+  const perm = permissionMap.get(testFile.operation_id)
+  if (perm === 'read') return 'safe_read'
+  if (perm) return 'unsafe_mutation'
+  if (!testFile.method || testFile.method === 'get' || testFile.method === 'head') return 'safe_read'
+  return 'unsafe_mutation'
+}
+
 /**
  * Verify a single site: run all test cases, compare fingerprints.
  */
@@ -97,6 +111,19 @@ export async function verifySite(
   const storedFingerprints = manifest?.fingerprint?.response_shape_hash
     ? parseStoredFingerprints(manifest.fingerprint.response_shape_hash)
     : new Map<string, string>()
+
+  // Build permission lookup for replaySafety resolution
+  const permissionMap = new Map<string, string>()
+  try {
+    const openapi = await loadOpenApi(site)
+    for (const ref of listOperations(openapi)) {
+      const ext = ref.operation['x-openweb'] as Record<string, unknown> | undefined
+      if (ext?.permission) permissionMap.set(ref.operation.operationId, ext.permission as string)
+    }
+  } catch (err) {
+    // Swallow file-not-found (WS-only sites have no openapi.yaml) — re-throw parse/validation errors
+    if (!(err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT')) throw err
+  }
 
   const examplesDir = path.join(siteRoot, 'examples')
   // Backward compat: fall back to legacy 'tests/' directory
@@ -132,8 +159,8 @@ export async function verifySite(
     const raw = await readFile(path.join(activeDir, fileName), 'utf8')
     const testFile = JSON.parse(raw) as TestFile
 
-    // Only verify GET operations — mutations are not safe to replay
-    if (testFile.protocol !== 'ws' && testFile.method && testFile.method !== 'get') {
+    // Skip unsafe mutations — not safe to replay
+    if (testFile.protocol !== 'ws' && resolveReplaySafety(testFile, permissionMap) === 'unsafe_mutation') {
       continue
     }
 

@@ -14,7 +14,7 @@
 
 **Key files:** `src/lifecycle/verify.ts`, `src/commands/compile.ts`, `src/compiler/generator/generate-v2.ts`, `src/cli.ts`, `src/compiler/types-v2.ts`
 **Verification:** `pnpm build` passes, 717/718 tests pass (1 pre-existing navigator test failure)
-**Commit:** (pending)
+**Commit:** 7dbfc17, 1b48e1d
 **Next:** None
 **Blockers:** None
 

@@ -2,24 +2,19 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import type { Browser } from 'playwright'
-import { connectWithRetry } from '../capture/connection.js'
 import { analyzeCapture } from '../compiler/analyzer/analyze.js'
 import { applyCuration } from '../compiler/curation/apply-curation.js'
 import { generateFromPlan } from '../compiler/generator/generate-v2.js'
 import { cleanupRecordingDir, runScriptedRecording } from '../compiler/recorder.js'
-import type { AnalysisReport, CuratedCompilePlan, CurationDecisionSet, VerifyReport } from '../compiler/types-v2.js'
-import { verifyPackage } from '../compiler/verify-v2.js'
-import { CDP_ENDPOINT } from '../lib/config.js'
+import type { AnalysisReport, CuratedCompilePlan, CurationDecisionSet } from '../compiler/types-v2.js'
 import { OpenWebError } from '../lib/errors.js'
+import { verifySite, type SiteVerifyResult } from '../lifecycle/verify.js'
 
 interface CompileArgs {
   readonly url: string
   readonly script?: string
   readonly captureDir?: string
   readonly interactive?: boolean
-  readonly probe?: boolean
-  readonly cdpEndpoint?: string
   readonly curation?: string
   readonly allowHosts?: readonly string[]
 }
@@ -142,63 +137,22 @@ export async function compileSite(
   const pkg = await generateFromPlan(plan, options.outputBaseDir)
 
   // Phase 5: Verify
-  let verifyReport: VerifyReport | undefined
+  let verifyResult: SiteVerifyResult | undefined
   if (options.verifyReplay !== false) {
-    let cookies: string | undefined
-
-    if (args.probe) {
-      const cdpEndpoint = args.cdpEndpoint ?? CDP_ENDPOINT
-      let browser: Browser | undefined
-      try {
-        browser = await connectWithRetry(cdpEndpoint, 1)
-      } catch {
-        throw new OpenWebError({
-          error: 'execution_failed',
-          code: 'EXECUTION_FAILED',
-          message: '--probe requires a managed browser. Could not connect to CDP.',
-          action: "Run `openweb browser start` first, then retry with --probe.",
-          retriable: true,
-          failureClass: 'needs_browser',
-        })
-      }
-      try {
-        const pages = browser.contexts()[0]?.pages() ?? []
-        const page = pages[0]
-        if (page) {
-          const browserCookies = await page.context().cookies()
-          cookies = browserCookies.map((c) => `${c.name}=${c.value}`).join('; ')
-        }
-      } finally {
-        await browser.close()
-      }
-    }
-
-    verifyReport = await verifyPackage({
-      operations: plan.operations.map((op) => ({
-        operationId: op.operationId,
-        method: op.method,
-        host: op.host,
-        pathTemplate: op.pathTemplate,
-        parameters: op.parameters,
-        exampleInput: op.exampleInput,
-        replaySafety: op.replaySafety,
-        requestBody: op.exampleRequestBody,
-      })),
-      auth: cookies ? { cookies } : undefined,
-    })
+    verifyResult = await verifySite(site)
   }
 
-  const verifiedCount = verifyReport
-    ? verifyReport.results.filter((r) => r.overall === 'pass').length
+  const verifiedCount = verifyResult
+    ? verifyResult.operations.filter((o) => o.status === 'PASS').length
     : 0
   const wsOpCount = plan.ws?.operations.length ?? 0
   const totalOpCount = plan.operations.length + wsOpCount
 
   // Write remaining report artifacts (analysis.json already written before curation)
-  await writeCompileReportV2(reportDir, { report, verifyReport, plan })
+  await writeCompileReportV2(reportDir, { report, verifyResult, plan })
 
   if (options.emitSummary) {
-    const parts = [`Compiled ${plan.operations.length} HTTP tool(s), verified ${verifiedCount}/${plan.operations.length}`]
+    const parts = [`Compiled ${totalOpCount} tool(s), verified ${verifiedCount}/${totalOpCount}`]
     if (wsOpCount > 0) parts.push(`${wsOpCount} WS operation(s)`)
     parts.push(`Output: ${pkg.outputRoot}`)
     process.stderr.write(`Report: ${reportDir}\n`)
@@ -217,27 +171,22 @@ export async function compileSite(
 
 interface CompileReportV2Data {
   readonly report: AnalysisReport
-  readonly verifyReport?: VerifyReport
+  readonly verifyResult?: SiteVerifyResult
   readonly plan: CuratedCompilePlan
 }
 
 function buildSummaryV2(data: CompileReportV2Data): string {
-  const { report, verifyReport, plan } = data
+  const { report, verifyResult, plan } = data
   const httpCount = plan.operations.length
 
   let verifyBreakdown: string
-  if (verifyReport) {
-    const pass = verifyReport.results.filter((r) => r.overall === 'pass').length
-    const skippedWrite = verifyReport.results.filter(
-      (r) => r.overall === 'skipped' && !r.attempts.some((a) => a.reason === 'needs_browser'),
-    ).length
-    const skippedPage = verifyReport.results.filter(
-      (r) => r.overall === 'skipped' && r.attempts.some((a) => a.reason === 'needs_browser'),
-    ).length
-    const fail = verifyReport.results.filter((r) => r.overall === 'fail').length
+  if (verifyResult) {
+    const ops = verifyResult.operations
+    const pass = ops.filter((o) => o.status === 'PASS').length
+    const drift = ops.filter((o) => o.status === 'DRIFT').length
+    const fail = ops.filter((o) => o.status === 'FAIL').length
     const segments = [`${pass} pass`]
-    if (skippedWrite > 0) segments.push(`${skippedWrite} skipped (write)`)
-    if (skippedPage > 0) segments.push(`${skippedPage} skipped (page)`)
+    if (drift > 0) segments.push(`${drift} drift`)
     if (fail > 0) segments.push(`${fail} fail (see verify-report.json)`)
     verifyBreakdown = segments.join(', ')
   } else {
@@ -258,8 +207,8 @@ async function writeCompileReportV2(reportDir: string, data: CompileReportV2Data
   await Promise.all([
     fs.writeFile(path.join(reportDir, 'summary.txt'), `${buildSummaryV2(data)}\n`),
     fs.writeFile(path.join(reportDir, 'analysis-full.json'), `${JSON.stringify(data.report, null, 2)}\n`),
-    data.verifyReport
-      ? fs.writeFile(path.join(reportDir, 'verify-report.json'), `${JSON.stringify(data.verifyReport, null, 2)}\n`)
+    data.verifyResult
+      ? fs.writeFile(path.join(reportDir, 'verify-report.json'), `${JSON.stringify(data.verifyResult, null, 2)}\n`)
       : Promise.resolve(),
   ])
 }

@@ -276,6 +276,7 @@ describe('generateFromPlan', () => {
       expect(files).toContain('examples/getUser.example.json')
       const testData = await readJson(path.join(outputRoot, 'examples', 'getUser.example.json'))
       expect(testData.operation_id).toBe('getUser')
+      expect(testData.replay_safety).toBe('safe_read')
       expect(testData.request_body).toEqual({ name: 'SCRUBBED_NAME' })
 
       const cases = testData.cases as Array<Record<string, unknown>>
