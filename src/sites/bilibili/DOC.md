@@ -18,6 +18,9 @@ openweb bilibili exec getVideoDetail '{"bvid": "BV1MBXPBtEbk"}'
 # Get video comments
 openweb bilibili exec getVideoComments '{"oid": 123456, "type": 1}'
 
+# Get danmaku (bullet comments) — oid is the CID from getVideoDetail
+openweb bilibili exec getDanmaku '{"oid": 1176840, "segment_index": 1}'
+
 # Get user profile
 openweb bilibili exec getUserProfile '{"mid": 1695320}'
 
@@ -33,12 +36,13 @@ openweb bilibili exec likeVideo '{"aid": 123456, "like": 1}'
 
 ## Operations
 
-### Read (7 ops)
+### Read (8 ops)
 | Operation | Description | Key Params |
 |-----------|-------------|------------|
 | searchVideos | Search videos by keyword | `keyword` (required), `page`, `page_size` |
 | getVideoDetail | Full video metadata, stats, tags | `bvid` (required) |
 | getVideoComments | Comments with replies | `oid` (required), `type`, `mode` |
+| getDanmaku | Bullet comments (弹幕) decoded from protobuf | `oid` (required, use CID from getVideoDetail), `segment_index`, `type` |
 | getPopularVideos | Trending/popular videos | `pn`, `ps` |
 | getUserProfile | User profile, avatar, bio, level | `mid` (required) |
 | searchUserVideos | User's uploaded videos (paginated, sortable) | `mid` (required), `pn`, `ps`, `order` |

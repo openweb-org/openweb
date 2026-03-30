@@ -216,6 +216,130 @@ async function getRecommendedFeed(page: Page, params: Record<string, unknown>): 
   })
 }
 
+/* ---------- danmaku (protobuf decode in browser) ---------- */
+
+/**
+ * Fetch a protobuf endpoint in browser context and decode danmaku elems.
+ * Bilibili's /x/v2/dm/wbi/web/seg.so returns DmSegMobileReply protobuf:
+ *   message DmSegMobileReply { repeated DanmakuElem elems = 1; }
+ *   message DanmakuElem {
+ *     int64 id=1; int32 progress=2; int32 mode=3; int32 fontsize=4;
+ *     uint32 color=5; string midHash=6; string content=7; int64 ctime=8;
+ *   }
+ * We decode just the fields agents care about: content, progress, mode, color.
+ */
+async function fetchProtobufDanmaku(
+  page: Page,
+  apiPath: string,
+  params: Record<string, unknown>,
+): Promise<unknown> {
+  return page.evaluate(
+    async ({ path, qs }) => {
+      const url = new URL(path, 'https://api.bilibili.com')
+      for (const [k, v] of Object.entries(qs)) {
+        if (v !== undefined && v !== null) url.searchParams.set(k, String(v))
+      }
+      const resp = await fetch(url.toString(), { credentials: 'include' })
+      const buf = await resp.arrayBuffer()
+      const bytes = new Uint8Array(buf)
+
+      // Minimal protobuf decoder for DmSegMobileReply
+      let pos = 0
+      function readVarint(): number {
+        let result = 0, shift = 0
+        while (pos < bytes.length) {
+          const b = bytes[pos++]
+          result |= (b & 0x7f) << shift
+          if ((b & 0x80) === 0) return result
+          shift += 7
+        }
+        return result
+      }
+      function readBytes(): Uint8Array {
+        const len = readVarint()
+        const data = bytes.slice(pos, pos + len)
+        pos += len
+        return data
+      }
+      function skipField(wireType: number) {
+        if (wireType === 0) readVarint()
+        else if (wireType === 1) pos += 8
+        else if (wireType === 2) { const len = readVarint(); pos += len }
+        else if (wireType === 5) pos += 4
+      }
+      function decodeElem(data: Uint8Array) {
+        const elem: Record<string, unknown> = {}
+        let p = 0
+        const d = data
+        // Local varint/bytes readers scoped to this sub-message
+        function rv(): number {
+          let r = 0, s = 0
+          while (p < d.length) {
+            const b = d[p++]
+            r |= (b & 0x7f) << s
+            if ((b & 0x80) === 0) return r
+            s += 7
+          }
+          return r
+        }
+        function rb(): Uint8Array {
+          const len = rv()
+          const out = d.slice(p, p + len)
+          p += len
+          return out
+        }
+        function sf(wt: number) {
+          if (wt === 0) rv()
+          else if (wt === 1) p += 8
+          else if (wt === 2) { const len = rv(); p += len }
+          else if (wt === 5) p += 4
+        }
+        while (p < d.length) {
+          const tag = rv()
+          const fieldNum = tag >>> 3
+          const wireType = tag & 0x7
+          if (fieldNum === 2 && wireType === 0) elem.progress_ms = rv()
+          else if (fieldNum === 3 && wireType === 0) elem.mode = rv()
+          else if (fieldNum === 5 && wireType === 0) elem.color = rv()
+          else if (fieldNum === 7 && wireType === 2) elem.content = new TextDecoder().decode(rb())
+          else if (fieldNum === 8 && wireType === 0) elem.ctime = rv()
+          else sf(wireType)
+        }
+        return elem
+      }
+
+      const elems: Record<string, unknown>[] = []
+      while (pos < bytes.length) {
+        const tag = readVarint()
+        const fieldNum = tag >>> 3
+        const wireType = tag & 0x7
+        // DmSegMobileReply: elems at field 1; DmSegOttReply: elems at field 2
+        if ((fieldNum === 1 || fieldNum === 2) && wireType === 2) {
+          const decoded = decodeElem(readBytes())
+          if (decoded.content) elems.push(decoded)
+        } else {
+          skipField(wireType)
+        }
+      }
+      return { code: 0, data: { elems } }
+    },
+    { path: apiPath, qs: params },
+  )
+}
+
+async function getDanmaku(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const oid = Number(params.oid)
+  if (!oid) throw OpenWebError.missingParam('oid')
+  const segmentIndex = Number(params.segment_index ?? 1)
+  const type = Number(params.type ?? 1)
+
+  return fetchProtobufDanmaku(page, '/x/v2/dm/wbi/web/seg.so', {
+    oid,
+    segment_index: segmentIndex,
+    type,
+  })
+}
+
 /* ---------- write operations ---------- */
 
 async function likeVideo(page: Page, params: Record<string, unknown>): Promise<unknown> {
@@ -256,6 +380,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getVideoDetail,
   getPopularVideos,
   getVideoComments,
+  getDanmaku,
   getRecommendedFeed,
   likeVideo,
   addToFavorites,

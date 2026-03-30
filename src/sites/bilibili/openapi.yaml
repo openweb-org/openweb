@@ -8076,6 +8076,75 @@ paths:
                   - message
                   - ttl
                   - data
+  /x/v2/dm/wbi/web/seg.so:
+    get:
+      operationId: getDanmaku
+      summary: Get danmaku (bullet comments) for a video segment — decoded from protobuf to JSON with comment text, timestamp, color, mode
+      x-openweb:
+        permission: read
+        build:
+          stable_id: danmaku0001
+          tool_version: 1
+        adapter:
+          name: bilibili-web
+          operation: getDanmaku
+      parameters:
+        - name: oid
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Video CID (content ID). Get from getVideoDetail response data.cid.
+          example: 1
+        - name: segment_index
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Segment index (each segment is 6 minutes of video). Starts from 1.
+          example: 1
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Danmaku type (1=video danmaku).
+          example: 1
+      responses:
+        "200":
+          description: Success. Decoded protobuf response containing danmaku elements.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      elems:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            content:
+                              type: string
+                              description: The bullet comment text.
+                            progress_ms:
+                              type: integer
+                              description: Position in video (milliseconds).
+                            mode:
+                              type: integer
+                              description: "Display mode: 1=scroll, 4=bottom, 5=top, 6=reverse, 7=special, 8=code."
+                            color:
+                              type: integer
+                              description: RGB color as decimal integer (e.g. 16777215 = white).
+                            ctime:
+                              type: integer
+                              description: Post timestamp (unix seconds).
   /x/web-interface/popular:
     get:
       operationId: getPopularVideos

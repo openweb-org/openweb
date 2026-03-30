@@ -1,0 +1,16 @@
+{
+  "operation_id": "getDanmaku",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "oid": 1,
+        "segment_index": 1,
+        "type": 1
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}
