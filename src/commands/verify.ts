@@ -1,3 +1,5 @@
+import type { Browser } from 'playwright-core'
+
 import {
   verifySite,
   verifyAll,
@@ -7,6 +9,8 @@ import {
   type SiteOverallStatus,
 } from '../lifecycle/verify.js'
 import { OpenWebError } from '../lib/errors.js'
+import { getManagedCdpEndpoint, browserStartCommand } from './browser.js'
+import { connectWithRetry } from '../capture/connection.js'
 
 function statusIcon(status: SiteOverallStatus): string {
   switch (status) {
@@ -20,82 +24,111 @@ function statusIcon(status: SiteOverallStatus): string {
 export interface VerifyCommandOptions {
   readonly site?: string
   readonly all?: boolean
+  readonly browser?: boolean
   readonly report?: boolean | string
 }
 
+async function acquireBrowser(): Promise<Browser> {
+  let cdpEndpoint = await getManagedCdpEndpoint()
+  if (!cdpEndpoint) {
+    process.stderr.write('Starting managed browser for verify...\n')
+    await browserStartCommand()
+    cdpEndpoint = await getManagedCdpEndpoint()
+    if (!cdpEndpoint) {
+      throw new OpenWebError({
+        error: 'execution_failed', code: 'EXECUTION_FAILED',
+        message: 'Failed to start managed browser.',
+        action: 'Run `openweb browser start` manually.',
+        retriable: true, failureClass: 'needs_browser',
+      })
+    }
+  }
+  return connectWithRetry(cdpEndpoint, 1)
+}
+
 export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
-  if (opts.all) {
-    const results = await verifyAll()
-
-    // Print per-site summary
-    for (const r of results) {
-      const icon = statusIcon(r.overallStatus)
-      const q = r.shouldQuarantine ? ' ⚠️ quarantined' : ''
-      process.stdout.write(`${icon} ${r.site}: ${r.overallStatus}${q}\n`)
-      for (const o of r.operations) {
-        if (o.status === 'PASS') continue
-        process.stdout.write(`  ${statusIcon(o.status)} ${o.operationId}: ${o.status} — ${o.detail ?? ''}\n`)
-      }
-    }
-
-    // Summary line
-    const passed = results.filter((r) => r.overallStatus === 'PASS').length
-    const drifted = results.filter((r) => r.overallStatus === 'DRIFT').length
-    const authExpired = results.filter((r) => r.overallStatus === 'auth_expired').length
-    const failed = results.filter((r) => r.overallStatus === 'FAIL').length
-    process.stdout.write(`\n${passed} passed, ${drifted} drifted, ${authExpired} auth_expired, ${failed} failed (${results.length} total)\n`)
-
-    // Report output
-    if (opts.report) {
-      const format = typeof opts.report === 'string' ? opts.report : 'json'
-      if (format === 'markdown') {
-        process.stdout.write(`\n${generateDriftReportMarkdown(results)}\n`)
-      } else {
-        process.stdout.write(`\n${JSON.stringify(generateDriftReport(results), null, 2)}\n`)
-      }
-    }
-
-    if (hasNonPassResults(results)) {
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: `${drifted} drifted, ${authExpired} auth_expired, ${failed} failed`,
-        action: 'Run `openweb verify --all --report` for details.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
-    }
-
-    return
+  let browser: Browser | undefined
+  if (opts.browser) {
+    browser = await acquireBrowser()
   }
 
-  if (opts.site) {
-    const result = await verifySite(opts.site)
-    const icon = statusIcon(result.overallStatus)
-    const q = result.shouldQuarantine ? ' ⚠️ quarantined' : ''
-    process.stdout.write(`${icon} ${result.site}: ${result.overallStatus}${q}\n`)
-    for (const o of result.operations) {
-      process.stdout.write(`  ${statusIcon(o.status)} ${o.operationId}: ${o.status}${o.detail ? ` — ${o.detail}` : ''}\n`)
+  const deps = browser ? { browser } : undefined
+
+  try {
+    if (opts.all) {
+      const results = await verifyAll(deps)
+
+      for (const r of results) {
+        const icon = statusIcon(r.overallStatus)
+        const q = r.shouldQuarantine ? ' ⚠️ quarantined' : ''
+        process.stdout.write(`${icon} ${r.site}: ${r.overallStatus}${q}\n`)
+        for (const o of r.operations) {
+          if (o.status === 'PASS') continue
+          process.stdout.write(`  ${statusIcon(o.status)} ${o.operationId}: ${o.status} — ${o.detail ?? ''}\n`)
+        }
+      }
+
+      const passed = results.filter((r) => r.overallStatus === 'PASS').length
+      const drifted = results.filter((r) => r.overallStatus === 'DRIFT').length
+      const authExpired = results.filter((r) => r.overallStatus === 'auth_expired').length
+      const failed = results.filter((r) => r.overallStatus === 'FAIL').length
+      process.stdout.write(`\n${passed} passed, ${drifted} drifted, ${authExpired} auth_expired, ${failed} failed (${results.length} total)\n`)
+
+      if (opts.report) {
+        const format = typeof opts.report === 'string' ? opts.report : 'json'
+        if (format === 'markdown') {
+          process.stdout.write(`\n${generateDriftReportMarkdown(results)}\n`)
+        } else {
+          process.stdout.write(`\n${JSON.stringify(generateDriftReport(results), null, 2)}\n`)
+        }
+      }
+
+      if (hasNonPassResults(results)) {
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: `${drifted} drifted, ${authExpired} auth_expired, ${failed} failed`,
+          action: 'Run `openweb verify --all --report` for details.',
+          retriable: false,
+          failureClass: 'fatal',
+        })
+      }
+
+      return
     }
 
-    if (result.overallStatus !== 'PASS') {
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: `${result.site}: ${result.overallStatus}`,
-        action: 'Inspect the per-operation details above.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
+    if (opts.site) {
+      const result = await verifySite(opts.site, deps)
+      const icon = statusIcon(result.overallStatus)
+      const q = result.shouldQuarantine ? ' ⚠️ quarantined' : ''
+      process.stdout.write(`${icon} ${result.site}: ${result.overallStatus}${q}\n`)
+      for (const o of result.operations) {
+        process.stdout.write(`  ${statusIcon(o.status)} ${o.operationId}: ${o.status}${o.detail ? ` — ${o.detail}` : ''}\n`)
+      }
+
+      if (result.overallStatus !== 'PASS') {
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: `${result.site}: ${result.overallStatus}`,
+          action: 'Inspect the per-operation details above.',
+          retriable: false,
+          failureClass: 'fatal',
+        })
+      }
+
+      return
     }
 
-    return
+    throw new OpenWebError({
+      error: 'execution_failed', code: 'INVALID_PARAMS',
+      message: 'Missing site name or --all flag.',
+      action: 'Usage: openweb verify <site> or openweb verify --all',
+      retriable: false, failureClass: 'fatal',
+    })
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => {})
+    }
   }
-
-  throw new OpenWebError({
-    error: 'execution_failed', code: 'INVALID_PARAMS',
-    message: 'Missing site name or --all flag.',
-    action: 'Usage: openweb verify <site> or openweb verify --all',
-    retriable: false, failureClass: 'fatal',
-  })
 }

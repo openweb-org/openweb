@@ -223,6 +223,7 @@ await yargs(argv)
       cmd
         .positional('site', { type: 'string', describe: 'Site to verify (omit with --all for all sites)' })
         .option('all', { type: 'boolean', default: false, describe: 'Verify all sites' })
+        .option('browser', { type: 'boolean', default: false, describe: 'Include page-transport ops (auto-starts browser if needed)' })
         .option('report', {
           describe: 'Output drift report (json or markdown). Only valid with --all.',
           coerce: (val: string | boolean) => val === true ? 'json' : val,
@@ -238,6 +239,7 @@ await yargs(argv)
         await verifyCommand({
           site: args.site ? String(args.site) : undefined,
           all: Boolean(args.all),
+          browser: Boolean(args.browser),
           report: args.report as boolean | string | undefined,
         })
       })
