@@ -1,0 +1,15 @@
+{
+  "operation_id": "getUserProfile",
+  "method": "get",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "username": "instagram"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

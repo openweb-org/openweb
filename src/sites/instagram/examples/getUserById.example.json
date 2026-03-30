@@ -1,0 +1,15 @@
+{
+  "operation_id": "getUserById",
+  "method": "get",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "userId": "25025320"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}
