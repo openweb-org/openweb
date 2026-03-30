@@ -10,8 +10,6 @@ servers:
   - url: https://www.zhipin.com
     x-openweb:
       transport: page
-      auth:
-        type: none
 paths:
   /web/geek/job:
     get:

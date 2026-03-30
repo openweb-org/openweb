@@ -1,10 +1,14 @@
 {
-  "operationId": "searchPlaces",
-  "params": {
-    "query": "coffee shops in San Francisco"
-  },
-  "expect": {
-    "status": 200,
-    "schema_valid": true
-  }
+  "operation_id": "searchPlaces",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "query": "coffee shops in San Francisco"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
 }

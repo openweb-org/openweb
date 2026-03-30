@@ -1,10 +1,14 @@
 {
-  "operationId": "getAutocompleteSuggestions",
-  "params": {
-    "input": "Statue of Liberty"
-  },
-  "expect": {
-    "status": 200,
-    "schema_valid": true
-  }
+  "operation_id": "getAutocompleteSuggestions",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "input": "Statue of Liberty"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
 }

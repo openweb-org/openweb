@@ -10,8 +10,6 @@ servers:
   - url: https://www.indeed.com
     x-openweb:
       transport: page
-      auth:
-        type: none
 paths:
   /jobs:
     get:

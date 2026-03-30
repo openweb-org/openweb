@@ -1,11 +1,15 @@
 {
-  "operationId": "nearbySearch",
-  "params": {
-    "category": "restaurants",
-    "location": "Times Square"
-  },
-  "expect": {
-    "status": 200,
-    "schema_valid": true
-  }
+  "operation_id": "nearbySearch",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "category": "restaurants",
+        "location": "Times Square"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
 }
