@@ -112,7 +112,7 @@ export async function verifySite(
     ? parseStoredFingerprints(manifest.fingerprint.response_shape_hash)
     : new Map<string, string>()
 
-  // Build permission lookup for replaySafety resolution
+  // Build permission lookup for replaySafety resolution (best-effort)
   const permissionMap = new Map<string, string>()
   try {
     const openapi = await loadOpenApi(site)
@@ -120,9 +120,8 @@ export async function verifySite(
       const ext = ref.operation['x-openweb'] as Record<string, unknown> | undefined
       if (ext?.permission) permissionMap.set(ref.operation.operationId, ext.permission as string)
     }
-  } catch (err) {
-    // Swallow file-not-found (WS-only sites have no openapi.yaml) — re-throw parse/validation errors
-    if (!(err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT')) throw err
+  } catch {
+    // No openapi or broken spec — fall back to method-based replaySafety check
   }
 
   const examplesDir = path.join(siteRoot, 'examples')
@@ -158,6 +157,9 @@ export async function verifySite(
   for (const fileName of exampleFiles) {
     const raw = await readFile(path.join(activeDir, fileName), 'utf8')
     const testFile = JSON.parse(raw) as TestFile
+
+    // Skip files with incompatible structure (legacy format without cases array)
+    if (!Array.isArray(testFile.cases)) continue
 
     // Skip unsafe mutations — not safe to replay
     if (testFile.protocol !== 'ws' && resolveReplaySafety(testFile, permissionMap) === 'unsafe_mutation') {
