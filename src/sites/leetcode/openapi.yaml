@@ -18,12 +18,12 @@ paths:
       x-openweb:
         permission: read
         build:
-          verified: true
+          verified: false
           stable_id: lc0001
           signature_id: lc0001s
           tool_version: 1
           signals:
-            - adapter-verified
+            - auth-required
         adapter:
           name: leetcode-graphql
           operation: searchProblems
@@ -59,7 +59,35 @@ paths:
                   questions:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ProblemSummary'
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        questionFrontendId:
+                          type: string
+                          description: Display ID (e.g. "1" for Two Sum).
+                        title:
+                          type: string
+                        titleSlug:
+                          type: string
+                        difficulty:
+                          type: string
+                          enum: [EASY, MEDIUM, HARD, Easy, Medium, Hard]
+                        paidOnly:
+                          type: boolean
+                          description: True if problem requires LeetCode Premium.
+                        acRate:
+                          type: number
+                          description: Acceptance rate (0-1).
+                        topicTags:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              slug:
+                                type: string
                   totalLength:
                     type: integer
                   hasMore:
@@ -119,7 +147,35 @@ paths:
                   questions:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ProblemSummary'
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        questionFrontendId:
+                          type: string
+                          description: Display ID (e.g. "1" for Two Sum).
+                        title:
+                          type: string
+                        titleSlug:
+                          type: string
+                        difficulty:
+                          type: string
+                          enum: [EASY, MEDIUM, HARD, Easy, Medium, Hard]
+                        paidOnly:
+                          type: boolean
+                          description: True if problem requires LeetCode Premium.
+                        acRate:
+                          type: number
+                          description: Acceptance rate (0-1).
+                        topicTags:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              slug:
+                                type: string
                   totalLength:
                     type: integer
                   hasMore:
@@ -159,7 +215,7 @@ paths:
                     type: object
                     properties:
                       id:
-                        type: integer
+                        type: string
                       questionFrontendId:
                         type: string
                       title:
@@ -729,35 +785,3 @@ paths:
                           description: Unix timestamp of last submission.
                         avatarUrl:
                           type: string
-components:
-  schemas:
-    ProblemSummary:
-      type: object
-      properties:
-        id:
-          type: integer
-        questionFrontendId:
-          type: string
-          description: Display ID (e.g. "1" for Two Sum).
-        title:
-          type: string
-        titleSlug:
-          type: string
-        difficulty:
-          type: string
-          enum: [EASY, MEDIUM, HARD, Easy, Medium, Hard]
-        paidOnly:
-          type: boolean
-          description: True if problem requires LeetCode Premium.
-        acRate:
-          type: number
-          description: Acceptance rate (0-100).
-        topicTags:
-          type: array
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              slug:
-                type: string
