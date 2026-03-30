@@ -62,6 +62,43 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        position:
+                          type: integer
+                        user:
+                          type: object
+                          properties:
+                            pk:
+                              type: string
+                            username:
+                              type: string
+                            full_name:
+                              type: string
+                            is_private:
+                              type: boolean
+                            is_verified:
+                              type: boolean
+                            profile_pic_url:
+                              type: string
+                  hashtags:
+                    type: array
+                    items:
+                      type: object
+                  places:
+                    type: array
+                    items:
+                      type: object
+                  has_more:
+                    type: boolean
+                  rank_token:
+                    type: string
+                  status:
+                    type: string
 
   /api/v1/users/web_profile_info/:
     get:
@@ -93,6 +130,55 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          username:
+                            type: string
+                          full_name:
+                            type: string
+                          biography:
+                            type: string
+                          profile_pic_url:
+                            type: string
+                          profile_pic_url_hd:
+                            type: string
+                          is_private:
+                            type: boolean
+                          is_verified:
+                            type: boolean
+                          external_url:
+                            type: string
+                            nullable: true
+                          edge_followed_by:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                          edge_follow:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                          edge_owner_to_timeline_media:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                          is_business_account:
+                            type: boolean
+                          is_professional_account:
+                            type: boolean
+                          highlight_reel_count:
+                            type: integer
+                  status:
+                    type: string
 
   /api/v1/users/{userId}/info/:
     get:
@@ -123,6 +209,46 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      pk:
+                        type: string
+                      username:
+                        type: string
+                      full_name:
+                        type: string
+                      biography:
+                        type: string
+                      profile_pic_url:
+                        type: string
+                      is_private:
+                        type: boolean
+                      is_verified:
+                        type: boolean
+                      follower_count:
+                        type: integer
+                      following_count:
+                        type: integer
+                      media_count:
+                        type: integer
+                      external_url:
+                        type: string
+                        nullable: true
+                      is_business_account:
+                        type: boolean
+                      is_professional_account:
+                        type: boolean
+                      category_name:
+                        type: string
+                        nullable: true
+                      pronouns:
+                        type: array
+                        items:
+                          type: string
+                  status:
+                    type: string
 
   /api/v1/feed/timeline/:
     get:
@@ -157,6 +283,48 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  feed_items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        media_or_ad:
+                          type: object
+                          properties:
+                            pk:
+                              type: string
+                            id:
+                              type: string
+                            media_type:
+                              type: integer
+                            code:
+                              type: string
+                            taken_at:
+                              type: integer
+                            like_count:
+                              type: integer
+                            comment_count:
+                              type: integer
+                            caption:
+                              type: object
+                            image_versions2:
+                              type: object
+                            video_versions:
+                              type: array
+                              nullable: true
+                              items:
+                                type: object
+                            user:
+                              type: object
+                  num_results:
+                    type: integer
+                  more_available:
+                    type: boolean
+                  next_max_id:
+                    type: string
+                  status:
+                    type: string
 
   /api/v1/feed/user/{userId}/:
     get:
@@ -204,6 +372,47 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        pk:
+                          type: string
+                        id:
+                          type: string
+                        media_type:
+                          type: integer
+                        code:
+                          type: string
+                        taken_at:
+                          type: integer
+                        like_count:
+                          type: integer
+                        comment_count:
+                          type: integer
+                        caption:
+                          type: object
+                        image_versions2:
+                          type: object
+                        video_versions:
+                          type: array
+                          nullable: true
+                          items:
+                            type: object
+                        user:
+                          type: object
+                  num_results:
+                    type: integer
+                  more_available:
+                    type: boolean
+                  next_max_id:
+                    type: string
+                  user:
+                    type: object
+                  status:
+                    type: string
 
   /api/v1/media/{mediaId}/info/:
     get:
@@ -234,6 +443,43 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        pk:
+                          type: string
+                        id:
+                          type: string
+                        media_type:
+                          type: integer
+                        code:
+                          type: string
+                        taken_at:
+                          type: integer
+                        like_count:
+                          type: integer
+                        comment_count:
+                          type: integer
+                        caption:
+                          type: object
+                        image_versions2:
+                          type: object
+                        video_versions:
+                          type: array
+                          nullable: true
+                          items:
+                            type: object
+                        user:
+                          type: object
+                  num_results:
+                    type: integer
+                  more_available:
+                    type: boolean
+                  status:
+                    type: string
 
   /api/v1/media/{mediaId}/comments/:
     get:
@@ -277,6 +523,52 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        pk:
+                          type: string
+                        text:
+                          type: string
+                        created_at:
+                          type: integer
+                        comment_like_count:
+                          type: integer
+                        child_comment_count:
+                          type: integer
+                        has_liked_comment:
+                          type: boolean
+                        user:
+                          type: object
+                          properties:
+                            pk:
+                              oneOf:
+                                - type: string
+                                - type: integer
+                            username:
+                              type: string
+                            full_name:
+                              type: string
+                            profile_pic_url:
+                              type: string
+                            is_private:
+                              type: boolean
+                            is_verified:
+                              type: boolean
+                  comment_count:
+                    type: integer
+                  has_more_comments:
+                    type: boolean
+                  next_min_id:
+                    type: string
+                  caption:
+                    type: object
+                    nullable: true
+                  status:
+                    type: string
 
   /api/v1/feed/reels_tray/:
     get:
@@ -301,6 +593,34 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  tray:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        expiring_at:
+                          type: integer
+                        has_besties_media:
+                          type: boolean
+                        latest_reel_media:
+                          type: integer
+                        seen:
+                          type: integer
+                        user:
+                          type: object
+                  story_ranking_token:
+                    type: string
+                  broadcasts:
+                    type: array
+                    items:
+                      type: object
+                  has_new_nux_story:
+                    type: boolean
+                  status:
+                    type: string
 
   /api/v1/feed/user/{userId}/story/:
     get:
@@ -331,6 +651,26 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  reel:
+                    type: object
+                    nullable: true
+                    properties:
+                      id:
+                        type: string
+                      expiring_at:
+                        type: integer
+                      items:
+                        type: array
+                        items:
+                          type: object
+                      user:
+                        type: object
+                  broadcast:
+                    type: object
+                    nullable: true
+                  status:
+                    type: string
 
   # ── Write operations ────────────────────────────────────────────────
 

@@ -1,3 +1,12 @@
+## 2026-03-30: Enrich response schemas
+
+**What changed:**
+- Replaced bare `type: object` response schemas with real property definitions for all 9 read ops
+- Schemas inferred from live API responses, kept to max 2 levels deep
+- Fixed `comments[].user.pk` type to `oneOf: [string, integer]` (API returns both)
+
+**Verification:** `pnpm dev verify instagram --browser` — 9/9 PASS, 0 schema warnings
+
 ## 2026-03-30: Release QA — examples, verify, doc review
 
 **What changed:**
