@@ -5,7 +5,7 @@
     {
       "input": {
         "subreddit": "technology",
-        "postId": "1s5yfpx"
+        "post_id": "1s5yfpx"
       },
       "assertions": {
         "status": 200,
