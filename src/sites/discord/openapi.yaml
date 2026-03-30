@@ -59,6 +59,37 @@ paths:
                     type: integer
                   last_message_id:
                     type: string
+                  flags:
+                    type: integer
+                  parent_id:
+                    type:
+                      - string
+                      - "null"
+                  rate_limit_per_user:
+                    type: integer
+                  nsfw:
+                    type: boolean
+                  permission_overwrites:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: integer
+                        allow:
+                          type: string
+                        deny:
+                          type: string
+                  icon_emoji:
+                    type:
+                      - object
+                      - "null"
+                  theme_color:
+                    type:
+                      - integer
+                      - "null"
   /api/v9/channels/{channelId}/messages:
     get:
       operationId: getChannelMessages
@@ -113,6 +144,10 @@ paths:
                   properties:
                     id:
                       type: string
+                    type:
+                      type: integer
+                    channel_id:
+                      type: string
                     content:
                       type: string
                     author:
@@ -122,6 +157,8 @@ paths:
                           type: string
                         username:
                           type: string
+                        discriminator:
+                          type: string
                         global_name:
                           type:
                             - string
@@ -130,13 +167,51 @@ paths:
                           type:
                             - string
                             - "null"
+                        public_flags:
+                          type: integer
+                        banner:
+                          type:
+                            - string
+                            - "null"
+                        accent_color:
+                          type:
+                            - integer
+                            - "null"
+                        banner_color:
+                          type:
+                            - string
+                            - "null"
                     timestamp:
                       type: string
+                    edited_timestamp:
+                      type:
+                        - string
+                        - "null"
+                    flags:
+                      type: integer
+                    pinned:
+                      type: boolean
+                    mention_everyone:
+                      type: boolean
+                    tts:
+                      type: boolean
+                    mentions:
+                      type: array
+                      items:
+                        type: object
+                    mention_roles:
+                      type: array
+                      items:
+                        type: string
                     attachments:
                       type: array
                       items:
                         type: object
                     embeds:
+                      type: array
+                      items:
+                        type: object
+                    components:
                       type: array
                       items:
                         type: object
@@ -177,6 +252,35 @@ paths:
                 type: array
                 items:
                   type: object
+                  properties:
+                    id:
+                      type: string
+                    sku_id:
+                      type: string
+                    application_id:
+                      type: string
+                    user_id:
+                      type: string
+                    type:
+                      type: integer
+                    deleted:
+                      type: boolean
+                    starts_at:
+                      type:
+                        - string
+                        - "null"
+                    ends_at:
+                      type:
+                        - string
+                        - "null"
+                    guild_id:
+                      type:
+                        - string
+                        - "null"
+                    subscription_id:
+                      type:
+                        - string
+                        - "null"
   /api/v9/users/@me/scheduled-events:
     get:
       operationId: getMyScheduledEvents
@@ -202,3 +306,38 @@ paths:
                 type: array
                 items:
                   type: object
+                  properties:
+                    id:
+                      type: string
+                    guild_id:
+                      type: string
+                    channel_id:
+                      type:
+                        - string
+                        - "null"
+                    creator_id:
+                      type: string
+                    name:
+                      type: string
+                    description:
+                      type:
+                        - string
+                        - "null"
+                    scheduled_start_time:
+                      type: string
+                    scheduled_end_time:
+                      type:
+                        - string
+                        - "null"
+                    privacy_level:
+                      type: integer
+                    status:
+                      type: integer
+                    entity_type:
+                      type: integer
+                    entity_id:
+                      type:
+                        - string
+                        - "null"
+                    user_count:
+                      type: integer
