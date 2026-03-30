@@ -90,6 +90,8 @@ paths:
                                 type: string
                   totalLength:
                     type: integer
+                  finishedLength:
+                    type: integer
                   hasMore:
                     type: boolean
   /problems/list:
@@ -177,6 +179,8 @@ paths:
                               slug:
                                 type: string
                   totalLength:
+                    type: integer
+                  finishedLength:
                     type: integer
                   hasMore:
                     type: boolean
@@ -281,6 +285,10 @@ paths:
                     properties:
                       name:
                         type: string
+                      expired:
+                        type: boolean
+                      hoverText:
+                        type: string
                       icon:
                         type: string
                   profile:
@@ -298,8 +306,14 @@ paths:
                         type: [string, 'null']
                       company:
                         type: [string, 'null']
+                      jobTitle:
+                        type: [string, 'null']
                       countryName:
                         type: [string, 'null']
+                      websites:
+                        type: array
+                        items:
+                          type: string
                       skillTags:
                         type: array
                         items:
@@ -350,6 +364,11 @@ paths:
                         type: integer
                       topPercentage:
                         type: number
+                      badge:
+                        type: [object, 'null']
+                        properties:
+                          name:
+                            type: string
                   userContestRankingHistory:
                     type: array
                     items:
@@ -357,9 +376,13 @@ paths:
                       properties:
                         attended:
                           type: boolean
+                        trendDirection:
+                          type: string
                         problemsSolved:
                           type: integer
                         totalProblems:
+                          type: integer
+                        finishTimeInSeconds:
                           type: integer
                         rating:
                           type: number
@@ -430,6 +453,10 @@ paths:
                           type: string
                         title:
                           type: string
+                        titleSlug:
+                          type: string
+                        status:
+                          type: integer
                         statusDisplay:
                           type: string
                         lang:
@@ -441,6 +468,8 @@ paths:
                         memory:
                           type: string
                         timestamp:
+                          type: string
+                        url:
                           type: string
   /problems/{questionSlug}/solutions:
     get:
@@ -515,12 +544,16 @@ paths:
                           properties:
                             realName:
                               type: string
+                            userAvatar:
+                              type: string
                             userSlug:
                               type: string
                         createdAt:
                           type: string
                         hitCount:
                           type: integer
+                        hasVideoArticle:
+                          type: boolean
                         reactions:
                           type: array
                           items:
@@ -529,6 +562,22 @@ paths:
                               count:
                                 type: integer
                               reactionType:
+                                type: string
+                        topic:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            topLevelCommentCount:
+                              type: integer
+                        tags:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              slug:
                                 type: string
   /contests/upcoming:
     get:
@@ -571,6 +620,9 @@ paths:
                         duration:
                           type: integer
                           description: Duration in seconds.
+                        cardImg:
+                          type: string
+                          description: Contest card image URL.
   /contests/history:
     get:
       operationId: getContestHistory
@@ -624,6 +676,8 @@ paths:
                         startTime:
                           type: integer
                         duration:
+                          type: integer
+                        solved:
                           type: integer
                         totalQuestions:
                           type: integer
