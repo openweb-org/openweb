@@ -67,7 +67,6 @@ pnpm dev login instagram                          # Open site in default browser
 ```bash
 pnpm dev compile https://api.example.com
 pnpm dev compile https://api.example.com --script ./scripts/record.ts
-pnpm dev compile https://api.example.com --probe --cdp-endpoint http://localhost:9222
 pnpm dev compile https://api.example.com --capture-dir ./captures/my-site  # Use existing capture
 ```
 

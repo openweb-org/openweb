@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-03-29 (v1+v5 site merge)
+> Last updated: 2026-03-30 (verify unify)
 
 ## Quick Start
 
@@ -79,7 +79,6 @@ src/
 │   ├── types.ts                #   Core types (RecordedRequestSample, SampleResponse)
 │   ├── types-v2.ts             #   Pipeline v2 contracts (all 5-phase types)
 │   ├── recorder.ts             #   HAR parsing + scripted recording
-│   ├── verify-v2.ts            #   Unified verify with auth-first escalation
 │   ├── analyzer/               #   Phase 2: label → normalize → cluster → schema → auth
 │   │   ├── analyze.ts          #     Orchestrator: analyzeCapture() → AnalysisReport
 │   │   ├── labeler.ts          #     Sample categorization (api/static/tracking/off_domain)

@@ -1,3 +1,23 @@
+## 2026-03-30: Unify verify — single verify system for compile + health check
+
+**What changed:**
+- Deleted `compiler/verify-v2.ts` (305 lines) and its test (384 lines) — raw-fetch verify replaced by `lifecycle/verify.ts` (`verifySite()`)
+- `verifySite()` now filters by `replaySafety` instead of HTTP method: safe POST ops (YouTube Innertube, GraphQL queries) are now verified instead of skipped
+- ReplaySafety resolution chain: `replay_safety` in example file → `x-openweb.permission` in openapi.yaml → HTTP method fallback
+- Generator writes `replay_safety` to `examples/*.example.json`
+- `compile.ts` calls `verifySite(site)` instead of `verifyPackage()` — cookie extraction and `--probe`/`--cdp-endpoint` CLI flags removed
+- Compile verify report now uses `SiteVerifyResult` format (same as `openweb verify`)
+
+**Why:**
+- Two verify systems doing the same job with different plumbing. The executor-based path (`verifySite`) handles all transports, auth resolvers, CSRF, and fingerprinting — strictly more capable than verify-v2's raw fetch.
+- Method-based filtering wrongly skipped safe POST operations (GraphQL queries, Innertube API).
+
+**Key files:** `src/lifecycle/verify.ts`, `src/commands/compile.ts`, `src/compiler/generator/generate-v2.ts`, `src/cli.ts`, `src/compiler/types-v2.ts`
+**Verification:** `pnpm build` passes, 717/718 tests pass (1 pre-existing navigator test failure)
+**Commit:** (pending)
+**Next:** None
+**Blockers:** None
+
 ## 2026-03-29: Merge v1+v5 site packages for 8 hard sites
 
 **What changed:**

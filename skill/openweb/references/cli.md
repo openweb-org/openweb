@@ -78,7 +78,6 @@ Records all browser traffic for later compilation. One capture session at a time
 ```bash
 openweb compile <site-url> --capture-dir <dir>
 openweb compile <site-url> --script ./record.ts
-openweb compile <site-url> --capture-dir <dir> --probe
 openweb compile <site-url> --capture-dir <dir> --curation <file>
 ```
 
@@ -88,7 +87,6 @@ Transforms captured traffic into a site package. Requires `--capture-dir` (manua
 |------|---------|
 | `--capture-dir <dir>` | Load from an existing capture bundle |
 | `--script <file>` | Use a scripted recording workflow |
-| `--probe` | Test endpoints with browser cookies during compile |
 | `--curation <file>` | Apply manual curation overrides (CSRF type, excluded ops, etc.) |
 
 ## Verify

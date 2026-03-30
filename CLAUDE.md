@@ -29,7 +29,6 @@ src/
     types.ts          # Core types (RecordedRequestSample, SampleResponse)
     types-v2.ts       # Pipeline v2 contracts (5-phase type definitions)
     recorder.ts       # HAR parsing + scripted recording
-    verify-v2.ts      # Unified verify with auth-first escalation
     analyzer/         # Phase 2: label → normalize → cluster → schema → auth
       analyze.ts      # Orchestrator: analyzeCapture() → AnalysisReport
       labeler.ts      # Sample categorization (api/static/tracking/off_domain)

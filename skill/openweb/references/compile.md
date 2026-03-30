@@ -21,14 +21,14 @@ When you arrive here, `openweb compile` has already run the full pipeline:
 
 Your job is to review these outputs and fix what auto-curation got wrong.
 
-**Important compile-time verify limitations:**
-- Compile-time verify always uses `node` transport with plain HTTP fetch.
-  Operations that require `page` transport (browser context) will often fail
-  with `non_json_response` or `auth_required` -- this is expected, not a bug.
-- Compile-time verify only has auth cookies when compile ran with `--probe`.
-  Without `--probe`, `verify-report.json` reflects unauthenticated results only.
-  For auth-required sites, expect many operations to show `auth_required` unless
-  compile had access to browser cookies.
+**Important compile-time verify behavior:**
+- Compile-time verify uses the same `verifySite()` as the lifecycle verifier —
+  full executor with all transports, auth resolvers, and fingerprinting.
+- Operations that require `page` transport will fail if no browser is running,
+  with `driftType: error` and detail "no browser tab open" — this is expected.
+- Auth is resolved automatically via the executor's auth chain: token cache →
+  browser CDP → fail. If a browser is running (common after recording), auth
+  cookies are available. Without a browser, auth-required ops report `auth_drift`.
 
 ## Artifacts to Review
 
@@ -72,37 +72,25 @@ real data via `openweb <site> exec <op> '{...}'`.
 Example: `8 HTTP ops, 5 verified, 42/120 API samples, auth=detected`
 
 **Then read `verify-report.json`** -- this is the compile-time verify output
-produced during `openweb compile`. It is NOT the same format as
-`openweb verify <site>`. Check each operation's `overall` status:
-- `pass` -- the operation works via node HTTP. Good.
-- `skipped` -- write operation, skipped by default. Expected.
-- `fail` -- needs investigation. Check `attempts[].reason` and `attempts[].mode`.
+produced during `openweb compile`. It now uses the same `SiteVerifyResult` format
+as `openweb verify <site>`. Check each operation's `status`:
+- `PASS` -- the operation works. Good.
+- `DRIFT` -- the operation works but response shape changed from stored fingerprint.
+- `FAIL` -- needs investigation. Check `driftType` and `detail`.
 
-**Compile-time verify caveat:** if compile ran without `--probe`, this report has
-no auth cookies. For auth-required sites, many operations will show
-`attempts[].reason = "auth_required"` even when the auth detection is correct.
-Treat that as "auth was not available at compile time", not automatically as a
-spec bug.
+**Note:** Operations with `replaySafety: unsafe_mutation` (write ops) are skipped
+entirely — they do not appear in the verify report. This is controlled by the
+`replay_safety` field in example files, falling back to `x-openweb.permission` or
+HTTP method.
 
 **Interpreting compile-time verify failures (`verify-report.json`):**
 
-| `reason` | What to check |
-|----------|---------------|
-| `auth_required` | If compile did not use `--probe`, this often just means auth cookies were unavailable at compile time. If compile did use `--probe` and `mode: "with_auth"` still failed, cookies may be expired or auth detection may be wrong. |
-| `non_json_response` | Got HTML instead of JSON. Common for page-transport operations tested via node. If this site needs page transport, this is expected. |
-| `client_error` | Check `statusCode`. 404 = wrong path template. 400 = missing required param or bad example value. |
-| `server_error` | Upstream 5xx. Retry once. If persistent, it may be a transient upstream problem rather than a spec issue. |
-| `timeout` | Site may be slow or may need page transport. Retry once. |
-| `network_error` | SSRF blocked? Wrong host? Check the URL. |
-| `missing_example` | No example params available to build request. Add `exampleValue` to parameters in the spec. |
-| `skipped_unsafe` | Write operation skipped. Not a failure. |
-| `ssrf_blocked` | URL resolved to private/internal IP. Check the host. |
-| 403 with cookies present | Most operations return 403 even though auth cookies are available. Likely wrong CSRF detection. Check `authCandidates[0].csrfOptions` in analysis.json -- see CSRF Troubleshooting in Step 2a. |
-
-If everything passes and the operation count matches expectations, you may have a
-clean compile. Continue to Step 2 for a quality review before installing. If the
-report is mostly `auth_required` and compile did not use `--probe`, continue to
-analysis/spec review before treating those results as failures.
+| `driftType` | What to check |
+|-------------|---------------|
+| `auth_drift` | Auth expired or no browser running for cookie resolution. If browser was running during compile, cookies may be expired. Otherwise, expected — auth ops fail without cookies. |
+| `schema_drift` | Response shape changed from stored fingerprint. May indicate API change or dynamic content. |
+| `endpoint_removed` | Request failed entirely — wrong path, network error, or site down. |
+| `error` | Execution error. Check `detail` for specifics: "no browser tab open" means page transport needed without browser. Transient errors are also reported here. |
 
 ### Step 2: Review Analysis Report
 
@@ -366,8 +354,9 @@ For each operation, check `x-openweb.permission`:
 - DELETE → `permission: delete`
 - GraphQL mutations → `permission: write`
 
-The compiler also sets `replaySafety` internally (`safe_read` or `unsafe_mutation`)
-to control verify behavior — write ops are skipped during verify by default.
+The compiler sets `replaySafety` per operation (`safe_read` or `unsafe_mutation`)
+and writes it to `examples/*.example.json` as `replay_safety`. This controls
+verify behavior — write ops are skipped during verify by default.
 
 Auto-curation defaults are usually correct, but verify that GraphQL queries using
 POST method have `permission: read`, not `permission: write`. The auto-curation

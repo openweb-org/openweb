@@ -147,7 +147,7 @@ openweb browser start [--headless]             # managed Chrome lifecycle
 openweb browser stop / restart / status
 openweb login <site>                           # open site in default browser for auth
 openweb capture start --cdp-endpoint ...       # record browser session
-openweb compile <url> [--probe]                  # generate skill package (--probe validates heuristics)
+openweb compile <url>                              # generate skill package
 openweb verify <site>                          # verify site and detect drift
 openweb verify --all                           # batch verify all sites
 openweb verify --all --report                  # verify with drift report

@@ -12,7 +12,7 @@ Phase 1: Capture      Record HTTP traffic, WebSocket frames, state, DOM
 Phase 2: Analyze      Label, normalize, cluster, infer schemas, detect auth
 Phase 3: Curate       Apply decisions, scrub PII, produce compile plan
 Phase 4: Generate     Emit openapi.yaml + asyncapi.yaml + manifest.json + examples/
-Phase 5: Verify       Auth-first escalation, replay safe reads, per-attempt diagnostics
+Phase 5: Verify       Replay safe reads via lifecycle verify (full executor)
 ```
 
 -> See: `src/compiler/`
@@ -129,31 +129,28 @@ Consumes `CuratedCompilePlan` and emits the skill package.
 
 ## Phase 5: Verify
 
-Unified verification replacing the old verify + probe split. Auth-first escalation with per-attempt diagnostics.
+Compile-time verify uses the same `verifySite()` as the lifecycle health check — full executor with all transports, auth resolvers, and fingerprinting.
 
 ```
-For each safe_read operation:
-  Step 1: with_auth (if cookies available)
-    200 -> authWorks=true, then try without_auth to check if public
-    401/403 -> authWorks=false, try without_auth
-    other error -> stop
-  Step 2: without_auth (if no cookies, or fallback from step 1)
-    200 -> publicWorks=true
-    fail -> publicWorks=false
+For each operation:
+  resolveReplaySafety(example file → x-openweb.permission → HTTP method)
+    unsafe_mutation -> skip
+    safe_read -> executeOperation() via full executor
+      auth resolvers (token cache → browser CDP → fail)
+      transport routing (node / page / browser-fetch)
+      fingerprint comparison against stored hashes
 
-unsafe_mutation operations -> skipped (never replayed)
-page-transport operations -> skipped with needs_browser reason (no browser in verify)
+WS operations -> verified via live connection (connect, send, wait for response)
 ```
 
-**Constraints:**
-- Bounded concurrency: 6 parallel verifications (configurable)
-- Per-attempt timeout (configurable, defaults to probe timeout from config)
-- SSRF-validated before every outbound request
-- Request body replay for POST operations with serialized body
+**ReplaySafety resolution** (3-level chain):
+1. `replay_safety` field in `.example.json` (written by generator)
+2. `x-openweb.permission` in `openapi.yaml` (`read` → safe_read, else → unsafe_mutation)
+3. HTTP method fallback (`get`/`head` → safe_read, else → unsafe_mutation)
 
-**Output:** `VerifyReport` with per-operation `VerifyResult` containing `VerifyAttempt[]` diagnostics
+**Output:** `SiteVerifyResult` with per-operation `OperationVerifyResult` (PASS/DRIFT/FAIL)
 
--> See: `src/compiler/verify-v2.ts`
+-> See: `src/lifecycle/verify.ts`
 
 ---
 
@@ -196,10 +193,6 @@ pnpm dev compile <url> --script ./scripts/record-site.ts
 # Compile with cross-domain API support
 pnpm dev compile <url> --allow-host api.openai.com
 
-# Compile with auth verification (--probe connects to managed browser for cookies)
-pnpm dev compile <url> --script ./script.ts --probe
-pnpm dev compile <url> --script ./script.ts --probe --cdp-endpoint http://localhost:9222
-
 # Compile from existing capture directory (skip capture phase)
 pnpm dev compile <url> --capture-dir ./captures/my-site
 
@@ -216,7 +209,6 @@ src/compiler/
 +-- types.ts                # Core types (RecordedRequestSample, SampleResponse, etc.)
 +-- types-v2.ts             # Pipeline v2 type definitions (all 5-phase contracts)
 +-- recorder.ts             # HAR parsing + scripted recording spawn
-+-- verify-v2.ts            # Unified verify with auth-first escalation
 +-- analyzer/               # Phase 2: Analyze
 |   +-- analyze.ts          # Orchestrator: analyzeCapture() -> AnalysisReport
 |   +-- labeler.ts          # Sample categorization (api/static/tracking/off_domain)
