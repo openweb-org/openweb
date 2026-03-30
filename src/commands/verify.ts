@@ -7,6 +7,7 @@ import {
   generateDriftReport,
   generateDriftReportMarkdown,
   type SiteOverallStatus,
+  type VerifyOptions,
 } from '../lifecycle/verify.js'
 import { OpenWebError } from '../lib/errors.js'
 import { getManagedCdpEndpoint, browserStartCommand } from './browser.js'
@@ -26,6 +27,7 @@ export interface VerifyCommandOptions {
   readonly all?: boolean
   readonly browser?: boolean
   readonly report?: boolean | string
+  readonly write?: boolean
 }
 
 async function acquireBrowser(): Promise<Browser> {
@@ -53,10 +55,15 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
   }
 
   const deps = browser ? { browser } : undefined
+  const verifyOpts: VerifyOptions | undefined = opts.write ? { includeWrite: true } : undefined
+
+  if (opts.write) {
+    process.stderr.write('⚠ --write enabled: replaying write/delete operations (transact excluded)\n')
+  }
 
   try {
     if (opts.all) {
-      const results = await verifyAll(deps)
+      const results = await verifyAll(deps, verifyOpts)
 
       for (const r of results) {
         const icon = statusIcon(r.overallStatus)
@@ -98,7 +105,7 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
     }
 
     if (opts.site) {
-      const result = await verifySite(opts.site, deps)
+      const result = await verifySite(opts.site, deps, verifyOpts)
       const icon = statusIcon(result.overallStatus)
       const q = result.shouldQuarantine ? ' ⚠️ quarantined' : ''
       process.stdout.write(`${icon} ${result.site}: ${result.overallStatus}${q}\n`)

@@ -224,6 +224,7 @@ await yargs(argv)
         .positional('site', { type: 'string', describe: 'Site to verify (omit with --all for all sites)' })
         .option('all', { type: 'boolean', default: false, describe: 'Verify all sites' })
         .option('browser', { type: 'boolean', default: false, describe: 'Include page-transport ops (auto-starts browser if needed)' })
+        .option('write', { type: 'boolean', default: false, describe: 'Include write/delete ops (use with caution — replays mutations)' })
         .option('report', {
           describe: 'Output drift report (json or markdown). Only valid with --all.',
           coerce: (val: string | boolean) => val === true ? 'json' : val,
@@ -240,6 +241,7 @@ await yargs(argv)
           site: args.site ? String(args.site) : undefined,
           all: Boolean(args.all),
           browser: Boolean(args.browser),
+          write: Boolean(args.write),
           report: args.report as boolean | string | undefined,
         })
       })

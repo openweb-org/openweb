@@ -219,6 +219,9 @@ export interface CurationDecisionSet {
     readonly operationId?: string
     readonly summary?: string
     readonly permission?: PermissionCategory
+    // TODO: Add 'safe_mutation' for idempotent/reversible writes (like, follow, bookmark)
+    // that are safe to replay during verify. Currently all non-read ops are unsafe_mutation.
+    // See doc/todo/verify-unify/design.md "Future: safe_mutation and --write flag"
     readonly replaySafety?: 'safe_read' | 'unsafe_mutation'
     readonly exampleInput?: Record<string, unknown>
     readonly exampleRequestBody?: unknown
@@ -244,6 +247,9 @@ export interface CuratedOperation {
   readonly operationId: string
   readonly summary: string
   readonly permission: PermissionCategory
+  // TODO: Add 'safe_mutation' for idempotent/reversible writes (like, follow, bookmark)
+  // that are safe to replay during verify. Currently all non-read ops are unsafe_mutation.
+  // See doc/todo/verify-unify/design.md "Future: safe_mutation and --write flag"
   readonly replaySafety: 'safe_read' | 'unsafe_mutation'
   readonly parameters: readonly ParameterDescriptor[]
   readonly responseVariants: readonly ResponseVariant[]

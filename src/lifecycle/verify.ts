@@ -20,6 +20,10 @@ export type OperationStatus = 'PASS' | 'DRIFT' | 'FAIL'
 /** Site-level overall status — includes 'auth_expired' for auth-only failures. */
 export type SiteOverallStatus = OperationStatus | 'auth_expired'
 
+export interface VerifyOptions {
+  readonly includeWrite?: boolean
+}
+
 export interface OperationVerifyResult {
   readonly operationId: string
   readonly status: OperationStatus
@@ -85,6 +89,9 @@ function isRetriable(error: unknown): boolean {
   return error instanceof OpenWebError && error.payload.failureClass === 'retriable'
 }
 
+// TODO: Add 'safe_mutation' for idempotent/reversible writes (like, follow, bookmark)
+// that are safe to replay during verify. Currently all non-read ops are unsafe_mutation.
+// See doc/todo/verify-unify/design.md "Future: safe_mutation and --write flag"
 function resolveReplaySafety(
   testFile: TestFile,
   permissionMap: Map<string, string>,
@@ -105,6 +112,7 @@ function resolveReplaySafety(
 export async function verifySite(
   site: string,
   deps?: ExecuteDependencies,
+  options?: VerifyOptions,
 ): Promise<SiteVerifyResult> {
   const siteRoot = await resolveSiteRoot(site)
   const manifest = await loadManifest(siteRoot)
@@ -163,7 +171,10 @@ export async function verifySite(
 
     // Skip unsafe mutations — not safe to replay
     if (testFile.protocol !== 'ws' && resolveReplaySafety(testFile, permissionMap) === 'unsafe_mutation') {
-      continue
+      if (!options?.includeWrite) continue
+      // Even with --write, never replay transact ops
+      const perm = permissionMap.get(testFile.operation_id)
+      if (perm === 'transact') continue
     }
 
     if (testFile.protocol === 'ws') {
@@ -429,14 +440,14 @@ function raceTimeout<T>(promise: Promise<T>, ms: number): Promise<T | undefined>
 /**
  * Verify all sites sequentially with rate limiting.
  */
-export async function verifyAll(deps?: ExecuteDependencies): Promise<SiteVerifyResult[]> {
+export async function verifyAll(deps?: ExecuteDependencies, options?: VerifyOptions): Promise<SiteVerifyResult[]> {
   const sites = await listSites()
   const results: SiteVerifyResult[] = []
 
   for (let i = 0; i < sites.length; i++) {
     const site = sites[i]
     if (!site) continue
-    results.push(await verifySite(site, deps))
+    results.push(await verifySite(site, deps, options))
     // Rate limit: 500ms delay between sites
     if (i < sites.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 500))
