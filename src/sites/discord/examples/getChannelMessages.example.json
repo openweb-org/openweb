@@ -4,9 +4,8 @@
   "cases": [
     {
       "input": {
-        "id": 1,
-        "before": 1,
-        "limit": 1
+        "channelId": "1280234300012494862",
+        "limit": 50
       },
       "assertions": {
         "status": 200,

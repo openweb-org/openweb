@@ -52,7 +52,9 @@ paths:
                   name:
                     type: string
                   topic:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                   position:
                     type: integer
                   last_message_id:
@@ -121,9 +123,13 @@ paths:
                         username:
                           type: string
                         global_name:
-                          type: string
+                          type:
+                            - string
+                            - "null"
                         avatar:
-                          type: string
+                          type:
+                            - string
+                            - "null"
                     timestamp:
                       type: string
                     attachments:
@@ -180,7 +186,13 @@ paths:
         build:
           stable_id: 7994b7c3e1e5ea5d
           tool_version: 2
-      parameters: []
+      parameters:
+        - name: guild_ids
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Comma-separated guild snowflake IDs to filter events"
       responses:
         "200":
           description: Success.

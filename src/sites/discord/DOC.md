@@ -13,7 +13,7 @@ openweb discord exec getChannelInfo '{"channelId": "1280234300012494862"}'
 openweb discord exec getChannelMessages '{"channelId": "1280234300012494862", "limit": 50}'
 
 # Get scheduled events
-openweb discord exec getMyScheduledEvents '{}'
+openweb discord exec getMyScheduledEvents '{"guild_ids": "1280234299949449216"}'
 
 # Get entitlements (Nitro, boosts)
 openweb discord exec getMyEntitlements '{"entitlement_type": 1}'

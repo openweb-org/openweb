@@ -4,7 +4,7 @@
   "cases": [
     {
       "input": {
-        "id": 1
+        "channelId": "1280234300012494862"
       },
       "assertions": {
         "status": 200,

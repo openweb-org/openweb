@@ -5,9 +5,7 @@
     {
       "input": {
         "entitlement_type": 1,
-        "exclude_ended": "true",
-        "with_application": "false",
-        "with_sku": "false"
+        "exclude_ended": "true"
       },
       "assertions": {
         "status": 200,

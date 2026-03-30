@@ -4,7 +4,7 @@
   "cases": [
     {
       "input": {
-        "guild_ids": 1
+        "guild_ids": "1280234299949449216"
       },
       "assertions": {
         "status": 200,

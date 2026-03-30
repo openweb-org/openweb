@@ -1,3 +1,18 @@
+## 2026-03-30: Release QA — example fixes and param alignment
+
+**What changed:**
+- Fixed example file operationIds to match openapi.yaml (getChannel→getChannelInfo, listChannelsMessages→getChannelMessages, etc.)
+- Renamed all 4 example files to match operationIds
+- Fixed example param names to match openapi.yaml (id→channelId, removed undeclared params)
+- Used realistic example values (string snowflake IDs, proper limit values)
+- Audited ops quality: 4 focused read ops, clean and meaningful
+- Verified DOC.md completeness: overview, ops table, auth/transport, quick-start, known issues all present
+
+**Why:**
+- Release QA pass to make site package consistent and release-ready
+
+**Verification:** Build passes. Verify returns transient webpack_module_walk errors (auth extraction issue — site is quarantined). Structural correctness confirmed.
+
 ## 2026-03-29: Initial discovery and compile
 
 **What changed:**
