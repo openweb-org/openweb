@@ -1,14 +1,11 @@
 {
-  "operation_id": "getOgvRecommend",
+  "operation_id": "searchVideos",
   "method": "get",
   "cases": [
     {
       "input": {
-        "brush": 1,
-        "fresh_type": 1,
-        "request_cnt": 1,
-        "season_type": 1,
-        "web_location": 1
+        "keyword": "编程",
+        "page": 1
       },
       "assertions": {
         "status": 200,

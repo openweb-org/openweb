@@ -4,24 +4,8 @@
   "cases": [
     {
       "input": {
-        "dm_cover_img_str": "<REDACTED_TOKEN>",
-        "dm_img_inter": [
-          "{\"ds\":[]",
-          "\"wh\":[4645",
-          5340,
-          "41]",
-          "\"of\":[414",
-          828,
-          "414]}"
-        ],
-        "dm_img_list": "[]",
-        "dm_img_str": "<REDACTED_TOKEN>",
         "mid": 1,
-        "platform": "web",
-        "token": "<REDACTED>",
-        "w_rid": "<REDACTED_TOKEN>",
-        "web_location": 1,
-        "wts": 1
+        "platform": "web"
       },
       "assertions": {
         "status": 200,

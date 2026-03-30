@@ -3,6 +3,7 @@ import type { Browser } from 'playwright-core'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { type OpenApiOperation, type OpenApiSpec, getRequestBodyParameters, validateParams } from '../lib/openapi.js'
+import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { ExecutorResult } from './executor-result.js'
 import { getServerXOpenWeb } from './operation-context.js'
@@ -188,19 +189,7 @@ export async function executeBrowserFetch(
     })
   }
 
-  let body: unknown
-  try {
-    body = JSON.parse(fetchResult.text) as unknown
-  } catch {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: `Response is not valid JSON (status ${String(fetchResult.status)})`,
-      action: 'The API returned non-JSON content. Check the endpoint.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
+  const body = parseResponseBody(fetchResult.text, fetchResult.headers['content-type'] ?? null, fetchResult.status)
 
   return { status: fetchResult.status, body, responseHeaders: fetchResult.headers }
 }

@@ -2,6 +2,7 @@ import type { Browser } from 'playwright-core'
 
 import { formatCookieString } from '../lib/cookies.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
+import { parseResponseBody } from '../lib/response-parser.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import {
   getRequestBodyParameters,
@@ -101,19 +102,7 @@ export async function executeCachedFetch(
   response.headers.forEach((value, key) => { responseHeaders[key] = value })
 
   const text = await response.text()
-  let body: unknown
-  try {
-    body = JSON.parse(text) as unknown
-  } catch {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: `Response is not valid JSON (status ${response.status})`,
-      action: 'The API returned non-JSON content.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
+  const body = parseResponseBody(text, response.headers.get('content-type'), response.status)
 
   return { status: response.status, body, responseHeaders }
 }

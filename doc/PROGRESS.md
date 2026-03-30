@@ -1,3 +1,20 @@
+## 2026-03-30: Bilibili site QA — prune to 10 ops, fix verify, release-ready
+
+**What changed:**
+- Pruned bilibili from 32 ops to 10 high-quality ops (7 read + 3 write)
+- Removed 22 noise/niche/broken ops (danmaku protobuf, niche user stats, live, ranking, etc.)
+- Cleaned 62 browser-injected params (w_rid, wts, web_location, dm_*) from example files
+- Fixed getLiveRoomInfo example: `uids` → `room_ids` to match schema
+- Fixed binary response handling: `parseResponseBody` now gracefully returns raw text for `application/octet-stream` and protobuf content types
+- Consolidated JSON parsing: `browser-fetch-executor` and `cache-manager` now use shared `parseResponseBody` instead of inline JSON.parse
+- Created searchVideos example file
+- Updated DOC.md for pruned op set
+- Updated adapter: removed dead handlers (getRanking, getUserFollowStats, getUploaderStats)
+
+**Key files:** `src/sites/bilibili/openapi.yaml`, `src/sites/bilibili/adapters/bilibili-web.ts`, `src/sites/bilibili/DOC.md`, `src/sites/bilibili/examples/`, `src/lib/response-parser.ts`, `src/runtime/browser-fetch-executor.ts`, `src/runtime/cache-manager.ts`, `src/runtime/http-executor.ts`
+**Verification:** 7/7 read ops PASS, 3 write ops untested (require auth)
+**Blockers:** None
+
 ## 2026-03-30: Add --write flag to verify, safe_mutation TODO
 
 **What changed:**

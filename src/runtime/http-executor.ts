@@ -2,6 +2,7 @@ import Ajv from 'ajv'
 import type { Browser } from 'playwright-core'
 
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
+import { parseResponseBody } from '../lib/response-parser.js'
 import { checkPermission, loadPermissions } from '../lib/permissions.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import {
@@ -287,18 +288,7 @@ export async function executeOperation(
         responseHeaders[key] = value
       })
       const text = await response.text()
-      try {
-        body = JSON.parse(text) as unknown
-      } catch {
-        throw new OpenWebError({
-          error: 'execution_failed',
-          code: 'EXECUTION_FAILED',
-          message: `Response is not valid JSON (status ${response.status})`,
-          action: 'The API returned non-JSON content. Check the endpoint.',
-          retriable: false,
-          failureClass: 'fatal',
-        })
-      }
+      body = parseResponseBody(text, response.headers.get('content-type'), response.status)
     }
   }
 

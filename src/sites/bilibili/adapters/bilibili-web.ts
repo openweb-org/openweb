@@ -139,19 +139,6 @@ async function getPopularVideos(page: Page, params: Record<string, unknown>): Pr
   })
 }
 
-async function getRanking(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const rid = Number(params.rid ?? 0)
-  const type = String(params.type ?? 'all')
-
-  return interceptApiResponse(
-    page,
-    '/x/web-interface/ranking/v2',
-    `https://www.bilibili.com/v/popular/rank/all`,
-  ).catch(async () => {
-    return fetchApiViaPage(page, '/x/web-interface/ranking/v2', { rid, type })
-  })
-}
-
 async function getVideoComments(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const oid = Number(params.oid)
   if (!oid) throw OpenWebError.missingParam('oid')
@@ -193,20 +180,6 @@ async function getUserInfo(page: Page, params: Record<string, unknown>): Promise
     '/x/space/wbi/acc/info',
     `https://space.bilibili.com/${mid}`,
   ).catch(() => result)
-}
-
-async function getUserFollowStats(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const vmid = Number(params.vmid ?? params.mid)
-  if (!vmid) throw OpenWebError.missingParam('vmid')
-
-  return fetchApiViaPage(page, '/x/relation/stat', { vmid })
-}
-
-async function getUploaderStats(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const mid = Number(params.mid)
-  if (!mid) throw OpenWebError.missingParam('mid')
-
-  return fetchApiViaPage(page, '/x/space/upstat', { mid })
 }
 
 async function getUserVideos(page: Page, params: Record<string, unknown>): Promise<unknown> {
@@ -282,19 +255,12 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   searchVideos,
   getVideoDetail,
   getPopularVideos,
-  getRanking,
   getVideoComments,
-  getUserInfo,
-  getUserFollowStats,
-  getUploaderStats,
-  getUserVideos,
   getRecommendedFeed,
   likeVideo,
   addToFavorites,
   followUploader,
-  // v5 name aliases → same handlers
   getUserProfile: getUserInfo,
-  getUserStats: getUploaderStats,
   searchUserVideos: getUserVideos,
 }
 

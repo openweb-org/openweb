@@ -6,5 +6,11 @@
   "site_url": "https://www.bilibili.com",
   "compiled_at": "2026-03-29T06:42:56.596Z",
   "requires_auth": false,
-  "transport": "node"
+  "transport": "node",
+  "last_verified": "2026-03-30T21:09:38.972Z",
+  "quarantined": true,
+  "fingerprint": {
+    "response_shape_hash": "getNavInfo:5a950c37c5cac87c,getVideoOnlineCount:46e53445b9e8640a,getVideoUserRelation:9878574f1f30f335",
+    "last_validated": "2026-03-30T21:09:38.973Z"
+  }
 }

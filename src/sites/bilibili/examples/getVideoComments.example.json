@@ -9,10 +9,7 @@
         "pagination_str": "{\"offset\":\"\"}",
         "plat": 1,
         "seek_rpid": "",
-        "type": 1,
-        "w_rid": "<REDACTED_TOKEN>",
-        "web_location": 1,
-        "wts": 1
+        "type": 1
       },
       "assertions": {
         "status": 200,

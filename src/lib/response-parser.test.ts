@@ -15,4 +15,12 @@ describe('parseResponseBody', () => {
   it('parses JSON even without content-type', () => {
     expect(parseResponseBody('{"ok":true}', null, 200)).toEqual({ ok: true })
   })
+
+  it('returns raw text for octet-stream content', () => {
+    expect(parseResponseBody('binary-data', 'application/octet-stream', 200)).toBe('binary-data')
+  })
+
+  it('returns raw text for protobuf content', () => {
+    expect(parseResponseBody('proto-data', 'application/x-protobuf', 200)).toBe('proto-data')
+  })
 })

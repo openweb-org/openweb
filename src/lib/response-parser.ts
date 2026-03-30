@@ -1,7 +1,13 @@
 import { OpenWebError } from '../lib/errors.js'
 
-/** Parse response body as JSON, throwing on failure */
+/** Parse response body as JSON, returning raw text for binary content types */
 export function parseResponseBody(text: string, contentType: string | null, status: number): unknown {
+  // Binary content types (protobuf, octet-stream) — return raw text
+  const ct = contentType ?? ''
+  if (ct.includes('octet-stream') || ct.includes('protobuf')) {
+    return text
+  }
+
   try {
     return JSON.parse(text) as unknown
   } catch {
