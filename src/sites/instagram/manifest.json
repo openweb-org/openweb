@@ -7,11 +7,26 @@
   "description": "Instagram API — cookie_session + cookie_to_header CSRF, page transport",
   "requires_auth": true,
   "dependencies": {
-    "searchTopSearch": ["getUserProfile"],
-    "getTimeline": ["getUserProfile", "getMediaInfo", "getMediaComments"],
-    "getUserProfile": ["getUserById", "getUserFeed", "getUserStories"],
-    "getUserFeed": ["getMediaInfo", "getMediaComments"],
-    "getReelsTray": ["getUserStories"]
+    "searchTopSearch": [
+      "getUserProfile"
+    ],
+    "getTimeline": [
+      "getUserProfile",
+      "getMediaInfo",
+      "getMediaComments"
+    ],
+    "getUserProfile": [
+      "getUserById",
+      "getUserFeed",
+      "getUserStories"
+    ],
+    "getUserFeed": [
+      "getMediaInfo",
+      "getMediaComments"
+    ],
+    "getReelsTray": [
+      "getUserStories"
+    ]
   },
   "stats": {
     "operation_count": 15,
@@ -19,5 +34,11 @@
     "l2_count": 9,
     "l3_count": 6,
     "ws_count": 0
+  },
+  "last_verified": "2026-03-30T22:09:55.792Z",
+  "quarantined": false,
+  "fingerprint": {
+    "response_shape_hash": "getMediaComments:9827723f028b74b8,getMediaInfo:8814ab3b37b15e50,getReelsTray:72804f96af01c900,getTimeline:4b453a540fe14523,getUserById:03109644f237a559,getUserFeed:9c571126cff345d3,getUserProfile:255256732dfb213f,getUserStories:2e85a50d7148da5a,searchTopSearch:c490f18e46466836",
+    "last_validated": "2026-03-30T22:09:55.794Z"
   }
 }

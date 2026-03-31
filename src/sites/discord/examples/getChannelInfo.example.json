@@ -1,6 +1,7 @@
 {
   "operation_id": "getChannelInfo",
   "method": "get",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": {

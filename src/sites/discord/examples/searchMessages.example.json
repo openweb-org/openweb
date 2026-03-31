@@ -1,10 +1,11 @@
 {
   "operation_id": "searchMessages",
   "method": "get",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": {
-        "guildId": "1216071219120439316",
+        "guildId": "1280234300012494859",
         "content": "hello"
       },
       "assertions": {
