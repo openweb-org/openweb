@@ -9,47 +9,30 @@ curate, verify, and install.
 - Reviewing or editing an existing site package
 - Recompiling an existing site with new traffic
 
-## What Compile Already Does
-
-When `openweb compile` runs, it executes the full pipeline in one shot:
-1. **Analyze** — labeled traffic, clustered API requests, detected auth, found extraction signals
-2. **Auto-curate** — accepted all clusters, picked top auth candidate, used suggested names
-3. **Generate** — produced `openapi.yaml`, `asyncapi.yaml`, `manifest.json`, test fixtures
-4. **Verify** — replayed safe operations via node HTTP, recorded pass/fail results
-
-Your job is to review these outputs and fix what auto-curation got wrong.
-
-**Important compile-time verify behavior:**
-- Compile-time verify uses the same `verifySite()` as the lifecycle verifier —
-  full executor with all transports, auth resolvers, and fingerprinting.
-- Operations that require `page` transport will fail if no browser is running,
-  with `driftType: error` and detail "no browser tab open" — this is expected.
-- Auth is resolved automatically via the executor's auth chain: token cache →
-  browser CDP → fail. If a browser is running (common after recording), auth
-  cookies are available. Without a browser, auth-required ops report `auth_drift`.
-
 ## Process
 
 ```mermaid
 flowchart TD
     C1["Step 1: Compile"]
     C2["Step 2: Review<br/>loads analysis-review.md"]
-    C3["Step 3: Curate<br/>loads spec-curation.md"]
-    C4{"Step 4: Verify"}
+    C3["Step 3: Curate<br/>loads spec-curation.md, site-doc.md"]
+    C4{"Step 4: Verify<br/>loads verify.md<br/>(independent agent)"}
     C5["Step 5: Install"]
+    C6["Step 6: Learn"]
     BACK["Return to discover.md capture"]
 
     C1 --> C2 --> C3 --> C4
     C2 -->|missing coverage| BACK
-    C4 -->|spec fix| C3
+    C4 -->|spec/doc fix| C3
     C4 -->|need more traffic| BACK
-    C4 -->|all target intents pass| C5
+    C4 -->|all dimensions pass| C5 --> C6
 
     style C1 fill:#e8f5e9
     style C2 fill:#fff3e0
     style C3 fill:#fff3e0
     style C4 fill:#fff3e0
     style C5 fill:#e1f5fe
+    style C6 fill:#f3e5f5
     style BACK fill:#ffebee
 ```
 
@@ -62,8 +45,15 @@ real data via `openweb <site> exec <op> '{...}'`.
 openweb compile <site-url> --capture-dir <capture-dir>
 ```
 
-This runs the FULL pipeline in one shot — analyze, auto-curate, generate,
-and verify. It produces:
+This runs the full pipeline in one shot:
+1. **Analyze** — label traffic, cluster API requests, detect auth, find extraction signals
+2. **Auto-curate** — accept all clusters, pick top auth candidate, use suggested names
+3. **Generate** — produce `openapi.yaml`, `asyncapi.yaml`, `manifest.json`, test fixtures
+4. **Verify** — replay safe operations via node HTTP, record pass/fail results
+
+Your job is to review these outputs and fix what auto-curation got wrong.
+
+It produces:
 
 | Output | Location | Purpose |
 |--------|----------|---------|
@@ -91,6 +81,15 @@ rate, auth status. Example: `8 HTTP ops, 5 verified, 42/120 API samples, auth=de
 - `DRIFT` — the operation works but response shape changed from stored fingerprint.
 - `FAIL` — needs investigation. Check `driftType` and `detail`.
 
+**Compile-time verify behavior:**
+- Uses the same `verifySite()` as the lifecycle verifier — full executor with
+  all transports, auth resolvers, and fingerprinting.
+- Operations requiring `page` transport will fail if no browser is running,
+  with `driftType: error` and detail "no browser tab open" — this is expected.
+- Auth resolves via: token cache → browser CDP → fail. If a browser is running
+  (common after recording), cookies are available. Without a browser,
+  auth-required ops report `auth_drift`.
+
 **Note:** Operations with `replaySafety: unsafe_mutation` (write ops) are skipped
 entirely — they do not appear in the verify report. This is controlled by the
 `replay_safety` field in example files, falling back to `x-openweb.permission` or
@@ -116,172 +115,43 @@ WebSocket analysis, and coverage decisions.
 
 ### Step 3: Curate
 
-**Read `references/spec-curation.md` now.** It is the complete guide for
-editing the generated spec: removing noise, renaming operations, fixing auth
-and transport, setting permissions, reviewing schemas, and handling write ops.
+**Read `references/spec-curation.md` and `references/site-doc.md` now.**
 
-Apply the edits described there to `~/.openweb/sites/<site>/openapi.yaml`
-(and `asyncapi.yaml` if WS operations are present).
+1. **Merge** (if existing package) — see `spec-curation.md` "Merge with Existing Package"
+2. **Edit spec** — apply all `spec-curation.md` edit targets to `~/.openweb/sites/<site>/openapi.yaml` (and `asyncapi.yaml`)
+3. **Write DOC.md** — create `~/.openweb/sites/<site>/DOC.md` per `site-doc.md` template. Writing DOC.md during curation validates your decisions — if you can't write a clear workflow, the operation naming or grouping needs revision.
+4. **Write PROGRESS.md** — append entry to `~/.openweb/sites/<site>/PROGRESS.md` per `site-doc.md` format
+
+All curation artifacts live in `~/.openweb/sites/<site>/` so that Step 5 is a
+single folder copy.
 
 ### Step 4: Verify
 
-After editing the spec, verify it works at runtime.
+**Read `references/verify.md` now.** It covers the full verification process.
 
-#### Batch Verify
+**Important:** Verification must be performed by an independent agent — not
+the same agent that curated the spec and wrote docs. This separation ensures
+blind spots in curation are caught.
 
-```bash
-openweb verify <site>
-openweb verify <site> --browser   # also verify page-transport ops (auto-starts browser)
-```
+Verification covers three dimensions:
+- **Runtime Verify** — batch verify + runtime exec (do operations return data?)
+- **Spec Verify** — does the spec follow `spec-curation.md` standards?
+- **Doc Verify** — does DOC.md follow the `site-doc.md` template?
 
-For sites that use `transport: page`, use `--browser` — it auto-starts the managed
-browser if not already running and verifies page-transport ops that would otherwise fail.
+All three must pass. If verify finds spec or doc issues, return to Step 3
+to fix them. If verify finds missing traffic, return to `discover.md` Step 2.
 
-`openweb verify <site>` reports lifecycle statuses:
-
-| Status | What it means | What to do |
-|--------|---------------|------------|
-| `PASS` | Works. Continue to runtime exec. | |
-| `DRIFT` | Works but response shape changed. | Re-compile or update fixtures if intentional. Document if transient. |
-| `auth_expired` | Login/session expired. | `openweb login <site>`, `openweb browser restart`, rerun verify. |
-| `FAIL` | Execution failed. | Read detail line. Fix spec or environment and rerun. |
-| `FAIL` (403 with cookies) | Most ops return 403 even with valid cookies. | Wrong CSRF — check `authCandidates[0].csrfOptions` in analysis.json. See `analysis-review.md` CSRF Troubleshooting. |
-
-#### Runtime Exec Exit Gate
-
-Batch verify checks HTTP sanity. Runtime exec proves an agent can get usable data.
-
-For each target intent, exec the best operation:
-
-```bash
-openweb <site> exec <operation> '{"param": "value"}'
-```
-
-**Exit criterion:** Each target intent has at least one operation that returns
-real data — HTTP 2xx, valid JSON, non-empty response with expected fields.
-
-If all pass → continue to Step 5 (install).
-If any fail → diagnose below.
-
-Common issues at this stage:
-- `needs_browser` → run `openweb browser start`
-- `needs_login` → log in to the site in the managed browser
-- Hangs → check if token cache is stale (restart browser)
-- Empty response → the API may need different parameters
-
-#### Diagnose and Loop
-
-When runtime exec fails, diagnose the root cause and fix the spec.
-Do not re-capture unless the problem is missing traffic.
-
-| Response | Likely cause | Fix |
-|----------|-------------|-----|
-| 403 | Wrong CSRF config, missing headers, expired session | Check CSRF cookie/header names. Check if CSRF scope excludes GET. Check for extra required headers. If cookies missing: `openweb login <site>` |
-| 401 | Session expired | `openweb login <site>`, restart browser |
-| 999 / bot block | Node transport hitting bot detection | Switch to `page` transport |
-| 200 HTML (not JSON) | SSR page endpoint, not API | Remove op and use API equivalent, or add extraction config |
-| 404 | Wrong path template | Fix path parameter normalization in spec |
-| 400 | Bad param examples or missing required params | Update `exampleValue` fields in spec |
-| 200 empty/wrong data | Wrong query variables or response schema | Check captured request params vs what you're sending |
-| Timeout / hang | Stale token cache, browser not running | `openweb browser restart`, clear token cache |
-| Redirect loop | Auth-gated endpoint, not logged in | Log in, or remove endpoint |
-
-After fixing the spec, return to batch verify. If the fix requires more captured
-traffic (missing endpoints, wrong API domain), return to `discover.md` Step 2
-for re-capture.
-
-> **When to stop iterating:**
-> - After 2 fix-and-verify cycles with no progress, the issue is likely
->   missing traffic (return to `discover.md` Step 2) or a blocked site.
-> - If bot detection blocks all transports and no workaround exists,
->   document the blocker in DOC.md Known Issues and tell the user.
-> - If the only failing ops are non-target bonus operations, proceed to
->   install — document the failures in Known Issues.
-
-#### WS Verification
-
-If AsyncAPI operations are present:
-- Can the WebSocket connect with the detected auth?
-- Does the heartbeat interval match?
-- Do subscribe operations receive expected event types?
+**Exit criterion:** All three dimensions pass — operations return real data,
+spec meets standards, docs are complete with workflows and data flow.
 
 ### Step 5: Install
 
-When all operations pass verification (or failures are understood and documented):
-
-#### Copy or Merge into Source Tree
-
-Copy the generated package from `~/.openweb/sites/<site>/` to `src/sites/<site>/`:
+Copy the curated package to the source tree. All semantic decisions were made
+in Step 3 — install is a dumb folder copy.
 
 ```bash
 mkdir -p src/sites/<site>
-cp ~/.openweb/sites/<site>/openapi.yaml src/sites/<site>/
-cp ~/.openweb/sites/<site>/manifest.json src/sites/<site>/
-# Copy asyncapi.yaml only if WS operations are present
-# Copy examples/ directory
-```
-
-If the site already has a package, merge carefully — do not lose existing
-adapter files, DOC.md, or PROGRESS.md.
-
-#### Merging with an Existing Package
-
-When the site already has a package at `src/sites/<site>/`:
-
-1. **Read the existing package first.** Open `openapi.yaml` and note:
-   - Write operations (permission: write) — these are manually authored
-   - Adapter references (x-openweb.adapter) — these have custom code
-   - Complex auth config (exchange_chain, page_global, sapisidhash, webpack_module_walk)
-   - Custom $ref schemas in components/
-
-2. **Copy new spec to a temp location.** Do not overwrite the existing spec.
-
-3. **Merge operations:**
-   - Add genuinely new operations (new paths not in existing spec) from
-     the new spec into the existing spec.
-   - For operations that exist in both: keep existing if it has better
-     schemas, params, or was manually curated. Take new if existing was
-     a stub.
-   - NEVER delete existing write operations.
-   - NEVER delete existing adapter references.
-
-4. **Merge auth:** If existing has complex auth (exchange_chain, page_global,
-   sapisidhash, webpack_module_walk), keep it. If existing has no auth and
-   new detected cookie_session + CSRF, take the new auth config.
-
-5. **Preserve adapters:** Copy no adapter files from the new package. The
-   existing adapter directory is always authoritative.
-
-6. **Update DOC.md:** Add new operations to the operations table. Do not
-   remove existing operation documentation.
-
-#### Write DOC.md
-
-Create or update `src/sites/<site>/DOC.md` per `references/site-doc.md`.
-
-Required sections: **Overview, Quick Start, Operations, Auth, Transport, Known Issues.**
-See `references/site-doc.md` for the canonical template.
-
-#### Write PROGRESS.md
-
-Append the first entry (or a new entry) to `src/sites/<site>/PROGRESS.md`:
-```markdown
-## YYYY-MM-DD: Initial compile (or: Added N operations)
-
-**What changed:**
-- Compiled N HTTP operations, M WS operations
-- Auth: <type>, Transport: <type>
-
-**Why:**
-- <user request or coverage goal>
-
-**Verification:** N/M passed
-**Commit:** <short hash>
-```
-
-#### Build and Test
-
-```bash
+cp -r ~/.openweb/sites/<site>/* src/sites/<site>/
 pnpm build && pnpm test
 ```
 
@@ -292,31 +162,35 @@ openweb sites                        # confirm CLI recognizes the site
 openweb <site>                       # confirm operations are listed
 ```
 
+**Note:** Do not overwrite existing adapter files — the existing `adapters/`
+directory is always authoritative.
+
 **Note:** `openweb sites` resolves from `~/.openweb/sites/` first (the compile
 cache), so it can succeed even if the `src/sites/` copy is missing. Always
 verify the repo files directly.
 
-#### Sync CLI Cache
-
-After installing to the source tree and running `pnpm build`, the CLI cache
-at `~/.openweb/sites/` may still hold the pre-edit version. Three paths exist:
+**Three paths exist** for site packages:
 - `~/.openweb/sites/<site>/` — compile cache (what `openweb` reads at runtime)
 - `src/sites/<site>/` — developer source tree (what you edit and commit)
 - `dist/sites/<site>/` — build output
 
-If you edited `src/sites/<site>/openapi.yaml` after compile, the compile cache
-is stale. Run `pnpm build` to update the build output, then verify against
-the source tree — not the cache.
+If you edited `src/sites/<site>/` after install, the compile cache is stale.
+Run `pnpm build` to update the build output, then verify against the source
+tree — not the cache.
 
-#### Update Knowledge (if applicable)
+### Step 6: Learn
 
-If you learned something new during compile that generalizes across sites,
-write it to `references/knowledge/` per `references/update-knowledge.md`.
+After a successful compile cycle, capture what you learned for future sites.
 
-## Appendix: Pipeline Improvement Report
+#### Update Knowledge
 
-If you hit friction during the compile process that wasn't site-specific — a
-rule too tight, a heuristic too loose, a doc gap that wasted a cycle — write it up.
+If you learned something that generalizes across sites, write it to
+`references/knowledge/` per `references/update-knowledge.md`.
+
+#### Pipeline Improvement Report
+
+If you hit friction that wasn't site-specific — a rule too tight, a heuristic
+too loose, a doc gap that wasted a cycle — write it up.
 
 Create `src/sites/<site>/pipeline-gaps.md`. The goal is NOT to overfit to this
 site, but to surface systematic issues that make ALL site discoveries less
@@ -338,8 +212,9 @@ Only upstream improvements — skip site-specific workarounds already resolved i
 
 - `references/discover.md` — capture workflow, framing intents
 - `references/analysis-review.md` — how to read `analysis.json` (loaded at Step 2)
-- `references/spec-curation.md` — how to clean and configure specs (loaded at Step 3)
-- `references/site-doc.md` — DOC.md / PROGRESS.md template
+- `references/spec-curation.md` — how to clean, configure, and merge specs (loaded at Step 3)
+- `references/site-doc.md` — DOC.md / PROGRESS.md template (loaded at Step 3)
+- `references/verify.md` — multi-dimensional verification (loaded at Step 4)
 - `references/update-knowledge.md` — when to write cross-site patterns
 - `references/knowledge/archetypes/index.md` — per-archetype curation expectations
 - `references/knowledge/auth-patterns.md` — auth primitive structures

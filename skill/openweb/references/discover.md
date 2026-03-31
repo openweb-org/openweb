@@ -56,7 +56,7 @@ Read these knowledge files in order — but scale depth to context:
      compiler cannot discover it.
 
    If the existing package uses these auth types, PRESERVE them during merge
-   (see `compile.md` Step 5 "Merging with an Existing Package").
+   (see `spec-curation.md` "Merge with Existing Package").
 
 ## Critical Rules
 
@@ -135,6 +135,10 @@ endpoints cannot be inferred from read traffic.
 
 ### Step 2: Navigate and Capture
 
+**Read `references/capture-guide.md` now.** It covers capture modes (UI
+browsing vs direct API calls), auth injection, scripted capture, multi-worker
+sharing, and troubleshooting.
+
 #### Start Capture
 
 ```bash
@@ -142,152 +146,13 @@ openweb browser start
 openweb capture start --cdp-endpoint http://localhost:9222
 ```
 
-#### Choose Capture Mode: UI Navigation vs `page.evaluate(fetch)`
+#### Browse per Target Intents
 
-Both modes produce HAR traffic that the compiler ingests. Use them together
-in each capture session — UI browsing discovers endpoints you don't know about;
-direct calls fill known coverage gaps.
+Browse the site systematically to trigger each target intent from Step 1.
+See `capture-guide.md` for detailed browsing tips, direct API call patterns,
+and write action techniques.
 
-#### Browsing Tips
-
-Browse the site systematically in the managed browser to trigger each target intent:
-- Do a search (triggers search API)
-- Click into a result (triggers detail API)
-- Scroll or paginate (triggers pagination)
-- Check other features (reviews, profile, settings)
-
-Tips:
-- **Vary your inputs** — use 2-3 different search terms for better schema inference.
-- **Wait for content to load** before navigating away.
-- **Click through UI tabs** on profiles and feeds — each tab triggers a different
-  API endpoint. Hit the top 2-3 tabs.
-- **Search: use the on-page search box**, not URL navigation. `page.goto()` to
-  a search URL delivers SSR HTML; typing in the SPA search widget triggers the
-  JSON API endpoint.
-- **If the site requires login**, log in in the managed browser. For net-new
-  sites, `openweb login <site>` won't work — authenticate via the target URL
-  directly. Existing Chrome profile logins may carry over.
-- **Trigger write actions** after browsing read flows: like a post, follow a user,
-  bookmark content. See Write Operation Safety table above for safe actions.
-
-  **Executing write actions programmatically:**
-
-  *Approach 1 — Click UI buttons* (when selectors are findable):
-  Navigate to a content detail page. Find the button using common selectors
-  (`[class*="like"]`, `[aria-label*="like"]`, `[data-action="like"]`), scroll it
-  into view, click, wait 2s for the POST to fire. If `.click()` doesn't trigger
-  the API call, try `dispatchEvent(new MouseEvent('click', {bubbles: true}))`.
-
-  *Approach 2 — Call write APIs directly* (preferred — see Direct API Calls below):
-  Use `page.evaluate(fetch('/api/endpoint', {method:'POST', credentials:'same-origin'}))`.
-  Read the CSRF token from `document.cookie` if the site uses CSRF. Find write
-  endpoint paths in the site's prior-round DOC.md or openapi.yaml — write
-  endpoints cannot be discovered from read traffic alone.
-
-  After each write action, trigger the reverse to capture both sides (like/unlike,
-  follow/unfollow, bookmark/unbookmark).
-- **If you expect auth-required operations:** Log in FIRST, then capture.
-  Auth detection requires seeing auth tokens in the traffic. Specifically:
-  - **exchange_chain (Reddit-like):** Do a COLD page load (clear cookies or
-    incognito) so the token exchange request appears in the HAR.
-  - **sapisidhash (Google/YouTube):** Must be logged into a Google account.
-    SAPISID cookie and `SAPISIDHASH` Authorization headers must appear in HAR.
-  - **cookie_session with CSRF:** Perform at least one mutation (like, follow)
-    so the CSRF token appears in POST request headers.
-- **Avoid** logout, delete account, billing, irreversible actions.
-
-**SPA navigation rule:** Use **in-app navigation** (click links in the UI), not
-address-bar navigation or `window.location.href`. Full-page reloads deliver data
-via SSR — JSON API calls only fire during SPA client-side routing. For
-programmatic browsing: `element.click()` on links, not `Page.navigate`.
-
-#### Direct API Calls via `page.evaluate(fetch)`
-
-Calling APIs directly from the page context is often the most reliable capture
-method — more reliable than hoping UI clicks trigger the right requests:
-
-```javascript
-await page.evaluate(() => fetch('/api/endpoint?param=value', {
-  credentials: 'same-origin'
-}));
-```
-
-**When to prefer direct fetch over SPA navigation:**
-- POST-based APIs (Innertube, GraphQL) — clicks may not send the right body
-- You know the API pattern but can't find the UI button
-- You want multiple samples with varied parameters for better schema inference
-- REST endpoints are more stable than GraphQL `doc_id` hashes
-
-**Combine with UI browsing:** Direct calls fill known coverage gaps; UI browsing
-discovers endpoints you don't know about. Use both in each capture session.
-
-**Same-origin only.** `page.evaluate(fetch(...))` is blocked by CORS for
-cross-origin URLs. Navigate to the target subdomain first, then use relative paths.
-
-#### Non-Cookie Auth Injection
-
-`credentials: 'same-origin'` only carries cookie-based auth. For sites using
-non-cookie auth (`webpack_module_walk`, `localStorage_jwt`, `page_global`),
-you must extract the token and inject it as a header:
-
-```javascript
-// Extract token (method depends on auth type)
-const token = await page.evaluate(() => {
-  // localStorage_jwt:
-  return localStorage.getItem('auth_token');
-  // page_global:
-  // return window.__AUTH_TOKEN__;
-});
-
-// Inject into fetch
-await page.evaluate((t) => fetch('/api/endpoint', {
-  headers: { 'Authorization': `Bearer ${t}` },
-}), token);
-```
-
-Check the site's `openapi.yaml` auth config to determine the correct extraction
-method and header name.
-
-#### Two-Phase Programmatic Capture
-
-For complex programmatic capture (many endpoints, varied parameters), use a
-two-phase approach instead of inline `page.evaluate` calls:
-
-1. **Phase 1 — Capture:** `openweb capture start` → run your script (Playwright,
-   CDP, or manual browsing) → `openweb capture stop`
-2. **Phase 2 — Compile:** `openweb compile <site-url> --capture-dir ./capture`
-
-This separates capture from compilation, giving you direct stderr visibility
-during the script phase and allowing fast iteration without restarting the
-full pipeline.
-
-When writing capture scripts (Playwright navigation, `page.evaluate(fetch)`,
-token extraction), follow the timeout discipline in
-`references/capture-script-guide.md` to prevent hangs.
-
-#### Capture Target Binding
-
-Capture is **browser-wide**, not single-tab. On start, it attaches HAR + WS
-recording to `pages()[0]`, then auto-attaches to every new tab opened
-afterwards via `context.on('page')`. Pre-existing tabs (opened before capture
-started) are NOT monitored, except `pages()[0]`.
-
-What this means in practice:
-1. **Start capture FIRST**, then open new tabs — they auto-attach.
-2. **Pre-existing tabs are blind spots.** If you opened tabs before capture,
-   their traffic won't appear in the HAR.
-3. **`page.evaluate(fetch(...))` works** on any monitored page — the initial
-   page or any tab opened after capture started.
-4. **Separate Playwright connections don't work.** A `page.evaluate(fetch())`
-   on a Page from a different Playwright `connect()` call uses a Page object
-   that capture doesn't monitor. Use CDP on the existing browser context, or
-   navigate in a tab that capture already tracks.
-
-**Verification:** After capture, check `summary.byCategory.api`. If it's 0
-despite browsing, traffic likely came from a pre-existing tab or a separate
-Playwright connection.
-
-#### Stop Capture and Artifacts
+#### Stop Capture
 
 ```bash
 openweb capture stop
@@ -295,16 +160,6 @@ openweb capture stop
 
 The capture directory (default `./capture/`) now contains `traffic.har`,
 `state_snapshots/`, and optionally `websocket_frames.jsonl`.
-
-#### Capture Troubleshooting
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| HAR has 0 API entries for target site | Browsing happened in a pre-existing tab (opened before capture) | Start capture first, then open a NEW tab for the site |
-| `page.evaluate(fetch())` not in HAR | Fetch ran on a Page from a separate Playwright connection | Use CDP on the capture's browser context, or navigate a monitored tab |
-| `No active capture session` on stop | Stale PID file or process killed | `pkill -f "capture start"`, delete PID file, restart |
-| HAR empty / truncated | Process killed before flush | Stop with `openweb capture stop`, never `kill -9` |
-| Another worker's stop kills your data | Global capture stop | Use Playwright `context.recordHar()` for isolated capture |
 
 ## Handoff to `compile.md`
 
@@ -316,53 +171,19 @@ compile, review, curate, verify, and install.
 Follow the "Before You Start" fast-path (reads existing DOC.md + openapi.yaml),
 identify gaps, then enter at Step 2 for targeted capture.
 
-### Existing-Site Fast Path
-
 When expanding an existing site, you already have operation IDs and paths from
 the prior package. Use these to focus capture on the missing intents only.
 
-### Chain-ID Rediscovery
-
-When rediscovering detail endpoints, use list endpoints first to get real
-entity IDs, then chain into detail calls:
-
-```
-listGuilds → pick guildId → getGuildInfo, listGuildChannels
-```
-
+When rediscovering detail endpoints, use the **Workflows** section of the site's
+DOC.md to find chain dependencies (e.g., `listGuilds → guildId → getGuildInfo`).
 Do not hardcode IDs from prior captures — they may be expired or invalid.
-Execute a list operation to get fresh IDs, then use those IDs for detail
-endpoint capture.
-
-## Multi-Worker Browser Sharing
-
-Multiple workers can share one Chrome browser on the same CDP port. Each
-worker starts its own **isolated** capture session — no cross-contamination.
-
-```bash
-# Worker A (discovering discord.com)
-SESSION_A=$(openweb capture start --isolate --url https://discord.com --cdp-endpoint http://localhost:9222)
-# browse discord in the auto-opened tab, or use page.evaluate(fetch) in a script
-openweb capture stop --session $SESSION_A
-openweb compile https://discord.com --capture-dir ./capture-$SESSION_A
-
-# Worker B (discovering reddit.com) — simultaneously
-SESSION_B=$(openweb capture start --isolate --url https://reddit.com --cdp-endpoint http://localhost:9222)
-# browse reddit
-openweb capture stop --session $SESSION_B
-openweb compile https://reddit.com --capture-dir ./capture-$SESSION_B
-```
-
-Key points:
-- `--isolate` creates a new tab and monitors only that tab's traffic
-- Each session gets a unique ID printed to stdout and a session-scoped PID file
-- `capture stop --session <id>` stops a specific session without affecting others
-- Output directories are auto-scoped: `./capture-<session-id>/`
-- Without `--isolate`, capture is browser-wide (single-worker interactive use)
+Execute a list operation to get fresh IDs, then use those for detail endpoint
+capture.
 
 ## Related References
 
-- `references/compile.md` — post-capture process (compile, review, curate, verify, install)
+- `references/compile.md` — post-capture process (compile, review, curate, verify, install, learn)
+- `references/capture-guide.md` — capture techniques, scripted capture, multi-worker, troubleshooting
 - `references/analysis-review.md` — how to read `analysis.json`
 - `references/spec-curation.md` — how to clean and configure generated specs
 - `references/site-doc.md` — DOC.md / PROGRESS.md template

@@ -2,11 +2,19 @@
 
 ## Purpose
 
-Standards for per-site documentation. Every site package should have DOC.md (current state) and PROGRESS.md (history trace) so the next agent or human can understand the site without re-discovering it.
+Standards for per-site documentation. Every site package should have DOC.md
+(current state) and PROGRESS.md (history trace).
+
+**DOC.md is a per-site skill doc.** Its first audience is the agent (or human)
+using the site through openweb — not the developer who compiled it. It answers:
+"what can I do here, and how do operations connect?" Detail params and schemas
+live in `openapi.yaml` (accessible via `openweb <site> <op>`); DOC.md carries
+only what the spec cannot express: intent, workflows, cross-operation data flow,
+and gotchas.
 
 ## When to Use
 
-- After initial discover/compile — create first DOC.md and PROGRESS.md
+- `compile.md` Step 3 (Curate) — write DOC.md alongside spec curation
 - After any site update (new operations, auth fix, transport change)
 - When onboarding a new site package
 
@@ -18,7 +26,7 @@ Standards for per-site documentation. Every site package should have DOC.md (cur
 src/sites/<site>/
 ├── openapi.yaml
 ├── manifest.json
-├── DOC.md          ← SOTA: what this site is and how it works
+├── DOC.md          ← Per-site skill doc: intent, workflows, data flow
 ├── PROGRESS.md     ← History: what happened and when
 ├── adapters/       (optional)
 └── examples/       (optional)
@@ -26,9 +34,28 @@ src/sites/<site>/
 
 ---
 
-## DOC.md — SOTA Memory
+## DOC.md — Per-Site Skill Doc
 
-Always reflects current best understanding. Update on every discover/compile/fix cycle.
+Always reflects current best understanding. Update on every discover/compile/fix
+cycle. The structure is user-first: workflows and operations before site internals.
+
+### Layering with openapi.yaml
+
+DOC.md and `openapi.yaml` serve different roles — avoid duplication:
+
+| Layer | Carries | Format |
+|---|---|---|
+| **openapi.yaml** | Structural truth — params, types, schemas, endpoints | Machine-readable |
+| **DOC.md** | Semantic truth — intent, workflows, cross-op data flow, gotchas | Agent-readable |
+
+DOC.md should only cover what `openapi.yaml` cannot express:
+1. **Cross-operation data flow** — `channelId ← listGuildChannels` (OpenAPI has no concept of this)
+2. **Intent mapping** — what this operation is for, when to use it
+3. **Workflows** — multi-step sequences connecting operations
+4. **Non-obvious behavior** — rate limits, required login, response quirks
+
+For full param lists, types, and response schemas, the agent uses
+`openweb <site> <op>`.
 
 ### Structure
 
@@ -38,9 +65,40 @@ Always reflects current best understanding. Update on every discover/compile/fix
 ## Overview
 One-liner: what this site is, what archetype (e-commerce, travel, social, etc.)
 
+## Workflows
+
+Common multi-step flows showing cross-operation data flow:
+
+### [Workflow name, e.g., "Find and read messages"]
+1. `listGuilds` → pick guild → `guildId`
+2. `listGuildChannels(guildId)` → pick channel → `channelId`
+3. `getChannelMessages(channelId, limit)` → messages
+
+### [Another workflow]
+1. `searchProducts(query)` → results with `productId`
+2. `getProductDetail(productId)` → full product info
+
+## Operations
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| listGuilds | list my servers | — | id, name, icon | entry point |
+| listGuildChannels | channels in server | guildId ← listGuilds | id, name, type | |
+| getChannelMessages | read messages | channelId ← listGuildChannels | id, content, author, timestamp | paginated (limit, before) |
+
+The `← source` annotations are the soul of this table — they turn a flat
+operation list into a directed graph so the agent knows where to get each param.
+
+**Column guide:**
+- **Operation**: operationId from openapi.yaml
+- **Intent**: what this achieves (short phrase)
+- **Key Input**: main params + where to get them (`← source_operation`). Omit trivial params — full list is in `openweb <site> <op>`
+- **Key Output**: key response fields the user cares about (not full schema)
+- **Notes**: pagination, rate limits, gotchas. Mark entry points (ops with no input dependencies)
+
 ## Quick Start
 
-Copy-paste commands for common intents:
+Copy-paste commands for common intents (ordered by workflow):
 
 \```bash
 # [Intent 1 description]
@@ -50,11 +108,12 @@ openweb <site> exec <op> '<full JSON params>'
 openweb <site> exec <op> '<full JSON params>'
 \```
 
-## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| searchProducts | search by keyword | GET /search?q= | returns title, price, image |
-| ... | ... | ... | ... |
+---
+
+## Site Internals
+
+Everything below is for discover/compile operators and deep debugging.
+Not needed for basic site usage.
 
 ## API Architecture
 How the site's API works — the non-obvious parts:
@@ -81,7 +140,11 @@ How the site's API works — the non-obvious parts:
 - Dynamic fields that cause verify DRIFT?
 ```
 
-**Required sections:** Overview, Quick Start, Operations, Auth, Transport, Known Issues. The rest (API Architecture, Extraction) are optional — include them when they capture something non-obvious. If a required section has nothing interesting (e.g., Auth for a public API), a one-liner is enough: `No auth required.`
+**Required sections:** Overview, Workflows, Operations, Quick Start, Auth,
+Transport, Known Issues. The rest (API Architecture, Extraction) are optional —
+include them when they capture something non-obvious. If a required section has
+nothing interesting (e.g., Auth for a public API), a one-liner is enough:
+`No auth required.`
 
 ---
 
@@ -128,6 +191,7 @@ If you learn something during discover/compile:
 
 - [cli.md](cli.md) — CLI commands including `verify` and `compile`
 - [discover.md](discover.md) — Discovery workflow that produces initial DOC.md
-- [compile.md](compile.md) — Compilation workflow
+- [compile.md](compile.md) — Compilation workflow (DOC.md written at Step 3 Curate)
+- [verify.md](verify.md) — Verification process (Doc Verify checks DOC.md against this template)
 - [update-knowledge.md](update-knowledge.md) — When to write to references/knowledge/ vs DOC.md
 - [troubleshooting.md](troubleshooting.md) — Debugging site issues

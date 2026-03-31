@@ -96,7 +96,7 @@ Transforms captured traffic into a site package. Requires `--capture-dir` (manua
 | Flag | Purpose |
 |------|---------|
 | `--capture-dir <dir>` | Load from an existing capture bundle |
-| `--script <file>` | Scripted recording — child process killed after 120s. See `references/capture-script-guide.md` for templates |
+| `--script <file>` | Scripted recording — child process killed after 120s. See `references/capture-guide.md` for templates |
 | `--curation <file>` | Apply manual curation overrides (CSRF type, excluded ops, etc.) |
 
 ## Verify

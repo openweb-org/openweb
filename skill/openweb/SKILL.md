@@ -37,8 +37,8 @@ openweb sites                                      # list available sites
 
 ### 2. Read site notes
 Check if `src/sites/<site>/DOC.md` exists and read it before trying operations.
-- DOC.md has: which operations serve which intents, copy-paste example commands, auth requirements, known issues
-- If DOC.md exists, read it BEFORE trying operations — it saves you from guessing params
+- DOC.md has: workflows, cross-operation data flow, intent mapping, known issues
+- If DOC.md exists, read it BEFORE trying operations — it tells you which ops to chain and where params come from
 
 ### 3. Check readiness
 ```bash
@@ -92,8 +92,9 @@ Errors on stderr include `failureClass`:
 | File | Loaded by | What it covers |
 |---|---|---|
 | `references/analysis-review.md` | `compile.md` Review step | How to read `analysis.json` and decide whether traffic is good enough |
-| `references/spec-curation.md` | `compile.md` Curate step | How to clean, name, configure, and harden generated specs |
-| `references/capture-script-guide.md` | `discover.md` Two-Phase Capture | Timeout discipline and templates for Playwright capture scripts |
+| `references/spec-curation.md` | `compile.md` Curate step | How to clean, name, configure, merge, and harden generated specs |
+| `references/verify.md` | `compile.md` Verify step | Multi-dimensional verification: runtime, spec standards, doc standards |
+| `references/capture-guide.md` | `discover.md` Capture step | Capture techniques, scripted capture, timeout discipline, multi-worker, troubleshooting |
 
 ### Knowledge files (load when the process doc tells you to)
 

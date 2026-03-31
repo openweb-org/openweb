@@ -23,6 +23,7 @@ before making changes. Edits fall into these categories:
 8. Review examples for PII
 9. Extraction complexity rule
 10. Curate write operations
+11. Merge with existing package (if recompiling)
 
 ## Remove Noise Operations
 
@@ -273,9 +274,47 @@ Write operations require extra attention beyond read ops:
    during QA. Alternatively, test manually: `openweb <site> exec <op> '{...}'`
    in a safe context (like a post you own, then unlike it).
 
+## Merge with Existing Package
+
+When recompiling a site that already has a package at `src/sites/<site>/`,
+merge decisions are curation work — they happen here, not at install time.
+Install is a dumb overwrite of the final curated package.
+
+### Process
+
+1. **Read the existing package first.** Open `openapi.yaml` and note:
+   - Write operations (permission: write) — these are manually authored
+   - Adapter references (x-openweb.adapter) — these have custom code
+   - Complex auth config (exchange_chain, page_global, sapisidhash, webpack_module_walk)
+   - Custom $ref schemas in components/
+
+2. **Copy new spec to a temp location.** Do not overwrite the existing spec.
+
+3. **Merge operations:**
+   - Add genuinely new operations (new paths not in existing spec) from
+     the new spec into the existing spec.
+   - For operations that exist in both: keep existing if it has better
+     schemas, params, or was manually curated. Take new if existing was
+     a stub.
+   - NEVER delete existing write operations.
+   - NEVER delete existing adapter references.
+
+4. **Merge auth:** If existing has complex auth (exchange_chain, page_global,
+   sapisidhash, webpack_module_walk), keep it. If existing has no auth and
+   new detected cookie_session + CSRF, take the new auth config.
+
+5. **Preserve adapters:** Copy no adapter files from the new package. The
+   existing adapter directory is always authoritative.
+
+6. **Output:** The merged spec at `~/.openweb/sites/<site>/openapi.yaml` is
+   the final curated artifact. Subsequent steps (doc writing, verify, install)
+   all operate on this merged result.
+
 ## Related References
 
 - `references/compile.md` — process doc that loads this reference at Curate step
+- `references/verify.md` — verification process (Spec Verify checks against these standards)
+- `references/site-doc.md` — DOC.md template (written during Curate, after spec editing)
 - `references/analysis-review.md` — analysis review guide loaded at Review step
 - `references/knowledge/auth-patterns.md` — auth primitive structures
 - `references/knowledge/bot-detection-patterns.md` — transport selection
