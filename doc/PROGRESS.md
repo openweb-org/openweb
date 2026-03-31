@@ -1,3 +1,18 @@
+## 2026-03-31: Friction-log code fixes — stderr, build sync, schema warning, auth docs
+
+**What changed:**
+- `recorder.ts`: stream stderr from `compile --script` child process in real-time instead of buffering
+- `build-sites.js`: auto-sync `dist/sites/` → `~/.openweb/sites/` after build so CLI cache stays current
+- `schema-v2.ts`: warn when empty array response produces bare `type: object` schema
+- `auth-patterns.md`: documented webpack export-key convention (`default`/`Z`/`ZP`) for `webpack_module_walk`
+
+**Why:**
+- All 4 items from Discord rediscovery friction log (doc/todo/improve-thought/discord-discover/cn/friction-log.md)
+
+**Key files:** `src/compiler/recorder.ts`, `scripts/build-sites.js`, `src/compiler/analyzer/schema-v2.ts`, `skill/openweb/references/knowledge/auth-patterns.md`
+**Verification:** pnpm build passes (with sync), 720/720 tests pass
+**Commit:** 03bf14a
+
 ## 2026-03-31: Skill doc refactor — split process + reference layers
 
 **What changed:**
