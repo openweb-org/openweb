@@ -123,6 +123,23 @@ Guide to authentication primitives detected by `classify.ts`. Organized by primi
 
 **Examples**: Discord (token in webpack module cache, page transport required)
 
+**Export key convention**: Webpack minifies export names in production builds.
+The runtime checks keys in order: `default`, `Z`, `ZP`. This covers most
+webpack versions. The chunk global name is site-specific (e.g., Discord:
+`webpackChunkdiscord_app`, Telegram: `webpackChunktelegram-web`).
+
+```javascript
+for (const key of ['default', 'Z', 'ZP']) {
+  const mod = exp[key];
+  if (typeof mod?.[moduleTest] === 'function') {
+    const val = mod[moduleTest]();
+    if (typeof val === 'string' && val.length > 20) { /* found token */ }
+  }
+}
+```
+
+Reference implementation: `src/runtime/primitives/webpack-module-walk.ts`.
+
 ## page_global
 
 **Detection**: Auth data available as a page-level JavaScript global variable.

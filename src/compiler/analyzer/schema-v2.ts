@@ -1,4 +1,5 @@
 import type { JsonSchema } from '../../lib/openapi.js'
+import { logger } from '../../lib/logger.js'
 
 export interface SchemaOptions {
   /** Maximum object nesting depth. Default: 10 */
@@ -7,6 +8,8 @@ export interface SchemaOptions {
   maxProperties?: number
   /** Maximum array items to sample for item schema inference. Default: 50 */
   maxArraySample?: number
+  /** Label for diagnostic messages (e.g., operationId) */
+  label?: string
 }
 
 const DEFAULT_OPTIONS: Required<SchemaOptions> = {
@@ -65,6 +68,9 @@ function inferSingleKind(
   if (kind === 'array') {
     if (depth >= opts.maxDepth) return { type: 'array' }
     const allItems = samples.flatMap((s) => (Array.isArray(s) ? s : []))
+    if (allItems.length === 0 && opts.label) {
+      logger.warn(`${opts.label}: empty array response — schema inference produces bare type: object`)
+    }
     const sampled = allItems.length > opts.maxArraySample ? allItems.slice(0, opts.maxArraySample) : allItems
     return { type: 'array', items: infer(sampled, opts, depth + 1) }
   }

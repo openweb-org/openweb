@@ -4,6 +4,7 @@
  * Runs AFTER tsup + build-adapters so compiled .js adapters exist.
  */
 import { cpSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 
 const sitesDir = path.join(process.cwd(), 'src', 'sites')
@@ -81,3 +82,21 @@ for (const site of sites) {
 }
 
 console.log(`Packaged ${String(sites.length)} site(s), ${String(copied)} file(s) copied to dist/sites/`)
+
+// Sync dist/sites/ → ~/.openweb/sites/ so that CLI cache stays up-to-date
+// with the source tree after build.
+const cacheDir = path.join(os.homedir(), '.openweb', 'sites')
+if (existsSync(outDir)) {
+  let synced = 0
+  for (const site of readdirSync(outDir, { withFileTypes: true })) {
+    if (!site.isDirectory()) continue
+    const src = path.join(outDir, site.name)
+    const dst = path.join(cacheDir, site.name)
+    mkdirSync(dst, { recursive: true })
+    cpSync(src, dst, { recursive: true })
+    synced++
+  }
+  if (synced > 0) {
+    console.log(`Synced ${String(synced)} site(s) to ${cacheDir}`)
+  }
+}
