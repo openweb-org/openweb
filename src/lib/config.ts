@@ -31,4 +31,6 @@ export const TIMEOUT = {
   adapterRetry: 500,
   /** AsyncAPI generator default timeout */
   asyncapiDefault: 10_000,
+  /** Recording script child process timeout */
+  recording: Number(process.env.OPENWEB_RECORDING_TIMEOUT ?? 120_000),
 } as const

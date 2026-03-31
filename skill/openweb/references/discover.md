@@ -261,6 +261,10 @@ This separates capture from compilation, giving you direct stderr visibility
 during the script phase and allowing fast iteration without restarting the
 full pipeline.
 
+When writing capture scripts (Playwright navigation, `page.evaluate(fetch)`,
+token extraction), follow the timeout discipline in
+`references/capture-script-guide.md` to prevent hangs.
+
 #### Capture Target Binding
 
 Capture is **browser-wide**, not single-tab. On start, it attaches HAR + WS

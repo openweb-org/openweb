@@ -93,6 +93,7 @@ Errors on stderr include `failureClass`:
 |---|---|---|
 | `references/analysis-review.md` | `compile.md` Review step | How to read `analysis.json` and decide whether traffic is good enough |
 | `references/spec-curation.md` | `compile.md` Curate step | How to clean, name, configure, and harden generated specs |
+| `references/capture-script-guide.md` | `discover.md` Two-Phase Capture | Timeout discipline and templates for Playwright capture scripts |
 
 ### Knowledge files (load when the process doc tells you to)
 

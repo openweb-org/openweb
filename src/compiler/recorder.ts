@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process'
 
 import { OpenWebError } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
+import { TIMEOUT } from '../lib/config.js'
 import type { RecordedRequestSample, SampleResponse } from './types.js'
 import type { CaptureData } from './analyzer/classify.js'
 import type { HarEntry as CaptureHarEntry, StateSnapshot } from '../capture/types.js'
@@ -72,6 +73,12 @@ export async function runScriptedRecording(scriptPath: string): Promise<string> 
 
     let stderr = ''
 
+    // Kill child process after timeout to prevent indefinite hang
+    const timer = setTimeout(() => {
+      child.kill('SIGTERM')
+      setTimeout(() => child.kill('SIGKILL'), 5_000)
+    }, TIMEOUT.recording)
+
     child.stderr.on('data', (chunk: Buffer) => {
       const text = chunk.toString('utf8')
       stderr += text
@@ -79,15 +86,17 @@ export async function runScriptedRecording(scriptPath: string): Promise<string> 
     })
 
     child.on('error', (error) => {
+      clearTimeout(timer)
       reject(error)
     })
 
     child.on('close', (code) => {
+      clearTimeout(timer)
       if (code === 0) {
         resolve()
         return
       }
-      reject(new Error(stderr || `record script exited with code ${String(code)}`))
+      reject(new Error(`record script exited with code ${String(code)}${stderr ? `\n${stderr}` : ''}`))
     })
   }).catch((error) => {
     const message = error instanceof Error ? error.message : String(error)
