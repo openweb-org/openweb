@@ -1,7 +1,7 @@
 # Browser Capture (CDP)
 
 > Passive browser recording via Chrome DevTools Protocol.
-> Last updated: 2026-03-26 (pipeline v2)
+> Last updated: 2026-03-31 (multi-worker isolation)
 
 ## Overview
 
@@ -105,6 +105,27 @@ pnpm dev capture start --cdp-endpoint http://localhost:9222
 # 4. Stop from another terminal (alternative to Ctrl+C)
 pnpm dev capture stop
 ```
+
+### Isolated Capture (multi-worker)
+
+Each worker gets its own page and session — no cross-contamination:
+
+```bash
+# Worker A
+SESSION_A=$(openweb capture start --isolate --url https://discord.com --cdp-endpoint http://localhost:9222)
+openweb capture stop --session $SESSION_A
+# Bundle at ./capture-$SESSION_A/
+
+# Worker B (simultaneously)
+SESSION_B=$(openweb capture start --isolate --url https://reddit.com --cdp-endpoint http://localhost:9222)
+openweb capture stop --session $SESSION_B
+```
+
+`--isolate` creates a new tab, navigates to `--url`, and passes `targetPage` +
+`isolateToTargetPage: true` to `createCaptureSession`. Each session gets a unique
+ID and session-scoped PID file (`.openweb-capture-<id>.pid`).
+
+-> See: `src/commands/capture.ts`
 
 ### Verification
 
