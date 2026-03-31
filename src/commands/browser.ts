@@ -183,7 +183,7 @@ async function cleanTempProfile(): Promise<void> {
   } catch { /* already gone */ }
 }
 
-export async function browserStartCommand(options: { headless?: boolean; port?: number } = {}): Promise<void> {
+export async function browserStartCommand(options: { headless?: boolean; port?: number; profile?: string } = {}): Promise<void> {
   const port = options.port ?? DEFAULT_PORT
 
   // Check if already running
@@ -197,7 +197,7 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
   }
 
   // Get and copy profile
-  const profilePath = getDefaultProfilePath()
+  const profilePath = options.profile ?? getDefaultProfilePath()
   if (!existsSync(profilePath)) {
     throw new OpenWebError({
       error: 'execution_failed', code: 'EXECUTION_FAILED',
@@ -295,7 +295,7 @@ export async function restoreTabs(port: number, urls: string[]): Promise<void> {
   }
 }
 
-export async function browserRestartCommand(options: { headless?: boolean; port?: number } = {}): Promise<void> {
+export async function browserRestartCommand(options: { headless?: boolean; port?: number; profile?: string } = {}): Promise<void> {
   const port = options.port ?? (await readPort()) ?? DEFAULT_PORT
 
   // Save open tab URLs before killing

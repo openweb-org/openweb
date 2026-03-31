@@ -292,11 +292,12 @@ await yargs(argv)
           describe: 'Browser action',
         })
         .option('headless', { type: 'boolean', default: false, describe: 'Run headless' })
-        .option('port', { type: 'number', default: Number(CDP_PORT), describe: 'CDP port' }),
+        .option('port', { type: 'number', default: Number(CDP_PORT), describe: 'CDP port' })
+        .option('profile', { type: 'string', describe: 'Chrome profile directory to copy from (default: system Chrome default profile)' }),
     async (args) => {
       await withErrorHandling(async () => {
         const action = String(args.action)
-        const opts = { headless: Boolean(args.headless), port: Number(args.port) }
+        const opts = { headless: Boolean(args.headless), port: Number(args.port), profile: args.profile ? String(args.profile) : undefined }
         if (action === 'start') await browserStartCommand(opts)
         else if (action === 'stop') await browserStopCommand()
         else if (action === 'restart') await browserRestartCommand(opts)
