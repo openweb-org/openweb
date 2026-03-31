@@ -88,21 +88,22 @@ export async function renderSite(site: string): Promise<string> {
   lines.push(`${displayName} (${allOps.length} operations)`)
   lines.push('')
 
-  // Derive site-level transport from the first HTTP operation's server (if available)
+  // Derive site-level transport from ALL HTTP operations (most restrictive wins)
   const httpOps = pkg.openapi ? listOperations(pkg.openapi) : []
   let siteTransport = 'node'
   let requiresBrowser = false
   let hasAdapter = false
 
   if (httpOps.length > 0 && pkg.openapi) {
-    const firstOp = httpOps[0]
-    const serverExt = getServerXOpenWeb(pkg.openapi, firstOp.operation)
-    siteTransport = serverExt?.transport ?? 'node'
-    hasAdapter = httpOps.some((entry) => {
+    for (const entry of httpOps) {
+      const serverExt = getServerXOpenWeb(pkg.openapi, entry.operation)
+      const opTransport = serverExt?.transport ?? 'node'
+      if (opTransport === 'page') siteTransport = 'page'
+      if (serverExt?.auth || serverExt?.csrf || serverExt?.signing) requiresBrowser = true
       const opExt = entry.operation['x-openweb'] as Record<string, unknown> | undefined
-      return !!opExt?.adapter
-    })
-    requiresBrowser = siteTransport === 'page' || !!(serverExt?.auth || serverExt?.csrf || serverExt?.signing)
+      if (opExt?.adapter) hasAdapter = true
+    }
+    if (siteTransport === 'page') requiresBrowser = true
   }
 
   const requiresAuth = manifest?.requires_auth ?? false
