@@ -1,7 +1,7 @@
 import type { Page, Request, Response } from 'playwright'
 
-import type { HarEntry, HarLog } from './types.js'
 import { logger } from '../lib/logger.js'
+import type { HarEntry, HarLog } from './types.js'
 
 // ── Body size gate ──────────────────────────────────────────────
 

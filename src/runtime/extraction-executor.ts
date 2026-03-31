@@ -3,14 +3,14 @@ import type { Browser, BrowserContext, Page } from 'playwright-core'
 import { OpenWebError } from '../lib/errors.js'
 import type { OpenApiOperation, OpenApiSpec } from '../lib/openapi.js'
 import type { ExtractionPrimitive } from '../types/primitives.js'
+import type { ExecutorResult } from './executor-result.js'
+import { listCandidatePages } from './page-candidates.js'
 import { resolveHtmlSelector } from './primitives/html-selector.js'
 import { resolvePageGlobalData } from './primitives/page-global-data.js'
 import { resolveScriptJson } from './primitives/script-json.js'
 import { resolveSsrNextData } from './primitives/ssr-next-data.js'
 import type { BrowserHandle } from './primitives/types.js'
-import type { ExecutorResult } from './executor-result.js'
-import { listCandidatePages } from './page-candidates.js'
-import { findPageForOrigin, autoNavigate } from './session-executor.js'
+import { autoNavigate, findPageForOrigin } from './session-executor.js'
 
 export type { ExecutorResult }
 

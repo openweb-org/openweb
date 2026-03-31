@@ -1,8 +1,8 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { executeAdapter, clearAdapterCache } from './adapter-executor.js'
-import type { CodeAdapter } from '../types/adapter.js'
 import type { Page } from 'playwright-core'
+import type { CodeAdapter } from '../types/adapter.js'
+import { clearAdapterCache, executeAdapter } from './adapter-executor.js'
 
 function mockPage(): Page {
   return {

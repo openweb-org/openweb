@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * LeetCode L3 adapter — GraphQL API via browser fetch.
  *
@@ -6,8 +8,6 @@
  * Submissions require login (cookie_session).
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const GRAPHQL_URL = 'https://leetcode.com/graphql/'
 

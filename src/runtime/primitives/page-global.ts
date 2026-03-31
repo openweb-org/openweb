@@ -1,6 +1,6 @@
 import { OpenWebError } from '../../lib/errors.js'
-import type { BrowserHandle, ResolvedInjections } from './types.js'
 import { evaluatePageExpression } from './page-expression.js'
+import type { BrowserHandle, ResolvedInjections } from './types.js'
 
 export interface PageGlobalConfig {
   readonly expression: string

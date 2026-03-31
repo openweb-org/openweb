@@ -1,3 +1,5 @@
+import { openwebHome } from './config.js'
+
 export type OpenWebErrorCode =
   | 'EXECUTION_FAILED'
   | 'TOOL_NOT_FOUND'
@@ -109,7 +111,7 @@ export class OpenWebError extends Error {
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: `Permission denied: ${category} on ${site}/${operationId}`,
-      action: `Update ~/.openweb/permissions.yaml to allow '${category}' for '${site}'.`,
+      action: `Update ${openwebHome()}/permissions.yaml to allow '${category}' for '${site}'.`,
       retriable: false,
       failureClass: 'permission_denied',
     })
@@ -147,7 +149,7 @@ export class OpenWebError extends Error {
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: `Permission required: ${category} on ${site}/${operationId}`,
-      action: `This operation requires '${category}' permission. Update ~/.openweb/permissions.yaml to allow it.`,
+      action: `This operation requires '${category}' permission. Update ${openwebHome()}/permissions.yaml to allow it.`,
       retriable: false,
       failureClass: 'permission_required',
     })

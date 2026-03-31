@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Weibo L3 adapter — page-based access to Weibo (China Twitter) data.
  *
@@ -9,8 +11,6 @@
  * cross-domain requests (s.weibo.com), and all read operations.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import type { Page } from 'playwright-core'
 
 const SITE = 'https://weibo.com'
 

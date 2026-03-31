@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Pinterest L3 adapter — Resource API via browser fetch.
  *
@@ -6,8 +8,6 @@
  * csrftoken cookie). All read operations work without login for public data.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const BASE_URL = 'https://www.pinterest.com'
 
@@ -177,7 +177,7 @@ async function getBoardDetails(page: Page, params: Record<string, unknown>): Pro
     ? { board_id: boardId, field_set_key: 'detailed' }
     : { slug, field_set_key: 'detailed' }
 
-  return resourceGet(page, 'BoardResource', options, `/`)
+  return resourceGet(page, 'BoardResource', options, "/")
 }
 
 async function getBoardPins(page: Page, params: Record<string, unknown>): Promise<unknown> {
@@ -189,7 +189,7 @@ async function getBoardPins(page: Page, params: Record<string, unknown>): Promis
     ...(bookmark ? { bookmarks: [bookmark] } : {}),
   }
 
-  const data = await resourceGet(page, 'BoardFeedResource', options, `/`)
+  const data = await resourceGet(page, 'BoardFeedResource', options, "/")
 
   const resp = data as unknown[] | null
   return {

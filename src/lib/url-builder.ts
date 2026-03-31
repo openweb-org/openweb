@@ -1,6 +1,6 @@
 import { OpenWebError } from './errors.js'
-import type { JsonSchema, OpenApiParameter } from './spec-loader.js'
 import { validateType } from './param-validator.js'
+import type { JsonSchema, OpenApiParameter } from './spec-loader.js'
 
 export function buildQueryUrl(
   baseServerUrl: string,

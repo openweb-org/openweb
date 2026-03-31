@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { writeCaptureBundle, type CaptureData } from './bundle.js'
+import { type CaptureData, writeCaptureBundle } from './bundle.js'
 
 describe('writeCaptureBundle', () => {
   let outputDir: string

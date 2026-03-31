@@ -27,8 +27,8 @@ async function main() {
       await page.evaluate(() => window.scrollBy(0, window.innerHeight * 2));
       await delay(1500);
       console.log(`  ✓ ${page.url()}`);
-    } catch (e: any) {
-      console.error(`  ✗ ${e.message}`);
+    } catch (e: unknown) {
+      console.error(`  ✗ ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 

@@ -6,7 +6,7 @@
 import { access } from 'node:fs/promises'
 import path from 'node:path'
 
-import type { ParameterDescriptor, RecordedRequestSample, SampleResponse } from '../types.js'
+import { extractSamples, loadCaptureData, loadHar } from '../recorder.js'
 import type {
   AnalysisReport,
   CaptureBundle,
@@ -21,22 +21,22 @@ import type {
   WsHeartbeatCandidate,
   WsOperationSummary,
 } from '../types-v2.js'
-import type { ExtractionSignal } from './classify.js'
-import { loadHar, extractSamples, loadCaptureData } from '../recorder.js'
-import { labelSamples } from './labeler.js'
-import { clusterSamples } from './cluster.js'
-import { normalizePathBatch } from './path-normalize.js'
-import { detectGraphqlEndpoint, subClusterGraphql } from './graphql-cluster.js'
-import { differentiateParameters } from './differentiate.js'
-import { annotateOperation } from './annotate.js'
-import { inferSchema } from './schema-v2.js'
-import { selectExample } from './example-select.js'
-import { buildAuthCandidates } from './auth-candidates.js'
-import { classify } from './classify.js'
-import { loadWsCapture } from '../ws-analyzer/ws-load.js'
-import { analyzeWsConnection } from '../ws-analyzer/ws-cluster.js'
+import type { ParameterDescriptor, RecordedRequestSample, SampleResponse } from '../types.js'
 import { classifyClusters } from '../ws-analyzer/ws-classify.js'
+import { analyzeWsConnection } from '../ws-analyzer/ws-cluster.js'
+import { loadWsCapture } from '../ws-analyzer/ws-load.js'
 import { inferWsSchemas } from '../ws-analyzer/ws-schema.js'
+import { annotateOperation } from './annotate.js'
+import { buildAuthCandidates } from './auth-candidates.js'
+import type { ExtractionSignal } from './classify.js'
+import { classify } from './classify.js'
+import { clusterSamples } from './cluster.js'
+import { differentiateParameters } from './differentiate.js'
+import { selectExample } from './example-select.js'
+import { detectGraphqlEndpoint, subClusterGraphql } from './graphql-cluster.js'
+import { labelSamples } from './labeler.js'
+import { normalizePathBatch } from './path-normalize.js'
+import { inferSchema } from './schema-v2.js'
 
 // ── Navigation grouping ─────────────────────────────────────────────────────
 

@@ -38,7 +38,7 @@ export async function searchActivities(page: Page, _params: Record<string, unkno
     // Total count from page text
     const totalMatch = text.match(/([\d,]+)\s*项旅游活动/)
     return {
-      totalCount: totalMatch ? parseInt(totalMatch[1].replace(/,/g, ''), 10) : activities.length,
+      totalCount: totalMatch ? Number.parseInt(totalMatch[1].replace(/,/g, ''), 10) : activities.length,
       activities,
     }
   })

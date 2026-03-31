@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Uber L3 adapter — Eats REST API + Rides GraphQL via browser fetch.
  *
@@ -7,8 +9,6 @@
  * Auth is via cookie_session (credentials: 'include' in browser fetch).
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 /* ---------- Rides GraphQL ---------- */
 

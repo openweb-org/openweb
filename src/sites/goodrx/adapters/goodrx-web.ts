@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * GoodRx adapter — DOM/JSON-LD extraction and GraphQL API via browser fetch.
  *
@@ -7,8 +9,6 @@
  * PerimeterX bot detection blocks direct HTTP — browser-only access.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import type { Page } from 'playwright-core'
 
 /* ---------- DOM extraction operations ---------- */
 
@@ -40,7 +40,7 @@ async function getDrugInfo(page: Page, _params: Record<string, unknown>): Promis
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'Drug') continue
         return {
           name: data.name ?? null,
@@ -65,7 +65,7 @@ async function getDrugOffers(page: Page, _params: Record<string, unknown>): Prom
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'Drug' || !data.offers) continue
         const offers = Array.isArray(data.offers) ? data.offers : [data.offers]
         return {
@@ -142,7 +142,7 @@ async function getDrugDescription(page: Page, _params: Record<string, unknown>):
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'MedicalWebPage') continue
         return {
           name: data.name ?? null,
@@ -165,7 +165,7 @@ async function getDrugFAQ(page: Page, _params: Record<string, unknown>): Promise
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'FAQPage') continue
         const questions = (data.mainEntity ?? []).map((q: Record<string, unknown>) => ({
           question: (q as Record<string, string>).name ?? null,
@@ -248,7 +248,7 @@ async function getDrugConcept(page: Page, _params: Record<string, unknown>): Pro
     let drugName: string | null = null
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] === 'Drug') {
           drugName = data.name
           break

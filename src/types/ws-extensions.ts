@@ -1,4 +1,5 @@
 import type { PermissionCategory, Transport } from './extensions.js'
+import type { XOpenWebBuildMeta } from './extensions.js'
 import type {
   WsAuthConfig,
   WsDiscriminatorConfig,
@@ -6,7 +7,6 @@ import type {
   WsMessageTemplate,
   WsPattern,
 } from './ws-primitives.js'
-import type { XOpenWebBuildMeta } from './extensions.js'
 
 // ── Server-level x-openweb (on AsyncAPI servers) ───
 

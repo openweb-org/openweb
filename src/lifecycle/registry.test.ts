@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtemp, writeFile, mkdir, rm, readFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { bumpMinor } from './registry.js'
 
@@ -14,5 +14,5 @@ describe('bumpMinor', () => {
 })
 
 // Integration tests for registry operations would require mocking the registry root.
-// Since the module uses a hardcoded path (~/.openweb/registry/), we test the pure
+// Since the module uses openwebHome() for the registry path ($OPENWEB_HOME/registry/), we test the pure
 // utility functions here. Full E2E registry testing happens in integration tests.

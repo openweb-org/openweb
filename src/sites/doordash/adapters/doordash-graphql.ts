@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * DoorDash L3 adapter — GraphQL API via browser fetch.
  *
@@ -6,8 +8,6 @@
  * Auth is via cookie_session (credentials: 'include' in browser fetch).
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import type { Page } from 'playwright-core'
 
 const GRAPHQL_URL = 'https://www.doordash.com/graphql'
 

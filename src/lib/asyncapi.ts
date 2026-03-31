@@ -3,11 +3,11 @@ import path from 'node:path'
 
 import { parse } from 'yaml'
 
-import { OpenWebError } from './errors.js'
 import { validateAsyncApiSpec } from '../types/validator.js'
 import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
 import type { XOpenWebWsServer } from '../types/ws-extensions.js'
 import type { WsPattern } from '../types/ws-primitives.js'
+import { OpenWebError } from './errors.js'
 
 // ── AsyncAPI Spec Types ─────────────────────────────
 

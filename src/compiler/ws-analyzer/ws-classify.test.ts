@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ParsedWsFrame } from './ws-load.js'
-import type { WsMessageCluster } from './ws-cluster.js'
 import { classifyClusters } from './ws-classify.js'
+import type { WsMessageCluster } from './ws-cluster.js'
+import type { ParsedWsFrame } from './ws-load.js'
 
 // ── Helpers ───────────────────────────────────────────────────
 

@@ -1,10 +1,12 @@
 import Ajv from 'ajv'
 import type { Browser } from 'playwright-core'
 
-import { OpenWebError, getHttpFailure } from '../lib/errors.js'
-import { parseResponseBody } from '../lib/response-parser.js'
-import { checkPermission, loadPermissions } from '../lib/permissions.js'
+import { connectWithRetry } from '../capture/connection.js'
+import { CDP_ENDPOINT } from '../lib/config.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
+import { OpenWebError, getHttpFailure } from '../lib/errors.js'
+import { logger } from '../lib/logger.js'
+import { loadManifest } from '../lib/manifest.js'
 import {
   buildQueryUrl,
   findOperation,
@@ -15,28 +17,26 @@ import {
   resolveSiteRoot,
   validateParams,
 } from '../lib/openapi.js'
-import { loadManifest } from '../lib/manifest.js'
+import { derivePermissionFromMethod } from '../lib/permission-derive.js'
+import { checkPermission, loadPermissions } from '../lib/permissions.js'
+import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
-import { fetchWithRedirects } from './redirect.js'
+import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types/extensions.js'
+import { executeAdapter, loadAdapter } from './adapter-executor.js'
+import { executeBrowserFetch } from './browser-fetch-executor.js'
+import { clearTokenCache, clearTokenCacheUnsafe, executeCachedFetch, readTokenCache, readTokenCacheUnsafe, withTokenLock, writeBrowserCookiesToCache } from './cache-manager.js'
+import { executeExtraction } from './extraction-executor.js'
 import { withHttpRetry } from './http-retry.js'
-import { connectWithRetry } from '../capture/connection.js'
+import { executeNodeSsr } from './node-ssr-executor.js'
+import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
+import { fetchWithRedirects } from './redirect.js'
+import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
 import {
+  autoNavigate,
   createNeedsPageError,
   executeSessionHttp,
   findPageForOrigin,
-  autoNavigate,
 } from './session-executor.js'
-import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
-import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
-import { executeBrowserFetch } from './browser-fetch-executor.js'
-import { loadAdapter, executeAdapter } from './adapter-executor.js'
-import { executeExtraction } from './extraction-executor.js'
-import { executeNodeSsr } from './node-ssr-executor.js'
-import { derivePermissionFromMethod } from '../lib/permission-derive.js'
-import { executeCachedFetch, writeBrowserCookiesToCache, readTokenCache, clearTokenCache, withTokenLock, readTokenCacheUnsafe, clearTokenCacheUnsafe } from './cache-manager.js'
-import { logger } from '../lib/logger.js'
-import { CDP_ENDPOINT } from '../lib/config.js'
-import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types/extensions.js'
 
 export interface ExecuteDependencies {
   readonly fetchImpl?: typeof fetch

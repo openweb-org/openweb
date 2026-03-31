@@ -5,6 +5,7 @@
  */
 
 import type { PermissionCategory } from '../../types/extensions.js'
+import type { WsMessageTemplate } from '../../types/ws-primitives.js'
 import type {
   AnalysisReport,
   AuthCandidate,
@@ -16,7 +17,6 @@ import type {
   CuratedWsPlan,
   CurationDecisionSet,
 } from '../types-v2.js'
-import type { WsMessageTemplate } from '../../types/ws-primitives.js'
 import { scrubExamples, scrubRequestBody } from './scrub.js'
 
 function selectAuthCandidate(
@@ -42,8 +42,8 @@ function buildSiteContext(
     const match = report.csrfOptions.find(
       (o) =>
         o.type === 'cookie_to_header' &&
-        o.cookie === decisions.csrfOverride!.cookie &&
-        o.header === decisions.csrfOverride!.header,
+        o.cookie === decisions.csrfOverride?.cookie &&
+        o.header === decisions.csrfOverride?.header,
     )
     if (match) csrf = match
   } else if (decisions.csrfType) {

@@ -1,7 +1,7 @@
+import { realpathSync } from 'node:fs'
+import { access, cp, mkdir, readdir, rename, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { realpathSync } from 'node:fs'
-import { cp, mkdir, readdir, access, rename, rm } from 'node:fs/promises'
 
 import { openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'

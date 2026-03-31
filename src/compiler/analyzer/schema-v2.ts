@@ -1,5 +1,5 @@
-import type { JsonSchema } from '../../lib/openapi.js'
 import { logger } from '../../lib/logger.js'
+import type { JsonSchema } from '../../lib/openapi.js'
 
 export interface SchemaOptions {
   /** Maximum object nesting depth. Default: 10 */

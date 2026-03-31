@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import { generateDriftReport, generateDriftReportMarkdown, hasNonPassResults, type SiteVerifyResult } from './verify.js'
 import { computeResponseFingerprint } from './fingerprint.js'
+import { type SiteVerifyResult, generateDriftReport, generateDriftReportMarkdown, hasNonPassResults } from './verify.js'
 
 const mockResults: SiteVerifyResult[] = [
   {

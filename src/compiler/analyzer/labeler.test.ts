@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { RecordedRequestSample } from '../types.js'
 import type { SampleCategory } from '../types-v2.js'
+import type { RecordedRequestSample } from '../types.js'
 import { labelSamples } from './labeler.js'
 
 function makeSample(overrides: Partial<RecordedRequestSample> = {}): RecordedRequestSample {

@@ -1,12 +1,12 @@
-import {
-  listRegisteredSites,
-  archiveSite,
-  rollbackSite,
-  listVersions,
-  getCurrentVersion,
-} from '../lifecycle/registry.js'
-import { resolveSiteRoot } from '../lib/openapi.js'
 import { OpenWebError } from '../lib/errors.js'
+import { resolveSiteRoot } from '../lib/openapi.js'
+import {
+  archiveSite,
+  getCurrentVersion,
+  listRegisteredSites,
+  listVersions,
+  rollbackSite,
+} from '../lifecycle/registry.js'
 
 export type RegistryAction = 'list' | 'install' | 'rollback' | 'show'
 

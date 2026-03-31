@@ -1,4 +1,4 @@
-import { renderOperation, renderSite, renderSiteJson, renderOperationJson, renderExample } from '../runtime/navigator.js'
+import { renderExample, renderOperation, renderOperationJson, renderSite, renderSiteJson } from '../runtime/navigator.js'
 
 export interface ShowOptions {
   readonly full?: boolean

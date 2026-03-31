@@ -1,3 +1,5 @@
+import type { Page, Response as PwResponse } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Indeed L3 adapter — page-based access to Indeed job search, salary, and company data.
  *
@@ -9,14 +11,12 @@
  * - API interception (/cmp/_rpc/review-filter)
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page, Response as PwResponse } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import {
   SITE,
-  navigateAndWait,
+  browseJobCategories,
   extractNextData,
   getCompanyReviews,
-  browseJobCategories,
+  navigateAndWait,
 } from './transforms.js'
 
 /* ---------- operations ---------- */
@@ -197,7 +197,7 @@ async function getCompanySalaries(page: Page, params: Record<string, unknown>): 
     // Extract salary table data from DOM
     const salaryRows = document.querySelectorAll('[data-testid="salary-table-row"], table tbody tr')
     const salaries: Record<string, unknown>[] = []
-    salaryRows.forEach((row) => {
+    for (const row of salaryRows) {
       const cells = row.querySelectorAll('td')
       if (cells.length >= 2) {
         salaries.push({
@@ -206,19 +206,19 @@ async function getCompanySalaries(page: Page, params: Record<string, unknown>): 
           salaryCount: cells[2]?.textContent?.trim(),
         })
       }
-    })
+    }
     if (salaries.length > 0) result.salaries = salaries
 
     // Try alternate DOM structure
     const salaryCards = document.querySelectorAll('[data-testid="salaryCard"], [class*="salaryRow"]')
     if (salaryCards.length > 0 && salaries.length === 0) {
       const cards: Record<string, unknown>[] = []
-      salaryCards.forEach((card) => {
+      for (const card of salaryCards) {
         cards.push({
           jobTitle: card.querySelector('[class*="jobTitle"], a')?.textContent?.trim(),
           salary: card.querySelector('[class*="salary"], [class*="amount"]')?.textContent?.trim(),
         })
-      })
+      }
       result.salaries = cards
     }
 

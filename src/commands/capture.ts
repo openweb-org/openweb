@@ -1,11 +1,11 @@
-import process from 'node:process'
 import crypto from 'node:crypto'
-import path from 'node:path'
 import { readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+import process from 'node:process'
 import { chromium } from 'playwright'
 
-import { OpenWebError } from '../lib/errors.js'
 import { createCaptureSession } from '../capture/session.js'
+import { OpenWebError } from '../lib/errors.js'
 
 const PID_PREFIX = '.openweb-capture-'
 const PID_SUFFIX = '.pid'

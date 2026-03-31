@@ -7,10 +7,10 @@ import { resolveExchangeChain } from './exchange-chain.js'
 import { resolveLocalStorageJwt } from './localstorage-jwt.js'
 import { resolveMetaTag } from './meta-tag.js'
 import { resolvePageGlobal } from './page-global.js'
-import { resolveSapisidhash, computeSapisidhash } from './sapisidhash.js'
+import { computeSapisidhash, resolveSapisidhash } from './sapisidhash.js'
 import { resolveScriptJson } from './script-json.js'
-import { resolveWebpackModuleWalk } from './webpack-module-walk.js'
 import type { BrowserHandle } from './types.js'
+import { resolveWebpackModuleWalk } from './webpack-module-walk.js'
 
 const noopSsrf = async () => {}
 

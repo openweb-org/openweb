@@ -51,7 +51,7 @@ export async function graphqlGet(
   const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
   if (json.errors?.length) {
     const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Unknown GraphQL error'
-    throw OpenWebError.apiError('GraphQL ' + operationName, msg)
+    throw OpenWebError.apiError(`GraphQL ${operationName}`, msg)
   }
 
   return json.data

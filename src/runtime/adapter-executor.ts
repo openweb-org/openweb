@@ -1,11 +1,11 @@
-import { pathToFileURL } from 'node:url'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import type { Page } from 'playwright-core'
 
-import { OpenWebError } from '../lib/errors.js'
 import { TIMEOUT } from '../lib/config.js'
+import { OpenWebError } from '../lib/errors.js'
 import type { CodeAdapter } from '../types/adapter.js'
 
 const adapterCache = new Map<string, CodeAdapter>()

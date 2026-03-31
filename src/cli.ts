@@ -4,17 +4,17 @@ import process from 'node:process'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
-import { captureStartCommand, captureStopCommand, type CaptureStopOptions } from './commands/capture.js'
+import { browserRestartCommand, browserStartCommand, browserStatusCommand, browserStopCommand, loginCommand } from './commands/browser.js'
+import { type CaptureStopOptions, captureStartCommand, captureStopCommand } from './commands/capture.js'
 import { compileCommand } from './commands/compile.js'
-import { verifyCommand } from './commands/verify.js'
-import { registryCommand, type RegistryAction } from './commands/registry.js'
 import { execCommand } from './commands/exec.js'
+import { initCommand } from './commands/init.js'
+import { type RegistryAction, registryCommand } from './commands/registry.js'
 import { showCommand } from './commands/show.js'
 import { sitesCommand } from './commands/sites.js'
 import { testCommand } from './commands/test.js'
-import { browserStartCommand, browserStopCommand, browserRestartCommand, browserStatusCommand, loginCommand } from './commands/browser.js'
-import { CDP_PORT, CDP_ENDPOINT } from './lib/config.js'
-import { initCommand } from './commands/init.js'
+import { verifyCommand } from './commands/verify.js'
+import { CDP_ENDPOINT, CDP_PORT, openwebHome } from './lib/config.js'
 import { OpenWebError, toOpenWebError, writeErrorToStderr } from './lib/errors.js'
 
 function isJsonObject(s: string): boolean {
@@ -316,7 +316,7 @@ await yargs(argv)
       })
     },
   )
-  .command('init', 'Initialize ~/.openweb/sites/ with default site packages', {}, async () => {
+  .command('init', `Initialize ${openwebHome()}/sites/ with default site packages`, {}, async () => {
     await withErrorHandling(async () => {
       await initCommand()
     })

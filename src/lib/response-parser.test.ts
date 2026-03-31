@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseResponseBody } from '../lib/response-parser.js'
 import { OpenWebError } from '../lib/errors.js'
+import { parseResponseBody } from '../lib/response-parser.js'
 
 describe('parseResponseBody', () => {
   it('parses valid JSON', () => {

@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * TripAdvisor adapter — DOM/LD+JSON extraction from browser-rendered pages.
  *
@@ -7,8 +9,6 @@
  * LD+JSON (LocalBusiness), and listings/reviews from DOM elements.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 /* ---------- Hotel operations ---------- */
 
@@ -59,7 +59,7 @@ async function getHotelDetail(page: Page, _params: Record<string, unknown>): Pro
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'LodgingBusiness') continue
         return {
           name: data.name ?? null,
@@ -120,9 +120,10 @@ async function getHotelReviews(page: Page, _params: Record<string, unknown>): Pr
     // Extract sub-ratings
     const subRatings: Record<string, string> = {}
     const subRatingPattern = /(Rooms|Service|Value|Cleanliness|Location|Sleep Quality)\n([\d.]+)/g
-    let match: RegExpExecArray | null
-    while ((match = subRatingPattern.exec(text))) {
+    let match: RegExpExecArray | null = subRatingPattern.exec(text)
+    while (match) {
       subRatings[match[1].toLowerCase().replace(' ', '_')] = match[2]
+      match = subRatingPattern.exec(text)
     }
 
     return {
@@ -190,7 +191,7 @@ async function getRestaurantDetail(page: Page, _params: Record<string, unknown>)
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] === 'Restaurant') {
           return {
             name: data.name ?? null,
@@ -257,9 +258,10 @@ async function getRestaurantReviews(page: Page, _params: Record<string, unknown>
     // Extract sub-ratings
     const subRatings: Record<string, string> = {}
     const subRatingPattern = /(Food|Service|Value|Atmosphere)\n([\d.]+)/g
-    let match: RegExpExecArray | null
-    while ((match = subRatingPattern.exec(text))) {
+    let match: RegExpExecArray | null = subRatingPattern.exec(text)
+    while (match) {
       subRatings[match[1].toLowerCase()] = match[2]
+      match = subRatingPattern.exec(text)
     }
 
     // Extract AI summary
@@ -308,7 +310,7 @@ async function getAttractionDetail(page: Page, _params: Record<string, unknown>)
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] === 'LocalBusiness' || data['@type'] === 'TouristAttraction') {
           return {
             name: data.name ?? null,

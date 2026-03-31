@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto'
-import path from 'node:path'
 import { mkdir, writeFile } from 'node:fs/promises'
+import path from 'node:path'
 
 import { stringify } from 'yaml'
 
-import type { WsOperationSchema } from '../ws-analyzer/ws-schema.js'
-import type { XOpenWebWsServer } from '../../types/ws-extensions.js'
 import { TIMEOUT } from '../../lib/config.js'
+import type { XOpenWebWsServer } from '../../types/ws-extensions.js'
+import type { WsOperationSchema } from '../ws-analyzer/ws-schema.js'
 
 // ── Input types ──────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
-import type { WsFirstMessage } from '../../types/ws-primitives.js'
 import { OpenWebError } from '../../lib/errors.js'
+import type { WsFirstMessage } from '../../types/ws-primitives.js'
 import { setValueAtPath } from '../value-path.js'
 import { registerWsResolver } from './ws-registry.js'
 import type { WsAuthResult, WsResolverContext } from './ws-registry.js'

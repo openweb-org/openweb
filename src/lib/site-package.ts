@@ -1,11 +1,11 @@
 import path from 'node:path'
 
-import type { OpenApiSpec, OperationRef, HttpMethod } from './openapi.js'
-import { loadOpenApi, listOperations as listHttpOperations, resolveSiteRoot, pathExists } from './openapi.js'
-import { loadAsyncApi, listAsyncApiOperations } from './asyncapi.js'
-import type { AsyncApiSpec, AsyncApiOperationRef } from './asyncapi.js'
 import type { PermissionCategory } from '../types/extensions.js'
 import type { WsPattern } from '../types/ws-primitives.js'
+import { listAsyncApiOperations, loadAsyncApi } from './asyncapi.js'
+import type { AsyncApiOperationRef, AsyncApiSpec } from './asyncapi.js'
+import type { HttpMethod, OpenApiSpec, OperationRef } from './openapi.js'
+import { listOperations as listHttpOperations, loadOpenApi, pathExists, resolveSiteRoot } from './openapi.js'
 import { derivePermissionFromMethod } from './permission-derive.js'
 
 // ── Operation Index Types ───────────────────────────

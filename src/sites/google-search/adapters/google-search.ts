@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Google Search adapter — DOM extraction for search results.
  *
@@ -9,8 +11,6 @@
  * getKnowledgePanel:    Extract knowledge panel from /search page
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 /** Read the current query from the search input on the page. */
 function readQuery(): string {

@@ -1,17 +1,17 @@
 import type { Browser } from 'playwright-core'
 
+import { connectWithRetry } from '../capture/connection.js'
+import { OpenWebError } from '../lib/errors.js'
 import {
-  verifySite,
-  verifyAll,
-  hasNonPassResults,
-  generateDriftReport,
-  generateDriftReportMarkdown,
   type SiteOverallStatus,
   type VerifyOptions,
+  generateDriftReport,
+  generateDriftReportMarkdown,
+  hasNonPassResults,
+  verifyAll,
+  verifySite,
 } from '../lifecycle/verify.js'
-import { OpenWebError } from '../lib/errors.js'
-import { getManagedCdpEndpoint, browserStartCommand } from './browser.js'
-import { connectWithRetry } from '../capture/connection.js'
+import { browserStartCommand, getManagedCdpEndpoint } from './browser.js'
 
 function statusIcon(status: SiteOverallStatus): string {
   switch (status) {

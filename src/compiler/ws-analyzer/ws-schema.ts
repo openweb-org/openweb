@@ -1,5 +1,5 @@
 import type { JsonSchema } from '../../lib/openapi.js'
-import type { WsPattern, WsMessageTemplate, WsBinding } from '../../types/ws-primitives.js'
+import type { WsBinding, WsMessageTemplate, WsPattern } from '../../types/ws-primitives.js'
 import { inferSchema } from '../analyzer/schema.js'
 import { CORRELATION_FIELDS, type ClassifiedCluster } from './ws-classify.js'
 

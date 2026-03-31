@@ -31,7 +31,7 @@ if (violations.length > 0) {
 // Check size
 const sizeMatch = output.match(/Tarball Size:\s*([\d.]+)\s*([kMG]B)/)
 if (sizeMatch) {
-  const size = parseFloat(sizeMatch[1])
+  const size = Number.parseFloat(sizeMatch[1])
   const unit = sizeMatch[2]
   const bytes = unit === 'kB' ? size * 1024 : unit === 'MB' ? size * 1024 * 1024 : size * 1024 * 1024 * 1024
   if (bytes > 5 * 1024 * 1024) {

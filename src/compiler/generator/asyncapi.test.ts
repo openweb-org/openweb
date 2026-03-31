@@ -1,13 +1,13 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
 
-import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { parse } from 'yaml'
 
-import type { WsOperationSchema } from '../ws-analyzer/ws-schema.js'
-import type { XOpenWebWsServer } from '../../types/ws-extensions.js'
 import { validateAsyncApiSpec } from '../../types/validator.js'
+import type { XOpenWebWsServer } from '../../types/ws-extensions.js'
+import type { WsOperationSchema } from '../ws-analyzer/ws-schema.js'
 import { generateAsyncApi } from './asyncapi.js'
 
 const SERVER_URL = 'wss://gateway.example.com/ws'

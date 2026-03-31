@@ -1,15 +1,15 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { EventEmitter } from 'node:events'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
+import type { WsConnectionEvents, WsConnectionManager } from './ws-connection.js'
 import {
-  executeWsOperation,
-  streamWsOperation,
   dispatchWsOperation,
+  executeWsOperation,
   resolveTemplate,
+  streamWsOperation,
 } from './ws-executor.js'
 import { WsRouter, type WsRouterConfig } from './ws-router.js'
-import type { WsConnectionManager, WsConnectionEvents } from './ws-connection.js'
-import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
 
 // ── Mock Connection ──────────────────────────────
 

@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Amazon add-to-cart adapter — submits the buy-box form via Playwright request.
  *
@@ -8,8 +10,6 @@
  * SAFETY: This adds to cart only — never proceeds to checkout.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const BUY_BOX_PATH = '/gp/product/handle-buy-box/ref=dp_start-bbf_1_glance'
 
@@ -43,7 +43,7 @@ async function addToCart(page: Page, params: Record<string, unknown>): Promise<u
   formData['items[0.base][quantity]'] = String(quantity)
   // Ensure submit action is add-to-cart (not buy-now)
   formData['submit.add-to-cart'] = 'Add to cart'
-  delete formData['isBuyNow']
+  formData.isBuyNow = undefined
 
   const urlParams = new URLSearchParams(formData)
   const url = `https://www.amazon.com${BUY_BOX_PATH}`
@@ -64,7 +64,7 @@ async function addToCart(page: Page, params: Record<string, unknown>): Promise<u
 
   // Check for cart count in response
   const cartCountMatch = text.match(/nav-cart-count[^>]*>(\d+)</)
-  const cartItemCount = cartCountMatch ? parseInt(cartCountMatch[1], 10) : null
+  const cartItemCount = cartCountMatch ? Number.parseInt(cartCountMatch[1], 10) : null
 
   // Success indicators: redirect to cart, or page contains "Added to Cart"
   const success = status === 200 || status === 302

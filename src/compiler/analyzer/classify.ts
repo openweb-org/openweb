@@ -1,8 +1,8 @@
 import type { HarEntry, StateSnapshot } from '../../capture/types.js'
-import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../../types/primitives.js'
 import type { Transport } from '../../types/extensions.js'
+import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../../types/primitives.js'
 
-import { detectCookieSession, detectLocalStorageJwt, detectExchangeChain } from './auth-detect.js'
+import { detectCookieSession, detectExchangeChain, detectLocalStorageJwt } from './auth-detect.js'
 import { detectCookieToHeader, detectMetaTag } from './csrf-detect.js'
 import { detectSapisidhash } from './signing-detect.js'
 

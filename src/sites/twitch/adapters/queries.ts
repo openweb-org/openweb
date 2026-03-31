@@ -51,7 +51,7 @@ export async function gqlFetch(
   const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
   if (json.errors) {
     const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Unknown GQL error'
-    throw OpenWebError.apiError('GraphQL ' + operationName, msg)
+    throw OpenWebError.apiError(`GraphQL ${operationName}`, msg)
   }
 
   return json.data
@@ -81,7 +81,7 @@ export async function gqlMutate(
         'Content-Type': 'text/plain;charset=UTF-8',
         'Client-ID': args.clientId,
       }
-      if (authToken) headers['Authorization'] = `OAuth ${authToken}`
+      if (authToken) headers.Authorization = `OAuth ${authToken}`
 
       const resp = await fetch(args.url, { method: 'POST', headers, body: args.body })
       return { status: resp.status, text: await resp.text() }

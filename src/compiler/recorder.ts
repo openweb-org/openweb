@@ -1,14 +1,14 @@
+import { spawn } from 'node:child_process'
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
 
+import type { HarEntry as CaptureHarEntry, StateSnapshot } from '../capture/types.js'
+import { TIMEOUT } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
-import { TIMEOUT } from '../lib/config.js'
-import type { RecordedRequestSample, SampleResponse } from './types.js'
 import type { CaptureData } from './analyzer/classify.js'
-import type { HarEntry as CaptureHarEntry, StateSnapshot } from '../capture/types.js'
+import type { RecordedRequestSample, SampleResponse } from './types.js'
 
 interface HarLog {
   readonly log?: {

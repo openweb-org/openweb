@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Home Depot adapter — LD+JSON and DOM extraction from browser-rendered pages.
  *
@@ -6,8 +8,6 @@
  * Store pages embed LD+JSON LocalBusiness + FAQPage schemas.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 /* ---------- helpers ---------- */
 
@@ -15,7 +15,7 @@ function parseLdJson(scripts: NodeListOf<Element>): any[] {
   const results: any[] = []
   for (const s of scripts) {
     try {
-      results.push(JSON.parse(s.textContent!))
+      results.push(JSON.parse(s.textContent ?? ''))
     } catch { /* skip */ }
   }
   return results
@@ -87,7 +87,7 @@ async function getProductDetail(page: Page, _params: Record<string, unknown>): P
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'Product') continue
         return {
           name: data.name ?? null,
@@ -124,7 +124,7 @@ async function getProductPricing(page: Page, _params: Record<string, unknown>): 
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'Product') continue
         const offers = data.offers ?? {}
         const strikethrough = offers.priceSpecification ?? null
@@ -148,7 +148,7 @@ async function getProductReviews(page: Page, _params: Record<string, unknown>): 
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'Product') continue
         const reviews = (data.review ?? []).map((r: any) => ({
           rating: r.reviewRating?.ratingValue ?? null,
@@ -174,7 +174,7 @@ async function getProductImages(page: Page, _params: Record<string, unknown>): P
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'Product') continue
         const images = Array.isArray(data.image) ? data.image : data.image ? [data.image] : []
         return { count: images.length, images }
@@ -191,7 +191,7 @@ async function getProductSpecs(page: Page, _params: Record<string, unknown>): Pr
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'Product') continue
         return {
           model: data.model ?? null,
@@ -239,7 +239,7 @@ async function getStoreDetails(page: Page, _params: Record<string, unknown>): Pr
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'LocalBusiness') continue
         return {
           name: data.aggregateRating?.itemReviewed ?? null,
@@ -268,7 +268,7 @@ async function getStoreReviews(page: Page, _params: Record<string, unknown>): Pr
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'LocalBusiness') continue
         const reviews = (data.review ?? []).map((r: any) => ({
           author: r.author ?? null,
@@ -295,7 +295,7 @@ async function getStoreFAQ(page: Page, _params: Record<string, unknown>): Promis
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'FAQPage') continue
         const questions = (data.mainEntity ?? []).map((q: any) => ({
           question: q.name ?? null,

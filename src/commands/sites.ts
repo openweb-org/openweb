@@ -1,7 +1,7 @@
-import { listSites, listOperations, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import { loadManifest } from '../lib/manifest.js'
-import { getServerXOpenWeb, resolveTransport } from '../runtime/operation-context.js'
+import { listOperations, listSites, loadOpenApi, resolveSiteRoot } from '../lib/openapi.js'
 import { derivePermissionFromMethod } from '../lib/permission-derive.js'
+import { getServerXOpenWeb, resolveTransport } from '../runtime/operation-context.js'
 import type { PermissionCategory } from '../types/extensions.js'
 
 export interface SitesOptions {

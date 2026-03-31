@@ -1,5 +1,5 @@
-import type { WsAuthConfig } from '../../types/ws-primitives.js'
 import { OpenWebError } from '../../lib/errors.js'
+import type { WsAuthConfig } from '../../types/ws-primitives.js'
 
 // ── Result ───────────────────────────────────────
 

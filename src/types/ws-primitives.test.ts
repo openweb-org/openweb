@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import type { WsAuthConfig, WsBinding, WsHeartbeat, WsMessageTemplate, WsPattern } from './ws-primitives.js'
-import type { XOpenWebWsOperation, XOpenWebWsServer } from './ws-extensions.js'
 import { validateAsyncApiSpec } from './validator.js'
+import type { XOpenWebWsOperation, XOpenWebWsServer } from './ws-extensions.js'
+import type { WsAuthConfig, WsBinding, WsHeartbeat, WsMessageTemplate, WsPattern } from './ws-primitives.js'
 
 // ── Type compile checks ────────────────────────────
 

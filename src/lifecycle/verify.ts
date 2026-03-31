@@ -1,17 +1,17 @@
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 
-import { executeOperation, type ExecuteDependencies } from '../runtime/executor.js'
-import { listSites, resolveSiteRoot, loadOpenApi, listOperations, pathExists } from '../lib/openapi.js'
+import { type AsyncApiSpec, loadAsyncApi } from '../lib/asyncapi.js'
 import { OpenWebError } from '../lib/errors.js'
-import { computeResponseFingerprint } from './fingerprint.js'
 import { loadManifest, saveManifest } from '../lib/manifest.js'
-import type { Manifest } from '../types/manifest.js'
-import { loadAsyncApi, type AsyncApiSpec } from '../lib/asyncapi.js'
+import { listOperations, listSites, loadOpenApi, pathExists, resolveSiteRoot } from '../lib/openapi.js'
+import { type ExecuteDependencies, executeOperation } from '../runtime/executor.js'
+import { executeWsOperation, streamWsOperation } from '../runtime/ws-executor.js'
 import { WsConnectionPool } from '../runtime/ws-pool.js'
 import { openWsSession } from '../runtime/ws-runtime.js'
-import { executeWsOperation, streamWsOperation } from '../runtime/ws-executor.js'
+import type { Manifest } from '../types/manifest.js'
 import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
+import { computeResponseFingerprint } from './fingerprint.js'
 
 export type DriftType = 'schema_drift' | 'auth_drift' | 'endpoint_removed' | 'error'
 

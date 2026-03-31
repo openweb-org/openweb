@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Google Maps L3 adapter — SPA navigation + DOM extraction / internal preview API.
  *
@@ -14,8 +16,6 @@
  * Place details, reviews, photos, and autocomplete work via direct fetch.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const MAPS_BASE = 'https://www.google.com/maps'
 

@@ -1,8 +1,8 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { OpenWebError } from '../lib/errors.js'
 import type { ExecuteResult } from './http-executor.js'
-import { withHttpRetry, parseRetryAfter, enforceOriginSpacing } from './http-retry.js'
+import { enforceOriginSpacing, parseRetryAfter, withHttpRetry } from './http-retry.js'
 
 function makeResult(status = 200): ExecuteResult {
   return { status, body: {}, responseSchemaValid: true, responseHeaders: {} }

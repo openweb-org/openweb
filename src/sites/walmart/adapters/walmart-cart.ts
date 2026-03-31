@@ -1,3 +1,5 @@
+import type { Page } from "playwright-core";
+import { OpenWebError } from "../../../lib/errors.js";
 /**
  * Walmart L3 adapter — addToCart via persisted GraphQL mutations.
  *
@@ -9,8 +11,6 @@
  *   addToCart — add a product to the shopping cart by usItemId
  */
 import type { CodeAdapter } from "../../../types/adapter.js";
-import type { Page } from "playwright-core";
-import { OpenWebError } from "../../../lib/errors.js";
 
 /** Persisted query hashes — derived from GraphQL query text, stable across deploys. */
 const HASHES = {
@@ -70,7 +70,7 @@ async function addToCart(
 			const offerId: string = product.offerId;
 			const productName: string = product.name || "";
 			if (!offerId)
-				throw new Error("No offerId found for product " + usItemId);
+				throw new Error(`No offerId found for product ${usItemId}`);
 
 			// Step 2: Get or create cart via MergeAndGetCart
 			const cartResp = await fetch(

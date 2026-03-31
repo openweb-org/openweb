@@ -1,3 +1,5 @@
+import type { Page, Response as PwResponse } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Bilibili L3 adapter — page-based API access with Wbi signing.
  *
@@ -9,8 +11,6 @@
  * For other endpoints, we navigate to the relevant page and intercept the API calls.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page, Response as PwResponse } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const API_BASE = 'https://api.bilibili.com'
 
@@ -246,7 +246,8 @@ async function fetchProtobufDanmaku(
       // Minimal protobuf decoder for DmSegMobileReply
       let pos = 0
       function readVarint(): number {
-        let result = 0, shift = 0
+        let result = 0
+        let shift = 0
         while (pos < bytes.length) {
           const b = bytes[pos++]
           result |= (b & 0x7f) << shift
@@ -273,7 +274,8 @@ async function fetchProtobufDanmaku(
         const d = data
         // Local varint/bytes readers scoped to this sub-message
         function rv(): number {
-          let r = 0, s = 0
+          let r = 0
+          let s = 0
           while (p < d.length) {
             const b = d[p++]
             r |= (b & 0x7f) << s

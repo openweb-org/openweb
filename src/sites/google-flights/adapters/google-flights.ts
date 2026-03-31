@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Google Flights adapter — DOM extraction from search, overview, booking, explore, and insights pages.
  *
@@ -8,8 +10,6 @@
  * getPriceInsights:       Extract price trends and popular airlines from search overview
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 /* ---------- searchFlights ---------- */
 
@@ -25,7 +25,7 @@ async function searchFlights(page: Page): Promise<unknown> {
 			)
 			if (!timeMatch) continue
 			const airlineSpan = [...li.querySelectorAll('span')].find((s) => {
-				const t = s.textContent!.trim()
+				const t = s.textContent?.trim()
 				return (
 					t.length > 2 &&
 					t.length < 30 &&
@@ -40,7 +40,7 @@ async function searchFlights(page: Page): Promise<unknown> {
 					!t.includes('Return')
 				)
 			})
-			const airline = airlineSpan ? airlineSpan.textContent!.trim() : ''
+			const airline = airlineSpan ? airlineSpan.textContent?.trim() : ''
 			const durationMatch = text.match(/(\d+\shr(?:\s\d+\smin)?|\d+\smin)/)
 			const routeMatch = text.match(/([A-Z]{3})[A-Za-z\s\u00A0-]+\u2013([A-Z]{3})/)
 			const stopsText = text.match(/(Nonstop|\d+\sstops?)/i)
@@ -55,9 +55,9 @@ async function searchFlights(page: Page): Promise<unknown> {
 				origin: routeMatch ? routeMatch[1] : '',
 				destination: routeMatch ? routeMatch[2] : '',
 				stops: stopsText ? stopsText[1] : '',
-				price: priceMatch ? parseInt(priceMatch[1].replace(',', '')) : null,
-				co2Kg: co2Match ? parseInt(co2Match[1]) : null,
-				emissionsPct: emMatch ? parseInt(emMatch[1]) : null,
+				price: priceMatch ? Number.parseInt(priceMatch[1].replace(',', '')) : null,
+				co2Kg: co2Match ? Number.parseInt(co2Match[1]) : null,
+				emissionsPct: emMatch ? Number.parseInt(emMatch[1]) : null,
 			})
 		}
 		const origin = (document.querySelector('input[aria-label*="Where from"]') as HTMLInputElement)?.value || ''
@@ -66,7 +66,7 @@ async function searchFlights(page: Page): Promise<unknown> {
 		return {
 			origin,
 			destination: dest,
-			resultCount: rc ? parseInt(rc[1]) : flights.length,
+			resultCount: rc ? Number.parseInt(rc[1]) : flights.length,
 			flights,
 		}
 	})
@@ -88,7 +88,7 @@ async function getFlightOverview(page: Page): Promise<unknown> {
 				/([A-Z][a-z]{2}, [A-Z][a-z]{2} \d+\s*[–—]\s*[A-Z][a-z]{2}, [A-Z][a-z]{2} \d+)/,
 			)
 			cards.push({
-				price: priceMatch ? parseInt(priceMatch[1].replace(',', '')) : null,
+				price: priceMatch ? Number.parseInt(priceMatch[1].replace(',', '')) : null,
 				airline: airlineMatch ? airlineMatch[1] : '',
 				stops: stopsMatch ? stopsMatch[1] : '',
 				duration: durationMatch ? durationMatch[1] : '',
@@ -141,7 +141,7 @@ async function getFlightBookingDetails(page: Page): Promise<unknown> {
 		}
 		const bookingMatch = text.match(/Book with ([^\n]+)/)
 		return {
-			totalPrice: totalPriceMatch ? parseInt(totalPriceMatch[1].replace(',', '')) : null,
+			totalPrice: totalPriceMatch ? Number.parseInt(totalPriceMatch[1].replace(',', '')) : null,
 			legs,
 			bagPolicies,
 			bookWith: bookingMatch ? bookingMatch[1].trim() : '',
@@ -183,10 +183,10 @@ async function exploreDestinations(page: Page): Promise<unknown> {
 			destinations.push({
 				destination,
 				dates,
-				flightPrice: parseInt(flightPriceMatch[1]),
+				flightPrice: Number.parseInt(flightPriceMatch[1]),
 				stops: stopsMatch ? stopsMatch[1] : '',
 				duration: durationMatch ? durationMatch[1].trim() : '',
-				hotelPricePerNight: hotelPriceMatch ? parseInt(hotelPriceMatch[1]) : null,
+				hotelPricePerNight: hotelPriceMatch ? Number.parseInt(hotelPriceMatch[1]) : null,
 			})
 		}
 		return { origin, destinationCount: destinations.length, destinations }
@@ -225,7 +225,7 @@ async function getPriceInsights(page: Page): Promise<unknown> {
 				/([A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)*)\n(Nonstop|\d+\s*stops?)\nfrom\s*\$(\d+)/g,
 			)
 			for (const m of airlineMatches) {
-				airlines.push({ airline: m[1].trim(), stops: m[2], fromPrice: parseInt(m[3]) })
+				airlines.push({ airline: m[1].trim(), stops: m[2], fromPrice: Number.parseInt(m[3]) })
 			}
 		}
 
@@ -236,10 +236,10 @@ async function getPriceInsights(page: Page): Promise<unknown> {
 			cheapestMonth: cheapMonthMatch ? cheapMonthMatch[1] : '',
 			mostExpensiveMonth: expMonthMatch ? expMonthMatch[1] : '',
 			cheapestRange: cheapRangeMatch
-				? { low: parseInt(cheapRangeMatch[2]), high: parseInt(cheapRangeMatch[3]) }
+				? { low: Number.parseInt(cheapRangeMatch[2]), high: Number.parseInt(cheapRangeMatch[3]) }
 				: null,
 			mostExpensiveRange: expRangeMatch
-				? { low: parseInt(expRangeMatch[2]), high: parseInt(expRangeMatch[3]) }
+				? { low: Number.parseInt(expRangeMatch[2]), high: Number.parseInt(expRangeMatch[3]) }
 				: null,
 			popularAirlines: airlines,
 		}

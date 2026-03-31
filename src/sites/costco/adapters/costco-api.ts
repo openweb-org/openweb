@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Costco L3 adapter — POST-based APIs via Playwright request context.
  *
@@ -12,8 +14,6 @@
  * while inheriting browser cookies.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const SEARCH_URL = 'https://gdx-api.costco.com/catalog/search/api/v1/search'
 const PRODUCT_GRAPHQL_URL = 'https://ecom-api.costco.com/ebusiness/product/v1/products/graphql'

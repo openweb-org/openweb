@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Boss直聘 L3 adapter — page-based job search, detail, and company data.
  *
@@ -9,8 +11,6 @@
  * Job search and detail pages require a human-established browser session to bypass bot detection.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import type { Page } from 'playwright-core'
 
 const SITE = 'https://www.zhipin.com'
 
@@ -49,7 +49,7 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
 
     // Extract job cards from rendered DOM
     const cards = document.querySelectorAll('.job-card-wrapper, .search-job-result .job-card-body, [class*="job-card"]')
-    cards.forEach((card) => {
+    for (const card of cards) {
       const job: Record<string, unknown> = {}
       const nameEl = card.querySelector('.job-name, [class*="job-name"], [ka="search_list_job_name"]')
       job.jobName = nameEl?.textContent?.trim()
@@ -66,10 +66,10 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
 
       const infoTags = card.querySelectorAll('.tag-list li, [class*="info-desc"]')
       const tags: string[] = []
-      infoTags.forEach((t) => {
+      for (const t of infoTags) {
         const text = t.textContent?.trim()
         if (text) tags.push(text)
-      })
+      }
       if (tags.length > 0) {
         job.experience = tags[0]
         job.degree = tags[1]
@@ -77,10 +77,10 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
 
       const skillTags = card.querySelectorAll('.job-card-footer .tag-list li, [class*="tag"]')
       const skills: string[] = []
-      skillTags.forEach((t) => {
+      for (const t of skillTags) {
         const text = t.textContent?.trim()
         if (text) skills.push(text)
-      })
+      }
       if (skills.length > 0) job.tags = skills
 
       const link = card.querySelector('a[href*="job_detail"], a[ka="search_list_job"]')
@@ -90,7 +90,7 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
       const companyTags = companyInfoEl?.querySelectorAll('li')
       if (companyTags) {
         const ct: string[] = []
-        companyTags.forEach((t) => ct.push(t.textContent?.trim() ?? ''))
+        for (const t of companyTags) ct.push(t.textContent?.trim() ?? '')
         job.industry = ct[0]
         job.companyStage = ct[1]
         job.companySize = ct[2]
@@ -102,7 +102,7 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
       job.bossTitle = bossTitleEl?.textContent?.trim()
 
       if (job.jobName) jobs.push(job)
-    })
+    }
 
     result.jobs = jobs
 
@@ -110,7 +110,7 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
     const countEl = document.querySelector('[class*="result-num"], [class*="job-tab"]')
     if (countEl) {
       const match = countEl.textContent?.match(/(\d+)/)
-      if (match) result.totalCount = parseInt(match[1], 10)
+      if (match) result.totalCount = Number.parseInt(match[1], 10)
     }
 
     return result
@@ -135,15 +135,15 @@ async function getJobDetail(page: Page, params: Record<string, unknown>): Promis
 
     const detailItems = document.querySelectorAll('.job-detail .detail-content p, [class*="job-detail"]')
     const infos: string[] = []
-    detailItems.forEach((el) => {
+    for (const el of detailItems) {
       const text = el.textContent?.trim()
       if (text) infos.push(text)
-    })
+    }
 
     // Info tags (city, experience, degree)
     const infoTags = document.querySelectorAll('.job-detail-header .info-primary p, [class*="job-tags"] span')
     const tags: string[] = []
-    infoTags.forEach((t) => tags.push(t.textContent?.trim() ?? ''))
+    for (const t of infoTags) tags.push(t.textContent?.trim() ?? '')
     if (tags.length > 0) {
       result.city = tags[0]
       result.experience = tags[1]
@@ -157,10 +157,10 @@ async function getJobDetail(page: Page, params: Record<string, unknown>): Promis
     // Tags/skills
     const skillEls = document.querySelectorAll('.job-tags .tag-item, [class*="job-keyword"] li')
     const skills: string[] = []
-    skillEls.forEach((el) => {
+    for (const el of skillEls) {
       const text = el.textContent?.trim()
       if (text) skills.push(text)
-    })
+    }
     if (skills.length > 0) result.tags = skills
 
     // Company info
@@ -168,7 +168,7 @@ async function getJobDetail(page: Page, params: Record<string, unknown>): Promis
     company.name = document.querySelector('.sider-company .company-name, [class*="company-info"] .name')?.textContent?.trim()
     const companyDetail = document.querySelectorAll('.sider-company p, [class*="company-info"] li')
     const companyInfos: string[] = []
-    companyDetail.forEach((el) => companyInfos.push(el.textContent?.trim() ?? ''))
+    for (const el of companyDetail) companyInfos.push(el.textContent?.trim() ?? '')
     if (companyInfos.length > 0) {
       company.industry = companyInfos[0]
       company.stage = companyInfos[1]
@@ -209,7 +209,7 @@ async function getCompanyProfile(page: Page, params: Record<string, unknown>): P
 
     const infoEls = document.querySelectorAll('.company-banner .info p, [class*="company-info"] li')
     const infos: string[] = []
-    infoEls.forEach((el) => infos.push(el.textContent?.trim() ?? ''))
+    for (const el of infoEls) infos.push(el.textContent?.trim() ?? '')
     result.industry = infos[0]
     result.stage = infos[1]
     result.size = infos[2]
@@ -220,7 +220,7 @@ async function getCompanyProfile(page: Page, params: Record<string, unknown>): P
     // Extract job listings
     const jobEls = document.querySelectorAll('.company-jobs .job-card, [class*="job-list"] li')
     const jobs: Record<string, unknown>[] = []
-    jobEls.forEach((el) => {
+    for (const el of jobEls) {
       const job: Record<string, unknown> = {}
       job.jobName = el.querySelector('.job-name, a')?.textContent?.trim()
       job.salaryDesc = el.querySelector('.salary, [class*="salary"]')?.textContent?.trim()
@@ -229,7 +229,7 @@ async function getCompanyProfile(page: Page, params: Record<string, unknown>): P
       const link = el.querySelector('a[href*="job_detail"]')
       job.link = (link as HTMLAnchorElement)?.getAttribute('href') || ''
       if (job.jobName) jobs.push(job)
-    })
+    }
     result.jobs = jobs
 
     return result

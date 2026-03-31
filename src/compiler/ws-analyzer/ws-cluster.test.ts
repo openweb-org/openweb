@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ParsedWsFrame, WsConnection } from './ws-load.js'
 import { analyzeWsConnection, detectDiscriminator } from './ws-cluster.js'
+import type { ParsedWsFrame, WsConnection } from './ws-load.js'
 
 // ── Helpers ───────────────────────────────────────────────────
 

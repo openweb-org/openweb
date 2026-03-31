@@ -1,10 +1,10 @@
-import { describe, expect, it, beforeAll, afterAll } from 'vitest'
-import { mkdtemp, writeFile, mkdir, rm } from 'node:fs/promises'
-import path from 'node:path'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
+import path from 'node:path'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { stringify } from 'yaml'
 
-import { loadSitePackage, findOperationEntry } from '../lib/site-package.js'
+import { findOperationEntry, loadSitePackage } from '../lib/site-package.js'
 
 // Minimal valid OpenAPI spec
 const minimalOpenApi = {

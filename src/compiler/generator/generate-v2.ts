@@ -52,7 +52,7 @@ function toPascalCase(s: string): string {
 }
 
 function parseWsUrl(url: string): { host: string; pathname: string } {
-  if (!url) throw new Error(`Empty WebSocket URL — capture may include connections without URLs`)
+  if (!url) throw new Error("Empty WebSocket URL — capture may include connections without URLs")
   const parsed = new URL(url)
   return { host: parsed.host, pathname: parsed.pathname || '/' }
 }

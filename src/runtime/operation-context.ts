@@ -1,7 +1,7 @@
 import { OpenWebError } from '../lib/errors.js'
+import type { OpenApiOperation, OpenApiSpec } from '../lib/openapi.js'
 import type { XOpenWebServer } from '../types/extensions.js'
 import type { Transport } from '../types/extensions.js'
-import type { OpenApiOperation, OpenApiSpec } from '../lib/openapi.js'
 
 const VALID_TRANSPORTS = new Set<string>(['node', 'page'])
 

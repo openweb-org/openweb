@@ -1,8 +1,8 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { WsConnectionManager, type WsConnectionConfig, type WsState } from './ws-connection.js'
-import { WsRouter, type WsRouterConfig } from './ws-router.js'
+import { type WsConnectionConfig, WsConnectionManager, type WsState } from './ws-connection.js'
 import { WsConnectionPool } from './ws-pool.js'
+import { WsRouter, type WsRouterConfig } from './ws-router.js'
 
 // ── Mock WebSocket ────────────────────────────────
 

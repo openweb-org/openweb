@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { classify, type CaptureData } from './classify.js'
 import type { HarEntry, StateSnapshot } from '../../capture/types.js'
+import { type CaptureData, classify } from './classify.js'
 
 function makeHarEntry(overrides: {
   method?: string

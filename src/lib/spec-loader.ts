@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises'
 
 import { parse } from 'yaml'
 
-import { OpenWebError } from './errors.js'
 import { validateXOpenWebSpec } from '../types/validator.js'
+import { OpenWebError } from './errors.js'
 import { resolveSiteRoot } from './site-resolver.js'
 
 export type JsonSchema = {

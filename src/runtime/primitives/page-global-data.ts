@@ -1,7 +1,7 @@
 import { OpenWebError } from '../../lib/errors.js'
 import { getValueAtPath } from '../value-path.js'
-import type { BrowserHandle } from './types.js'
 import { evaluatePageExpression } from './page-expression.js'
+import type { BrowserHandle } from './types.js'
 
 export interface PageGlobalDataConfig {
   readonly expression: string

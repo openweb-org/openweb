@@ -1,12 +1,12 @@
-import { OpenWebError } from '../lib/errors.js'
+import { type AsyncApiSpec, loadAsyncApi } from '../lib/asyncapi.js'
 import { TIMEOUT } from '../lib/config.js'
-import { loadAsyncApi, type AsyncApiSpec } from '../lib/asyncapi.js'
-import { loadSitePackage, findOperationEntry, type WsOperationEntry } from '../lib/site-package.js'
-import { WsConnectionPool } from './ws-pool.js'
-import { openWsSession, type WsRuntimeDeps } from './ws-runtime.js'
-import { executeWsOperation, streamWsOperation, type WsExecuteResult } from './ws-executor.js'
+import { OpenWebError } from '../lib/errors.js'
+import { type WsOperationEntry, findOperationEntry, loadSitePackage } from '../lib/site-package.js'
 import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
 import type { ExecuteDependencies, ExecuteResult } from './http-executor.js'
+import { type WsExecuteResult, executeWsOperation, streamWsOperation } from './ws-executor.js'
+import { WsConnectionPool } from './ws-pool.js'
+import { type WsRuntimeDeps, openWsSession } from './ws-runtime.js'
 
 // ── Types ────────────────────────────────────────
 

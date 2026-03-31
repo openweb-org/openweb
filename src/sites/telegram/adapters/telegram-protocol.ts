@@ -1,3 +1,4 @@
+import type { Page } from 'playwright-core'
 /**
  * Telegram Web A (web.telegram.org/a/) L3 adapter.
  *
@@ -10,7 +11,6 @@
  */
 import { OpenWebError } from '../../../lib/errors.js'
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
 
 /** Inlined in every page.evaluate — finds teact getGlobal by walking webpack modules */
 function findGetGlobal(): (() => Record<string, unknown>) | null {
@@ -29,7 +29,7 @@ function findGetGlobal(): (() => Record<string, unknown>) | null {
         if (typeof (mod as Record<string, unknown>)[key] !== 'function') continue
         try {
           const r = ((mod as Record<string, unknown>)[key] as () => Record<string, unknown>)()
-          if (r && r.chats && r.users && r.currentUserId) {
+          if (r?.chats && r.users && r.currentUserId) {
             return (mod as Record<string, unknown>)[key] as () => Record<string, unknown>
           }
         } catch { /* intentional: module function call may throw */ }
@@ -168,7 +168,7 @@ export default {
             if (!chatMsgs) return []
             const msgIds = Object.keys(chatMsgs).sort((a, b) => Number(b) - Number(a)).slice(0, args.limit)
             return msgIds.map((id) => {
-              const msg = chatMsgs[id]!
+              const msg = chatMsgs[id] as Record<string, any>
               return {
                 id: msg.id,
                 chatId: msg.chatId,

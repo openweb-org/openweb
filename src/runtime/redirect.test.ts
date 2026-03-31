@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { fetchWithRedirects } from './redirect.js'
 import { OpenWebError } from '../lib/errors.js'
+import { fetchWithRedirects } from './redirect.js'
 
 describe('fetchWithRedirects', () => {
   it('returns response on non-redirect status', async () => {

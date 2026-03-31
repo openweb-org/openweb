@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Xueqiu L3 adapter — REST API via browser fetch.
  *
@@ -6,8 +8,6 @@
  * cookies (xq_a_token) set on first visit — direct HTTP is blocked.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 /* ---------- constants ---------- */
 

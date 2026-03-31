@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Medium L3 adapter — GraphQL API via browser fetch.
  *
@@ -6,21 +8,19 @@
  * without auth. Search results are extracted from the rendered DOM.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import {
-  TOPIC_LATEST_STORIES_QUERY,
-  TOPIC_CURATED_LISTS_QUERY,
-  TOPIC_WRITERS_QUERY,
-  RECOMMENDED_FEED_QUERY,
-  RECOMMENDED_TAGS_QUERY,
-  PUBLICATION_POSTS_QUERY,
-  POST_CLAPS_QUERY,
-  RECOMMENDED_WRITERS_QUERY,
-  VIEWER_QUERY,
   CLAP_MUTATION,
   FOLLOW_USER_MUTATION,
+  POST_CLAPS_QUERY,
+  PUBLICATION_POSTS_QUERY,
+  RECOMMENDED_FEED_QUERY,
+  RECOMMENDED_TAGS_QUERY,
+  RECOMMENDED_WRITERS_QUERY,
   SAVE_ARTICLE_MUTATION,
+  TOPIC_CURATED_LISTS_QUERY,
+  TOPIC_LATEST_STORIES_QUERY,
+  TOPIC_WRITERS_QUERY,
+  VIEWER_QUERY,
 } from './queries.js'
 
 const GRAPHQL_URL = 'https://medium.com/_/graphql'
@@ -59,7 +59,7 @@ async function graphqlFetch(
   const first = json[0]
   if (first?.errors) {
     const msg = (first.errors[0] as Record<string, string>)?.message ?? 'Unknown GraphQL error'
-    throw OpenWebError.apiError('GraphQL ' + operationName, msg)
+    throw OpenWebError.apiError(`GraphQL ${operationName}`, msg)
   }
 
   return first?.data

@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * YouTube Music L3 adapter — InnerTube API via browser fetch.
  *
@@ -6,16 +8,14 @@
  * without auth. API key extracted from ytcfg page global.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import {
   type Obj,
+  browseContents,
+  parseCarouselItems,
+  parseShelfItems,
   runs,
   thumbUrl,
-  browseContents,
   twoColBrowse,
-  parseShelfItems,
-  parseCarouselItems,
 } from './transforms.js'
 
 const API_BASE = '/youtubei/v1'
@@ -68,7 +68,7 @@ async function innerTube(
   const json = JSON.parse(result.text) as Record<string, unknown>
   if (json.error) {
     const err = json.error as Record<string, unknown>
-    throw OpenWebError.apiError('YouTube Music ' + endpoint, String(err.message ?? 'Unknown error'))
+    throw OpenWebError.apiError(`YouTube Music ${endpoint}`, String(err.message ?? 'Unknown error'))
   }
   return json
 }

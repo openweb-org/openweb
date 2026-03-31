@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { parseLinkHeader, executePaginated } from './paginator.js'
 import type { ExecuteResult } from './executor.js'
+import { executePaginated, parseLinkHeader } from './paginator.js'
 
 // Mock executor — vi.hoisted so the factory runs before module evaluation
 const executeOperationMock = vi.fn<(...args: unknown[]) => Promise<ExecuteResult>>()

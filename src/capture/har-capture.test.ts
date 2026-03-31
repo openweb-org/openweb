@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { Page, Request, Response } from 'playwright'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { attachHarCapture } from './har-capture.js'
 
 // ── Helpers to simulate Playwright page events ──────────────────

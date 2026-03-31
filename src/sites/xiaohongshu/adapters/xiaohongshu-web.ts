@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Xiaohongshu (小红书) L3 adapter — Vue SSR state extraction + comment API interception.
  *
@@ -8,8 +10,6 @@
  * Comments are loaded async by the page's own JS — we intercept the API response.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const BASE = 'https://www.xiaohongshu.com'
 

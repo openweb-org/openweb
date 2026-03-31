@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Douban L3 adapter — DOM extraction from SSR pages.
  *
@@ -6,8 +8,6 @@
  * and music across movie.douban.com, book.douban.com, music.douban.com.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import type { Page } from 'playwright-core'
 
 /* ---------- helpers ---------- */
 

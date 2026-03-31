@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import type { RecordedRequestSample } from '../types.js'
 import type { GraphqlClusterInfo } from '../types-v2.js'
+import type { RecordedRequestSample } from '../types.js'
 
 /** Returns true if all samples target a single GraphQL endpoint. */
 export function detectGraphqlEndpoint(samples: RecordedRequestSample[]): boolean {

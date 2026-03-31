@@ -1,10 +1,10 @@
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
-import { describe, expect, it, afterEach } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
-import { loadPermissions, checkPermission, type PermissionsConfig } from './permissions.js'
+import { type PermissionsConfig, checkPermission, loadPermissions } from './permissions.js'
 
 describe('loadPermissions', () => {
   const dirs: string[] = []

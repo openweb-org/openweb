@@ -1,13 +1,13 @@
-import path from 'node:path'
 import { mkdir } from 'node:fs/promises'
+import path from 'node:path'
 
-import type { AnalyzedOperation } from '../types.js'
-import type { ClassifyResult } from '../analyzer/classify.js'
-import type { WsOperationSchema } from '../ws-analyzer/ws-schema.js'
-import type { XOpenWebWsServer } from '../../types/ws-extensions.js'
 import { openwebHome } from '../../lib/config.js'
-import { generateOpenApi } from './openapi.js'
+import type { XOpenWebWsServer } from '../../types/ws-extensions.js'
+import type { ClassifyResult } from '../analyzer/classify.js'
+import type { AnalyzedOperation } from '../types.js'
+import type { WsOperationSchema } from '../ws-analyzer/ws-schema.js'
 import { generateAsyncApi } from './asyncapi.js'
+import { generateOpenApi } from './openapi.js'
 
 export interface GeneratePackageInput {
   readonly site: string

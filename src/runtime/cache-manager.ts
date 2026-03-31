@@ -1,25 +1,25 @@
 import type { Browser } from 'playwright-core'
 
 import { formatCookieString } from '../lib/cookies.js'
-import { OpenWebError, getHttpFailure } from '../lib/errors.js'
-import { parseResponseBody } from '../lib/response-parser.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
+import { OpenWebError, getHttpFailure } from '../lib/errors.js'
+import { logger } from '../lib/logger.js'
 import {
+  type OpenApiOperation,
+  type OpenApiSpec,
   getRequestBodyParameters,
   getServerUrl,
   validateParams,
-  type OpenApiOperation,
-  type OpenApiSpec,
 } from '../lib/openapi.js'
+import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
-import { fetchWithRedirects } from './redirect.js'
-import { readTokenCache, writeTokenCache, clearTokenCache, DEFAULT_TTL_SECONDS, extractJwtExp, type CachedTokens } from './token-cache.js'
-import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
-import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
-import type { ExecuteDependencies } from './http-executor.js'
-import type { ExecutorResult } from './executor-result.js'
 import type { XOpenWebServer } from '../types/extensions.js'
-import { logger } from '../lib/logger.js'
+import type { ExecutorResult } from './executor-result.js'
+import type { ExecuteDependencies } from './http-executor.js'
+import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
+import { fetchWithRedirects } from './redirect.js'
+import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
+import { type CachedTokens, DEFAULT_TTL_SECONDS, clearTokenCache, extractJwtExp, readTokenCache, writeTokenCache } from './token-cache.js'
 
 /** Execute a request using cached cookies instead of browser extraction */
 export async function executeCachedFetch(

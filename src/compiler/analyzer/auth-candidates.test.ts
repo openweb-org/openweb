@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
+import type { HarEntry, StateSnapshot } from '../../capture/types.js'
 import { buildAuthCandidates, scoreCsrfMatch } from './auth-candidates.js'
 import type { CaptureData } from './classify.js'
-import type { HarEntry, StateSnapshot } from '../../capture/types.js'
 
 // ── Test helpers ────────────────────────────────────────────────────────────
 

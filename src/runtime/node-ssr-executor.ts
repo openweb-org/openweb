@@ -1,3 +1,4 @@
+import { DEFAULT_USER_AGENT } from '../lib/config.js'
 /**
  * Node-based SSR extraction: fetches pages via HTTP and parses embedded data.
  *
@@ -5,12 +6,11 @@
  * `transport: node` and no auth/csrf — avoids needing a browser.
  */
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
-import { DEFAULT_USER_AGENT } from '../lib/config.js'
 import { validateSSRF } from '../lib/ssrf.js'
-import { fetchWithRedirects } from './redirect.js'
-import { getValueAtPath } from './value-path.js'
 import type { ExtractionPrimitive } from '../types/primitives.js'
 import type { ExecutorResult } from './executor-result.js'
+import { fetchWithRedirects } from './redirect.js'
+import { getValueAtPath } from './value-path.js'
 
 export type { ExecutorResult }
 

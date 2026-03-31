@@ -1,13 +1,13 @@
 import type { Browser, BrowserContext, CDPSession, Page } from 'playwright'
 
-import type { CaptureMetadata, DomExtraction, StateSnapshot } from './types.js'
+import { logger } from '../lib/logger.js'
 import { writeCaptureBundle } from './bundle.js'
 import { connectWithRetry } from './connection.js'
 import { captureDomAndGlobals } from './dom-capture.js'
-import { attachHarCapture, buildHarLog, type HarCapture } from './har-capture.js'
+import { type HarCapture, attachHarCapture, buildHarLog } from './har-capture.js'
 import { captureStateSnapshot } from './state-capture.js'
-import { attachWsCapture, type WsCapture } from './ws-capture.js'
-import { logger } from '../lib/logger.js'
+import type { CaptureMetadata, DomExtraction, StateSnapshot } from './types.js'
+import { type WsCapture, attachWsCapture } from './ws-capture.js'
 
 export interface CaptureSessionOptions {
   readonly cdpEndpoint: string

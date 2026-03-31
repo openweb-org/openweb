@@ -1,11 +1,11 @@
-import { spawn, execFile } from 'node:child_process'
-import { mkdtemp, mkdir, readFile, writeFile, rm, unlink, copyFile, readdir, chmod } from 'node:fs/promises'
+import { execFile, spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { chmod, copyFile, mkdir, mkdtemp, readFile, readdir, rm, unlink, writeFile } from 'node:fs/promises'
 import { homedir, platform, tmpdir } from 'node:os'
+import { join } from 'node:path'
 
-import { OpenWebError } from '../lib/errors.js'
 import { CDP_PORT, TIMEOUT, openwebHome } from '../lib/config.js'
+import { OpenWebError } from '../lib/errors.js'
 
 const PID_FILE = () => join(openwebHome(), 'browser.pid')
 const PORT_FILE = () => join(openwebHome(), 'browser.port')

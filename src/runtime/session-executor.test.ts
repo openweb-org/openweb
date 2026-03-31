@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { OpenWebError } from '../lib/errors.js'
+import type { OpenApiOperation, OpenApiParameter, OpenApiSpec } from '../lib/openapi.js'
+import { buildHeaderParams, substitutePath } from './request-builder.js'
 import {
-  createNeedsPageError,
-  findPageForOrigin,
-  executeSessionHttp,
   autoNavigate,
+  createNeedsPageError,
+  executeSessionHttp,
+  findPageForOrigin,
 } from './session-executor.js'
-import { substitutePath, buildHeaderParams } from './request-builder.js'
-import type { OpenApiSpec, OpenApiOperation, OpenApiParameter } from '../lib/openapi.js'
 
 function instagramSpec(): OpenApiSpec {
   return {

@@ -1,6 +1,6 @@
+import { access, readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { access, readdir, readFile } from 'node:fs/promises'
 
 import { openwebHome } from './config.js'
 import { OpenWebError } from './errors.js'
@@ -51,7 +51,7 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
     })
   }
 
-  // 1. ~/.openweb/sites/ — user-installed (primary)
+  // 1. $OPENWEB_HOME/sites/ — user-installed (primary)
   const userSite = path.join(openwebHome(), 'sites', site)
   if (await hasSitePackage(userSite)) {
     return userSite

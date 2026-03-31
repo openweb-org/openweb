@@ -1,11 +1,11 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
 
 import { describe, expect, it } from 'vitest'
 
-import type { AnalyzedOperation } from './types.js'
 import { generatePackage } from './generator/index.js'
+import type { AnalyzedOperation } from './types.js'
 
 function op(partial: Partial<AnalyzedOperation> & Pick<AnalyzedOperation, 'operationId' | 'host' | 'path'>): AnalyzedOperation {
   return {

@@ -1,6 +1,6 @@
 import type { WsPattern } from '../../types/ws-primitives.js'
-import type { ParsedWsFrame } from './ws-load.js'
 import type { WsMessageCluster } from './ws-cluster.js'
+import type { ParsedWsFrame } from './ws-load.js'
 
 // ── Output types ──────────────────────────────────────────────
 

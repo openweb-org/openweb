@@ -71,7 +71,7 @@ export async function getCompanyReviews(page: Page, params: Record<string, unkno
     // Individual reviews
     const reviewEls = document.querySelectorAll('[data-testid="reviewCard"], [itemprop="review"]')
     const reviews: Record<string, unknown>[] = []
-    reviewEls.forEach((el) => {
+    for (const el of reviewEls) {
       const review: Record<string, unknown> = {}
       review.title = el.querySelector('[itemprop="name"], [data-testid="reviewTitle"]')?.textContent?.trim()
       review.rating = el.querySelector('[itemprop="ratingValue"]')?.getAttribute('content') ||
@@ -84,7 +84,7 @@ export async function getCompanyReviews(page: Page, params: Record<string, unkno
       review.jobTitle = el.querySelector('[data-testid="reviewJobTitle"]')?.textContent?.trim()
       review.location = el.querySelector('[data-testid="reviewLocation"]')?.textContent?.trim()
       if (review.title || review.rating) reviews.push(review)
-    })
+    }
     result.reviews = reviews
 
     // LD+JSON
@@ -126,16 +126,16 @@ export async function browseJobCategories(page: Page, _params: Record<string, un
 
     // Indeed's browsejobs page has sections: "Companies by letter", "Jobs by title", etc.
     const sectionEls = document.querySelectorAll('section[role="region"]')
-    sectionEls.forEach((section) => {
+    for (const section of sectionEls) {
       const heading = section.querySelector('h2')?.textContent?.trim()
       const links: { name: string; url: string }[] = []
-      section.querySelectorAll('a').forEach((a) => {
+      for (const a of section.querySelectorAll('a')) {
         const text = (a as HTMLAnchorElement).textContent?.trim()
         const href = (a as HTMLAnchorElement).href
         if (text && href) links.push({ name: text, url: href })
-      })
+      }
       if (heading) sections.push({ heading, links })
-    })
+    }
 
     result.sections = sections
     result.title = document.querySelector('h1')?.textContent?.trim()

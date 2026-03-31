@@ -1,10 +1,10 @@
-import type { WsConnectionManager } from './ws-connection.js'
-import type { WsRouter, ClassifiedFrame } from './ws-router.js'
+import { randomUUID } from 'node:crypto'
+import { TIMEOUT } from '../lib/config.js'
 import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
 import type { WsMessageTemplate } from '../types/ws-primitives.js'
 import { getValueAtPath, setValueAtPath } from './value-path.js'
-import { TIMEOUT } from '../lib/config.js'
-import { randomUUID } from 'node:crypto'
+import type { WsConnectionManager } from './ws-connection.js'
+import type { ClassifiedFrame, WsRouter } from './ws-router.js'
 
 // ── Types ────────────────────────────────────────
 

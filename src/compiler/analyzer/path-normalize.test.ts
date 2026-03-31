@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { normalizePathBatch, normalizePath } from './path-normalize.js'
+import { normalizePath, normalizePathBatch } from './path-normalize.js'
 
 describe('normalizePath', () => {
   it('normalizes numeric IDs', () => {

@@ -1,4 +1,4 @@
-import { WsConnectionManager, type WsConnectionConfig } from './ws-connection.js'
+import { type WsConnectionConfig, WsConnectionManager } from './ws-connection.js'
 
 // ── Pool Config ───────────────────────────────────
 

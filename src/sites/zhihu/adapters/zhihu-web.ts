@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Zhihu L3 adapter — page-based API access with cookie session.
  *
@@ -6,8 +8,6 @@
  * cookies automatically.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const SITE_BASE = 'https://www.zhihu.com'
 

@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Substack L3 adapter — REST API via browser fetch.
  *
@@ -7,8 +9,6 @@
  * All read operations work without auth.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 const BASE_URL = 'https://substack.com'
 
@@ -170,7 +170,7 @@ async function getPostComments(page: Page, params: Record<string, unknown>): Pro
     await page.goto(pubUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
   }
 
-  let url = `${pubUrl}/api/v1/post/${postId}/comments?token=${token}&all_comments=${all_comments}`
+  const url = `${pubUrl}/api/v1/post/${postId}/comments?token=${token}&all_comments=${all_comments}`
   return apiFetch(page, url)
 }
 

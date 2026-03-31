@@ -1,14 +1,14 @@
-import path from 'node:path'
 import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 
-import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { parse } from 'yaml'
 
-import { loadWsCapture } from './ws-load.js'
-import { analyzeWsConnection } from './ws-cluster.js'
-import { classifyClusters } from './ws-classify.js'
-import { inferWsSchemas } from './ws-schema.js'
 import { validateAsyncApiSpec } from '../../types/validator.js'
+import { classifyClusters } from './ws-classify.js'
+import { analyzeWsConnection } from './ws-cluster.js'
+import { loadWsCapture } from './ws-load.js'
+import { inferWsSchemas } from './ws-schema.js'
 
 // ── Fixture path ──────────────────────────────────────────────────
 

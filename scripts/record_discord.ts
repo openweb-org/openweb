@@ -84,7 +84,7 @@ if (!token) {
   process.stderr.write('ERROR: could not extract Discord auth token\n')
   session.stop()
   await session.done
-  const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T | void> =>
+  const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T | undefined> =>
     Promise.race([p, new Promise<void>((r) => setTimeout(r, ms))])
   await withTimeout(page.close(), 5_000)
   await withTimeout(browser.close(), 5_000)
@@ -201,7 +201,7 @@ session.stop()
 await session.done
 
 // Bounded cleanup — don't let page/browser close hang or crash the process
-const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T | void> =>
+const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T | undefined> =>
   Promise.race([p.catch(() => {}), new Promise<void>((r) => setTimeout(r, ms))])
 await withTimeout(page.close(), 5_000)
 await withTimeout(browser.close(), 5_000)

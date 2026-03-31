@@ -5,7 +5,7 @@
  * In built mode (node dist/cli.js), only .js files work.
  */
 import { execSync } from 'node:child_process'
-import { readdirSync, existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
 const sitesDir = path.join(process.cwd(), 'src', 'sites')

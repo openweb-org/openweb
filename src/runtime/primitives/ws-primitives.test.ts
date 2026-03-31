@@ -3,10 +3,10 @@ import { describe, expect, it, vi } from 'vitest'
 import type { WsAuthConfig, WsFirstMessage, WsHttpHandshake, WsUpgradeHeader, WsUrlToken } from '../../types/ws-primitives.js'
 import { resolveWsFirstMessage } from './ws-first-message.js'
 import { resolveWsHttpHandshake } from './ws-http-handshake.js'
-import { resolveWsUpgradeHeader } from './ws-upgrade-header.js'
-import { resolveWsUrlToken } from './ws-url-token.js'
 import { getWsResolver, resolveWsAuth } from './ws-registry.js'
 import type { WsResolverContext } from './ws-registry.js'
+import { resolveWsUpgradeHeader } from './ws-upgrade-header.js'
+import { resolveWsUrlToken } from './ws-url-token.js'
 
 // ── ws_upgrade_header ────────────────────────────
 

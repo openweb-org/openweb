@@ -5,12 +5,12 @@
  * Capture -> Analyze -> Curate -> Generate -> Verify
  */
 
-import type { ExtractionSignal } from './analyzer/classify.js'
-import type { ParameterDescriptor, RecordedRequestSample, SampleResponse } from './types.js'
 import type { JsonSchema } from '../lib/openapi.js'
 import type { PermissionCategory, Transport } from '../types/extensions.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../types/primitives.js'
 import type { WsMessageTemplate } from '../types/ws-primitives.js'
+import type { ExtractionSignal } from './analyzer/classify.js'
+import type { ParameterDescriptor, RecordedRequestSample, SampleResponse } from './types.js'
 
 // ---------------------------------------------------------------------------
 // Phase 1: Capture

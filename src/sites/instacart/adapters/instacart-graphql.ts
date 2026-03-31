@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Instacart L3 adapter — GraphQL API via persisted queries (GET).
  *
@@ -8,9 +10,7 @@
  * Auth is via cookie_session (credentials: 'include' in browser fetch).
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import { graphqlGet, normalizeItem, getSearchResults } from './queries.js'
+import { getSearchResults, graphqlGet, normalizeItem } from './queries.js'
 
 /* ---------- operation handlers ---------- */
 

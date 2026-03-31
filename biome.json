@@ -1,5 +1,8 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "files": {
+    "ignore": ["src/sites/*/adapters/*.js"]
+  },
   "linter": {
     "enabled": true,
     "rules": {
@@ -9,6 +12,18 @@
       }
     }
   },
+  "overrides": [
+    {
+      "include": ["src/sites/*/adapters/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    }
+  ],
   "formatter": {
     "enabled": false
   }

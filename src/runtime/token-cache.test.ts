@@ -1,20 +1,20 @@
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
-import { describe, expect, it, afterEach } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import {
-  readTokenCache,
-  writeTokenCache,
-  clearTokenCache,
-  clearAllTokenCache,
-  extractJwtExp,
-  _activeLockCount,
-  withTokenLock,
-  readTokenCacheUnsafe,
-  clearTokenCacheUnsafe,
   type CachedTokens,
+  _activeLockCount,
+  clearAllTokenCache,
+  clearTokenCache,
+  clearTokenCacheUnsafe,
+  extractJwtExp,
+  readTokenCache,
+  readTokenCacheUnsafe,
+  withTokenLock,
+  writeTokenCache,
 } from './token-cache.js'
 
 function makeTempDir(): string {

@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Redfin L3 adapter — DOM extraction of structured data from Redfin pages.
  *
@@ -11,8 +13,6 @@
  * - Similar homes from .SimilarHomeCardReact cards
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 
 /* ---------- operation handlers ---------- */
 
@@ -22,7 +22,7 @@ async function searchHomes(page: Page, _params: Record<string, unknown>): Promis
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (!Array.isArray(data) || data.length !== 2) continue
         const residence = data[0]
         const product = data[1]
@@ -59,7 +59,7 @@ async function getPropertyDetails(page: Page, _params: Record<string, unknown>):
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (!data['@type'] || !Array.isArray(data['@type'])) continue
         if (!data['@type'].includes('RealEstateListing')) continue
         const entity = data.mainEntity || {}
@@ -155,7 +155,7 @@ async function getListingPhotos(page: Page, _params: Record<string, unknown>): P
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (!data['@type'] || !Array.isArray(data['@type'])) continue
         if (!data['@type'].includes('RealEstateListing')) continue
         const entity = data.mainEntity || {}

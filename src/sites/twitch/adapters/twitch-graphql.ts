@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Twitch L3 adapter — GraphQL API via browser fetch (persisted queries).
  *
@@ -6,9 +8,7 @@
  * Client-ID header is required (public anonymous key).
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import { gqlFetch, gqlMutate, getTopStreams } from './queries.js'
+import { getTopStreams, gqlFetch, gqlMutate } from './queries.js'
 
 /* ---------- operation handlers ---------- */
 

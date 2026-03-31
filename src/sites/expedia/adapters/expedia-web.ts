@@ -1,3 +1,5 @@
+import type { Page } from 'playwright-core'
+import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Expedia adapter — DOM/LD+JSON extraction from browser-rendered pages.
  *
@@ -6,9 +8,7 @@
  * data-stid lodging cards, activities/cars/deals from DOM.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import { searchActivities, searchCarRentals, getDeals } from './transforms.js'
+import { getDeals, searchActivities, searchCarRentals } from './transforms.js'
 
 /* ---------- Hotel Search ---------- */
 
@@ -59,7 +59,7 @@ async function getHotelDetail(page: Page, _params: Record<string, unknown>): Pro
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'ItemList') continue
         const items = data.itemListElement ?? []
         const hotel = items[0]?.item
@@ -251,7 +251,7 @@ async function getHotelFAQ(page: Page, _params: Record<string, unknown>): Promis
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent!)
+        const data = JSON.parse(s.textContent ?? '')
         if (data['@type'] !== 'FAQPage') continue
         const entities = data.mainEntity ?? []
         const questions = entities.map((e: { name?: string; acceptedAnswer?: { text?: string } }) => ({

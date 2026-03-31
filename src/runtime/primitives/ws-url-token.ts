@@ -1,5 +1,5 @@
-import type { WsUrlToken } from '../../types/ws-primitives.js'
 import { OpenWebError } from '../../lib/errors.js'
+import type { WsUrlToken } from '../../types/ws-primitives.js'
 import { registerWsResolver } from './ws-registry.js'
 import type { WsAuthResult, WsResolverContext } from './ws-registry.js'
 

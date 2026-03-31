@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 import type { OpenApiSpec } from '../lib/openapi.js'
+import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 
 describe('getServerXOpenWeb', () => {
   it('returns server x-openweb config', () => {

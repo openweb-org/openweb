@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import { mkdtemp, writeFile, symlink, rm } from 'node:fs/promises'
-import path from 'node:path'
+import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import os from 'node:os'
+import path from 'node:path'
+import { describe, expect, it } from 'vitest'
 
 import { renderOperation, renderSite, renderSiteJson, safeReadNotes } from './navigator.js'
 
@@ -56,7 +56,7 @@ describe('navigator', () => {
   })
 
   it('shows notes hint when DOC.md exists', async () => {
-    // Create a temp fixture with DOC.md to test independently of ~/.openweb state
+    // Create a temp fixture with DOC.md to test independently of $OPENWEB_HOME state
     const result = await safeReadNotes(path.join(process.cwd(), 'src/sites/bestbuy'))
     expect(result).toBeTruthy()
     expect(result).toContain('Best Buy')

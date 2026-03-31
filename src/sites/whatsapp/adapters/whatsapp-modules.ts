@@ -1,3 +1,4 @@
+import type { Page } from 'playwright-core'
 /**
  * WhatsApp Web L3 adapter — accesses internal module system via require().
  *
@@ -7,7 +8,6 @@
  */
 import { OpenWebError } from '../../../lib/errors.js'
 import type { CodeAdapter } from '../../../types/adapter.js'
-import type { Page } from 'playwright-core'
 
 function fatalAdapterError(message: string): OpenWebError {
   return new OpenWebError({

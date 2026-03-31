@@ -1,3 +1,5 @@
+import type { Page } from "playwright-core";
+import { OpenWebError, toOpenWebError } from "../../../lib/errors.js";
 /**
  * JD L3 adapter — h5st-signed API calls + DOM extraction via page.evaluate().
  *
@@ -18,8 +20,6 @@
  *   getHotSearchWords      — trending search keywords (requires login)
  */
 import type { CodeAdapter } from "../../../types/adapter.js";
-import type { Page } from "playwright-core";
-import { OpenWebError, toOpenWebError } from "../../../lib/errors.js";
 
 const JD_GLOBAL = "https://global.jd.com";
 
@@ -508,7 +508,7 @@ async function getProductDetail(
 			).map((v) => {
 				const copy = { ...v };
 				const vid = copy.skuId;
-				delete copy.skuId;
+				copy.skuId = undefined;
 				return { skuId: String(vid), ...copy };
 			}),
 			reviewCount: reviewMatch ? Number(reviewMatch[1]) : null,

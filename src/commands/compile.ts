@@ -9,7 +9,7 @@ import { cleanupRecordingDir, runScriptedRecording } from '../compiler/recorder.
 import type { AnalysisReport, CuratedCompilePlan, CurationDecisionSet } from '../compiler/types-v2.js'
 import { openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
-import { verifySite, type SiteVerifyResult } from '../lifecycle/verify.js'
+import { type SiteVerifyResult, verifySite } from '../lifecycle/verify.js'
 
 interface CompileArgs {
   readonly url: string
@@ -78,7 +78,8 @@ export async function compileSite(
     })
   }
 
-  const recordingDir = userProvidedDir ?? await runScriptedRecording(args.script!)
+  // args.script is guaranteed non-null: either userProvidedDir or args.script must exist (checked above)
+  const recordingDir = userProvidedDir ?? await runScriptedRecording(args.script as string)
 
   // Create report directory early — it's needed for the analysis handoff artifact
   const reportDir = path.join(openwebHome(), 'compile', site)

@@ -1,11 +1,11 @@
 import { OpenWebError } from '../lib/errors.js'
 import {
-  getRequestBodyParameters,
-  getRequestBodySchema,
-  isObjectSchema,
   type OpenApiOperation,
   type OpenApiParameter,
   type OpenApiSpec,
+  getRequestBodyParameters,
+  getRequestBodySchema,
+  isObjectSchema,
 } from '../lib/openapi.js'
 
 const UNSAFE_REF_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
