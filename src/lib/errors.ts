@@ -20,6 +20,8 @@ export interface OpenWebErrorPayload {
   readonly action: string
   readonly retriable: boolean
   readonly failureClass: FailureClass
+  /** Retry-After value from HTTP response header (seconds or HTTP-date string) */
+  readonly retryAfter?: string
 }
 
 export function getHttpFailure(status: number): Pick<OpenWebErrorPayload, 'failureClass' | 'retriable'> {

@@ -18,6 +18,7 @@ import {
 import { loadManifest } from '../lib/manifest.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import { fetchWithRedirects } from './redirect.js'
+import { withHttpRetry } from './http-retry.js'
 import { connectWithRetry } from '../capture/connection.js'
 import {
   createNeedsPageError,
@@ -280,6 +281,7 @@ export async function executeOperation(
             : `Check parameters with: openweb ${site} ${operationId}`,
           retriable: httpFailure.retriable,
           failureClass: httpFailure.failureClass,
+          retryAfter: response.headers.get('retry-after') ?? undefined,
         })
       }
 
@@ -328,7 +330,7 @@ export async function dispatchOperation(
   const entry = findOperationEntry(pkg, operationId)
 
   const execute = entry.protocol === 'http'
-    ? executeOperation(site, operationId, params, deps)
+    ? withHttpRetry(() => executeOperation(site, operationId, params, deps), site)
     : (await import('./ws-cli-executor.js')).executeWsFromCli(site, operationId, params, deps)
 
   let timer: ReturnType<typeof setTimeout>
