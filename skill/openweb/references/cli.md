@@ -68,10 +68,20 @@ After login: `openweb verify <site>` to confirm auth works.
 
 ```bash
 openweb capture start --cdp-endpoint http://localhost:9222
+openweb capture start --isolate --url https://example.com --cdp-endpoint http://localhost:9222
 openweb capture stop
+openweb capture stop --session <id>
 ```
 
-Records all browser traffic for later compilation. One capture session at a time.
+Records browser traffic for later compilation. Prints a session ID to stdout.
+
+| Flag | Purpose |
+|------|---------|
+| `--cdp-endpoint <url>` | Chrome DevTools Protocol endpoint (required) |
+| `--output <dir>` | Output directory (default: `./capture/` or `./capture-<session>/` with `--isolate`) |
+| `--isolate` | Isolate capture to a single new tab (for multi-worker) |
+| `--url <url>` | URL to navigate (required with `--isolate`) |
+| `--session <id>` | Stop a specific session (required if multiple active) |
 
 ## Compile
 

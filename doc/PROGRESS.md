@@ -1,3 +1,45 @@
+## 2026-03-31: Multi-worker capture isolation
+
+**What changed:**
+- `capture.ts`: `--isolate` + `--url` flags for per-page isolation, `--session` flag for targeted stop
+- Session-scoped PID files (`.openweb-capture-<id>.pid`) replace single global PID file
+- Auto-discovery: `capture stop` finds the single session, or errors listing active sessions if multiple
+- `cli.ts`: wire new flags to yargs
+- `discover.md`: replace shared-capture multi-worker section with per-worker `--isolate` pattern
+- `cli.md`: document new capture flags
+
+**Why:**
+- Multiple workers sharing one Chrome browser had traffic cross-contamination, PID collisions, and no way to stop specific sessions. Capture primitives were already page-scoped — only the CLI needed changes.
+
+**Key files:** `src/commands/capture.ts`, `src/cli.ts`, `skill/openweb/references/discover.md`, `skill/openweb/references/cli.md`
+**Verification:** 3/3 QA tests pass (backward compat, isolated session, multi-session error)
+
+## 2026-03-31: Fix compile --script hang + capture script guide
+
+**What changed:**
+- `recorder.ts`: 120s timeout on child process (SIGTERM → SIGKILL after 5s grace). Restores timeout lost in blanket revert of commit 1b910e9.
+- `config.ts`: `TIMEOUT.recording` (env-overridable via `OPENWEB_RECORDING_TIMEOUT`)
+- `capture-script-guide.md`: new reference doc — timeout discipline table, two-phase and --script templates
+- `record_discord.ts`: reference script with `waitUntil:'load'`, AbortController on fetch, bounded cleanup, `process.exit(0)`
+- Updated SKILL.md, cli.md, discover.md to reference capture-script-guide.md
+
+**Why:**
+- `compile --script` could hang indefinitely: no parent timeout, `networkidle` never fires on SPAs, `page.close()`/`browser.close()` can hang on bad CDP state. Discovered 3 additional bugs during QA: Promise.race propagates cleanup rejections, lingering setTimeout prevents process exit, pnpm/tsx wrappers don't die on SIGINT.
+
+**Key files:** `src/compiler/recorder.ts`, `src/lib/config.ts`, `scripts/record_discord.ts`, `skill/openweb/references/capture-script-guide.md`
+**Verification:** 3/3 QA tests pass (hang timeout, Discord --script, two-phase capture)
+**Commit:** c3f0cad
+
+## 2026-03-31: Multi-worker capture isolation design
+
+**What changed:**
+- Added `doc/todo/improve-thought/20260331_discord-discover/multi-worker-capture-design.md`
+
+**Why:**
+- Capture primitives are already page-scoped, but CLI exposes browser-wide capture only. Design proposes `--isolate` flag + session-scoped PID files for parallel discovery.
+
+**Commit:** 4847b25
+
 ## 2026-03-31: Friction-log code fixes — stderr, build sync, schema warning, auth docs
 
 **What changed:**

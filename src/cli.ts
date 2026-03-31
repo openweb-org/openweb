@@ -4,7 +4,7 @@ import process from 'node:process'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
-import { captureStartCommand, captureStopCommand } from './commands/capture.js'
+import { captureStartCommand, captureStopCommand, type CaptureStopOptions } from './commands/capture.js'
 import { compileCommand } from './commands/compile.js'
 import { verifyCommand } from './commands/verify.js'
 import { registryCommand, type RegistryAction } from './commands/registry.js'
@@ -199,21 +199,33 @@ await yargs(argv)
                 demandOption: true,
                 describe: `Chrome DevTools Protocol endpoint (e.g. ${CDP_ENDPOINT})`,
               })
-              .option('output', { type: 'string', describe: 'Output directory (default: ./capture)' }),
+              .option('output', { type: 'string', describe: 'Output directory (default: ./capture)' })
+              .option('isolate', { type: 'boolean', describe: 'Isolate capture to a single page (for multi-worker)' })
+              .option('url', { type: 'string', describe: 'URL to navigate (required with --isolate)' }),
           async (args) => {
             await withErrorHandling(async () => {
               await captureStartCommand({
                 cdpEndpoint: String(args['cdp-endpoint']),
                 output: args.output ? String(args.output) : undefined,
+                isolate: args.isolate ?? false,
+                url: args.url ? String(args.url) : undefined,
               })
             })
           },
         )
-        .command('stop', 'Stop an active capture session', {}, async () => {
-          await withErrorHandling(async () => {
-            await captureStopCommand()
-          })
-        })
+        .command(
+          'stop',
+          'Stop an active capture session',
+          (sub) =>
+            sub.option('session', { type: 'string', describe: 'Session ID to stop (required if multiple active)' }),
+          async (args) => {
+            await withErrorHandling(async () => {
+              await captureStopCommand({
+                session: args.session ? String(args.session) : undefined,
+              } satisfies CaptureStopOptions)
+            })
+          },
+        )
         .demandCommand(1),
   )
   .command(

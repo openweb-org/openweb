@@ -336,17 +336,29 @@ endpoint capture.
 
 ## Multi-Worker Browser Sharing
 
-Multiple workers can share one Chrome browser on the same CDP port:
-1. **ONE worker starts capture** — it's browser-wide, not per-tab.
-2. **Each worker opens a NEW tab** after capture starts (auto-attached via
-   `context.on('page')`). Do NOT close or navigate other workers' tabs.
-3. **Workers browse in their own tabs.** All tabs' traffic merges into one
-   HAR. The compile command filters by site URL.
-4. **Last worker to finish** triggers `capture stop`.
-5. For **same-site parallel capture**, use separate browser instances on different
-   CDP ports, or capture sequentially.
-6. If `capture start` is already running (another worker started it), skip it —
-   your new tabs are auto-attached and traffic is already being recorded.
+Multiple workers can share one Chrome browser on the same CDP port. Each
+worker starts its own **isolated** capture session — no cross-contamination.
+
+```bash
+# Worker A (discovering discord.com)
+SESSION_A=$(openweb capture start --isolate --url https://discord.com --cdp-endpoint http://localhost:9222)
+# browse discord in the auto-opened tab, or use page.evaluate(fetch) in a script
+openweb capture stop --session $SESSION_A
+openweb compile https://discord.com --capture-dir ./capture-$SESSION_A
+
+# Worker B (discovering reddit.com) — simultaneously
+SESSION_B=$(openweb capture start --isolate --url https://reddit.com --cdp-endpoint http://localhost:9222)
+# browse reddit
+openweb capture stop --session $SESSION_B
+openweb compile https://reddit.com --capture-dir ./capture-$SESSION_B
+```
+
+Key points:
+- `--isolate` creates a new tab and monitors only that tab's traffic
+- Each session gets a unique ID printed to stdout and a session-scoped PID file
+- `capture stop --session <id>` stops a specific session without affecting others
+- Output directories are auto-scoped: `./capture-<session-id>/`
+- Without `--isolate`, capture is browser-wide (single-worker interactive use)
 
 ## Related References
 
