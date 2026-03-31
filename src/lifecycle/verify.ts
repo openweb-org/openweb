@@ -133,20 +133,11 @@ export async function verifySite(
   }
 
   const examplesDir = path.join(siteRoot, 'examples')
-  // Backward compat: fall back to legacy 'tests/' directory
-  const legacyTestsDir = path.join(siteRoot, 'tests')
   let exampleFiles: string[]
-  let activeDir: string
   try {
     exampleFiles = (await readdir(examplesDir)).filter((f) => f.endsWith('.example.json'))
-    activeDir = examplesDir
   } catch {
-    try {
-      exampleFiles = (await readdir(legacyTestsDir)).filter((f) => f.endsWith('.test.json'))
-      activeDir = legacyTestsDir
-    } catch {
-      return { site, operations: [], overallStatus: 'FAIL', shouldQuarantine: false }
-    }
+    return { site, operations: [], overallStatus: 'FAIL', shouldQuarantine: false }
   }
 
   const operations: OperationVerifyResult[] = []
@@ -163,7 +154,7 @@ export async function verifySite(
   }
 
   for (const fileName of exampleFiles) {
-    const raw = await readFile(path.join(activeDir, fileName), 'utf8')
+    const raw = await readFile(path.join(examplesDir, fileName), 'utf8')
     const testFile = JSON.parse(raw) as TestFile
 
     // Skip files with incompatible structure (legacy format without cases array)

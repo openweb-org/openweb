@@ -1,9 +1,0 @@
-{
-  "operation_id": "getUserProfile",
-  "cases": [
-    {
-      "input": { "username": "lee215" },
-      "assertions": { "status": 200, "response_schema_valid": true }
-    }
-  ]
-}

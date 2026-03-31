@@ -292,19 +292,16 @@ export async function renderOperationJson(site: string, operationId: string): Pr
 export async function renderExample(site: string, operationId: string): Promise<string> {
   const siteRoot = await resolveSiteRoot(site)
 
-  // Try examples/ first, then legacy tests/ for backward compat
-  for (const [dir, ext] of [['examples', '.example.json'], ['tests', '.test.json']] as const) {
-    const fixturePath = path.join(siteRoot, dir, `${operationId}${ext}`)
-    try {
-      const raw = await readFile(fixturePath, 'utf8')
-      const fixture = JSON.parse(raw) as { cases?: Array<{ input?: Record<string, unknown> }> }
-      const input = fixture.cases?.[0]?.input
-      if (input && Object.keys(input).length > 0) {
-        return JSON.stringify(input, null, 2)
-      }
-    } catch {
-      continue
+  const fixturePath = path.join(siteRoot, 'examples', `${operationId}.example.json`)
+  try {
+    const raw = await readFile(fixturePath, 'utf8')
+    const fixture = JSON.parse(raw) as { cases?: Array<{ input?: Record<string, unknown> }> }
+    const input = fixture.cases?.[0]?.input
+    if (input && Object.keys(input).length > 0) {
+      return JSON.stringify(input, null, 2)
     }
+  } catch {
+    // No example file found
   }
 
   return `No example available for "${operationId}". Run \`openweb ${site} ${operationId}\` to see parameters.`

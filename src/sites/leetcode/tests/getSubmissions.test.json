@@ -1,9 +1,0 @@
-{
-  "operation_id": "getSubmissions",
-  "cases": [
-    {
-      "input": { "questionSlug": "two-sum", "limit": 5 },
-      "assertions": { "status": 200 }
-    }
-  ]
-}

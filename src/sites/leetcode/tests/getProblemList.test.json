@@ -1,9 +1,0 @@
-{
-  "operation_id": "getProblemList",
-  "cases": [
-    {
-      "input": { "limit": 10, "difficulty": "EASY" },
-      "assertions": { "status": 200, "response_schema_valid": true }
-    }
-  ]
-}
