@@ -7,6 +7,7 @@ import { applyCuration } from '../compiler/curation/apply-curation.js'
 import { generateFromPlan } from '../compiler/generator/generate-v2.js'
 import { cleanupRecordingDir, runScriptedRecording } from '../compiler/recorder.js'
 import type { AnalysisReport, CuratedCompilePlan, CurationDecisionSet } from '../compiler/types-v2.js'
+import { openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import { verifySite, type SiteVerifyResult } from '../lifecycle/verify.js'
 
@@ -80,7 +81,7 @@ export async function compileSite(
   const recordingDir = userProvidedDir ?? await runScriptedRecording(args.script!)
 
   // Create report directory early — it's needed for the analysis handoff artifact
-  const reportDir = path.join(os.homedir(), '.openweb', 'compile', site)
+  const reportDir = path.join(openwebHome(), 'compile', site)
   await fs.rm(reportDir, { recursive: true, force: true })
   await fs.mkdir(reportDir, { recursive: true })
 

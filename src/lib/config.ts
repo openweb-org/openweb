@@ -3,6 +3,16 @@
  * All values fall back to sensible defaults and can be overridden via env vars.
  */
 
+import os from 'node:os'
+import path from 'node:path'
+
+// ── Data directory ──────────────────────────────
+
+/** Root data directory. Override with OPENWEB_HOME env var. Defaults to ~/.openweb. */
+export function openwebHome(): string {
+  return process.env.OPENWEB_HOME ?? path.join(os.homedir(), '.openweb')
+}
+
 // ── CDP ──────────────────────────────────────────
 
 export const CDP_PORT = process.env.OPENWEB_CDP_PORT ?? '9222'

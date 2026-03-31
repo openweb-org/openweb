@@ -19,7 +19,7 @@ Read these knowledge files in order — but scale depth to context:
 - **Existing site (rediscovery/update):** Read the site's prior-round `DOC.md`
   and `openapi.yaml` from the first available source:
   1. `src/sites/<site>/` (worktree)
-  2. `~/.openweb/sites/<site>/` (compile cache)
+  2. `$OPENWEB_HOME/sites/<site>/` (compile cache; default `~/.openweb/sites/<site>/`)
   3. `git show HEAD:src/sites/<site>/DOC.md` (if files deleted from worktree)
   Focus on: auth config, write endpoint paths, adapter/transport requirements,
   known issues (signing, SSR-only endpoints). Skim the archetype row for anything

@@ -1,4 +1,3 @@
-import os from 'node:os'
 import path from 'node:path'
 import { mkdir } from 'node:fs/promises'
 
@@ -6,6 +5,7 @@ import type { AnalyzedOperation } from '../types.js'
 import type { ClassifyResult } from '../analyzer/classify.js'
 import type { WsOperationSchema } from '../ws-analyzer/ws-schema.js'
 import type { XOpenWebWsServer } from '../../types/ws-extensions.js'
+import { openwebHome } from '../../lib/config.js'
 import { generateOpenApi } from './openapi.js'
 import { generateAsyncApi } from './asyncapi.js'
 
@@ -27,7 +27,7 @@ function nowIso(): string {
 }
 
 export async function generatePackage(input: GeneratePackageInput): Promise<string> {
-  const outputBaseDir = input.outputBaseDir ?? path.join(os.homedir(), '.openweb', 'sites')
+  const outputBaseDir = input.outputBaseDir ?? path.join(openwebHome(), 'sites')
   const outputRoot = path.join(outputBaseDir, input.site)
   await mkdir(outputRoot, { recursive: true })
 

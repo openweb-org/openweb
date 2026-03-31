@@ -69,7 +69,7 @@ Errors on stderr include `failureClass`:
 | `needs_browser` | Run `openweb browser start` |
 | `needs_login` | `openweb login <site>` → `openweb browser restart` |
 | `needs_page` | Open a tab to the site URL |
-| `permission_denied` | Update `~/.openweb/permissions.yaml` |
+| `permission_denied` | Update `$OPENWEB_HOME/permissions.yaml` (default `~/.openweb/permissions.yaml`) |
 | `permission_required` | Ask user for confirmation, then retry |
 | `retriable` | Wait a few seconds, retry (max 2) |
 | `fatal` | Don't retry — fix params or check site name |

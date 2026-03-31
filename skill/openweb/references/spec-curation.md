@@ -10,7 +10,7 @@ into a production-quality site package.
 
 ## Edit Targets
 
-The generated spec is at `~/.openweb/sites/<site>/openapi.yaml`. Read it
+The generated spec is at `$OPENWEB_HOME/sites/<site>/openapi.yaml` (default `~/.openweb/sites/<site>/openapi.yaml`). Read it
 before making changes. Edits fall into these categories:
 
 1. Remove noise operations
@@ -306,7 +306,7 @@ Install is a dumb overwrite of the final curated package.
 5. **Preserve adapters:** Copy no adapter files from the new package. The
    existing adapter directory is always authoritative.
 
-6. **Output:** The merged spec at `~/.openweb/sites/<site>/openapi.yaml` is
+6. **Output:** The merged spec at `$OPENWEB_HOME/sites/<site>/openapi.yaml` is
    the final curated artifact. Subsequent steps (doc writing, verify, install)
    all operate on this merged result.
 

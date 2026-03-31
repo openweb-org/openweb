@@ -115,7 +115,7 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 ### Cache Returns Stale Token
 
 - **Symptoms:** operation fails with `401` but `openweb browser status` shows the browser is authenticated
-- **Detection signals:** token in `~/.openweb/tokens/<site>/` has expired but the cache hasn't evicted it, JWT `exp` claim is in the past
+- **Detection signals:** token in `$OPENWEB_HOME/tokens/<site>/` has expired but the cache hasn't evicted it, JWT `exp` claim is in the past
 - **Action:** run `openweb browser restart` to clear the token cache. Check if the TTL config for this site is too long — JWT tokens with short expiry (e.g., 5 min) need a matching cache TTL.
 
 ### Token Extraction Fails After Site Update

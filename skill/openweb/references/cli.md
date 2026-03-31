@@ -52,7 +52,7 @@ openweb browser status
 
 **How it works:** `browser start` copies auth-relevant files from your default Chrome profile to a temp directory, then launches Chrome with `--remote-debugging-port=9222`. When running, `exec` auto-detects it — no `--cdp-endpoint` needed.
 
-**Token caching:** Successful auth requests cache cookies in `~/.openweb/tokens/<site>/`. Cache auto-expires by TTL (1h default or JWT exp). `browser restart` clears the cache.
+**Token caching:** Successful auth requests cache cookies in `$OPENWEB_HOME/tokens/<site>/` (default `~/.openweb/tokens/<site>/`). Cache auto-expires by TTL (1h default or JWT exp). `browser restart` clears the cache.
 
 **Limitation:** Browser/capture orchestration is singleton. One managed browser instance at a time.
 
@@ -136,7 +136,7 @@ openweb registry show <site>     # version history
 | `delete` | DELETE | **prompt** — returns structured error for relay |
 | `transact` | checkout/purchase/payment | **deny** — blocked by default |
 
-Users customize in `~/.openweb/permissions.yaml`.
+Users customize in `$OPENWEB_HOME/permissions.yaml` (default `~/.openweb/permissions.yaml`).
 
 ## Transports
 

@@ -57,14 +57,14 @@ It produces:
 
 | Output | Location | Purpose |
 |--------|----------|---------|
-| `analysis.json` | `~/.openweb/compile/<site>/` | Analysis report (response bodies stripped) |
-| `analysis-full.json` | `~/.openweb/compile/<site>/` | Full report (large, rarely needed) |
-| `verify-report.json` | `~/.openweb/compile/<site>/` | Per-operation verification results |
-| `summary.txt` | `~/.openweb/compile/<site>/` | One-line summary |
-| `openapi.yaml` | `~/.openweb/sites/<site>/` | Generated HTTP spec |
-| `asyncapi.yaml` | `~/.openweb/sites/<site>/` | Generated WS spec (if WS traffic) |
-| `manifest.json` | `~/.openweb/sites/<site>/` | Package metadata |
-| `examples/*.example.json` | `~/.openweb/sites/<site>/` | Example fixtures (PII-scrubbed) |
+| `analysis.json` | `$OPENWEB_HOME/compile/<site>/` | Analysis report (response bodies stripped) |
+| `analysis-full.json` | `$OPENWEB_HOME/compile/<site>/` | Full report (large, rarely needed) |
+| `verify-report.json` | `$OPENWEB_HOME/compile/<site>/` | Per-operation verification results |
+| `summary.txt` | `$OPENWEB_HOME/compile/<site>/` | One-line summary |
+| `openapi.yaml` | `$OPENWEB_HOME/sites/<site>/` | Generated HTTP spec |
+| `asyncapi.yaml` | `$OPENWEB_HOME/sites/<site>/` | Generated WS spec (if WS traffic) |
+| `manifest.json` | `$OPENWEB_HOME/sites/<site>/` | Package metadata |
+| `examples/*.example.json` | `$OPENWEB_HOME/sites/<site>/` | Example fixtures (PII-scrubbed) |
 
 The auto-curation accepts all clusters, picks the top-ranked auth candidate,
 and uses the analyzer's suggested operation names (camelCase by default, e.g.,
@@ -118,11 +118,11 @@ WebSocket analysis, and coverage decisions.
 **Read `references/spec-curation.md` and `references/site-doc.md` now.**
 
 1. **Merge** (if existing package) — see `spec-curation.md` "Merge with Existing Package"
-2. **Edit spec** — apply all `spec-curation.md` edit targets to `~/.openweb/sites/<site>/openapi.yaml` (and `asyncapi.yaml`)
-3. **Write DOC.md** — create `~/.openweb/sites/<site>/DOC.md` per `site-doc.md` template. Writing DOC.md during curation validates your decisions — if you can't write a clear workflow, the operation naming or grouping needs revision.
-4. **Write PROGRESS.md** — append entry to `~/.openweb/sites/<site>/PROGRESS.md` per `site-doc.md` format
+2. **Edit spec** — apply all `spec-curation.md` edit targets to `$OPENWEB_HOME/sites/<site>/openapi.yaml` (and `asyncapi.yaml`)
+3. **Write DOC.md** — create `$OPENWEB_HOME/sites/<site>/DOC.md` per `site-doc.md` template. Writing DOC.md during curation validates your decisions — if you can't write a clear workflow, the operation naming or grouping needs revision.
+4. **Write PROGRESS.md** — append entry to `$OPENWEB_HOME/sites/<site>/PROGRESS.md` per `site-doc.md` format
 
-All curation artifacts live in `~/.openweb/sites/<site>/` so that Step 5 is a
+All curation artifacts live in `$OPENWEB_HOME/sites/<site>/` so that Step 5 is a
 single folder copy.
 
 ### Step 4: Verify
@@ -151,7 +151,7 @@ in Step 3 — install is a dumb folder copy.
 
 ```bash
 mkdir -p src/sites/<site>
-cp -r ~/.openweb/sites/<site>/* src/sites/<site>/
+cp -r $OPENWEB_HOME/sites/<site>/* src/sites/<site>/
 pnpm build && pnpm test
 ```
 
@@ -165,12 +165,12 @@ openweb <site>                       # confirm operations are listed
 **Note:** Do not overwrite existing adapter files — the existing `adapters/`
 directory is always authoritative.
 
-**Note:** `openweb sites` resolves from `~/.openweb/sites/` first (the compile
+**Note:** `openweb sites` resolves from `$OPENWEB_HOME/sites/` first (the compile
 cache), so it can succeed even if the `src/sites/` copy is missing. Always
 verify the repo files directly.
 
 **Three paths exist** for site packages:
-- `~/.openweb/sites/<site>/` — compile cache (what `openweb` reads at runtime)
+- `$OPENWEB_HOME/sites/<site>/` — compile cache (what `openweb` reads at runtime)
 - `src/sites/<site>/` — developer source tree (what you edit and commit)
 - `dist/sites/<site>/` — build output
 

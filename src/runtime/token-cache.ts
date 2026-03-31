@@ -4,9 +4,11 @@ import { homedir, hostname } from 'node:os'
 import { randomBytes, pbkdf2, createCipheriv, createDecipheriv } from 'node:crypto'
 import { promisify } from 'node:util'
 
+import { openwebHome } from '../lib/config.js'
+
 const pbkdf2Async = promisify(pbkdf2)
 
-const TOKENS_DIR = join(homedir(), '.openweb', 'tokens')
+const TOKENS_DIR = () => join(openwebHome(), 'tokens')
 const DEFAULT_TTL_SECONDS = 3600 // 1 hour
 
 const PBKDF2_ITERATIONS = 210_000
@@ -187,7 +189,7 @@ export async function withTokenLock<T>(site: string, fn: () => Promise<T>): Prom
 // --- Public API ---
 
 function tokenRoot(baseDir?: string): string {
-  return baseDir ?? TOKENS_DIR
+  return baseDir ?? TOKENS_DIR()
 }
 
 function siteDir(site: string, baseDir?: string): string {

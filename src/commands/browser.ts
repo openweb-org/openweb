@@ -5,12 +5,11 @@ import { join } from 'node:path'
 import { homedir, platform, tmpdir } from 'node:os'
 
 import { OpenWebError } from '../lib/errors.js'
-import { CDP_PORT, TIMEOUT } from '../lib/config.js'
+import { CDP_PORT, TIMEOUT, openwebHome } from '../lib/config.js'
 
-const OPENWEB_DIR = join(homedir(), '.openweb')
-const PID_FILE = join(OPENWEB_DIR, 'browser.pid')
-const PORT_FILE = join(OPENWEB_DIR, 'browser.port')
-const PROFILE_DIR_FILE = join(OPENWEB_DIR, 'browser.profile')
+const PID_FILE = () => join(openwebHome(), 'browser.pid')
+const PORT_FILE = () => join(openwebHome(), 'browser.port')
+const PROFILE_DIR_FILE = () => join(openwebHome(), 'browser.profile')
 const DEFAULT_PORT = Number(CDP_PORT)
 
 function getDefaultProfilePath(): string {
@@ -122,7 +121,7 @@ async function waitForCdp(port: number, timeoutMs = TIMEOUT.cdpReady): Promise<v
 
 async function readPid(): Promise<number | null> {
   try {
-    const raw = await readFile(PID_FILE, 'utf8')
+    const raw = await readFile(PID_FILE(), 'utf8')
     const pid = Number(raw.trim())
     return Number.isInteger(pid) && pid > 0 ? pid : null
   } catch {
@@ -133,7 +132,7 @@ async function readPid(): Promise<number | null> {
 
 async function readPort(): Promise<number | null> {
   try {
-    const raw = await readFile(PORT_FILE, 'utf8')
+    const raw = await readFile(PORT_FILE(), 'utf8')
     const port = Number(raw.trim())
     return Number.isInteger(port) && port > 0 ? port : null
   } catch {
@@ -149,8 +148,8 @@ async function killManaged(): Promise<boolean> {
 
   if (!pid || !isProcessAlive(pid)) {
     // Already dead — clean up state files
-    try { await unlink(PID_FILE) } catch { /* already gone */ }
-    try { await unlink(PORT_FILE) } catch { /* already gone */ }
+    try { await unlink(PID_FILE()) } catch { /* already gone */ }
+    try { await unlink(PORT_FILE()) } catch { /* already gone */ }
     return true
   }
 
@@ -158,8 +157,8 @@ async function killManaged(): Promise<boolean> {
   if (port && await isCdpReady(port)) {
     process.kill(pid, 'SIGTERM')
     await new Promise((r) => setTimeout(r, 500))
-    try { await unlink(PID_FILE) } catch { /* already gone */ }
-    try { await unlink(PORT_FILE) } catch { /* already gone */ }
+    try { await unlink(PID_FILE()) } catch { /* already gone */ }
+    try { await unlink(PORT_FILE()) } catch { /* already gone */ }
     return true
   }
 
@@ -173,13 +172,13 @@ async function killManaged(): Promise<boolean> {
 
 async function cleanTempProfile(): Promise<void> {
   try {
-    const profileDir = (await readFile(PROFILE_DIR_FILE, 'utf8')).trim()
+    const profileDir = (await readFile(PROFILE_DIR_FILE(), 'utf8')).trim()
     // Safety: only rm -rf paths that look like our mkdtemp output
     const expectedPrefix = join(tmpdir(), 'openweb-profile-')
     if (profileDir?.startsWith(expectedPrefix)) {
       await rm(profileDir, { recursive: true, force: true })
     }
-    await unlink(PROFILE_DIR_FILE)
+    await unlink(PROFILE_DIR_FILE())
   } catch { /* already gone */ }
 }
 
@@ -241,10 +240,10 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
   }
 
   // Save PID, port, and temp profile path
-  await mkdir(OPENWEB_DIR, { recursive: true })
-  await writeFile(PID_FILE, String(child.pid), { mode: 0o600 })
-  await writeFile(PORT_FILE, String(port), { mode: 0o600 })
-  await writeFile(PROFILE_DIR_FILE, tempUserDataDir, { mode: 0o600 })
+  await mkdir(openwebHome(), { recursive: true })
+  await writeFile(PID_FILE(), String(child.pid), { mode: 0o600 })
+  await writeFile(PORT_FILE(), String(port), { mode: 0o600 })
+  await writeFile(PROFILE_DIR_FILE(), tempUserDataDir, { mode: 0o600 })
 
   // Wait for CDP
   await waitForCdp(port)
@@ -255,8 +254,8 @@ export async function browserStopCommand(): Promise<void> {
   const pid = await readPid()
   if (!pid || !isProcessAlive(pid)) {
     process.stdout.write('No managed Chrome process running.\n')
-    try { await unlink(PID_FILE) } catch { /* already gone */ }
-    try { await unlink(PORT_FILE) } catch { /* already gone */ }
+    try { await unlink(PID_FILE()) } catch { /* already gone */ }
+    try { await unlink(PORT_FILE()) } catch { /* already gone */ }
     await cleanTempProfile()
     return
   }
@@ -313,7 +312,7 @@ export async function browserRestartCommand(options: { headless?: boolean; port?
   await cleanTempProfile()
 
   // Clear token cache
-  const tokensDir = join(OPENWEB_DIR, 'tokens')
+  const tokensDir = join(openwebHome(), 'tokens')
   await rm(tokensDir, { recursive: true, force: true })
 
   await browserStartCommand(options)
@@ -345,8 +344,8 @@ export async function browserStatusCommand(): Promise<void> {
   } else {
     process.stdout.write(`Chrome not running (stale PID ${pid}). Run: openweb browser start\n`)
     // Clean up stale PID file
-    try { await unlink(PID_FILE) } catch { /* ok */ }
-    try { await unlink(PORT_FILE) } catch { /* ok */ }
+    try { await unlink(PID_FILE()) } catch { /* ok */ }
+    try { await unlink(PORT_FILE()) } catch { /* ok */ }
   }
 }
 

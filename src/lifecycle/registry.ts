@@ -1,12 +1,12 @@
-import os from 'node:os'
 import path from 'node:path'
 import { readFile, writeFile, readdir, mkdir, cp, rm, realpath } from 'node:fs/promises'
 import { realpathSync } from 'node:fs'
 
+import { openwebHome } from '../lib/config.js'
 import { resolveSiteRoot } from '../lib/openapi.js'
 import { loadManifest } from '../lib/manifest.js'
 
-const REGISTRY_ROOT = path.join(os.homedir(), '.openweb', 'registry')
+const REGISTRY_ROOT = path.join(openwebHome(), 'registry')
 const MAX_VERSIONS = 5
 
 /** Alphanumeric, hyphens, dots only. No empty, no '..' components. */

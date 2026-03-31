@@ -1,12 +1,12 @@
-import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { realpathSync } from 'node:fs'
 import { cp, mkdir, readdir, access, rename, rm } from 'node:fs/promises'
 
+import { openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 
-const SITES_ROOT = path.join(os.homedir(), '.openweb', 'sites')
+const SITES_ROOT = path.join(openwebHome(), 'sites')
 
 /** Verify resolved path stays inside canonical SITES_ROOT. Rejects symlink escapes. */
 function safeSitesPath(canonicalRoot: string, siteName: string): string {

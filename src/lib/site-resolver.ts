@@ -1,8 +1,8 @@
-import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { access, readdir, readFile } from 'node:fs/promises'
 
+import { openwebHome } from './config.js'
 import { OpenWebError } from './errors.js'
 import { logger } from './logger.js'
 
@@ -52,18 +52,18 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
   }
 
   // 1. ~/.openweb/sites/ — user-installed (primary)
-  const userSite = path.join(os.homedir(), '.openweb', 'sites', site)
+  const userSite = path.join(openwebHome(), 'sites', site)
   if (await hasSitePackage(userSite)) {
     return userSite
   }
 
   // 2. Registry (versioned sites)
   if (!opts?.skipRegistry) {
-    const registryCurrentFile = path.join(os.homedir(), '.openweb', 'registry', site, 'current')
+    const registryCurrentFile = path.join(openwebHome(), 'registry', site, 'current')
     try {
       const currentVersion = (await readFile(registryCurrentFile, 'utf8')).trim()
       if (/^\d+\.\d+\.\d+$/.test(currentVersion)) {
-        const registryVersionPath = path.join(os.homedir(), '.openweb', 'registry', site, currentVersion)
+        const registryVersionPath = path.join(openwebHome(), 'registry', site, currentVersion)
         if (await hasSitePackage(registryVersionPath)) {
           return registryVersionPath
         }
@@ -95,8 +95,8 @@ export async function resolveSiteRoot(site: string, opts?: ResolveSiteOptions): 
 
 export async function listSites(): Promise<string[]> {
   const roots = [
-    path.join(os.homedir(), '.openweb', 'sites'),
-    path.join(os.homedir(), '.openweb', 'registry'),
+    path.join(openwebHome(), 'sites'),
+    path.join(openwebHome(), 'registry'),
     BUNDLED_SITES,
     path.join(process.cwd(), 'src', 'sites'),
   ]

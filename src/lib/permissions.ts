@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { homedir } from 'node:os'
 
 import { parse } from 'yaml'
 
 import type { PermissionCategory } from '../types/extensions.js'
+import { openwebHome } from './config.js'
 import { logger } from './logger.js'
 
 export type Policy = 'allow' | 'prompt' | 'deny'
@@ -67,7 +67,7 @@ function parseConfig(raw: unknown): PermissionsConfig | null {
 }
 
 export function loadPermissions(configPath?: string): PermissionsConfig {
-  const filePath = configPath ?? join(homedir(), '.openweb', 'permissions.yaml')
+  const filePath = configPath ?? join(openwebHome(), 'permissions.yaml')
   try {
     const raw = readFileSync(filePath, 'utf8')
     const parsed = parse(raw) as unknown

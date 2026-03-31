@@ -1,11 +1,10 @@
 import { createHash } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
-import os from 'node:os'
 import path from 'node:path'
 
 import { stringify } from 'yaml'
 
-import { TIMEOUT } from '../../lib/config.js'
+import { TIMEOUT, openwebHome } from '../../lib/config.js'
 import type { PermissionCategory } from '../../types/extensions.js'
 import type {
   CuratedCompilePlan,
@@ -403,7 +402,7 @@ export async function generateFromPlan(
   plan: CuratedCompilePlan,
   outputBaseDir?: string,
 ): Promise<GeneratedPackage> {
-  const base = outputBaseDir ?? path.join(os.homedir(), '.openweb', 'sites')
+  const base = outputBaseDir ?? path.join(openwebHome(), 'sites')
   const outputRoot = path.join(base, plan.site)
   await mkdir(outputRoot, { recursive: true })
 
