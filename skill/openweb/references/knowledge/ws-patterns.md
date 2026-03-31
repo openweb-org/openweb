@@ -139,6 +139,7 @@ The `x-openweb` extension on operations specifies permission and message pattern
 
 ## Related References
 
-- `references/compile.md` — WS curation in Step 2d and Step 4d
+- `references/analysis-review.md` — WebSocket analysis during Review
+- `references/compile.md` — WS verification in Step 4
 - `references/discover.md` — WS traffic inspection during capture
 - `references/knowledge/troubleshooting-patterns.md` — WS failure patterns

@@ -17,7 +17,7 @@ User wants to...
 │   └── Site does not exist → Read references/discover.md
 ├── Add or expand site coverage (new site OR more ops)
 │   └── Read references/discover.md
-├── Curate and verify a compiled site package
+├── Turn a capture into a working site package
 │   └── Read references/compile.md
 ├── Diagnose failures
 │   └── Read references/troubleshooting.md
@@ -80,12 +80,19 @@ Errors on stderr include `failureClass`:
 
 | File | When |
 |---|---|
-| `references/discover.md` | Adding or expanding a site |
-| `references/compile.md` | Curating, generating, and verifying a site package |
+| `references/discover.md` | Adding or expanding a site; framing intents; navigating; capturing |
+| `references/compile.md` | Turning a capture into a working site package |
 | `references/site-doc.md` | Writing DOC.md / PROGRESS.md |
 | `references/cli.md` | CLI reference, browser mgmt |
 | `references/troubleshooting.md` | Debugging errors |
 | `references/update-knowledge.md` | After learning something new |
+
+### Deep reference docs (load when the process doc tells you to)
+
+| File | Loaded by | What it covers |
+|---|---|---|
+| `references/analysis-review.md` | `compile.md` Review step | How to read `analysis.json` and decide whether traffic is good enough |
+| `references/spec-curation.md` | `compile.md` Curate step | How to clean, name, configure, and harden generated specs |
 
 ### Knowledge files (load when the process doc tells you to)
 
@@ -95,9 +102,9 @@ specify exactly which knowledge file to read at each step and what to look for.
 | File | Loaded by | What to extract |
 |---|---|---|
 | `references/knowledge/archetypes/index.md` | discover "Before You Start" | Site archetype, expected ops, auth/transport |
-| `references/knowledge/auth-patterns.md` | discover "Before You Start", compile Step 2a | Expected auth type for this site category |
-| `references/knowledge/bot-detection-patterns.md` | discover "Before You Start" | Whether to use real Chrome profile, session length |
-| `references/knowledge/extraction-patterns.md` | compile Step 2c | When extraction beats API replay |
-| `references/knowledge/graphql-patterns.md` | compile Step 2b (GraphQL sites only) | Persisted queries, batching, sub-cluster patterns |
-| `references/knowledge/ws-patterns.md` | compile Step 2d (WS sites only) | Operation vs noise signal classification |
+| `references/knowledge/auth-patterns.md` | discover "Before You Start"; analysis-review "Auth candidates"; spec-curation "Fix auth" | Expected auth type and exact auth primitive structure |
+| `references/knowledge/bot-detection-patterns.md` | discover "Before You Start"; spec-curation "Transport selection" | Whether to prefer real Chrome profile or page transport |
+| `references/knowledge/extraction-patterns.md` | analysis-review "Extraction signals"; spec-curation "Extraction rule" | When extraction beats API replay |
+| `references/knowledge/graphql-patterns.md` | analysis-review "Clusters" on GraphQL sites | Persisted queries, batching, sub-cluster patterns |
+| `references/knowledge/ws-patterns.md` | analysis-review "WebSocket analysis" | Operation vs noise signal classification |
 | `references/knowledge/troubleshooting-patterns.md` | troubleshooting Step 2 | Known failure cause/fix patterns |
