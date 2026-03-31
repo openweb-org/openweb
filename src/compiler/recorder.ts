@@ -75,7 +75,7 @@ export async function runScriptedRecording(scriptPath: string): Promise<string> 
     child.stderr.on('data', (chunk: Buffer) => {
       const text = chunk.toString('utf8')
       stderr += text
-      logger.info(text.trimEnd())
+      process.stderr.write(text)
     })
 
     child.on('error', (error) => {
