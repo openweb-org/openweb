@@ -1,3 +1,37 @@
+## 2026-03-31: Skill doc refactor — split process + reference layers
+
+**What changed:**
+- Split discover.md (479→357 lines) and compile.md (689→349 lines) into focused process docs
+- Extracted analysis-review.md (265 lines) from compile Step 2 + discover Step 4
+- Extracted spec-curation.md (283 lines) from compile Step 3
+- Updated SKILL.md routing table: added deep reference docs table with Loaded by column
+- Added 6 friction-log improvements: non-cookie auth injection, two-phase capture, chain-ID rediscovery, cache sync, empty-array schema fallback, official-doc fallback
+- Removed 4 duplicate sections (handoff text, curl anti-pattern)
+- Fixed stale cross-reference in ws-patterns.md
+
+**Why:**
+- During Discord rediscovery, agent loaded 689 lines of compile.md but only used ~100 lines per phase. Progressive disclosure pattern: process docs stay linear, reference material loads on demand.
+
+**Key files:** `skill/openweb/SKILL.md`, `skill/openweb/references/discover.md`, `skill/openweb/references/compile.md`, `skill/openweb/references/analysis-review.md`, `skill/openweb/references/spec-curation.md`
+**Verification:** pnpm build passes, discord verify 10/10 PASS, Codex cross-review APPROVE (2 rounds)
+**Commit:** 398ffc0
+**Design:** doc/todo/skill-doc-refactor/final/design.md
+
+## 2026-03-30: Discord rediscovery — expand from 4 to 10 ops
+
+**What changed:**
+- Recaptured Discord with working webpack_module_walk auth via page.evaluate(fetch)
+- Expanded from 4 ops to 10: added getCurrentUser, listGuilds, getDirectMessages, getGuildInfo, listGuildChannels, getGuildRoles, searchMessages, getPinnedMessages
+- Dropped getMyEntitlements, getMyScheduledEvents (low value for messaging archetype)
+- Enriched response schemas from live API data for all ops
+
+**Why:**
+- Original 4 ops too few for messaging archetype coverage (guilds, channels, messages, DMs, user info, search)
+
+**Key files:** `src/sites/discord/openapi.yaml`, `src/sites/discord/DOC.md`, `src/sites/discord/PROGRESS.md`, `src/sites/discord/examples/`
+**Verification:** All 10 ops verify PASS with --browser
+**Commit:** 263a1b4
+
 ## 2026-03-30: Bilibili site QA — prune to 10 ops, fix verify, release-ready
 
 **What changed:**

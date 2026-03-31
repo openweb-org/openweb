@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-03-30 (verify unify)
+> Last updated: 2026-03-31 (skill doc refactor)
 
 ## Quick Start
 
