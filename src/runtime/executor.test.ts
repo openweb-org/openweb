@@ -9,8 +9,8 @@ describe('executeOperation', () => {
     const fetchMock = vi.fn(async (_input: string | URL | Request) => {
       return new Response(
         JSON.stringify({
-          results: [{ name: 'Berlin', latitude: 52.52, longitude: 13.41 }],
-          generationtime_ms: 1,
+          total: 1,
+          items: [{ name: 'Elden Ring', id: 1245620, type: 'app' }],
         }),
         {
           status: 200,
@@ -22,9 +22,9 @@ describe('executeOperation', () => {
     const ssrfMock = vi.fn(async () => {})
 
     const result = await executeOperation(
-      'open-meteo',
-      'search_location',
-      { name: 'Berlin', count: 1 },
+      'steam',
+      'searchGames',
+      { term: 'elden ring' },
       { fetchImpl: fetchMock, ssrfValidator: ssrfMock },
     )
 
@@ -33,15 +33,15 @@ describe('executeOperation', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
     const calledUrl = String((fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0])
-    expect(calledUrl).toContain('https://geocoding-api.open-meteo.com/v1/search?')
-    expect(calledUrl).toContain('name=Berlin')
+    expect(calledUrl).toContain('https://store.steampowered.com/api/storesearch')
+    expect(calledUrl).toContain('term=elden')
   })
 
   it('throws INVALID_PARAMS when required params are missing', async () => {
     const fetchMock = vi.fn() as unknown as typeof fetch
 
     await expect(
-      executeOperation('open-meteo', 'get_forecast', { longitude: 13.41 }, { fetchImpl: fetchMock }),
+      executeOperation('steam', 'getAppDetails', {}, { fetchImpl: fetchMock }),
     ).rejects.toMatchObject({
       payload: {
         code: 'INVALID_PARAMS',
@@ -60,9 +60,9 @@ describe('executeOperation', () => {
     const ssrfMock = vi.fn(async () => {})
 
     const result = await executeOperation(
-      'open-meteo',
-      'search_location',
-      { name: 'Berlin' },
+      'steam',
+      'searchGames',
+      { term: 'test' },
       { fetchImpl: fetchMock, ssrfValidator: ssrfMock },
     )
 
@@ -79,7 +79,7 @@ describe('executeOperation', () => {
     ) as unknown as typeof fetch
 
     await expect(
-      executeOperation('open-meteo', 'search_location', { name: 'Berlin' }, { fetchImpl: fetchMock }),
+      executeOperation('steam', 'searchGames', { term: 'test' }, { fetchImpl: fetchMock }),
     ).rejects.toBeInstanceOf(OpenWebError)
   })
 })
@@ -91,7 +91,7 @@ describe('permission gate', () => {
 
   it('blocks write operations with permission_required on default config', async () => {
     await expect(
-      executeOperation('jsonplaceholder', 'createPost', { title: 'x', body: 'y', userId: 1 }, {
+      executeOperation('steam', 'addToWishlist', {}, {
         permissionsConfig: defaultPermissions,
       }),
     ).rejects.toMatchObject({
@@ -104,17 +104,17 @@ describe('permission gate', () => {
 
   it('allows write operations when site override permits', async () => {
     const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({ id: 101, title: 'x', body: 'y', userId: 1 }), {
+      new Response(JSON.stringify({ success: true, wishlistCount: 5 }), {
         status: 201,
         headers: { 'content-type': 'application/json' },
       }),
     ) as unknown as typeof fetch
 
-    const result = await executeOperation('jsonplaceholder', 'createPost', { title: 'x', body: 'y', userId: 1 }, {
+    const result = await executeOperation('steam', 'addToWishlist', {}, {
       fetchImpl: fetchMock,
       permissionsConfig: {
         defaults: defaultPermissions.defaults,
-        sites: { 'jsonplaceholder': { write: 'allow' } },
+        sites: { 'steam': { write: 'allow' } },
       },
     })
 
@@ -123,13 +123,13 @@ describe('permission gate', () => {
 
   it('allows read operations on default config', async () => {
     const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify([{ userId: 1, id: 1, title: 'a', body: 'b' }]), {
+      new Response(JSON.stringify({ total: 1, items: [{ name: 'Test Game', id: 1, type: 'app' }] }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       }),
     ) as unknown as typeof fetch
 
-    const result = await executeOperation('jsonplaceholder', 'listPosts', { _limit: 1 }, {
+    const result = await executeOperation('steam', 'searchGames', { term: 'test' }, {
       fetchImpl: fetchMock,
       permissionsConfig: defaultPermissions,
     })

@@ -23,8 +23,8 @@ function loadFixture(name: string) {
 }
 
 describe('validateXOpenWebSpec', () => {
-  it('passes for L1-only spec (open-meteo, no server-level x-openweb primitives)', async () => {
-    const spec = await loadFixture('open-meteo').spec()
+  it('passes for L1-only spec (steam, no server-level x-openweb primitives)', async () => {
+    const spec = await loadFixture('steam').spec()
     const result = validateXOpenWebSpec(spec)
     expect(result.valid).toBe(true)
     expect(result.errors).toHaveLength(0)
@@ -247,8 +247,8 @@ describe('validateXOpenWebSpec', () => {
 })
 
 describe('validateManifest', () => {
-  it('passes for open-meteo manifest', async () => {
-    const manifest = await loadFixture('open-meteo').manifest()
+  it('passes for steam manifest', async () => {
+    const manifest = await loadFixture('steam').manifest()
     const result = validateManifest(manifest)
     expect(result.valid).toBe(true)
     expect(result.errors).toHaveLength(0)

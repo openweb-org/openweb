@@ -7,16 +7,16 @@ import { renderOperation, renderSite, renderSiteJson, safeReadNotes } from './na
 
 describe('navigator', () => {
   it('renders site with readiness metadata', async () => {
-    const output = await renderSite('open-meteo')
-    expect(output).toContain('4 operations')
+    const output = await renderSite('steam')
+    expect(output).toContain('14 operations')
     expect(output).toContain('Transport:        node')
     expect(output).toContain('Requires browser: no')
     expect(output).toContain('Requires login:   no')
     expect(output).toContain('Permissions:')
     expect(output).toContain('read:')
     expect(output).toContain('Operations:')
-    expect(output).toContain('get_forecast')
-    expect(output).toContain('search_location')
+    expect(output).toContain('getAppDetails')
+    expect(output).toContain('searchGames')
   })
 
   it('renders site with auth requirements', async () => {
@@ -28,8 +28,8 @@ describe('navigator', () => {
   })
 
   it('renders one operation with resolved transport', async () => {
-    const output = await renderOperation('open-meteo', 'get_forecast', false)
-    expect(output).toContain('GET /v1/forecast')
+    const output = await renderOperation('steam', 'getAppDetails', false)
+    expect(output).toContain('GET /api/appdetails')
     expect(output).toContain('Transport: node')
     expect(output).toContain('Permission: read')
   })
@@ -84,7 +84,7 @@ describe('navigator', () => {
   })
 
   it('includes hasNotes boolean in JSON output', async () => {
-    const output = await renderSiteJson('open-meteo')
+    const output = await renderSiteJson('steam')
     const parsed = JSON.parse(output)
     expect(typeof parsed.hasNotes).toBe('boolean')
   })
