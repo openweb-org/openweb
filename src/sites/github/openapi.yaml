@@ -8,6 +8,17 @@ servers:
   - url: https://api.github.com
     x-openweb:
       transport: node
+      auth:
+        type: cookie_session
+      csrf:
+        type: meta_tag
+        name: csrf-token
+        header: X-CSRF-Token
+        scope:
+          - PUT
+          - POST
+          - PATCH
+          - DELETE
 paths:
   /repos/{owner}/{repo}:
     get:

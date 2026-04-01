@@ -63,15 +63,15 @@ openweb github exec getUserProfile '{"username":"anthropics"}'
 - List endpoints use `link_header` pagination
 
 ## Auth
-No auth required for public read operations. Write operations and private repo
-access require authentication (not currently configured — write ops will fail
-with 401 without a valid session).
+- `cookie_session` — uses browser session cookies
+- CSRF: `meta_tag` type, reads `csrf-token` from page, sends as `X-CSRF-Token` on PUT/POST/PATCH/DELETE
+- Read ops on public repos work without auth; write ops require a logged-in browser session
 
 ## Transport
 `node` — all endpoints use direct HTTP. No bot detection, no browser needed.
 
 ## Known Issues
-- Write ops (`createIssue`, `forkRepo`, `starRepo`) require authentication not configured in the package — use only if you have a valid session
+- Write ops (`createIssue`, `forkRepo`, `starRepo`) require a logged-in browser session — run `openweb browser start` and log in first
 - `graphqlQuery` has `write` permission since arbitrary mutations are possible via the query string
 - `starRepo` permission is set to `read` in the spec but is actually a write action (PUT) — kept as-is since verify skips it either way
 - Rate limit: 60 requests/hour unauthenticated, 5000/hour authenticated
