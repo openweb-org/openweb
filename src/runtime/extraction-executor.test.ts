@@ -167,4 +167,73 @@ describe('executeExtraction', () => {
     expect(result.status).toBe(200)
     expect(result.body).toBe('user-1')
   })
+
+  it('substitutes path parameters into the target URL', async () => {
+    const browser = extractionBrowser([
+      {
+        url: 'https://www.amazon.com/dp/B0D77BX616',
+        evaluateResult: { name: 'Test Product', price: '$29.99' },
+      },
+    ])
+
+    const operation: OpenApiOperation = {
+      operationId: 'getProductDetail',
+      parameters: [
+        { name: 'asin', in: 'path', required: true, schema: { type: 'string' } },
+      ],
+      responses: { '200': { content: { 'application/json': { schema: { type: 'object' } } } } },
+      'x-openweb': {
+        extraction: {
+          type: 'page_global_data',
+          expression: 'window.__DATA__',
+        },
+      },
+    }
+
+    const result = await executeExtraction(
+      browser,
+      extractionSpec('https://www.amazon.com'),
+      operation,
+      '/dp/{asin}',
+      { asin: 'B0D77BX616' },
+    )
+
+    expect(result.status).toBe(200)
+    expect(result.body).toEqual({ name: 'Test Product', price: '$29.99' })
+  })
+
+  it('substitutes path parameters into page_url when present', async () => {
+    const browser = extractionBrowser([
+      {
+        url: 'https://www.example.com/product/ABC123',
+        evaluateResult: { title: 'Widget' },
+      },
+    ])
+
+    const operation: OpenApiOperation = {
+      operationId: 'getProduct',
+      parameters: [
+        { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+      ],
+      responses: { '200': { content: { 'application/json': { schema: { type: 'object' } } } } },
+      'x-openweb': {
+        extraction: {
+          type: 'page_global_data',
+          page_url: '/product/{id}',
+          expression: 'window.__DATA__',
+        },
+      },
+    }
+
+    const result = await executeExtraction(
+      browser,
+      extractionSpec('https://www.example.com'),
+      operation,
+      '/items/{id}',
+      { id: 'ABC123' },
+    )
+
+    expect(result.status).toBe(200)
+    expect(result.body).toEqual({ title: 'Widget' })
+  })
 })

@@ -1,6 +1,6 @@
 ## Pipeline Gaps — Amazon Discovery (2026-04-01)
 
-### 1. Extraction executor ignores operation parameters
+### 1. Extraction executor ignores operation parameters — FIXED
 
 **Problem:** The `executeExtraction()` function in `extraction-executor.ts` doesn't receive
 or substitute path/query parameters. For parameterized operations like `/dp/{asin}`, the
@@ -10,10 +10,10 @@ extraction evaluates on the wrong page (server URL or `page_url` without paramet
 receives only the operation object, not the resolved parameters. The `http-executor.ts:175`
 call site also doesn't pass params.
 
-**Suggested fix:** Pass params to `executeExtraction`, resolve the page URL with parameter
-substitution (like `http-executor.ts:163` does with `substitutePath`), and auto-navigate
-to the resolved URL before evaluating the expression. This would eliminate the need for
-adapters on many SSR sites.
+**Fix:** `executeExtraction()` now accepts optional `pathTemplate` and `params` arguments.
+`resolvePageUrl()` substitutes path parameters (via `substitutePath`) into `page_url` or
+the operation path template before resolving the target URL. The `http-executor.ts` call
+site passes `operationRef.path` and `params` through.
 
 ### 2. Browser-wide capture creates noisy traffic
 

@@ -11,6 +11,7 @@ import { resolveScriptJson } from './primitives/script-json.js'
 import { resolveSsrNextData } from './primitives/ssr-next-data.js'
 import type { BrowserHandle } from './primitives/types.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
+import { resolveAllParameters, substitutePath } from './request-builder.js'
 import { type AutoNavigateResult, autoNavigate, findPageForOrigin } from './session-executor.js'
 
 export type { ExecutorResult }
@@ -55,17 +56,30 @@ async function findPageForTarget(
   return findPageForOrigin(context, targetUrl)
 }
 
-function resolvePageUrl(serverUrl: string, extraction: ExtractionPrimitive): string {
-  const pageUrl = 'page_url' in extraction ? extraction.page_url : undefined
-  if (!pageUrl) {
+function resolvePageUrl(
+  serverUrl: string,
+  extraction: ExtractionPrimitive,
+  pathTemplate: string | undefined,
+  spec: OpenApiSpec,
+  operation: OpenApiOperation,
+  params: Record<string, unknown>,
+): string {
+  // Determine the raw URL path: prefer explicit page_url, fall back to operation path template
+  const rawPath = ('page_url' in extraction ? extraction.page_url : undefined) ?? pathTemplate
+
+  if (!rawPath) {
     return serverUrl
   }
 
+  // Substitute path parameters (e.g., /dp/{asin} → /dp/B0D77BX616)
+  const allParams = resolveAllParameters(spec, operation)
+  const resolvedPath = substitutePath(rawPath, allParams, params)
+
   try {
-    return new URL(pageUrl, serverUrl).toString()
+    return new URL(resolvedPath, serverUrl).toString()
   } catch {
-    // intentional: relative URL resolution failed — use page_url as-is
-    return pageUrl
+    // intentional: relative URL resolution failed — use resolvedPath as-is
+    return resolvedPath
   }
 }
 
@@ -89,6 +103,8 @@ export async function executeExtraction(
   browser: Browser,
   spec: OpenApiSpec,
   operation: OpenApiOperation,
+  pathTemplate?: string,
+  params: Record<string, unknown> = {},
 ): Promise<ExecutorResult> {
   const context = browser.contexts()[0]
   if (!context) {
@@ -115,7 +131,7 @@ export async function executeExtraction(
   }
 
   const extraction = getExtraction(operation)
-  const targetPageUrl = resolvePageUrl(serverUrl, extraction)
+  const targetPageUrl = resolvePageUrl(serverUrl, extraction, pathTemplate, spec, operation, params)
   let page = await findPageForTarget(context, targetPageUrl, 'page_url' in extraction && !!extraction.page_url)
   let ownedPage = false
   if (!page) {

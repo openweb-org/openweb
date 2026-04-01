@@ -172,7 +172,7 @@ export async function executeOperation(
     } else {
       const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? CDP_ENDPOINT)
       try {
-        const result = await executeExtraction(browser, spec, operationRef.operation)
+        const result = await executeExtraction(browser, spec, operationRef.operation, operationRef.path, params)
         status = result.status
         body = result.body
         responseHeaders = { ...result.responseHeaders }
