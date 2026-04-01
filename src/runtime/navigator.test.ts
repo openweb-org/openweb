@@ -49,7 +49,7 @@ describe('navigator', () => {
 
   it('renders L3 adapter transport for adapter-backed sites and operations', async () => {
     const siteOutput = await renderSite('telegram')
-    const opOutput = await renderOperation('telegram', 'getDialogs', false)
+    const opOutput = await renderOperation('telegram', 'getChats', false)
 
     expect(siteOutput).toContain('Transport:        adapter (L3)')
     expect(opOutput).toContain('Transport: adapter (L3)')

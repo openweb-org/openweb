@@ -110,6 +110,8 @@ Guide to authentication primitives detected by `classify.ts`. Organized by primi
 - **Multi-step chains**: Some sites have 2+ exchange steps (Reddit: cookie → shreddit token → bearer JWT).
 - **GET method**: Some exchange endpoints use GET, not POST (ChatGPT session endpoint). Check `method` field.
 - **Cookie extraction**: Some chains start by reading a browser cookie (`extract_from: 'cookie'`), not an HTTP response.
+- **Cloudflare UA binding**: If the site uses Cloudflare, the exchange step AND all subsequent API requests must send a User-Agent matching the browser session. Add a `headers: { User-Agent: ... }` to the exchange step config, and a `User-Agent` header parameter to every operation in the spec. Without this, Node.js fetch sends `undici` UA which Cloudflare rejects with 403.
+- **Token cache bypass**: The token cache (`executeCachedFetch`) does not reconstruct exchange_chain auth from cache — it falls through to `executeSessionHttp`. This means exchange_chain sites always need a live browser connection.
 
 **Examples**:
 - Reddit: cookie CSRF → POST shreddit/token → bearer JWT → oauth.reddit.com
