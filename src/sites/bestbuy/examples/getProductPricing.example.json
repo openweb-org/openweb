@@ -1,0 +1,14 @@
+{
+    "operation_id": "getProductPricing",
+    "cases": [
+        {
+            "input": {
+                "skus": "6614950"
+            },
+            "assertions": {
+                "status": 200,
+                "response_schema_valid": true
+            }
+        }
+    ]
+}

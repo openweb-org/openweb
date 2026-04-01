@@ -23,3 +23,16 @@
 - Build: `pnpm build` → exits 0
 
 **Commit:** b997744
+
+## 2026-03-31: Add example fixtures and update DOC.md
+
+**What changed:**
+- Created `examples/` with 3 example files: searchProducts, getProductDetails, getProductPricing
+- Updated DOC.md: added Workflows, Quick Start, data-flow annotations (← source) in Operations table
+
+**Why:**
+- Site had 0 examples — `openweb verify bestbuy` failed with no test cases
+- DOC.md was missing required sections per site-doc.md template
+
+**Verification:** `openweb verify bestbuy` → PASS (3/3 operations)
+**Commit:** TBD

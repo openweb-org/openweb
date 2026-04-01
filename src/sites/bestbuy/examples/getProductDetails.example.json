@@ -1,0 +1,14 @@
+{
+    "operation_id": "getProductDetails",
+    "cases": [
+        {
+            "input": {
+                "skuids": "6638906,6612975"
+            },
+            "assertions": {
+                "status": 200,
+                "response_schema_valid": true
+            }
+        }
+    ]
+}
