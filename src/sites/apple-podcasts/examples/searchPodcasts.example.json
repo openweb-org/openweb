@@ -1,14 +1,7 @@
 {
-    "operation_id": "searchPodcasts",
-    "cases": [
-        {
-            "input": {
-                "term": "true crime"
-            },
-            "assertions": {
-                "status": 200,
-                "response_schema_valid": true
-            }
-        }
-    ]
+  "operation_id": "searchPodcasts",
+  "cases": [{
+    "input": { "term": "technology", "l": "en-US" },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
 }

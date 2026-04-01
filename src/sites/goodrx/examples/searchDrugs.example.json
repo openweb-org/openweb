@@ -1,7 +1,7 @@
 {
-  "operation_id": "getDrugPrices",
+  "operation_id": "searchDrugs",
   "cases": [{
-    "input": { "slug": "metformin" },
+    "input": { "query": "metformin" },
     "assertions": { "status": 200, "response_schema_valid": true }
   }]
 }

@@ -1,52 +1,65 @@
 # Apple Podcasts
 
 ## Overview
-Apple's podcast discovery and listening platform. Search podcasts and episodes, browse show details and episode lists, read user reviews/ratings, and explore top charts by genre — all via the MusicKit amp-api.
+Apple Podcasts content platform — search, browse, and get details for podcasts and episodes via the AMP API.
+
+## Workflows
+
+### Search and explore a podcast
+1. `searchPodcasts(term)` → results with podcast `id`
+2. `getPodcast(id, include=["episodes"])` → full details with episode list
+
+### Autocomplete search
+1. `getSearchSuggestions(term)` → suggestions with podcast/episode matches
+2. `searchPodcasts(term)` → full search results
+
+### Browse top charts
+1. `getTopCharts(name="search-landing")` → editorial groupings with featured podcasts
 
 ## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| searchPodcasts | search shows by keyword | GET /search | types=podcasts; offset pagination |
-| searchEpisodes | search episodes by keyword | GET /search | types=podcast-episodes; offset pagination |
-| getPodcastDetails | get show info (name, artist, artwork, feed) | GET /podcasts/{id} | extend=editorialArtwork,feedUrl |
-| getPodcastEpisodes | list episodes for a show | GET /podcasts/{id}/episodes | offset pagination; returns audio URL |
-| getEpisodeDetails | get single episode detail | GET /podcast-episodes/{id} | includes duration, audio URL, description |
-| getPodcastReviews | get user ratings and reviews | GET /podcasts/{id}/reviews | rating (1-5), title, review text, username |
-| getTopPodcasts | get top podcast charts | GET /charts | types=podcasts; optional genre filter |
-| getTopEpisodes | get top episode charts | GET /charts | types=podcast-episodes; optional genre filter |
-| getGenreCharts | get top podcasts by genre | GET /charts | genre={genreId}; e.g. 1303=Comedy |
-| searchAll | combined search (shows + episodes) | GET /search/groups | grouped results with top, shows, episodes sections |
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| searchPodcasts | search by keyword | term | id, name, artistName, artwork, url | entry point |
+| getPodcast | podcast detail + episodes | id ← searchPodcasts | name, description, artwork, feedUrl, genreNames, episodes (via include) | set include=episodes for episode list |
+| getSearchSuggestions | autocomplete | term | searchTerm, displayTerm, content | prefix-based suggestions |
+| getTopCharts | browse charts | name (optional) | editorial groupings, featured podcasts | name=search-landing for main charts |
+
+## Quick Start
+
+```bash
+# Search podcasts
+openweb apple-podcasts exec searchPodcasts '{"term":"technology","platform":"web"}'
+
+# Get podcast details with episodes
+openweb apple-podcasts exec getPodcast '{"id":"917918570","extend":["editorialArtwork","feedUrl","userRating"],"include":["episodes"],"l":"en-US","limit[episodes]":10}'
+
+# Autocomplete suggestions
+openweb apple-podcasts exec getSearchSuggestions '{"term":"tech","platform":"web"}'
+
+# Top charts
+openweb apple-podcasts exec getTopCharts '{"name":"search-landing","platform":"web"}'
+```
+
+---
+
+## Site Internals
 
 ## API Architecture
-- **MusicKit amp-api**: REST API at `amp-api.podcasts.apple.com/v1/catalog/{storefront}/`
-- **Auth**: Bearer token (JWT developer token from MusicKit JS — not user auth)
-- **Pagination**: Offset-based — responses include `next` URL or use `offset` param
-- **Response shape**: `{ data: [...] }` for detail, `{ results: { type: { data: [...] } } }` for search/charts
-- **Resource types**: `podcasts`, `podcast-episodes`, `user-reviews`
+REST API at `amp-api.podcasts.apple.com`. Apple's internal content API used by the web player. JSON:API-style responses with `data`, `included`, and `relationships` structure.
 
 ## Auth
-- Developer token obtained from `MusicKit.getInstance().developerToken` in browser context
-- No user login required (`requires_auth: false`)
-- Token is a public JWT signed by Apple, embedded in MusicKit JS bundle
-- Token rotates periodically — always fetch fresh from MusicKit instance
+- MusicKit developer JWT extracted from `window.MusicKit.getInstance().developerToken`
+- Token is a public developer-level JWT (ES256), not per-user auth
+- Injected as `Authorization: Bearer <token>` by the adapter
+- Token is rotated periodically (weeks-scale expiry)
 
 ## Transport
-- `transport: page` — browser fetch for all operations
-- Bearer token only available in browser context where MusicKit JS is loaded
-- Must navigate to podcasts.apple.com first to initialize MusicKit
-- Direct HTTP without token returns 401
-
-## Extraction
-- **Adapter-based**: All operations use the `apple-podcasts-api` adapter
-- amp-api returns structured JSON — no DOM parsing needed
-- Podcast attributes: name, artistName, artwork, description, genreNames, trackCount, feedUrl
-- Episode attributes: name, description, durationInMilliseconds, assetUrl, releaseDateTime
-- Review attributes: rating, title, review, userName, date
+- `page` transport with adapter (`apple-podcasts-api.ts`)
+- Adapter uses `page.request.fetch()` to call `amp-api.podcasts.apple.com` with the bearer token
+- Browser must have a podcasts.apple.com tab open for MusicKit token access
 
 ## Known Issues
-- **Token dependency**: MusicKit JS must be initialized (page must load podcasts.apple.com)
-- **No categories endpoint**: `/categories` returns 500 — genre info available via genreNames on podcasts
-- **Chart names vary**: Charts return names like "Top Series", "Top Episodes" — not customizable
-- **Genre IDs**: Must use Apple genre IDs (e.g. 1303=Comedy, 1318=Technology, 1301=Arts)
-- **Rate limiting**: Heavy API usage may trigger temporary blocks
-- **Storefront**: Hardcoded to `us` — other storefronts possible by changing catalog path
+- `platform=web` query param is required on search and editorial endpoints
+- The `extend` and `include` bracket-style params (e.g., `extend[podcast-channels]`) use Apple's custom query encoding
+- No dedicated episodes-only endpoint captured; use `getPodcast` with `include=episodes` and `limit[episodes]` param

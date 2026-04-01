@@ -1,258 +1,142 @@
 import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-/**
- * Apple Podcasts L3 adapter — amp-api via browser fetch.
- *
- * Apple Podcasts serves data through amp-api.podcasts.apple.com (MusicKit API).
- * Requires a Bearer token obtained from MusicKit.getInstance().developerToken
- * in the browser context. All read operations work without user login.
- */
 import type { CodeAdapter } from '../../../types/adapter.js'
 
 const AMP_API = 'https://amp-api.podcasts.apple.com'
-const CATALOG = `${AMP_API}/v1/catalog/us`
 
-/* ---------- helpers ---------- */
-
-async function getToken(page: Page): Promise<string> {
+async function getDeveloperToken(page: Page): Promise<string> {
   const token = await page.evaluate(() => {
-    const mk = (window as unknown as Record<string, unknown>).MusicKit as
-      | { getInstance(): { developerToken: string } }
-      | undefined
-    return mk?.getInstance()?.developerToken ?? ''
+    try {
+      return (window as any).MusicKit?.getInstance()?.developerToken as string | undefined
+    } catch {
+      return undefined
+    }
   })
-  if (!token) throw OpenWebError.apiError('Apple Podcasts', 'MusicKit developer token not available')
+  if (!token) {
+    const err = Object.assign(new Error('MusicKit developer token not found. Ensure podcasts.apple.com is fully loaded.'), { failureClass: 'needs_login' as const })
+    throw err
+  }
   return token
 }
 
-async function ampGet(
+async function apiGet(
   page: Page,
   path: string,
-  params: Record<string, string> = {},
+  params: Record<string, unknown> = {},
 ): Promise<unknown> {
-  const token = await getToken(page)
-  const qs = new URLSearchParams({ platform: 'web', ...params }).toString()
-  const url = `${CATALOG}${path}?${qs}`
+  const token = await getDeveloperToken(page)
+  const url = new URL(`${AMP_API}${path}`)
 
-  const result = await page.evaluate(
-    async (args: { url: string; token: string }) => {
-      const resp = await fetch(args.url, {
-        headers: {
-          Authorization: `Bearer ${args.token}`,
-          Accept: 'application/json',
-          Origin: 'https://podcasts.apple.com',
-        },
-      })
-      return { status: resp.status, text: await resp.text() }
-    },
-    { url, token },
-  )
-
-  if (result.status >= 400) {
-    throw OpenWebError.httpError(result.status)
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) continue
+    if (Array.isArray(value)) {
+      for (const v of value) url.searchParams.append(key, String(v))
+    } else {
+      url.searchParams.set(key, String(value))
+    }
   }
 
-  return JSON.parse(result.text)
+  const resp = await page.request.fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+      Origin: 'https://podcasts.apple.com',
+      Referer: 'https://podcasts.apple.com/',
+    },
+  })
+
+  if (!resp.ok()) {
+    const body = await resp.text().catch(() => '')
+    const err = Object.assign(
+      new Error(`API ${resp.status()}: ${body.slice(0, 200)}`),
+      { failureClass: resp.status() === 401 || resp.status() === 403 ? 'needs_login' as const : 'fatal' as const },
+    )
+    throw err
+  }
+
+  return resp.json()
 }
 
-/* ---------- operation handlers ---------- */
+const DEFAULT_TYPES = 'podcasts,podcast-channels,podcast-episodes,categories,editorial-items'
+
+/* ---------- operations ---------- */
 
 async function searchPodcasts(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const term = String(params.term ?? params.query ?? '')
-  const limit = String(params.limit ?? 25)
-  const offset = params.offset ? String(params.offset) : undefined
+  return apiGet(page, '/v1/catalog/us/search/groups', {
+    term: params.term,
+    platform: 'web',
+    types: params.types ?? DEFAULT_TYPES,
+    groups: params.groups ?? 'category,channel,episode,show,top',
+    l: params.l ?? 'en-US',
+    limit: params.limit ?? '25',
+    extend: params.extend,
+  })
+}
 
-  const json = (await ampGet(page, '/search', {
-    term,
-    types: 'podcasts',
-    limit,
-    ...(offset ? { offset } : {}),
-  })) as { results?: { podcasts?: { data?: unknown[]; next?: string } } }
-
-  return {
-    term,
-    results: json.results?.podcasts?.data ?? [],
-    next: json.results?.podcasts?.next ?? null,
+async function getPodcast(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const id = params.id
+  const queryParams: Record<string, unknown> = {
+    l: params.l ?? 'en-US',
   }
+  if (params.extend) queryParams.extend = params.extend
+  if (params.include) queryParams.include = params.include
+  if (params['limit[episodes]']) queryParams['limit[episodes]'] = params['limit[episodes]']
+
+  return apiGet(page, `/v1/catalog/us/podcasts/${id}`, queryParams)
 }
 
-async function searchEpisodes(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const term = String(params.term ?? params.query ?? '')
-  const limit = String(params.limit ?? 25)
-  const offset = params.offset ? String(params.offset) : undefined
-
-  const json = (await ampGet(page, '/search', {
-    term,
-    types: 'podcast-episodes',
-    limit,
-    ...(offset ? { offset } : {}),
-  })) as { results?: { 'podcast-episodes'?: { data?: unknown[]; next?: string } } }
-
-  return {
-    term,
-    results: json.results?.['podcast-episodes']?.data ?? [],
-    next: json.results?.['podcast-episodes']?.next ?? null,
-  }
+async function getSearchSuggestions(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  return apiGet(page, '/v1/catalog/us/search/suggestions', {
+    term: params.term,
+    platform: 'web',
+    kinds: params.kinds ?? 'terms,topResults',
+    types: params.types ?? DEFAULT_TYPES,
+    l: params.l ?? 'en-US',
+  })
 }
 
-async function getPodcastDetails(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const podcastId = String(params.podcastId ?? params.id ?? '')
-
-  const json = (await ampGet(page, `/podcasts/${podcastId}`, {
-    extend: 'editorialArtwork,feedUrl',
-  })) as { data?: unknown[] }
-
-  return json.data?.[0] ?? null
+async function getTopCharts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  return apiGet(page, '/v1/editorial/us/groupings', {
+    name: params.name ?? 'search-landing',
+    platform: 'web',
+    l: params.l ?? 'en-US',
+    with: params.with,
+  })
 }
-
-async function getPodcastEpisodes(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const podcastId = String(params.podcastId ?? params.id ?? '')
-  const limit = String(params.limit ?? 20)
-  const offset = params.offset ? String(params.offset) : undefined
-
-  const json = (await ampGet(page, `/podcasts/${podcastId}/episodes`, {
-    limit,
-    ...(offset ? { offset } : {}),
-  })) as { data?: unknown[]; next?: string }
-
-  return {
-    podcastId,
-    episodes: json.data ?? [],
-    next: json.next ?? null,
-  }
-}
-
-async function getEpisodeDetails(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const episodeId = String(params.episodeId ?? params.id ?? '')
-
-  const json = (await ampGet(page, `/podcast-episodes/${episodeId}`)) as { data?: unknown[] }
-
-  return json.data?.[0] ?? null
-}
-
-async function getPodcastReviews(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const podcastId = String(params.podcastId ?? params.id ?? '')
-  const limit = String(params.limit ?? 20)
-  const offset = params.offset ? String(params.offset) : undefined
-
-  const json = (await ampGet(page, `/podcasts/${podcastId}/reviews`, {
-    limit,
-    ...(offset ? { offset } : {}),
-  })) as { data?: unknown[]; next?: string }
-
-  return {
-    podcastId,
-    reviews: json.data ?? [],
-    next: json.next ?? null,
-  }
-}
-
-async function getTopPodcasts(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const limit = String(params.limit ?? 50)
-  const genre = params.genre ? String(params.genre) : undefined
-
-  const json = (await ampGet(page, '/charts', {
-    types: 'podcasts',
-    limit,
-    ...(genre ? { genre } : {}),
-  })) as { results?: { podcasts?: unknown[] } }
-
-  const chart = (json.results?.podcasts as { name?: string; data?: unknown[] }[])?.[0]
-  return {
-    chartName: chart?.name ?? 'Top Podcasts',
-    genre: genre ?? null,
-    results: chart?.data ?? [],
-  }
-}
-
-async function getTopEpisodes(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const limit = String(params.limit ?? 50)
-  const genre = params.genre ? String(params.genre) : undefined
-
-  const json = (await ampGet(page, '/charts', {
-    types: 'podcast-episodes',
-    limit,
-    ...(genre ? { genre } : {}),
-  })) as { results?: { 'podcast-episodes'?: unknown[] } }
-
-  const chart = (json.results?.['podcast-episodes'] as { name?: string; data?: unknown[] }[])?.[0]
-  return {
-    chartName: chart?.name ?? 'Top Episodes',
-    genre: genre ?? null,
-    results: chart?.data ?? [],
-  }
-}
-
-async function getGenreCharts(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const genreId = String(params.genreId ?? params.genre ?? '')
-  const limit = String(params.limit ?? 50)
-
-  const json = (await ampGet(page, '/charts', {
-    types: 'podcasts',
-    genre: genreId,
-    limit,
-  })) as { results?: { podcasts?: unknown[] } }
-
-  const chart = (json.results?.podcasts as { name?: string; data?: unknown[] }[])?.[0]
-  return {
-    genreId,
-    chartName: chart?.name ?? 'Top Podcasts',
-    results: chart?.data ?? [],
-  }
-}
-
-async function searchAll(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const term = String(params.term ?? params.query ?? '')
-  const limit = String(params.limit ?? 10)
-
-  const json = (await ampGet(page, '/search/groups', {
-    term,
-    types: 'podcasts,podcast-episodes',
-    limit,
-    extend: 'editorialArtwork,feedUrl',
-  })) as { results?: { groups?: unknown[] } }
-
-  return {
-    term,
-    groups: json.results?.groups ?? [],
-  }
-}
-
-/* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
   searchPodcasts,
-  searchEpisodes,
-  getPodcastDetails,
-  getPodcastEpisodes,
-  getEpisodeDetails,
-  getPodcastReviews,
-  getTopPodcasts,
-  getTopEpisodes,
-  getGenreCharts,
-  searchAll,
+  getPodcast,
+  getSearchSuggestions,
+  getTopCharts,
 }
 
 const adapter: CodeAdapter = {
   name: 'apple-podcasts-api',
-  description: 'Apple Podcasts amp-api — search, details, episodes, reviews, charts',
+  description: 'Apple Podcasts AMP API — search, detail, suggestions, charts via MusicKit bearer token',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('podcasts.apple.com')
   },
 
-  async isAuthenticated(_page: Page): Promise<boolean> {
-    return true // Public API — developer token, not user auth
+  async isAuthenticated(page: Page): Promise<boolean> {
+    const token = await page.evaluate(() => {
+      try {
+        return !!(window as any).MusicKit?.getInstance()?.developerToken
+      } catch {
+        return false
+      }
+    })
+    return token
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    try {
-      const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
-      return handler(page, { ...params })
-    } catch (error) {
-      throw toOpenWebError(error)
+    const handler = OPERATIONS[operation]
+    if (!handler) {
+      const err = Object.assign(new Error(`Unknown operation: ${operation}`), { failureClass: 'fatal' as const })
+      throw err
     }
+    return handler(page, { ...params })
   },
 }
 

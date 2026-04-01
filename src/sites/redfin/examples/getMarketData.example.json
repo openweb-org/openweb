@@ -1,8 +1,8 @@
 {
-  "operation_id": "getDrugArticles",
+  "operation_id": "getMarketData",
   "cases": [
     {
-      "input": { "slug": "metformin" },
+      "input": { "regionId": "16163", "state": "WA", "city": "Seattle" },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

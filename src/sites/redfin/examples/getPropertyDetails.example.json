@@ -2,7 +2,7 @@
   "operation_id": "getPropertyDetails",
   "cases": [
     {
-      "input": { "state": "WA", "city": "Seattle", "address": "3412-NW-56th-St-98107", "propertyId": "200910046" },
+      "input": { "state": "WA", "city": "Seattle", "address": "1546-Sturgus-Ave-S-98144", "propertyId": "22392812" },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

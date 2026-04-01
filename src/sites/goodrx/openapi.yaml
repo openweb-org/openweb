@@ -1,27 +1,71 @@
-openapi: '3.1.0'
+openapi: "3.1.0"
 info:
   title: GoodRx
-  version: '1.0.0'
+  version: "1.0.0"
   x-openweb:
-    spec_version: '2.0'
-    compiled_at: '2026-03-24T00:00:00Z'
+    spec_version: "2.0"
+    compiled_at: "2026-04-01T00:00:00Z"
     requires_auth: false
 servers:
   - url: https://www.goodrx.com
     x-openweb:
       transport: page
 paths:
-  /{slug}:
+  /search:
     get:
-      operationId: getDrugPrices
-      summary: Get drug price comparison across pharmacies — pharmacy name, coupon price, special offers
+      operationId: searchDrugs
+      summary: "Search drugs by name — autocomplete results with drug name and URL"
       x-openweb:
         permission: read
         build:
-          verified: true
-          stable_id: grx0001
-          signature_id: grx0001s
-          tool_version: 1
+          stable_id: grx_searchDrugs_v1
+          tool_version: 2
+          signals:
+            - adapter-verified
+        adapter:
+          name: goodrx-web
+          operation: searchDrugs
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Drug name to search for (e.g. 'metformin', 'lisinopril')"
+          example: metformin
+      responses:
+        "200":
+          description: Drug search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, results]
+                properties:
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [name]
+                      properties:
+                        name:
+                          type: string
+                          description: Drug name or suggestion text
+                        url:
+                          type: string
+                          description: URL to the drug pricing page
+
+  /{slug}:
+    get:
+      operationId: getDrugPrices
+      summary: "Get drug price comparison across pharmacies — pharmacy name, coupon price"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: grx_getDrugPrices_v1
+          tool_version: 2
           signals:
             - adapter-verified
         adapter:
@@ -33,9 +77,10 @@ paths:
           required: true
           schema:
             type: string
-          description: Drug slug (e.g. "metformin", "lisinopril", "lipitor").
+          description: "Drug slug (e.g. 'metformin', 'lisinopril', 'amoxicillin')"
+          example: metformin
       responses:
-        '200':
+        "200":
           description: Pharmacy price comparison for the drug.
           content:
             application/json:
@@ -43,6 +88,9 @@ paths:
                 type: object
                 required: [count, prices]
                 properties:
+                  drugName:
+                    type: string
+                    description: Drug display name
                   count:
                     type: integer
                   prices:
@@ -53,436 +101,56 @@ paths:
                       properties:
                         pharmacy:
                           type: string
-                          description: Pharmacy name (e.g. "CVS Pharmacy", "Walgreens", "Walmart").
+                          description: "Pharmacy name (e.g. 'CVS Pharmacy', 'Walgreens')"
                         price:
                           type: number
-                          description: Coupon price in USD.
-                        hasSpecialOffer:
-                          type: boolean
-  /info/{slug}:
+                          description: Coupon price in USD
+
+  /pharmacy-near-me:
     get:
-      operationId: getDrugInfo
-      summary: Get drug metadata — name, class, description, warnings, dosage form
+      operationId: getPharmacies
+      summary: "Get nearby pharmacies — pharmacy name, slug, URL"
       x-openweb:
         permission: read
         build:
-          verified: true
-          stable_id: grx0002
-          signature_id: grx0002s
-          tool_version: 1
+          stable_id: grx_getPharmacies_v1
+          tool_version: 2
           signals:
             - adapter-verified
         adapter:
           name: goodrx-web
-          operation: getDrugInfo
+          operation: getPharmacies
       parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Drug slug (e.g. "metformin", "lisinopril").
-      responses:
-        '200':
-          description: Drug metadata from JSON-LD schema.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  name:
-                    type: string
-                  alternateName:
-                    type: [string, 'null']
-                  description:
-                    type: [string, 'null']
-                  drugClass:
-                    type: [string, 'null']
-                    description: Drug class name (e.g. "Biguanides", "ACE Inhibitors").
-                  prescriptionStatus:
-                    type: [string, 'null']
-                  administrationRoute:
-                    type: [string, 'null']
-                  dosageForm:
-                    type: [string, 'null']
-                  nonProprietaryName:
-                    type: [string, 'null']
-                  warning:
-                    type: [string, 'null']
-                  image:
-                    type: [string, 'null']
-                    description: URL to drug/pill image.
-  /offers/{slug}:
-    get:
-      operationId: getDrugOffers
-      summary: Get drug pricing offers — prices by form, dosage, and membership tier
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: grx0003
-          signature_id: grx0003s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: goodrx-web
-          operation: getDrugOffers
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Drug slug (e.g. "metformin").
-      responses:
-        '200':
-          description: Drug pricing offers from JSON-LD structured data.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  drugName:
-                    type: string
-                  count:
-                    type: integer
-                  offers:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        price:
-                          type: [number, string, 'null']
-                        priceCurrency:
-                          type: [string, 'null']
-                        availability:
-                          type: [string, 'null']
-                        validForMemberTier:
-                          type: [string, 'null']
-                          description: Membership tier (e.g. "GoodRx Gold").
-                        priceValidUntil:
-                          type: [string, 'null']
-                        quantity:
-                          type: [number, 'null']
-                        quantityUnit:
-                          type: [string, 'null']
-                        form:
-                          type: [string, 'null']
-                          description: Drug form (e.g. "ml of oral solution", "tablet").
-                        strength:
-                          type: [string, 'null']
-                          description: Drug strength (e.g. "500mg", "500mg/5ml").
-  /dosage-prices/{slug}:
-    get:
-      operationId: getDrugPricesByDosage
-      summary: Get drug prices by dosage — retail vs GoodRx price per dosage/quantity
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: grx0004
-          signature_id: grx0004s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: goodrx-web
-          operation: getDrugPricesByDosage
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Drug slug (e.g. "metformin").
-      responses:
-        '200':
-          description: Drug prices broken down by dosage and quantity.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [count, entries]
-                properties:
-                  count:
-                    type: integer
-                  entries:
-                    type: array
-                    items:
-                      type: object
-                      required: [dosage, quantity, retailPrice, goodrxPrice]
-                      properties:
-                        dosage:
-                          type: string
-                          description: Dosage strength (e.g. "500mg", "10mg").
-                        quantity:
-                          type: string
-                          description: Quantity (e.g. "60 tablets", "90 tablets").
-                        retailPrice:
-                          type: string
-                          description: Retail/cash price (e.g. "$43.03").
-                        goodrxPrice:
-                          type: string
-                          description: GoodRx coupon price (e.g. "$8.78").
-  /delivery/{slug}:
-    get:
-      operationId: getHomeDeliveryPrices
-      summary: Get home delivery pharmacy prices for a drug
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: grx0005
-          signature_id: grx0005s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: goodrx-web
-          operation: getHomeDeliveryPrices
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Drug slug (e.g. "metformin").
-      responses:
-        '200':
-          description: Home delivery pharmacy options and prices.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [count, providers]
-                properties:
-                  count:
-                    type: integer
-                  providers:
-                    type: array
-                    items:
-                      type: object
-                      required: [name]
-                      properties:
-                        name:
-                          type: string
-                          description: Delivery pharmacy name.
-                        price:
-                          type: [number, 'null']
-                          description: Price in USD.
-                        details:
-                          type: string
-  /{slug}/what-is:
-    get:
-      operationId: getDrugDescription
-      summary: Get detailed drug description — uses, author, publication dates
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: grx0006
-          signature_id: grx0006s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: goodrx-web
-          operation: getDrugDescription
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Drug slug (e.g. "metformin").
-      responses:
-        '200':
-          description: Medical web page description for the drug.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  name:
-                    type: [string, 'null']
-                  description:
-                    type: [string, 'null']
-                  url:
-                    type: [string, 'null']
-                  datePublished:
-                    type: [string, 'null']
-                  dateModified:
-                    type: [string, 'null']
-                  lastReviewed:
-                    type: [string, 'null']
-                  author:
-                    type: [string, 'null']
-                  alternativeHeadline:
-                    type: [string, 'null']
-  /faq/{slug}:
-    get:
-      operationId: getDrugFAQ
-      summary: Get drug FAQ — common questions and answers about a medication
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: grx0007
-          signature_id: grx0007s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: goodrx-web
-          operation: getDrugFAQ
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Drug slug (e.g. "metformin").
-      responses:
-        '200':
-          description: FAQ questions and answers about the drug.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [count, questions]
-                properties:
-                  count:
-                    type: integer
-                  questions:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        question:
-                          type: [string, 'null']
-                        answer:
-                          type: [string, 'null']
-  /internal/getDrugArticles:
-    get:
-      operationId: getDrugArticles
-      summary: Get health articles related to a drug — titles, links, thumbnails
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: grx0008
-          signature_id: grx0008s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: goodrx-web
-          operation: getDrugArticles
-      parameters:
-        - name: slug
+        - name: zipCode
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: Drug slug — page must be open on this drug (e.g. "metformin").
+          description: "ZIP code for location-based results (e.g. '90210'). Defaults to browser geolocation."
+          example: "90210"
       responses:
-        '200':
-          description: Health articles about the drug.
+        "200":
+          description: List of pharmacies near the given location.
           content:
             application/json:
               schema:
                 type: object
-                properties:
-                  total:
-                    type: integer
-                  items:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        title:
-                          type: string
-                        permalink:
-                          type: string
-                        thumbnail:
-                          type: [string, 'null']
-  /internal/getPopularDrugs:
-    get:
-      operationId: getPopularDrugs
-      summary: Get most popular/searched drugs on GoodRx
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: grx0009
-          signature_id: grx0009s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: goodrx-web
-          operation: getPopularDrugs
-      parameters: []
-      responses:
-        '200':
-          description: List of most popular drugs by search volume.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [count, drugs]
+                required: [count, pharmacies]
                 properties:
                   count:
                     type: integer
-                  drugs:
+                  pharmacies:
                     type: array
                     items:
                       type: object
-                      required: [name]
+                      required: [name, slug, url]
                       properties:
                         name:
                           type: string
-                          description: Drug name.
+                          description: Pharmacy chain name
                         slug:
                           type: string
-                          description: URL slug for the drug page.
-  /internal/getDrugConcept:
-    get:
-      operationId: getDrugConcept
-      summary: Get drug concept — recommended form/dosage and lowest available price
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: grx0010
-          signature_id: grx0010s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: goodrx-web
-          operation: getDrugConcept
-      parameters:
-        - name: slug
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Drug slug (e.g. "metformin", "lisinopril").
-      responses:
-        '200':
-          description: Drug concept with recommended configuration and lowest price.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  drugName:
-                    type: [string, 'null']
-                  configDisplayText:
-                    type: [string, 'null']
-                    description: Page subtitle with drug config info.
-                  lowestPrice:
-                    type: [string, 'null']
-                    description: Lowest price formatted (e.g. "$6.63").
+                          description: URL slug for this pharmacy
+                        url:
+                          type: string
+                          description: Full URL to pharmacy page on GoodRx

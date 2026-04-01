@@ -1,0 +1,7 @@
+{
+  "operation_id": "getPodcast",
+  "cases": [{
+    "input": { "id": "917918570", "extend": ["editorialArtwork", "feedUrl", "userRating"], "l": "en-US" },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

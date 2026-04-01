@@ -1,23 +1,14 @@
 {
   "name": "goodrx",
-  "display_name": "GoodRx",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.goodrx.com",
-  "description": "Drug price comparison across pharmacies — coupon prices, drug info, dosage pricing, FAQ, and health articles via GoodRx DOM/GraphQL extraction",
+  "compiled_at": "2026-04-01T00:00:00Z",
   "requires_auth": false,
-  "dependencies": {},
-  "stats": {
-    "operation_count": 10,
-    "l1_count": 0,
-    "l2_count": 10,
-    "l3_count": 0,
-    "ws_count": 0
-  },
-  "last_verified": "2026-03-24T19:50:00.261Z",
-  "quarantined": true,
+  "last_verified": "",
+  "quarantined": false,
   "fingerprint": {
-    "response_shape_hash": "getDrugArticles:6102ac2a37d98c39,getDrugConcept:506dcbc5cdcc0a2a,getDrugDescription:08d428f00e109c58,getDrugFAQ:bfba3f5797da31a9,getDrugInfo:e56bd91e0b839949,getDrugOffers:48041352e885bcad,getDrugPrices:dfbc23bc86190d7d,getDrugPricesByDosage:ebafc74b88c09779,getHomeDeliveryPrices:031cfd64f0b6b633,getPopularDrugs:c2a43096125168e1",
-    "last_validated": "2026-03-24T19:50:00.264Z"
+    "response_shape_hash": "",
+    "last_validated": ""
   }
 }

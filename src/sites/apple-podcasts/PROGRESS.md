@@ -1,24 +1,13 @@
-# Apple Podcasts Fixture — Progress
-
-## 2026-03-24: Initial discovery — 10 operations
+## 2026-04-01: Initial discovery and compile
 
 **What changed:**
-- Created apple-podcasts with 10 operations: searchPodcasts, searchEpisodes, getPodcastDetails, getPodcastEpisodes, getEpisodeDetails, getPodcastReviews, getTopPodcasts, getTopEpisodes, getGenreCharts, searchAll
-- Created openapi.yaml, manifest.json, DOC.md, PROGRESS.md
-- Created adapters/apple-podcasts-api.ts — MusicKit amp-api via browser fetch
+- Discovered Apple Podcasts AMP API at `amp-api.podcasts.apple.com`
+- 4 operations: searchPodcasts, getPodcast, getSearchSuggestions, getTopCharts
+- Auth: page_global (MusicKit developer JWT from `window.MusicKit.getInstance().developerToken`)
+- Transport: node with page_global auth extraction
 
 **Why:**
-- Apple Podcasts is a major podcast platform — search, discovery, and reviews are core use cases
-- All 10 operations use the amp-api at `amp-api.podcasts.apple.com/v1/catalog/us/` with page transport
-- Bearer token obtained from MusicKit JS developer token (public, not user auth)
+- New site package for podcast search and browse functionality
 
-**Discovery process:**
-1. Browsed homepage, search pages, podcast detail pages, charts, and genre pages via CDP
-2. Captured network traffic — identified amp-api as sole data source for dynamic content
-3. Discovered MusicKit JS provides developer token via `MusicKit.getInstance().developerToken`
-4. Tested 10 amp-api endpoints: search (podcasts/episodes), detail (podcast/episode), episodes list, reviews, charts (top/genre), search groups
-5. Verified all return structured JSON with consistent `{ data: [...] }` / `{ results: { ... } }` shapes
-
-**Verification:** All 10 endpoints return 200 with valid data. Search returns podcast/episode objects with full metadata. Detail endpoints return comprehensive attributes (artwork, feedUrl, description). Reviews include rating (1-5), title, text, username. Charts return ranked lists filterable by genre.
-
-**Knowledge updates:** Apple Podcasts uses MusicKit amp-api (same infrastructure as Apple Music). Developer token is a public JWT — no user auth needed for read operations. Token is available via `MusicKit.getInstance().developerToken` in browser context where podcasts.apple.com has been loaded. Categories endpoint (/categories) returns 500 — genre info available as `genreNames` attribute on podcast objects. Offset-based pagination (not cursor/bookmark).
+**Verification:** compile-time verify (auth extraction pending browser)
+**Commit:** pending

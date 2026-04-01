@@ -4,14 +4,15 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.redfin.com",
-  "description": "Redfin home search, property details, estimate, photos, history, market insights, similar homes — page_global_data extraction from SSR-rendered pages",
+  "description": "Real estate search, property details, and housing market data via browser DOM/JSON-LD extraction",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
-    "operation_count": 7,
+    "operation_count": 3,
     "l1_count": 0,
-    "l2_count": 7,
+    "l2_count": 3,
     "l3_count": 0,
     "ws_count": 0
-  }
+  },
+  "quarantined": false
 }
