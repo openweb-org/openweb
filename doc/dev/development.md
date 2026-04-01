@@ -133,11 +133,11 @@ src/
 
 ## Site Resolution
 
-1. `~/.openweb/sites/<site>/openapi.yaml` -- User-installed (primary, seeded by `openweb init`)
+1. `$OPENWEB_HOME/sites/<site>/openapi.yaml` -- User-installed (primary, seeded by `openweb init`)
 2. `./src/sites/<site>/openapi.yaml` -- Development fixtures (dev fallback)
-3. `~/.openweb/registry/<site>/current` -> versioned -- Registry
+3. `$OPENWEB_HOME/registry/<site>/current` -> versioned -- Registry
 
-`openweb init` copies bundled sites to `~/.openweb/sites/` (idempotent). Site names: `/^[a-z0-9][a-z0-9_-]*$/`.
+`openweb init` copies bundled sites to `$OPENWEB_HOME/sites/` (idempotent). Site names: `/^[a-z0-9][a-z0-9_-]*$/`.
 
 ## Fixture Layout
 
@@ -210,7 +210,7 @@ openweb instagram getTimeline '{}'  # verify execution end-to-end
 openweb verify --all                # batch verify all sites
 ```
 
-When testing the installed binary, replace all `pnpm dev` with `openweb`. The binary resolves sites from `dist/sites/` (bundled read-only) or `~/.openweb/sites/` (user-installed).
+When testing the installed binary, replace all `pnpm dev` with `openweb`. The binary resolves sites from `dist/sites/` (bundled read-only) or `$OPENWEB_HOME/sites/` (user-installed).
 
 ## Troubleshooting
 
@@ -219,9 +219,9 @@ When testing the installed binary, replace all `pnpm dev` with `openweb`. The bi
 | `pnpm dev` fails | Run `pnpm build` first |
 | CDP connection refused | Run `pnpm dev browser start` |
 | Auth fails on exec | Run `pnpm dev login <site>` then `pnpm dev browser restart` |
-| Permission denied | Update `~/.openweb/permissions.yaml` or confirm the operation |
+| Permission denied | Update `$OPENWEB_HOME/permissions.yaml` or confirm the operation |
 | SSRF validation error | Target URL must be HTTPS + public IP |
-| "Site not found" | Check `src/sites/` or `~/.openweb/sites/` |
+| "Site not found" | Check `src/sites/` or `$OPENWEB_HOME/sites/` |
 
 ## Detailed Documentation
 

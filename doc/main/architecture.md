@@ -88,7 +88,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 | **Capture** | CDP browser recording (HAR + WS + state + DOM), no content filtering, body-size-gate only | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17), unfiltered (v2) |
 | **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skill/openweb/references/` | 2 process docs + 2 deep refs + 7 knowledge files |
 | **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete — npm binary `openweb` (M33) |
-| **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `~/.openweb/sites/` (installed) | 68 sites with DOC.md + PROGRESS.md |
+| **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `$OPENWEB_HOME/sites/` (installed) | 68 sites with DOC.md + PROGRESS.md |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `skill/openweb/SKILL.md` | 5-intent router (M38) |
 
 ---
@@ -135,7 +135,7 @@ Auth, CSRF, and signing are resolved as a pipeline on every L2 request:
 ## CLI Interface
 
 ```bash
-openweb init                                   # seed default sites to ~/.openweb/sites/
+openweb init                                   # seed default sites to $OPENWEB_HOME/sites/
 openweb sites [--json]                         # list compiled sites
 openweb <site> [--json]                        # list operations (tools)
 openweb <site> <op> [--json] [--example]       # show params + response schema
@@ -170,7 +170,7 @@ Operations carry a `permission` category that gates execution:
 | `transact` | checkout/purchase/payment paths | `deny` |
 
 When `x-openweb.permission` is absent, the runtime derives permission from HTTP method + API path (fail-closed). Paths matching `/checkout|purchase|payment|order|subscribe/` are auto-escalated to `transact`.
-Policy is configurable per-site in `~/.openweb/permissions.yaml`.
+Policy is configurable per-site in `$OPENWEB_HOME/permissions.yaml` (defaults to `~/.openweb/permissions.yaml`).
 `prompt` policy returns a structured error for the agent to relay to the user.
 
 -> See: `src/lib/permissions.ts`, `src/runtime/executor.ts`
@@ -179,9 +179,9 @@ Policy is configurable per-site in `~/.openweb/permissions.yaml`.
 
 ## Browser Lifecycle (M14)
 
-`openweb browser start` copies auth-relevant files from the default Chrome profile to a secure temp directory (`mkdtemp`, mode 0o700), launches Chrome with CDP, and saves PID/port to `~/.openweb/`. All `exec` commands auto-detect the managed browser — no `--cdp-endpoint` needed.
+`openweb browser start` copies auth-relevant files from the default Chrome profile to a secure temp directory (`mkdtemp`, mode 0o700), launches Chrome with CDP, and saves PID/port to `$OPENWEB_HOME/`. All `exec` commands auto-detect the managed browser — no `--cdp-endpoint` needed.
 
-Token cache at `~/.openweb/vault.json` stores cookies + localStorage + sessionStorage with AES-256-GCM encryption and PBKDF2 machine-binding. JWT-aware TTL. Cache hit → no browser connection needed. 401/403 → cache invalidated → browser fallback.
+Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessionStorage with AES-256-GCM encryption and PBKDF2 machine-binding. JWT-aware TTL. Cache hit → no browser connection needed. 401/403 → cache invalidated → browser fallback.
 
 -> See: `src/commands/browser.ts`, `src/runtime/token-cache.ts`
 

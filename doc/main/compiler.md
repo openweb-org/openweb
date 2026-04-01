@@ -174,7 +174,7 @@ Child process is killed after 120s (`TIMEOUT.recording`, env-overridable via
 
 ## Report Format
 
-All compile artifacts are written to `~/.openweb/compile/<site>/`:
+All compile artifacts are written to `$OPENWEB_HOME/compile/<site>/`:
 
 | File | Content | When |
 |------|---------|------|
