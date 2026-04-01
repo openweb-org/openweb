@@ -4,15 +4,20 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://music.youtube.com",
-  "description": "Music streaming platform — search, albums, playlists, artists, songs, lyrics, charts via InnerTube API",
+  "description": "Music streaming — search, albums, playlists, artists, songs, charts via InnerTube API",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
-    "operation_count": 10,
+    "operation_count": 9,
     "l1_count": 0,
-    "l2_count": 0,
-    "l3_count": 10,
+    "l2_count": 9,
+    "l3_count": 0,
     "ws_count": 0
   },
-  "quarantined": true
+  "last_verified": "2026-04-01T17:50:18.538Z",
+  "quarantined": false,
+  "fingerprint": {
+    "response_shape_hash": "browseCharts:d5f924bafe757100,browseHome:4650d1e40297b07f,getAlbum:41c04e30d010626a,getArtist:40557494a8e23bab,getPlaylist:41c04e30d010626a,getSearchSuggestions:7fd3257c575a73cd,getSong:efe9f7065a858c58,getUpNext:3932ededa47cab44,searchMusic:c1ce898c07e99994",
+    "last_validated": "2026-04-01T17:50:18.540Z"
+  }
 }

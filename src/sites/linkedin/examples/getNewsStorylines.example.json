@@ -1,0 +1,18 @@
+{
+  "operation_id": "getNewsStorylines",
+  "method": "get",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "includeWebMetadata": "true",
+        "queryId": "voyagerNewsDashStorylines.c042ce89aeaa19a94ba27cf715164f46",
+        "variables": "()"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

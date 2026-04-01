@@ -1,0 +1,16 @@
+{
+  "operation_id": "getPlaylist",
+  "method": "post",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "browseId": "VLPL4fGSI1pDJn6puJdseH2Rt9sMvt9E2M4i"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

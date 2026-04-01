@@ -1,0 +1,18 @@
+{
+  "operation_id": "getProfile",
+  "method": "get",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "includeWebMetadata": "true",
+        "queryId": "voyagerIdentityDashProfiles.34ead06db82a2cc9a778fac97f69ad6a",
+        "variables": "(vanityName:qi-guo)"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

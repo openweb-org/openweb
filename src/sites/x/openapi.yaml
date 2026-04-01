@@ -1,0 +1,923 @@
+openapi: 3.1.0
+info:
+  title: x
+  version: 1.0.0
+  x-openweb:
+    spec_version: "2.0"
+    compiled_at: 2026-04-01T17:02:13.234Z
+    requires_auth: true
+servers:
+  - url: https://x.com
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+      csrf:
+        type: cookie_to_header
+        cookie: ct0
+        header: x-csrf-token
+        scope: [GET, POST, PUT, DELETE]
+paths:
+  /i/api/graphql/{id}/HomeTimeline:
+    get:
+      operationId: getHomeTimeline
+      summary: "Get home timeline — tweets, retweets, promoted content with author info, engagement counts, cursor pagination"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 094ad7404e54e3b4
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for HomeTimeline
+        - name: variables
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "JSON-encoded variables: count (int), includePromotedContent (bool), requestContext (string)"
+          example: '{"count":20,"includePromotedContent":true,"requestContext":"launch","withCommunity":true}'
+        - name: features
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JSON-encoded feature flags (browser sends these automatically)
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      home:
+                        type: object
+                        properties:
+                          home_timeline_urt:
+                            type: object
+                            properties:
+                              instructions:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    type:
+                                      type: string
+                                    entries:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          entryId:
+                                            type: string
+                                          sortIndex:
+                                            type: string
+                                          content:
+                                            type: object
+                                            properties:
+                                              entryType:
+                                                type: string
+                                              itemContent:
+                                                type: object
+                                                properties:
+                                                  tweet_results:
+                                                    type: object
+                                                  tweetDisplayType:
+                                                    type: string
+                                              cursorType:
+                                                type: string
+                                              value:
+                                                type: string
+                              metadata:
+                                type: object
+
+  /i/api/graphql/{id}/TweetDetail:
+    get:
+      operationId: getTweetDetail
+      summary: "Get tweet detail — full tweet content, replies thread, author info, engagement counts, media, quoted tweets"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 40f50380aa7c842d
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for TweetDetail
+        - name: variables
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "JSON-encoded variables: focalTweetId (string, required), referrer (string), rankingMode (string), includePromotedContent (bool)"
+          example: '{"focalTweetId":"1234567890","with_rux_injections":false,"rankingMode":"Relevance","includePromotedContent":true,"withCommunity":true,"withQuickPromoteEligibilityTweetFields":true,"withBirdwatchNotes":true,"withVoice":true}'
+        - name: features
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JSON-encoded feature flags
+        - name: fieldToggles
+          in: query
+          required: false
+          schema:
+            type: string
+          description: JSON-encoded field toggles for article content
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      threaded_conversation_with_injections_v2:
+                        type: object
+                        properties:
+                          instructions:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                type:
+                                  type: string
+                                entries:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      entryId:
+                                        type: string
+                                      sortIndex:
+                                        type: string
+                                      content:
+                                        type: object
+                                        properties:
+                                          entryType:
+                                            type: string
+                                          itemContent:
+                                            type: object
+                                            properties:
+                                              tweet_results:
+                                                type: object
+                                              tweetDisplayType:
+                                                type: string
+                          metadata:
+                            type: object
+
+  /i/api/graphql/{id}/UserByScreenName:
+    get:
+      operationId: getUserByScreenName
+      summary: "Get user profile by screen name — name, bio, followers/following count, verified status, profile image, join date, pinned tweets"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: b690ce172d53e653
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for UserByScreenName
+        - name: variables
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "JSON-encoded variables: screen_name (string, required)"
+          example: '{"screen_name":"openai","withGrokTranslatedBio":true}'
+        - name: features
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JSON-encoded feature flags
+        - name: fieldToggles
+          in: query
+          required: false
+          schema:
+            type: string
+          description: JSON-encoded field toggles
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          result:
+                            type: object
+                            properties:
+                              __typename:
+                                type: string
+                              rest_id:
+                                type: string
+                                description: Numeric user ID
+                              core:
+                                type: object
+                                properties:
+                                  created_at:
+                                    type: string
+                                  name:
+                                    type: string
+                                  screen_name:
+                                    type: string
+                              legacy:
+                                type: object
+                                properties:
+                                  description:
+                                    type: string
+                                  followers_count:
+                                    type: integer
+                                  friends_count:
+                                    type: integer
+                                  favourites_count:
+                                    type: integer
+                                  statuses_count:
+                                    type: integer
+                                  media_count:
+                                    type: integer
+                                  listed_count:
+                                    type: integer
+                                  profile_banner_url:
+                                    type: string
+                                    format: uri
+                                  pinned_tweet_ids_str:
+                                    type: array
+                                    items:
+                                      type: string
+                              is_blue_verified:
+                                type: boolean
+                              verification:
+                                type: object
+                                properties:
+                                  verified:
+                                    type: boolean
+                                  verified_type:
+                                    type: string
+                              avatar:
+                                type: object
+                                properties:
+                                  image_url:
+                                    type: string
+                                    format: uri
+
+  /i/api/graphql/{id}/SearchTimeline:
+    get:
+      operationId: searchTweets
+      summary: "Search tweets by keyword — tweet results with author info, engagement counts, media, cursor pagination"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 5c9b3e64cc81d1a8
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for SearchTimeline
+        - name: variables
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "JSON-encoded variables: rawQuery (string, required), count (int), querySource (string), product (string: Top|Latest|People|Photos|Videos)"
+          example: '{"rawQuery":"openai","count":20,"querySource":"typed_query","product":"Latest"}'
+        - name: features
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JSON-encoded feature flags
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      search_by_raw_query:
+                        type: object
+                        properties:
+                          search_timeline:
+                            type: object
+                            properties:
+                              timeline:
+                                type: object
+                                properties:
+                                  instructions:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        type:
+                                          type: string
+                                        entries:
+                                          type: array
+                                          items:
+                                            type: object
+
+  /i/api/graphql/{id}/Followers:
+    get:
+      operationId: getUserFollowers
+      summary: "Get user followers — list of follower profiles with bio, follow counts, verified status, cursor pagination"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 2aaf96a63e4e20f7
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for Followers
+        - name: variables
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "JSON-encoded variables: userId (string, required — from getUserByScreenName rest_id), count (int)"
+          example: '{"userId":"4398626122","count":20,"includePromotedContent":false}'
+        - name: features
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JSON-encoded feature flags
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          result:
+                            type: object
+                            properties:
+                              timeline:
+                                type: object
+                                properties:
+                                  timeline:
+                                    type: object
+                                    properties:
+                                      instructions:
+                                        type: array
+                                        items:
+                                          type: object
+
+  /i/api/graphql/{id}/Following:
+    get:
+      operationId: getUserFollowing
+      summary: "Get user following — list of accounts the user follows with profile info, cursor pagination"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 7ac2c68ca93d8b16
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for Following
+        - name: variables
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "JSON-encoded variables: userId (string, required — from getUserByScreenName rest_id), count (int)"
+          example: '{"userId":"4398626122","count":20,"includePromotedContent":false}'
+        - name: features
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JSON-encoded feature flags
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          result:
+                            type: object
+                            properties:
+                              timeline:
+                                type: object
+                                properties:
+                                  timeline:
+                                    type: object
+                                    properties:
+                                      instructions:
+                                        type: array
+                                        items:
+                                          type: object
+
+  /i/api/graphql/{id}/UserTweets:
+    get:
+      operationId: getUserTweets
+      summary: "Get user's tweets — timeline of tweets by a specific user with engagement counts, media, cursor pagination"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: c847d0a51b3bd2e1
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for UserTweets
+        - name: variables
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "JSON-encoded variables: userId (string, required — from getUserByScreenName rest_id), count (int)"
+          example: '{"userId":"44196397","count":20,"includePromotedContent":true,"withQuickPromoteEligibilityTweetFields":true,"withVoice":true,"withV2Timeline":true}'
+        - name: features
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JSON-encoded feature flags
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          result:
+                            type: object
+                            properties:
+                              timeline_v2:
+                                type: object
+                                properties:
+                                  timeline:
+                                    type: object
+                                    properties:
+                                      instructions:
+                                        type: array
+                                        items:
+                                          type: object
+
+  /i/api/graphql/{id}/FavoriteTweet:
+    post:
+      operationId: likeTweet
+      summary: "Like a tweet"
+      x-openweb:
+        permission: write
+        build:
+          stable_id: 8e1f27c7f48a6bf5
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for FavoriteTweet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                variables:
+                  type: object
+                  properties:
+                    tweet_id:
+                      type: string
+                      description: Tweet ID to like
+                  required:
+                    - tweet_id
+              required:
+                - variables
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      favorite_tweet:
+                        type: string
+
+  /i/api/graphql/{id}/UnfavoriteTweet:
+    post:
+      operationId: unlikeTweet
+      summary: "Unlike a tweet"
+      x-openweb:
+        permission: write
+        build:
+          stable_id: 4cb79114b9ccaa27
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for UnfavoriteTweet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                variables:
+                  type: object
+                  properties:
+                    tweet_id:
+                      type: string
+                      description: Tweet ID to unlike
+                  required:
+                    - tweet_id
+              required:
+                - variables
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      unfavorite_tweet:
+                        type: string
+
+  /i/api/graphql/{id}/CreateBookmark:
+    post:
+      operationId: createBookmark
+      summary: "Bookmark a tweet"
+      x-openweb:
+        permission: write
+        build:
+          stable_id: b2c4ea53219c3d2a
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for CreateBookmark
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                variables:
+                  type: object
+                  properties:
+                    tweet_id:
+                      type: string
+                      description: Tweet ID to bookmark
+                  required:
+                    - tweet_id
+              required:
+                - variables
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /i/api/graphql/{id}/DeleteBookmark:
+    post:
+      operationId: deleteBookmark
+      summary: "Remove a tweet bookmark"
+      x-openweb:
+        permission: write
+        build:
+          stable_id: d6e3a19c85c7f432
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for DeleteBookmark
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                variables:
+                  type: object
+                  properties:
+                    tweet_id:
+                      type: string
+                      description: Tweet ID to unbookmark
+                  required:
+                    - tweet_id
+              required:
+                - variables
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /i/api/graphql/{id}/CreateRetweet:
+    post:
+      operationId: createRetweet
+      summary: "Retweet a tweet"
+      x-openweb:
+        permission: write
+        build:
+          stable_id: 3f7d28c951e2b4a6
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for CreateRetweet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                variables:
+                  type: object
+                  properties:
+                    tweet_id:
+                      type: string
+                      description: Tweet ID to retweet
+                  required:
+                    - tweet_id
+              required:
+                - variables
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      create_retweet:
+                        type: object
+                        properties:
+                          retweet_results:
+                            type: object
+                            properties:
+                              result:
+                                type: object
+                                properties:
+                                  rest_id:
+                                    type: string
+                                  legacy:
+                                    type: object
+
+  /i/api/graphql/{id}/DeleteRetweet:
+    post:
+      operationId: deleteRetweet
+      summary: "Undo a retweet"
+      x-openweb:
+        permission: write
+        build:
+          stable_id: 9a8bc3d4e5f61728
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for DeleteRetweet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                variables:
+                  type: object
+                  properties:
+                    source_tweet_id:
+                      type: string
+                      description: Original tweet ID to un-retweet
+                  required:
+                    - source_tweet_id
+              required:
+                - variables
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      unretweet:
+                        type: object
+
+  /i/api/graphql/{id}/ExplorePage:
+    get:
+      operationId: getExplorePage
+      summary: "Get explore/trending page — trending topics, recommended content, news"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 6d8f4c2e1a3b5970
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: GraphQL persisted query hash for ExplorePage
+        - name: variables
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "JSON-encoded variables"
+          example: '{}'
+        - name: features
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JSON-encoded feature flags
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      explore_page:
+                        type: object
+                        properties:
+                          body:
+                            type: object
+                            properties:
+                              timelines:
+                                type: array
+                                items:
+                                  type: object
+
+  /i/api/1.1/search/typeahead.json:
+    get:
+      operationId: searchTypeahead
+      summary: "Search typeahead/autocomplete — users, topics, events matching query prefix"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 17bbfb7a90bfabc7
+          tool_version: 2
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query prefix
+          example: openai
+        - name: result_type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Comma-separated result types: events, users, topics, lists"
+          example: "events,users,topics,lists"
+        - name: src
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search source context
+          example: search_box
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json;charset=utf-8:
+              schema:
+                type: object
+                properties:
+                  num_results:
+                    type: integer
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        id_str:
+                          type: string
+                        name:
+                          type: string
+                        screen_name:
+                          type: string
+                        verified:
+                          type: boolean
+                        is_blue_verified:
+                          type: boolean
+                        profile_image_url_https:
+                          type: string
+                          format: uri
+                  topics:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        topic:
+                          type: string
+                        inline:
+                          type: boolean
+      servers:
+        - url: https://api.x.com

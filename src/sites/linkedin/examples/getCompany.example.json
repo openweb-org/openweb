@@ -1,0 +1,18 @@
+{
+  "operation_id": "getCompany",
+  "method": "get",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "includeWebMetadata": "true",
+        "queryId": "voyagerOrganizationDashCompanies.2fce873504d824e22294f312f718b4c7",
+        "variables": "(count:6,viewerPermissions:(canReadOrganizationUpdateAnalytics:true))"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

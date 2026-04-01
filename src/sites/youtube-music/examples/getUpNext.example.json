@@ -1,0 +1,16 @@
+{
+  "operation_id": "getUpNext",
+  "method": "post",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "videoId": "dQw4w9WgXcQ"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

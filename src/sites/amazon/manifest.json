@@ -1,17 +1,14 @@
 {
   "name": "amazon",
-  "display_name": "Amazon",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.amazon.com",
-  "description": "Amazon product search, detail, reviews, Q&A, deals, and cart via browser DOM extraction",
+  "compiled_at": "2026-04-01T16:53:30.021Z",
   "requires_auth": false,
-  "dependencies": {},
-  "stats": {
-    "operation_count": 6,
-    "l1_count": 5,
-    "l2_count": 0,
-    "l3_count": 1,
-    "ws_count": 0
+  "last_verified": "2026-04-01T17:03:17.369Z",
+  "quarantined": false,
+  "fingerprint": {
+    "response_shape_hash": "",
+    "last_validated": "2026-04-01T17:03:17.369Z"
   }
 }

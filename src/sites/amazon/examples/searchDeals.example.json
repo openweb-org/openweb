@@ -1,0 +1,12 @@
+{
+  "operation_id": "searchDeals",
+  "cases": [
+    {
+      "input": { "startIndex": 1, "pageSize": 5 },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,64 +1,90 @@
 # LinkedIn
 
 ## Overview
-Professional social network. Archetype: social.
+Professional networking platform — social media archetype with Voyager REST/GraphQL API.
 
-## Quick Start
+## Workflows
 
-Copy-paste commands for common intents:
+### Look up a person's profile
+1. `getProfile(vanityName)` → profile data with URN
+2. `getProfileByUrn(id, decorationId)` → full profile with experience, education, skills
 
-```bash
-# Search people by keyword
-openweb linkedin.com exec get_search_results_people '{"keywords":"software engineer"}'
+### Browse feed and news
+1. `getFeed(queryId, variables)` → posts, articles, shares
+2. `getNewsStorylines(queryId, variables)` → trending topics, curated news
 
-# Search jobs by keyword
-openweb linkedin.com exec search_jobs '{"keywords":"frontend developer"}'
+### Search people, jobs, or content
+Search is not yet supported — queryIds rotate with LinkedIn deploys and the captured queryId was stale.
 
-# Search content/posts by keyword
-openweb linkedin.com exec get_search_results_content '{"keywords":"machine learning"}'
+### Check connections and invitations
+1. `getConnectionsSummary()` → total count, new connections
+2. `getInvitations(q, count, start)` → pending invites with sender info
+3. `getMyNetworkNotifications()` → connection suggestions
 
-# Get a person's profile (replace slug with LinkedIn profile slug)
-openweb linkedin.com exec get_voyager_identity_normalizedprofile '{"id":"satyanadella"}'
-
-# Get job posting details (GraphQL — use openweb linkedin.com voyager_jobs_job_postings --example for queryId)
-openweb linkedin.com exec voyager_jobs_job_postings '{"includeWebMetadata":"true","queryId":"<queryId from --example>","variables":"(jobPostingUrn:urn%3Ali%3Afsd_jobPosting%3A<JOB_ID>)"}'
-```
-
-Note: GraphQL operations (`voyager_*`) require `queryId` hashes that change with LinkedIn deploys. Always run `openweb linkedin.com <op> --example` first to get the current queryId.
+### Check notifications
+1. `getNotificationCards(decorationId, q, count)` → likes, comments, mentions, job alerts
 
 ## Operations
 
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| voyager_identity_profiles | Search/get person profile | GET /voyager/api/graphql | GraphQL, queryId=voyagerIdentityDashProfiles, variables=(memberIdentity:...) |
-| get_voyager_identity_normalizedprofile | Get person profile details | GET /voyager/api/identity/normalizedProfiles/{id} | REST, returns full profile |
-| list_voyager_voyagerjobsdashjobcards | Search jobs by keyword | GET /voyager/api/voyagerJobsDashJobCards | REST, q=jobSearch, query=(keywords:...) |
-| voyager_jobs_job_postings | Get job posting details | GET /voyager/api/graphql | GraphQL, queryId=voyagerJobsDashJobPostings, variables=(jobPostingUrn:urn%3Ali%3Afsd_jobPosting%3A...) |
-| voyager_jobs_job_posting_detail_sections | Get job posting sections | GET /voyager/api/graphql | GraphQL, queryId=voyagerJobsDashJobPostingDetailSections |
-| voyager_lego_page_contents | Search content/posts | GET /voyager/api/graphql | GraphQL, queryId=voyagerLegoDashPageContents, variables=(pageKey:...,slotId:...) |
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| getMe | get own profile | — | name, headline, profileUrn | entry point |
+| getProfile | get profile by vanity name | vanityName (URL slug) | name, headline, location, industry | via GraphQL |
+| getProfileByUrn | get full profile by URN | id ← getMe/getProfile, decorationId | experience, education, skills | FullProfile-76 decoration |
+| getFeed | get main feed | count, sortOrder | posts, shares, author info, engagement | via GraphQL |
+| getConnectionsSummary | connection counts | — | total connections, new count | |
+| getInvitations | pending invites | q=receivedInvitation, count, start | sender info, shared connections | paginated |
+| getNotificationCards | notifications | decorationId, count, q | likes, comments, mentions, job alerts | |
+| getNewsStorylines | trending news | — | topics, articles, industry updates | via GraphQL |
+| getCompany | company page | universalName (URL slug) | name, industry, size, followers | via GraphQL |
+| getMyNetworkNotifications | network updates | — | connection suggestions | |
+
+## Quick Start
+
+```bash
+# Get own profile
+openweb linkedin exec getMe '{}'
+
+# Get someone's profile by vanity name
+openweb linkedin exec getProfile '{"queryId":"voyagerIdentityDashProfiles.34ead06db82a2cc9a778fac97f69ad6a","variables":"(vanityName:williamhgates)"}'
+
+# Get main feed
+openweb linkedin exec getFeed '{"queryId":"voyagerFeedDashMainFeed.923020905727c01516495a0ac90bb475","variables":"(count:10,sortOrder:RELEVANCE)"}'
+
+# Get company info
+openweb linkedin exec getCompany '{"queryId":"voyagerOrganizationDashCompanies.2fce873504d824e22294f312f718b4c7","variables":"(universalName:microsoft)"}'
+
+# Get connection invitations
+openweb linkedin exec getInvitations '{"q":"receivedInvitation","count":10,"start":0}'
+
+# Get notification cards
+openweb linkedin exec getNotificationCards '{"decorationId":"com.linkedin.voyager.dash.deco.identity.notifications.CardsCollectionWithInjectionsNoPills-24","q":"filterVanityName","count":10}'
+```
+
+---
+
+## Site Internals
 
 ## API Architecture
-- **Voyager GraphQL** (`/voyager/api/graphql`) — primary data API with persisted queries via `queryId` param
-- **Voyager REST** (`/voyager/api/...`) — REST endpoints for jobs, identity, messaging
-- **RSC** (`/flagship-web/rsc-action/actions/...`) — React Server Components for feed and UI
-- Variables use LinkedIn's custom format: `(key:value,key2:value2)` not JSON
-- URN values within variables must have colons encoded: `urn%3Ali%3Afsd_jobPosting%3A123`
-- queryId hashes are persisted query IDs tied to server deployments; may change over time
+LinkedIn uses a hybrid Voyager REST + GraphQL API:
+- **REST endpoints**: `/voyager/api/me`, `/voyager/api/relationships/*`, `/voyager/api/identity/dash/*`
+- **GraphQL endpoints**: `/voyager/api/graphql` with `queryId` parameter for operation dispatch
+- **Messaging GraphQL**: Separate endpoint at `/voyager/api/voyagerMessagingGraphQL/graphql`
+- Parameters use Rest.li tuple syntax: `(key:value,nested:(a:1,b:2))` not JSON
+- Responses use LinkedIn normalized JSON format with `included` array for referenced entities
 
 ## Auth
-- Type: `cookie_session` + `cookie_to_header` CSRF
-- CSRF: `JSESSIONID` cookie value → `csrf-token` header (strip quotes from cookie value)
-- Auto-detection picked wrong CSRF (`lc-main` → `x-li-lang` locale cookie) — manual override required
-- Login required for all Voyager API endpoints
+- **Type**: `cookie_session` with CSRF
+- **CSRF**: `cookie_to_header` — JSESSIONID cookie value → `csrf-token` header
+- **CSRF scope**: ALL methods including GET (unusual — most sites only require CSRF on mutations)
+- **Key cookies**: `li_at` (auth token), `JSESSIONID` (session/CSRF), `liap` (premium flag)
 
 ## Transport
-- `page` transport required — LinkedIn uses bot detection (status 999) and custom request signing
-- Requires an open LinkedIn tab in the managed browser
+- **Default**: `node` — LinkedIn's API works with cookie-based auth from Node.js
+- Bot detection is moderate (PerimeterX `_px3` cookie observed) but node transport with valid cookies works
 
 ## Known Issues
-- Status 999 (bot detection) on HTML page requests with node transport
-- CSRF auto-detection fails — always picks locale cookie instead of JSESSIONID
-- GraphQL queryId hashes change with LinkedIn deploys — may need periodic re-capture
-- URLSearchParams over-encodes `( ) ,` which LinkedIn rejects — fixed in runtime with minimal encoding
-- 71 operations compiled but only ~6 are target intents; rest are supporting/background ops
-- Some GraphQL operations return 400 if URN colons are not percent-encoded
+- **GraphQL queryIds are versioned**: If operations stop working, queryIds may have changed. Re-capture to get fresh queryIds.
+- **Rest.li tuple encoding**: Variables must use LinkedIn's tuple format `(key:value)`, not JSON. Nested tuples and List() are supported.
+- **Decoration IDs**: Profile and notification endpoints use `decorationId` to control response depth. Wrong decoration may return partial data.
+- **Search 500s**: Search can return 500 if the variables string encoding is malformed. Ensure proper URL-encoding of spaces and special characters.

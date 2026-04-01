@@ -1,44 +1,89 @@
-# YouTube Music Fixture
+# YouTube Music
 
 ## Overview
+YouTube Music (music.youtube.com) is Google's music streaming platform. Content Platform archetype — all public data served through the InnerTube API.
 
-YouTube Music (music.youtube.com) is Google's music streaming platform. All public data is served through the **InnerTube API** at `/youtubei/v1/` — the same API backend used by regular YouTube, but with client name `WEB_REMIX`.
+## Workflows
 
-## Architecture
+### Search and play a song
+1. `searchMusic(query)` → results with `videoId` per song
+2. `getSong(videoId)` → title, artist, duration, view count, thumbnail
+3. `getUpNext(videoId)` → related tracks, lyrics browseId
 
-- **Transport**: `page` — browser fetch via same-origin (Google bot detection)
-- **API type**: InnerTube REST (POST JSON with context object)
-- **Auth**: None for public data; API key extracted from `ytcfg` page global
+### Explore an artist
+1. `searchMusic(query)` → results with artist `browseId` (UC...)
+2. `getArtist(browseId)` → top songs, albums, singles, videos, related artists
+3. `getAlbum(browseId)` → full track list for an album (MPREb_...)
+
+### Browse an album or playlist
+1. `getAlbum(browseId)` → album tracks, artist, year, thumbnail
+2. `getPlaylist(browseId)` → playlist tracks, creator, description
+
+### Discover music
+1. `browseHome()` → personalized recommendations, new releases
+2. `browseCharts()` → top songs, trending, top artists by country
+
+## Operations
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| searchMusic | search songs/albums/artists | query | sections with videoId, browseId, title, artist | entry point |
+| getAlbum | album details + tracks | browseId (MPREb_...) ← searchMusic | title, artist, year, tracks with videoId | |
+| getPlaylist | playlist details + tracks | browseId (VL...) ← searchMusic | title, creator, tracks with videoId | |
+| getArtist | artist page | browseId (UC...) ← searchMusic | name, subscribers, top songs, albums, singles | |
+| getSong | song metadata | videoId ← searchMusic | title, artist, duration, viewCount, thumbnail | |
+| getUpNext | related tracks + lyrics ID | videoId ← searchMusic | related tracks, lyrics browseId, autoplay | |
+| getSearchSuggestions | search autocomplete | input (partial query) | suggested completions | entry point |
+| browseHome | homepage recommendations | — | sections with playlists, new releases | entry point |
+| browseCharts | music charts | — | top songs, trending, top artists | entry point |
+
+## Quick Start
+
+```bash
+# Search for music
+openweb youtube-music exec searchMusic '{"query": "Bohemian Rhapsody"}'
+
+# Get album details
+openweb youtube-music exec getAlbum '{"browseId": "MPREb_9nqEki4ZDpp"}'
+
+# Get artist page
+openweb youtube-music exec getArtist '{"browseId": "UCiMhD4jzUqG-IgPzUmmytRQ"}'
+
+# Get song metadata
+openweb youtube-music exec getSong '{"videoId": "dQw4w9WgXcQ"}'
+
+# Get search suggestions
+openweb youtube-music exec getSearchSuggestions '{"input": "taylor sw"}'
+
+# Browse homepage
+openweb youtube-music exec browseHome '{}'
+
+# Browse charts
+openweb youtube-music exec browseCharts '{}'
+```
+
+---
+
+## Site Internals
+
+## API Architecture
+- **Protocol**: InnerTube REST API (POST JSON)
+- **Domain**: `music.youtube.com/youtubei/v1/`
 - **Client**: `WEB_REMIX` (YouTube Music's InnerTube client identifier)
-- **API key**: Public key from `ytcfg.get('INNERTUBE_API_KEY')`
+- **Pattern**: Every request is POST with JSON body containing `context` (auto-injected) and operation-specific params. API key passed as query param.
+- **Browse multiplexing**: The `/youtubei/v1/browse` endpoint serves albums, playlists, artists, home, and charts — differentiated by `browseId` prefix pattern.
+- **Response nesting**: Responses use deeply nested renderer objects (e.g., `musicShelfRenderer`, `musicCarouselShelfRenderer`). Consumers should traverse to extract user-facing fields.
 
-## Operations (10)
+## Auth
+No auth required for public data. API key (`AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30`) is public and auto-injected as a `const` query parameter.
 
-| Operation | Endpoint | Description |
-|-----------|----------|-------------|
-| `searchMusic` | `/search` | Search songs, albums, artists, playlists by keyword |
-| `getAlbum` | `/browse` | Album details with full track list (browseId: MPREb_...) |
-| `getPlaylist` | `/browse` | Playlist details with tracks (browseId: VL...) |
-| `getArtist` | `/browse` | Artist page — top songs, albums, singles, videos (channelId: UC...) |
-| `getSong` | `/player` | Song metadata — title, artist, duration, view count |
-| `getUpNext` | `/next` | Up-next queue, related tracks, lyrics/related browse IDs |
-| `getLyrics` | `/next` + `/browse` | Song lyrics with source attribution (auto-resolves from videoId) |
-| `browseHome` | `/browse` | Home page recommendation sections |
-| `getSearchSuggestions` | `/music/get_search_suggestions` | Search autocomplete suggestions |
-| `browseCharts` | `/browse` | Charts — top songs, video charts, genres, top artists |
+For personalized results (recommendations, history), Google account login with `sapisidhash` signing would be needed — not currently supported.
 
-## Key Patterns
+## Transport
+`node` — InnerTube API accepts direct HTTP requests without cookies or bot detection challenges. No browser needed.
 
-- **InnerTube context**: Every request includes a `context` object with `clientName: WEB_REMIX` and `clientVersion`. The version updates periodically but the API is backward-compatible.
-- **Browse IDs**: Albums use `MPREb_` prefix, playlists use `VL` prefix, artists use `UC` channel IDs, special pages use `FEmusic_` prefix (home, explore, charts).
-- **Response nesting**: YouTube Music responses are deeply nested with renderer objects. The adapter extracts and flattens the relevant data.
-- **Two-column layout**: Albums and playlists use `twoColumnBrowseResultsRenderer` (header in primary, tracks in secondary). Artists and charts use `singleColumnBrowseResultsRenderer`.
-- **Lyrics**: Two-step process — first call `/next` to get the lyrics browse ID from tab[1], then call `/browse` with that ID.
-
-## Limitations
-
-- API key and client version are extracted from `ytcfg` page global — requires page to be loaded
-- Personalized recommendations require login (home page returns generic content without auth)
-- Radio/auto-generated playlists (RDCLAK...) may return limited data without auth
-- Client version updates periodically; API remains backward-compatible but version mismatch may affect some features
-- No write operations (creating playlists, liking songs requires auth)
+## Known Issues
+- **Client version**: Hardcoded to `1.20260327.10.00`. YouTube updates this periodically; the API is backward-compatible but may eventually require a version bump.
+- **Deep nesting**: InnerTube responses use complex renderer hierarchies. Raw JSON is large but structured.
+- **No write operations**: Creating playlists, liking songs, subscribing require Google account auth (sapisidhash + cookie_session), not currently implemented.
+- **Radio playlists**: Auto-generated playlists (RDCLAK...) may return limited data without auth.

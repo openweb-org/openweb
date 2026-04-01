@@ -1,0 +1,19 @@
+{
+  "operation_id": "searchTypeahead",
+  "method": "get",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "q": "openai",
+        "result_type": "events,users,topics,lists",
+        "src": "search_box"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ],
+  "operationId": "searchTypeahead"
+}

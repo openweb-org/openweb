@@ -1,0 +1,25 @@
+{
+  "operation_id": "searchMusic",
+  "method": "post",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "query": "Bohemian Rhapsody"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    },
+    {
+      "input": {
+        "query": "Taylor Swift"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

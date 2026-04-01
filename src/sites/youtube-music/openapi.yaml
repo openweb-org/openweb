@@ -1,31 +1,38 @@
-openapi: '3.1.0'
+openapi: "3.1.0"
 info:
   title: YouTube Music API
-  version: '1.0.0'
+  version: "1.0.0"
   x-openweb:
-    spec_version: '2.0'
-    compiled_at: '2026-03-24T00:00:00Z'
+    spec_version: "2.0"
+    compiled_at: "2026-04-01T00:00:00Z"
     requires_auth: false
 servers:
   - url: https://music.youtube.com
     x-openweb:
-      transport: page
+      transport: node
 paths:
-  /search:
+  /youtubei/v1/search:
     post:
       operationId: searchMusic
-      summary: Search for songs, albums, artists, playlists, and videos
+      summary: "Search songs, albums, artists, playlists — returns categorized sections with title, artist, thumbnail, videoId/browseId"
       x-openweb:
         permission: read
-        adapter:
-          name: youtube-music-innertube
-          operation: searchMusic
         build:
-          stable_id: ytm0001
-          tool_version: 1
-          signals:
-            - adapter-verified
-      parameters: []
+          stable_id: ytm_search_v1
+          tool_version: 2
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+        - name: prettyPrint
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: false
       requestBody:
         required: true
         content:
@@ -35,46 +42,61 @@ paths:
               required:
                 - query
               properties:
+                context:
+                  type: object
+                  const:
+                    client:
+                      clientName: WEB_REMIX
+                      clientVersion: "1.20260327.10.00"
+                      hl: en
+                      gl: US
                 query:
                   type: string
-                  description: Search query (song name, artist, album, etc.)
+                  description: Search query (song name, artist, album, playlist)
             example:
               query: Bohemian Rhapsody
       responses:
-        '200':
-          description: Search results grouped by category (songs, albums, artists, etc.)
+        "200":
+          description: Search results grouped by category
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  sections:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        title:
-                          type: string
-                        items:
-                          type: array
-                          items:
-                            type: object
+                  contents:
+                    type: object
+                    properties:
+                      tabbedSearchResultsRenderer:
+                        type: object
+                        properties:
+                          tabs:
+                            type: array
+                            items:
+                              type: object
 
-  /album:
+  /browse/album:
     post:
       operationId: getAlbum
-      summary: Get album details including track list
+      summary: "Get album details — title, artist, year, track list with videoId, duration, play count"
       x-openweb:
         permission: read
-        adapter:
-          name: youtube-music-innertube
-          operation: getAlbum
+        actual_path: /youtubei/v1/browse
         build:
-          stable_id: ytm0002
-          tool_version: 1
-          signals:
-            - adapter-verified
-      parameters: []
+          stable_id: ytm_album_v1
+          tool_version: 2
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+        - name: prettyPrint
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: false
       requestBody:
         required: true
         content:
@@ -84,47 +106,57 @@ paths:
               required:
                 - browseId
               properties:
+                context:
+                  type: object
+                  const:
+                    client:
+                      clientName: WEB_REMIX
+                      clientVersion: "1.20260327.10.00"
+                      hl: en
+                      gl: US
                 browseId:
                   type: string
-                  description: 'Album browse ID (format: MPREb_...)'
+                  description: "Album browse ID (format: MPREb_...)"
             example:
               browseId: MPREb_9nqEki4ZDpp
       responses:
-        '200':
+        "200":
           description: Album metadata and track listing
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  title:
-                    type: string
-                  artist:
-                    type: string
-                  subtitle:
-                    type: string
-                  trackCount:
-                    type: integer
-                  tracks:
-                    type: array
-                    items:
-                      type: object
+                  header:
+                    type: object
+                  contents:
+                    type: object
+                  background:
+                    type: object
 
-  /playlist:
+  /browse/playlist:
     post:
       operationId: getPlaylist
-      summary: Get playlist details and tracks
+      summary: "Get playlist details — title, creator, description, track list with videoId, artist, duration"
       x-openweb:
         permission: read
-        adapter:
-          name: youtube-music-innertube
-          operation: getPlaylist
+        actual_path: /youtubei/v1/browse
         build:
-          stable_id: ytm0003
-          tool_version: 1
-          signals:
-            - adapter-verified
-      parameters: []
+          stable_id: ytm_playlist_v1
+          tool_version: 2
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+        - name: prettyPrint
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: false
       requestBody:
         required: true
         content:
@@ -132,47 +164,57 @@ paths:
             schema:
               type: object
               required:
-                - playlistId
+                - browseId
               properties:
-                playlistId:
+                context:
+                  type: object
+                  const:
+                    client:
+                      clientName: WEB_REMIX
+                      clientVersion: "1.20260327.10.00"
+                      hl: en
+                      gl: US
+                browseId:
                   type: string
-                  description: 'Playlist ID (VL prefix added automatically if missing)'
+                  description: "Playlist browse ID (format: VL... or VLPL... or VLRDCLAK...)"
             example:
-              playlistId: PLgzTt0k8mXzEk586ze4BjvDXR7c-TUSnx
+              browseId: VLPL4fGSI1pDJn6puJdseH2Rt9sMvt9E2M4i
       responses:
-        '200':
+        "200":
           description: Playlist metadata and track listing
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  title:
-                    type: string
-                  author:
-                    type: string
-                  trackCount:
-                    type: integer
-                  tracks:
-                    type: array
-                    items:
-                      type: object
+                  header:
+                    type: object
+                  contents:
+                    type: object
 
-  /artist:
+  /browse/artist:
     post:
       operationId: getArtist
-      summary: Get artist page with top songs, albums, singles, and videos
+      summary: "Get artist page — name, subscriber count, top songs, albums, singles, videos, related artists"
       x-openweb:
         permission: read
-        adapter:
-          name: youtube-music-innertube
-          operation: getArtist
+        actual_path: /youtubei/v1/browse
         build:
-          stable_id: ytm0004
-          tool_version: 1
-          signals:
-            - adapter-verified
-      parameters: []
+          stable_id: ytm_artist_v1
+          tool_version: 2
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+        - name: prettyPrint
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: false
       requestBody:
         required: true
         content:
@@ -180,228 +222,187 @@ paths:
             schema:
               type: object
               required:
-                - channelId
+                - browseId
               properties:
-                channelId:
-                  type: string
-                  description: Artist channel ID (UC... format)
-            example:
-              channelId: UCiMhD4jzUqG-IgPzUmmytRQ
-      responses:
-        '200':
-          description: Artist profile with sections (top songs, albums, singles, videos)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  name:
-                    type: string
-                  subscribers:
-                    type: string
-                  sections:
-                    type: array
-                    items:
-                      type: object
-
-  /song:
-    post:
-      operationId: getSong
-      summary: Get song/video details (title, artist, duration, view count)
-      x-openweb:
-        permission: read
-        adapter:
-          name: youtube-music-innertube
-          operation: getSong
-        build:
-          stable_id: ytm0005
-          tool_version: 1
-          signals:
-            - adapter-verified
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - videoId
-              properties:
-                videoId:
-                  type: string
-                  description: YouTube video ID
-            example:
-              videoId: fJ9rUzIMcZQ
-      responses:
-        '200':
-          description: Song metadata from the InnerTube player endpoint
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  videoId:
-                    type: string
-                  title:
-                    type: string
-                  author:
-                    type: string
-                  lengthSeconds:
-                    type: integer
-                  viewCount:
-                    type: integer
-
-  /up-next:
-    post:
-      operationId: getUpNext
-      summary: Get up-next queue and related tracks for a song
-      x-openweb:
-        permission: read
-        adapter:
-          name: youtube-music-innertube
-          operation: getUpNext
-        build:
-          stable_id: ytm0006
-          tool_version: 1
-          signals:
-            - adapter-verified
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - videoId
-              properties:
-                videoId:
-                  type: string
-                  description: YouTube video ID for current song
-                playlistId:
-                  type: string
-                  description: Optional playlist ID for queue context
-            example:
-              videoId: fJ9rUzIMcZQ
-      responses:
-        '200':
-          description: Queue of upcoming tracks with lyrics/related browse IDs
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  currentVideoId:
-                    type: string
-                  trackCount:
-                    type: integer
-                  tracks:
-                    type: array
-                    items:
-                      type: object
-                  lyricsBrowseId:
-                    type: string
-                    nullable: true
-
-  /lyrics:
-    post:
-      operationId: getLyrics
-      summary: Get song lyrics (provide videoId or lyricsBrowseId)
-      x-openweb:
-        permission: read
-        adapter:
-          name: youtube-music-innertube
-          operation: getLyrics
-        build:
-          stable_id: ytm0007
-          tool_version: 1
-          signals:
-            - adapter-verified
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                videoId:
-                  type: string
-                  description: YouTube video ID (will auto-resolve lyrics browseId)
+                context:
+                  type: object
+                  const:
+                    client:
+                      clientName: WEB_REMIX
+                      clientVersion: "1.20260327.10.00"
+                      hl: en
+                      gl: US
                 browseId:
                   type: string
-                  description: Direct lyrics browse ID (MPLYt_... format)
+                  description: "Artist channel ID (format: UC...)"
             example:
-              videoId: fJ9rUzIMcZQ
+              browseId: UCiMhD4jzUqG-IgPzUmmytRQ
       responses:
-        '200':
-          description: Song lyrics text and source attribution
+        "200":
+          description: Artist page with sections for top songs, albums, singles, videos
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  available:
-                    type: boolean
-                  text:
-                    type: string
-                    nullable: true
-                  source:
-                    type: string
-                    nullable: true
+                  header:
+                    type: object
+                  contents:
+                    type: object
 
-  /home:
+  /youtubei/v1/player:
     post:
-      operationId: browseHome
-      summary: Browse YouTube Music home page recommendations
+      operationId: getSong
+      summary: "Get song metadata — title, artist, album, duration, view count, thumbnail, streaming details"
       x-openweb:
         permission: read
-        adapter:
-          name: youtube-music-innertube
-          operation: browseHome
         build:
-          stable_id: ytm0008
-          tool_version: 1
-          signals:
-            - adapter-verified
-      parameters: []
+          stable_id: ytm_player_v1
+          tool_version: 2
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+        - name: prettyPrint
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: false
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
               type: object
-              properties: {}
-            example: {}
+              required:
+                - videoId
+              properties:
+                context:
+                  type: object
+                  const:
+                    client:
+                      clientName: WEB_REMIX
+                      clientVersion: "1.20260327.10.00"
+                      hl: en
+                      gl: US
+                videoId:
+                  type: string
+                  description: "YouTube video ID (11 characters)"
+            example:
+              videoId: dQw4w9WgXcQ
       responses:
-        '200':
-          description: Home page sections (quick picks, playlists, recommendations)
+        "200":
+          description: Song metadata and streaming info
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  sections:
-                    type: array
-                    items:
-                      type: object
+                  videoDetails:
+                    type: object
+                    properties:
+                      videoId:
+                        type: string
+                      title:
+                        type: string
+                      lengthSeconds:
+                        type: string
+                      channelId:
+                        type: string
+                      shortDescription:
+                        type: string
+                      thumbnail:
+                        type: object
+                      viewCount:
+                        type: string
+                      author:
+                        type: string
+                      musicVideoType:
+                        type: string
+                  playabilityStatus:
+                    type: object
 
-  /search-suggestions:
+  /youtubei/v1/next:
     post:
-      operationId: getSearchSuggestions
-      summary: Get search autocomplete suggestions
+      operationId: getUpNext
+      summary: "Get up-next queue — related tracks, lyrics browse ID, song info, autoplay suggestions"
       x-openweb:
         permission: read
-        adapter:
-          name: youtube-music-innertube
-          operation: getSearchSuggestions
         build:
-          stable_id: ytm0009
-          tool_version: 1
-          signals:
-            - adapter-verified
-      parameters: []
+          stable_id: ytm_next_v1
+          tool_version: 2
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+        - name: prettyPrint
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+              properties:
+                context:
+                  type: object
+                  const:
+                    client:
+                      clientName: WEB_REMIX
+                      clientVersion: "1.20260327.10.00"
+                      hl: en
+                      gl: US
+                videoId:
+                  type: string
+                  description: "YouTube video ID for the currently playing song"
+            example:
+              videoId: dQw4w9WgXcQ
+      responses:
+        "200":
+          description: Up-next queue and related content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contents:
+                    type: object
+
+  /youtubei/v1/music/get_search_suggestions:
+    post:
+      operationId: getSearchSuggestions
+      summary: "Get search autocomplete suggestions — query completions and trending searches"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ytm_suggestions_v1
+          tool_version: 2
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+        - name: prettyPrint
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: false
       requestBody:
         required: true
         content:
@@ -411,61 +412,134 @@ paths:
               required:
                 - input
               properties:
+                context:
+                  type: object
+                  const:
+                    client:
+                      clientName: WEB_REMIX
+                      clientVersion: "1.20260327.10.00"
+                      hl: en
+                      gl: US
                 input:
                   type: string
                   description: Partial search query for autocomplete
             example:
-              input: Taylor Sw
+              input: bohemi
       responses:
-        '200':
-          description: Search suggestions list
+        "200":
+          description: Search suggestions
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  suggestions:
+                  contents:
                     type: array
                     items:
                       type: object
-                      properties:
-                        text:
-                          type: string
-                        type:
-                          type: string
 
-  /charts:
+  /browse/home:
     post:
-      operationId: browseCharts
-      summary: Browse music charts (top songs, trending, top artists)
+      operationId: browseHome
+      summary: "Get homepage — personalized recommendations, trending music, playlists, new releases"
       x-openweb:
         permission: read
-        adapter:
-          name: youtube-music-innertube
-          operation: browseCharts
+        actual_path: /youtubei/v1/browse
         build:
-          stable_id: ytm0010
-          tool_version: 1
-          signals:
-            - adapter-verified
-      parameters: []
+          stable_id: ytm_home_v1
+          tool_version: 2
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+        - name: prettyPrint
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: false
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
               type: object
-              properties: {}
-            example: {}
+              properties:
+                context:
+                  type: object
+                  const:
+                    client:
+                      clientName: WEB_REMIX
+                      clientVersion: "1.20260327.10.00"
+                      hl: en
+                      gl: US
+                browseId:
+                  type: string
+                  const: FEmusic_home
       responses:
-        '200':
-          description: Charts sections (top songs, video charts, genres, top artists)
+        "200":
+          description: Homepage sections with music recommendations
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  sections:
-                    type: array
-                    items:
-                      type: object
+                  contents:
+                    type: object
+
+  /browse/charts:
+    post:
+      operationId: browseCharts
+      summary: "Get music charts — top songs, trending, top artists, top music videos by country/genre"
+      x-openweb:
+        permission: read
+        actual_path: /youtubei/v1/browse
+        build:
+          stable_id: ytm_charts_v1
+          tool_version: 2
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+        - name: prettyPrint
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context:
+                  type: object
+                  const:
+                    client:
+                      clientName: WEB_REMIX
+                      clientVersion: "1.20260327.10.00"
+                      hl: en
+                      gl: US
+                browseId:
+                  type: string
+                  const: FEmusic_charts
+      responses:
+        "200":
+          description: Music charts by category
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contents:
+                    type: object
+                  header:
+                    type: object

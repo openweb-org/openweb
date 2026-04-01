@@ -1,0 +1,16 @@
+{
+  "operation_id": "getAlbum",
+  "method": "post",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "browseId": "MPREb_9nqEki4ZDpp"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
