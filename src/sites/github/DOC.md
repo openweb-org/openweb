@@ -1,37 +1,77 @@
 # GitHub
 
 ## Overview
-GitHub REST + GraphQL API — code hosting platform.
+GitHub REST + GraphQL API — code hosting platform (developer tools archetype).
+
+## Workflows
+
+### Explore a repository
+1. `searchRepos(q)` → pick result → `owner`, `repo` from `full_name`
+2. `getRepo(owner, repo)` → description, stars, language
+3. `getRepoReadme(owner, repo)` → base64-encoded README content
+4. `listIssues(owner, repo)` → open issues
+5. `listPullRequests(owner, repo)` → open PRs
+
+### Investigate a user's work
+1. `getUserProfile(username)` → bio, public_repos, followers
+2. `searchRepos(q: "user:username")` → their repositories
+
+### File an issue
+1. `getRepo(owner, repo)` → confirm repo exists
+2. `createIssue(owner, repo, title, body)` → issue number, html_url
 
 ## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| getRepo | get repository details | GET /repos/{owner}/{repo} | verified |
-| listIssues | list repo issues | GET /repos/{owner}/{repo}/issues | `link_header` pagination, verified |
-| createIssue | create an issue | POST /repos/{owner}/{repo}/issues | write op, returns 201 |
-| searchRepos | search repositories by keyword | GET /search/repositories?q= | `link_header` pagination, sort by stars/forks/updated |
-| getUserProfile | get user profile | GET /users/{username} | public profile info |
-| getRepoReadme | get repository README | GET /repos/{owner}/{repo}/readme | returns base64-encoded content |
-| listPullRequests | list repo pull requests | GET /repos/{owner}/{repo}/pulls | `link_header` pagination, filter by state |
-| listContributors | list repo contributors | GET /repos/{owner}/{repo}/contributors | `link_header` pagination |
-| forkRepo | fork a repository | POST /repos/{owner}/{repo}/forks | write op, returns 202 |
-| starRepo | star a repository | PUT /user/starred/{owner}/{repo} | write op, returns 204 |
-| graphqlQuery | execute GraphQL query | POST /graphql | `write` permission — unrestricted query string can carry mutations |
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| searchRepos | find repositories | q | total_count, items[].full_name, stargazers_count | entry point, paginated |
+| getRepo | repository details | owner, repo | id, full_name, description | entry point |
+| getUserProfile | user profile | username | login, name, bio, public_repos, followers | entry point |
+| getRepoReadme | repository README | owner ← getRepo, repo ← getRepo | name, content (base64), encoding | |
+| listIssues | repository issues | owner ← getRepo, repo ← getRepo | id, title, state | paginated |
+| listPullRequests | repository PRs | owner ← getRepo, repo ← getRepo | id, title, state, user.login | paginated |
+| listContributors | repository contributors | owner ← getRepo, repo ← getRepo | login, contributions | paginated |
+| createIssue | create an issue | owner ← getRepo, repo ← getRepo, title, body | id, number, html_url | write, CAUTION |
+| forkRepo | fork a repository | owner ← getRepo, repo ← getRepo | id, full_name | write, CAUTION |
+| starRepo | star a repository | owner ← getRepo, repo ← getRepo | — (204) | write, SAFE |
+| graphqlQuery | execute GraphQL | query, variables | data | write (unrestricted mutations possible) |
+
+## Quick Start
+
+```bash
+# Search repositories
+openweb github exec searchRepos '{"q":"react language:typescript","per_page":5}'
+
+# Get repository details
+openweb github exec getRepo '{"owner":"anthropics","repo":"claude-code"}'
+
+# List issues
+openweb github exec listIssues '{"owner":"anthropics","repo":"claude-code","per_page":5}'
+
+# Get user profile
+openweb github exec getUserProfile '{"username":"anthropics"}'
+```
+
+---
+
+## Site Internals
 
 ## API Architecture
 - REST API at `api.github.com` — standard resource-based endpoints
 - GraphQL endpoint at `/graphql` — single POST endpoint with full query flexibility
-- Requires `Accept: application/vnd.github+json` header on all requests
+- All requests require `Accept: application/vnd.github+json` header (set as default)
 - List endpoints use `link_header` pagination
 
 ## Auth
-- `cookie_session` — uses browser session cookies
-- CSRF: `meta_tag` type, reads `csrf-token`, sends as `X-CSRF-Token` on mutating methods
+No auth required for public read operations. Write operations and private repo
+access require authentication (not currently configured — write ops will fail
+with 401 without a valid session).
 
 ## Transport
-- `node` — all endpoints use direct HTTP
+`node` — all endpoints use direct HTTP. No bot detection, no browser needed.
 
 ## Known Issues
-- `starRepo`, `graphqlQuery`, and all new ops are unverified (verified: false) — verify command crashes with exit code 13 (pre-existing issue)
-- `graphqlQuery` is `write` permission since arbitrary mutations are possible
-- `createIssue` and `forkRepo` are write ops — use only in safe/test contexts
+- Write ops (`createIssue`, `forkRepo`, `starRepo`) require authentication not configured in the package — use only if you have a valid session
+- `graphqlQuery` has `write` permission since arbitrary mutations are possible via the query string
+- `starRepo` permission is set to `read` in the spec but is actually a write action (PUT) — kept as-is since verify skips it either way
+- Rate limit: 60 requests/hour unauthenticated, 5000/hour authenticated

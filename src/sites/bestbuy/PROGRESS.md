@@ -35,4 +35,4 @@
 - DOC.md was missing required sections per site-doc.md template
 
 **Verification:** `openweb verify bestbuy` → PASS (3/3 operations)
-**Commit:** TBD
+**Commit:** ad290b5

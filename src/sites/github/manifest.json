@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://github.com",
-  "description": "GitHub REST API — cookie_session auth + meta_tag CSRF + link_header pagination",
-  "requires_auth": true,
+  "description": "GitHub REST API — public read access + link_header pagination",
+  "requires_auth": false,
   "dependencies": {},
   "stats": {
     "operation_count": 11,
