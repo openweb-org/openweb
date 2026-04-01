@@ -266,6 +266,11 @@ x-openweb:
 **Inline is OK for:** simple `ssr_next_data`, `page_global`, short `html_selector` (1-3 lines).
 **Adapter is required for:** multi-line DOM queries, regex parsing, complex data transformation.
 
+**Adapters must be self-contained.** Do not import from `../../lib/`, `../../../src/`, or any path outside the adapter directory. Use inline error creation:
+```typescript
+const err = Object.assign(new Error(msg), { failureClass: 'fatal' })
+```
+
 ## Curate Write Operations
 
 Write operations require extra attention beyond read ops:

@@ -28,15 +28,17 @@ monitors all existing tabs.
 **Suggested fix:** Default capture should filter by the specified site URL's domain during
 recording, or at least during analysis. The `--isolate` flag helps but isn't the default.
 
-### 3. tsx `__name` injection breaks page.evaluate callbacks
+### 3. tsx `__name` injection breaks page.evaluate callbacks — FIXED
 
-**Problem:** When using `page.evaluate(() => { const f = (x) => x; ... })` in TypeScript
+**Problem:** When using `page.evaluate(() => { function f(x) { return x; } })` in TypeScript
 adapter files run through tsx, the transpiler injects `__name` helper calls that fail in
 the browser context with `ReferenceError: __name is not defined`.
 
-**Root cause:** tsx/esbuild transformation adds decorator-like helpers for named functions.
-Browser's evaluate context doesn't have these helpers.
+**Root cause:** tsx hardcodes `keepNames: true` in its esbuild transform. Named function
+declarations inside `page.evaluate()` callbacks get `__name(fn, "name")` injected into the
+serialized function body. The browser context doesn't have the `__name` helper.
 
-**Suggested fix:** Document this as a known issue in capture-guide.md or extraction-patterns.md.
-Workaround: use `page.evaluate(\`(expression string)\`)` instead of function callbacks in
-adapter files.
+**Fix:** `page-polyfill.ts` injects a no-op `__name` into the browser page context
+(matching esbuild's semantics) before any adapter, browser-fetch, extraction, or
+session-http execution. The polyfill is idempotent and uses a string expression
+to avoid tsx transforming the polyfill itself.

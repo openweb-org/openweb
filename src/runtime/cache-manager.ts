@@ -1,5 +1,6 @@
 import type { Browser } from 'playwright-core'
 
+import { DEFAULT_USER_AGENT } from '../lib/config.js'
 import { formatCookieString } from '../lib/cookies.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
@@ -85,7 +86,7 @@ export async function executeCachedFetch(
     : undefined
   if (jsonBody) requestHeaders['Content-Type'] = 'application/json'
 
-  const response = await fetchWithRedirects(url, upperMethod, { Accept: 'application/json', ...requestHeaders }, jsonBody, {
+  const response = await fetchWithRedirects(url, upperMethod, { 'Accept': 'application/json', 'User-Agent': DEFAULT_USER_AGENT, ...requestHeaders }, jsonBody, {
     fetchImpl: deps.fetchImpl ?? fetch,
     ssrfValidator: deps.ssrfValidator ?? validateSSRF,
   })

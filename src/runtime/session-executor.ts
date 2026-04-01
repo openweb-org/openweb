@@ -14,6 +14,7 @@ import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 import type { BrowserHandle } from './primitives/types.js'
 import { fetchWithRedirects } from './redirect.js'
 import { buildHeaderParams, buildJsonRequestBody, buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
+import { ensurePagePolyfills } from './page-polyfill.js'
 
 function getPageHintUrl(serverUrl: string): string {
   try {
@@ -160,6 +161,7 @@ export async function executeSessionHttp(
   if (!page) throw createNeedsPageError(serverUrl)
 
   try {
+    await ensurePagePolyfills(page)
     const handle: BrowserHandle = { page, context }
 
     // 1. Resolve auth

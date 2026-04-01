@@ -7,6 +7,7 @@ import type { Page } from 'playwright-core'
 import { TIMEOUT } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import type { CodeAdapter } from '../types/adapter.js'
+import { ensurePagePolyfills } from './page-polyfill.js'
 
 const adapterCache = new Map<string, CodeAdapter>()
 
@@ -107,6 +108,7 @@ export async function executeAdapter(
   operation: string,
   params: Readonly<Record<string, unknown>>,
 ): Promise<unknown> {
+  await ensurePagePolyfills(page)
   let ready = await adapter.init(page)
   if (!ready) {
     await page.reload({ waitUntil: 'domcontentloaded' })

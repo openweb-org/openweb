@@ -114,6 +114,8 @@ write operations, do not remove auth/csrf from `servers[0].x-openweb`.
 | `endpoint_removed` | Request failed entirely — wrong path, network error, or site down. |
 | `error` | Execution error. Check `detail` for specifics: "no browser tab open" means page transport needed without browser. Transient errors are also reported here. |
 
+**SSR-heavy sites:** If compile produces many noise operations (telemetry, config, analytics) but zero usable data operations, the site likely delivers data via HTML (SSR, LD+JSON, DOM) rather than JSON APIs. In this case, skip further compile iterations and write an adapter directly — see `capture-guide.md` scripted capture templates for the adapter pattern.
+
 **Now read `references/analysis-review.md`.** It covers how to read
 `analysis.json` in detail: auth candidates, clusters, extraction signals,
 WebSocket analysis, and coverage decisions.
@@ -164,6 +166,20 @@ mkdir -p src/sites/<site>
 cp -r $OPENWEB_HOME/sites/<site>/* src/sites/<site>/
 pnpm build && pnpm test
 ```
+
+**Warning:** `pnpm build` syncs FROM `src/sites/` TO `dist/sites/` and `$OPENWEB_HOME/sites/`. Edits made directly to `$OPENWEB_HOME/sites/` will be overwritten by the next build. Always edit `src/sites/` as the source of truth.
+
+**Example file format** (`examples/*.example.json`):
+```json
+{
+  "operation_id": "searchProducts",
+  "cases": [{
+    "input": { "k": "laptop" },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}
+```
+Files without a `cases` array are silently skipped by verify. For adapter-only packages where compile doesn't generate examples, create them manually following this format.
 
 Verify the source-tree copy (not just the CLI cache):
 ```bash

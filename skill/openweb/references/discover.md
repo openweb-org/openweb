@@ -187,6 +187,25 @@ Do not hardcode IDs from prior captures — they may be expired or invalid.
 Execute a list operation to get fresh IDs, then use those for detail endpoint
 capture.
 
+## Adapter-Only Sites
+
+Some sites use proprietary protocols or deliver all data via HTML (no JSON API).
+For these, the standard capture → compile flow produces no usable operations.
+
+**Signals that a site needs an adapter:**
+- Compile produces 0 `api`-labeled samples (all `static` or `off_domain`)
+- All data is in SSR HTML, LD+JSON, or DOM (no XHR/fetch JSON responses)
+- Site uses a proprietary protocol (e.g., Telegram MTProto)
+
+**Adapter-only workflow:**
+1. Frame target intents (Step 1 — same as normal)
+2. Write adapter directly: `src/sites/<site>/adapters/<site>.ts`
+3. Write openapi.yaml manually (operations, schemas, x-openweb with adapter transport)
+4. Create example files manually
+5. Verify with `openweb verify <site>`
+
+See `capture-guide.md` "Scripted Capture" for adapter templates.
+
 ## Related References
 
 - `references/compile.md` — post-capture process (compile, review, curate, verify, install, learn)

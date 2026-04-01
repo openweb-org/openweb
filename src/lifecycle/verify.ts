@@ -89,6 +89,12 @@ function isRetriable(error: unknown): boolean {
   return error instanceof OpenWebError && error.payload.failureClass === 'retriable'
 }
 
+function formatErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'string') return err
+  return JSON.stringify(err)
+}
+
 // TODO: Add 'safe_mutation' for idempotent/reversible writes (like, follow, bookmark)
 // that are safe to replay during verify. Currently all non-read ops are unsafe_mutation.
 // See doc/todo/verify-unify/design.md "Future: safe_mutation and --write flag"
@@ -312,14 +318,14 @@ async function verifyOperation(
         operationId,
         status: 'FAIL',
         driftType: 'error',
-        detail: `transient error: ${error instanceof Error ? error.message : String(error)}`,
+        detail: `transient error: ${formatErrorMessage(error)}`,
       }
     }
     return {
       operationId,
       status: 'FAIL',
       driftType: 'endpoint_removed',
-      detail: error instanceof Error ? error.message : String(error),
+      detail: formatErrorMessage(error),
     }
   }
 }
@@ -417,7 +423,7 @@ async function verifyWsOperation(
     if (isAuthDrift(error)) {
       return { operationId, status: 'FAIL', driftType: 'auth_drift', detail: 'WS auth failed' }
     }
-    return { operationId, status: 'FAIL', driftType: 'error', detail: error instanceof Error ? error.message : String(error) }
+    return { operationId, status: 'FAIL', driftType: 'error', detail: formatErrorMessage(error) }
   }
 }
 

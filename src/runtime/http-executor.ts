@@ -2,7 +2,7 @@ import Ajv from 'ajv'
 import type { Browser } from 'playwright-core'
 
 import { connectWithRetry } from '../capture/connection.js'
-import { CDP_ENDPOINT } from '../lib/config.js'
+import { CDP_ENDPOINT, DEFAULT_USER_AGENT } from '../lib/config.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
@@ -272,7 +272,7 @@ export async function executeOperation(
       if (jsonBody) {
         requestHeaders['Content-Type'] = 'application/json'
       }
-      const response = await fetchWithRedirects(url, upperMethod, { Accept: 'application/json', ...requestHeaders }, jsonBody, {
+      const response = await fetchWithRedirects(url, upperMethod, { 'Accept': 'application/json', 'User-Agent': DEFAULT_USER_AGENT, ...requestHeaders }, jsonBody, {
         fetchImpl: deps.fetchImpl ?? fetch,
         ssrfValidator: deps.ssrfValidator ?? validateSSRF,
       })

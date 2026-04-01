@@ -10,6 +10,7 @@ import { resolvePageGlobalData } from './primitives/page-global-data.js'
 import { resolveScriptJson } from './primitives/script-json.js'
 import { resolveSsrNextData } from './primitives/ssr-next-data.js'
 import type { BrowserHandle } from './primitives/types.js'
+import { ensurePagePolyfills } from './page-polyfill.js'
 import { type AutoNavigateResult, autoNavigate, findPageForOrigin } from './session-executor.js'
 
 export type { ExecutorResult }
@@ -126,6 +127,7 @@ export async function executeExtraction(
   }
 
   try {
+    await ensurePagePolyfills(page)
     const handle: BrowserHandle = { page, context }
     let body: unknown
     switch (extraction.type) {

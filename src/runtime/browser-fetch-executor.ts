@@ -17,6 +17,7 @@ import {
   createNeedsPageError,
   findPageForOrigin,
 } from './session-executor.js'
+import { ensurePagePolyfills } from './page-polyfill.js'
 
 export type { ExecutorResult }
 
@@ -71,6 +72,7 @@ export async function executeBrowserFetch(
   }
 
   try {
+    await ensurePagePolyfills(page)
     const handle: BrowserHandle = { page, context }
     const authResult = serverExt?.auth
       ? await resolveAuth(handle, serverExt.auth, serverUrl, deps)
