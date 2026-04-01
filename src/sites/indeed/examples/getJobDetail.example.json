@@ -1,0 +1,9 @@
+{
+  "operation_id": "getJobDetail",
+  "cases": [
+    {
+      "input": { "jk": "72046173738a7637" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

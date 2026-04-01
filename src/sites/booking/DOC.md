@@ -1,48 +1,72 @@
 # Booking.com
 
 ## Overview
-Hotel booking platform. Property search, details, reviews, room pricing, facilities, location info, and photos via browser DOM/LD+JSON extraction from booking.com.
+Travel platform — hotel search, property details, reviews, room pricing, and flight search via browser DOM/LD+JSON extraction.
+
+## Workflows
+
+### Find a hotel and check prices
+1. `searchHotels(ss, checkin, checkout)` → pick hotel → `url` contains `/hotel/{country}/{slug}.html`
+2. `getHotelDetail(country, slug)` → name, rating, address, description
+3. `getHotelPrices(slug)` → room types, beds, prices (requires hotel page open)
+4. `getHotelReviews(slug)` → score, subscores, featured reviews (requires hotel page open)
+
+### Search flights
+1. `searchFlights(route, from, to, depart)` → carriers, times, duration, stops, prices
 
 ## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| searchProperties | search hotels in a destination | GET /searchresults.html?ss={query} | property cards: name, price, rating, distance |
-| getPropertyDetail | property info by URL slug | GET /hotel/{country}/{slug}.html | LD+JSON Hotel: name, rating, reviewCount, address, description, image |
-| getPropertyReviews | review summary and scores | internal (same page as detail) | overall score, 7 category subscores, featured review quotes |
-| getPropertyRooms | room types and pricing | internal (same page as detail) | room names, beds, sizes, facilities, prices |
-| getPropertyFacilities | amenities list | internal (same page as detail) | popular amenities + full facilities list |
-| getPropertyLocation | location and nearby POIs | internal (same page as detail) | POIs with distances, location score, GPS coordinates |
-| getPropertyPhotos | property images | internal (same page as detail) | gallery image URLs from bstatic.com CDN |
-| getPropertyHouseRules | check-in/out and policies | internal (same page as detail) | check-in/out times, cancellation policy text |
-| getPropertyFAQ | frequently asked questions | internal (same page as detail) | common questions about the property |
-| searchAll | cross-category search | GET /searchresults.html?ss={query} | hotels, flights, car rentals |
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| searchHotels | find hotels in a destination | ss (query), checkin, checkout | name, url, price, rating, reviewCount | entry point; up to 30 results |
+| getHotelDetail | hotel info by URL | country, slug ← searchHotels url | name, rating, description, address, image | LD+JSON Hotel schema |
+| getHotelReviews | review summary | slug ← searchHotels url | score, subscores, featured reviews | requires hotel detail page open |
+| getHotelPrices | room availability + pricing | slug ← searchHotels url | room name, bed, size, price, perNight | requires hotel detail page open |
+| searchFlights | find flights by route | route (NYC-PAR), from, to, depart | carrier, times, airports, duration, stops, price | flights.booking.com subdomain |
+
+## Quick Start
+
+```bash
+# Search hotels in New York
+openweb booking exec searchHotels '{"ss":"New York","checkin":"2026-05-01","checkout":"2026-05-03"}'
+
+# Get hotel details (extract country/slug from searchHotels URL)
+openweb booking exec getHotelDetail '{"country":"us","slug":"riverside-tower","checkin":"2026-05-01","checkout":"2026-05-03"}'
+
+# Get hotel reviews (hotel page must be open)
+openweb booking exec getHotelReviews '{"slug":"riverside-tower"}'
+
+# Get room pricing (hotel page must be open)
+openweb booking exec getHotelPrices '{"slug":"riverside-tower"}'
+
+# Search flights NYC to Paris
+openweb booking exec searchFlights '{"route":"NYC-PAR","from":"NYC.CITY","to":"PAR.CITY","depart":"2026-05-01"}'
+```
+
+---
+
+## Site Internals
 
 ## API Architecture
 - **LD+JSON Hotel schema** on property detail pages: name, aggregateRating, description, address, image, priceRange
-- **GraphQL at /dml/graphql** — used internally but not stable for direct access
+- **GraphQL at /dml/graphql** — used internally but not stable; not exposed as operations
 - Search results use **data-testid** property cards with structured DOM
-- Property details combine LD+JSON with DOM extraction for reviews, rooms, facilities, location
+- Property details combine LD+JSON with DOM extraction for reviews, rooms
+- Flights on **flights.booking.com** subdomain with **data-testid** flight cards
 - Images hosted on **cf.bstatic.com** CDN
 
 ## Auth
-- No auth needed for public browsing and search
-- `requires_auth: false`
+No auth required for public browsing and search.
 
 ## Transport
 - `transport: page` — browser-only access required
 - Bot detection (likely PerimeterX) blocks direct HTTP requests
-- Homepage redirects to login page in automated browsers — use direct URLs (/searchresults.html, /hotel/...)
 - All operations use the `booking-web` adapter for DOM/LD+JSON extraction
-
-## Extraction
-- **LD+JSON**: Property detail (Hotel schema) — name, rating, address, description, image
-- **DOM data-testid**: `property-card`, `title`, `price-and-discounted-price`, `review-score`, `review-subscore`, `property-most-popular-facilities-wrapper`, `poi-block-list`, `GalleryUnifiedDesktop-wrapper`, `HouseRules-wrapper`, `faq-accordion-left-card`
-- **Room table**: `table.hprt-table` with `.hprt-roomtype-icon-link`, `.hprt-roomtype-bed`, `.hprt-roomtype-room-size`
+- Flights require navigating to flights.booking.com subdomain
 
 ## Known Issues
-- **Homepage redirect** — navigating to booking.com homepage may redirect to login; use direct search URLs instead
+- **All ops require pre-navigation** — the adapter extracts from the current page DOM; the browser must already be on the correct URL (search results page for searchHotels, hotel detail page for getHotelDetail/getHotelReviews/getHotelPrices, flights page for searchFlights)
 - **Dynamic pricing** — prices change based on dates, currency, and user session
-- **Listings are first page only** — no pagination via adapter
+- **Search results are first page only** — no pagination via adapter
+- **Flights on separate subdomain** — flights.booking.com requires cross-domain navigation from www.booking.com
 - **Review text partial** — featured reviews show excerpt; full text requires clicking "Read more"
-- **Facilities section** — full facilities list may not load without scrolling to the section
-- **Coordinates** — extracted from Google Maps static image URL; not always available

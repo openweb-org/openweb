@@ -1,0 +1,12 @@
+{
+  "operation_id": "searchFlights",
+  "cases": [
+    {
+      "input": { "route": "NYC-PAR", "from": "NYC.CITY", "to": "PAR.CITY", "depart": "2026-05-01" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

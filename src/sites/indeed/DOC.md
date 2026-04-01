@@ -1,53 +1,92 @@
 # Indeed
 
 ## Overview
-Job search platform. Search jobs by keyword and location, view full job postings, salary data for any role, company profiles with ratings, employee reviews, and company salary breakdowns.
+Job search platform. Search jobs, view postings, salary data, company profiles, and reviews.
+
+## Workflows
+
+### Find and apply to jobs
+1. `searchJobs(q, l)` → browse results → `jobkey`
+2. `getJobDetail(jk)` → full posting with salary, benefits, company info
+
+### Research salaries
+1. `autocompleteJobTitle(q)` → normalized job title
+2. `getSalary(title)` → median, range, top cities, top companies
+3. `getSalary(title, location)` → location-specific salary
+
+### Research a company
+1. `getCompanyOverview(company)` → ratings, about, jobs, locations
+2. `getCompanyReviews(company)` → employee reviews with pros/cons
+3. `getCompanySalaries(company)` → salary by job title
 
 ## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| searchJobs | search jobs by keyword & location | GET /jobs?q={q}&l={l} | returns 15-25 job cards per page with title, company, salary, snippet; paginate with start=10,20,... |
-| getJobDetail | get full job posting | GET /viewjob?jk={jk} | LD+JSON JobPosting schema + _initialData; salary, benefits, description, hiring insights |
-| getSalary | salary data for a role | GET /career/{title}/salaries | Next.js __NEXT_DATA__; median/min/max by period, top cities, top companies, related titles |
-| getCompanyOverview | company info & ratings | GET /cmp/{company} | _initialData with about, ratings, salaries, jobs, locations, interviews, FAQ |
-| getCompanyReviews | employee reviews | GET /cmp/{company}/reviews | DOM extraction; individual reviews with rating, pros, cons, job title |
-| getCompanySalaries | salaries at a company | GET /cmp/{company}/salaries | DOM extraction; job titles with salary data |
-| getReviewFilters | review filter metadata | intercept /cmp/_rpc/review-filter | job titles (1000+), locations, categories for filtering reviews |
-| autocompleteJobTitle | job title suggestions | page.evaluate fetch to autocomplete.indeed.com | normalized job title suggestions |
-| autocompleteLocation | location suggestions | page.evaluate fetch to autocomplete.indeed.com | city/state/country suggestions |
-| browseJobCategories | browse job categories | GET /browsejobs | job category links and popular searches |
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| searchJobs | search jobs by keyword & location | q, l (optional) | jobkey, title, company, salary, snippet | entry point; paginate with start=10,20,... |
+| getJobDetail | get full job posting | jk ← searchJobs | title, description, salary, benefits, company | LD+JSON + _initialData |
+| getSalary | salary data for a role | title, location (optional) | median, min, max, top cities, top companies | Next.js __NEXT_DATA__ |
+| getCompanyOverview | company info & ratings | company slug | about, ratings, salaries, jobs, locations | entry point; _initialData |
+| getCompanyReviews | employee reviews | company ← getCompanyOverview | reviews[].rating, pros, cons, jobTitle | DOM extraction |
+| getCompanySalaries | salaries at a company | company ← getCompanyOverview | salaries[].jobTitle, salary | DOM extraction |
+| autocompleteJobTitle | job title suggestions | q (partial text) | normalized job titles | entry point |
+| autocompleteLocation | location suggestions | q (partial text) | city/state/country suggestions | entry point |
+
+## Quick Start
+
+```bash
+# Search for jobs
+openweb indeed exec searchJobs '{"q":"software engineer","l":"San Francisco, CA"}'
+
+# Get job details (use jobkey from search results)
+openweb indeed exec getJobDetail '{"jk":"72046173738a7637"}'
+
+# Get salary data
+openweb indeed exec getSalary '{"title":"software engineer"}'
+
+# Company overview
+openweb indeed exec getCompanyOverview '{"company":"Google"}'
+
+# Company reviews
+openweb indeed exec getCompanyReviews '{"company":"Google"}'
+
+# Autocomplete job title
+openweb indeed exec autocompleteJobTitle '{"q":"softw"}'
+```
+
+---
+
+## Site Internals
 
 ## API Architecture
-- **SSR-heavy site**: No public REST API. Data embedded in SSR HTML via multiple patterns:
+- **SSR-heavy site**: No public REST API. Data embedded in SSR HTML via:
   - `window._initialData` — job search results, company pages, job detail
-  - `window.mosaic.providerData['mosaic-provider-jobcards']` — job card data in search results
+  - `window.mosaic.providerData['mosaic-provider-jobcards']` — job card data
   - `__NEXT_DATA__` — salary pages (Next.js)
-  - `application/ld+json` — structured data (JobPosting on detail pages, LocalBusiness on company pages)
-- **Internal APIs**: `/cmp/_rpc/review-filter` (review metadata), `autocomplete.indeed.com/api/v0/suggestions/*` (autocomplete)
-- **Mosaic architecture**: Indeed uses a micro-frontend system called "mosaic" with provider-based data injection
+  - `application/ld+json` — structured data (JobPosting, LocalBusiness)
+- **Autocomplete APIs**: `autocomplete.indeed.com/api/v0/suggestions/*` called via page.evaluate(fetch)
+- **Mosaic architecture**: Micro-frontend system with provider-based data injection
 
 ## Auth
-- No auth needed for all 10 operations
-- `requires_auth: false`
-- Logged-in users get personalized results (saved jobs, applied status) but all public data is accessible without login
+No auth required. All 8 operations return public data.
 
 ## Transport
 - `page` (L3 adapter) — all operations via page navigation + data extraction
-- **Cloudflare bot detection**: Direct HTTP requests trigger challenge pages (`cdn-cgi/challenge-platform`)
-- Cannot downgrade to `node` — all endpoints require browser context to bypass bot detection
-- Autocomplete APIs (`autocomplete.indeed.com`) called via `page.evaluate(fetch)` to inherit browser cookies/context
+- Cloudflare bot detection blocks direct HTTP requests
+- Autocomplete APIs called via `page.evaluate(fetch)` to inherit browser context
 
 ## Extraction
 - Job search: `window.mosaic.providerData` → `mosaicProviderJobCardsModel.results`
-- Job detail: `application/ld+json` (JobPosting) + `window._initialData` supplement
+- Job detail: `application/ld+json` (JobPosting) + `window._initialData`
 - Salary: `__NEXT_DATA__` props.pageProps (Next.js SSR)
-- Company: `window._initialData` (20+ section view models)
-- Reviews: DOM scraping (`[itemprop]` elements) + `/cmp/_rpc/review-filter` API interception
+- Company: `window._initialData` (section view models)
+- Reviews: DOM extraction (`[itemprop]`, `[data-testid]`)
+- Company salaries: DOM extraction (table rows)
 - Autocomplete: `page.evaluate(fetch)` to autocomplete subdomain
 
 ## Known Issues
-- **DOM selectors may drift** — Indeed frequently updates its frontend. Data-testid attributes and CSS classes may change. LD+JSON and `_initialData` are more stable.
-- **Job search mosaic data** — The `mosaic.providerData` structure is loaded asynchronously by micro-frontends. Timing-sensitive — the 3-second wait after navigation is required.
-- **Salary page location format** — Location must use Indeed's URL segment format (e.g. "San-Francisco--CA" not "San Francisco, CA"). Use autocompleteLocation to find valid segments.
-- **Review DOM fragility** — Review card selectors (`[itemprop="review"]`, `[data-testid="reviewCard"]`) may change. The review-filter API is stable but only returns filter metadata, not actual reviews.
-- **Rate limiting** — Rapid page navigation may trigger Cloudflare challenges. Space out requests.
+- **DOM selectors may drift** — Indeed updates frontend frequently. LD+JSON and `_initialData` are more stable than DOM selectors.
+- **Mosaic data timing** — `mosaic.providerData` loads asynchronously. The 3-second wait after navigation is required.
+- **Salary location format** — Must use Indeed's URL segment format (e.g. "San-Francisco--CA"). Use autocompleteLocation.
+- **Review DOM fragility** — Review card selectors may change across Indeed updates.
+- **Cloudflare challenges** — Rapid page navigation may trigger bot detection. Space out requests.

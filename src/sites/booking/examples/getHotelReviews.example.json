@@ -1,0 +1,12 @@
+{
+  "operation_id": "getHotelReviews",
+  "cases": [
+    {
+      "input": { "slug": "riverside-tower" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

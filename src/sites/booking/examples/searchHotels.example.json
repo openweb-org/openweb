@@ -1,0 +1,12 @@
+{
+  "operation_id": "searchHotels",
+  "cases": [
+    {
+      "input": { "ss": "New York", "checkin": "2026-05-01", "checkout": "2026-05-03" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

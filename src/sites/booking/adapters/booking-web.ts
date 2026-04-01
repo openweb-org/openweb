@@ -1,20 +1,32 @@
 import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
+
+// Self-contained types — avoid external imports so adapter works from compile cache
+interface CodeAdapter {
+  readonly name: string
+  readonly description: string
+  init(page: Page): Promise<boolean>
+  isAuthenticated(page: Page): Promise<boolean>
+  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
+}
+
+function unknownOpError(op: string): Error {
+  return Object.assign(new Error(`Unknown operation: ${op}`), { failureClass: 'fatal' })
+}
+
 /**
  * Booking.com adapter — DOM/LD+JSON extraction from browser-rendered pages.
  *
- * Booking.com uses GraphQL at /dml/graphql with bot detection.
- * All data extracted via browser. Hotel details from LD+JSON (Hotel schema),
- * search results from data-testid property cards, reviews/rooms/facilities from DOM.
+ * Hotels: www.booking.com — search via data-testid property cards,
+ * detail via LD+JSON Hotel schema, reviews/prices/facilities from DOM.
+ * Flights: flights.booking.com — search results via data-testid flight cards.
  */
-import type { CodeAdapter } from '../../../types/adapter.js'
 
-/* ---------- Search operations ---------- */
+/* ---------- Hotel search ---------- */
 
-async function searchProperties(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function searchHotels(page: Page, _params: Record<string, unknown>): Promise<unknown> {
   return page.evaluate(() => {
     const cards = document.querySelectorAll('[data-testid="property-card"]')
-    const properties: {
+    const hotels: {
       name: string
       url: string
       price: string | null
@@ -31,9 +43,9 @@ async function searchProperties(page: Page, _params: Record<string, unknown>): P
 
       const reviewEl = card.querySelector('[data-testid="review-score"]')
       const reviewText = reviewEl?.textContent?.trim() ?? ''
-      const scoreMatch = reviewText.match(/Scored ([\d.]+)\s+([\d.]+)\s*([A-Za-z ]+?)\s+([\d,]+)\s*reviews/)
+      const scoreMatch = reviewText.match(/Scored\s+([\d.]+)\s+([\d.]+)\s*([A-Za-z ]+?)\s+([\d,]+)\s*reviews/)
 
-      properties.push({
+      hotels.push({
         name: title,
         url: link.href,
         price: card.querySelector('[data-testid="price-and-discounted-price"]')?.textContent?.trim() ?? null,
@@ -44,39 +56,14 @@ async function searchProperties(page: Page, _params: Record<string, unknown>): P
       })
     }
 
-    return { count: properties.length, properties: properties.slice(0, 30) }
+    return { count: hotels.length, hotels: hotels.slice(0, 30) }
   })
 }
 
-async function searchAll(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+/* ---------- Hotel detail ---------- */
+
+async function getHotelDetail(page: Page, _params: Record<string, unknown>): Promise<unknown> {
   return page.evaluate(() => {
-    const results: { name: string; url: string; type: string }[] = []
-    const seen = new Set<string>()
-
-    const links = document.querySelectorAll('a[href*="/hotel/"], a[href*="/flights/"], a[href*="/cars/"]')
-    for (const a of links) {
-      const el = a as HTMLAnchorElement
-      const name = el.textContent?.trim() ?? ''
-      if (name.length < 3 || name.length > 100 || seen.has(el.href)) continue
-      seen.add(el.href)
-
-      let type = 'other'
-      if (el.href.includes('/hotel/')) type = 'hotel'
-      else if (el.href.includes('/flights/')) type = 'flight'
-      else if (el.href.includes('/cars/')) type = 'car_rental'
-
-      results.push({ name, url: el.href, type })
-    }
-
-    return { count: results.length, results: results.slice(0, 30) }
-  })
-}
-
-/* ---------- Property detail operations ---------- */
-
-async function getPropertyDetail(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    // Extract from LD+JSON Hotel schema
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
       try {
@@ -101,7 +88,7 @@ async function getPropertyDetail(page: Page, _params: Record<string, unknown>): 
           url: data.url ?? null,
         }
       } catch {
-        /* skip */
+        /* skip non-parseable LD+JSON */
       }
     }
 
@@ -121,27 +108,22 @@ async function getPropertyDetail(page: Page, _params: Record<string, unknown>): 
   })
 }
 
-async function getPropertyReviews(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+/* ---------- Hotel reviews ---------- */
+
+async function getHotelReviews(page: Page, _params: Record<string, unknown>): Promise<unknown> {
   return page.evaluate(() => {
-    // Overall score
     const scoreComponent = document.querySelector('[data-testid="review-score-component"]')
     const scoreText = scoreComponent?.textContent?.trim() ?? ''
-    const scoreMatch = scoreText.match(/Scored ([\d.]+)\s+([\d.]+)/)
+    const scoreMatch = scoreText.match(/Scored\s+([\d.]+)\s+([\d.]+)/)
     const countMatch = scoreText.match(/([\d,]+)\s*reviews/)
 
-    // Category subscores
     const subscores: Record<string, string> = {}
-    const subscoreEls = document.querySelectorAll('[data-testid="review-subscore"]')
-    for (const el of subscoreEls) {
+    for (const el of document.querySelectorAll('[data-testid="review-subscore"]')) {
       const text = el.textContent?.trim() ?? ''
       const match = text.match(/^(.+?)\s*([\d.]+)$/)
-      if (match) {
-        const key = match[1].toLowerCase().replace(/\s+/g, '_')
-        subscores[key] = match[2]
-      }
+      if (match) subscores[match[1].toLowerCase().replace(/\s+/g, '_')] = match[2]
     }
 
-    // Featured reviews
     const featured = [...document.querySelectorAll('[data-testid="featuredreview"]')].slice(0, 5).map((el) => {
       const text = el.querySelector('[data-testid="featuredreview-text"], [data-testid="featuredreviewcard-text"]')?.textContent?.trim()
       const avatar = el.querySelector('[data-testid="featuredreview-avatar"], [data-testid="featuredreviewcard-avatar"]')?.textContent?.trim()
@@ -163,7 +145,9 @@ async function getPropertyReviews(page: Page, _params: Record<string, unknown>):
   })
 }
 
-async function getPropertyRooms(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+/* ---------- Hotel prices (room availability) ---------- */
+
+async function getHotelPrices(page: Page, _params: Record<string, unknown>): Promise<unknown> {
   return page.evaluate(() => {
     const table = document.querySelector('table.hprt-table')
     if (!table) return { count: 0, rooms: [] }
@@ -178,19 +162,18 @@ async function getPropertyRooms(page: Page, _params: Record<string, unknown>): P
       perNight: string | null
     }[] = []
 
-    const rows = table.querySelectorAll('tr.js-rt-block-row')
-    for (const row of rows) {
-      const roomTypeCell = row.querySelector('.hprt-roomtype-icon-link')
-      const name = roomTypeCell?.textContent?.trim()
+    for (const row of table.querySelectorAll('tr.js-rt-block-row')) {
+      const name = row.querySelector('.hprt-roomtype-icon-link')?.textContent?.trim()
       if (!name || seen.has(name)) continue
       seen.add(name)
 
       const bed = row.querySelector('.hprt-roomtype-bed')?.textContent?.trim() ?? null
       const size = row.querySelector('.hprt-roomtype-room-size')?.textContent?.trim() ?? null
-      const facilitiesEls = row.querySelectorAll('.hprt-facilities-facility')
-      const facilities = [...facilitiesEls].map((f) => f.textContent?.trim() ?? '').filter(Boolean).slice(0, 8)
+      const facilities = [...row.querySelectorAll('.hprt-facilities-facility')]
+        .map((f) => f.textContent?.trim() ?? '')
+        .filter(Boolean)
+        .slice(0, 8)
 
-      // Price from the row text
       const rowText = row.textContent ?? ''
       const priceMatch = rowText.match(/\$([\d,]+)\s*Price/)
       const perNightMatch = rowText.match(/\$([\d,]+)\s*per night/)
@@ -209,147 +192,65 @@ async function getPropertyRooms(page: Page, _params: Record<string, unknown>): P
   })
 }
 
-async function getPropertyFacilities(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+/* ---------- Flights search ---------- */
+
+async function searchFlights(page: Page, _params: Record<string, unknown>): Promise<unknown> {
   return page.evaluate(() => {
-    // Popular amenities
-    const wrapper = document.querySelector('[data-testid="property-most-popular-facilities-wrapper"]')
-    const seen = new Set<string>()
-    const popular: string[] = []
-    if (wrapper) {
-      for (const span of wrapper.querySelectorAll('span')) {
-        const text = span.textContent?.trim()
-        if (text && text.length > 2 && !text.includes('See all') && !text.includes('Most popular') && !seen.has(text)) {
-          seen.add(text)
-          popular.push(text)
-        }
-      }
+    const cards = document.querySelectorAll('[data-testid="searchresults_card"]')
+    const flights: {
+      carrier: string | null
+      departureTime: string | null
+      arrivalTime: string | null
+      departureAirport: string | null
+      arrivalAirport: string | null
+      duration: string | null
+      stops: string | null
+      price: string | null
+    }[] = []
+
+    for (const card of cards) {
+      const carrier = card.querySelector('[data-testid="flight_card_carriers"]')?.textContent?.trim() ?? null
+      const depTime = card.querySelector('[data-testid="flight_card_segment_departure_time_0"]')?.textContent?.trim() ?? null
+      const arrTime = card.querySelector('[data-testid="flight_card_segment_destination_time_0"]')?.textContent?.trim() ?? null
+      const depAirport = card.querySelector('[data-testid="flight_card_segment_departure_airport_0"]')?.textContent?.trim() ?? null
+      const arrAirport = card.querySelector('[data-testid="flight_card_segment_destination_airport_0"]')?.textContent?.trim() ?? null
+      const duration = card.querySelector('[data-testid="flight_card_segment_duration_0"]')?.textContent?.trim() ?? null
+      const stops = card.querySelector('[data-testid="flight_card_segment_stops_0"]')?.textContent?.trim() ?? null
+
+      // Price from the upt_price element
+      const priceEl = card.querySelector('[data-testid="upt_price"]')
+      const priceText = priceEl?.textContent?.trim() ?? ''
+      const priceMatch = priceText.match(/\$[\d,]+/)
+
+      flights.push({
+        carrier,
+        departureTime: depTime,
+        arrivalTime: arrTime,
+        departureAirport: depAirport,
+        arrivalAirport: arrAirport,
+        duration,
+        stops,
+        price: priceMatch?.[0] ?? null,
+      })
     }
 
-    // Full facilities from the facilities section
-    const facSection = document.querySelector('#hp_facilities_box, [data-testid="property-facilities-block-container"]')
-    const allFacilities: string[] = []
-    if (facSection) {
-      const items = facSection.querySelectorAll('li, [data-testid="facility-icon"]')
-      for (const item of items) {
-        const text = item.textContent?.trim()
-        if (text && text.length > 1 && !allFacilities.includes(text)) {
-          allFacilities.push(text)
-        }
-      }
-    }
-
-    return {
-      popular,
-      all: allFacilities.length > 0 ? allFacilities.slice(0, 50) : null,
-      totalCount: allFacilities.length || null,
-    }
-  })
-}
-
-async function getPropertyLocation(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    // POIs
-    const poiEls = document.querySelectorAll('[data-testid="poi-block-list"] li, [data-testid="poi-block"] li')
-    const pois = [...poiEls].slice(0, 15).map((el) => {
-      const text = el.textContent?.trim() ?? ''
-      const match = text.match(/^(.+?)([\d,.]+\s*(?:ft|mi|km|m|miles))$/)
-      return match
-        ? { name: match[1].trim(), distance: match[2].trim() }
-        : { name: text, distance: null }
-    })
-
-    // Location score
-    const locationScore = document
-      .querySelector('[data-testid="property-description-location-score-trans"]')
-      ?.textContent?.trim() ?? null
-
-    // Coordinates from static map (may be background-image or img src)
-    let coordinates: { latitude: string; longitude: string } | null = null
-    const mapEntry = document.querySelector('[data-testid="map-entry-point-desktop"] div[style*="maps.googleapis.com"]') as HTMLElement | null
-    const mapImg = document.querySelector('img[src*="maps.googleapis.com"]') as HTMLImageElement | null
-    const mapSrc = mapEntry?.style.backgroundImage || mapImg?.src || ''
-    const coordMatch = mapSrc.match(/center=([\d.-]+),([\d.-]+)/)
-    if (coordMatch) coordinates = { latitude: coordMatch[1], longitude: coordMatch[2] }
-
-    // Address
-    const address = document.querySelector('[data-testid="PropertyHeaderAddressDesktop-wrapper"]')?.textContent?.trim() ?? null
-
-    return { address, locationScore, coordinates, pois }
-  })
-}
-
-async function getPropertyPhotos(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const gallery = document.querySelector('[data-testid="GalleryUnifiedDesktop-wrapper"]')
-    const imgs = gallery?.querySelectorAll('img') ?? document.querySelectorAll('[data-testid="image"] img')
-
-    const photos = [...imgs]
-      .map((img) => img.src || img.getAttribute('data-src'))
-      .filter((src): src is string => !!src && src.includes('bstatic.com'))
-      .slice(0, 20)
-
-    return { count: photos.length, photos }
-  })
-}
-
-async function getPropertyHouseRules(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const wrapper = document.querySelector('[data-testid="HouseRules-wrapper"]')
-    if (!wrapper) return null
-
-    const text = wrapper.textContent?.trim() ?? ''
-
-    const checkInMatch = text.match(/Check-in\s*From\s*([\d:]+\s*[AP]M)/)
-    const checkOutMatch = text.match(/Check-out\s*Until\s*([\d:]+\s*[AP]M)/)
-    const cancellationMatch = text.match(/Cancellation\/ prepayment\s*([\s\S]*?)(?=Children|Damage|$)/)
-
-    return {
-      checkIn: checkInMatch?.[1] ?? null,
-      checkOut: checkOutMatch?.[1] ?? null,
-      cancellation: cancellationMatch?.[1]?.trim()?.slice(0, 200) ?? null,
-      fullText: text.slice(0, 500),
-    }
-  })
-}
-
-async function getPropertyFAQ(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const leftCard = document.querySelector('[data-testid="faq-accordion-left-card"]')
-    const rightCard = document.querySelector('[data-testid="faq-accordion-right-card"]')
-
-    const extractQuestions = (card: Element | null): string[] => {
-      if (!card) return []
-      // innerText preserves line breaks; textContent does not
-      return (card as HTMLElement).innerText
-        ?.split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.endsWith('?')) ?? []
-    }
-
-    const questions = [...extractQuestions(leftCard), ...extractQuestions(rightCard)]
-    return { count: questions.length, questions }
+    return { count: flights.length, flights: flights.slice(0, 30) }
   })
 }
 
 /* ---------- Adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> =
-  {
-    searchProperties,
-    searchAll,
-    getPropertyDetail,
-    getPropertyReviews,
-    getPropertyRooms,
-    getPropertyFacilities,
-    getPropertyLocation,
-    getPropertyPhotos,
-    getPropertyHouseRules,
-    getPropertyFAQ,
-  }
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+  searchHotels,
+  getHotelDetail,
+  getHotelReviews,
+  getHotelPrices,
+  searchFlights,
+}
 
 const adapter: CodeAdapter = {
   name: 'booking-web',
-  description: 'Booking.com — DOM/LD+JSON extraction for hotel search, details, reviews, rooms, facilities',
+  description: 'Booking.com — DOM/LD+JSON extraction for hotel search, details, reviews, pricing, flights',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('booking.com')
@@ -364,13 +265,9 @@ const adapter: CodeAdapter = {
     operation: string,
     params: Readonly<Record<string, unknown>>,
   ): Promise<unknown> {
-    try {
-      const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
-      return await handler(page, { ...params })
-    } catch (error) {
-      throw toOpenWebError(error)
-    }
+    const handler = OPERATIONS[operation]
+    if (!handler) throw unknownOpError(operation)
+    return handler(page, { ...params })
   },
 }
 

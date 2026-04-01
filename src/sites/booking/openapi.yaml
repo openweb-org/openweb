@@ -4,7 +4,7 @@ info:
   version: '1.0.0'
   x-openweb:
     spec_version: '2.0'
-    compiled_at: '2026-03-24T00:00:00Z'
+    compiled_at: '2026-04-01T00:00:00Z'
     requires_auth: false
 servers:
   - url: https://www.booking.com
@@ -13,8 +13,8 @@ servers:
 paths:
   /searchresults.html:
     get:
-      operationId: searchProperties
-      summary: Search hotels/properties in a destination — names, prices, ratings, distances
+      operationId: searchHotels
+      summary: Search hotels by destination — names, prices, ratings, review counts, distances
       x-openweb:
         permission: read
         build:
@@ -26,7 +26,7 @@ paths:
             - adapter-verified
         adapter:
           name: booking-web
-          operation: searchProperties
+          operation: searchHotels
       parameters:
         - name: ss
           in: query
@@ -62,16 +62,16 @@ paths:
           description: Number of rooms.
       responses:
         '200':
-          description: List of properties matching the search.
+          description: List of hotels matching the search.
           content:
             application/json:
               schema:
                 type: object
-                required: [count, properties]
+                required: [count, hotels]
                 properties:
                   count:
                     type: integer
-                  properties:
+                  hotels:
                     type: array
                     items:
                       type: object
@@ -98,8 +98,8 @@ paths:
 
   /hotel/{country}/{slug}.html:
     get:
-      operationId: getPropertyDetail
-      summary: Get property details — name, rating, description, address, image from LD+JSON Hotel schema
+      operationId: getHotelDetail
+      summary: Get hotel details — name, rating, description, address, image from LD+JSON Hotel schema
       x-openweb:
         permission: read
         build:
@@ -111,7 +111,7 @@ paths:
             - adapter-verified
         adapter:
           name: booking-web
-          operation: getPropertyDetail
+          operation: getHotelDetail
       parameters:
         - name: country
           in: path
@@ -124,10 +124,22 @@ paths:
           required: true
           schema:
             type: string
-          description: Property URL slug (e.g. "the-chemists-club-hotel-new-york").
+          description: Hotel URL slug (e.g. "riverside-tower").
+        - name: checkin
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-in date in YYYY-MM-DD format.
+        - name: checkout
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-out date in YYYY-MM-DD format.
       responses:
         '200':
-          description: Property detail from LD+JSON Hotel schema.
+          description: Hotel detail from LD+JSON Hotel schema.
           content:
             application/json:
               schema:
@@ -159,14 +171,14 @@ paths:
                         type: [string, 'null']
                   image:
                     type: [string, 'null']
-                    description: Main property image URL.
+                    description: Main hotel image URL.
                   url:
                     type: [string, 'null']
 
-  /internal/getPropertyReviews:
+  /internal/getHotelReviews:
     get:
-      operationId: getPropertyReviews
-      summary: Get property review summary — overall score, 7 category subscores, featured review quotes
+      operationId: getHotelReviews
+      summary: Get hotel review summary — overall score, category subscores, featured review quotes
       x-openweb:
         permission: read
         build:
@@ -178,17 +190,17 @@ paths:
             - adapter-verified
         adapter:
           name: booking-web
-          operation: getPropertyReviews
+          operation: getHotelReviews
       parameters:
         - name: slug
           in: query
           required: true
           schema:
             type: string
-          description: Property URL slug — page must be on this property's page.
+          description: Hotel URL slug — page must be on this hotel's page.
       responses:
         '200':
-          description: Review summary extracted from the property page.
+          description: Review summary extracted from the hotel page.
           content:
             application/json:
               schema:
@@ -214,10 +226,10 @@ paths:
                         country:
                           type: [string, 'null']
 
-  /internal/getPropertyRooms:
+  /internal/getHotelPrices:
     get:
-      operationId: getPropertyRooms
-      summary: Get available room types — names, beds, sizes, facilities, prices
+      operationId: getHotelPrices
+      summary: Get available room types with pricing — names, beds, sizes, facilities, prices
       x-openweb:
         permission: read
         build:
@@ -229,14 +241,14 @@ paths:
             - adapter-verified
         adapter:
           name: booking-web
-          operation: getPropertyRooms
+          operation: getHotelPrices
       parameters:
         - name: slug
           in: query
           required: true
           schema:
             type: string
-          description: Property URL slug — page must be on this property's page.
+          description: Hotel URL slug — page must be on this hotel's page.
       responses:
         '200':
           description: Room types and pricing from the availability table.
@@ -271,10 +283,10 @@ paths:
                           type: [string, 'null']
                           description: Price per night.
 
-  /internal/getPropertyFacilities:
+  /flights/{route}/:
     get:
-      operationId: getPropertyFacilities
-      summary: Get property amenities and facilities list
+      operationId: searchFlights
+      summary: Search flights by route — carriers, times, duration, stops, prices
       x-openweb:
         permission: read
         build:
@@ -286,253 +298,98 @@ paths:
             - adapter-verified
         adapter:
           name: booking-web
-          operation: getPropertyFacilities
+          operation: searchFlights
       parameters:
-        - name: slug
+        - name: route
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Flight route as "FROM-TO" IATA city codes (e.g. "NYC-PAR", "LON-BER").
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            default: ONEWAY
+            enum: [ONEWAY, ROUNDTRIP]
+          description: Trip type.
+        - name: depart
           in: query
           required: true
           schema:
             type: string
-          description: Property URL slug — page must be on this property's page.
-      responses:
-        '200':
-          description: Property amenities.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  popular:
-                    type: array
-                    items:
-                      type: string
-                    description: Most popular amenities (e.g. Free Wifi, Restaurant, Bar).
-                  all:
-                    type: [array, 'null']
-                    items:
-                      type: string
-                    description: Full facilities list.
-                  totalCount:
-                    type: [integer, 'null']
-
-  /internal/getPropertyLocation:
-    get:
-      operationId: getPropertyLocation
-      summary: Get property location — nearby POIs with distances, location score, coordinates
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: bk0006
-          signature_id: bk0006s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: booking-web
-          operation: getPropertyLocation
-      parameters:
-        - name: slug
+          description: Departure date in YYYY-MM-DD format.
+        - name: return
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Return date in YYYY-MM-DD format (for ROUNDTRIP).
+        - name: adults
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Number of adult passengers.
+        - name: cabinClass
+          in: query
+          required: false
+          schema:
+            type: string
+            default: ECONOMY
+            enum: [ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST]
+          description: Cabin class.
+        - name: from
           in: query
           required: true
           schema:
             type: string
-          description: Property URL slug — page must be on this property's page.
+          description: Origin as IATA.CITY code (e.g. "NYC.CITY").
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Destination as IATA.CITY code (e.g. "PAR.CITY").
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            default: BEST
+            enum: [BEST, CHEAPEST, FASTEST]
+          description: Sort order.
       responses:
         '200':
-          description: Location information.
+          description: List of flights matching the search.
           content:
             application/json:
               schema:
                 type: object
+                required: [count, flights]
                 properties:
-                  address:
-                    type: [string, 'null']
-                  locationScore:
-                    type: [string, 'null']
-                    description: Location rating text (e.g. "they rated it 9.7 for a two-person trip").
-                  coordinates:
-                    type: [object, 'null']
-                    properties:
-                      latitude:
-                        type: string
-                      longitude:
-                        type: string
-                  pois:
+                  count:
+                    type: integer
+                  flights:
                     type: array
                     items:
                       type: object
                       properties:
-                        name:
-                          type: string
-                        distance:
+                        carrier:
                           type: [string, 'null']
-
-  /internal/getPropertyPhotos:
-    get:
-      operationId: getPropertyPhotos
-      summary: Get property photo gallery — image URLs from bstatic.com CDN
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: bk0007
-          signature_id: bk0007s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: booking-web
-          operation: getPropertyPhotos
-      parameters:
-        - name: slug
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Property URL slug — page must be on this property's page.
-      responses:
-        '200':
-          description: Property photo URLs.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [count, photos]
-                properties:
-                  count:
-                    type: integer
-                  photos:
-                    type: array
-                    items:
-                      type: string
-                      description: Image URL on cf.bstatic.com.
-
-  /internal/getPropertyHouseRules:
-    get:
-      operationId: getPropertyHouseRules
-      summary: Get property house rules — check-in/out times, cancellation policies
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: bk0008
-          signature_id: bk0008s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: booking-web
-          operation: getPropertyHouseRules
-      parameters:
-        - name: slug
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Property URL slug — page must be on this property's page.
-      responses:
-        '200':
-          description: House rules.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  checkIn:
-                    type: [string, 'null']
-                    description: Check-in time (e.g. "3:00 PM").
-                  checkOut:
-                    type: [string, 'null']
-                    description: Check-out time (e.g. "11:00 AM").
-                  cancellation:
-                    type: [string, 'null']
-                  fullText:
-                    type: [string, 'null']
-
-  /internal/getPropertyFAQ:
-    get:
-      operationId: getPropertyFAQ
-      summary: Get property FAQ — common questions about the property
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: bk0009
-          signature_id: bk0009s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: booking-web
-          operation: getPropertyFAQ
-      parameters:
-        - name: slug
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Property URL slug — page must be on this property's page.
-      responses:
-        '200':
-          description: FAQ questions.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [count, questions]
-                properties:
-                  count:
-                    type: integer
-                  questions:
-                    type: array
-                    items:
-                      type: string
-
-  /searchresults.html?search_type=any:
-    get:
-      operationId: searchAll
-      summary: Search Booking.com across all categories — hotels, flights, car rentals
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: bk0010
-          signature_id: bk0010s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: booking-web
-          operation: searchAll
-      parameters:
-        - name: ss
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query (e.g. "Paris", "London hotels").
-      responses:
-        '200':
-          description: Search results across categories.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [count, results]
-                properties:
-                  count:
-                    type: integer
-                  results:
-                    type: array
-                    items:
-                      type: object
-                      required: [name, url, type]
-                      properties:
-                        name:
-                          type: string
-                        url:
-                          type: string
-                        type:
-                          type: string
-                          description: Result type — "hotel", "flight", "car_rental", or "other".
+                        departureTime:
+                          type: [string, 'null']
+                        arrivalTime:
+                          type: [string, 'null']
+                        departureAirport:
+                          type: [string, 'null']
+                        arrivalAirport:
+                          type: [string, 'null']
+                        duration:
+                          type: [string, 'null']
+                        stops:
+                          type: [string, 'null']
+                        price:
+                          type: [string, 'null']
