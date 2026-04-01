@@ -164,7 +164,7 @@ export async function executeSessionHttp(
 
     // 1. Resolve auth
     const authResult = serverExt?.auth
-      ? await resolveAuth(handle, serverExt.auth, serverUrl, deps)
+      ? await resolveAuth(handle, serverExt.auth, serverUrl, { ...deps, ssrfValidator })
       : undefined
 
     // 2. Build request
@@ -216,12 +216,12 @@ export async function executeSessionHttp(
         for (const [k, v] of Object.entries(headers)) {
           if (!['cookie', 'accept', 'referer', 'content-type'].includes(k.toLowerCase())) authHeaders[k] = v
         }
-        Object.assign(headers, (await resolveCsrf(handle, serverExt.csrf, serverUrl, { ...deps, authHeaders, cookieString })).headers)
+        Object.assign(headers, (await resolveCsrf(handle, serverExt.csrf, serverUrl, { ...deps, ssrfValidator, authHeaders, cookieString })).headers)
       }
     }
 
     // 4. Resolve signing
-    if (serverExt?.signing) Object.assign(headers, (await resolveSigning(handle, serverExt.signing, serverUrl, deps)).headers)
+    if (serverExt?.signing) Object.assign(headers, (await resolveSigning(handle, serverExt.signing, serverUrl, { ...deps, ssrfValidator })).headers)
     if (cookieString) headers.Cookie = cookieString
 
     // 5. Fetch with redirects

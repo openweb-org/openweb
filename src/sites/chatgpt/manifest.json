@@ -1,17 +1,14 @@
 {
   "name": "chatgpt",
-  "display_name": "ChatGPT",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "spec_version": "2.0",
   "site_url": "https://chatgpt.com",
-  "description": "ChatGPT backend API — exchange_chain (session token extraction) over session_http",
+  "compiled_at": "2026-04-01T18:41:26.924Z",
   "requires_auth": true,
-  "dependencies": {},
-  "stats": {
-    "operation_count": 5,
-    "l1_count": 0,
-    "l2_count": 5,
-    "l3_count": 0,
-    "ws_count": 0
+  "last_verified": "2026-04-01T19:43:19.928Z",
+  "quarantined": false,
+  "fingerprint": {
+    "response_shape_hash": "getConversation:f96e21836a90d59d,getModels:7282205f74c73a66,getProfile:e1187e483263d0f8,listConversations:23f75641ded6b1bc,searchConversations:43dc405274c607e4",
+    "last_validated": "2026-04-01T19:43:19.928Z"
   }
 }

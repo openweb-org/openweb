@@ -1,7 +1,7 @@
 openapi: '3.1.0'
 info:
   title: ChatGPT API
-  version: '1.0'
+  version: '2.0'
   x-openweb:
     spec_version: '2.0'
 servers:
@@ -15,31 +15,35 @@ servers:
             method: GET
             extract: accessToken
             headers:
-              User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+              User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36
         inject:
           header: Authorization
           prefix: 'Bearer '
+components:
+  parameters:
+    UserAgent:
+      name: User-Agent
+      in: header
+      required: false
+      schema:
+        type: string
+        default: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36
+      description: Required for Cloudflare cf_clearance cookie binding.
 paths:
   /me:
     get:
       operationId: getProfile
-      summary: Get authenticated user profile
+      summary: Get authenticated user profile — id, name, email, picture, org membership
       x-openweb:
         permission: read
         build:
           stable_id: cg0001
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - status-match
       parameters:
-        - name: User-Agent
-          in: header
-          required: false
-          schema:
-            type: string
-            default: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
-          description: Required for Cloudflare cf_clearance cookie binding.
+        - $ref: '#/components/parameters/UserAgent'
       responses:
         '200':
           description: User profile.
@@ -50,26 +54,53 @@ paths:
                 required:
                   - id
                   - name
+                  - email
                 properties:
-                  id:
+                  object:
                     type: string
-                  name:
+                  id:
                     type: string
                   email:
                     type: string
+                    format: email
+                  name:
+                    type: string
                   picture:
                     type: string
+                    format: uri
                   created:
-                    type: number
+                    type: integer
+                  phone_number:
+                    type: string
+                  mfa_flag_enabled:
+                    type: boolean
+                  country:
+                    type: string
+                  orgs:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            personal:
+                              type: boolean
+                            role:
+                              type: string
   /conversations:
     get:
       operationId: listConversations
-      summary: List recent conversations
+      summary: List recent conversations — id, title, create/update time, archived status
       x-openweb:
         permission: read
         build:
           stable_id: cg0002
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - status-match
@@ -79,25 +110,39 @@ paths:
           request_param: cursor
           items_path: items
       parameters:
-        - name: User-Agent
-          in: header
-          required: false
-          schema:
-            type: string
-            default: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
-          description: Required for Cloudflare cf_clearance cookie binding.
+        - $ref: '#/components/parameters/UserAgent'
         - name: limit
           in: query
           required: false
           schema:
             type: integer
             default: 28
+          description: Number of conversations to return.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Offset for pagination.
         - name: order
           in: query
           required: false
           schema:
             type: string
             default: updated
+          description: Sort order (updated or created).
+        - name: is_archived
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: is_starred
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: Paginated list of conversations.
@@ -113,15 +158,31 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - id
+                        - title
                       properties:
                         id:
                           type: string
+                          format: uuid
                         title:
                           type: string
                         create_time:
                           type: string
+                          format: date-time
                         update_time:
                           type: string
+                          format: date-time
+                        is_archived:
+                          type: boolean
+                        is_starred:
+                          type:
+                            - boolean
+                            - 'null'
+                        gizmo_id:
+                          type:
+                            - string
+                            - 'null'
                   total:
                     type: integer
                   limit:
@@ -135,29 +196,23 @@ paths:
   /conversation/{conversation_id}:
     get:
       operationId: getConversation
-      summary: Get full conversation with message history
+      summary: Get full conversation with message tree — title, mapping (message nodes with author, content, timestamps), current_node
       x-openweb:
         permission: read
         build:
           stable_id: cg0003
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - status-match
       parameters:
+        - $ref: '#/components/parameters/UserAgent'
         - name: conversation_id
           in: path
           required: true
           schema:
             type: string
           description: UUID of the conversation.
-        - name: User-Agent
-          in: header
-          required: false
-          schema:
-            type: string
-            default: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
-          description: Required for Cloudflare cf_clearance cookie binding.
       responses:
         '200':
           description: Full conversation including message tree.
@@ -181,7 +236,7 @@ paths:
                     type: number
                   current_node:
                     type: string
-                    description: ID of the latest message node.
+                    description: ID of the latest message node. Walk parent pointers to reconstruct thread.
                   default_model_slug:
                     type: string
                   is_archived:
@@ -203,7 +258,9 @@ paths:
                           items:
                             type: string
                         message:
-                          type: object
+                          type:
+                            - object
+                            - 'null'
                           properties:
                             id:
                               type: string
@@ -228,8 +285,7 @@ paths:
                                   type: string
                                 parts:
                                   type: array
-                                  items:
-                                    type: string
+                                  items: {}
                             status:
                               type: string
                             weight:
@@ -237,12 +293,12 @@ paths:
   /conversations/search:
     get:
       operationId: searchConversations
-      summary: Search past conversations by keyword
+      summary: Search past conversations by keyword — returns conversation titles and matched message snippets
       x-openweb:
         permission: read
         build:
           stable_id: cg0004
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - status-match
@@ -252,6 +308,7 @@ paths:
           request_param: cursor
           items_path: items
       parameters:
+        - $ref: '#/components/parameters/UserAgent'
         - name: query
           in: query
           required: true
@@ -263,14 +320,7 @@ paths:
           required: false
           schema:
             type: string
-          description: Pagination cursor from previous response.
-        - name: User-Agent
-          in: header
-          required: false
-          schema:
-            type: string
-            default: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
-          description: Required for Cloudflare cf_clearance cookie binding.
+          description: Pagination cursor from previous response (numeric offset as string).
       responses:
         '200':
           description: Search results with matching conversations and message snippets.
@@ -306,28 +356,73 @@ paths:
                               description: Matched message text excerpt.
                   cursor:
                     type:
+                      - string
                       - integer
                       - 'null'
                     description: Next page cursor (numeric offset).
+  /models:
+    get:
+      operationId: getModels
+      summary: Get available models — slug, title, description, capabilities, max tokens
+      x-openweb:
+        permission: read
+        build:
+          stable_id: cg0006
+          tool_version: 2
+          verified: true
+          signals:
+            - status-match
+      parameters:
+        - $ref: '#/components/parameters/UserAgent'
+        - name: history_and_training_disabled
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Available model list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - models
+                properties:
+                  models:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        slug:
+                          type: string
+                          description: Model identifier for sendMessage (e.g. "gpt-4o", "o4-mini").
+                        title:
+                          type: string
+                        description:
+                          type: string
+                        max_tokens:
+                          type: integer
+                        tags:
+                          type: array
+                          items:
+                            type: string
+                        qualitative_properties:
+                          type: object
   /f/conversation:
     post:
       operationId: sendMessage
-      summary: Send a message and get streaming response
+      summary: Send a message and get streaming response (SSE)
       x-openweb:
         permission: write
         build:
           stable_id: cg0005
-          tool_version: 1
+          tool_version: 2
           verified: false
           signals: []
       parameters:
-        - name: User-Agent
-          in: header
-          required: false
-          schema:
-            type: string
-            default: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
-          description: Required for Cloudflare cf_clearance cookie binding.
+        - $ref: '#/components/parameters/UserAgent'
       requestBody:
         required: true
         content:
@@ -377,10 +472,10 @@ paths:
                               type: string
                 parent_message_id:
                   type: string
-                  description: Parent node ID, or "client-created-root" for new conversations.
+                  description: Parent node ID from getConversation current_node, or UUID for new conversations.
                 model:
                   type: string
-                  description: Model slug (e.g. "gpt-5-3").
+                  description: Model slug from getModels (e.g. "gpt-4o").
                 conversation_id:
                   type: string
                   description: Existing conversation UUID. Omit for new conversations.
@@ -391,4 +486,4 @@ paths:
             text/event-stream:
               schema:
                 type: string
-                description: SSE stream with delta events containing message content.
+                description: SSE stream with delta events containing incremental message content.

@@ -29,7 +29,12 @@ export async function executeCachedFetch(
   params: Record<string, unknown>,
   cached: CachedTokens,
   deps: ExecuteDependencies,
-): Promise<ExecutorResult> {
+): Promise<ExecutorResult | null> {
+  // exchange_chain requires a live browser to call the token endpoint;
+  // cached cookies alone are insufficient — fall through to sessionHttp
+  const auth = serverExt?.auth
+  if (auth?.type === 'exchange_chain') return null
+
   const serverUrl = getServerUrl(spec, operationRef.operation)
   const allParams = resolveAllParameters(spec, operationRef.operation)
   const inputParams = validateParams(
@@ -45,7 +50,6 @@ export async function executeCachedFetch(
   if (cookieStr) requestHeaders.Cookie = cookieStr
 
   // Reconstruct auth headers from cached localStorage (localStorage_jwt)
-  const auth = serverExt?.auth
   if (auth?.type === 'localStorage_jwt' && Object.keys(cached.localStorage).length > 0) {
     const authConfig = auth as { key: string; path?: string; inject: { header?: string; prefix?: string; query?: string } }
     const raw = cached.localStorage[authConfig.key]

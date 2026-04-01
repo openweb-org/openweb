@@ -1,8 +1,10 @@
 {
-  "operation_id": "searchConversations",
+  "operation_id": "getModels",
+  "method": "get",
+  "replay_safety": "safe_read",
   "cases": [
     {
-      "input": { "query": "python" },
+      "input": {},
       "assertions": {
         "status": 200,
         "response_schema_valid": true

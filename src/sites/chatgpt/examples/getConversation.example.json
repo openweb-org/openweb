@@ -1,8 +1,12 @@
 {
   "operation_id": "getConversation",
+  "method": "get",
+  "replay_safety": "safe_read",
   "cases": [
     {
-      "input": { "conversation_id": "69c55a16-7c30-832e-8713-d4c411b8dea0" },
+      "input": {
+        "conversation_id": "69cd2ed5-3548-8326-8d74-fdfe93fe47f4"
+      },
       "assertions": {
         "status": 200,
         "response_schema_valid": true
