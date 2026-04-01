@@ -42,6 +42,8 @@ Transaction-oriented sites where users browse, compare, and purchase goods or se
 | GraphQL | rare | rare | common (persisted queries) |
 
 **Notable patterns:**
+- Amazon: Akamai Bot Manager blocks all node HTTP — adapter transport with DOM extraction required. No JSON-LD on product pages. Deals API (`/d2b/api/v1/products/search`) is the only public JSON API.
+- Booking.com: LD+JSON Hotel schema on detail pages, data-testid DOM structure, flights on separate subdomain (flights.booking.com), no auth needed for public search
 - Walmart: ssr_next_data extraction, PerimeterX blocks CDP browser
 - Best Buy: Akamai blocks all direct HTTP — three internal APIs via same-origin fetch only
 - Zillow: BLOCKED — five-layer PerimeterX detection

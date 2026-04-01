@@ -14,6 +14,7 @@ Quick-reference matrix for identifying a site's type before discovery. Each row 
 | **E-commerce** | cookie_session + CSRF | node (SSR) or page | Walmart, Best Buy, eBay | [commerce.md](commerce.md) |
 | **Travel** | cookie_session | node or page | Airbnb, Booking, Expedia | [commerce.md](commerce.md) |
 | **Food Delivery** | cookie_session | node or page | DoorDash, Instacart, Starbucks | [commerce.md](commerce.md) |
+| **Job Boards** | none or cookie_session | page (adapter) | Indeed, LinkedIn, Glassdoor | [commerce.md](commerce.md) |
 | **Productivity / Enterprise** | sessionStorage_msal, cookie_session | node | Stripe, Linear, Asana | [enterprise.md](enterprise.md) |
 | **Developer Tools** | cookie_session, none | node | GitHub, npm, StackOverflow | [enterprise.md](enterprise.md) |
 | **Finance / Banking** | cookie_session, exchange_chain | node or page | Fidelity, Robinhood, Bloomberg | [enterprise.md](enterprise.md) |

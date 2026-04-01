@@ -1,35 +1,71 @@
 # ChatGPT
 
 ## Overview
-ChatGPT backend API — OpenAI's conversational AI interface.
+ChatGPT backend API — OpenAI's conversational AI interface. Content platform archetype.
+
+## Workflows
+
+### Browse conversations
+1. `listConversations` → pick conversation → `conversationId`
+2. `getConversation(conversationId)` → full message tree
+
+### Search and read
+1. `searchConversations(query)` → results with `conversationId`
+2. `getConversation(conversationId)` → full message tree
+
+### Send a message
+1. `getModels` → pick model → `modelSlug`
+2. `listConversations` → pick conversation → `conversationId`, `currentNode`
+3. `sendMessage(conversationId, parentMessageId, model, text)` → SSE stream
 
 ## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| getProfile | authenticated user profile | GET /me | |
-| listConversations | recent conversations | GET /conversations | cursor pagination |
-| getConversation | full conversation with message tree | GET /conversation/{id} | mapping contains all messages as a tree |
-| searchConversations | search past conversations by keyword | GET /conversations/search | returns snippets with matched text |
-| sendMessage | send message, get streaming response | POST /f/conversation | ⚠️ WRITE — SSE response (text/event-stream) |
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| getProfile | authenticated user info | — | id, name, email | entry point |
+| listConversations | recent conversations | limit?, cursor? | items[].id, title, cursor | paginated (cursor) |
+| getConversation | full conversation detail | conversationId <- listConversations | mapping (message tree), current_node | tree structure |
+| searchConversations | search past conversations | query | items[].conversation_id, snippet | paginated (offset cursor) |
+| getModels | available models | — | models[].slug, title | entry point |
+| sendMessage | send message, get response | model <- getModels, parentMessageId, text | SSE delta stream | WRITE, SSE response |
+
+## Quick Start
+
+```bash
+# List recent conversations
+openweb chatgpt exec listConversations '{"limit": 10}'
+
+# Get a conversation
+openweb chatgpt exec getConversation '{"conversationId": "<id>"}'
+
+# Search conversations
+openweb chatgpt exec searchConversations '{"query": "python"}'
+
+# Get available models
+openweb chatgpt exec getModels '{}'
+```
+
+---
+
+## Site Internals
 
 ## API Architecture
 - Backend API at `chatgpt.com/backend-api/`
-- Conversation detail returns a `mapping` object: a tree of nodes keyed by UUID, each with `parent`, `children`, and `message` fields. Follow `current_node` to find the latest message, then walk `parent` pointers to reconstruct the thread.
-- Search returns `items` with `payload.snippet` containing the matched message text.
-- Send message (`POST /f/conversation`) returns Server-Sent Events (SSE), **not** WebSocket. The response stream contains `delta` events with incremental message content.
-- Cursor pagination on listConversations: response `cursor` → request `cursor` param
-- Search pagination uses numeric offset: response `cursor` (integer) → request `cursor` param
+- Conversation detail returns a `mapping` object: tree of nodes keyed by UUID, each with `parent`, `children`, `message` fields
+- Send message returns SSE (text/event-stream), not WebSocket
+- Cursor pagination on listConversations; offset pagination on search
 
 ## Auth
 - `exchange_chain` — single step:
   1. GET `chatgpt.com/api/auth/session` → extract `accessToken`
-  - Injected as `Authorization: Bearer <token>`
+  2. Inject as `Authorization: Bearer <token>`
 - Session cookies must include valid `cf_clearance` (Cloudflare)
+- UA header must match browser session UA
 
 ## Transport
-- `node` — direct HTTP (with session cookies forwarded via CDP browser context)
+- `node` — direct HTTP with session cookies forwarded via CDP
 
 ## Known Issues
-- UA header must match the browser session's UA or Cloudflare rejects the request
-- CLI `verify` command hits exit code 13 (top-level await issue in tsx); operations verified manually via direct HTTP calls
-- WebSocket connections visible in traffic are for notifications/presence, not chat messaging
+- UA header mismatch causes Cloudflare rejection
+- ssrfValidator may block some backend-api URLs (known bug)
+- WebSocket connections in traffic are notifications, not chat

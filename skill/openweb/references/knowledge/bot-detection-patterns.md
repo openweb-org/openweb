@@ -19,6 +19,7 @@ How major bot detection systems work, their impact on openweb transport and capt
 - **Symptoms:** `403` with empty or generic error body, `_abck` cookie with `~0~` (invalid sensor), request succeeds in browser but fails in Node
 - **Impact on transport:** Node transport almost never works. Must use `page` transport with real browser.
 - **Capture strategy:** Record in a real browser session. The `_abck` cookie refreshes frequently — capture sessions should be short.
+- **Adapter pattern:** For Akamai-protected sites like Amazon, most content is SSR HTML (not JSON APIs). Use adapter transport with `page.goto()` + DOM extraction via `page.evaluate()` string expressions. Avoid TypeScript function callbacks in `page.evaluate()` — tsx transpilation injects `__name` helpers that fail in the browser context. Use template literal strings instead.
 
 ### PerimeterX (HUMAN Security)
 
@@ -45,6 +46,7 @@ Some sites roll their own detection in addition to (or instead of) commercial so
 | Custom request signing | Amazon, LinkedIn | Requests include `x-amzn-*` or custom HMAC headers computed client-side |
 | Encrypted payloads | Google, Facebook | Request body or params are base64/protobuf — can't be replayed without the encoder |
 | Rate-based blocking | Most APIs | `429` or silent empty responses after N requests/minute |
+| Rate-based redirect loops | LinkedIn | Rapid sequential node requests trigger redirect loops (>5 redirects), individual requests work but batch verify fails |
 | Referrer/origin validation | Many sites | Requests without proper `Referer` or `Origin` header get `403` |
 | Cookie chaining | Banking, ticket sites | Multi-step cookie flow — must visit specific pages in order |
 

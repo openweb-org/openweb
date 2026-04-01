@@ -50,6 +50,8 @@ Guide to authentication primitives detected by `classify.ts`. Organized by primi
 
 **Pitfalls**:
 - **Scope matters**: Some sites (X/Twitter) require CSRF on ALL methods including GET. Check `scope` field.
+- **LinkedIn JSESSIONID quotes**: LinkedIn's JSESSIONID cookie value is quoted (e.g., `"ajax:123456789"`). The cookie_to_header resolver must handle quoted values.
+- **LinkedIn CSRF on GET**: LinkedIn requires the `csrf-token` header on ALL HTTP methods including GET — set `scope: [GET, POST, PUT, DELETE]`.
 - **Cookie rotation**: CSRF cookies may rotate on each response. Always read fresh value.
 
 ## meta_tag (CSRF)
@@ -149,6 +151,14 @@ Reference implementation: `src/runtime/primitives/webpack-module-walk.ts`.
 - Data accessible via `page.evaluate()`
 
 **Examples**: YouTube (ytcfg contains auth credentials for API calls)
+
+**Alternative to page_global — `const` schema fields**: When the page_global value is a
+**public, stable key** (not a per-user or per-session token), you can hardcode it as an
+OpenAPI schema `const` field instead of using page transport + page_global resolver.
+The `param-validator.ts` injects `const` values automatically, enabling `node` transport
+without an adapter. Example: YouTube Music's INNERTUBE_API_KEY is public and unchanging —
+modeled as `const` query param + `const` context body object, avoiding the L3 adapter the
+prior package needed. Only use this when the key is truly public (not user-scoped).
 
 ## sapisidhash (Signing)
 

@@ -1,18 +1,9 @@
 import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-/**
- * Medium L3 adapter — GraphQL API via browser fetch.
- *
- * Medium serves data through a GraphQL endpoint at /_/graphql.
- * Requests are sent as arrays (batched). Most read operations work
- * without auth. Search results are extracted from the rendered DOM.
- */
-import type { CodeAdapter } from '../../../types/adapter.js'
 import {
   CLAP_MUTATION,
   FOLLOW_USER_MUTATION,
   POST_CLAPS_QUERY,
-  PUBLICATION_POSTS_QUERY,
+  POST_DETAIL_QUERY,
   RECOMMENDED_FEED_QUERY,
   RECOMMENDED_TAGS_QUERY,
   RECOMMENDED_WRITERS_QUERY,
@@ -23,9 +14,35 @@ import {
   VIEWER_QUERY,
 } from './queries.js'
 
+/**
+ * Medium L3 adapter — GraphQL API via browser fetch.
+ *
+ * Medium serves data through a GraphQL endpoint at /_/graphql.
+ * Requests are sent as arrays (batched). Most read operations work
+ * without auth. Search results and profiles are extracted from the
+ * rendered DOM (SSR content).
+ */
+
+// Self-contained types — avoid external imports so adapter works from compile cache
+interface CodeAdapter {
+  readonly name: string
+  readonly description: string
+  init(page: Page): Promise<boolean>
+  isAuthenticated(page: Page): Promise<boolean>
+  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
+}
+
+function fatalError(message: string): Error {
+  return Object.assign(new Error(message), { failureClass: 'fatal' })
+}
+
+function missingParamError(param: string): Error {
+  return fatalError(`Missing required parameter: ${param}`)
+}
+
 const GRAPHQL_URL = 'https://medium.com/_/graphql'
 
-/* ---------- adapter implementation ---------- */
+/* ---------- helpers ---------- */
 
 async function graphqlFetch(
   page: Page,
@@ -52,14 +69,14 @@ async function graphqlFetch(
   )
 
   if (result.status >= 400) {
-    throw OpenWebError.httpError(result.status)
+    throw fatalError(`HTTP ${result.status}`)
   }
 
   const json = JSON.parse(result.text) as Array<{ data?: unknown; errors?: unknown[] }>
   const first = json[0]
   if (first?.errors) {
     const msg = (first.errors[0] as Record<string, string>)?.message ?? 'Unknown GraphQL error'
-    throw OpenWebError.apiError(`GraphQL ${operationName}`, msg)
+    throw fatalError(`GraphQL ${operationName}: ${msg}`)
   }
 
   return first?.data
@@ -71,8 +88,8 @@ async function searchArticles(page: Page, params: Record<string, unknown>): Prom
   const query = String(params.query ?? params.q ?? '')
   const url = `https://medium.com/search?q=${encodeURIComponent(query)}`
 
-  await page.goto(url, { waitUntil: 'networkidle' })
-  await page.waitForTimeout(2000)
+  await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
+  await page.waitForTimeout(3000)
 
   const articles = await page.evaluate(() => {
     const results: Array<Record<string, unknown>> = []
@@ -98,6 +115,17 @@ async function searchArticles(page: Page, params: Record<string, unknown>): Prom
   })
 
   return { query, articles, totalResults: articles.length }
+}
+
+async function getArticle(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const postId = String(params.postId ?? params.id ?? '')
+  if (!postId) throw missingParamError('postId')
+
+  const data = (await graphqlFetch(page, 'PostDetailQuery', POST_DETAIL_QUERY, {
+    postId,
+  })) as Record<string, unknown>
+
+  return data.postResult ?? null
 }
 
 async function getTagFeed(page: Page, params: Record<string, unknown>): Promise<unknown> {
@@ -194,25 +222,6 @@ async function getRecommendedTags(page: Page): Promise<unknown> {
   }
 }
 
-async function getPublicationPosts(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const postIds = params.postIds as string[] ?? []
-  if (postIds.length === 0) {
-    throw OpenWebError.missingParam('postIds')
-  }
-
-  const posts: unknown[] = []
-  for (const postId of postIds) {
-    const data = (await graphqlFetch(page, 'PostDetailQuery', PUBLICATION_POSTS_QUERY, {
-      postId,
-    })) as Record<string, unknown>
-    if (data.postResult) {
-      posts.push(data.postResult)
-    }
-  }
-
-  return { posts }
-}
-
 async function getPostClaps(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const postId = String(params.postId ?? params.id ?? '')
   const data = (await graphqlFetch(page, 'ClapCountQuery', POST_CLAPS_QUERY, {
@@ -241,8 +250,8 @@ async function getUserProfile(page: Page, params: Record<string, unknown>): Prom
   const username = String(params.username ?? '')
   const url = `https://medium.com/@${username}`
 
-  await page.goto(url, { waitUntil: 'networkidle' })
-  await page.waitForTimeout(2000)
+  await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
+  await page.waitForTimeout(3000)
 
   const profile = await page.evaluate(() => {
     const nameEl = document.querySelector('h2')
@@ -269,13 +278,13 @@ async function getUserProfile(page: Page, params: Record<string, unknown>): Prom
 async function getViewerId(page: Page): Promise<string> {
   const data = (await graphqlFetch(page, 'ViewerQuery', VIEWER_QUERY, {})) as Record<string, unknown>
   const viewer = data.viewer as Record<string, unknown> | undefined
-  if (!viewer?.id) throw OpenWebError.apiError('ViewerQuery', 'Not authenticated — login required for write operations')
+  if (!viewer?.id) throw fatalError('Not authenticated — login required for write operations')
   return String(viewer.id)
 }
 
 async function clapArticle(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const postId = String(params.postId ?? params.id ?? '')
-  if (!postId) throw OpenWebError.missingParam('postId')
+  if (!postId) throw missingParamError('postId')
   const numClaps = Number(params.numClaps ?? 1)
 
   const userId = await getViewerId(page)
@@ -295,7 +304,7 @@ async function clapArticle(page: Page, params: Record<string, unknown>): Promise
 
 async function followWriter(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const userId = String(params.userId ?? params.id ?? '')
-  if (!userId) throw OpenWebError.missingParam('userId')
+  if (!userId) throw missingParamError('userId')
 
   const data = (await graphqlFetch(page, 'FollowUserMutation', FOLLOW_USER_MUTATION, {
     userId,
@@ -313,7 +322,7 @@ async function followWriter(page: Page, params: Record<string, unknown>): Promis
 
 async function saveArticle(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const postId = String(params.postId ?? params.id ?? '')
-  if (!postId) throw OpenWebError.missingParam('postId')
+  if (!postId) throw missingParamError('postId')
 
   const data = (await graphqlFetch(page, 'AddToPredefinedCatalog', SAVE_ARTICLE_MUTATION, {
     type: 'READING_LIST',
@@ -333,12 +342,12 @@ async function saveArticle(page: Page, params: Record<string, unknown>): Promise
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
   searchArticles,
+  getArticle,
   getTagFeed,
   getTagCuratedLists,
   getTagWriters,
   getRecommendedFeed,
   getRecommendedTags,
-  getPublicationPosts,
   getPostClaps,
   getRecommendedWriters,
   getUserProfile,
@@ -363,13 +372,9 @@ const adapter: CodeAdapter = {
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
     const handler = OPERATIONS[operation]
     if (!handler) {
-      throw OpenWebError.unknownOp(operation)
+      throw fatalError(`Unknown operation: ${operation}`)
     }
-    try {
-      return await handler(page, { ...params })
-    } catch (error) {
-      throw toOpenWebError(error)
-    }
+    return handler(page, { ...params })
   },
 }
 

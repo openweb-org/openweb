@@ -120,8 +120,30 @@ Is data in an API response (XHR/fetch)?
 
 1. **Prefer API over extraction** — if the site makes an API call, use the API endpoint directly
 2. **Prefer JSON over DOM** — `ssr_next_data` > `html_selector` for stability
+3. **Prefer adapter for parameterized extraction** — the extraction executor does not substitute path parameters or pass query params. For operations where the URL depends on user input (e.g., `/dp/{asin}`), use an adapter that handles navigation + extraction. Inline extraction only works for static page URLs.
 3. **Document the pattern in DOC.md** — the Extraction section should name the pattern and the specific selector/variable
 4. **Test with `openweb verify`** — extraction patterns are fragile; verify catches drift early
+5. **Auto-compile for SSR-heavy sites produces noise** — sites with no JSON API (data embedded in `window.*` globals, LD+JSON, DOM) generate mostly tracking/logging ops from auto-compile. Core operations need manual adapter curation. Use auto-compile to discover ancillary APIs (e.g., autocomplete) but plan for adapter-based extraction upfront.
+
+## LD+JSON Structured Data
+
+Hotel/travel sites and e-commerce sites often embed structured data as `<script type="application/ld+json">` blocks using schema.org vocabularies (Hotel, Product, etc.).
+
+- **When to use:** detail pages for entities with schema.org types — hotels, products, restaurants, events
+- **Detection signals:** `<script type="application/ld+json">` with `@type` field matching a known schema.org type
+- **Impact:** More stable than DOM extraction — LD+JSON is typically maintained for SEO and changes less frequently than CSS classes or data-testid attributes. Use as primary extraction source with DOM fallback.
+- **Action:** Parse all LD+JSON blocks, filter by `@type`, extract fields. Always include a DOM fallback for resilience.
+- **Example:** Booking.com hotel detail pages include `@type: "Hotel"` with name, aggregateRating, description, address, image. Expedia uses `@type: "ItemList"` containing Hotel objects.
+
+## data-testid DOM Extraction
+
+Many modern SPAs use `data-testid` attributes for test automation. These are more stable than CSS classes (which change with styling) but less stable than LD+JSON.
+
+- **When to use:** search result lists, review sections, room/pricing tables, flight cards — any repeated UI component
+- **Detection signals:** Elements with `data-testid="property-card"`, `data-testid="searchresults_card"`, etc.
+- **Impact:** Reliable for adapter-based extraction. Selectors are semantic (test-oriented) rather than visual (style-oriented).
+- **Action:** Enumerate `data-testid` values on the page to discover extraction targets. Cross-reference with the site's test framework naming conventions.
+- **Example:** Booking.com uses `data-testid="property-card"` for search results, `data-testid="review-score-component"` for reviews. Expedia uses `data-stid="lodging-card-responsive"`.
 
 ## Related References
 

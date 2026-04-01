@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://medium.com",
-  "description": "Blogging platform — article search, tag feeds, curated lists, publications, user profiles, clap, follow, save via Medium GraphQL API",
+  "description": "Blogging platform — article search, tag feeds, curated lists, user profiles, clap, follow, save via Medium GraphQL API",
   "requires_auth": false,
   "dependencies": {},
   "stats": {

@@ -1,9 +1,16 @@
-## 2026-03-26: Initial documentation
+## 2026-04-01: v2.0 — expanded to 6 operations
 
 **What changed:**
-- Created DOC.md and PROGRESS.md from existing openapi.yaml spec
+- Expanded from 3 to 6 operations: getChats, getMessages, searchMessages, getUserInfo, getMe, sendMessage
+- Renamed getDialogs → getChats for consistency
+- Added richer response fields: senderName, isOutgoing, membersCount, lastMessageDate
+- Added searchMessages (in-memory text search across loaded messages)
+- Added getUserInfo (user profile lookup by ID)
+- Added sendMessage (write op via DOM interaction)
+- Rewrote adapter with extracted operation handlers for maintainability
 
 **Why:**
-- Document 3 verified L3 adapter operations via teact global state
+- Prior package only had basic read operations; messaging archetype expects search, contacts, and write operations
 
-**Verification:** spec review only — no new capture or compilation
+**Verification:** adapter-level (requires logged-in browser session)
+**Commit:** pending

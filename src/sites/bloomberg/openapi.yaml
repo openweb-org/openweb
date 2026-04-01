@@ -4,7 +4,7 @@ info:
   version: '1.0.0'
   x-openweb:
     spec_version: '2.0'
-    compiled_at: '2026-03-24T00:00:00Z'
+    compiled_at: '2026-04-01T00:00:00Z'
     requires_auth: false
 servers:
   - url: https://www.bloomberg.com
@@ -37,7 +37,7 @@ paths:
                 type: array
                 items:
                   type: object
-                  required: [id, shortName, price, percentChange1Day]
+                  required: [id, shortName]
                   properties:
                     id:
                       type: string
@@ -49,10 +49,10 @@ paths:
                     shortName:
                       type: string
                     percentChange1Day:
-                      type: number
+                      type: [number, 'null']
                       description: Daily percent change.
                     price:
-                      type: number
+                      type: [number, 'null']
                     lastYield:
                       type: [number, 'null']
                       description: Yield for bonds, null for equities/commodities.
@@ -61,7 +61,7 @@ paths:
   /news-headlines:
     get:
       operationId: getNewsHeadlines
-      summary: Get top financial news headlines from Bloomberg homepage
+      summary: Get top financial news headlines from Bloomberg homepage — headline, abstract, author, topics
       x-openweb:
         permission: read
         build:
@@ -150,7 +150,7 @@ paths:
   /quote/{ticker}:
     get:
       operationId: getQuote
-      summary: Get stock, index, or security quote with price, fundamentals, and key metrics
+      summary: Get stock, index, or security quote — price, change, fundamentals, 52wk range, PE, EPS, dividend
       x-openweb:
         permission: read
         build:
@@ -199,8 +199,6 @@ paths:
                   type:
                     type: string
                     description: Security type (EQT, IND, COM, etc.).
-                  mediaSecurityType:
-                    type: [string, 'null']
                   issuedCurrency:
                     type: [string, 'null']
                   openPrice:
@@ -214,10 +212,6 @@ paths:
                   dayRange:
                     type: [string, 'null']
                   fiftyTwoWeekRange:
-                    type: [string, 'null']
-                  lowPrice:
-                    type: [string, 'null']
-                  highPrice:
                     type: [string, 'null']
                   lowPrice52Week:
                     type: [string, 'null']
@@ -333,7 +327,7 @@ paths:
   /quote/{ticker}/price-chart:
     get:
       operationId: getPriceChart
-      summary: Get historical bar chart data for a security (1 year and 5 year)
+      summary: Get historical bar chart data — 1 year and 5 year closing prices by date
       x-openweb:
         permission: read
         build:
@@ -386,7 +380,7 @@ paths:
   /quote/{ticker}/price-movements:
     get:
       operationId: getPriceMovements
-      summary: Get price movement history — 1 day, 1 month, 6 months, YTD, 1 year, 5 years
+      summary: Get price movement history — 1D, 1M, 6M, YTD, 1Y, 5Y periods with date+value pairs
       x-openweb:
         permission: read
         build:
@@ -493,7 +487,7 @@ paths:
   /quote/{ticker}/board-members:
     get:
       operationId: getBoardMembers
-      summary: Get board members and executives for a company
+      summary: Get board members and executives — name, title, type (executive/board)
       x-openweb:
         permission: read
         build:
@@ -533,7 +527,7 @@ paths:
   /quote/{ticker}/index-members:
     get:
       operationId: getIndexMembers
-      summary: Get component securities of an index
+      summary: Get component securities of an index — ticker, name, price, daily change
       x-openweb:
         permission: read
         build:
@@ -575,7 +569,7 @@ paths:
   /latest-news:
     get:
       operationId: getLatestNews
-      summary: Get the latest breaking news from Bloomberg
+      summary: Get latest breaking news from Bloomberg — headline, abstract, author, published time
       x-openweb:
         permission: read
         build:

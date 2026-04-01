@@ -47,6 +47,7 @@ User-facing sites focused on content consumption, social interaction, and commun
 
 **Notable patterns:**
 - X: CSRF on ALL methods including GET, page transport required (TLS fingerprint)
+- LinkedIn: Voyager REST + GraphQL hybrid API, CSRF on ALL methods (JSESSIONID → csrf-token), page transport required (node triggers redirect-loop rate limiting), PerimeterX detection, Rest.li tuple parameter encoding
 - TikTok: BLOCKED — VM-based anti-bot signing, SSR extraction only via adapter
 - Discord/Telegram/WhatsApp: webpack_module_walk or internal module access for auth
 - YouTube: sapisidhash signing for authenticated requests

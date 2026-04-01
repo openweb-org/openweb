@@ -1,0 +1,12 @@
+{
+  "operation_id": "getChats",
+  "cases": [
+    {
+      "input": { "limit": 10 },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

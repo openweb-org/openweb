@@ -1,0 +1,10 @@
+{
+  "operation_id": "getNewsHeadlines",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {},
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

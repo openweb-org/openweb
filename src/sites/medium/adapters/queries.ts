@@ -171,7 +171,7 @@ export const RECOMMENDED_TAGS_QUERY = `query RightSidebarQuery {
   }
 }`
 
-export const PUBLICATION_POSTS_QUERY = `query PostDetailQuery($postId: ID!) {
+export const POST_DETAIL_QUERY = `query PostDetailQuery($postId: ID!) {
   postResult(id: $postId) {
     ... on Post {
       id

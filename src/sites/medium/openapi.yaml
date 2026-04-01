@@ -4,7 +4,7 @@ info:
   version: '1.0.0'
   x-openweb:
     spec_version: '2.0'
-    compiled_at: '2026-03-24T00:00:00Z'
+    compiled_at: '2026-04-01T00:00:00Z'
     requires_auth: false
 servers:
   - url: https://medium.com
@@ -14,13 +14,11 @@ paths:
   /search:
     get:
       operationId: searchArticles
-      summary: Search articles by keyword — returns titles, subtitles, authors
+      summary: Search articles by keyword — returns titles, subtitles, authors, URLs
       x-openweb:
         permission: read
         build:
-          verified: true
           stable_id: md0001
-          signature_id: md0001s
           tool_version: 1
           signals:
             - adapter-verified
@@ -50,6 +48,34 @@ paths:
                       $ref: '#/components/schemas/SearchResult'
                   totalResults:
                     type: integer
+  /post/{postId}:
+    get:
+      operationId: getArticle
+      summary: Get article detail by ID — title, author, claps, reading time, locked status
+      x-openweb:
+        permission: read
+        build:
+          stable_id: md0014
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: getArticle
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Medium post ID (hex string, e.g. "70d2a62246c0").
+      responses:
+        '200':
+          description: Full article detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostSummary'
   /tag/{tagSlug}/feed:
     get:
       operationId: getTagFeed
@@ -57,9 +83,7 @@ paths:
       x-openweb:
         permission: read
         build:
-          verified: true
           stable_id: md0002
-          signature_id: md0002s
           tool_version: 1
           signals:
             - adapter-verified
@@ -92,13 +116,11 @@ paths:
   /tag/{tagSlug}/curated-lists:
     get:
       operationId: getTagCuratedLists
-      summary: Get curated reading lists for a tag — staff-picked collections
+      summary: Get curated reading lists for a tag — staff-picked article collections
       x-openweb:
         permission: read
         build:
-          verified: true
           stable_id: md0003
-          signature_id: md0003s
           tool_version: 1
           signals:
             - adapter-verified
@@ -129,13 +151,11 @@ paths:
   /tag/{tagSlug}/writers:
     get:
       operationId: getTagWriters
-      summary: Get recommended writers and publications for a tag
+      summary: Get recommended writers and publications for a tag — name, bio, followers
       x-openweb:
         permission: read
         build:
-          verified: true
           stable_id: md0004
-          signature_id: md0004s
           tool_version: 1
           signals:
             - adapter-verified
@@ -181,13 +201,11 @@ paths:
   /feed/recommended:
     get:
       operationId: getRecommendedFeed
-      summary: Get personalized recommended article feed — trending and top posts
+      summary: Get recommended article feed — trending and top posts globally
       x-openweb:
         permission: read
         build:
-          verified: true
           stable_id: md0005
-          signature_id: md0005s
           tool_version: 1
           signals:
             - adapter-verified
@@ -216,16 +234,22 @@ paths:
                       $ref: '#/components/schemas/PostSummary'
                   pagingInfo:
                     type: object
+                    properties:
+                      next:
+                        type: object
+                        properties:
+                          limit:
+                            type: integer
+                          to:
+                            type: string
   /tags/recommended:
     get:
       operationId: getRecommendedTags
-      summary: Get recommended/trending topic tags
+      summary: Get recommended/trending topic tags — tag names and slugs
       x-openweb:
         permission: read
         build:
-          verified: true
           stable_id: md0006
-          signature_id: md0006s
           tool_version: 1
           signals:
             - adapter-verified
@@ -252,43 +276,6 @@ paths:
                           type: string
                         slug:
                           type: string
-  /posts/batch:
-    get:
-      operationId: getPublicationPosts
-      summary: Get multiple posts by ID — for publication sections and curated collections
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: md0007
-          signature_id: md0007s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: medium-graphql
-          operation: getPublicationPosts
-      parameters:
-        - name: postIds
-          in: query
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-          description: Array of Medium post IDs.
-      responses:
-        '200':
-          description: Posts matching the given IDs.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  posts:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/PostSummary'
   /post/{postId}/claps:
     get:
       operationId: getPostClaps
@@ -296,9 +283,7 @@ paths:
       x-openweb:
         permission: read
         build:
-          verified: true
           stable_id: md0008
-          signature_id: md0008s
           tool_version: 1
           signals:
             - adapter-verified
@@ -327,13 +312,11 @@ paths:
   /writers/recommended:
     get:
       operationId: getRecommendedWriters
-      summary: Get recommended writers and publications to follow
+      summary: Get recommended writers and publications to follow — name, bio, image
       x-openweb:
         permission: read
         build:
-          verified: true
           stable_id: md0009
-          signature_id: md0009s
           tool_version: 1
           signals:
             - adapter-verified
@@ -356,13 +339,11 @@ paths:
   /user/{username}/profile:
     get:
       operationId: getUserProfile
-      summary: Get user/author profile — name, bio, followers
+      summary: Get user/author profile — name, bio, follower count, avatar
       x-openweb:
         permission: read
         build:
-          verified: true
           stable_id: md0010
-          signature_id: md0010s
           tool_version: 1
           signals:
             - adapter-verified
@@ -375,7 +356,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Medium username (e.g. "Netflix_TechBlog", "towards-data-science").
+          description: Medium username (e.g. "Netflix_TechBlog", "towardsdatascience").
       responses:
         '200':
           description: User profile information.
@@ -403,9 +384,7 @@ paths:
         safety: safe
         requires_auth: true
         build:
-          verified: true
           stable_id: md0011
-          signature_id: md0011s
           tool_version: 1
           signals:
             - adapter-verified
@@ -418,7 +397,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Medium post ID (hex string, e.g. "959d1a85284e").
+          description: Medium post ID (hex string).
       requestBody:
         required: false
         content:
@@ -442,10 +421,8 @@ paths:
                     type: string
                   clapCount:
                     type: integer
-                    description: Total clap count on the post.
                   viewerClapCount:
                     type: integer
-                    description: Claps from the current user.
   /user/{userId}/follow:
     post:
       operationId: followWriter
@@ -455,9 +432,7 @@ paths:
         safety: safe
         requires_auth: true
         build:
-          verified: true
           stable_id: md0012
-          signature_id: md0012s
           tool_version: 1
           signals:
             - adapter-verified
@@ -496,9 +471,7 @@ paths:
         safety: safe
         requires_auth: true
         build:
-          verified: true
           stable_id: md0013
-          signature_id: md0013s
           tool_version: 1
           signals:
             - adapter-verified
@@ -511,7 +484,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Medium post ID (hex string, e.g. "959d1a85284e").
+          description: Medium post ID (hex string).
       responses:
         '200':
           description: Save result.

@@ -1,0 +1,10 @@
+{
+  "operation_id": "getBoardMembers",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": { "ticker": "AAPL:US" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

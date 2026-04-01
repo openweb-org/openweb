@@ -1,0 +1,12 @@
+{
+  "operation_id": "getUserInfo",
+  "cases": [
+    {
+      "input": { "userId": "777000" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 openapi: '3.1.0'
 info:
   title: Telegram Web A
-  version: '1.0'
+  version: '2.0'
   x-openweb:
     spec_version: '2.0'
 servers:
@@ -9,31 +9,31 @@ servers:
     x-openweb:
       transport: page
 paths:
-  /internal/dialogs:
+  /internal/chats:
     get:
-      operationId: getDialogs
-      summary: Get dialog/chat list from Telegram global state
+      operationId: getChats
+      summary: List user's chats/dialogs from Telegram global state
       x-openweb:
         permission: read
         build:
           stable_id: tg0001
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
         adapter:
           name: telegram-protocol
-          operation: getDialogs
+          operation: getChats
       parameters:
         - name: limit
           in: query
           schema:
             type: integer
             default: 50
-          description: Max number of dialogs to return
+          description: Max number of chats to return
       responses:
         '200':
-          description: Array of dialog objects
+          description: Array of chat objects
           content:
             application/json:
               schema:
@@ -47,18 +47,202 @@ paths:
                       type: string
                     type:
                       type: string
+                      enum: [chatTypePrivate, chatTypeBasicGroup, chatTypeSuperGroup, chatTypeChannel]
+                    membersCount:
+                      type: integer
+                    lastMessageDate:
+                      type: integer
+                      description: Unix timestamp of the last message
                   required:
                     - id
                     - title
-  /internal/me:
+                    - type
+
+  /internal/messages:
     get:
-      operationId: getMe
-      summary: Get current user info
+      operationId: getMessages
+      summary: Get messages from a specific chat
       x-openweb:
         permission: read
         build:
           stable_id: tg0002
-          tool_version: 1
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: telegram-protocol
+          operation: getMessages
+      parameters:
+        - name: chatId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Chat ID (e.g. -1001625429257)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Max messages to return
+        - name: offsetId
+          in: query
+          schema:
+            type: integer
+          description: Message ID to start pagination from (exclusive, returns older messages)
+      responses:
+        '200':
+          description: Array of message objects sorted by date descending
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    chatId:
+                      type: string
+                    date:
+                      type: integer
+                      description: Unix timestamp
+                    text:
+                      type: string
+                    senderId:
+                      type: string
+                    senderName:
+                      type: string
+                    isOutgoing:
+                      type: boolean
+                  required:
+                    - id
+                    - chatId
+                    - date
+
+  /internal/search:
+    get:
+      operationId: searchMessages
+      summary: Search messages by keyword across chats or within a specific chat
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tg0003
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: telegram-protocol
+          operation: searchMessages
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query string
+        - name: chatId
+          in: query
+          schema:
+            type: string
+          description: Optional chat ID to search within (omit for global search)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Max results to return
+      responses:
+        '200':
+          description: Array of matching messages with chat context
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    chatId:
+                      type: string
+                    chatTitle:
+                      type: string
+                    date:
+                      type: integer
+                    text:
+                      type: string
+                    senderId:
+                      type: string
+                    senderName:
+                      type: string
+                  required:
+                    - id
+                    - chatId
+                    - date
+                    - text
+
+  /internal/user:
+    get:
+      operationId: getUserInfo
+      summary: Get user profile information by user ID
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tg0004
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: telegram-protocol
+          operation: getUserInfo
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User ID to look up
+      responses:
+        '200':
+          description: User profile object (null if not found)
+          content:
+            application/json:
+              schema:
+                type: object
+                nullable: true
+                properties:
+                  id:
+                    type: string
+                  firstName:
+                    type: string
+                  lastName:
+                    type: string
+                  username:
+                    type: string
+                  phoneNumber:
+                    type: string
+                  type:
+                    type: string
+                  status:
+                    type: string
+                  isPremium:
+                    type: boolean
+                required:
+                  - id
+
+  /internal/me:
+    get:
+      operationId: getMe
+      summary: Get current authenticated user info
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tg0005
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
@@ -81,54 +265,55 @@ paths:
                     type: string
                   username:
                     type: string
+                  phoneNumber:
+                    type: string
+                  isPremium:
+                    type: boolean
                 required:
                   - id
-  /internal/messages:
-    get:
-      operationId: getMessages
-      summary: Get messages from a specific chat
+
+  /internal/messages/send:
+    post:
+      operationId: sendMessage
+      summary: Send a text message to a chat
       x-openweb:
-        permission: read
+        permission: write
         build:
-          stable_id: tg0003
-          tool_version: 1
-          verified: true
+          stable_id: tg0006
+          tool_version: 2
+          verified: false
           signals:
-            - adapter-verified
+            - adapter-manual
         adapter:
           name: telegram-protocol
-          operation: getMessages
-      parameters:
-        - name: chatId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Chat ID (e.g. -1001625429257)
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 50
-          description: Max messages to return
+          operation: sendMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatId:
+                  type: string
+                  description: Target chat ID
+                text:
+                  type: string
+                  description: Message text to send
+              required:
+                - chatId
+                - text
       responses:
         '200':
-          description: Array of message objects
+          description: Send confirmation
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                    chatId:
-                      type: string
-                    date:
-                      type: integer
-                    text:
-                      type: string
-                  required:
-                    - id
-                    - chatId
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  chatId:
+                    type: string
+                  text:
+                    type: string
