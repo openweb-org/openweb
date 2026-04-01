@@ -3,21 +3,43 @@
  * Copy runtime site assets to dist/sites/<name>/ for npm packaging.
  * Runs AFTER tsup + build-adapters so compiled .js adapters exist.
  */
-import { cpSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
 const sitesDir = path.join(process.cwd(), 'src', 'sites')
 const outDir = path.join(process.cwd(), 'dist', 'sites')
 
+/** Sites excluded from build output (WIP / dropped — kept in src/ only). */
+const EXCLUDED_SITES = new Set([
+  'bitbucket',
+  'coinbase',
+  'coingecko',
+  'digital',
+  'finance',
+  'httpbin',
+  'jsonplaceholder',
+  'microsoft-word',
+  'npm',
+  'open-meteo',
+  'pokeapi',
+  'stackoverflow',
+  'tiktok',
+  'yelp',
+  'zillow',
+])
+
 if (!existsSync(sitesDir)) {
   console.log('No sites directory found, skipping site packaging.')
   process.exit(0)
 }
 
-const sites = readdirSync(sitesDir, { withFileTypes: true }).filter((d) =>
-  d.isDirectory(),
+const sites = readdirSync(sitesDir, { withFileTypes: true }).filter(
+  (d) => d.isDirectory() && !EXCLUDED_SITES.has(d.name),
 )
+
+// Clean stale dist/sites/ so excluded sites don't linger across builds
+if (existsSync(outDir)) rmSync(outDir, { recursive: true })
 
 let copied = 0
 
@@ -87,6 +109,12 @@ console.log(`Packaged ${String(sites.length)} site(s), ${String(copied)} file(s)
 // with the source tree after build.
 const cacheDir = path.join(os.homedir(), '.openweb', 'sites')
 if (existsSync(outDir)) {
+  // Remove excluded sites from cache if they linger from previous builds
+  for (const name of EXCLUDED_SITES) {
+    const stale = path.join(cacheDir, name)
+    if (existsSync(stale)) rmSync(stale, { recursive: true })
+  }
+
   let synced = 0
   for (const site of readdirSync(outDir, { withFileTypes: true })) {
     if (!site.isDirectory()) continue
