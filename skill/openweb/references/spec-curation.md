@@ -157,18 +157,36 @@ each auth primitive type.
 Decide on the transport for each operation:
 
 ```
-Can node make the request without cookies?
-  |-- Yes → node transport (fastest)
-  |-- No → Does the site use bot detection (Akamai/PX/DataDome)?
-       |-- No/light (basic Cloudflare) → node + browser cookie extraction
-       |-- Heavy → page transport
-            |-- Does page need specific JS context (signing, encryption)?
-                 |-- No → page with evaluate
-                 |-- Yes → adapter transport
+Does the endpoint return JSON directly (XHR/fetch API)?
+  |-- Yes → Does node work (no bot detection)?
+  |     |-- Yes → transport: node (fastest)
+  |     |-- No → transport: page (browser-fetch)
+  |-- No → Is data in SSR HTML (Next.js __NEXT_DATA__, window globals, LD+JSON, DOM)?
+       |-- Yes → Is extraction simple (single expression, parameterized URL)?
+       |     |-- Yes → extraction (x-openweb.extract with page_url + path params)
+       |     |-- No → adapter (complex navigation, multi-step, dynamic waits)
+       |-- No → adapter (proprietary protocol, complex interaction)
 ```
 
 > Read `references/knowledge/bot-detection-patterns.md` "Impact on Transport
 > Selection" for the detailed decision tree.
+
+#### Extraction vs Adapter
+
+Extraction (`x-openweb.extraction`) is declarative — configured entirely in
+YAML with no code. Prefer it when a single `page_url` + expression can reach
+the data, including parameterized URLs (e.g., `/dp/{asin}`). The extraction
+executor resolves path parameters, navigates to the URL, and evaluates the
+expression.
+
+Use an adapter instead when you need:
+- Multi-step navigation (login → search → paginate)
+- Dynamic waits or interaction sequences (click, scroll, waitForSelector)
+- Proprietary protocols or complex request signing
+- DOM interaction beyond a single `page.evaluate()` expression
+
+See `references/knowledge/extraction-patterns.md` for the extraction type
+decision flow and pattern catalog.
 
 ### Does Data Come from WebSocket?
 
