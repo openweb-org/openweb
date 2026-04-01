@@ -46,6 +46,7 @@ openweb <site>                                     # transport, auth, operations
 ```
 - `Requires browser: yes` → run `openweb browser start` first
 - `Requires login: yes` → user must be logged in
+- For details on how transport and auth work, see `references/knowledge/x-openweb-extensions.md`
 
 ### 4. Inspect the operation
 ```bash
@@ -110,3 +111,4 @@ specify exactly which knowledge file to read at each step and what to look for.
 | `references/knowledge/graphql-patterns.md` | analysis-review "Clusters" on GraphQL sites | Persisted queries, batching, sub-cluster patterns |
 | `references/knowledge/ws-patterns.md` | analysis-review "WebSocket analysis" | Operation vs noise signal classification |
 | `references/knowledge/troubleshooting-patterns.md` | troubleshooting Step 2 | Known failure cause/fix patterns |
+| `references/knowledge/x-openweb-extensions.md` | spec-curation "Fix auth/transport"; verify "Spec verify" | `x-openweb` field schema (server-level auth/transport/csrf, operation-level permission/extraction). Read when editing or reviewing specs. |
