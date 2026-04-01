@@ -120,10 +120,10 @@ Is data in an API response (XHR/fetch)?
 
 1. **Prefer API over extraction** — if the site makes an API call, use the API endpoint directly
 2. **Prefer JSON over DOM** — `ssr_next_data` > `html_selector` for stability
-3. **Prefer adapter for parameterized extraction** — the extraction executor does not substitute path parameters or pass query params. For operations where the URL depends on user input (e.g., `/dp/{asin}`), use an adapter that handles navigation + extraction. Inline extraction only works for static page URLs.
-3. **Document the pattern in DOC.md** — the Extraction section should name the pattern and the specific selector/variable
-4. **Test with `openweb verify`** — extraction patterns are fragile; verify catches drift early
-5. **Auto-compile for SSR-heavy sites produces noise** — sites with no JSON API (data embedded in `window.*` globals, LD+JSON, DOM) generate mostly tracking/logging ops from auto-compile. Core operations need manual adapter curation. Use auto-compile to discover ancillary APIs (e.g., autocomplete) but plan for adapter-based extraction upfront.
+3. **Extraction now supports parameterized URLs** — the extraction executor substitutes path parameters (e.g., `/dp/{asin}`) and navigates to the resolved URL before evaluating. For simple cases, inline extraction with `page_url` + path params works without an adapter. Use adapters only when you need complex multi-step navigation, dynamic waits, or DOM interaction beyond a single `page.evaluate()` expression.
+4. **Document the pattern in DOC.md** — the Extraction section should name the pattern and the specific selector/variable
+5. **Test with `openweb verify`** — extraction patterns are fragile; verify catches drift early
+6. **Auto-compile for SSR-heavy sites produces noise** — sites with no JSON API (data embedded in `window.*` globals, LD+JSON, DOM) generate mostly tracking/logging ops from auto-compile. Core operations need manual adapter curation. Use auto-compile to discover ancillary APIs (e.g., autocomplete) but plan for adapter-based extraction upfront.
 
 ## LD+JSON Structured Data
 

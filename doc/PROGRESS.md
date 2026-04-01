@@ -1728,3 +1728,20 @@
 **Next:** M0 — Playwright browser capture integration
 
 **Blockers:** None
+
+## 2026-04-01: Pipeline gap fixes from batch1 learnings
+
+**What changed:**
+- Extraction executor now supports path parameter substitution
+- verify.ts formats non-Error throws correctly
+- page-polyfill.ts fixes tsx __name injection in page.evaluate
+- Default User-Agent set on all node-transport requests (Cloudflare UA binding)
+- ssrfValidator propagated to auth/csrf/signing resolvers
+- exchange_chain bypasses token cache (falls through to session-http)
+- Doc updates: capture isolation, adapter self-containment, example format, SSR guidance
+
+**Why:**
+- Batch1 rediscovery (booking, indeed, x, amazon, linkedin, youtube-music) exposed multiple pipeline gaps where the runtime failed on real sites despite correct specs. Each fix removes a class of failure that would recur on future sites.
+
+**Key files:** `src/runtime/http-executor.ts`, `src/lifecycle/verify.ts`, `src/runtime/primitives/page-polyfill.ts`, `skill/openweb/references/knowledge/extraction-patterns.md`
+**Verification:** Build passes, tests pass
