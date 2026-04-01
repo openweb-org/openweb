@@ -1,45 +1,75 @@
 # ESPN
 
 ## Overview
-Sports data platform. Live scores, game summaries, team/player info, standings, news, and search across NFL, NBA, MLB, NHL, soccer, and more via ESPN's internal REST APIs.
+Sports news, scores, and data. Public REST APIs — no auth required.
+
+## Workflows
+
+### Check live scores for a sport
+1. `getScoreboard(sport, league)` → events with teams, scores, status
+
+### Look up a specific team
+1. `getTeams(sport, league)` → find `teamId`
+2. `getTeam(sport, league, teamId)` → full team detail
+
+### Check league standings
+1. `getStandings(sport, league)` → divisions/conferences with team records
+
+### Get latest sports news
+1. `getNews(sport, league)` → articles with headlines, descriptions, links
+
+### Search for a player or team
+1. `searchPlayers(query, type)` → results with names, links, descriptions
 
 ## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| getScoreboard | live/recent scores by sport | GET /apis/site/v2/sports/{sport}/{league}/scoreboard | returns events with competitors, scores, status; filter by date |
-| getGameSummary | game detail/boxscore | GET /apis/site/v2/sports/{sport}/{league}/summary?event={id} | full boxscore, scoring plays, leaders, player stats |
-| getNews | sport news headlines | GET /apis/site/v2/sports/{sport}/{league}/news | articles with headline, description, images, categories |
-| getTeams | list all teams | GET /apis/site/v2/sports/{sport}/{league}/teams | all teams in a league with logos, colors, links |
-| getTeamDetail | team info | GET /apis/site/v2/sports/{sport}/{league}/teams/{teamId} | record, next event, standing summary, franchise info |
-| getStandings | league standings | GET /apis/v2/sports/{sport}/{league}/standings | grouped by division/conference with win/loss stats |
-| getAthlete | player bio/stats | GET /apis/site/v2/sports/{sport}/{league}/athletes/{athleteId} | bio, position, team, career statistics |
-| getTeamSchedule | team schedule | GET /apis/site/v2/sports/{sport}/{league}/teams/{teamId}/schedule | season games with scores, opponents, status |
-| getScoreboardHeader | compact score ticker | GET /apis/site/v2/scoreboard/header | quick scores across all sports (via site.web.api.espn.com) |
-| searchESPN | search everything | GET /apis/search/v2?query={q} | athletes, teams, articles, videos (via site.web.api.espn.com) |
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| getScoreboard | live/recent scores | sport, league, dates? | events[].name, competitions[].competitors[].score, status | entry point |
+| getTeam | team detail | sport, league, teamId ← getTeams | team.displayName, record, logos | |
+| getTeams | list all teams | sport, league | sports[].leagues[].teams[].team.id, displayName | use to find teamId |
+| getStandings | league standings | sport, league | children[].standings.entries[].team, stats | may be empty in off-season |
+| getNews | sports articles | sport, league | articles[].headline, description, published | |
+| searchPlayers | search players/teams | query, type?, limit? | items[].displayName, shortName, type | uses site.web.api.espn.com |
+
+## Quick Start
+
+```bash
+# NFL scoreboard
+openweb espn exec getScoreboard '{"sport":"football","league":"nfl"}'
+
+# Get NBA teams
+openweb espn exec getTeams '{"sport":"basketball","league":"nba"}'
+
+# Get a specific NFL team
+openweb espn exec getTeam '{"sport":"football","league":"nfl","teamId":"17"}'
+
+# NFL standings
+openweb espn exec getStandings '{"sport":"football","league":"nfl"}'
+
+# NFL news
+openweb espn exec getNews '{"sport":"football","league":"nfl"}'
+
+# Search for a player
+openweb espn exec searchPlayers '{"query":"Patrick Mahomes","type":"player","limit":5}'
+```
+
+---
+
+## Site Internals
 
 ## API Architecture
-- **Two API hosts**: `site.api.espn.com` (8 operations) and `site.web.api.espn.com` (2 operations — search, scoreboard header)
-- Internal APIs used by ESPN's website and mobile apps — no official public documentation
-- All operations are public (no auth required)
-- Path pattern: `/apis/site/v2/sports/{sport}/{league}/...` for most sport-specific data
-- Common sport/league slugs: football/nfl, basketball/nba, baseball/mlb, hockey/nhl, soccer/eng.1
+Public REST APIs on `site.api.espn.com` (main) and `site.web.api.espn.com` (search).
+Parameterized by sport/league: `/apis/site/v2/sports/{sport}/{league}/{resource}`.
+
+Common sport/league pairs: `football/nfl`, `basketball/nba`, `baseball/mlb`, `hockey/nhl`, `soccer/eng.1`.
 
 ## Auth
-- No auth needed for any operation
-- `requires_auth: false`
-- ESPN website uses JWT tokens and Disney BAMTech auth for personalized/streaming features, but data APIs are fully public
+No auth required. All APIs are public.
 
 ## Transport
-- `transport: node` — direct HTTP fetch from Node.js
-- No bot detection on the API subdomains (site.api.espn.com, site.web.api.espn.com)
-- API responses are clean JSON
-
-## Extraction
-- All operations return JSON directly — no SSR extraction needed
-- Response schemas use nested objects extensively (events → competitions → competitors → team)
+`node` — direct HTTP. No bot detection observed.
 
 ## Known Issues
-- **Offseason data** — scoreboard returns empty events array when no games are scheduled (e.g. NFL in March)
-- **Team/athlete IDs** — numeric IDs are not predictable; use getTeams or searchESPN to discover IDs
-- **Standings may 404** — some leagues don't support the standings endpoint (e.g. individual sports)
-- **Sport/league slugs** — must use exact slugs (football not nfl, then nfl as league). Common pairs: football/nfl, basketball/nba, baseball/mlb, hockey/nhl, soccer/eng.1
+- Standings may return minimal data during off-season periods.
+- The `dates` parameter on getScoreboard uses YYYYMMDD format.

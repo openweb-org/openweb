@@ -1,12 +1,12 @@
 {
-  "operation_id": "getNews",
+  "operation_id": "getTeam",
   "cases": [
     {
-      "input": { "sport": "football", "league": "nfl" },
+      "input": { "sport": "football", "league": "nfl", "teamId": "17" },
       "assertions": { "status": 200, "response_schema_valid": true }
     },
     {
-      "input": { "sport": "basketball", "league": "nba" },
+      "input": { "sport": "basketball", "league": "nba", "teamId": "13" },
       "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]

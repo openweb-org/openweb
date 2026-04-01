@@ -2,14 +2,12 @@
   "operation_id": "getStandings",
   "cases": [
     {
-      "input": {
-        "sport": "football",
-        "league": "nfl"
-      },
-      "assertions": {
-        "status": 200,
-        "response_schema_valid": true
-      }
+      "input": { "sport": "football", "league": "nfl" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    },
+    {
+      "input": { "sport": "basketball", "league": "nba" },
+      "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]
 }
