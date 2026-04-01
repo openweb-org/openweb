@@ -83,7 +83,8 @@ If `authCandidates` is empty or has only `confidence: 0` entries, no auth was
 detected. Expected for public APIs; a red flag for sites that require login.
 
 **If auth looks wrong:** note what needs changing — you will edit the spec's
-`servers[0].x-openweb` section during curation.
+`servers[0].x-openweb` section during curation. See
+`references/knowledge/x-openweb-extensions.md` for the complete extension schema.
 
 ### Confidence and Evidence
 

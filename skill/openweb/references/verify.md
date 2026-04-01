@@ -51,6 +51,9 @@ browser if not already running and verifies page-transport ops that would otherw
 
 ### Runtime Exec Exit Gate
 
+Read the site's DOC.md to identify target intents framed during discovery.
+Verify against those intents, not just whatever operations happen to exist.
+
 Batch verify checks HTTP sanity. Runtime exec proves an agent can get usable data.
 
 For each target intent, exec the best operation:
@@ -110,6 +113,8 @@ If AsyncAPI operations are present:
 ---
 
 ## Spec Verify
+
+> See: `references/knowledge/x-openweb-extensions.md` for the complete `x-openweb` field schema.
 
 Check the curated spec against `spec-curation.md` standards. The verifier
 should not have seen the curation decisions — review the spec fresh.
