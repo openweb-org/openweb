@@ -7963,6 +7963,7 @@ paths:
       operationId: getDanmaku
       summary: Get danmaku (bullet comments) for a video segment — decoded from protobuf to JSON with comment text, timestamp, color, mode
       x-openweb:
+        transport: page
         permission: read
         build:
           stable_id: danmaku0001

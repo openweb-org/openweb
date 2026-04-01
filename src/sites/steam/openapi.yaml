@@ -388,9 +388,13 @@ paths:
                         discount_percent:
                           type: integer
                         original_price:
-                          type: [integer, 'null']
+                          oneOf:
+                            - type: integer
+                            - type: 'null'
                         final_price:
-                          type: [integer, 'null']
+                          oneOf:
+                            - type: integer
+                            - type: 'null'
                         currency:
                           type: string
                         large_capsule_image:
@@ -411,9 +415,13 @@ paths:
                         discount_percent:
                           type: integer
                         original_price:
-                          type: [integer, 'null']
+                          oneOf:
+                            - type: integer
+                            - type: 'null'
                         final_price:
-                          type: [integer, 'null']
+                          oneOf:
+                            - type: integer
+                            - type: 'null'
                         currency:
                           type: string
                         large_capsule_image:
@@ -434,9 +442,13 @@ paths:
                         discount_percent:
                           type: integer
                         original_price:
-                          type: [integer, 'null']
+                          oneOf:
+                            - type: integer
+                            - type: 'null'
                         final_price:
-                          type: [integer, 'null']
+                          oneOf:
+                            - type: integer
+                            - type: 'null'
                         currency:
                           type: string
                         header_image:
@@ -455,9 +467,13 @@ paths:
                         discount_percent:
                           type: integer
                         original_price:
-                          type: [integer, 'null']
+                          oneOf:
+                            - type: integer
+                            - type: 'null'
                         final_price:
-                          type: [integer, 'null']
+                          oneOf:
+                            - type: integer
+                            - type: 'null'
                         currency:
                           type: string
                         header_image:
@@ -521,9 +537,13 @@ paths:
                             discount_percent:
                               type: integer
                             original_price:
-                              type: integer
+                              oneOf:
+                                - type: integer
+                                - type: 'null'
                             final_price:
-                              type: integer
+                              oneOf:
+                                - type: integer
+                                - type: 'null'
                             currency:
                               type: string
                             header_image:
@@ -549,9 +569,13 @@ paths:
                             discount_percent:
                               type: integer
                             original_price:
-                              type: integer
+                              oneOf:
+                                - type: integer
+                                - type: 'null'
                             final_price:
-                              type: integer
+                              oneOf:
+                                - type: integer
+                                - type: 'null'
                             currency:
                               type: string
                             header_image:
@@ -577,9 +601,13 @@ paths:
                             discount_percent:
                               type: integer
                             original_price:
-                              type: integer
+                              oneOf:
+                                - type: integer
+                                - type: 'null'
                             final_price:
-                              type: integer
+                              oneOf:
+                                - type: integer
+                                - type: 'null'
                             currency:
                               type: string
                             header_image:
@@ -605,9 +633,13 @@ paths:
                             discount_percent:
                               type: integer
                             original_price:
-                              type: integer
+                              oneOf:
+                                - type: integer
+                                - type: 'null'
                             final_price:
-                              type: integer
+                              oneOf:
+                                - type: integer
+                                - type: 'null'
                             currency:
                               type: string
                             header_image:
@@ -841,7 +873,9 @@ paths:
                             name:
                               type: string
                             percent:
-                              type: [number, string]
+                              oneOf:
+                                - type: number
+                                - type: string
 
   /ISteamNews/GetNewsForApp/v1/:
     get:
@@ -998,7 +1032,9 @@ paths:
                           type: object
                           properties:
                             steam:
-                              type: ['string', 'null']
+                              oneOf:
+                                - type: string
+                                - type: 'null'
 
   /tagdata/populartags/english:
     get:

@@ -32,6 +32,7 @@ import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 import { fetchWithRedirects } from './redirect.js'
 import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
 import {
+  type AutoNavigateResult,
   autoNavigate,
   createNeedsPageError,
   executeSessionHttp,
@@ -118,23 +119,29 @@ export async function executeOperation(
       }
       const serverUrl = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
       let page = await findPageForOrigin(context, serverUrl)
+      let ownedPage = false
       if (!page) {
-        page = await autoNavigate(context, serverUrl)
+        const nav = await autoNavigate(context, serverUrl)
+        if (nav) { page = nav.page; ownedPage = nav.owned }
       }
       if (!page) {
         throw createNeedsPageError(serverUrl)
       }
-      const mergedParams = { ...params, ...adapterRef.params }
+      try {
+        const mergedParams = { ...params, ...adapterRef.params }
 
-      // Validate params: required checks, unknown rejection, type validation, defaults
-      const allParams = resolveAllParameters(spec, operationRef.operation)
-      const adapterParams = validateParams(
-        [...allParams, ...getRequestBodyParameters(operationRef.operation)],
-        mergedParams,
-      )
+        // Validate params: required checks, unknown rejection, type validation, defaults
+        const allParams = resolveAllParameters(spec, operationRef.operation)
+        const adapterParams = validateParams(
+          [...allParams, ...getRequestBodyParameters(operationRef.operation)],
+          mergedParams,
+        )
 
-      body = await executeAdapter(page, adapter, adapterRef.operation, adapterParams)
-      status = 200
+        body = await executeAdapter(page, adapter, adapterRef.operation, adapterParams)
+        status = 200
+      } finally {
+        if (ownedPage) await page.close().catch(() => {})
+      }
     } finally {
       if (!deps.browser) {
         browser.close().catch(() => {}) // intentional: cleanup — browser may already be closed

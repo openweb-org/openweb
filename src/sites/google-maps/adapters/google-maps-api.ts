@@ -141,7 +141,7 @@ async function fetchPlaceInfo(page: Page, placeId: string, query: string): Promi
 
   const data = JSON.parse(result.replace(/^\)\]\}'\n/, '')) as unknown[]
   const info = data[6] as unknown[]
-  if (!Array.isArray(info)) throw new OpenWebError('No place data found', 'EXTRACT_FAILED')
+  if (!Array.isArray(info)) throw OpenWebError.apiError('place', 'No place data found')
   return info
 }
 

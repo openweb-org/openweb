@@ -76,14 +76,29 @@ export function createNeedsPageError(serverUrl: string): OpenWebError {
   })
 }
 
+export interface AutoNavigateResult {
+  page: Page
+  /** true if this page was created by autoNavigate (caller must close it) */
+  owned: boolean
+}
+
 /** Auto-navigate to site URL when no matching page exists */
-export async function autoNavigate(context: BrowserContext, serverUrl: string): Promise<Page | undefined> {
+export async function autoNavigate(context: BrowserContext, serverUrl: string): Promise<AutoNavigateResult | undefined> {
   const siteUrl = getPageHintUrl(serverUrl)
   try {
     logger.debug(`auto-navigating to ${siteUrl}`)
     const newPage = await context.newPage()
     await newPage.goto(siteUrl, { waitUntil: 'networkidle', timeout: 15_000 })
-    return await findPageForOrigin(context, serverUrl)
+    const matched = await findPageForOrigin(context, serverUrl)
+    if (!matched) {
+      await newPage.close().catch(() => {})
+      return undefined
+    }
+    // If findPageForOrigin returned a different page, close the one we created
+    if (matched !== newPage) {
+      await newPage.close().catch(() => {})
+    }
+    return { page: matched, owned: matched === newPage }
   } catch (err) {
     logger.debug(`auto-navigation failed: ${err instanceof Error ? err.message : String(err)}`)
     return undefined
@@ -137,94 +152,101 @@ export async function executeSessionHttp(
   }
 
   let page = await findPageForOrigin(context, serverUrl)
+  let ownedPage = false
   if (!page) {
-    page = await autoNavigate(context, serverUrl)
+    const nav = await autoNavigate(context, serverUrl)
+    if (nav) { page = nav.page; ownedPage = nav.owned }
   }
   if (!page) throw createNeedsPageError(serverUrl)
-  const handle: BrowserHandle = { page, context }
 
-  // 1. Resolve auth
-  const authResult = serverExt?.auth
-    ? await resolveAuth(handle, serverExt.auth, serverUrl, deps)
-    : undefined
+  try {
+    const handle: BrowserHandle = { page, context }
 
-  // 2. Build request
-  const allParams = resolveAllParameters(spec, operation)
-  const inputParams = validateParams(
-    [...allParams, ...getRequestBodyParameters(operation)],
-    { ...params, ...authResult?.queryParams },
-  )
-  const resolvedPath = substitutePath(operationPath, allParams, inputParams)
-  let target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams)
+    // 1. Resolve auth
+    const authResult = serverExt?.auth
+      ? await resolveAuth(handle, serverExt.auth, serverUrl, deps)
+      : undefined
 
-  const upperMethod = method.toUpperCase()
-  let jsonBody: string | undefined
-  if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
-    jsonBody = buildJsonRequestBody(operation, inputParams)
-  }
+    // 2. Build request
+    const allParams = resolveAllParameters(spec, operation)
+    const inputParams = validateParams(
+      [...allParams, ...getRequestBodyParameters(operation)],
+      { ...params, ...authResult?.queryParams },
+    )
+    const resolvedPath = substitutePath(operationPath, allParams, inputParams)
+    let target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams)
 
-  const serverOrigin = new URL(serverUrl).origin
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-    Referer: `${serverOrigin}/`,
-    ...buildHeaderParams(allParams, inputParams),
-  }
-  if (jsonBody) headers['Content-Type'] = 'application/json'
+    const upperMethod = method.toUpperCase()
+    let jsonBody: string | undefined
+    if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
+      jsonBody = buildJsonRequestBody(operation, inputParams)
+    }
 
-  let cookieString: string | undefined
-  if (authResult) {
-    Object.assign(headers, authResult.headers)
-    cookieString = authResult.cookieString
-    if (authResult.queryParams) {
-      for (const [key, value] of Object.entries(authResult.queryParams)) {
-        const sep = target.includes('?') ? '&' : '?'
-        target = `${target}${sep}${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+    const serverOrigin = new URL(serverUrl).origin
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      Referer: `${serverOrigin}/`,
+      ...buildHeaderParams(allParams, inputParams),
+    }
+    if (jsonBody) headers['Content-Type'] = 'application/json'
+
+    let cookieString: string | undefined
+    if (authResult) {
+      Object.assign(headers, authResult.headers)
+      cookieString = authResult.cookieString
+      if (authResult.queryParams) {
+        for (const [key, value] of Object.entries(authResult.queryParams)) {
+          const sep = target.includes('?') ? '&' : '?'
+          target = `${target}${sep}${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+        }
       }
     }
-  }
 
-  // D-14: node transport always sends browser cookies
-  if (!cookieString) {
-    const browserCookies = await context.cookies(serverUrl)
-    if (browserCookies.length > 0) cookieString = formatCookieString(browserCookies)
-  }
-
-  // 3. Resolve CSRF
-  if (serverExt?.csrf) {
-    const csrfScope = (serverExt.csrf as Record<string, unknown>).scope as string[] | undefined
-    if (shouldApplyCsrf(csrfScope, upperMethod)) {
-      const authHeaders: Record<string, string> = {}
-      for (const [k, v] of Object.entries(headers)) {
-        if (!['cookie', 'accept', 'referer', 'content-type'].includes(k.toLowerCase())) authHeaders[k] = v
-      }
-      Object.assign(headers, (await resolveCsrf(handle, serverExt.csrf, serverUrl, { ...deps, authHeaders, cookieString })).headers)
+    // D-14: node transport always sends browser cookies
+    if (!cookieString) {
+      const browserCookies = await context.cookies(serverUrl)
+      if (browserCookies.length > 0) cookieString = formatCookieString(browserCookies)
     }
+
+    // 3. Resolve CSRF
+    if (serverExt?.csrf) {
+      const csrfScope = (serverExt.csrf as Record<string, unknown>).scope as string[] | undefined
+      if (shouldApplyCsrf(csrfScope, upperMethod)) {
+        const authHeaders: Record<string, string> = {}
+        for (const [k, v] of Object.entries(headers)) {
+          if (!['cookie', 'accept', 'referer', 'content-type'].includes(k.toLowerCase())) authHeaders[k] = v
+        }
+        Object.assign(headers, (await resolveCsrf(handle, serverExt.csrf, serverUrl, { ...deps, authHeaders, cookieString })).headers)
+      }
+    }
+
+    // 4. Resolve signing
+    if (serverExt?.signing) Object.assign(headers, (await resolveSigning(handle, serverExt.signing, serverUrl, deps)).headers)
+    if (cookieString) headers.Cookie = cookieString
+
+    // 5. Fetch with redirects
+    const response = await fetchWithRedirects(target, upperMethod, headers, jsonBody, { fetchImpl, ssrfValidator })
+
+    if (!response.ok) {
+      const httpFailure = getHttpFailure(response.status)
+      throw new OpenWebError({
+        error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
+        code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
+        message: `HTTP ${response.status}`,
+        action: httpFailure.failureClass === 'needs_login'
+          ? 'Run: openweb login <site>, then: openweb browser restart'
+          : 'Check parameters and endpoint availability.',
+        retriable: httpFailure.retriable, failureClass: httpFailure.failureClass,
+      })
+    }
+
+    // 6. Parse response
+    const text = await response.text()
+    const body = parseResponseBody(text, response.headers.get('content-type'), response.status)
+    const responseHeaders: Record<string, string> = {}
+    response.headers.forEach((value, key) => { responseHeaders[key] = value })
+    return { status: response.status, body, responseHeaders }
+  } finally {
+    if (ownedPage) await page.close().catch(() => {})
   }
-
-  // 4. Resolve signing
-  if (serverExt?.signing) Object.assign(headers, (await resolveSigning(handle, serverExt.signing, serverUrl, deps)).headers)
-  if (cookieString) headers.Cookie = cookieString
-
-  // 5. Fetch with redirects
-  const response = await fetchWithRedirects(target, upperMethod, headers, jsonBody, { fetchImpl, ssrfValidator })
-
-  if (!response.ok) {
-    const httpFailure = getHttpFailure(response.status)
-    throw new OpenWebError({
-      error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',
-      code: httpFailure.failureClass === 'needs_login' ? 'AUTH_FAILED' : 'EXECUTION_FAILED',
-      message: `HTTP ${response.status}`,
-      action: httpFailure.failureClass === 'needs_login'
-        ? 'Run: openweb login <site>, then: openweb browser restart'
-        : 'Check parameters and endpoint availability.',
-      retriable: httpFailure.retriable, failureClass: httpFailure.failureClass,
-    })
-  }
-
-  // 6. Parse response
-  const text = await response.text()
-  const body = parseResponseBody(text, response.headers.get('content-type'), response.status)
-  const responseHeaders: Record<string, string> = {}
-  response.headers.forEach((value, key) => { responseHeaders[key] = value })
-  return { status: response.status, body, responseHeaders }
 }

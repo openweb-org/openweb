@@ -1146,31 +1146,30 @@ describe('RC2: autoNavigate', () => {
   it('creates a new page and navigates to the site URL', async () => {
     const gotoFn = vi.fn(async () => {})
     let newPageCreated = false
+    const newPageObj = {
+      goto: gotoFn,
+      url: () => 'https://www.instagram.com/',
+      content: vi.fn(async () => '<html><body>instagram</body></html>'),
+      close: vi.fn(async () => {}),
+    }
     const context = {
       pages: () => {
         // After newPage + goto, the page list includes the navigated page
         if (newPageCreated) {
-          return [
-            {
-              url: () => 'https://www.instagram.com/',
-              content: vi.fn(async () => '<html><body>instagram</body></html>'),
-            },
-          ]
+          return [newPageObj]
         }
         return [] // Initially no pages
       },
       newPage: vi.fn(async () => {
         newPageCreated = true
-        return {
-          goto: gotoFn,
-          url: () => 'https://www.instagram.com/',
-          content: vi.fn(async () => '<html><body>instagram</body></html>'),
-        }
+        return newPageObj
       }),
     } as unknown as import('playwright').BrowserContext
 
-    const page = await autoNavigate(context, 'https://www.instagram.com/api/v1')
-    expect(page).toBeDefined()
+    const result = await autoNavigate(context, 'https://www.instagram.com/api/v1')
+    expect(result).toBeDefined()
+    expect(result!.page).toBeDefined()
+    expect(result!.owned).toBe(true)
     expect(gotoFn).toHaveBeenCalledWith(
       'https://www.instagram.com/',
       expect.objectContaining({ waitUntil: 'networkidle', timeout: 15_000 }),
@@ -1184,10 +1183,36 @@ describe('RC2: autoNavigate', () => {
         goto: vi.fn(async () => { throw new Error('net::ERR_CONNECTION_REFUSED') }),
         url: () => 'about:blank',
         content: vi.fn(async () => ''),
+        close: vi.fn(async () => {}),
       })),
     } as unknown as import('playwright').BrowserContext
 
-    const page = await autoNavigate(context, 'https://unreachable.example.com/api')
-    expect(page).toBeUndefined()
+    const result = await autoNavigate(context, 'https://unreachable.example.com/api')
+    expect(result).toBeUndefined()
+  })
+
+  it('returns owned=false when findPageForOrigin returns an existing page', async () => {
+    const existingPage = {
+      url: () => 'https://www.instagram.com/feed',
+      content: vi.fn(async () => '<html></html>'),
+      close: vi.fn(async () => {}),
+    }
+    const newPageObj = {
+      goto: vi.fn(async () => {}),
+      url: () => 'https://www.instagram.com/',
+      content: vi.fn(async () => '<html></html>'),
+      close: vi.fn(async () => {}),
+    }
+    const context = {
+      pages: () => [existingPage, newPageObj],
+      newPage: vi.fn(async () => newPageObj),
+    } as unknown as import('playwright').BrowserContext
+
+    const result = await autoNavigate(context, 'https://www.instagram.com/api/v1')
+    expect(result).toBeDefined()
+    expect(result!.page).toBe(existingPage)
+    expect(result!.owned).toBe(false)
+    // The newly created page should have been closed since it wasn't the match
+    expect(newPageObj.close).toHaveBeenCalled()
   })
 })

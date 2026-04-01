@@ -10,7 +10,7 @@ import { resolvePageGlobalData } from './primitives/page-global-data.js'
 import { resolveScriptJson } from './primitives/script-json.js'
 import { resolveSsrNextData } from './primitives/ssr-next-data.js'
 import type { BrowserHandle } from './primitives/types.js'
-import { autoNavigate, findPageForOrigin } from './session-executor.js'
+import { type AutoNavigateResult, autoNavigate, findPageForOrigin } from './session-executor.js'
 
 export type { ExecutorResult }
 
@@ -116,42 +116,48 @@ export async function executeExtraction(
   const extraction = getExtraction(operation)
   const targetPageUrl = resolvePageUrl(serverUrl, extraction)
   let page = await findPageForTarget(context, targetPageUrl, 'page_url' in extraction && !!extraction.page_url)
+  let ownedPage = false
   if (!page) {
-    page = await autoNavigate(context, serverUrl)
+    const nav = await autoNavigate(context, serverUrl)
+    if (nav) { page = nav.page; ownedPage = nav.owned }
   }
   if (!page) {
     throw createExtractionNeedsPageError(targetPageUrl)
   }
 
-  const handle: BrowserHandle = { page, context }
-  let body: unknown
-  switch (extraction.type) {
-    case 'script_json':
-      body = await resolveScriptJson(handle, extraction)
-      break
-    case 'ssr_next_data':
-      body = await resolveSsrNextData(handle, extraction)
-      break
-    case 'html_selector':
-      body = await resolveHtmlSelector(handle, extraction)
-      break
-    case 'page_global_data':
-      body = await resolvePageGlobalData(handle, extraction)
-      break
-    default:
-      throw new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: `Unsupported extraction primitive: ${extraction.type}`,
-        action: 'Implement the extraction resolver or update the site package.',
-        retriable: false,
-        failureClass: 'fatal',
-      })
-  }
+  try {
+    const handle: BrowserHandle = { page, context }
+    let body: unknown
+    switch (extraction.type) {
+      case 'script_json':
+        body = await resolveScriptJson(handle, extraction)
+        break
+      case 'ssr_next_data':
+        body = await resolveSsrNextData(handle, extraction)
+        break
+      case 'html_selector':
+        body = await resolveHtmlSelector(handle, extraction)
+        break
+      case 'page_global_data':
+        body = await resolvePageGlobalData(handle, extraction)
+        break
+      default:
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: `Unsupported extraction primitive: ${extraction.type}`,
+          action: 'Implement the extraction resolver or update the site package.',
+          retriable: false,
+          failureClass: 'fatal',
+        })
+    }
 
-  return {
-    status: 200,
-    body,
-    responseHeaders: {},
+    return {
+      status: 200,
+      body,
+      responseHeaders: {},
+    }
+  } finally {
+    if (ownedPage) await page.close().catch(() => {})
   }
 }

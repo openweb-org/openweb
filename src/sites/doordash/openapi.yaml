@@ -54,7 +54,6 @@ paths:
                       type: object
                       required:
                         - name
-                        - resultType
                       properties:
                         name:
                           type: string

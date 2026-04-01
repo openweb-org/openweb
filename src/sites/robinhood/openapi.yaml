@@ -127,7 +127,9 @@ paths:
                         last_trade_price:
                           type: string
                         last_extended_hours_trade_price:
-                          type: string
+                          oneOf:
+                            - type: string
+                            - type: 'null'
                         previous_close:
                           type: string
                         adjusted_previous_close:
