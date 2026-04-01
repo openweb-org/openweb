@@ -1,0 +1,10 @@
+{
+  "operation_id": "searchJobs",
+  "method": "get",
+  "cases": [
+    {
+      "input": { "query": "Java", "city": "101010100" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "operation_id": "getFlightDetail",
+  "cases": [{
+    "input": { "origin": "San Francisco (SFO)", "destination": "Chicago (ORD-O'Hare Intl.)", "departureDate": "2026-06-15", "adults": 1 },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

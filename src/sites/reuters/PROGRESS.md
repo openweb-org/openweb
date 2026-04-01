@@ -1,7 +1,14 @@
-# Reuters Fixture Progress
+## 2026-04-01: Initial discovery and compile
 
-## 2026-03-24: Initial discovery
+**What changed:**
+- Discovered Reuters Arc Publishing (PageBuilder Fusion) API pattern
+- Created adapter-based site package with 4 operations: searchArticles, getArticle, getTopicArticles, getMarketQuotes
+- API requires browser session (401 on direct Node.js requests) — page transport with adapter
 
-**What:** Discovered and compiled Reuters fixture with 10 operations covering news sections, article search, market data, and company profiles.
+**Why:**
+- Reuters uses a JSON-encoded query parameter pattern that the auto-compiler collapses into one generic endpoint
+- DataDome bot detection prevents node transport
+- Manual adapter required for proper parameter handling
 
-**Operations:** getTopNews, searchArticles, getArticle, getWorldNews, getBusinessNews, getTechnologyNews, getLegalNews, getMarketData, getCompanyProfile, getQuote
+**Verification:** API-level — all 4 operations return valid JSON from browser context
+**Commit:** pending

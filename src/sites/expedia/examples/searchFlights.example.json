@@ -1,0 +1,7 @@
+{
+  "operation_id": "searchFlights",
+  "cases": [{
+    "input": { "origin": "New York (NYC-All Airports)", "destination": "Los Angeles (LAX-Los Angeles Intl.)", "departureDate": "2026-05-10", "returnDate": "2026-05-17", "adults": 1 },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

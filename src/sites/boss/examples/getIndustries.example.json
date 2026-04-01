@@ -1,0 +1,10 @@
+{
+  "operation_id": "getIndustries",
+  "method": "get",
+  "cases": [
+    {
+      "input": {},
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

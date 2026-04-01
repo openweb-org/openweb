@@ -1,0 +1,10 @@
+{
+  "operation_id": "getFilterConditions",
+  "method": "get",
+  "cases": [
+    {
+      "input": {},
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

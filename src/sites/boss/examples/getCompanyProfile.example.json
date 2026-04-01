@@ -1,0 +1,10 @@
+{
+  "operation_id": "getCompanyProfile",
+  "method": "get",
+  "cases": [
+    {
+      "input": { "companyId": "test.html" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}
