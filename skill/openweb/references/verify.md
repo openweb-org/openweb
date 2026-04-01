@@ -122,7 +122,7 @@ should not have seen the curation decisions — review the spec fresh.
 | **Anti-bot params removed** | No `dm_*`, `w_rid`, `x-bogus`, `__a/__d/__s`, `msToken` in param lists |
 | **Operation naming** | camelCase, descriptive, verb+noun (`searchProducts` not `getApiV1Search`) |
 | **Summaries** | Each operation has a summary with 3-5 key response fields |
-| **Auth config** | `x-openweb.auth` matches site's actual auth pattern; CSRF present if needed |
+| **Auth config** | `x-openweb.auth` matches site's actual auth pattern; CSRF present if needed. **If site has write ops, auth must not be removed even if reads work without it** — auth is site-level |
 | **Transport** | Correct transport per bot-detection level; page-transport ops have page_url |
 | **Permissions** | GET → read, mutations → write/delete, GraphQL queries via POST → read |
 | **Response schemas** | No bare `type: object` for ops that return structured JSON (unless truly opaque) |

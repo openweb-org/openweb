@@ -126,6 +126,11 @@ Review parameter descriptions for user-facing clarity:
 
 ## Fix Auth and Transport
 
+Auth is **site-level** (`servers[0].x-openweb.auth`) — it applies to all operations.
+Do not remove auth to make read-only verify pass. If the site has any write
+operations (createIssue, likePost, addToCart, etc.), auth must be preserved even
+if read operations work without it.
+
 ### `x-openweb` Auth/CSRF Shape
 
 If analysis review found auth issues, edit `servers[0].x-openweb`:

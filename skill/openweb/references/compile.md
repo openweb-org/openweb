@@ -36,8 +36,7 @@ flowchart TD
     style BACK fill:#ffebee
 ```
 
-**Exit criterion:** For each target intent, at least one operation returns
-real data via `openweb <site> exec <op> '{...}'`.
+**Exit criterion:** All dimensions of `verify.md` pass — see Step 4.
 
 ### Step 1: Compile
 
@@ -93,7 +92,9 @@ rate, auth status. Example: `8 HTTP ops, 5 verified, 42/120 API samples, auth=de
 **Note:** Operations with `replaySafety: unsafe_mutation` (write ops) are skipped
 entirely — they do not appear in the verify report. This is controlled by the
 `replay_safety` field in example files, falling back to `x-openweb.permission` or
-HTTP method.
+HTTP method. **However, auth config must be preserved even if read ops pass without
+it** — auth is site-level, so removing it breaks all write ops. If a site has any
+write operations, do not remove auth/csrf from `servers[0].x-openweb`.
 
 **Interpreting compile-time verify failures (`verify-report.json`):**
 
@@ -141,8 +142,8 @@ Verification covers three dimensions:
 All three must pass. If verify finds spec or doc issues, return to Step 3
 to fix them. If verify finds missing traffic, return to `discover.md` Step 2.
 
-**Exit criterion:** All three dimensions pass — operations return real data,
-spec meets standards, docs are complete with workflows and data flow.
+**Exit criterion:** All three dimensions of `verify.md` pass. Do not define
+separate exit criteria here — `verify.md` is the single source of truth.
 
 ### Step 5: Install
 
