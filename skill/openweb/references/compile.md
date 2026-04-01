@@ -74,6 +74,15 @@ and uses the analyzer's suggested operation names (camelCase by default, e.g.,
 **Read `summary.txt` first** — one line showing operation count, verify pass
 rate, auth status. Example: `8 HTTP ops, 5 verified, 42/120 API samples, auth=detected`
 
+**Check `byCategory` in `analysis.json`** — the labeler already filters
+off-domain and tracking traffic. Only `api`-labeled samples proceed to
+clustering and endpoint generation. If `byCategory.api` is low but
+`byCategory.off_domain` is high, your capture included cross-site traffic
+(use `--isolate` next time). The off-domain entries do not affect generated
+operations — but **auth detection currently reads all raw HAR entries**
+(not just `api`-labeled ones), so cross-site cookies can contaminate auth
+candidate ranking. Verify the selected auth candidate is correct.
+
 **Then read `verify-report.json`** — compile-time verify output using the
 `SiteVerifyResult` format. Check each operation's `status`:
 - `PASS` — the operation works. Good.

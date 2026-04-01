@@ -143,23 +143,30 @@ sharing, and troubleshooting.
 
 ```bash
 openweb browser start
-openweb capture start --cdp-endpoint http://localhost:9222
+openweb capture start --isolate --url https://<site-domain> --cdp-endpoint http://localhost:9222
 ```
+
+`--isolate` creates a dedicated tab and records only that tab's traffic.
+Without it, capture records all tabs — fine for single-site interactive use,
+but causes cross-site contamination when multiple tabs are open.
+
+The capture output goes to `$OPENWEB_HOME/captures/<session-id>/`. Do not
+use the project root for capture artifacts.
 
 #### Browse per Target Intents
 
-Browse the site systematically to trigger each target intent from Step 1.
+Browse the site in the capture tab to trigger each target intent from Step 1.
 See `capture-guide.md` for detailed browsing tips, direct API call patterns,
 and write action techniques.
 
 #### Stop Capture
 
 ```bash
-openweb capture stop
+openweb capture stop --session <session-id>
 ```
 
-The capture directory (default `./capture/`) now contains `traffic.har`,
-`state_snapshots/`, and optionally `websocket_frames.jsonl`.
+The capture directory contains `traffic.har`, `state_snapshots/`, and
+optionally `websocket_frames.jsonl`.
 
 ## Handoff to `compile.md`
 
