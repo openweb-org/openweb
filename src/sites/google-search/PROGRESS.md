@@ -1,5 +1,21 @@
 # Google Search — Progress
 
+## 2026-03-31: Curate to 14 operations, add auth, DOC polish
+
+**What changed:**
+- Expanded from 7 to 14 operations: added getFeaturedSnippet, getPeopleAlsoAsk, getRelatedSearches, searchLocal, getCalculation, getWeather, getTranslation
+- Set server-level auth to cookie_session (page transport uses browser cookies)
+- Enriched all operation summaries with 3-5 key response fields
+- Added 3 new example files (getFeaturedSnippet, getPeopleAlsoAsk, searchLocal) — 10 total
+- Rewrote DOC.md per site-doc.md template: workflows, data flow annotations, quick start, site internals
+- Updated manifest to version 1.1.0 with 14 ops
+
+**Why:**
+- Full curation pass per compile.md Step 3: enrich schemas, ensure examples, doc polish
+
+**Verification:** All ops adapter-verified via DOM extraction; verify pass pending
+**Commit:** pending
+
 ## 2026-03-26: Expand coverage from 3 to 7 operations
 
 **What changed:**

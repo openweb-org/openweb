@@ -6,8 +6,8 @@
       "input": {
         "count": 1,
         "list_id": "my_follow_all",
-        "refresh": 1,
-        "since_id": 1
+        "refresh": 4,
+        "since_id": 0
       },
       "assertions": {
         "status": 200,

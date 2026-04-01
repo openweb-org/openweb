@@ -60,12 +60,13 @@ paths:
                         type: integer
                       name:
                         type: string
-                        enum:
-                          - bishi
-                          - imoonkey
+                        description: Username.
                       sex:
                         type: string
+                        description: "Gender: 男 (male), 女 (female), 保密 (private)."
                         enum:
+                          - 男
+                          - 女
                           - 保密
                       face:
                         type: string
@@ -76,8 +77,7 @@ paths:
                         type: integer
                       sign:
                         type: string
-                        enum:
-                          - ""
+                        description: User bio/signature.
                       rank:
                         type: integer
                       level:
@@ -375,6 +375,16 @@ paths:
                             type: array
                             items:
                               type: object
+                              properties:
+                                mid:
+                                  type: integer
+                                  description: User ID.
+                                tag:
+                                  type: string
+                                  description: Honour tag text.
+                                link:
+                                  type: string
+                                  description: Link URL.
                           is_latest_100honour:
                             type: integer
                         required:
@@ -774,6 +784,13 @@ paths:
                               - type: array
                                 items:
                                   type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                      description: Series/collection name.
+                                    count:
+                                      type: integer
+                                      description: Number of videos in series.
                           tlist:
                             type: "null"
                           vlist:
@@ -1972,6 +1989,7 @@ paths:
                                         - region
                                 avatar_item:
                                   type: object
+                                  description: Avatar decoration layers (frames, pendants, NFT badges).
                                   properties:
                                     container_size:
                                       type: object
@@ -1990,46 +2008,6 @@ paths:
                                           type: array
                                           items:
                                             type: object
-                                            properties:
-                                              visible:
-                                                type: boolean
-                                              general_spec:
-                                                type: object
-                                                properties:
-                                                  pos_spec:
-                                                    type: object
-                                                  size_spec:
-                                                    type: object
-                                                  render_spec:
-                                                    type: object
-                                                required:
-                                                  - pos_spec
-                                                  - size_spec
-                                                  - render_spec
-                                              layer_config:
-                                                type: object
-                                                properties:
-                                                  tags:
-                                                    type: object
-                                                  is_critical:
-                                                    type: boolean
-                                                required:
-                                                  - tags
-                                              resource:
-                                                type: object
-                                                properties:
-                                                  res_type:
-                                                    type: integer
-                                                  res_image:
-                                                    type: object
-                                                required:
-                                                  - res_type
-                                                  - res_image
-                                            required:
-                                              - visible
-                                              - general_spec
-                                              - layer_config
-                                              - resource
                                         is_critical_group:
                                           type: boolean
                                       required:
@@ -2037,33 +2015,6 @@ paths:
                                         - is_critical_group
                                     mid:
                                       type: string
-                                    layers:
-                                      type: array
-                                      items:
-                                        type: object
-                                        properties:
-                                          layers:
-                                            type: array
-                                            items:
-                                              type: object
-                                              properties:
-                                                visible:
-                                                  type: boolean
-                                                general_spec:
-                                                  type: object
-                                                layer_config:
-                                                  type: object
-                                                resource:
-                                                  type: object
-                                              required:
-                                                - visible
-                                                - general_spec
-                                                - layer_config
-                                                - resource
-                                          is_critical_group:
-                                            type: boolean
-                                        required:
-                                          - layers
                                   required:
                                     - container_size
                                     - fallback_layers
@@ -3461,6 +3412,7 @@ paths:
                                             type: "null"
                                           avatar_item:
                                             type: object
+                                            description: Avatar decoration layers (frames, pendants, NFT badges).
                                             properties:
                                               container_size:
                                                 type: object
@@ -3486,17 +3438,6 @@ paths:
                                                   - is_critical_group
                                               mid:
                                                 type: string
-                                              layers:
-                                                type: array
-                                                items:
-                                                  type: object
-                                                  properties:
-                                                    layers:
-                                                      type: array
-                                                    is_critical_group:
-                                                      type: boolean
-                                                  required:
-                                                    - layers
                                             required:
                                               - container_size
                                               - fallback_layers
@@ -3567,6 +3508,17 @@ paths:
                                             type: array
                                             items:
                                               type: object
+                                              properties:
+                                                mid:
+                                                  type: string
+                                                  description: Mentioned user ID.
+                                                uname:
+                                                  type: string
+                                                  description: Mentioned username.
+                                                avatar:
+                                                  type: string
+                                                  format: uri
+                                                  description: Avatar URL.
                                           jump_url:
                                             type: object
                                             properties: {}
@@ -4642,6 +4594,7 @@ paths:
                                         type: "null"
                                       avatar_item:
                                         type: object
+                                        description: Avatar decoration layers (frames, pendants, NFT badges).
                                         properties:
                                           container_size:
                                             type: object
@@ -4660,46 +4613,6 @@ paths:
                                                 type: array
                                                 items:
                                                   type: object
-                                                  properties:
-                                                    visible:
-                                                      type: boolean
-                                                    general_spec:
-                                                      type: object
-                                                      properties:
-                                                        pos_spec:
-                                                          type: object
-                                                        size_spec:
-                                                          type: object
-                                                        render_spec:
-                                                          type: object
-                                                      required:
-                                                        - pos_spec
-                                                        - size_spec
-                                                        - render_spec
-                                                    layer_config:
-                                                      type: object
-                                                      properties:
-                                                        tags:
-                                                          type: object
-                                                        is_critical:
-                                                          type: boolean
-                                                      required:
-                                                        - tags
-                                                    resource:
-                                                      type: object
-                                                      properties:
-                                                        res_type:
-                                                          type: integer
-                                                        res_image:
-                                                          type: object
-                                                      required:
-                                                        - res_type
-                                                        - res_image
-                                                  required:
-                                                    - visible
-                                                    - general_spec
-                                                    - layer_config
-                                                    - resource
                                               is_critical_group:
                                                 type: boolean
                                             required:
@@ -4707,10 +4620,6 @@ paths:
                                               - is_critical_group
                                           mid:
                                             type: string
-                                            enum:
-                                              - "147166910"
-                                              - "1487316826"
-                                              - "674734501"
                                         required:
                                           - container_size
                                           - fallback_layers
@@ -5560,6 +5469,7 @@ paths:
                                               type: "null"
                                             avatar_item:
                                               type: object
+                                              description: Avatar decoration layers (frames, pendants, NFT badges).
                                               properties:
                                                 container_size:
                                                   type: object
@@ -5585,10 +5495,6 @@ paths:
                                                     - is_critical_group
                                                 mid:
                                                   type: string
-                                                  enum:
-                                                    - "1026426367"
-                                                    - "113362335"
-                                                    - "247963696"
                                               required:
                                                 - container_size
                                                 - fallback_layers
@@ -5628,6 +5534,17 @@ paths:
                                               type: array
                                               items:
                                                 type: object
+                                                properties:
+                                                  mid:
+                                                    type: string
+                                                    description: Mentioned user ID.
+                                                  uname:
+                                                    type: string
+                                                    description: Mentioned username.
+                                                  avatar:
+                                                    type: string
+                                                    format: uri
+                                                    description: Avatar URL.
                                             jump_url:
                                               type: object
                                               properties: {}
@@ -6418,6 +6335,7 @@ paths:
                                       type: "null"
                                     avatar_item:
                                       type: object
+                                      description: Avatar decoration layers (frames, pendants, NFT badges).
                                       properties:
                                         container_size:
                                           type: object
@@ -6436,46 +6354,6 @@ paths:
                                               type: array
                                               items:
                                                 type: object
-                                                properties:
-                                                  visible:
-                                                    type: boolean
-                                                  general_spec:
-                                                    type: object
-                                                    properties:
-                                                      pos_spec:
-                                                        type: object
-                                                      size_spec:
-                                                        type: object
-                                                      render_spec:
-                                                        type: object
-                                                    required:
-                                                      - pos_spec
-                                                      - size_spec
-                                                      - render_spec
-                                                  layer_config:
-                                                    type: object
-                                                    properties:
-                                                      tags:
-                                                        type: object
-                                                      is_critical:
-                                                        type: boolean
-                                                    required:
-                                                      - tags
-                                                  resource:
-                                                    type: object
-                                                    properties:
-                                                      res_type:
-                                                        type: integer
-                                                      res_image:
-                                                        type: object
-                                                    required:
-                                                      - res_type
-                                                      - res_image
-                                                required:
-                                                  - visible
-                                                  - general_spec
-                                                  - layer_config
-                                                  - resource
                                             is_critical_group:
                                               type: boolean
                                           required:
@@ -6483,10 +6361,6 @@ paths:
                                             - is_critical_group
                                         mid:
                                           type: string
-                                          enum:
-                                            - "147166910"
-                                            - "1487316826"
-                                            - "674734501"
                                       required:
                                         - container_size
                                         - fallback_layers
@@ -7336,6 +7210,7 @@ paths:
                                             type: "null"
                                           avatar_item:
                                             type: object
+                                            description: Avatar decoration layers (frames, pendants, NFT badges).
                                             properties:
                                               container_size:
                                                 type: object
@@ -7361,10 +7236,6 @@ paths:
                                                   - is_critical_group
                                               mid:
                                                 type: string
-                                                enum:
-                                                  - "1026426367"
-                                                  - "113362335"
-                                                  - "247963696"
                                             required:
                                               - container_size
                                               - fallback_layers
@@ -7404,6 +7275,17 @@ paths:
                                             type: array
                                             items:
                                               type: object
+                                              properties:
+                                                mid:
+                                                  type: string
+                                                  description: Mentioned user ID.
+                                                uname:
+                                                  type: string
+                                                  description: Mentioned username.
+                                                avatar:
+                                                  type: string
+                                                  format: uri
+                                                  description: Avatar URL.
                                           jump_url:
                                             type: object
                                             properties: {}
@@ -9871,6 +9753,22 @@ paths:
                                 type: array
                                 items:
                                   type: object
+                                  properties:
+                                    id:
+                                      type: integer
+                                      description: Subtitle ID.
+                                    lan:
+                                      type: string
+                                      description: "Language code (e.g. zh-CN)."
+                                    lan_doc:
+                                      type: string
+                                      description: Language display name.
+                                    subtitle_url:
+                                      type: string
+                                      format: uri
+                                      description: Subtitle file URL.
+                                    is_lock:
+                                      type: boolean
                             required:
                               - allow_submit
                               - list
@@ -10514,6 +10412,13 @@ paths:
                                                     - ""
                                                 dimension:
                                                   type: object
+                                                  properties:
+                                                    width:
+                                                      type: integer
+                                                    height:
+                                                      type: integer
+                                                    rotate:
+                                                      type: integer
                                               required:
                                                 - cid
                                                 - page
@@ -10708,7 +10613,8 @@ paths:
                               attentions:
                                 type: array
                                 items:
-                                  type: object
+                                  type: integer
+                                  description: User ID of a followed user.
                               fans:
                                 type: integer
                               friend:
@@ -11425,6 +11331,21 @@ paths:
                             type: array
                             items:
                               type: object
+                              properties:
+                                name:
+                                  type: string
+                                  description: Share platform display name (e.g. 微信, QQ, 微博).
+                                logo:
+                                  type: string
+                                  format: uri
+                                  description: Platform icon URL.
+                                channel:
+                                  type: string
+                                  description: Platform identifier (e.g. WECHAT, QQ, WEIBO).
+                              required:
+                                - name
+                                - logo
+                                - channel
                         required:
                           - show
                           - list

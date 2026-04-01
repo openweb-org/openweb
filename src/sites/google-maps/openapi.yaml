@@ -8,6 +8,8 @@ servers:
   - url: https://www.google.com
     x-openweb:
       transport: page
+      auth:
+        type: cookie_session
 paths:
   /internal/searchPlaces:
     get:
@@ -170,10 +172,27 @@ paths:
                       properties:
                         text:
                           type: string
+                          description: Review text content.
+                        authorName:
+                          type:
+                            - string
+                            - 'null'
+                          description: Reviewer display name.
                         authorUrl:
                           type:
                             - string
                             - 'null'
+                          description: Link to reviewer's Google profile.
+                        rating:
+                          type:
+                            - number
+                            - 'null'
+                          description: Individual review star rating (1-5).
+                        relativeTime:
+                          type:
+                            - string
+                            - 'null'
+                          description: When the review was posted (e.g. "2 months ago").
   /internal/getDirections:
     get:
       operationId: getDirections
@@ -311,7 +330,7 @@ paths:
                           type:
                             - number
                             - 'null'
-                          description: Individual review star rating.
+                          description: Individual review star rating (1-5).
                         relativeTime:
                           type:
                             - string
@@ -506,3 +525,429 @@ paths:
                             - string
                             - 'null'
                           description: Additional context about the suggestion.
+  /internal/getTransitDirections:
+    get:
+      operationId: getTransitDirections
+      summary: Get transit directions between two locations — routes, durations, public transport options
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0008
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: getTransitDirections
+      parameters:
+        - name: origin
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Starting location (address or place name).
+        - name: destination
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Ending location (address or place name).
+      responses:
+        '200':
+          description: Transit directions with route options.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - routes
+                properties:
+                  origin:
+                    type: string
+                  destination:
+                    type: string
+                  routes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Route name or transit line.
+                        distanceText:
+                          type: string
+                        durationText:
+                          type: string
+                          description: Human-readable duration (e.g. "45 min").
+                        summary:
+                          type:
+                            - string
+                            - 'null'
+  /internal/getWalkingDirections:
+    get:
+      operationId: getWalkingDirections
+      summary: Get walking directions between two locations — routes, distances, durations
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0009
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: getWalkingDirections
+      parameters:
+        - name: origin
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Starting location (address or place name).
+        - name: destination
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Ending location (address or place name).
+      responses:
+        '200':
+          description: Walking directions with route options.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - routes
+                properties:
+                  origin:
+                    type: string
+                  destination:
+                    type: string
+                  routes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Route name.
+                        distanceText:
+                          type: string
+                        durationText:
+                          type: string
+                          description: Human-readable duration (e.g. "25 min").
+                        summary:
+                          type:
+                            - string
+                            - 'null'
+  /internal/getBicyclingDirections:
+    get:
+      operationId: getBicyclingDirections
+      summary: Get bicycling directions between two locations — routes, distances, durations
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0010
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: getBicyclingDirections
+      parameters:
+        - name: origin
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Starting location (address or place name).
+        - name: destination
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Ending location (address or place name).
+      responses:
+        '200':
+          description: Bicycling directions with route options.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - routes
+                properties:
+                  origin:
+                    type: string
+                  destination:
+                    type: string
+                  routes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Route name.
+                        distanceText:
+                          type: string
+                        durationText:
+                          type: string
+                          description: Human-readable duration.
+                        summary:
+                          type:
+                            - string
+                            - 'null'
+  /internal/getPlaceHours:
+    get:
+      operationId: getPlaceHours
+      summary: Get place operating hours — weekly schedule, current open/closed status
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0011
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: getPlaceHours
+      parameters:
+        - name: placeId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Place ID from searchPlaces (hex format "0x...:0x...").
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Place name (helps Maps resolve the place).
+      responses:
+        '200':
+          description: Place operating hours with weekly schedule.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - placeId
+                properties:
+                  placeName:
+                    type:
+                      - string
+                      - 'null'
+                  placeId:
+                    type: string
+                  status:
+                    type:
+                      - string
+                      - 'null'
+                    description: Current open/closed status (e.g. "Open", "Closes at 10 PM").
+                  schedule:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        day:
+                          type: string
+                          description: Day of the week.
+                        hours:
+                          type: string
+                          description: Operating hours for that day (e.g. "9 AM–10 PM", "Closed").
+  /internal/geocode:
+    get:
+      operationId: geocode
+      summary: Convert address to coordinates — lat, lng, placeId from address string
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0012
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: geocode
+      parameters:
+        - name: address
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Address or place name to geocode (e.g. "1600 Amphitheatre Parkway, Mountain View, CA").
+      responses:
+        '200':
+          description: Geocoded location with coordinates.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  address:
+                    type: string
+                    description: Input address string.
+                  lat:
+                    type:
+                      - number
+                      - 'null'
+                  lng:
+                    type:
+                      - number
+                      - 'null'
+                  placeId:
+                    type:
+                      - string
+                      - 'null'
+                    description: Google Maps place ID for the resolved location.
+                  formattedAddress:
+                    type:
+                      - string
+                      - 'null'
+                    description: Formatted address returned by Maps.
+                  name:
+                    type:
+                      - string
+                      - 'null'
+                    description: Place name if the address resolves to a named place.
+  /internal/reverseGeocode:
+    get:
+      operationId: reverseGeocode
+      summary: Convert coordinates to address — address, place name from lat/lng
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0013
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: reverseGeocode
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Latitude coordinate.
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Longitude coordinate.
+      responses:
+        '200':
+          description: Reverse-geocoded location with address.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lat:
+                    type: number
+                  lng:
+                    type: number
+                  address:
+                    type:
+                      - string
+                      - 'null'
+                    description: Resolved street address.
+                  name:
+                    type:
+                      - string
+                      - 'null'
+                    description: Place or area name at the coordinates.
+                  placeId:
+                    type:
+                      - string
+                      - 'null'
+                    description: Google Maps place ID if resolved.
+  /internal/getPlaceAbout:
+    get:
+      operationId: getPlaceAbout
+      summary: Get place about info — description, category, rating, website, phone, address
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gm0014
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-maps-api
+          operation: getPlaceAbout
+      parameters:
+        - name: placeId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Place ID from searchPlaces (hex format "0x...:0x...").
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Place name (helps Maps resolve the place).
+      responses:
+        '200':
+          description: Place about information.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - placeId
+                properties:
+                  placeName:
+                    type:
+                      - string
+                      - 'null'
+                  placeId:
+                    type: string
+                  description:
+                    type:
+                      - string
+                      - 'null'
+                    description: Place description or editorial summary.
+                  category:
+                    type:
+                      - string
+                      - 'null'
+                    description: Primary place category (e.g. "Coffee shop", "Restaurant").
+                  address:
+                    type:
+                      - string
+                      - 'null'
+                  priceLevel:
+                    type:
+                      - string
+                      - 'null'
+                  rating:
+                    type:
+                      - number
+                      - 'null'
+                  reviewCount:
+                    type:
+                      - integer
+                      - 'null'
+                  website:
+                    type:
+                      - string
+                      - 'null'
+                  phone:
+                    type:
+                      - string
+                      - 'null'

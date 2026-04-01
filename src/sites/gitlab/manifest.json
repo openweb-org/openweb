@@ -8,8 +8,8 @@
   "requires_auth": true,
   "dependencies": {},
   "stats": {
-    "operation_count": 13,
-    "l1_count": 13,
+    "operation_count": 14,
+    "l1_count": 14,
     "l2_count": 0,
     "l3_count": 0,
     "ws_count": 0

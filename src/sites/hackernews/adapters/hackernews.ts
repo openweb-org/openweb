@@ -79,15 +79,98 @@ async function getUserProfile(page: Page, params: Readonly<Record<string, unknow
   })
 }
 
+async function getNewComments(page: Page, _params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  await page.goto(`${HN_ORIGIN}/newcomments`, { waitUntil: 'domcontentloaded' })
+
+  return page.evaluate((indentUnit: number) => {
+    const commentRows = document.querySelectorAll('.comtr')
+    return Array.from(commentRows).map((tr) => {
+      const indentPx = Number(tr.querySelector('.ind img')?.getAttribute('width') ?? '0')
+      return {
+        id: tr.id,
+        author: tr.querySelector('.hnuser')?.textContent ?? null,
+        age: tr.querySelector('.age a')?.textContent ?? null,
+        text: tr.querySelector('.commtext')?.textContent?.trim() ?? null,
+        indent: Math.round(indentPx / indentUnit),
+      }
+    })
+  }, INDENT_UNIT)
+}
+
+async function getStoriesByDomain(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const site = params.site
+  if (!site) throw new Error('site parameter is required')
+
+  await page.goto(`${HN_ORIGIN}/from?site=${encodeURIComponent(String(site))}`, { waitUntil: 'domcontentloaded' })
+
+  return page.evaluate(() => {
+    const items = document.querySelectorAll('.athing')
+    return Array.from(items).map((row) => {
+      const subtext = row.nextElementSibling
+      return {
+        title: row.querySelector('.titleline > a')?.textContent ?? null,
+        score: subtext?.querySelector('.score')?.textContent ?? null,
+        author: subtext?.querySelector('.hnuser')?.textContent ?? null,
+        age: subtext?.querySelector('.age a')?.textContent ?? null,
+      }
+    })
+  })
+}
+
+async function getUserSubmissions(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const id = params.id
+  if (!id) throw new Error('id parameter is required')
+
+  await page.goto(`${HN_ORIGIN}/submitted?id=${encodeURIComponent(String(id))}`, { waitUntil: 'domcontentloaded' })
+
+  return page.evaluate(() => {
+    const items = document.querySelectorAll('.athing')
+    return Array.from(items).map((row) => {
+      const subtext = row.nextElementSibling
+      return {
+        title: row.querySelector('.titleline > a')?.textContent ?? null,
+        score: subtext?.querySelector('.score')?.textContent ?? null,
+        author: subtext?.querySelector('.hnuser')?.textContent ?? null,
+        age: subtext?.querySelector('.age a')?.textContent ?? null,
+      }
+    })
+  })
+}
+
+async function getUserComments(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const id = params.id
+  if (!id) throw new Error('id parameter is required')
+
+  await page.goto(`${HN_ORIGIN}/threads?id=${encodeURIComponent(String(id))}`, { waitUntil: 'domcontentloaded' })
+
+  return page.evaluate((indentUnit: number) => {
+    const commentRows = document.querySelectorAll('.comtr')
+    return Array.from(commentRows).map((tr) => {
+      const indentPx = Number(tr.querySelector('.ind img')?.getAttribute('width') ?? '0')
+      return {
+        id: tr.id,
+        author: tr.querySelector('.hnuser')?.textContent ?? null,
+        age: tr.querySelector('.age a')?.textContent ?? null,
+        text: tr.querySelector('.commtext')?.textContent?.trim() ?? null,
+        indent: Math.round(indentPx / indentUnit),
+      }
+    })
+  }, INDENT_UNIT)
+}
+
 const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, unknown>>) => Promise<unknown>> = {
   getStoryDetail,
   getStoryComments,
   getUserProfile,
+  getNewComments,
+  getStoriesByDomain,
+  getUserSubmissions,
+  getUserComments,
 }
 
 const adapter: CodeAdapter = {
   name: 'hackernews',
-  description: 'Hacker News DOM extraction — story detail, comments, and user profiles',
+  description: 'Hacker News DOM extraction — stories, comments, and user profiles',
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()

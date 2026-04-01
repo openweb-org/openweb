@@ -1,0 +1,12 @@
+{
+  "operation_id": "getPeopleAlsoAsk",
+  "cases": [
+    {
+      "input": { "q": "how to learn python" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

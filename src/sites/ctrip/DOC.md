@@ -1,44 +1,95 @@
 # Trip.com / Ctrip
 
 ## Overview
-China's #1 travel platform (Ctrip International). Flights, hotels, trains, attractions, and travel guides via Trip.com's internal REST APIs. All APIs use POST with JSON request/response bodies.
+China's largest travel platform (Ctrip International). Flights, trains, attractions, and destination guides via Trip.com's internal POST-only REST APIs. Travel archetype.
+
+## Workflows
+
+### Search and compare flights
+1. `searchPOI(key)` — find city codes for departure/arrival
+2. `searchFlights(departCode, arriveCode, departDate)` — get flight itineraries with prices → `token`
+3. `getFlightCalendarPrices(dCity, aCity, dDate)` — compare prices across dates
+4. `getFlightComfort(flightNo, dCity, aCity, dDate)` — check seat, WiFi, entertainment for a specific flight
+5. `getFlightFilters(token)` — get available filter options (airline, stops, cabin) for refining results
+
+### Plan a train journey
+1. `getTrainStations()` — get station list → `stationCode`
+2. `searchTrains(departStation, arriveStation, departDate)` — find trains with schedules and prices
+3. `getTrainCalendar(departStation, arriveStation, month)` — check availability across a month
+
+### Explore a destination
+1. `getHotDestinations()` — browse trending cities → `districtId`
+2. `getCityList(countryId)` — browse cities in a country → `districtId`
+3. `getDestinationInfo(districtId, moduleList)` — get travel guide (sights, hotels, restaurants)
+4. `searchAttractions(sceneCode)` — find things to do → `productId`
+5. `getAttractionDetail(productId)` — get attraction details, tickets, reviews
 
 ## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| searchFlights | search flights by route and date | POST /restapi/soa2/27015/FlightListSearch | returns flight itineraries with airlines, stops, prices |
-| getFlightCalendarPrices | lowest prices per day for a route | POST /restapi/soa2/14427/GetLowPriceInCalender | calendar view of cheapest fares |
-| getFlightComfort | comfort ratings per flight segment | POST /restapi/soa2/14427/BatchGetFlightComfort | seat, WiFi, entertainment info |
-| getGeneralInfo | general site info and announcements | POST /restapi/soa2/27501/getGeneralInfo | config, promotions, notices |
-| getHotDestinations | trending travel destinations | POST /restapi/soa2/20400/getGsHotSearchForTripOnline | popular cities (via www.trip.com) |
-| searchTrains | search trains by route and date | POST /restapi/soa2/31699/searchListForWeb | schedules, prices, seat availability |
-| getTrainStations | list train stations | POST /restapi/soa2/36040/loadStationList | station names, codes, countries |
-| searchPOI | search cities/airports by keyword | POST /restapi/soa2/14427/poiSearch | autocomplete for flight/hotel/train search |
-| getDestinationInfo | travel guide for a destination | POST /restapi/soa2/23044/getDestinationPageInfo.json | attractions, hotels, restaurants (via www.trip.com) |
-| searchAttractions | search attractions and tours | POST /restapi/soa2/28181/json/getByScenesCode | tickets, tours, experiences (via www.trip.com) |
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| searchPOI | find city/airport codes | key (keyword) | results[]{name, code, districtId} | entry point for flights/trains |
+| searchFlights | search flights | departCode, arriveCode, departDate ← searchPOI | flightItineraryList[]{flightNo, airline, times, price}, token | requires Head object |
+| getFlightCalendarPrices | cheapest fares per day | dCity, aCity, dDate ← searchPOI | lowPriceInCalenderDtoInfoList[]{date, price} | calendar view |
+| getFlightComfort | aircraft comfort info | flightNo, dCity, aCity, dDate ← searchFlights | flightComfortList[]{seatPitch, wifi, entertainment} | |
+| getFlightFilters | flight filter options | token ← searchFlights | filterList[]{filterType, options[]{label, value, count}} | refine search results |
+| getTrainStations | list train stations | — | stationList[]{stationName, stationCode, cityName} | entry point for trains |
+| searchTrains | search trains | departStation, arriveStation, departDate ← getTrainStations | trainList[]{trainNumber, times, seatList with prices} | |
+| getTrainCalendar | train availability calendar | departStation, arriveStation, month ← getTrainStations | calendarList[]{date, available, lowestPrice} | |
+| getHotDestinations | trending destinations | — | data[]{id, word, url} | entry point for exploration |
+| getCityList | cities in a country | countryId | cityList[]{districtId, cityName, imageUrl} | entry point for exploration |
+| getDestinationInfo | destination travel guide | districtId ← getHotDestinations/getCityList | hotDistrict, classicRecommendSight[]{poiName, rating}, classicRecommendHotel[]{hotelName, price}, hotComment[]{content, rating} | www.trip.com |
+| searchAttractions | things to do | baseInfo, sceneParams | list[]{productId, productName, rating, price}, sortRuleList[]{sortType, sortName} | www.trip.com |
+| getAttractionDetail | attraction detail | productId ← searchAttractions | description, rating, reviewCount, tickets, hours | www.trip.com |
+| getGeneralInfo | site info/announcements | — | savedTips, travelTipsList[]{title, content}, promotionList[]{title, linkUrl}, noticeList[]{title, content} | utility |
+
+## Quick Start
+
+```bash
+# Search for city codes
+openweb ctrip exec searchPOI '{"key":"Tokyo","mode":"0","tripType":"OW"}'
+
+# Search flights NYC → Shanghai
+openweb ctrip exec searchFlights '{"searchCriteria":{"tripType":1,"journeyNo":1,"passengerInfoType":{"adultCount":1,"childCount":0,"infantCount":0},"journeyInfoTypes":[{"journeyNo":1,"departDate":"2026-05-01","departCode":"NYC","arriveCode":"SHA"}]},"Head":{"Locale":"en-US","Currency":"USD","Group":"Trip","Source":"ONLINE","Version":"3"}}'
+
+# Get cheapest fares for a month
+openweb ctrip exec getFlightCalendarPrices '{"dCity":"NYC","aCity":"SHA","dDate":"2026-05-01","flightWayType":"OW","cabinClass":"Economy"}'
+
+# Browse trending destinations
+openweb ctrip exec getHotDestinations '{"lang":"en","locale":"en-US","currency":"USD","dataType":"destinations","head":{"syscode":"999","locale":"en-US"}}'
+
+# Get destination guide for Shanghai (districtId=2)
+openweb ctrip exec getDestinationInfo '{"districtId":"2","moduleList":["classicRecommendSight"]}'
+
+# Search attractions
+openweb ctrip exec searchAttractions '{"baseInfo":{"channelId":24,"locale":"en-US","currency":"USD"},"sceneParams":[{"sceneCode":"city_sight_list"}]}'
+```
+
+---
+
+## Site Internals
 
 ## API Architecture
-- **All POST**: Every operation uses POST with JSON body — even read operations. No GET endpoints for data.
-- **API pattern**: `/restapi/soa2/{serviceId}/{methodName}` on `us.trip.com` and `www.trip.com`
-- **Two hosts**: `us.trip.com` (US locale, 7 operations) and `www.trip.com` (destination/attractions, 3 operations)
-- **Service IDs**: 27015 (flights search), 14427 (flights util/POI), 27501 (general), 20400 (hot search), 31699/36040 (trains), 23044 (destination), 28181 (attractions)
-- **Request headers**: Most requests include a `Head` object with Locale, Currency, Group, Source fields
-- **City codes**: Flight cities use IATA codes (NYC, SHA, LON). Destinations use numeric district IDs (2=Shanghai). Trains use station codes.
+- **All POST**: Every operation uses POST with JSON body, even reads.
+- **URL pattern**: `/restapi/soa2/{serviceId}/{methodName}` — numbered service IDs map to internal microservices.
+- **Two hosts**: `us.trip.com` (11 ops: flights, trains, POI, general) and `www.trip.com` (3 ops: destinations, attractions).
+- **Head object**: Most APIs require a `Head` or `head` object with Locale, Currency, Group, Source. Without these, APIs return SourceEnum or locale errors. The browser session populates these via cookies/context.
+- **City codes**: Flights use IATA codes (NYC, SHA). Destinations use numeric district IDs (2=Shanghai). Trains use station codes.
 
 ## Auth
-- No auth needed for search/read operations
-- `requires_auth: false`
-- Hotel detail pages redirect to sign-in (auth-gated, not included in fixture)
-- Hotel search (fetchHotelList) requires Trip.com framework headers — cannot be called via simple browser fetch
+- Auth type: `cookie_session` — browser cookies provide session context.
+- No login required for search/read operations.
+- Hotel detail pages are auth-gated (not included).
+- The `Head.Source` field is resolved from browser session state, not user input.
 
 ## Transport
-- `transport: page` — browser-mediated fetch via page.evaluate()
-- Requires open Trip.com tab in the browser
-- Operations on `us.trip.com` need a `us.trip.com` tab; operations on `www.trip.com` need a `www.trip.com` tab
+- `transport: page` — all requests execute via `page.evaluate(fetch(...))` inside the browser.
+- Trip.com uses bot detection that blocks direct Node.js HTTP requests (403).
+- Operations on `us.trip.com` need a `us.trip.com` tab open; `www.trip.com` ops need a `www.trip.com` tab.
 
 ## Known Issues
-- **Hotel search unavailable**: fetchHotelList/fetchDynamicRefreshList APIs require Trip.com's JavaScript framework headers (anti-CSRF/bot). Cannot be called via simple browser fetch.
-- **Flight search SSE**: The primary flight search endpoint (FlightListSearchSSE) uses Server-Sent Events. The fixture uses the non-SSE variant (FlightListSearch) which returns standard JSON.
-- **Head object required**: Most APIs need a `Head` object with `Locale`, `Currency`, `Group`, `Source` fields. Without these, APIs return errors like "locale cannot be blank".
+- **Head/locale context**: Many APIs return "SourceEnum cannot be null" or "locale cannot be blank" when called without proper browser session context. Verify may pass (HTTP 200 returned) but response contains error content. The Trip.com JS framework injects locale/source context that cannot be replicated via simple fetch.
+- **Hotel search unavailable**: fetchHotelList API requires Trip.com's JavaScript framework headers (anti-CSRF/bot). Cannot be called via browser fetch.
+- **Flight search SSE**: Primary flight search (FlightListSearchSSE) uses Server-Sent Events. This package uses the non-SSE variant (FlightListSearch) which returns standard JSON.
 - **A/B testing**: Request headers contain A/B test flags that may affect response format.
-- **Locale sensitivity**: The `us.trip.com` domain may redirect or switch locale based on IP/cookies.
+- **New operations unverified**: getFlightFilters, getAttractionDetail, getTrainCalendar, getCityList are inferred from the API surface pattern but do not have example fixtures. They may need path or param adjustments.

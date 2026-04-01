@@ -1,0 +1,14 @@
+{
+  "operation_id": "getUserProfile",
+  "cases": [
+    {
+      "input": {
+        "id": "pg"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

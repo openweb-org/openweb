@@ -66,7 +66,7 @@ paths:
                   statuses:
                     type: array
                     items:
-                      type: object
+                      $ref: '#/components/schemas/WeiboPost'
                   since_id:
                     type: [string, integer]
                   max_id:
@@ -141,49 +141,13 @@ paths:
                     type: array
                     description: List of hot posts.
                     items:
-                      type: object
+                      $ref: '#/components/schemas/WeiboPost'
                   total_number:
                     type: integer
                   since_id:
                     type: [string, integer]
                   max_id:
                     type: [string, integer]
-
-  /ajax/feed/unreadfriendstimeline:
-    get:
-      operationId: getUnreadFeed
-      summary: "Get unread posts from followed users"
-      x-openweb:
-        permission: read
-        build:
-          stable_id: d0b2f3c4a1e56789
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /ajax/feed/allGroups:
-    get:
-      operationId: listFeedGroups
-      summary: "List feed groups (custom timeline groups, special follows)"
-      x-openweb:
-        permission: read
-        build:
-          stable_id: b1c2d3e4f5a67890
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
 
   # --- Trending / Search ---
   /ajax/side/hotSearch:
@@ -246,71 +210,6 @@ paths:
                               type: string
                               description: Hashtag format.
 
-  /ajax/side/searchBand:
-    get:
-      operationId: getSearchBand
-      summary: "Get search band (trending topic bar)"
-      x-openweb:
-        permission: read
-        build:
-          stable_id: d3e4f5a6b7c89012
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Search band data.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [ok, data]
-                properties:
-                  ok:
-                    type: integer
-                  data:
-                    type: object
-                    properties:
-                      realtime:
-                        type: array
-                        description: "Trending topics (50 items)."
-                        items:
-                          type: object
-                          properties:
-                            word:
-                              type: string
-                            note:
-                              type: string
-                            num:
-                              type: integer
-                            rank:
-                              type: [integer, "null"]
-                            icon_desc:
-                              type: string
-
-  /ajax/side/search:
-    get:
-      operationId: searchSuggest
-      summary: "Search suggestions and hot queries — pass q for keyword results"
-      x-openweb:
-        permission: read
-        build:
-          stable_id: e4f5a6b7c8d90123
-          tool_version: 2
-      parameters:
-        - name: q
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Search query keyword (optional — omit for default suggestions)."
-      responses:
-        "200":
-          description: Search results.
-          content:
-            application/json:
-              schema:
-                type: object
-
   # --- Users ---
   /ajax/profile/info:
     get:
@@ -350,11 +249,20 @@ paths:
                     type: object
                     properties:
                       user:
-                        type: object
+                        $ref: '#/components/schemas/WeiboUser'
                       tabList:
                         type: array
                         items:
                           type: object
+                          properties:
+                            id:
+                              type: integer
+                            tabKey:
+                              type: string
+                              description: "Tab identifier (e.g. 'weibo', 'album', 'fav')."
+                            title:
+                              type: string
+                              description: "Tab display name."
 
   /ajax/profile/detail:
     get:
@@ -395,8 +303,16 @@ paths:
                         type: string
                       sunshine_credit:
                         type: object
+                        properties:
+                          level:
+                            type: string
+                            description: "Credit level label (e.g. '信用极好')."
                       education:
                         type: object
+                        properties:
+                          school:
+                            type: string
+                            description: "School name."
                       company:
                         type: string
 
@@ -457,7 +373,7 @@ paths:
                       list:
                         type: array
                         items:
-                          type: object
+                          $ref: '#/components/schemas/WeiboPost'
                       total:
                         type: integer
 
@@ -493,11 +409,11 @@ paths:
           example: zh-CN
       responses:
         "200":
-          description: Post detail.
+          description: Post detail (WeiboPost with optional longText).
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/WeiboPost'
 
   /ajax/statuses/longtext:
     get:
@@ -518,11 +434,43 @@ paths:
           description: "Post ID (alphanumeric)"
       responses:
         "200":
-          description: Success.
+          description: Long text content.
           content:
             application/json:
               schema:
                 type: object
+                required: [ok, data]
+                properties:
+                  ok:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      longTextContent:
+                        type: string
+                        description: Full post text (HTML entities).
+                      longTextContent_raw:
+                        type: string
+                        description: Full post text (plain).
+                      url_struct:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url_title:
+                              type: string
+                              description: "Display title of the link."
+                            ori_url:
+                              type: string
+                              description: "Original full URL."
+                            short_url:
+                              type: string
+                              description: "Shortened t.cn URL."
+                            url_type:
+                              type: integer
+                              description: "Link type code."
+                      isMarkdown:
+                        type: boolean
 
   /ajax/statuses/buildComments:
     get:
@@ -539,7 +487,14 @@ paths:
           required: true
           schema:
             type: string
-          description: "Post ID (mid)."
+          description: "Post ID (numeric mid, e.g. '5281762063682574')."
+        - name: is_reload
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: "Reload flag (required by API, default 1)."
         - name: count
           in: query
           required: false
@@ -611,7 +566,7 @@ paths:
                         source:
                           type: string
                         user:
-                          type: object
+                          $ref: '#/components/schemas/WeiboUser'
                         like_count:
                           type: integer
                         reply_count:
@@ -651,66 +606,25 @@ paths:
           example: 10
       responses:
         "200":
-          description: Success.
+          description: Reposts list.
           content:
             application/json:
               schema:
                 type: object
-
-  # --- Notifications / Config ---
-  /ajax/message/unreadHint:
-    get:
-      operationId: getUnreadMessages
-      summary: "Get unread message/notification counts"
-      x-openweb:
-        permission: read
-        build:
-          stable_id: c8d9e0f1a2b34567
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /ajax/config/get_config:
-    get:
-      operationId: getConfig
-      summary: "Get site config and current logged-in user info — uid, screen name, avatar"
-      x-openweb:
-        permission: read
-        build:
-          stable_id: d9e0f1a2b3c45678
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /ajax/side/cards:
-    get:
-      operationId: listSidebarCards
-      summary: "List sidebar recommendation cards"
-      x-openweb:
-        permission: read
-        build:
-          stable_id: e0f1a2b3c4d56789
-          tool_version: 2
-      parameters: []
-      responses:
-        "200":
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WeiboPost'
+                  total_number:
+                    type: integer
+                  max_page:
+                    type: integer
+                  next_cursor:
+                    type: integer
 
   # --- Write Operations ---
   /ajax/statuses/setLike:
@@ -751,7 +665,7 @@ paths:
                     type: string
                     description: "Attitude type (e.g. 'heart')."
                   status:
-                    type: object
+                    $ref: '#/components/schemas/WeiboPost'
 
   /ajax/statuses/repost:
     post:
@@ -792,7 +706,7 @@ paths:
                   ok:
                     type: integer
                   statuses:
-                    type: object
+                    $ref: '#/components/schemas/WeiboPost'
 
   /ajax/friendships/create:
     post:
@@ -825,6 +739,11 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  ok:
+                    type: integer
+                  data:
+                    $ref: '#/components/schemas/WeiboUser'
 
   /ajax/statuses/createFavorites:
     post:
@@ -861,7 +780,7 @@ paths:
                   ok:
                     type: integer
                   status:
-                    type: object
+                    $ref: '#/components/schemas/WeiboPost'
                   tags:
                     type: array
                     items:
@@ -944,7 +863,7 @@ components:
           type: string
           description: "Client source (e.g. '微博网页版')."
         user:
-          type: object
+          $ref: '#/components/schemas/WeiboUser'
         reposts_count:
           type: integer
         comments_count:
@@ -985,4 +904,4 @@ components:
                     type: integer
         retweeted_status:
           description: "Reposted/quoted post (same structure)."
-          type: object
+          $ref: '#/components/schemas/WeiboPost'

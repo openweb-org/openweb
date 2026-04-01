@@ -1,3 +1,23 @@
+## 2026-03-31: Curate to 14 ops — directions, hours, geocoding, about
+
+**What changed:**
+- Added getTransitDirections, getWalkingDirections, getBicyclingDirections — direction variants using travel mode URL parameter
+- Added getPlaceHours — weekly operating schedule from preview API
+- Added geocode — address to coordinates via SPA search
+- Added reverseGeocode — coordinates to address via SPA navigation
+- Added getPlaceAbout — description, category, attributes from preview API
+- Refactored getDirections into shared `getDirectionsForMode()` helper with mode parameter
+- Added cookie_session auth to transport config
+- Enriched getPlaceDetails reviews schema (added authorName, rating, relativeTime)
+- Rewrote DOC.md per site-doc.md template with workflows and data flow
+- Updated manifest to 14 ops, version 2.0.0
+- Added 3 new examples (getTransitDirections, getWalkingDirections, reverseGeocode) for 10 total
+
+**Why:**
+- Full curation pass per compile.md Step 3 — expand coverage to 14 ops with complete documentation
+
+**Verification:** Spec verify + doc verify. Runtime pending browser session.
+
 ## 2026-03-26: Expand coverage from 3 to 7 ops
 
 **What changed:**

@@ -6,8 +6,8 @@
   "site_url": "https://en.wikipedia.org",
   "requires_auth": false,
   "stats": {
-    "operation_count": 6,
-    "l1_count": 6,
+    "operation_count": 14,
+    "l1_count": 14,
     "l2_count": 0,
     "l3_count": 0,
     "ws_count": 0

@@ -1,7 +1,42 @@
 # Zhihu (知乎)
 
 ## Overview
-Chinese Q&A and knowledge-sharing platform (similar to Quora). Users ask questions, write answers, publish articles, and follow topics. The platform has a rich internal API used by its SPA frontend.
+Chinese Q&A knowledge-sharing platform (Quora archetype). Users ask questions, write answers, publish articles, and follow topics.
+
+## Workflows
+
+**Discover answers by search:**
+`searchContent` → `getMember` (author url_token from results) → `getUserAnswers`
+
+**Explore a user's network:**
+`getMember` → `listMemberMutuals` → `listMemberActivities`
+
+**Find related content:**
+`searchContent` → `listSimilarQuestions` (question ID from results) → `listQuestionFollowers`
+
+**Engage with content (write):**
+`searchContent` → `upvoteAnswer` (answer ID from results)
+`getMember` → `followUser` (url_token from profile)
+`searchContent` → `followQuestion` (question ID from results)
+
+## Operations
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| **searchContent** | Search questions/answers/articles | `q` | data[].object.{id, question, author, excerpt} | Entry point |
+| **getHotSearch** | Trending search terms | — | hot_search_queries[].{query, display_query} | Entry point |
+| **getFeedRecommend** | Personalized homepage feed | — | data[].target.{question, author, voteup_count} | Entry point |
+| **getMe** | Current user info | — | id, name, follower_count, answer_count | Entry point |
+| **getMember** | User profile details | `url_token` ← searchContent author | name, headline, follower_count, answer_count |
+| **getUserAnswers** | List user's answers | `url_token` ← getMember | data[].{question, voteup_count, content, excerpt} |
+| **listMemberActivities** | User's recent activity | `url_token` ← getMember | data[].{verb, target.{title, author}} |
+| **listMemberMutuals** | Mutual followers | `url_token` ← getMember | data[].{name, url_token, answer_count} |
+| **listQuestionFollowers** | Users following a question | `id` ← searchContent question | data[].{name, url_token, headline} |
+| **listSimilarQuestions** | Related questions | `id` ← searchContent question | data[].{title, answer_count, follower_count} |
+| **getEntityWord** | Answer annotations | `token` (answer ID) | search_words[].{name, link, entity_class} |
+| **upvoteAnswer** | Upvote an answer | `answer_id` ← searchContent | voting status | write/caution |
+| **followUser** | Follow a user | `url_token` ← getMember | is_following | write/caution |
+| **followQuestion** | Follow a question | `question_id` ← searchContent | is_following | write/caution |
 
 ## Quick Start
 
@@ -12,77 +47,46 @@ openweb zhihu exec searchContent '{"q": "人工智能"}'
 # Get trending hot search terms
 openweb zhihu exec getHotSearch '{}'
 
+# Get user profile (url_token from search results)
+openweb zhihu exec getMember '{"url_token": "excited-vczh"}'
+
+# List user's answers
+openweb zhihu exec getUserAnswers '{"url_token": "excited-vczh"}'
+
 # Get recommended feed
 openweb zhihu exec getFeedRecommend '{}'
 
-# Get user profile
-openweb zhihu exec getMember '{"url_token": "zhang-jia-wei"}'
-
 # Get current user info
 openweb zhihu exec getMe '{}'
-
-# List user's answers
-openweb zhihu exec getUserAnswers '{"url_token": "zhang-jia-wei"}'
-
-# List similar questions
-openweb zhihu exec listSimilarQuestions '{"id": 35931336}'
-
-# List user activities
-openweb zhihu exec listMemberActivities '{"url_token": "zhang-jia-wei"}'
 ```
 
-## Operations
+---
 
-| Operation | Intent | Method | Path | Notes |
-|-----------|--------|--------|------|-------|
-| searchContent | Search questions/answers/articles | GET | /api/v4/search_v3 | Returns paginated results with excerpts |
-| getMember | Get user profile details | GET | /api/v4/members/{url_token} | Follower count, answer count, headline |
-| getUserAnswers | List user's answers | GET | /api/v4/members/{url_token}/answers | Paginated, sortable by created/voteups |
-| getHotSearch | Get trending search topics | GET | /api/v4/search/hot_search | Current hot keywords with heat scores |
-| getMe | Current user info | GET | /api/v4/me | Name, avatar, follower/answer counts |
-| getFeedRecommend | Get homepage feed | GET | /api/v3/feed/topstory/recommend | Personalized recommendation feed |
-| listMemberActivities | Get user's recent activity | GET | /api/v3/moments/{url_token}/activities | Answers, upvotes, follows timeline |
-| listMemberMutuals | Mutual followers | GET | /api/v4/members/{url_token}/relations/mutuals | Shared connections |
-| getAnswerRelationship | Answer vote status | GET | /api/v4/answers/{id}/relationship | Voting/bookmark status |
-| getEntityWord | Answer annotations | GET | /api/v3/entity_word | Knowledge cards, linked topics |
-| listQuestionFollowers | Question followers | GET | /api/v4/questions/{id}/concerned_followers | Users following a question |
-| listSimilarQuestions | Get related questions | GET | /api/v4/questions/{id}/similar-questions | Questions with answer/follower counts |
-| upvoteAnswer | Upvote an answer | POST | /api/v4/answers/{answer_id}/voters | Reversible (send "neutral" to undo) |
-| followUser | Follow a user | POST | /api/v4/members/{url_token}/followers | Reversible (DELETE to unfollow) |
-| followQuestion | Follow a question | POST | /api/v4/questions/{question_id}/followers | Reversible (DELETE to unfollow) |
-| followTopic | Follow a topic | POST | /api/v4/topics/{topic_id}/followers | Reversible (DELETE to unfollow) |
+## Site Internals
 
-## API Architecture
-
+### API Architecture
 - **Base URL**: `https://www.zhihu.com`
-- **API versions**: v3, v4, v5.1 coexist — newer endpoints use higher versions
-- **Response format**: JSON with consistent `{ data, paging }` envelope for lists
+- **API versions**: v3, v4 coexist — newer endpoints use v4
+- **Response format**: JSON with `{ data, paging }` envelope for lists
 - **Pagination**: Cursor-based via `offset` + `limit` or `paging.next` URL
 - **Path parameters**: `url_token` for users (e.g. "excited-vczh"), numeric IDs for questions/topics
-- Some endpoints also accessible on `api.zhihu.com`
 
-## Auth
-
+### Auth
 - Type: `cookie_session` with CSRF
 - CSRF: `_xsrf` cookie → `x-xsrftoken` header
-- Login required for most operations — some read endpoints return reduced data without login
-- Session cookies from browser profile; auth cookie is `z_c0`
-- No explicit API key or OAuth token needed
+- Auth cookie: `z_c0` — login required for most operations
+- Some read endpoints return reduced data without login
 
-## Transport
-
+### Transport
 - `transport: page` (L3 adapter) — all operations use browser-mediated fetch
-- Zhihu uses cookie-based session auth; direct HTTP calls without cookies return 401 or redirects
-- All API calls are made via `page.evaluate(fetch(...))` to inherit browser cookies and headers
-- Browser's JS handles request signing automatically
-- L3 adapter: `adapters/zhihu-web.ts`
+- API calls via `page.evaluate(fetch(...))` to inherit browser cookies
+- Browser JS handles request signing automatically
+- Adapter: `adapters/zhihu-web.ts`
 
-## Known Issues
-
-- Question detail page (`/question/{id}`) uses SSR + client-side hydration; no clean API endpoint for full question data — question text is embedded in the page HTML
-- Answer content is HTML-rich with inline images; the API returns sanitized HTML
+### Known Issues
+- No clean question detail API — question text is embedded in SSR page HTML
+- Answer content is HTML-rich; API returns sanitized HTML
 - Rate limiting is aggressive — space requests
-- Some user profiles may be private, returning 403
-- `include` parameter controls which fields are returned — omitting it returns minimal data
-- Comments API exists but was not captured in this discovery
-- Topic APIs (getTopicIntro, getTopicFeed, getTopicChildren) removed — Zhihu now returns error 10003 ("request parameters abnormal"), likely requiring additional request signing headers (x-zse-93, x-zse-96)
+- `include` parameter controls response fields — omitting returns minimal data
+- Comments API exists but was not captured
+- Topic APIs return error 10003 — require additional signing headers (x-zse-93, x-zse-96)

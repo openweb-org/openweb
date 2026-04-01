@@ -1,0 +1,16 @@
+{
+  "operation_id": "getHotSearch",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "content_token": 1,
+        "content_type": "question"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

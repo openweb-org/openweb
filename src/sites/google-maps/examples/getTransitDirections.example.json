@@ -1,0 +1,11 @@
+{
+  "operationId": "getTransitDirections",
+  "parameters": {
+    "origin": "Union Square, San Francisco",
+    "destination": "Golden Gate Park, San Francisco"
+  },
+  "expect": {
+    "status": 200
+  },
+  "replay_safety": "safe_read"
+}

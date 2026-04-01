@@ -1,3 +1,21 @@
+## 2026-03-31: Curate to 14 operations, page transport, DOC polish
+
+**What changed:**
+- Added 4 operations: getNewComments, getStoriesByDomain, getUserSubmissions, getUserComments
+- Changed transport from `node` to `page` (cookie_session) — DOM extraction requires browser
+- Enriched all summaries with 3-5 key response fields per spec-curation standards
+- Added `$ref` component schemas (FeedStory, Comment) to eliminate duplication
+- Added descriptions to all schema properties
+- Created 10 example fixtures (up from 1)
+- Rewrote DOC.md per site-doc.md template: workflows, operations table with `← source`, quick start
+
+**Why:**
+- Spec curation pass (compile.md Step 3) to meet verify exit gate across all three dimensions
+
+**Verification:** `pnpm --silent dev verify hackernews` — runtime, spec, doc
+
+---
+
 ## 2026-03-26: Expand from 1 to 10 operations
 
 **What changed:**

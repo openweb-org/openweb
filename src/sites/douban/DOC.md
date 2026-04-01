@@ -1,75 +1,113 @@
 # Douban
 
 ## Overview
-Chinese media review/rating platform (movies, books, music). 14 operations across movies, books, music, and discovery — uses mobile JSON API via page transport for most operations, with DOM adapter fallback for music and desktop-only features.
+Chinese media review/rating platform (movies, books, music). Social/media archetype — 14 operations across movies, books, music, and discovery via mobile JSON API and DOM adapters.
+
+## Workflows
+
+### Find and explore a movie
+1. `searchMovies(q)` → pick result → `target.id`
+2. `getMovie(id)` → full detail (rating, summary, cast overview)
+3. `getMovieCelebrities(id)` → directors, actors with roles
+4. `getMovieReviews(id)` → user reviews with ratings
+5. `getMoviePhotos(id)` → stills, posters (adapter)
+
+### Find and explore a book
+1. `searchBooks(q)` → pick result → `target.id`
+2. `getBook(id)` → full detail (rating, author, summary)
+3. `getBookReviews(id)` → user reviews with ratings
+
+### Discover trending content
+1. `getRecentHotMovies()` → trending movies → `id`
+2. `getRecentHotTv()` → trending TV shows → `id`
+3. `getNowShowingMovies()` → in-theater movies → `id`
+4. `getTop250(start)` → all-time top movies (adapter)
+
+### Find music
+1. `searchMusic(query)` → pick result → `subjectId`
+2. `getMusicDetail(id)` → album detail, tracklist (adapter)
+
+## Operations
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| searchMovies | search movies | q | target.id, title, rating, year | entry point |
+| getMovie | movie detail | id ← searchMovies | title, rating, genres, intro, directors, actors | |
+| getMovieReviews | movie user reviews | id ← searchMovies | comment, rating, user.name, vote_count | paginated (count, start) |
+| getMovieCelebrities | movie cast/crew | id ← searchMovies | directors[], actors[] with name, character, latin_name | |
+| getMoviePhotos | movie photo gallery | id ← searchMovies | photos[].imageUrl | adapter (douban-dom) |
+| getTop250 | top 250 movies | start (optional) | rank, title, rating, quote | adapter, paginated by 25 |
+| searchBooks | search books | q | target.id, title, rating, card_subtitle | entry point |
+| getBook | book detail | id ← searchBooks | title, rating, intro, author_intro, pubdate | |
+| getBookReviews | book user reviews | id ← searchBooks | comment, rating, user.name, vote_count | paginated (count, start) |
+| searchMusic | search music | query | subjectId, title, rating, meta | entry point, adapter (douban-dom) |
+| getMusicDetail | album detail | id ← searchMusic | title, artist, genre, tracks[], releaseDate | adapter (douban-dom) |
+| getRecentHotMovies | trending movies | limit (optional) | id, title, rating, year | entry point |
+| getRecentHotTv | trending TV shows | limit (optional) | id, title, rating, episodes_info | entry point |
+| getNowShowingMovies | in-theater movies | count (optional) | id, title, rating, release_date | entry point |
 
 ## Quick Start
 
 ```bash
-# Search movies
+# Search for a movie and get its ID
 openweb douban exec searchMovies '{"q": "肖申克的救赎"}'
 
-# Get movie detail by ID
+# Get movie detail by ID (from search results target.id)
 openweb douban exec getMovie '{"id": 1292052}'
 
-# Get movie cast/crew
+# Get movie cast and crew
 openweb douban exec getMovieCelebrities '{"id": 1292052}'
+
+# Get movie reviews
+openweb douban exec getMovieReviews '{"id": 1292052, "count": 10}'
 
 # Search books
 openweb douban exec searchBooks '{"q": "三体"}'
 
-# Get book detail by ID
+# Get book detail
 openweb douban exec getBook '{"id": 2567698}'
 
-# Get trending movies
+# Trending movies right now
 openweb douban exec getRecentHotMovies '{"limit": 20}'
 
-# Get Top 250 (adapter)
+# Movies in theaters
+openweb douban exec getNowShowingMovies '{"count": 10}'
+
+# Top 250 (adapter — needs browser)
 openweb douban exec getTop250 '{"start": 0}'
 
-# Search music (adapter)
+# Search music (adapter — needs browser)
 openweb douban exec searchMusic '{"query": "周杰伦"}'
 ```
 
-## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| searchMovies | Search movies by keyword | GET /rexxar/api/v2/search/movie | Mobile JSON API |
-| getMovie | Get movie detail | GET /rexxar/api/v2/movie/{id} | Full detail: rating, cast, summary, trailers |
-| getMovieReviews | Get movie user reviews | GET /rexxar/api/v2/movie/{id}/interests | Paginated reviews with rating |
-| getMovieCelebrities | Get movie cast/crew | GET /rexxar/api/v2/movie/{id}/celebrities | Directors, actors with roles |
-| getMoviePhotos | Get movie photo gallery | Adapter: douban-dom | Stills, posters, wallpapers (desktop DOM) |
-| getTop250 | Get Douban Top 250 movies | Adapter: douban-dom | Classic ranking, paginated by 25 |
-| searchBooks | Search books by keyword | GET /rexxar/api/v2/search/book | Mobile JSON API |
-| getBook | Get book detail | GET /rexxar/api/v2/book/{id} | Full detail: rating, author, summary |
-| getBookReviews | Get book user reviews | GET /rexxar/api/v2/book/{id}/interests | Paginated reviews with rating |
-| searchMusic | Search music/albums | Adapter: douban-dom | Desktop DOM extraction |
-| getMusicDetail | Get album detail | Adapter: douban-dom | Artist, tracklist, genre (desktop DOM) |
-| getRecentHotMovies | Get trending movies | GET /rexxar/api/v2/subject/recent_hot/movie | Currently popular films |
-| getRecentHotTv | Get trending TV shows | GET /rexxar/api/v2/subject/recent_hot/tv | Currently popular TV series |
-| getNowShowingMovies | Get now showing movies | GET /rexxar/api/v2/subject_collection/movie_showing/items | Films in theaters |
+---
+
+## Site Internals
 
 ## API Architecture
 Two data sources:
 
 1. **Mobile JSON API** (primary) — `m.douban.com/rexxar/api/v2/`. RESTful JSON, requires browser context (Referer/Origin validation). Used for movies, books, trending, and now-showing operations.
 
-2. **Desktop DOM extraction** (adapter) — `movie.douban.com`, `book.douban.com`, `music.douban.com`, `search.douban.com`. HTML pages scraped via Playwright adapter. Used for music operations, movie photos, and Top 250 — features not available in the mobile API.
+2. **Desktop DOM extraction** (adapter) — `movie.douban.com`, `search.douban.com`, `music.douban.com`. HTML pages scraped via Playwright adapter. Used for music operations, movie photos, and Top 250 — features not available in the mobile API.
 
 ## Auth
-- No auth required for all operations — all return public content
+- Auth type: `cookie_session`
+- No login required — all operations return public content
+- Auth cookie `dbcl2` detected by adapter for potential future authenticated operations
 - `requires_auth: false`
-- Auth cookie `dbcl2` detected by adapter for future authenticated operations
 
 ## Transport
-Page transport required. Both the mobile API and desktop sites validate request origin — only works from within browser context. Node transport returns 400/403.
+Page transport required for all operations. Both the mobile API and desktop sites validate request origin — node transport returns 400/403. Adapter operations navigate directly to desktop Douban pages.
 
-## Adapters
-- **douban-dom** — DOM extraction adapter for desktop Douban pages. Covers: searchMusic, getMusicDetail, getMoviePhotos, getTop250. Source: `adapters/douban-dom.ts`.
+## Extraction
+- Mobile API: direct JSON response (no extraction needed)
+- Adapter ops (getMoviePhotos, getTop250, searchMusic, getMusicDetail): DOM extraction via `douban-dom.ts` adapter using Playwright `page.evaluate()`
 
 ## Known Issues
-- Rate limiting: Chinese sites are aggressive about rate limits
+- Rate limiting: Douban is aggressive about rate limits — space requests
 - Content is zh-CN only
-- Desktop pages have no JSON API — adapter operations extract from HTML
-- Search results return subject IDs usable with getMovie/getBook/getMusicDetail
-- Mobile API (m.douban.com) has no music endpoints — music only via desktop adapter
+- Desktop pages have no JSON API — adapter operations extract from HTML (fragile to DOM changes)
+- Mobile API has no music endpoints — music only via desktop adapter
+- Adapter ops require managed browser (`openweb browser start`)
+- Movie/book IDs from search results are in `target.id` (string), detail endpoints accept integer

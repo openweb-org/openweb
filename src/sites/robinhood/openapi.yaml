@@ -4,17 +4,20 @@ info:
   version: '1.0.0'
   x-openweb:
     spec_version: '2.0'
-    compiled_at: '2026-03-24T00:00:00Z'
-    requires_auth: false
+    compiled_at: '2026-03-31T00:00:00Z'
+    requires_auth: true
 servers:
   - url: https://api.robinhood.com
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
 paths:
   /instruments/:
     get:
       operationId: getInstruments
       summary: Look up stock instruments by IDs (returns symbol, name, tradability, market)
       x-openweb:
-        transport: node
         permission: read
         build:
           verified: true
@@ -82,7 +85,6 @@ paths:
       operationId: getStockQuotes
       summary: Get real-time stock quotes (bid, ask, last trade price, previous close)
       x-openweb:
-        transport: node
         permission: read
         build:
           verified: true
@@ -154,7 +156,6 @@ paths:
       operationId: getStockFundamentals
       summary: Get stock fundamentals (market cap, PE ratio, dividend yield, 52-week range, company info)
       x-openweb:
-        transport: node
         permission: read
         build:
           verified: true
@@ -242,12 +243,105 @@ paths:
                   year_founded:
                     type: integer
 
+  /marketdata/historicals/{instrument_id}/:
+    get:
+      operationId: getStockHistoricals
+      summary: Get stock historical OHLCV price data (candlestick chart data with configurable interval/span)
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0012
+          signature_id: rh0012s
+          tool_version: 1
+      parameters:
+        - name: instrument_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Instrument UUID (e.g. "450dfc6d-5510-4d40-abfb-f633b7d9be3e" for AAPL).
+        - name: interval
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [5minute, 10minute, hour, day, week]
+          description: Data point interval.
+        - name: span
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [day, week, month, 3month, year, 5year, all]
+          description: Time span for historical data.
+        - name: bounds
+          in: query
+          required: false
+          schema:
+            type: string
+            default: regular
+            enum: [regular, extended, trading]
+          description: Trading session bounds.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [symbol, instrument, interval, span, bounds, historicals]
+                properties:
+                  quote:
+                    type: string
+                  symbol:
+                    type: string
+                  interval:
+                    type: string
+                  span:
+                    type: string
+                  bounds:
+                    type: string
+                  instrument:
+                    type: string
+                  InstrumentID:
+                    type: string
+                  open_price:
+                    type: ['string', 'null']
+                  open_time:
+                    type: ['string', 'null']
+                  previous_close_price:
+                    type: ['string', 'null']
+                  previous_close_time:
+                    type: ['string', 'null']
+                  historicals:
+                    type: array
+                    items:
+                      type: object
+                      required: [begins_at, open_price, close_price, high_price, low_price, volume]
+                      properties:
+                        begins_at:
+                          type: string
+                        open_price:
+                          type: string
+                        close_price:
+                          type: string
+                        high_price:
+                          type: string
+                        low_price:
+                          type: string
+                        volume:
+                          type: integer
+                        session:
+                          type: string
+                        interpolated:
+                          type: boolean
+
   /marketdata/earnings/:
     get:
       operationId: getStockEarnings
       summary: Get earnings history (EPS estimates vs actuals, report dates, earnings calls)
       x-openweb:
-        transport: node
         permission: read
         build:
           verified: true
@@ -317,7 +411,6 @@ paths:
       operationId: getAnalystRatings
       summary: Get analyst ratings summary and individual ratings (buy/hold/sell) for a stock
       x-openweb:
-        transport: node
         permission: read
         build:
           verified: true
@@ -370,9 +463,8 @@ paths:
   /feed/midlands/instrument/{instrument_id}/:
     get:
       operationId: getStockNews
-      summary: Get news articles for a stock instrument
+      summary: Get news articles for a stock (title, source, date, preview text, related instruments)
       x-openweb:
-        transport: node
         permission: read
         build:
           verified: true
@@ -425,7 +517,6 @@ paths:
       operationId: getCryptoQuote
       summary: Get real-time crypto price quote (bid, ask, mark, open, high, low, volume)
       x-openweb:
-        transport: node
         permission: read
         build:
           verified: true
@@ -474,7 +565,6 @@ paths:
       operationId: getCryptoFundamentals
       summary: Get crypto fundamentals (market cap, circulating supply, 52-week range, description)
       x-openweb:
-        transport: node
         permission: read
         build:
           verified: true
@@ -521,7 +611,6 @@ paths:
       operationId: getCryptoHistoricals
       summary: Get crypto historical OHLCV price data (candlestick chart data)
       x-openweb:
-        transport: node
         permission: read
         build:
           verified: true
@@ -611,7 +700,6 @@ paths:
       operationId: getMarketHours
       summary: Get market hours for a specific exchange and date (open/close times, extended hours)
       x-openweb:
-        transport: node
         permission: read
         build:
           verified: true
@@ -671,9 +759,8 @@ paths:
   /discovery/lists/:
     get:
       operationId: getDiscoveryLists
-      summary: Get curated stock lists/collections (e.g. popular, technology, crypto)
+      summary: Get curated stock lists for an instrument (collection name, description, item count)
       x-openweb:
-        transport: node
         permission: read
         build:
           verified: true
@@ -736,3 +823,102 @@ paths:
                           type: string
                         foreground_color:
                           type: string
+
+  /midlands/movers/sp500/:
+    get:
+      operationId: getMarketMovers
+      summary: Get S&P 500 top movers (symbol, price movement percentage, last price)
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0013
+          signature_id: rh0013s
+          tool_version: 1
+      parameters:
+        - name: direction
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [up, down]
+          description: Movement direction — "up" for top gainers, "down" for top losers.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, results]
+                properties:
+                  count:
+                    type: integer
+                  next:
+                    type: ['string', 'null']
+                  previous:
+                    type: ['string', 'null']
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [instrument_url, symbol, updated_at, price_movement]
+                      properties:
+                        instrument_url:
+                          type: string
+                        symbol:
+                          type: string
+                        updated_at:
+                          type: string
+                        price_movement:
+                          type: object
+                          required: [market_hours_last_movement_pct, market_hours_last_price]
+                          properties:
+                            market_hours_last_movement_pct:
+                              type: string
+                            market_hours_last_price:
+                              type: string
+                        description:
+                          type: string
+
+  /midlands/tags/tag/{slug}/:
+    get:
+      operationId: getTagCollection
+      summary: Get a tagged stock collection (instrument URLs, name, membership count)
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: rh0014
+          signature_id: rh0014s
+          tool_version: 1
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Tag slug (e.g. "100-most-popular", "etf", "technology").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [slug, name, instruments, membership_count]
+                properties:
+                  slug:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  canonical_examples:
+                    type: string
+                  instruments:
+                    type: array
+                    items:
+                      type: string
+                  membership_count:
+                    type: integer

@@ -5,15 +5,18 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  *
  * Search:       Navigate to /maps/search/{query}/, extract from DOM
  * Place:        GET /maps/preview/place via page.evaluate(fetch()) with pb param
- * Directions:   Navigate to /maps/dir/{origin}/{destination}/, extract from DOM
+ * Directions:   Navigate to /maps/dir/{origin}/{dest}/, mode via data= param
  * Reviews:      GET /maps/preview/place — detailed review extraction
  * Photos:       GET /maps/preview/place — photo URL extraction
+ * Hours:        GET /maps/preview/place — operating schedule extraction
+ * About:        GET /maps/preview/place — description, category, attributes
  * Nearby:       Navigate to /maps/search/{category}+near+{location}/, extract from DOM
  * Autocomplete: GET /maps/suggest via page.evaluate(fetch())
+ * Geocode:      Navigate to /maps/search/{address}/, extract first result coords
+ * RevGeocode:   Navigate to /@{lat},{lng},17z, extract address from DOM
  *
- * Search, directions, and nearby use SPA navigation because their APIs require
- * session-specific tokens that only the Maps SPA generates during navigation.
- * Place details, reviews, photos, and autocomplete work via direct fetch.
+ * Search, directions, nearby, geocode, and reverse geocode use SPA navigation.
+ * Place details, reviews, photos, hours, about, and autocomplete work via fetch.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 
@@ -218,8 +221,14 @@ async function getPlaceReviews(page: Page, params: Record<string, unknown>): Pro
       if (!text) continue
       const authorUrl = dig(r, 0, 0) as string | null
       const authorName = dig(r, 0, 1) as string | null
-      const reviewRating = dig(r, 4) as number | null
-      const relativeTime = dig(r, 57) as string | null
+      // Rating index may shift — try [4], fall back to [2], [3]
+      const rawRating = dig(r, 4)
+      const reviewRating = typeof rawRating === 'number' ? rawRating
+        : typeof dig(r, 2) === 'number' ? (dig(r, 2) as number)
+        : typeof dig(r, 3) === 'number' ? (dig(r, 3) as number)
+        : null
+      const rawTime = dig(r, 57) ?? dig(r, 5) ?? dig(r, 27)
+      const relativeTime = typeof rawTime === 'string' ? rawTime : null
       reviews.push({
         text,
         authorName,
@@ -285,6 +294,7 @@ async function getAutocompleteSuggestions(page: Page, params: Record<string, unk
   if (!input) throw OpenWebError.missingParam('input')
 
   await ensureMapsPage(page)
+  await sleep(1000) // wait for SPA context to stabilize after navigation
 
   const raw = await page.evaluate(async (q: string) => {
     const resp = await fetch(`/maps/suggest?authuser=0&hl=en&gl=us&q=${encodeURIComponent(q)}`, { credentials: 'include' })
@@ -310,26 +320,26 @@ async function getAutocompleteSuggestions(page: Page, params: Record<string, unk
   }
 }
 
-/* ---------- getDirections ---------- */
+/* ---------- directions (shared helper) ---------- */
 
-async function getDirections(page: Page, params: Record<string, unknown>): Promise<unknown> {
+/** Travel modes: 0=driving, 1=bicycling, 2=walking, 3=transit */
+async function getDirectionsForMode(page: Page, params: Record<string, unknown>, mode: number): Promise<unknown> {
   const origin = String(params.origin ?? '')
   const destination = String(params.destination ?? '')
   if (!origin || !destination) throw OpenWebError.missingParam('origin and destination')
 
   await ensureMapsPage(page)
 
-  // Navigate to directions URL — Maps SPA loads route data during navigation
-  const dirUrl = `${MAPS_BASE}/dir/${encodeURIComponent(origin)}/${encodeURIComponent(destination)}/`
+  const modeParam = mode > 0 ? `data=!3m1!4b1!4m2!4m1!3e${mode}` : ''
+  const dirUrl = `${MAPS_BASE}/dir/${encodeURIComponent(origin)}/${encodeURIComponent(destination)}/${modeParam}`
   await page.evaluate((url: string) => {
     window.location.href = url
   }, dirUrl)
   await sleep(8000)
   await page.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => {}) // intentional: best-effort wait
 
-  // Extract route data from DOM
   const routes = await page.evaluate(() => {
-    function parseRoute(text: string) {
+    const parseRoute = (text: string) => {
       const duration = text.match(/(\d+\s*hr\s*\d*\s*min|\d+\s*min)(?!\w)/)
       const distance = text.match(/([\d,.]+)\s*(miles|mi(?!n))/)
       const via = text.match(/via\s+([\w\s\d-]+?)(?:\s*(?:Fastest|Details|$))/)
@@ -348,7 +358,6 @@ async function getDirections(page: Page, params: Record<string, unknown>): Promi
       if (r) results.push(r)
     }
 
-    // Fallback: parse entire directions panel by splitting on "via"
     if (results.length === 0) {
       const panel = document.querySelector('#section-directions-trip-0, [role="main"]')
       if (panel) {
@@ -364,6 +373,95 @@ async function getDirections(page: Page, params: Record<string, unknown>): Promi
   return { origin, destination, routes }
 }
 
+const getDirections = (p: Page, params: Record<string, unknown>) => getDirectionsForMode(p, params, 0)
+const getTransitDirections = (p: Page, params: Record<string, unknown>) => getDirectionsForMode(p, params, 3)
+const getWalkingDirections = (p: Page, params: Record<string, unknown>) => getDirectionsForMode(p, params, 2)
+const getBicyclingDirections = (p: Page, params: Record<string, unknown>) => getDirectionsForMode(p, params, 1)
+
+/* ---------- getPlaceHours ---------- */
+
+async function getPlaceHours(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const placeId = String(params.placeId ?? params.place_id ?? '')
+  const query = String(params.query ?? params.name ?? '')
+  if (!placeId) throw OpenWebError.missingParam('placeId')
+
+  const info = await fetchPlaceInfo(page, placeId, query)
+  const placeName = dig(info, 11) as string | null
+  const statusText = dig(info, 203, 1, 4, 0) as string | null
+  const hoursArr = dig(info, 203, 1, 0) as unknown[][] | null
+  const schedule: Array<{ day: string; hours: string }> = []
+  if (Array.isArray(hoursArr)) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    for (const entry of hoursArr) {
+      if (!Array.isArray(entry)) continue
+      const dayIdx = entry[0] as number
+      const timeStr = dig(entry, 1, 0) as string | null
+      if (typeof dayIdx === 'number' && days[dayIdx]) {
+        schedule.push({ day: days[dayIdx], hours: timeStr ?? 'Closed' })
+      }
+    }
+  }
+  return { placeName, placeId, status: statusText, schedule }
+}
+
+/* ---------- geocode ---------- */
+
+async function geocode(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const address = String(params.address ?? '')
+  if (!address) throw OpenWebError.missingParam('address')
+  const places = await navigateAndExtractPlaces(page, `${MAPS_BASE}/search/${encodeURIComponent(address)}/`)
+  const first = places[0]
+  if (!first) return { address, lat: null, lng: null, placeId: null, formattedAddress: null }
+  return { address, lat: first.lat, lng: first.lng, placeId: first.placeId, formattedAddress: first.address, name: first.name }
+}
+
+/* ---------- reverseGeocode ---------- */
+
+async function reverseGeocode(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const lat = Number(params.lat)
+  const lng = Number(params.lng)
+  if (Number.isNaN(lat) || Number.isNaN(lng)) throw OpenWebError.missingParam('lat and lng')
+
+  await ensureMapsPage(page)
+  await page.evaluate((url: string) => { window.location.href = url },
+    `${MAPS_BASE}/@${lat},${lng},17z`)
+  await sleep(5000)
+  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {}) // intentional: best-effort wait
+
+  const result = await page.evaluate(() => {
+    const title = document.title.replace(' - Google Maps', '').trim()
+    const h1 = document.querySelector('h1')?.textContent?.trim()
+    const addrEl = document.querySelector('button[data-item-id="address"]')
+    const address = addrEl?.textContent?.trim() || h1 || title || null
+    const url = window.location.href
+    const pidMatch = url.match(/0x[0-9a-f]+:0x[0-9a-f]+/)
+    return { address, name: h1 || null, placeId: pidMatch?.[0] || null }
+  })
+  return { lat, lng, ...result }
+}
+
+/* ---------- getPlaceAbout ---------- */
+
+async function getPlaceAbout(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const placeId = String(params.placeId ?? params.place_id ?? '')
+  const query = String(params.query ?? params.name ?? '')
+  if (!placeId) throw OpenWebError.missingParam('placeId')
+
+  const info = await fetchPlaceInfo(page, placeId, query)
+  return {
+    placeName: dig(info, 11) as string | null,
+    placeId: (dig(info, 10) as string | null) ?? placeId,
+    description: dig(info, 154, 0, 0) as string | null,
+    category: dig(info, 76, 0, 0) as string | null,
+    address: (dig(info, 18) as string | null) ?? (dig(info, 39) as string | null),
+    priceLevel: dig(info, 4, 2) as string | null,
+    rating: dig(info, 4, 7) as number | null,
+    reviewCount: dig(info, 4, 8) as number | null,
+    website: dig(info, 7, 0) as string | null,
+    phone: dig(info, 178, 0, 0) as string | null,
+  }
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
@@ -372,13 +470,20 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getPlaceReviews,
   getPlacePhotos,
   getDirections,
+  getTransitDirections,
+  getWalkingDirections,
+  getBicyclingDirections,
   nearbySearch,
   getAutocompleteSuggestions,
+  getPlaceHours,
+  geocode,
+  reverseGeocode,
+  getPlaceAbout,
 }
 
 const adapter: CodeAdapter = {
   name: 'google-maps-api',
-  description: 'Google Maps — search, details, reviews, photos, directions, nearby search, autocomplete via SPA navigation + internal APIs',
+  description: 'Google Maps — search, details, reviews, photos, directions (driving/transit/walking/cycling), nearby, autocomplete, hours, geocode via SPA + internal APIs',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('google.com')

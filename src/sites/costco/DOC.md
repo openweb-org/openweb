@@ -1,65 +1,101 @@
 # Costco
 
 ## Overview
-Costco Wholesale — e-commerce warehouse club. Product search, detail, reviews, warehouse locator, and cart via POST-based APIs and BazaarVoice.
+E-commerce warehouse club. Product search, detail, reviews, warehouse locator, delivery options, cart management, and product comparison.
+
+## Workflows
+
+### Find and evaluate a product
+1. `searchProducts(query)` → product listings with `itemNumber`
+2. `getProductDetail(itemNumber)` → price, description, attributes, rating
+3. `getProductReviews(productId)` → review summary, rating distribution, recommendation %
+
+### Compare products before buying
+1. `searchProducts(query)` → find candidates → `itemNumber`s
+2. `compareProducts(itemNumbers)` → side-by-side price, brand, rating, attributes
+3. `getDeliveryOptions(itemNumber)` → shipping/pickup availability per product
+
+### Check warehouse availability
+1. `findWarehouses(latitude, longitude)` → nearby warehouses with `warehouseId`
+2. `getWarehouseDetails(warehouseId)` → full hours, services, amenities
+3. `checkWarehouseStock(itemNumber, warehouseNumber)` → in-store vs online-only, price
+
+### Browse and discover
+1. `searchSuggestions(query)` → autocomplete completions to refine search
+2. `browseCategory(category)` → products by department with available filters
+
+### Cart management (requires login)
+1. `searchProducts(query)` → `itemNumber`
+2. `addToCart(itemNumber, quantity)` → `orderItemId`
+3. `updateCartQuantity(orderItemId, quantity)` → update quantity
+4. `removeFromCart(orderItemId)` → remove item
 
 ## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| searchProducts | search by keyword | POST `gdx-api.costco.com/catalog/search/api/v1/search` | returns title, brands, categories, image, pills, marketing statement |
-| getProductDetail | get product by item number | POST `ecom-api.costco.com/ebusiness/product/v1/products/graphql` | returns price, description, attributes, rating |
-| getProductReviews | get review summary for a product | page.evaluate + BV internal state | returns total reviews, average rating, distribution, recommendation % |
-| findWarehouses | find nearby warehouse locations | GET `ecom-api.costco.com/core/warehouse-locator/v1/salesLocations.json` | returns address, hours, services, distance |
-| addToCart | ⚠️ add product to cart | POST `www.costco.com/AjaxManageShoppingCartCmd` | requires login, write permission |
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| searchProducts | search by keyword | query | itemNumber, title, brands, pills | entry point, paginated (pageSize, offset) |
+| searchSuggestions | autocomplete | query | term, type | entry point |
+| getProductDetail | product details | itemNumber ← searchProducts | price, rating, attributes, buyable | price=0 means "see in cart" |
+| getMultipleProducts | batch product lookup | itemNumbers ← searchProducts | price, brand, rating per item | |
+| compareProducts | side-by-side comparison | itemNumbers ← searchProducts (2+) | price, brand, rating, attributes | |
+| getProductReviews | review summary | productId ← searchProducts | totalReviews, averageRating, distribution | navigates page (BV widget) |
+| getDeliveryOptions | shipping/pickup check | itemNumber ← searchProducts | options[].type, available, membershipRequired | types: shipping, business_delivery, warehouse_pickup |
+| browseCategory | browse by department | category | products, availableFilters | entry point, paginated |
+| findWarehouses | nearby warehouses | latitude, longitude | warehouseId, name, address, hours, services | entry point |
+| getWarehouseDetails | full warehouse info | warehouseId ← findWarehouses | hours, services[].name/hours, has* booleans | |
+| checkWarehouseStock | in-store availability | itemNumber ← searchProducts, warehouseNumber ← findWarehouses | inWarehouse, onlineOnly, price | |
+| addToCart | add to cart | itemNumber ← searchProducts | orderItemId | write, requires login |
+| removeFromCart | remove from cart | orderItemId ← addToCart | success | write, requires login |
+| updateCartQuantity | change cart qty | orderItemId ← addToCart, quantity | success | write, requires login |
+
+## Quick Start
+
+```bash
+# Search for products
+openweb costco exec searchProducts '{"query": "laptop"}'
+
+# Get product details (use itemNumber from search)
+openweb costco exec getProductDetail '{"itemNumber": "100978861"}'
+
+# Get review summary
+openweb costco exec getProductReviews '{"productId": "4000373324"}'
+
+# Find nearby warehouses
+openweb costco exec findWarehouses '{"latitude": 37.35, "longitude": -121.95, "limit": 3}'
+
+# Check delivery options
+openweb costco exec getDeliveryOptions '{"itemNumber": "100978861", "zipCode": "95050"}'
+
+# Browse a category
+openweb costco exec browseCategory '{"category": "Electronics"}'
+
+# Compare products side by side
+openweb costco exec compareProducts '{"itemNumbers": ["100978861", "4000373324"]}'
+```
+
+---
+
+## Site Internals
 
 ## API Architecture
-- **Hybrid**: POST-based REST search API + GraphQL product detail API + REST warehouse locator + BazaarVoice reviews
+- **Hybrid**: POST-based REST search + GraphQL product detail + REST warehouse locator + BazaarVoice reviews
 - **Search domain**: `gdx-api.costco.com` — JSON POST body with `query`, `pageSize`, `offset`, warehouse/delivery config
 - **Product domain**: `ecom-api.costco.com` — inline GraphQL query (not persisted hashes), products resolved by `itemNumbers`
-- **Warehouse domain**: `ecom-api.costco.com/core/warehouse-locator/v1` — GET with lat/lng, different `client-identifier` (`7c71124c-...`)
-- **Reviews**: BazaarVoice widget loads on product pages, data extracted from `BV.rating_summary.apiData` via page.evaluate (BV BFD API requires internal auth, inaccessible via page.request)
-- **Cart**: POST to `www.costco.com/AjaxManageShoppingCartCmd` with query params, requires browser session cookies + auth token
-- All APIs are cross-origin from `www.costco.com` with CORS enabled
+- **Warehouse domain**: `ecom-api.costco.com/core/warehouse-locator/v1` — GET with lat/lng
+- **Reviews**: BazaarVoice widget loads on product pages, data extracted from `BV.rating_summary.apiData` via page.evaluate
 - Search returns product IDs but **no prices** — prices come from the product GraphQL
 - Some products have `price: 0` meaning "see price in cart" (`disp_price_in_cart_only` attribute)
 
-### Required Headers
-| Header | Search | Product | Warehouse | Value |
-|--------|--------|---------|-----------|-------|
-| `client-identifier` | yes | yes | yes | `168287ea-...` (search), `4900eb1f-...` (product), `7c71124c-...` (warehouse) |
-| `client_id` | yes | no | no | `USBC` |
-| `locale` | yes | no | no | `en-US` |
-| `searchresultprovider` | yes | no | no | `GRS` |
-| `costco.env` | no | yes | no | `ecom` |
-| `costco.service` | no | yes | no | `restProduct` |
-
-### Search Request Body
-```json
-{
-  "visitorId": "0",
-  "query": "laptop",
-  "pageSize": 24,
-  "offset": 0,
-  "searchMode": "page",
-  "warehouseId": "249-wh",
-  "shipToPostal": "95050",
-  "shipToState": "CA",
-  "deliveryLocations": ["653-bd", "848-bd", "249-wh", "847_0-wm"]
-}
-```
-`visitorId` and `userInfo` fields are required or the backend returns 500.
-
 ## Auth
-- **No auth required** for public product data, reviews, and warehouse locator
-- No cookies or authorization headers for read operations
+- **No auth required** for all read operations (search, product, reviews, warehouses)
 - Each API domain uses a distinct `client-identifier` (app-level, not session-level)
-- **addToCart requires login** — browser must have session cookies and JWT auth token
+- **Cart operations require login** — browser must have session cookies and JWT auth token
 
 ## Transport
-- **page** transport with `page.request.fetch()` — NOT `page.evaluate(fetch(...))`
+- **page** transport with `page.request.fetch()` — bypasses PerimeterX client-side fetch interception while inheriting browser cookies
 - Must have browser on `costco.com` for the adapter to initialize
-- `page.request.fetch()` bypasses PerimeterX's client-side fetch interception while inheriting browser cookies
-- **Reviews exception**: uses `page.evaluate` + `page.goto` to navigate to product page and extract BV widget data from `window.BV` global (BV BFD API returns 401 via page.request)
+- **Reviews exception**: uses `page.goto()` + `page.evaluate` to navigate to product page and extract BV widget data from `window.BV` global
 
 ## Extraction
 - Direct JSON responses for search, product, warehouse — no SSR extraction needed
@@ -72,11 +108,9 @@ Costco Wholesale — e-commerce warehouse club. Product search, detail, reviews,
 - Reviews: `window.BV.rating_summary.apiData[productId]` → summary stats from BazaarVoice internal cache
 
 ## Known Issues
-- **PerimeterX**: present on `www.costco.com`, intercepts `window.fetch` and `XMLHttpRequest` in `page.evaluate`. Both fail with `TypeError: Failed to fetch`. Workaround: `page.request.fetch()`.
-- **BazaarVoice auth**: BV BFD API (`apps.bazaarvoice.com/bfd/...`) returns 401 from `page.request.fetch()`. BV's internal `bvFetch` adds auth headers not accessible externally. Reviews extracted from BV widget's cached state instead.
-- **Reviews limited to summary**: full review text (title, body, author) not available — only aggregates (count, average, distribution, recommendation %). Individual review text is rendered by BV widget but requires complex DOM scraping.
+- **PerimeterX**: present on `www.costco.com`, intercepts `window.fetch` and `XMLHttpRequest` in `page.evaluate`. Workaround: `page.request.fetch()`.
+- **BazaarVoice auth**: BV BFD API returns 401 from `page.request.fetch()`. Reviews extracted from BV widget's cached state instead.
+- **Reviews limited to summary**: full review text not available — only aggregates (count, average, distribution, recommendation %).
+- **getProductReviews navigates**: uses `page.goto()` — changes current page URL, may affect subsequent operations.
+- **Price $0**: some items return `price: 0` — these are "display price in cart only" items, not actually free.
 - **Compiler limitation**: search and product APIs are POST with request bodies → compiler auto-skips them. Manual fixture + L3 adapter required.
-- **Price $0**: some items return `price: "0.00000"` — these are "display price in cart only" items, not actually free
-- **`_next/static/` without `__NEXT_DATA__`**: Costco serves Next.js-style static chunks but has no `__NEXT_DATA__` script tag. Not a classic Next.js SSR site — hybrid architecture.
-- **Shared CDP browser**: when multiple agents share the same CDP browser (localhost:9222), capture sessions can conflict. Other agents may navigate the tab or create new tabs during capture.
-- **getProductReviews navigates**: this operation uses `page.goto()` to load the product page for BV data — it changes the current page URL, which may affect subsequent operations that depend on page state.

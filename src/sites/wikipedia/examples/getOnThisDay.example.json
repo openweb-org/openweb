@@ -1,0 +1,16 @@
+{
+  "operation_id": "getOnThisDay",
+  "cases": [
+    {
+      "input": {
+        "type": "events",
+        "MM": "07",
+        "DD": "20"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

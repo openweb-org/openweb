@@ -10,6 +10,8 @@ servers:
   - url: https://m.douban.com
     x-openweb:
       transport: page
+      auth:
+        type: cookie_session
 paths:
   # ── Movies ──────────────────────────────────────────────────────────
 
@@ -51,6 +53,42 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  count:
+                    type: integer
+                  start:
+                    type: integer
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        target_id:
+                          type: string
+                        target:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            rating:
+                              type: object
+                              properties:
+                                count:
+                                  type: integer
+                                value:
+                                  type: number
+                            year:
+                              type: string
+                            cover_url:
+                              type: string
+                            card_subtitle:
+                              type: string
+                        target_type:
+                          type: string
 
   /rexxar/api/v2/movie/{id}:
     get:
@@ -76,11 +114,90 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  original_title:
+                    type: string
+                  year:
+                    type: string
+                  rating:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      max:
+                        type: integer
+                      value:
+                        type: number
+                      star_count:
+                        type: integer
+                  genres:
+                    type: array
+                    items:
+                      type: string
+                  countries:
+                    type: array
+                    items:
+                      type: string
+                  languages:
+                    type: array
+                    items:
+                      type: string
+                  durations:
+                    type: array
+                    items:
+                      type: string
+                  pubdate:
+                    type: array
+                    items:
+                      type: string
+                  intro:
+                    type: string
+                  cover_url:
+                    type: string
+                  pic:
+                    type: object
+                    properties:
+                      large:
+                        type: string
+                      normal:
+                        type: string
+                  directors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                  actors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                  aka:
+                    type: array
+                    items:
+                      type: string
+                  is_tv:
+                    type: boolean
+                  review_count:
+                    type: integer
+                  comment_count:
+                    type: integer
+                  url:
+                    type: string
+                  uri:
+                    type: string
 
   /rexxar/api/v2/movie/{id}/interests:
     get:
       operationId: getMovieReviews
-      summary: "Get user reviews for a movie — reviewer name, rating, comment text, date"
+      summary: "Get user reviews for a movie — reviewer name, rating, comment text, vote count, date"
       x-openweb:
         permission: read
         build:
@@ -115,11 +232,51 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  count:
+                    type: integer
+                  start:
+                    type: integer
+                  total:
+                    type: integer
+                  interests:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        comment:
+                          type: string
+                        rating:
+                          type: object
+                          properties:
+                            max:
+                              type: integer
+                            value:
+                              type: integer
+                            star_count:
+                              type: integer
+                        create_time:
+                          type: string
+                        vote_count:
+                          type: integer
+                        user:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            uid:
+                              type: string
+                            avatar:
+                              type: string
+                        status:
+                          type: string
 
   /rexxar/api/v2/movie/{id}/celebrities:
     get:
       operationId: getMovieCelebrities
-      summary: "Get cast and crew for a movie — directors, actors, writers with name, avatar, role"
+      summary: "Get cast and crew for a movie — directors, actors with name, latin name, avatar, character role"
       x-openweb:
         permission: read
         build:
@@ -140,11 +297,58 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  total:
+                    type: integer
+                  directors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        latin_name:
+                          type: string
+                        character:
+                          type: string
+                        roles:
+                          type: array
+                          items:
+                            type: string
+                        avatar:
+                          type: object
+                          properties:
+                            large:
+                              type: string
+                  actors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        latin_name:
+                          type: string
+                        character:
+                          type: string
+                        roles:
+                          type: array
+                          items:
+                            type: string
+                        avatar:
+                          type: object
+                          properties:
+                            large:
+                              type: string
 
   /movie/{id}/photos:
     get:
       operationId: getMoviePhotos
-      summary: "Get movie photo gallery — stills, posters, behind the scenes"
+      summary: "Get movie photo gallery — stills, posters, behind the scenes images"
       x-openweb:
         permission: read
         build:
@@ -177,11 +381,27 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  subjectId:
+                    type: string
+                  photos:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        imageUrl:
+                          type: string
+                        pageUrl:
+                          type: string
+                        info:
+                          type: string
+                  totalPhotos:
+                    type: integer
 
   /top250:
     get:
       operationId: getTop250
-      summary: "Get Douban Top 250 movies — ranked by user ratings with pagination"
+      summary: "Get Douban Top 250 movies — rank, title, rating, quote, paginated by 25"
       x-openweb:
         permission: read
         build:
@@ -207,6 +427,32 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  movies:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        rank:
+                          type: integer
+                        subjectId:
+                          type: string
+                        title:
+                          type: string
+                        rating:
+                          type: string
+                        ratingCount:
+                          type: integer
+                        quote:
+                          type: string
+                        info:
+                          type: string
+                        url:
+                          type: string
+                  start:
+                    type: integer
+                  pageSize:
+                    type: integer
 
   # ── Books ───────────────────────────────────────────────────────────
 
@@ -248,11 +494,47 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  count:
+                    type: integer
+                  start:
+                    type: integer
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        target_id:
+                          type: string
+                        target:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            abstract:
+                              type: string
+                            rating:
+                              type: object
+                              properties:
+                                count:
+                                  type: integer
+                                value:
+                                  type: number
+                            cover_url:
+                              type: string
+                            card_subtitle:
+                              type: string
+                        target_type:
+                          type: string
 
   /rexxar/api/v2/book/{id}:
     get:
       operationId: getBook
-      summary: "Get book detail — title, rating, author, publisher, pages, summary, table of contents"
+      summary: "Get book detail — title, rating, author, publisher, pages, summary, author bio"
       x-openweb:
         permission: read
         build:
@@ -273,11 +555,54 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  rating:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      max:
+                        type: integer
+                      value:
+                        type: number
+                      star_count:
+                        type: number
+                  subtitle:
+                    type: array
+                    items:
+                      type: string
+                  pubdate:
+                    type: array
+                    items:
+                      type: string
+                  pic:
+                    type: object
+                    properties:
+                      large:
+                        type: string
+                      normal:
+                        type: string
+                  intro:
+                    type: string
+                  author_intro:
+                    type: string
+                  card_subtitle:
+                    type: string
+                  review_count:
+                    type: integer
+                  url:
+                    type: string
+                  uri:
+                    type: string
 
   /rexxar/api/v2/book/{id}/interests:
     get:
       operationId: getBookReviews
-      summary: "Get user reviews for a book — reviewer name, rating, comment text, date"
+      summary: "Get user reviews for a book — reviewer name, rating, comment text, vote count, date"
       x-openweb:
         permission: read
         build:
@@ -312,13 +637,53 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  count:
+                    type: integer
+                  start:
+                    type: integer
+                  total:
+                    type: integer
+                  interests:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        comment:
+                          type: string
+                        rating:
+                          type: object
+                          properties:
+                            max:
+                              type: integer
+                            value:
+                              type: integer
+                            star_count:
+                              type: integer
+                        create_time:
+                          type: string
+                        vote_count:
+                          type: integer
+                        user:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            uid:
+                              type: string
+                            avatar:
+                              type: string
+                        status:
+                          type: string
 
   # ── Music (adapter-only, desktop DOM extraction) ────────────────────
 
   /search/music:
     get:
       operationId: searchMusic
-      summary: "Search music/albums by keyword — titles, artists, ratings"
+      summary: "Search music/albums by keyword — titles, artists, ratings, covers"
       x-openweb:
         permission: read
         build:
@@ -343,11 +708,31 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        subjectId:
+                          type: string
+                        title:
+                          type: string
+                        rating:
+                          type: string
+                        meta:
+                          type: string
+                        url:
+                          type: string
+                        coverImage:
+                          type: string
+                  totalResults:
+                    type: integer
 
   /music/{id}:
     get:
       operationId: getMusicDetail
-      summary: "Get album detail — rating, artist, tracklist, genre, release date"
+      summary: "Get album detail — rating, artist, tracklist, genre, release date, publisher"
       x-openweb:
         permission: read
         build:
@@ -373,6 +758,35 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  subjectId:
+                    type: string
+                  title:
+                    type: string
+                  rating:
+                    type: string
+                  ratingCount:
+                    type: integer
+                  poster:
+                    type: string
+                  artist:
+                    type: string
+                  genre:
+                    type: string
+                  albumType:
+                    type: string
+                  medium:
+                    type: string
+                  releaseDate:
+                    type: string
+                  publisher:
+                    type: string
+                  alias:
+                    type: string
+                  tracks:
+                    type: array
+                    items:
+                      type: string
 
   # ── Trending / Discovery ────────────────────────────────────────────
 
@@ -400,6 +814,46 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  category:
+                    type: string
+                  total:
+                    type: integer
+                  type:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        rating:
+                          type: object
+                          properties:
+                            count:
+                              type: integer
+                            value:
+                              type: number
+                            star_count:
+                              type: number
+                        year:
+                          type: string
+                        pic:
+                          type: object
+                          properties:
+                            large:
+                              type: string
+                        card_subtitle:
+                          type: string
+                        is_new:
+                          type: boolean
+                        type:
+                          type: string
+                        uri:
+                          type: string
 
   /rexxar/api/v2/subject/recent_hot/tv:
     get:
@@ -425,11 +879,53 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  category:
+                    type: string
+                  total:
+                    type: integer
+                  type:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        rating:
+                          type: object
+                          properties:
+                            count:
+                              type: integer
+                            value:
+                              type: number
+                            star_count:
+                              type: number
+                        year:
+                          type: string
+                        pic:
+                          type: object
+                          properties:
+                            large:
+                              type: string
+                        card_subtitle:
+                          type: string
+                        episodes_info:
+                          type: string
+                        is_new:
+                          type: boolean
+                        type:
+                          type: string
+                        uri:
+                          type: string
 
   /rexxar/api/v2/subject_collection/movie_showing/items:
     get:
       operationId: getNowShowingMovies
-      summary: "Get movies currently in theaters — title, rating, cover, release date"
+      summary: "Get movies currently in theaters — title, rating, cover, release date, directors, actors"
       x-openweb:
         permission: read
         build:
@@ -457,3 +953,56 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  count:
+                    type: integer
+                  start:
+                    type: integer
+                  total:
+                    type: integer
+                  subject_collection:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                  subject_collection_items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        year:
+                          type: string
+                        rating:
+                          type: object
+                          properties:
+                            count:
+                              type: integer
+                            value:
+                              type: number
+                        cover:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                        card_subtitle:
+                          type: string
+                        release_date:
+                          type: string
+                        directors:
+                          type: array
+                          items:
+                            type: string
+                        actors:
+                          type: array
+                          items:
+                            type: string
+                        type:
+                          type: string
+                        uri:
+                          type: string

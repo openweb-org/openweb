@@ -9,11 +9,15 @@ servers:
   - url: https://www.google.com
     x-openweb:
       transport: page
+      auth:
+        type: cookie_session
 paths:
   /complete/search:
     get:
       operationId: searchSuggestions
-      summary: Get autocomplete suggestions for a search query prefix
+      summary: >-
+        Get autocomplete suggestions for a query prefix — returns ranked
+        completion strings, useful for query refinement and discovery
       x-openweb:
         transport: node
         permission: read
@@ -61,7 +65,9 @@ paths:
   /search:
     get:
       operationId: searchWeb
-      summary: Extract organic web search results from an open Google search page
+      summary: >-
+        Extract organic web search results — title, link, displayUrl, snippet
+        for each result from the Google search page
       x-openweb:
         permission: read
         build:
@@ -117,7 +123,9 @@ paths:
   /search/images:
     get:
       operationId: searchImages
-      summary: Extract image search results from an open Google Images page
+      summary: >-
+        Extract image search results — sourceUrl, alt text, thumbnail
+        width/height from Google Images page (udm=2)
       x-openweb:
         permission: read
         build:
@@ -173,7 +181,9 @@ paths:
   /search/news:
     get:
       operationId: searchNews
-      summary: Extract news search results from an open Google News tab page
+      summary: >-
+        Extract news results — headline, link, source, snippet, publishedAt
+        (ISO 8601) from Google News tab (tbm=nws)
       x-openweb:
         permission: read
         build:
@@ -232,7 +242,9 @@ paths:
   /search/videos:
     get:
       operationId: searchVideos
-      summary: Extract video search results from an open Google Videos tab page
+      summary: >-
+        Extract video search results — title, link, source, snippet from
+        Google Videos tab (tbm=vid)
       x-openweb:
         permission: read
         build:
@@ -288,7 +300,9 @@ paths:
   /search/shopping:
     get:
       operationId: searchShopping
-      summary: Extract shopping product results from an open Google Shopping page
+      summary: >-
+        Extract shopping results — product title, price, originalPrice,
+        merchant, reviewCount from Google Shopping (udm=28)
       x-openweb:
         permission: read
         build:
@@ -347,7 +361,9 @@ paths:
   /search/knowledge:
     get:
       operationId: getKnowledgePanel
-      summary: Extract knowledge panel data from a Google search results page
+      summary: >-
+        Extract knowledge panel — entity title, subtitle, description, and
+        facts (born, spouse, etc.) from search sidebar
       x-openweb:
         permission: read
         build:
@@ -397,3 +413,341 @@ paths:
                         value:
                           type: string
                           description: Fact value.
+  /search/featured-snippet:
+    get:
+      operationId: getFeaturedSnippet
+      summary: >-
+        Extract featured snippet (answer box) — snippet text, source title,
+        sourceUrl, displayUrl from the top of search results
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0008
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: getFeaturedSnippet
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query likely to trigger a featured snippet (e.g. "what is photosynthesis").
+      responses:
+        '200':
+          description: Featured snippet extracted from the top of search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  snippet:
+                    type: string
+                    nullable: true
+                    description: The featured answer text.
+                  title:
+                    type: string
+                    nullable: true
+                    description: Title of the source page.
+                  sourceUrl:
+                    type: string
+                    nullable: true
+                    description: URL of the source page.
+                  displayUrl:
+                    type: string
+                    nullable: true
+                    description: Display URL shown under the snippet.
+  /search/people-also-ask:
+    get:
+      operationId: getPeopleAlsoAsk
+      summary: >-
+        Extract "People also ask" questions — list of related questions
+        from the PAA box on search results page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0009
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: getPeopleAlsoAsk
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query — must match the query on the open Google search page.
+      responses:
+        '200':
+          description: People Also Ask questions extracted from the search page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        question:
+                          type: string
+                          description: A related question (e.g. "How does photosynthesis work?").
+                  count:
+                    type: integer
+                    description: Number of PAA questions extracted.
+  /search/related:
+    get:
+      operationId: getRelatedSearches
+      summary: >-
+        Extract related searches — list of suggested follow-up queries
+        from the bottom of the search results page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0010
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: getRelatedSearches
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query — must match the query on the open Google search page.
+      responses:
+        '200':
+          description: Related search suggestions from the bottom of results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  searches:
+                    type: array
+                    items:
+                      type: string
+                    description: List of related search query strings.
+                  count:
+                    type: integer
+                    description: Number of related searches extracted.
+  /search/local:
+    get:
+      operationId: searchLocal
+      summary: >-
+        Extract local business results (local pack) — name, rating, reviews,
+        business type, address from search results map section
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0011
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: searchLocal
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Local search query (e.g. "pizza near me", "coffee shops in Brooklyn").
+      responses:
+        '200':
+          description: Local business results from the map pack.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Business name.
+                        rating:
+                          type: string
+                          description: Star rating (e.g. "4.5").
+                        reviews:
+                          type: string
+                          description: Review count (e.g. "234").
+                        type:
+                          type: string
+                          description: Business type (e.g. "Italian restaurant").
+                        address:
+                          type: string
+                          description: Street address or area.
+                  resultCount:
+                    type: integer
+                    description: Number of local results extracted.
+  /search/calculator:
+    get:
+      operationId: getCalculation
+      summary: >-
+        Extract calculator/converter result — computed result, expression,
+        unit labels from Google's calculator or unit/currency converter widget
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0012
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: getCalculation
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Math expression or conversion query (e.g. "100 usd to eur", "sqrt(144)", "5 miles in km").
+      responses:
+        '200':
+          description: Calculator or unit/currency conversion result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    nullable: true
+                    description: Computed result or converted value.
+                  expression:
+                    type: string
+                    nullable: true
+                    description: Input expression or source value.
+                  fromUnit:
+                    type: string
+                    nullable: true
+                    description: Source unit label (for conversions).
+                  toUnit:
+                    type: string
+                    nullable: true
+                    description: Target unit label (for conversions).
+  /search/weather:
+    get:
+      operationId: getWeather
+      summary: >-
+        Extract weather widget — location, temperature, condition, humidity,
+        wind speed, precipitation from the Google weather card
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0013
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: getWeather
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Weather query (e.g. "weather in Tokyo", "weather NYC").
+      responses:
+        '200':
+          description: Weather information from the Google weather widget.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  location:
+                    type: string
+                    nullable: true
+                    description: Location name shown in the widget.
+                  temperature:
+                    type: string
+                    nullable: true
+                    description: Current temperature with unit (e.g. "72°F").
+                  condition:
+                    type: string
+                    nullable: true
+                    description: Weather condition (e.g. "Sunny", "Partly cloudy").
+                  humidity:
+                    type: string
+                    nullable: true
+                    description: Humidity percentage (e.g. "45%").
+                  wind:
+                    type: string
+                    nullable: true
+                    description: Wind speed (e.g. "10 mph").
+                  precipitation:
+                    type: string
+                    nullable: true
+                    description: Precipitation chance (e.g. "10%").
+  /search/translate:
+    get:
+      operationId: getTranslation
+      summary: >-
+        Extract translation result — source text, translated text, source
+        language, target language from the Google Translate widget
+      x-openweb:
+        permission: read
+        build:
+          stable_id: gs0014
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: google-search
+          operation: getTranslation
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Translation query (e.g. "translate hello to Spanish", "bonjour in English").
+      responses:
+        '200':
+          description: Translation result from the Google Translate widget.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sourceText:
+                    type: string
+                    nullable: true
+                    description: Original text being translated.
+                  translatedText:
+                    type: string
+                    nullable: true
+                    description: Translated text.
+                  sourceLang:
+                    type: string
+                    nullable: true
+                    description: Source language name.
+                  targetLang:
+                    type: string
+                    nullable: true
+                    description: Target language name.

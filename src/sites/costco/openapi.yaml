@@ -8,11 +8,13 @@ servers:
   - url: https://www.costco.com
     x-openweb:
       transport: page
+      auth:
+        type: cookie_session
 paths:
   /internal/searchProducts:
     get:
       operationId: searchProducts
-      summary: Search Costco products by keyword — returns titles, brands, categories, images
+      summary: Search Costco products by keyword — returns title, brand, categories, image, badges, promotions
       x-openweb:
         permission: read
         build:
@@ -44,7 +46,7 @@ paths:
           schema:
             type: integer
             default: 0
-          description: Pagination offset.
+          description: Pagination offset (e.g. 24 for page 2).
       responses:
         '200':
           description: Search results with product listings.
@@ -96,10 +98,63 @@ paths:
                             - string
                             - 'null'
                           description: Promotional text (e.g. "$150 OFF").
+  /internal/searchSuggestions:
+    get:
+      operationId: searchSuggestions
+      summary: Get search autocomplete suggestions — returns keyword completions and category hints
+      x-openweb:
+        permission: read
+        build:
+          stable_id: co0006
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: searchSuggestions
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Partial search term (e.g. "lap" for laptop suggestions).
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Max number of suggestions to return.
+      responses:
+        '200':
+          description: Autocomplete suggestions for the partial query.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - query
+                  - suggestions
+                properties:
+                  query:
+                    type: string
+                  suggestions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        term:
+                          type: string
+                          description: Suggested search term.
+                        type:
+                          type: string
+                          description: Suggestion type (keyword, category, brand).
   /internal/getProductDetail:
     get:
       operationId: getProductDetail
-      summary: Get Costco product details — price, description, attributes, ratings
+      summary: Get Costco product details — price, description, attributes, rating, buyable status
       x-openweb:
         permission: read
         build:
@@ -117,7 +172,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Costco item number (from searchProducts).
+          description: Costco item number (from searchProducts or browseCategory).
       responses:
         '200':
           description: Product details.
@@ -168,7 +223,7 @@ paths:
                         type:
                           - number
                           - 'null'
-                        description: Average review rating.
+                        description: Average review rating (1-5).
                       numberOfRatings:
                         type:
                           - integer
@@ -183,10 +238,154 @@ paths:
                           items:
                             type: string
                         description: Product attributes keyed by name (e.g. "Color", "Features").
+  /internal/getMultipleProducts:
+    get:
+      operationId: getMultipleProducts
+      summary: Get details for multiple products at once — price, title, brand, rating for batch lookup
+      x-openweb:
+        permission: read
+        build:
+          stable_id: co0007
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: getMultipleProducts
+      parameters:
+        - name: itemNumbers
+          in: query
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+          description: Array of Costco item numbers (from searchProducts).
+      responses:
+        '200':
+          description: Product details for each item.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - products
+                  - totalCount
+                properties:
+                  totalCount:
+                    type: integer
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        itemNumber:
+                          type: string
+                        title:
+                          type:
+                            - string
+                            - 'null'
+                        price:
+                          type:
+                            - number
+                            - 'null'
+                        listPrice:
+                          type:
+                            - number
+                            - 'null'
+                        brand:
+                          type:
+                            - string
+                            - 'null'
+                        rating:
+                          type:
+                            - number
+                            - 'null'
+                        buyable:
+                          type: boolean
+  /internal/compareProducts:
+    get:
+      operationId: compareProducts
+      summary: Compare 2+ products side by side — price, brand, rating, full attributes for comparison
+      x-openweb:
+        permission: read
+        build:
+          stable_id: co0014
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: compareProducts
+      parameters:
+        - name: itemNumbers
+          in: query
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+            minItems: 2
+          description: Array of 2+ Costco item numbers to compare.
+      responses:
+        '200':
+          description: Products with full attributes for side-by-side comparison.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - products
+                  - comparedCount
+                properties:
+                  comparedCount:
+                    type: integer
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        itemNumber:
+                          type: string
+                        title:
+                          type:
+                            - string
+                            - 'null'
+                        price:
+                          type:
+                            - number
+                            - 'null'
+                        listPrice:
+                          type:
+                            - number
+                            - 'null'
+                        brand:
+                          type:
+                            - string
+                            - 'null'
+                        rating:
+                          type:
+                            - number
+                            - 'null'
+                        numberOfRatings:
+                          type:
+                            - integer
+                            - 'null'
+                        buyable:
+                          type: boolean
+                        attributes:
+                          type: object
+                          additionalProperties:
+                            type: array
+                            items:
+                              type: string
+                          description: Product attributes for comparison.
   /internal/getProductReviews:
     get:
       operationId: getProductReviews
-      summary: Get customer reviews for a Costco product — ratings, text, photos via BazaarVoice
+      summary: Get review summary for a product — total reviews, average rating, distribution, recommendation %
       x-openweb:
         permission: read
         build:
@@ -207,7 +406,7 @@ paths:
           description: Costco item/product number (from searchProducts or getProductDetail).
       responses:
         '200':
-          description: Product review summary statistics (rating, distribution, recommendation %).
+          description: Product review summary statistics.
           content:
             application/json:
               schema:
@@ -233,8 +432,10 @@ paths:
                       properties:
                         key:
                           type: integer
+                          description: Star rating (1-5).
                         count:
                           type: integer
+                          description: Number of reviews with this rating.
                   recommendedPercentage:
                     type:
                       - integer
@@ -245,10 +446,177 @@ paths:
                     items:
                       type: object
                     description: Empty array (full review text blocked by PerimeterX + BazaarVoice auth).
+  /internal/getDeliveryOptions:
+    get:
+      operationId: getDeliveryOptions
+      summary: Check delivery options for a product — shipping, business delivery, warehouse pickup availability
+      x-openweb:
+        permission: read
+        build:
+          stable_id: co0008
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: getDeliveryOptions
+      parameters:
+        - name: itemNumber
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Costco item number (from searchProducts).
+        - name: zipCode
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '95050'
+          description: Delivery zip code.
+      responses:
+        '200':
+          description: Delivery options for the product.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - itemNumber
+                  - available
+                properties:
+                  itemNumber:
+                    type: string
+                  title:
+                    type:
+                      - string
+                      - 'null'
+                  price:
+                    type:
+                      - number
+                      - 'null'
+                  available:
+                    type: boolean
+                    description: Whether the product is buyable.
+                  membershipRequired:
+                    type: boolean
+                  maxQuantity:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Maximum order quantity.
+                  options:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          description: Delivery type (shipping, business_delivery, warehouse_pickup).
+                        label:
+                          type: string
+                        zipCode:
+                          type:
+                            - string
+                            - 'null'
+                        available:
+                          type: boolean
+  /internal/browseCategory:
+    get:
+      operationId: browseCategory
+      summary: Browse products by department/category — returns products, total count, available filters
+      x-openweb:
+        permission: read
+        build:
+          stable_id: co0009
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: browseCategory
+      parameters:
+        - name: category
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Category path (e.g. "Electronics", "Grocery & Household Essentials > Coffee").
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 24
+          description: Number of results per page (max 24).
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset.
+      responses:
+        '200':
+          description: Products in the specified category.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - products
+                  - totalCount
+                properties:
+                  category:
+                    type: string
+                  totalCount:
+                    type: integer
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        itemNumber:
+                          type: string
+                        title:
+                          type: string
+                        brands:
+                          type: array
+                          items:
+                            type: string
+                        categories:
+                          type: array
+                          items:
+                            type: string
+                        imageUrl:
+                          type:
+                            - string
+                            - 'null'
+                        pills:
+                          type: array
+                          items:
+                            type: string
+                        marketingStatement:
+                          type:
+                            - string
+                            - 'null'
+                  availableFilters:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Filter category name (e.g. "Brand", "Price").
+                        count:
+                          type: integer
+                          description: Number of filter options.
   /internal/findWarehouses:
     get:
       operationId: findWarehouses
-      summary: Find Costco warehouse locations near coordinates — address, hours, services
+      summary: Find Costco warehouse locations near coordinates — address, hours, services, distance
       x-openweb:
         permission: read
         build:
@@ -350,10 +718,173 @@ paths:
                           items:
                             type: string
                           description: Available services (Food Court, Gas Station, Pharmacy, etc.).
+  /internal/getWarehouseDetails:
+    get:
+      operationId: getWarehouseDetails
+      summary: Get full details for a specific warehouse — address, all services with hours, amenities
+      x-openweb:
+        permission: read
+        build:
+          stable_id: co0010
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: getWarehouseDetails
+      parameters:
+        - name: warehouseId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Warehouse ID (from findWarehouses, e.g. "1").
+      responses:
+        '200':
+          description: Full warehouse details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  warehouse:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      warehouseId:
+                        type: string
+                      name:
+                        type: string
+                      phone:
+                        type:
+                          - string
+                          - 'null'
+                      address:
+                        type: object
+                        properties:
+                          street:
+                            type: string
+                          city:
+                            type: string
+                          state:
+                            type: string
+                          zipCode:
+                            type: string
+                          country:
+                            type: string
+                      latitude:
+                        type: number
+                      longitude:
+                        type: number
+                      hours:
+                        type:
+                          - string
+                          - 'null'
+                        description: Warehouse operating hours.
+                      services:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            code:
+                              type: string
+                            hours:
+                              type:
+                                - string
+                                - 'null'
+                            phone:
+                              type:
+                                - string
+                                - 'null'
+                      hasGasStation:
+                        type: boolean
+                      hasPharmacy:
+                        type: boolean
+                      hasTireCenter:
+                        type: boolean
+                      hasFoodCourt:
+                        type: boolean
+  /internal/checkWarehouseStock:
+    get:
+      operationId: checkWarehouseStock
+      summary: Check product availability at a specific warehouse — in-store vs online-only, price, stock
+      x-openweb:
+        permission: read
+        build:
+          stable_id: co0011
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: checkWarehouseStock
+      parameters:
+        - name: itemNumber
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Costco item number (from searchProducts).
+        - name: warehouseNumber
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '847'
+          description: Warehouse number (from findWarehouses warehouseId).
+      responses:
+        '200':
+          description: Product availability at the specified warehouse.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - itemNumber
+                  - warehouseNumber
+                  - available
+                properties:
+                  itemNumber:
+                    type: string
+                  warehouseNumber:
+                    type: string
+                  available:
+                    type: boolean
+                    description: Whether the product is buyable.
+                  inWarehouse:
+                    type: boolean
+                    description: Available for in-warehouse pickup.
+                  onlineOnly:
+                    type: boolean
+                    description: Only available online, not in warehouse.
+                  product:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      title:
+                        type:
+                          - string
+                          - 'null'
+                      price:
+                        type:
+                          - number
+                          - 'null'
+                      membershipRequired:
+                        type: boolean
+                      maxQuantity:
+                        type:
+                          - integer
+                          - 'null'
   /internal/addToCart:
     post:
       operationId: addToCart
-      summary: Add a product to Costco shopping cart — requires login
+      summary: Add a product to Costco shopping cart — requires login session
       x-openweb:
         permission: write
         build:
@@ -379,3 +910,88 @@ paths:
             type: integer
             default: 1
           description: Quantity to add.
+      responses:
+        '200':
+          description: Cart update confirmation (requires active login session).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  orderItemId:
+                    type:
+                      - string
+                      - 'null'
+                    description: Order item ID for the added item (use with removeFromCart / updateCartQuantity).
+  /internal/removeFromCart:
+    post:
+      operationId: removeFromCart
+      summary: Remove an item from Costco shopping cart — requires login session and orderItemId
+      x-openweb:
+        permission: write
+        build:
+          stable_id: co0012
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: removeFromCart
+      parameters:
+        - name: orderItemId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Order item ID (from cart response after addToCart).
+      responses:
+        '200':
+          description: Cart update confirmation (requires active login session).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+  /internal/updateCartQuantity:
+    post:
+      operationId: updateCartQuantity
+      summary: Update quantity of an item in Costco shopping cart — requires login session
+      x-openweb:
+        permission: write
+        build:
+          stable_id: co0013
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: costco-api
+          operation: updateCartQuantity
+      parameters:
+        - name: orderItemId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Order item ID (from cart response after addToCart).
+        - name: quantity
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: New quantity for the item.
+      responses:
+        '200':
+          description: Cart update confirmation (requires active login session).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean

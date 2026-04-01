@@ -70,10 +70,6 @@ async function getHotSearch(page: Page, _params: Record<string, unknown>): Promi
   return fetchJson(page, `${SITE}/ajax/side/hotSearch`)
 }
 
-async function getSearchBand(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return fetchJson(page, `${SITE}/ajax/side/searchBand`)
-}
-
 async function getHotFeed(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const url = buildUrl(SITE, '/ajax/feed/hottimeline', {
     since_id: params.since_id,
@@ -95,14 +91,6 @@ async function getFriendsFeed(page: Page, params: Record<string, unknown>): Prom
     count: params.count ?? 25,
   })
   return fetchJson(page, url)
-}
-
-async function getUnreadFeed(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return fetchJson(page, `${SITE}/ajax/feed/unreadfriendstimeline`)
-}
-
-async function listFeedGroups(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return fetchJson(page, `${SITE}/ajax/feed/allGroups`)
 }
 
 async function getPost(page: Page, params: Record<string, unknown>): Promise<unknown> {
@@ -174,31 +162,6 @@ async function getUserStatuses(page: Page, params: Record<string, unknown>): Pro
   return fetchJson(page, url)
 }
 
-async function searchSuggest(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const url = buildUrl(SITE, '/ajax/side/search', { q: params.q })
-  return fetchJson(page, url)
-}
-
-async function getUnreadMessages(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return fetchJson(page, `${SITE}/ajax/message/unreadHint`)
-}
-
-async function getConfig(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return fetchJson(page, `${SITE}/ajax/config/get_config`)
-}
-
-async function listSidebarCards(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const url = buildUrl(SITE, '/ajax/side/cards', { from: params.from, id: params.id })
-  return fetchJson(page, url)
-}
-
-async function getIndexBand(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const url = buildUrl('https://s.weibo.com', '/ajax_Indexband/getIndexBand', {
-    type: params.type ?? 0,
-  })
-  return fetchJson(page, url)
-}
-
 /* ---------- write operations ---------- */
 
 async function likePost(page: Page, params: Record<string, unknown>): Promise<unknown> {
@@ -232,12 +195,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   // Feeds
   getFriendsFeed,
   getHotFeed,
-  getUnreadFeed,
-  listFeedGroups,
-  // Trending / Search
+  // Trending
   getHotSearch,
-  getSearchBand,
-  searchSuggest,
   // Users
   getUserProfile,
   getUserDetail,
@@ -247,17 +206,11 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getLongtext,
   listComments,
   listReposts,
-  // Notifications / Config
-  getUnreadMessages,
-  getConfig,
-  listSidebarCards,
   // Write
   likePost,
   repost,
   followUser,
   bookmarkPost,
-  // Cross-domain
-  getIndexBand,
 }
 
 const adapter: CodeAdapter = {

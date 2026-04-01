@@ -47,10 +47,14 @@ paths:
                 properties:
                   count:
                     type: integer
+                    description: Total number of results returned.
                   restaurants:
                     type: array
                     items:
                       type: object
+                      required:
+                        - name
+                        - resultType
                       properties:
                         name:
                           type: string
@@ -114,64 +118,99 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - storeHeader
+                  - menuBook
+                  - itemLists
                 properties:
                   storeHeader:
                     type: object
+                    required:
+                      - id
+                      - name
                     properties:
                       id:
                         type: string
+                        description: DoorDash store ID.
                       name:
                         type: string
+                        description: Restaurant name.
                       description:
                         type: string
+                        description: Restaurant description.
                       priceRange:
                         type: integer
+                        description: Price tier (1–4).
                       address:
                         type: object
+                        required:
+                          - displayAddress
                         properties:
                           displayAddress:
                             type: string
+                            description: Full display address.
                           city:
                             type: string
                           state:
                             type: string
                       ratings:
                         type: object
+                        required:
+                          - averageRating
+                          - numRatingsDisplayString
                         properties:
                           averageRating:
                             type: number
+                            description: Average star rating (e.g. 4.7).
                           numRatingsDisplayString:
                             type: string
+                            description: Display string for rating count (e.g. "1,200+ ratings").
                       status:
                         type: object
                         properties:
                           delivery:
                             type: object
+                            required:
+                              - isAvailable
                             properties:
                               isAvailable:
                                 type: boolean
+                                description: Whether delivery is currently available.
                               minutes:
                                 type: string
+                                description: Estimated delivery time (e.g. "25-35").
                   menuBook:
                     type: object
+                    required:
+                      - name
+                      - menuCategories
                     properties:
                       name:
                         type: string
+                        description: Menu name (e.g. "Dinner", "All Day").
                       menuCategories:
                         type: array
                         items:
                           type: object
+                          required:
+                            - id
+                            - name
                           properties:
                             id:
                               type: string
                             name:
                               type: string
+                              description: Category name (e.g. "Popular Items", "Appetizers").
                             numItems:
                               type: integer
+                              description: Number of items in this category.
                   itemLists:
                     type: array
                     items:
                       type: object
+                      required:
+                        - name
+                        - items
                       properties:
                         name:
                           type: string
@@ -180,17 +219,26 @@ paths:
                           type: array
                           items:
                             type: object
+                            required:
+                              - id
+                              - name
+                              - displayPrice
                             properties:
                               id:
                                 type: string
+                                description: Menu item ID (use with addToCart).
                               name:
                                 type: string
+                                description: Item name.
                               description:
                                 type: string
+                                description: Item description.
                               displayPrice:
                                 type: string
+                                description: Formatted price (e.g. "$12.99").
                               imageUrl:
                                 type: string
+                                description: Item image URL.
   /internal/getOrderHistory:
     get:
       operationId: getOrderHistory
@@ -242,49 +290,78 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - id
+                        - createdAt
+                        - store
+                        - orders
+                        - grandTotal
                       properties:
                         id:
                           type: string
+                          description: Order ID.
                         orderUuid:
                           type: string
+                          description: Order UUID.
                         createdAt:
                           type: string
+                          description: Order creation timestamp.
                         fulfilledAt:
                           type: string
+                          description: Order fulfillment timestamp.
                         isPickup:
                           type: boolean
+                          description: Whether this was a pickup order.
                         store:
                           type: object
+                          required:
+                            - id
+                            - name
                           properties:
                             id:
                               type: string
                             name:
                               type: string
+                              description: Store name.
                         orders:
                           type: array
                           items:
                             type: object
+                            required:
+                              - items
                             properties:
                               items:
                                 type: array
                                 items:
                                   type: object
+                                  required:
+                                    - name
+                                    - quantity
                                   properties:
                                     name:
                                       type: string
+                                      description: Item name.
                                     quantity:
                                       type: integer
                                     originalItemPrice:
                                       type: number
+                                      description: Original item price in dollars.
                         grandTotal:
                           type: object
+                          required:
+                            - displayString
+                            - unitAmount
+                            - currency
                           properties:
                             displayString:
                               type: string
+                              description: Formatted total (e.g. "$24.99").
                             unitAmount:
                               type: integer
+                              description: Total in smallest currency unit (cents).
                             currency:
                               type: string
+                              description: Currency code (e.g. "USD").
   /internal/addToCart:
     post:
       operationId: addToCart
@@ -333,9 +410,13 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
+                  - cartId
                 properties:
                   success:
                     type: boolean
+                    description: Whether the item was added successfully.
                   cartId:
                     type: string
                     description: Cart UUID.
@@ -344,8 +425,12 @@ paths:
                     description: Cart subtotal in cents.
                   currencyCode:
                     type: string
+                    description: Currency code (e.g. "USD").
                   restaurant:
                     type: object
+                    required:
+                      - id
+                      - name
                     properties:
                       id:
                         type: string
@@ -355,6 +440,10 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - id
+                        - name
+                        - quantity
                       properties:
                         id:
                           type: string
@@ -364,10 +453,4 @@ paths:
                           type: integer
                         price:
                           type: string
-                        deliveryAddress:
-                          type: object
-                          properties:
-                            formattedAddress:
-                              type:
-                                - string
-                                - 'null'
+                          description: Formatted price string.

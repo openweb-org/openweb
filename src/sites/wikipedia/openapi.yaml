@@ -7,13 +7,16 @@ info:
     requires_auth: false
 servers:
   - url: https://en.wikipedia.org
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
 paths:
   /w/api.php:
     get:
       operationId: searchArticles
-      summary: Search Wikipedia articles by keyword
+      summary: Search articles by keyword — returns title, pageid, snippet, wordcount, timestamp
       x-openweb:
-        transport: node
         permission: read
         build:
           stable_id: wp0001
@@ -48,7 +51,7 @@ paths:
           schema:
             type: integer
             default: 10
-          description: Maximum number of results.
+          description: Maximum number of results (max 500).
         - name: sroffset
           in: query
           required: false
@@ -63,6 +66,13 @@ paths:
             type: string
             const: json
           description: Response format.
+        - name: formatversion
+          in: query
+          required: true
+          schema:
+            type: integer
+            const: 2
+          description: Response format version.
       responses:
         '200':
           description: Success.
@@ -73,7 +83,14 @@ paths:
                 required: [batchcomplete, query]
                 properties:
                   batchcomplete:
-                    type: string
+                    type: boolean
+                  continue:
+                    type: object
+                    properties:
+                      sroffset:
+                        type: integer
+                      continue:
+                        type: string
                   query:
                     type: object
                     required: [searchinfo, search]
@@ -104,12 +121,572 @@ paths:
                               type: string
                             timestamp:
                               type: string
+  /w/api.php~getPageCategories:
+    get:
+      operationId: getPageCategories
+      summary: Get categories for a page — category title, namespace ID, pagination via clcontinue
+      x-openweb:
+        actual_path: /w/api.php
+        permission: read
+        build:
+          stable_id: wp0007
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            const: query
+          description: API action.
+        - name: titles
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Page title (underscores for spaces).
+        - name: prop
+          in: query
+          required: true
+          schema:
+            type: string
+            const: categories
+          description: Query property.
+        - name: cllimit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Maximum number of categories (max 500).
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            const: json
+          description: Response format.
+        - name: formatversion
+          in: query
+          required: true
+          schema:
+            type: integer
+            const: 2
+          description: Response format version.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [query]
+                properties:
+                  batchcomplete:
+                    type: boolean
+                  continue:
+                    type: object
+                    properties:
+                      clcontinue:
+                        type: string
+                      continue:
+                        type: string
+                  query:
+                    type: object
+                    required: [pages]
+                    properties:
+                      pages:
+                        type: array
+                        items:
+                          type: object
+                          required: [pageid, ns, title]
+                          properties:
+                            pageid:
+                              type: integer
+                            ns:
+                              type: integer
+                            title:
+                              type: string
+                            categories:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  ns:
+                                    type: integer
+                                  title:
+                                    type: string
+  /w/api.php~getPageLinks:
+    get:
+      operationId: getPageLinks
+      summary: Get outgoing links from a page — linked page title, namespace ID, pagination via plcontinue
+      x-openweb:
+        actual_path: /w/api.php
+        permission: read
+        build:
+          stable_id: wp0008
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            const: query
+          description: API action.
+        - name: titles
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Page title (underscores for spaces).
+        - name: prop
+          in: query
+          required: true
+          schema:
+            type: string
+            const: links
+          description: Query property.
+        - name: pllimit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Maximum number of links (max 500).
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            const: json
+          description: Response format.
+        - name: formatversion
+          in: query
+          required: true
+          schema:
+            type: integer
+            const: 2
+          description: Response format version.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [query]
+                properties:
+                  batchcomplete:
+                    type: boolean
+                  continue:
+                    type: object
+                    properties:
+                      plcontinue:
+                        type: string
+                      continue:
+                        type: string
+                  query:
+                    type: object
+                    required: [pages]
+                    properties:
+                      pages:
+                        type: array
+                        items:
+                          type: object
+                          required: [pageid, ns, title]
+                          properties:
+                            pageid:
+                              type: integer
+                            ns:
+                              type: integer
+                            title:
+                              type: string
+                            links:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  ns:
+                                    type: integer
+                                  title:
+                                    type: string
+  /w/api.php~getPageBacklinks:
+    get:
+      operationId: getPageBacklinks
+      summary: Get pages that link to a title — pageid, title, namespace, pagination via blcontinue
+      x-openweb:
+        actual_path: /w/api.php
+        permission: read
+        build:
+          stable_id: wp0009
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            const: query
+          description: API action.
+        - name: list
+          in: query
+          required: true
+          schema:
+            type: string
+            const: backlinks
+          description: Query list type.
+        - name: bltitle
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Page title to find backlinks for (underscores for spaces).
+        - name: bllimit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Maximum number of backlinks (max 500).
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            const: json
+          description: Response format.
+        - name: formatversion
+          in: query
+          required: true
+          schema:
+            type: integer
+            const: 2
+          description: Response format version.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [query]
+                properties:
+                  batchcomplete:
+                    type: boolean
+                  continue:
+                    type: object
+                    properties:
+                      blcontinue:
+                        type: string
+                      continue:
+                        type: string
+                  query:
+                    type: object
+                    required: [backlinks]
+                    properties:
+                      backlinks:
+                        type: array
+                        items:
+                          type: object
+                          required: [pageid, ns, title]
+                          properties:
+                            pageid:
+                              type: integer
+                            ns:
+                              type: integer
+                            title:
+                              type: string
+  /w/api.php~getPageLanguageLinks:
+    get:
+      operationId: getPageLanguageLinks
+      summary: Get available translations — language code, localized title, pagination via llcontinue
+      x-openweb:
+        actual_path: /w/api.php
+        permission: read
+        build:
+          stable_id: wp0010
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            const: query
+          description: API action.
+        - name: titles
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Page title (underscores for spaces).
+        - name: prop
+          in: query
+          required: true
+          schema:
+            type: string
+            const: langlinks
+          description: Query property.
+        - name: lllimit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Maximum number of language links (max 500).
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            const: json
+          description: Response format.
+        - name: formatversion
+          in: query
+          required: true
+          schema:
+            type: integer
+            const: 2
+          description: Response format version.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [query]
+                properties:
+                  batchcomplete:
+                    type: boolean
+                  continue:
+                    type: object
+                    properties:
+                      llcontinue:
+                        type: string
+                      continue:
+                        type: string
+                  query:
+                    type: object
+                    required: [pages]
+                    properties:
+                      pages:
+                        type: array
+                        items:
+                          type: object
+                          required: [pageid, ns, title]
+                          properties:
+                            pageid:
+                              type: integer
+                            ns:
+                              type: integer
+                            title:
+                              type: string
+                            langlinks:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  lang:
+                                    type: string
+                                  title:
+                                    type: string
+  /w/api.php~getPageInfo:
+    get:
+      operationId: getPageInfo
+      summary: Get page metadata — pageid, content model, last revision ID, page length, language
+      x-openweb:
+        actual_path: /w/api.php
+        permission: read
+        build:
+          stable_id: wp0011
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            const: query
+          description: API action.
+        - name: titles
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Page title (underscores for spaces).
+        - name: prop
+          in: query
+          required: true
+          schema:
+            type: string
+            const: info
+          description: Query property.
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            const: json
+          description: Response format.
+        - name: formatversion
+          in: query
+          required: true
+          schema:
+            type: integer
+            const: 2
+          description: Response format version.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [query]
+                properties:
+                  batchcomplete:
+                    type: boolean
+                  query:
+                    type: object
+                    required: [pages]
+                    properties:
+                      pages:
+                        type: array
+                        items:
+                          type: object
+                          required: [pageid, ns, title]
+                          properties:
+                            pageid:
+                              type: integer
+                            ns:
+                              type: integer
+                            title:
+                              type: string
+                            contentmodel:
+                              type: string
+                            pagelanguage:
+                              type: string
+                            pagelanguagedir:
+                              type: string
+                            touched:
+                              type: string
+                            lastrevid:
+                              type: integer
+                            length:
+                              type: integer
+  /w/api.php~getPageExtract:
+    get:
+      operationId: getPageExtract
+      summary: Get plain text extract of intro section — pageid, title, extract text (length-controlled)
+      x-openweb:
+        actual_path: /w/api.php
+        permission: read
+        build:
+          stable_id: wp0012
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            const: query
+          description: API action.
+        - name: titles
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Page title (underscores for spaces).
+        - name: prop
+          in: query
+          required: true
+          schema:
+            type: string
+            const: extracts
+          description: Query property.
+        - name: exintro
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: true
+          description: Return only the intro section.
+        - name: explaintext
+          in: query
+          required: true
+          schema:
+            type: boolean
+            const: true
+          description: Return plain text instead of HTML.
+        - name: exsentences
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Limit extract to this many sentences.
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            const: json
+          description: Response format.
+        - name: formatversion
+          in: query
+          required: true
+          schema:
+            type: integer
+            const: 2
+          description: Response format version.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [query]
+                properties:
+                  batchcomplete:
+                    type: boolean
+                  query:
+                    type: object
+                    required: [pages]
+                    properties:
+                      pages:
+                        type: array
+                        items:
+                          type: object
+                          required: [pageid, ns, title, extract]
+                          properties:
+                            pageid:
+                              type: integer
+                            ns:
+                              type: integer
+                            title:
+                              type: string
+                            extract:
+                              type: string
   /api/rest_v1/page/summary/{title}:
     get:
       operationId: getPageSummary
-      summary: Get a summary of a Wikipedia page by title
+      summary: Get page summary — title, extract, description, thumbnail URL, content URLs
       x-openweb:
-        transport: node
         permission: read
         build:
           stable_id: wp0002
@@ -141,16 +718,42 @@ paths:
                     type: string
                   namespace:
                     type: object
+                    properties:
+                      id:
+                        type: integer
+                      text:
+                        type: string
                   wikibase_item:
                     type: string
                   titles:
                     type: object
+                    properties:
+                      canonical:
+                        type: string
+                      normalized:
+                        type: string
+                      display:
+                        type: string
                   pageid:
                     type: integer
                   thumbnail:
                     type: object
+                    properties:
+                      source:
+                        type: string
+                      width:
+                        type: integer
+                      height:
+                        type: integer
                   originalimage:
                     type: object
+                    properties:
+                      source:
+                        type: string
+                      width:
+                        type: integer
+                      height:
+                        type: integer
                   lang:
                     type: string
                   dir:
@@ -159,12 +762,25 @@ paths:
                     type: string
                   tid:
                     type: string
+                  timestamp:
+                    type: string
                   description:
                     type: string
                   description_source:
                     type: string
                   content_urls:
                     type: object
+                    properties:
+                      desktop:
+                        type: object
+                        properties:
+                          page:
+                            type: string
+                      mobile:
+                        type: object
+                        properties:
+                          page:
+                            type: string
                   extract:
                     type: string
                   extract_html:
@@ -172,9 +788,8 @@ paths:
   /w/rest.php/v1/page/{title}:
     get:
       operationId: getPageSource
-      summary: Get the full wikitext source and metadata of a Wikipedia article
+      summary: Get full wikitext source — title, source text, revision timestamp, license
       x-openweb:
-        transport: node
         permission: read
         build:
           stable_id: wp0003
@@ -225,9 +840,8 @@ paths:
   /api/rest_v1/page/media-list/{title}:
     get:
       operationId: getPageMediaList
-      summary: Get all images and media files for a Wikipedia page
+      summary: Get page media files — file title, media type, srcset URLs, captions
       x-openweb:
-        transport: node
         permission: read
         build:
           stable_id: wp0004
@@ -291,9 +905,8 @@ paths:
   /api/rest_v1/page/random/summary:
     get:
       operationId: getRandomArticle
-      summary: Get a summary of a random Wikipedia article
+      summary: Get random article summary — title, extract, description, thumbnail URL
       x-openweb:
-        transport: node
         permission: read
         build:
           stable_id: wp0005
@@ -318,16 +931,42 @@ paths:
                     type: string
                   namespace:
                     type: object
+                    properties:
+                      id:
+                        type: integer
+                      text:
+                        type: string
                   wikibase_item:
                     type: string
                   titles:
                     type: object
+                    properties:
+                      canonical:
+                        type: string
+                      normalized:
+                        type: string
+                      display:
+                        type: string
                   pageid:
                     type: integer
                   thumbnail:
                     type: object
+                    properties:
+                      source:
+                        type: string
+                      width:
+                        type: integer
+                      height:
+                        type: integer
                   originalimage:
                     type: object
+                    properties:
+                      source:
+                        type: string
+                      width:
+                        type: integer
+                      height:
+                        type: integer
                   lang:
                     type: string
                   dir:
@@ -336,10 +975,23 @@ paths:
                     type: string
                   tid:
                     type: string
+                  timestamp:
+                    type: string
                   description:
                     type: string
                   content_urls:
                     type: object
+                    properties:
+                      desktop:
+                        type: object
+                        properties:
+                          page:
+                            type: string
+                      mobile:
+                        type: object
+                        properties:
+                          page:
+                            type: string
                   extract:
                     type: string
                   extract_html:
@@ -347,9 +999,8 @@ paths:
   /w/rest.php/v1/page/{title}/history:
     get:
       operationId: getPageRevisions
-      summary: Get the revision history of a Wikipedia page
+      summary: Get revision history — revision ID, timestamp, user name, edit comment, size delta
       x-openweb:
-        transport: node
         permission: read
         build:
           stable_id: wp0006
@@ -414,3 +1065,344 @@ paths:
                     type: string
                   older:
                     type: string
+  /api/rest_v1/feed/onthisday/{type}/{MM}/{DD}:
+    get:
+      operationId: getOnThisDay
+      summary: Get historical events for a date — event text, year, related page titles and summaries
+      x-openweb:
+        permission: read
+        build:
+          stable_id: wp0013
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [all, selected, births, deaths, events, holidays]
+          description: Type of events (all, selected, births, deaths, events, holidays).
+        - name: MM
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Month as two digits (01-12).
+        - name: DD
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Day as two digits (01-31).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  selected:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        year:
+                          type: integer
+                        pages:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              title:
+                                type: string
+                              pageid:
+                                type: integer
+                              extract:
+                                type: string
+                              thumbnail:
+                                type: object
+                                properties:
+                                  source:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        year:
+                          type: integer
+                        pages:
+                          type: array
+                          items:
+                            type: object
+                            required: [title, pageid]
+                            properties:
+                              title:
+                                type: string
+                              pageid:
+                                type: integer
+                              extract:
+                                type: string
+                              thumbnail:
+                                type: object
+                                properties:
+                                  source:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                  births:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        year:
+                          type: integer
+                        pages:
+                          type: array
+                          items:
+                            type: object
+                            required: [title, pageid]
+                            properties:
+                              title:
+                                type: string
+                              pageid:
+                                type: integer
+                              extract:
+                                type: string
+                              thumbnail:
+                                type: object
+                                properties:
+                                  source:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                  deaths:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        year:
+                          type: integer
+                        pages:
+                          type: array
+                          items:
+                            type: object
+                            required: [title, pageid]
+                            properties:
+                              title:
+                                type: string
+                              pageid:
+                                type: integer
+                              extract:
+                                type: string
+                              thumbnail:
+                                type: object
+                                properties:
+                                  source:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                  holidays:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        pages:
+                          type: array
+                          items:
+                            type: object
+                            required: [title, pageid]
+                            properties:
+                              title:
+                                type: string
+                              pageid:
+                                type: integer
+                              extract:
+                                type: string
+                              thumbnail:
+                                type: object
+                                properties:
+                                  source:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+  /api/rest_v1/feed/featured/{YYYY}/{MM}/{DD}:
+    get:
+      operationId: getFeaturedContent
+      summary: Get daily featured content — featured article summary, most-read articles, picture of the day
+      x-openweb:
+        permission: read
+        build:
+          stable_id: wp0014
+          tool_version: 1
+          verified: false
+          signals: []
+      parameters:
+        - name: YYYY
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Year as four digits (e.g. 2026).
+        - name: MM
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Month as two digits (01-12).
+        - name: DD
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Day as two digits (01-31).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tfa:
+                    type: object
+                    description: Today's featured article (same schema as getPageSummary).
+                    properties:
+                      title:
+                        type: string
+                      pageid:
+                        type: integer
+                      extract:
+                        type: string
+                      thumbnail:
+                        type: object
+                        properties:
+                          source:
+                            type: string
+                          width:
+                            type: integer
+                          height:
+                            type: integer
+                      description:
+                        type: string
+                      content_urls:
+                        type: object
+                        required: [desktop, mobile]
+                        properties:
+                          desktop:
+                            type: object
+                            properties:
+                              page:
+                                type: string
+                          mobile:
+                            type: object
+                            properties:
+                              page:
+                                type: string
+                  mostread:
+                    type: object
+                    properties:
+                      date:
+                        type: string
+                      articles:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            title:
+                              type: string
+                            pageid:
+                              type: integer
+                            views:
+                              type: integer
+                            rank:
+                              type: integer
+                            extract:
+                              type: string
+                            thumbnail:
+                              type: object
+                              required: [source, width, height]
+                              properties:
+                                source:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                  image:
+                    type: object
+                    description: Picture of the day.
+                    properties:
+                      title:
+                        type: string
+                      thumbnail:
+                        type: object
+                        properties:
+                          source:
+                            type: string
+                          width:
+                            type: integer
+                          height:
+                            type: integer
+                      description:
+                        type: object
+                        properties:
+                          text:
+                            type: string
+                          lang:
+                            type: string
+                  onthisday:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        year:
+                          type: integer
+                        pages:
+                          type: array
+                          items:
+                            type: object
+                            required: [title, pageid]
+                            properties:
+                              title:
+                                type: string
+                              pageid:
+                                type: integer
+                              extract:
+                                type: string
+                              thumbnail:
+                                type: object
+                                properties:
+                                  source:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer

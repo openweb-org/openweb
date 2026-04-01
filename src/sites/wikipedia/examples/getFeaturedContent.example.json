@@ -1,0 +1,16 @@
+{
+  "operation_id": "getFeaturedContent",
+  "cases": [
+    {
+      "input": {
+        "YYYY": "2026",
+        "MM": "03",
+        "DD": "15"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

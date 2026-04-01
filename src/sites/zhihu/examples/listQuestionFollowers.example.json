@@ -1,0 +1,17 @@
+{
+  "operation_id": "listQuestionFollowers",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": 19550225,
+        "limit": 1,
+        "offset": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

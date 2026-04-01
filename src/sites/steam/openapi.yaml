@@ -8,12 +8,14 @@ info:
     requires_auth: false
 servers:
   - url: https://store.steampowered.com
+    x-openweb:
+      transport: node
   - url: https://api.steampowered.com
 paths:
   /api/appdetails:
     get:
       operationId: getAppDetails
-      summary: Get full details for a game by app ID (price, description, requirements, screenshots)
+      summary: Get full game details — name, price, short description, genres, platforms, developers, metacritic score, release date
       x-openweb:
         transport: node
         permission: read
@@ -142,7 +144,7 @@ paths:
   /api/storesearch/:
     get:
       operationId: searchGames
-      summary: Search Steam store by keyword
+      summary: Search Steam store by keyword — returns matching apps with id, name, price, metascore, platforms
       x-openweb:
         transport: node
         permission: read
@@ -220,7 +222,7 @@ paths:
   /appreviews/{appid}:
     get:
       operationId: getAppReviews
-      summary: Get user reviews for a game
+      summary: Get user reviews for a game — review text, voted_up, votes_up, author playtime, review score summary
       x-openweb:
         transport: node
         permission: read
@@ -340,7 +342,7 @@ paths:
   /api/featured/:
     get:
       operationId: getFeatured
-      summary: Get featured games on the Steam homepage
+      summary: Get featured/promoted games — id, name, discount_percent, final_price, platform availability per OS
       x-openweb:
         transport: node
         permission: read
@@ -376,6 +378,25 @@ paths:
                     type: array
                     items:
                       type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        discounted:
+                          type: boolean
+                        discount_percent:
+                          type: integer
+                        original_price:
+                          type: [integer, 'null']
+                        final_price:
+                          type: [integer, 'null']
+                        currency:
+                          type: string
+                        large_capsule_image:
+                          type: string
+                        header_image:
+                          type: string
                   featured_win:
                     type: array
                     items:
@@ -401,13 +422,53 @@ paths:
                           type: string
                   featured_mac:
                     type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        discounted:
+                          type: boolean
+                        discount_percent:
+                          type: integer
+                        original_price:
+                          type: [integer, 'null']
+                        final_price:
+                          type: [integer, 'null']
+                        currency:
+                          type: string
+                        header_image:
+                          type: string
                   featured_linux:
                     type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        discounted:
+                          type: boolean
+                        discount_percent:
+                          type: integer
+                        original_price:
+                          type: [integer, 'null']
+                        final_price:
+                          type: [integer, 'null']
+                        currency:
+                          type: string
+                        header_image:
+                          type: string
+                  status:
+                    type: integer
 
   /api/featuredcategories/:
     get:
       operationId: getFeaturedCategories
-      summary: Get featured category lists (specials, top sellers, new releases, etc.)
+      summary: Get featured categories — specials, top sellers, new releases, coming soon with id, name, price, discount
       x-openweb:
         transport: node
         permission: read
@@ -469,15 +530,93 @@ paths:
                               type: string
                   coming_soon:
                     type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            name:
+                              type: string
+                            discounted:
+                              type: boolean
+                            discount_percent:
+                              type: integer
+                            original_price:
+                              type: integer
+                            final_price:
+                              type: integer
+                            currency:
+                              type: string
+                            header_image:
+                              type: string
                   top_sellers:
                     type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            name:
+                              type: string
+                            discounted:
+                              type: boolean
+                            discount_percent:
+                              type: integer
+                            original_price:
+                              type: integer
+                            final_price:
+                              type: integer
+                            currency:
+                              type: string
+                            header_image:
+                              type: string
                   new_releases:
                     type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            name:
+                              type: string
+                            discounted:
+                              type: boolean
+                            discount_percent:
+                              type: integer
+                            original_price:
+                              type: integer
+                            final_price:
+                              type: integer
+                            currency:
+                              type: string
+                            header_image:
+                              type: string
 
   /api/packagedetails:
     get:
       operationId: getPackageDetails
-      summary: Get details for a Steam package/bundle
+      summary: Get package/bundle details — name, included apps, price, discount, platform support
       x-openweb:
         transport: node
         permission: read
@@ -553,7 +692,7 @@ paths:
   /ISteamNews/GetNewsForApp/v2/:
     get:
       operationId: getAppNews
-      summary: Get news articles for a game
+      summary: "Get news articles for a game — title, author, contents, date, url, feedname"
       servers:
         - url: https://api.steampowered.com
       x-openweb:
@@ -623,7 +762,7 @@ paths:
   /ISteamUserStats/GetNumberOfCurrentPlayers/v1/:
     get:
       operationId: getCurrentPlayers
-      summary: Get number of current online players for a game
+      summary: Get current online player count for a game — player_count, result status
       servers:
         - url: https://api.steampowered.com
       x-openweb:
@@ -662,7 +801,7 @@ paths:
   /ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/:
     get:
       operationId: getGlobalAchievements
-      summary: Get global achievement unlock percentages for a game
+      summary: Get global achievement unlock percentages — achievement name, percent unlocked per achievement
       servers:
         - url: https://api.steampowered.com
       x-openweb:
@@ -707,7 +846,7 @@ paths:
   /ISteamNews/GetNewsForApp/v1/:
     get:
       operationId: getAppNewsV1
-      summary: Get news articles for a game (v1 — wraps items in newsitem sub-object)
+      summary: Get news articles for a game (v1) — title, author, contents, date, tags, feed filtering
       servers:
         - url: https://api.steampowered.com
       x-openweb:
@@ -789,3 +928,189 @@ paths:
                                       type: array
                                       items:
                                         type: string
+
+  /api/dlcforapp/:
+    get:
+      operationId: getDlcForApp
+      summary: Get DLC listing for a game — dlc id, name, price, platforms, release date, header image
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: false
+          stable_id: stm0011
+          signature_id: stm0011s
+          tool_version: 1
+      parameters:
+        - name: appid
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Steam app ID of the base game (e.g. 1245620).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, appid, name, dlc]
+                properties:
+                  status:
+                    type: integer
+                  appid:
+                    type: string
+                  name:
+                    type: string
+                  dlc:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        header_image:
+                          type: string
+                        price_overview:
+                          type: object
+                          properties:
+                            currency:
+                              type: string
+                            initial:
+                              type: integer
+                            final:
+                              type: integer
+                            discount_percent:
+                              type: integer
+                        platforms:
+                          type: object
+                          properties:
+                            windows:
+                              type: boolean
+                            mac:
+                              type: boolean
+                            linux:
+                              type: boolean
+                        release_date:
+                          type: object
+                          properties:
+                            steam:
+                              type: ['string', 'null']
+
+  /tagdata/populartags/english:
+    get:
+      operationId: getPopularTags
+      summary: Get all Steam store tags — tagid and name for each tag, sorted by popularity
+      x-openweb:
+        transport: node
+        permission: read
+        build:
+          verified: false
+          stable_id: stm0012
+          signature_id: stm0012s
+          tool_version: 1
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [tagid, name]
+                  properties:
+                    tagid:
+                      type: integer
+                    name:
+                      type: string
+
+  /dynamicstore/userdata/:
+    get:
+      operationId: getUserStoreData
+      summary: Get logged-in user's store data — owned apps, wishlist IDs, followed apps, recommended tags, ignored apps
+      x-openweb:
+        permission: read
+        build:
+          verified: false
+          stable_id: stm0013
+          signature_id: stm0013s
+          tool_version: 1
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rgOwnedApps:
+                    type: array
+                    items:
+                      type: integer
+                  rgWishlist:
+                    type: array
+                    items:
+                      type: integer
+                  rgFollowedApps:
+                    type: array
+                    items:
+                      type: integer
+                  rgRecommendedTags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tagid:
+                          type: integer
+                        name:
+                          type: string
+                  rgIgnoredApps:
+                    type: array
+                    items:
+                      type: integer
+                  rgOwnedPackages:
+                    type: array
+                    items:
+                      type: integer
+
+  /api/addtowishlist:
+    post:
+      operationId: addToWishlist
+      summary: Add a game to the logged-in user's wishlist — returns success status and wishlist count
+      x-openweb:
+        permission: write
+        build:
+          verified: false
+          stable_id: stm0014
+          signature_id: stm0014s
+          tool_version: 1
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [appid]
+              properties:
+                appid:
+                  type: integer
+                  description: Steam app ID to add to wishlist.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+                  wishlistCount:
+                    type: integer

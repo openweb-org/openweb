@@ -8,5 +8,6 @@
   "dependencies": {
     "search_location.results[].latitude": "get_forecast.latitude",
     "search_location.results[].longitude": "get_forecast.longitude"
-  }
+  },
+  "quarantined": true
 }

@@ -17,10 +17,10 @@
     "searchContent → followQuestion": "searchContent returns question IDs used by followQuestion"
   },
   "stats": {
-    "operation_count": 16,
+    "operation_count": 14,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 16,
+    "l3_count": 14,
     "ws_count": 0
   },
   "last_verified": "2026-03-29T00:00:00.000Z"

@@ -1,5 +1,25 @@
 # Xiaohongshu Fixture Progress
 
+## 2026-03-31: Expand to 14 operations with full curation
+
+**What changed:**
+- Added 7 new operations: getHotSearch, getNoteComments, getUserCollections, getUserLiked, getRelatedNotes, followUser, commentNote
+- getHotSearch: trending search terms from search page SSR state
+- getNoteComments: standalone comment fetching via API interception (dedicated version of what was bundled in getNoteDetail)
+- getUserCollections: user's bookmarked/collected notes from profile page SSR state
+- getUserLiked: user's liked notes from profile page SSR state
+- getRelatedNotes: related/recommended notes from note detail page (API interception + SSR fallback)
+- followUser: click follow button on profile page (write op, idempotent)
+- commentNote: type and submit comment on note detail page (write op)
+- Added 5 new example files (10 total, covering all read ops)
+- Full DOC.md rewrite per site-doc.md template: workflows, data flow annotations, quick start commands
+- Enriched response schemas — all operations have detailed property types, no bare type:object
+
+**Why:**
+- Full curation pass to bring the site package to production quality with complete agent workflows
+
+**Verification:** Pending — spec verify + doc verify + runtime verify
+
 ## 2026-03-26: Expand coverage from 3 to 7 operations
 
 **What changed:**

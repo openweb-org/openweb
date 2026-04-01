@@ -1,27 +1,33 @@
 {
   "name": "google-maps",
   "display_name": "Google Maps",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.google.com/maps",
-  "description": "Google Maps — search, details, reviews, photos, directions, nearby search, autocomplete via internal APIs",
+  "description": "Google Maps — search, details, reviews, photos, directions (driving/transit/walking/cycling), nearby, autocomplete, hours, geocode via internal APIs",
   "requires_auth": false,
   "dependencies": {
     "searchPlaces → getPlaceDetails": "placeId from search results",
     "searchPlaces → getPlaceReviews": "placeId from search results",
     "searchPlaces → getPlacePhotos": "placeId from search results",
-    "nearbySearch → getPlaceDetails": "placeId from nearby results"
+    "searchPlaces → getPlaceHours": "placeId from search results",
+    "searchPlaces → getPlaceAbout": "placeId from search results",
+    "nearbySearch → getPlaceDetails": "placeId from nearby results",
+    "nearbySearch → getPlaceReviews": "placeId from nearby results",
+    "nearbySearch → getPlaceHours": "placeId from nearby results",
+    "nearbySearch → getPlaceAbout": "placeId from nearby results",
+    "geocode → getPlaceDetails": "placeId from geocode result"
   },
   "stats": {
-    "operation_count": 7,
+    "operation_count": 14,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 7,
+    "l3_count": 14,
     "ws_count": 0
   },
-  "last_verified": "2026-03-23T23:29:28.455Z",
+  "last_verified": "2026-03-31T00:00:00.000Z",
   "fingerprint": {
     "response_shape_hash": "",
-    "last_validated": "2026-03-23T23:29:28.456Z"
+    "last_validated": "2026-03-31T00:00:00.000Z"
   }
 }

@@ -533,3 +533,458 @@ paths:
                       - bookmarked
                       - already_bookmarked
                       - failed
+  /internal/getHotSearch:
+    get:
+      operationId: getHotSearch
+      summary: Get trending search terms — popular keywords with rank and score
+      x-openweb:
+        permission: read
+        build:
+          stable_id: xhs0008
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: getHotSearch
+      parameters: []
+      responses:
+        '200':
+          description: List of trending search keywords.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        keyword:
+                          type: string
+                          description: Trending search term.
+                        score:
+                          type:
+                            - number
+                            - 'null'
+                          description: Popularity score.
+                        rank:
+                          type: integer
+                          description: Rank position (1-based).
+  /internal/getNoteComments:
+    get:
+      operationId: getNoteComments
+      summary: Get comments for a note — comment text, author, like count, replies count, location
+      x-openweb:
+        permission: read
+        build:
+          stable_id: xhs0009
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: getNoteComments
+      parameters:
+        - name: noteId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Note ID (from searchNotes or getExploreFeed).
+        - name: xsecToken
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Security token (from searchNotes). Improves reliability.
+      responses:
+        '200':
+          description: Comments for the note.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - comments
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  hasMore:
+                    type: boolean
+                    description: Whether more comments are available.
+                  cursor:
+                    type: string
+                    description: Pagination cursor for next page.
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        content:
+                          type: string
+                        likeCount:
+                          type:
+                            - string
+                            - integer
+                        createTime:
+                          type: integer
+                          description: Comment timestamp (ms).
+                        ipLocation:
+                          type: string
+                        subCommentCount:
+                          type:
+                            - string
+                            - integer
+                          description: Number of replies to this comment.
+                        user:
+                          type: object
+                          properties:
+                            userId:
+                              type: string
+                            nickname:
+                              type: string
+                            avatar:
+                              type: string
+  /internal/getUserCollections:
+    get:
+      operationId: getUserCollections
+      summary: Get a user's collected/bookmarked notes — titles, covers, like counts
+      x-openweb:
+        permission: read
+        build:
+          stable_id: xhs0010
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: getUserCollections
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User ID (from searchNotes or getNoteDetail).
+      responses:
+        '200':
+          description: List of user's collected notes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - notes
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  notes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        noteId:
+                          type: string
+                        xsecToken:
+                          type: string
+                        type:
+                          type: string
+                          enum:
+                            - normal
+                            - video
+                        displayTitle:
+                          type: string
+                        user:
+                          type: object
+                          properties:
+                            userId:
+                              type: string
+                            nickname:
+                              type: string
+                            avatar:
+                              type: string
+                        likedCount:
+                          type:
+                            - string
+                            - 'null'
+                        cover:
+                          type:
+                            - object
+                            - 'null'
+                          properties:
+                            url:
+                              type: string
+                            width:
+                              type: integer
+                            height:
+                              type: integer
+  /internal/getUserLiked:
+    get:
+      operationId: getUserLiked
+      summary: Get a user's liked notes — titles, covers, like counts
+      x-openweb:
+        permission: read
+        build:
+          stable_id: xhs0011
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: getUserLiked
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User ID (from searchNotes or getNoteDetail).
+      responses:
+        '200':
+          description: List of user's liked notes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - notes
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  notes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        noteId:
+                          type: string
+                        xsecToken:
+                          type: string
+                        type:
+                          type: string
+                          enum:
+                            - normal
+                            - video
+                        displayTitle:
+                          type: string
+                        user:
+                          type: object
+                          properties:
+                            userId:
+                              type: string
+                            nickname:
+                              type: string
+                            avatar:
+                              type: string
+                        likedCount:
+                          type:
+                            - string
+                            - 'null'
+                        cover:
+                          type:
+                            - object
+                            - 'null'
+                          properties:
+                            url:
+                              type: string
+                            width:
+                              type: integer
+                            height:
+                              type: integer
+  /internal/getRelatedNotes:
+    get:
+      operationId: getRelatedNotes
+      summary: Get related/recommended notes for a note — similar content suggestions
+      x-openweb:
+        permission: read
+        build:
+          stable_id: xhs0012
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: getRelatedNotes
+      parameters:
+        - name: noteId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Note ID to get related notes for.
+        - name: xsecToken
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Security token (from searchNotes). Improves reliability.
+      responses:
+        '200':
+          description: List of related/recommended notes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - notes
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  notes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        noteId:
+                          type: string
+                        xsecToken:
+                          type:
+                            - string
+                            - 'null'
+                        type:
+                          type: string
+                          enum:
+                            - normal
+                            - video
+                        displayTitle:
+                          type: string
+                        user:
+                          type: object
+                          properties:
+                            userId:
+                              type: string
+                            nickname:
+                              type: string
+                            avatar:
+                              type: string
+                        likedCount:
+                          type:
+                            - string
+                            - 'null'
+                        cover:
+                          type:
+                            - object
+                            - 'null'
+                          properties:
+                            url:
+                              type: string
+                            width:
+                              type: integer
+                            height:
+                              type: integer
+  /internal/followUser:
+    post:
+      operationId: followUser
+      summary: Follow a user (skips if already following). Requires login.
+      x-openweb:
+        permission: write
+        build:
+          stable_id: xhs0013
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: followUser
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User ID to follow.
+      responses:
+        '200':
+          description: Follow result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                  followed:
+                    type: boolean
+                  action:
+                    type: string
+                    description: "Result: followed, already_following, or failed."
+                    enum:
+                      - followed
+                      - already_following
+                      - failed
+  /internal/commentNote:
+    post:
+      operationId: commentNote
+      summary: Post a comment on a note. Requires login.
+      x-openweb:
+        permission: write
+        build:
+          stable_id: xhs0014
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: xiaohongshu-web
+          operation: commentNote
+      parameters:
+        - name: noteId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Note ID to comment on.
+        - name: content
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comment text to post.
+        - name: xsecToken
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Security token (from searchNotes). Improves reliability.
+      responses:
+        '200':
+          description: Comment result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  noteId:
+                    type: string
+                  commentId:
+                    type:
+                      - string
+                      - 'null'
+                    description: ID of the posted comment (null if failed).
+                  content:
+                    type: string
+                  action:
+                    type: string
+                    description: "Result: commented or failed."
+                    enum:
+                      - commented
+                      - failed

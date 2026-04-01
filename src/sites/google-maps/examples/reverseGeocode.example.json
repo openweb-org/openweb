@@ -1,0 +1,11 @@
+{
+  "operationId": "reverseGeocode",
+  "parameters": {
+    "lat": 37.7749,
+    "lng": -122.4194
+  },
+  "expect": {
+    "status": 200
+  },
+  "replay_safety": "safe_read"
+}

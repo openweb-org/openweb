@@ -4,9 +4,9 @@
   "cases": [
     {
       "input": {
-        "count": 1,
+        "count": 5,
         "q": "三体",
-        "start": 1
+        "start": 0
       },
       "assertions": {
         "status": 200,

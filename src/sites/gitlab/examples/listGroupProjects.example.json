@@ -1,0 +1,15 @@
+{
+  "operation_id": "listGroupProjects",
+  "cases": [
+    {
+      "input": {
+        "groupId": 9970,
+        "per_page": 5
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

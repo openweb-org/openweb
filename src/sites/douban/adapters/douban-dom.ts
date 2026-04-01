@@ -332,8 +332,9 @@ const adapter: CodeAdapter = {
   },
 
   async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies('https://www.douban.com')
-    return cookies.some(c => c.name === 'dbcl2')
+    // All current ops are public — no login required.
+    // dbcl2 cookie indicates logged-in session for future write ops.
+    return true
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {

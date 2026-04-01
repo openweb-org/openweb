@@ -233,6 +233,7 @@ async function fetchProtobufDanmaku(
   apiPath: string,
   params: Record<string, unknown>,
 ): Promise<unknown> {
+  // All inner functions use arrow syntax to avoid tsup __name decorators in browser context
   return page.evaluate(
     async ({ path, qs }) => {
       const url = new URL(path, 'https://api.bilibili.com')
@@ -243,9 +244,8 @@ async function fetchProtobufDanmaku(
       const buf = await resp.arrayBuffer()
       const bytes = new Uint8Array(buf)
 
-      // Minimal protobuf decoder for DmSegMobileReply
       let pos = 0
-      function readVarint(): number {
+      const readVarint = (): number => {
         let result = 0
         let shift = 0
         while (pos < bytes.length) {
@@ -256,24 +256,23 @@ async function fetchProtobufDanmaku(
         }
         return result
       }
-      function readBytes(): Uint8Array {
+      const readBytes = (): Uint8Array => {
         const len = readVarint()
         const data = bytes.slice(pos, pos + len)
         pos += len
         return data
       }
-      function skipField(wireType: number) {
+      const skipField = (wireType: number) => {
         if (wireType === 0) readVarint()
         else if (wireType === 1) pos += 8
         else if (wireType === 2) { const len = readVarint(); pos += len }
         else if (wireType === 5) pos += 4
       }
-      function decodeElem(data: Uint8Array) {
+      const decodeElem = (data: Uint8Array) => {
         const elem: Record<string, unknown> = {}
         let p = 0
         const d = data
-        // Local varint/bytes readers scoped to this sub-message
-        function rv(): number {
+        const rv = (): number => {
           let r = 0
           let s = 0
           while (p < d.length) {
@@ -284,13 +283,13 @@ async function fetchProtobufDanmaku(
           }
           return r
         }
-        function rb(): Uint8Array {
+        const rb = (): Uint8Array => {
           const len = rv()
           const out = d.slice(p, p + len)
           p += len
           return out
         }
-        function sf(wt: number) {
+        const sf = (wt: number) => {
           if (wt === 0) rv()
           else if (wt === 1) p += 8
           else if (wt === 2) { const len = rv(); p += len }
@@ -315,7 +314,6 @@ async function fetchProtobufDanmaku(
         const tag = readVarint()
         const fieldNum = tag >>> 3
         const wireType = tag & 0x7
-        // DmSegMobileReply: elems at field 1; DmSegOttReply: elems at field 2
         if ((fieldNum === 1 || fieldNum === 2) && wireType === 2) {
           const decoded = decodeElem(readBytes())
           if (decoded.content) elems.push(decoded)
@@ -340,6 +338,34 @@ async function getDanmaku(page: Page, params: Record<string, unknown>): Promise<
     segment_index: segmentIndex,
     type,
   })
+}
+
+/* ---------- nav / relation / online ---------- */
+
+async function getNavInfo(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+  return fetchApiViaPage(page, '/x/web-interface/nav', {})
+}
+
+async function getVideoOnlineCount(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const bvid = String(params.bvid ?? '')
+  const aid = params.aid != null ? Number(params.aid) : undefined
+  if (!bvid && !aid) throw OpenWebError.missingParam('bvid')
+  const qs: Record<string, unknown> = {}
+  if (bvid) qs.bvid = bvid
+  if (aid) qs.aid = aid
+  const cid = params.cid != null ? Number(params.cid) : undefined
+  if (cid) qs.cid = cid
+  return fetchApiViaPage(page, '/x/player/online/total', qs)
+}
+
+async function getVideoUserRelation(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const bvid = String(params.bvid ?? '')
+  const aid = params.aid != null ? Number(params.aid) : undefined
+  if (!bvid && !aid) throw OpenWebError.missingParam('bvid')
+  const qs: Record<string, unknown> = {}
+  if (bvid) qs.bvid = bvid
+  if (aid) qs.aid = aid
+  return fetchApiViaPage(page, '/x/web-interface/archive/relation', qs)
 }
 
 /* ---------- write operations ---------- */
@@ -384,6 +410,9 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getVideoComments,
   getDanmaku,
   getRecommendedFeed,
+  getNavInfo,
+  getVideoOnlineCount,
+  getVideoUserRelation,
   likeVideo,
   addToFavorites,
   followUploader,

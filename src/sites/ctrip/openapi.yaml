@@ -1,7 +1,7 @@
 openapi: '3.1.0'
 info:
   title: Trip.com / Ctrip
-  version: '1.0'
+  version: '1.1'
   x-openweb:
     spec_version: '2.0'
     requires_auth: false
@@ -9,11 +9,15 @@ servers:
   - url: https://us.trip.com
     x-openweb:
       transport: page
+      auth:
+        type: cookie_session
 paths:
   /restapi/soa2/27015/FlightListSearch:
     post:
       operationId: searchFlights
-      summary: Search flights by route and date — airlines, times, stops, prices
+      summary: >-
+        Search flights by route and date — itinerary list with airline, departure/arrival times,
+        stops, duration, price per cabin class, booking token
       x-openweb:
         permission: read
         build:
@@ -49,7 +53,7 @@ paths:
                       default: 1
                     tripType:
                       type: integer
-                      description: '1 = one-way, 2 = round-trip'
+                      description: '1 = one-way, 2 = round-trip.'
                       default: 1
                     journeyNo:
                       type: integer
@@ -95,10 +99,18 @@ paths:
                             default: ''
                 sortInfoType:
                   type: object
-                  default:
-                    direction: true
-                    orderBy: Direct
-                    topList: []
+                  properties:
+                    direction:
+                      type: boolean
+                      default: true
+                    orderBy:
+                      type: string
+                      default: Direct
+                    topList:
+                      type: array
+                      items:
+                        type: string
+                      default: []
                 Head:
                   type: object
                   required:
@@ -137,14 +149,60 @@ paths:
                         type: array
                         items:
                           type: object
+                          properties:
+                            itineraryId:
+                              type: string
+                            flightSegments:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  flightNo:
+                                    type: string
+                                  airlineName:
+                                    type: string
+                                  departDateTime:
+                                    type: string
+                                  arriveDateTime:
+                                    type: string
+                                  departAirport:
+                                    type: string
+                                  arriveAirport:
+                                    type: string
+                                  duration:
+                                    type: integer
+                                    description: Flight duration in minutes.
+                                  stopCount:
+                                    type: integer
+                            priceList:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  price:
+                                    type: number
+                                  currency:
+                                    type: string
+                                  cabinClass:
+                                    type: string
                       token:
                         type: string
+                        description: Session token for paginated or follow-up requests.
                   status:
                     type: integer
+                  head:
+                    type: object
+                    properties:
+                      retCode:
+                        type: string
+                      retMsg:
+                        type: string
   /restapi/soa2/14427/GetLowPriceInCalender:
     post:
       operationId: getFlightCalendarPrices
-      summary: Get lowest flight prices per day for a route — calendar view pricing
+      summary: >-
+        Get lowest flight prices per day for a route — daily low price, currency,
+        direct flight availability, monthly activity info
       x-openweb:
         permission: read
         build:
@@ -184,13 +242,34 @@ paths:
                   default: ANY
                 searchInfo:
                   type: object
-                  default:
+                  properties:
                     travelerNum:
-                      adult: 1
-                      child: 0
-                      infant: 0
+                      type: object
+                      properties:
+                        adult:
+                          type: integer
+                          default: 1
+                        child:
+                          type: integer
+                          default: 0
+                        infant:
+                          type: integer
+                          default: 0
                 Head:
                   type: object
+                  properties:
+                    Locale:
+                      type: string
+                      default: en-US
+                    Currency:
+                      type: string
+                      default: USD
+                    Group:
+                      type: string
+                      default: Trip
+                    Source:
+                      type: string
+                      default: ONLINE
       responses:
         '200':
           description: Calendar of lowest prices per day.
@@ -216,7 +295,9 @@ paths:
   /restapi/soa2/14427/BatchGetFlightComfort:
     post:
       operationId: getFlightComfort
-      summary: Get comfort ratings for flight segments — seat, WiFi, entertainment
+      summary: >-
+        Get comfort ratings for flight segments — seat pitch, WiFi availability,
+        entertainment system, power outlet, aircraft type
       x-openweb:
         permission: read
         build:
@@ -257,6 +338,19 @@ paths:
                         description: 'Flight number (e.g., CX831).'
                 Head:
                   type: object
+                  properties:
+                    Locale:
+                      type: string
+                      default: en-US
+                    Currency:
+                      type: string
+                      default: USD
+                    Group:
+                      type: string
+                      default: Trip
+                    Source:
+                      type: string
+                      default: ONLINE
       responses:
         '200':
           description: Comfort data per flight segment.
@@ -265,12 +359,30 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
-                    type: object
+                  flightComfortList:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+                      properties:
+                        flightNo:
+                          type: string
+                        aircraftType:
+                          type: string
+                        seatPitch:
+                          type: string
+                        hasWifi:
+                          type: boolean
+                        hasEntertainment:
+                          type: boolean
+                        hasPower:
+                          type: boolean
   /restapi/soa2/27501/getGeneralInfo:
     post:
       operationId: getGeneralInfo
-      summary: Get general site info and announcements — config, promotions, notices
+      summary: >-
+        Get general site info and announcements — travel tips, promotions,
+        notices, saved preferences
       x-openweb:
         permission: read
         build:
@@ -313,10 +425,55 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  savedTips:
+                    type: boolean
+                  travelTipsList:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        content:
+                          type: string
+                        imageUrl:
+                          type: string
+                        type:
+                          type: string
+                  promotionList:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        description:
+                          type: string
+                        imageUrl:
+                          type: string
+                        linkUrl:
+                          type: string
+                  noticeList:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        content:
+                          type: string
+                        type:
+                          type: string
   /restapi/soa2/20400/getGsHotSearchForTripOnline:
     post:
       operationId: getHotDestinations
-      summary: Get trending travel destinations — popular cities and search terms
+      summary: >-
+        Get trending travel destinations — city name, district ID, type,
+        travel guide URL, total count
       servers:
         - url: https://www.trip.com
           x-openweb:
@@ -374,6 +531,10 @@ paths:
                       properties:
                         id:
                           type: integer
+                          description: District ID (use with getDestinationInfo).
+                        code:
+                          type: string
+                          description: 'District code (e.g., district_120518).'
                         word:
                           type: string
                           description: Destination name.
@@ -382,10 +543,16 @@ paths:
                         url:
                           type: string
                           description: Travel guide URL path.
+                        iconName:
+                          type: string
+                  total:
+                    type: integer
   /restapi/soa2/31699/searchListForWeb:
     post:
       operationId: searchTrains
-      summary: Search trains by departure and arrival stations — schedules, prices, seat types
+      summary: >-
+        Search trains by route and date — train number, departure/arrival times,
+        duration, seat types with availability and prices
       x-openweb:
         permission: read
         build:
@@ -400,9 +567,25 @@ paths:
             schema:
               type: object
               properties:
+                departStation:
+                  type: string
+                  description: 'Departure station code (← getTrainStations).'
+                arriveStation:
+                  type: string
+                  description: 'Arrival station code (← getTrainStations).'
+                departDate:
+                  type: string
+                  description: 'Departure date (YYYY-MM-DD).'
                 head:
                   type: object
                   description: Request context with locale, currency, device info.
+                  properties:
+                    locale:
+                      type: string
+                      default: en-US
+                    currency:
+                      type: string
+                      default: USD
       responses:
         '200':
           description: Train search results.
@@ -413,10 +596,48 @@ paths:
                 properties:
                   data:
                     type: object
+                    properties:
+                      trainList:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            trainNumber:
+                              type: string
+                            departTime:
+                              type: string
+                            arriveTime:
+                              type: string
+                            duration:
+                              type: string
+                            departStation:
+                              type: string
+                            arriveStation:
+                              type: string
+                            seatList:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  seatType:
+                                    type: string
+                                  price:
+                                    type: number
+                                  available:
+                                    type: integer
+                  head:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      msg:
+                        type: string
   /restapi/soa2/36040/loadStationList:
     post:
       operationId: getTrainStations
-      summary: Get list of train stations — names, codes, countries
+      summary: >-
+        Get list of train stations — station name, code, country, city name,
+        for use as input to searchTrains
       x-openweb:
         permission: read
         build:
@@ -434,6 +655,13 @@ paths:
                 head:
                   type: object
                   description: Request context.
+                  properties:
+                    locale:
+                      type: string
+                      default: en-US
+                    currency:
+                      type: string
+                      default: USD
       responses:
         '200':
           description: List of train stations.
@@ -444,10 +672,33 @@ paths:
                 properties:
                   data:
                     type: object
+                    properties:
+                      stationList:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            stationName:
+                              type: string
+                            stationCode:
+                              type: string
+                            cityName:
+                              type: string
+                            countryName:
+                              type: string
+                  head:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      msg:
+                        type: string
   /restapi/soa2/14427/poiSearch:
     post:
       operationId: searchPOI
-      summary: Search cities, airports, and POIs by keyword — autocomplete for flight/hotel search
+      summary: >-
+        Search cities, airports, and POIs by keyword — city name, IATA code,
+        country, district ID, for use as autocomplete in flight/hotel/train search
       x-openweb:
         permission: read
         build:
@@ -476,6 +727,19 @@ paths:
                   description: 'OW = one-way, RT = round-trip.'
                 Head:
                   type: object
+                  properties:
+                    Locale:
+                      type: string
+                      default: en-US
+                    Currency:
+                      type: string
+                      default: USD
+                    Group:
+                      type: string
+                      default: Trip
+                    Source:
+                      type: string
+                      default: ONLINE
       responses:
         '200':
           description: Matching cities and airports.
@@ -484,17 +748,36 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
-                    type: object
-                    properties:
-                      poiList:
-                        type: array
-                        items:
-                          type: object
+                  results:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        code:
+                          type: string
+                          description: City or airport IATA code.
+                        type:
+                          type: string
+                          description: 'POI type (city, airport, etc.).'
+                        countryName:
+                          type: string
+                        districtId:
+                          type: integer
+                  isRecommend:
+                    type: boolean
+                    nullable: true
+                  key:
+                    type: string
+                    nullable: true
   /restapi/soa2/23044/getDestinationPageInfo.json:
     post:
       operationId: getDestinationInfo
-      summary: Get travel guide info for a destination — attractions, hotels, restaurants, tips
+      summary: >-
+        Get travel guide for a destination — recommended sights, hotels,
+        restaurants, related districts, hot comments
       servers:
         - url: https://www.trip.com
           x-openweb:
@@ -517,18 +800,25 @@ paths:
               properties:
                 districtId:
                   type: string
-                  description: 'District/city ID (e.g., "2" = Shanghai).'
+                  description: 'District/city ID (e.g., "2" = Shanghai, "248" = New York ← getHotDestinations or searchPOI).'
                 moduleList:
                   type: array
                   items:
                     type: string
                   description: >-
-                    Modules to load. Options include: hotDistrict, classicRecommendHotel,
+                    Modules to load. Options: hotDistrict, classicRecommendHotel,
                     classicRecommendSight, classicRecommendRestaurant, toursAndTickets,
                     localExperienceMoments, hotComment, relateDistrict, advertisement.
-                    Pass null for overview.
+                    Omit for overview.
                 head:
                   type: object
+                  properties:
+                    syscode:
+                      type: string
+                      default: '999'
+                    locale:
+                      type: string
+                      default: en-US
       responses:
         '200':
           description: Destination guide data.
@@ -537,12 +827,155 @@ paths:
               schema:
                 type: object
                 properties:
+                  result:
+                    type: integer
                   data:
                     type: object
+                    nullable: true
+                    properties:
+                      hotDistrict:
+                        type: object
+                        nullable: true
+                        properties:
+                          title:
+                            type: string
+                          list:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                districtId:
+                                  type: integer
+                                districtName:
+                                  type: string
+                                imageUrl:
+                                  type: string
+                      classicRecommendSight:
+                        type: object
+                        nullable: true
+                        properties:
+                          title:
+                            type: string
+                          list:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                poiId:
+                                  type: integer
+                                poiName:
+                                  type: string
+                                rating:
+                                  type: number
+                                imageUrl:
+                                  type: string
+                                commentCount:
+                                  type: integer
+                      classicRecommendHotel:
+                        type: object
+                        nullable: true
+                        properties:
+                          title:
+                            type: string
+                          list:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                hotelId:
+                                  type: integer
+                                hotelName:
+                                  type: string
+                                rating:
+                                  type: number
+                                price:
+                                  type: number
+                                currency:
+                                  type: string
+                                imageUrl:
+                                  type: string
+                      classicRecommendRestaurant:
+                        type: object
+                        nullable: true
+                        properties:
+                          title:
+                            type: string
+                          list:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                poiId:
+                                  type: integer
+                                poiName:
+                                  type: string
+                                rating:
+                                  type: number
+                                imageUrl:
+                                  type: string
+                      toursAndTickets:
+                        type: object
+                        nullable: true
+                        properties:
+                          title:
+                            type: string
+                          list:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                productId:
+                                  type: integer
+                                productName:
+                                  type: string
+                                price:
+                                  type: number
+                                currency:
+                                  type: string
+                                imageUrl:
+                                  type: string
+                      hotComment:
+                        type: object
+                        nullable: true
+                        properties:
+                          title:
+                            type: string
+                          list:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                userName:
+                                  type: string
+                                content:
+                                  type: string
+                                rating:
+                                  type: number
+                                publishDate:
+                                  type: string
+                      relateDistrict:
+                        type: object
+                        nullable: true
+                        properties:
+                          title:
+                            type: string
+                          list:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                districtId:
+                                  type: integer
+                                districtName:
+                                  type: string
+                                imageUrl:
+                                  type: string
   /restapi/soa2/28181/json/getByScenesCode:
     post:
       operationId: searchAttractions
-      summary: Search attractions and things-to-do by city — tickets, tours, experiences
+      summary: >-
+        Search attractions and things-to-do by city — attraction name, rating,
+        price, image, category, sort options
       servers:
         - url: https://www.trip.com
           x-openweb:
@@ -585,8 +1018,20 @@ paths:
                         type: array
                         items:
                           type: object
+                          properties:
+                            filterType:
+                              type: string
+                            filterValue:
+                              type: string
                 head:
                   type: object
+                  properties:
+                    syscode:
+                      type: string
+                      default: '999'
+                    locale:
+                      type: string
+                      default: en-US
       responses:
         '200':
           description: Attractions and tours listings.
@@ -595,5 +1040,335 @@ paths:
               schema:
                 type: object
                 properties:
+                  list:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+                      properties:
+                        productId:
+                          type: integer
+                        productName:
+                          type: string
+                        rating:
+                          type: number
+                        price:
+                          type: number
+                        currency:
+                          type: string
+                        imageUrl:
+                          type: string
+                        category:
+                          type: string
+                  sortRuleList:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+                      properties:
+                        sortType:
+                          type: string
+                        sortName:
+                          type: string
+                  resultStatus:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                      errorCode:
+                        type: string
+  /restapi/soa2/14427/getFlightFilters:
+    post:
+      operationId: getFlightFilters
+      summary: >-
+        Get available flight search filters — airline options, stop count,
+        departure time ranges, cabin classes, price ranges
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0011
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  description: 'Search session token (← searchFlights response).'
+                Head:
+                  type: object
+                  properties:
+                    Locale:
+                      type: string
+                      default: en-US
+                    Currency:
+                      type: string
+                      default: USD
+                    Group:
+                      type: string
+                      default: Trip
+                    Source:
+                      type: string
+                      default: ONLINE
+      responses:
+        '200':
+          description: Available filter options for current search.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  filterList:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+                      properties:
+                        filterType:
+                          type: string
+                        filterName:
+                          type: string
+                        options:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              label:
+                                type: string
+                              value:
+                                type: string
+                              count:
+                                type: integer
+  /restapi/soa2/28181/json/getDetailV2:
+    post:
+      operationId: getAttractionDetail
+      summary: >-
+        Get attraction detail page — description, photos, reviews summary,
+        ticket options, opening hours, location
+      servers:
+        - url: https://www.trip.com
+          x-openweb:
+            transport: page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0012
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+              properties:
+                productId:
+                  type: integer
+                  description: 'Attraction product ID (← searchAttractions).'
+                baseInfo:
+                  type: object
+                  properties:
+                    channelId:
+                      type: integer
+                      default: 24
+                    locale:
+                      type: string
+                      default: en-US
+                    currency:
+                      type: string
+                      default: USD
+                head:
+                  type: object
+                  properties:
+                    syscode:
+                      type: string
+                      default: '999'
+                    locale:
+                      type: string
+                      default: en-US
+      responses:
+        '200':
+          description: Attraction detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  productName:
+                    type: string
+                  description:
+                    type: string
+                  rating:
+                    type: number
+                  reviewCount:
+                    type: integer
+                  address:
+                    type: string
+                  openingHours:
+                    type: string
+                  imageList:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                  ticketList:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+                      properties:
+                        ticketName:
+                          type: string
+                        price:
+                          type: number
+                        currency:
+                          type: string
+                  resultStatus:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+  /restapi/soa2/36040/getTrainCalendar:
+    post:
+      operationId: getTrainCalendar
+      summary: >-
+        Get train availability calendar — daily availability status, lowest
+        price per day, route info for schedule planning
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0013
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - departStation
+                - arriveStation
+                - month
+              properties:
+                departStation:
+                  type: string
+                  description: 'Departure station code (← getTrainStations).'
+                arriveStation:
+                  type: string
+                  description: 'Arrival station code (← getTrainStations).'
+                month:
+                  type: string
+                  description: 'Month to query (YYYY-MM).'
+                head:
+                  type: object
+                  properties:
+                    locale:
+                      type: string
+                      default: en-US
+                    currency:
+                      type: string
+                      default: USD
+      responses:
+        '200':
+          description: Monthly train availability calendar.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
                   data:
                     type: object
+                    properties:
+                      calendarList:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            date:
+                              type: string
+                            available:
+                              type: boolean
+                            lowestPrice:
+                              type: number
+                              nullable: true
+                  head:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      msg:
+                        type: string
+  /restapi/soa2/23044/getCityList:
+    post:
+      operationId: getCityList
+      summary: >-
+        Get popular cities/districts for a country — city name, district ID,
+        image URL, for destination browsing and trip planning
+      servers:
+        - url: https://www.trip.com
+          x-openweb:
+            transport: page
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ct0014
+          tool_version: 1
+          verified: false
+          signals: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                countryId:
+                  type: string
+                  description: 'Country ID to list cities for.'
+                head:
+                  type: object
+                  properties:
+                    syscode:
+                      type: string
+                      default: '999'
+                    locale:
+                      type: string
+                      default: en-US
+      responses:
+        '200':
+          description: List of cities/districts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      cityList:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            districtId:
+                              type: integer
+                            cityName:
+                              type: string
+                            countryName:
+                              type: string
+                            imageUrl:
+                              type: string

@@ -344,6 +344,337 @@ async function bookmarkNote(page: Page, params: Record<string, unknown>): Promis
   return { noteId, bookmarked: success, action: success ? 'bookmarked' : 'failed' }
 }
 
+async function getHotSearch(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+  await page.goto(`${BASE}/explore`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.waitForTimeout(3000)
+
+  // Click search bar to trigger hot search display, then extract from SSR state
+  return page.evaluate(() => {
+    const state = (window as any).__INITIAL_STATE__
+    if (!state?.search) return { items: [], count: 0 }
+
+    const hotRef = state.search.hotSearch
+    const hot: any[] = hotRef?._rawValue ?? hotRef ?? []
+    if (!Array.isArray(hot)) return { items: [], count: 0 }
+
+    const items = hot.map((h: any, i: number) => ({
+      keyword: h.name ?? h.word ?? '',
+      score: h.score ?? null,
+      rank: h.rank ?? i + 1,
+    }))
+
+    return { items, count: items.length }
+  })
+}
+
+async function getNoteComments(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const noteId = String(params.noteId ?? params.note_id ?? '')
+  if (!noteId) throw OpenWebError.missingParam('noteId')
+  const xsecToken = String(params.xsecToken ?? params.xsec_token ?? '')
+
+  // Intercept comment API response
+  const commentPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/api/sns/web/v2/comment/page') && resp.status() === 200,
+    { timeout: 15000 },
+  ).catch(() => null)
+
+  const tokenParam = xsecToken ? `&xsec_token=${encodeURIComponent(xsecToken)}` : ''
+  await page.goto(
+    `${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`,
+    { waitUntil: 'domcontentloaded', timeout: 30000 },
+  )
+  await page.waitForTimeout(4000)
+
+  const commentResp = await commentPromise
+  if (!commentResp) return { comments: [], count: 0, hasMore: false }
+
+  try {
+    const json = (await commentResp.json()) as Record<string, unknown>
+    const data = asRecord(json.data)
+    const rawComments = data.comments as Array<Record<string, unknown>> | undefined
+    const hasMore = Boolean(data.has_more)
+    const cursor = String(data.cursor ?? '')
+
+    const comments = Array.isArray(rawComments)
+      ? rawComments.slice(0, 20).map((c) => ({
+          id: c.id,
+          content: c.content,
+          likeCount: c.like_count,
+          createTime: c.create_time,
+          ipLocation: c.ip_location,
+          subCommentCount: c.sub_comment_count,
+          user: c.user_info
+            ? {
+                userId: (c.user_info as Record<string, unknown>).user_id,
+                nickname: (c.user_info as Record<string, unknown>).nickname,
+                avatar: (c.user_info as Record<string, unknown>).image,
+              }
+            : null,
+        }))
+      : []
+
+    return { comments, count: comments.length, hasMore, cursor }
+  } catch {
+    return { comments: [], count: 0, hasMore: false }
+  }
+}
+
+async function getUserCollections(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const userId = String(params.userId ?? params.user_id ?? '')
+  if (!userId) throw OpenWebError.missingParam('userId')
+
+  await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+
+  if (page.url().includes('captcha') || page.url().includes('login')) {
+    throw OpenWebError.apiError('Xiaohongshu', 'CAPTCHA triggered — please solve it in the browser and retry')
+  }
+
+  // Click the "收藏" (collections) tab
+  await page.waitForTimeout(3000)
+  await page.click('[class*="tab"]:has-text("收藏")', { timeout: 5000 }).catch(() => null)
+  await page.waitForTimeout(2000)
+
+  return page.evaluate(() => {
+    const state = (window as any).__INITIAL_STATE__
+    if (!state?.user) return { notes: [], count: 0 }
+
+    const collectRef = state.user.collect
+    const collectPages: any[] = collectRef?._rawValue ?? collectRef ?? []
+    if (!Array.isArray(collectPages) || collectPages.length === 0) return { notes: [], count: 0 }
+
+    const allNotes: any[] = []
+    for (const pg of collectPages) {
+      const items: any[] = pg?._rawValue ?? pg ?? []
+      if (Array.isArray(items)) {
+        for (const item of items) {
+          if (item?.noteCard) {
+            const card = item.noteCard
+            allNotes.push({
+              noteId: item.id,
+              xsecToken: item.xsecToken,
+              type: card.type,
+              displayTitle: card.displayTitle,
+              user: card.user
+                ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar }
+                : null,
+              likedCount: card.interactInfo?.likedCount ?? null,
+              cover: card.cover
+                ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height }
+                : null,
+            })
+          }
+        }
+      }
+    }
+
+    return { notes: allNotes, count: allNotes.length }
+  })
+}
+
+async function getUserLiked(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const userId = String(params.userId ?? params.user_id ?? '')
+  if (!userId) throw OpenWebError.missingParam('userId')
+
+  await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+
+  if (page.url().includes('captcha') || page.url().includes('login')) {
+    throw OpenWebError.apiError('Xiaohongshu', 'CAPTCHA triggered — please solve it in the browser and retry')
+  }
+
+  // Click the "赞过" (liked) tab
+  await page.waitForTimeout(3000)
+  await page.click('[class*="tab"]:has-text("赞过")', { timeout: 5000 }).catch(() => null)
+  await page.waitForTimeout(2000)
+
+  return page.evaluate(() => {
+    const state = (window as any).__INITIAL_STATE__
+    if (!state?.user) return { notes: [], count: 0 }
+
+    const likedRef = state.user.liked
+    const likedPages: any[] = likedRef?._rawValue ?? likedRef ?? []
+    if (!Array.isArray(likedPages) || likedPages.length === 0) return { notes: [], count: 0 }
+
+    const allNotes: any[] = []
+    for (const pg of likedPages) {
+      const items: any[] = pg?._rawValue ?? pg ?? []
+      if (Array.isArray(items)) {
+        for (const item of items) {
+          if (item?.noteCard) {
+            const card = item.noteCard
+            allNotes.push({
+              noteId: item.id,
+              xsecToken: item.xsecToken,
+              type: card.type,
+              displayTitle: card.displayTitle,
+              user: card.user
+                ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar }
+                : null,
+              likedCount: card.interactInfo?.likedCount ?? null,
+              cover: card.cover
+                ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height }
+                : null,
+            })
+          }
+        }
+      }
+    }
+
+    return { notes: allNotes, count: allNotes.length }
+  })
+}
+
+async function getRelatedNotes(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const noteId = String(params.noteId ?? params.note_id ?? '')
+  if (!noteId) throw OpenWebError.missingParam('noteId')
+  const xsecToken = String(params.xsecToken ?? params.xsec_token ?? '')
+
+  // Intercept recommend API response
+  const recommendPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/api/sns/web/v1/note/recommend') && resp.status() === 200,
+    { timeout: 15000 },
+  ).catch(() => null)
+
+  const tokenParam = xsecToken ? `&xsec_token=${encodeURIComponent(xsecToken)}` : ''
+  await page.goto(
+    `${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`,
+    { waitUntil: 'domcontentloaded', timeout: 30000 },
+  )
+  await page.waitForTimeout(5000)
+
+  // Try intercept first
+  const recommendResp = await recommendPromise
+  if (recommendResp) {
+    try {
+      const json = (await recommendResp.json()) as Record<string, unknown>
+      const data = asRecord(json.data)
+      const rawNotes = data.items as Array<Record<string, unknown>> | undefined
+      if (Array.isArray(rawNotes) && rawNotes.length > 0) {
+        const notes = rawNotes.map((item: any) => ({
+          noteId: item.id ?? item.note_id,
+          xsecToken: item.xsec_token ?? null,
+          type: item.note_card?.type ?? item.type,
+          displayTitle: item.note_card?.display_title ?? item.title ?? '',
+          user: item.note_card?.user
+            ? { userId: item.note_card.user.user_id, nickname: item.note_card.user.nickname, avatar: item.note_card.user.avatar }
+            : null,
+          likedCount: item.note_card?.interact_info?.liked_count ?? null,
+          cover: item.note_card?.cover
+            ? { url: item.note_card.cover.url, width: item.note_card.cover.width, height: item.note_card.cover.height }
+            : null,
+        }))
+        return { notes, count: notes.length }
+      }
+    } catch { /* fall through to SSR state */ }
+  }
+
+  // Fallback: read from SSR state
+  return page.evaluate(() => {
+    const state = (window as any).__INITIAL_STATE__
+    if (!state?.note) return { notes: [], count: 0 }
+
+    const relatedRef = state.note.relatedNotes ?? state.note.recommendNotes
+    const related: any[] = relatedRef?._rawValue ?? relatedRef ?? []
+    if (!Array.isArray(related) || related.length === 0) return { notes: [], count: 0 }
+
+    const notes = related.map((f: any) => {
+      const card = f.noteCard ?? f
+      return {
+        noteId: f.id ?? card.noteId,
+        xsecToken: f.xsecToken ?? null,
+        type: card.type,
+        displayTitle: card.displayTitle ?? card.title ?? '',
+        user: card.user
+          ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar }
+          : null,
+        likedCount: card.interactInfo?.likedCount ?? null,
+        cover: card.cover
+          ? { url: card.cover.urlDefault ?? card.cover.url, width: card.cover.width, height: card.cover.height }
+          : null,
+      }
+    })
+
+    return { notes, count: notes.length }
+  })
+}
+
+async function followUser(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const userId = String(params.userId ?? params.user_id ?? '')
+  if (!userId) throw OpenWebError.missingParam('userId')
+
+  await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+
+  if (page.url().includes('captcha') || page.url().includes('login')) {
+    throw OpenWebError.apiError('Xiaohongshu', 'CAPTCHA triggered — please solve it in the browser and retry')
+  }
+
+  await page.waitForTimeout(3000)
+
+  // Check current follow state from SSR
+  const wasFollowing = await page.evaluate(() => {
+    const state = (window as any).__INITIAL_STATE__
+    const pageDataRef = state?.user?.userPageData
+    const pageData: Record<string, any> = pageDataRef?._rawValue ?? pageDataRef ?? {}
+    const basicInfo = pageData.basicInfo?._rawValue ?? pageData.basicInfo ?? {}
+    return basicInfo.isFollowed ?? false
+  })
+
+  if (wasFollowing) return { userId, followed: true, action: 'already_following' }
+
+  // Intercept follow API response
+  const followPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/api/sns/web/v1/user/follow') && resp.status() === 200,
+    { timeout: 10000 },
+  ).catch(() => null)
+
+  // Click the follow button
+  await page.click('.user-actions button:has-text("关注"), .info-part button:has-text("关注"), [class*="follow"]:not([class*="fans"])', { timeout: 5000 })
+  const followResp = await followPromise
+
+  const success = !!followResp
+  return { userId, followed: success, action: success ? 'followed' : 'failed' }
+}
+
+async function commentNote(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const noteId = String(params.noteId ?? params.note_id ?? '')
+  if (!noteId) throw OpenWebError.missingParam('noteId')
+  const content = String(params.content ?? '')
+  if (!content) throw OpenWebError.missingParam('content')
+  const xsecToken = String(params.xsecToken ?? params.xsec_token ?? '')
+
+  await navigateToNote(page, { noteId, xsecToken })
+
+  // Intercept comment API response
+  const commentPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/api/sns/web/v1/comment/post') && resp.status() === 200,
+    { timeout: 10000 },
+  ).catch(() => null)
+
+  // Focus comment input and type
+  const commentInput = page.locator('#content-textarea, [class*="comment"] textarea, [placeholder*="评论"]')
+  await commentInput.click({ timeout: 5000 })
+  await commentInput.fill(content)
+  await page.waitForTimeout(500)
+
+  // Click submit
+  await page.click('[class*="comment"] button:has-text("发送"), [class*="submit"]:has-text("发送"), button.submit', { timeout: 5000 })
+  const commentResp = await commentPromise
+
+  if (commentResp) {
+    try {
+      const json = (await commentResp.json()) as Record<string, unknown>
+      const data = asRecord(json.data)
+      return {
+        noteId,
+        commentId: data.comment?.id ?? data.id ?? null,
+        content,
+        action: 'commented',
+      }
+    } catch { /* fall through */ }
+  }
+
+  return { noteId, commentId: null, content, action: 'failed' }
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
@@ -354,11 +685,18 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getExploreFeed,
   likeNote,
   bookmarkNote,
+  getHotSearch,
+  getNoteComments,
+  getUserCollections,
+  getUserLiked,
+  getRelatedNotes,
+  followUser,
+  commentNote,
 }
 
 const adapter: CodeAdapter = {
   name: 'xiaohongshu-web',
-  description: 'Xiaohongshu (小红书) — search, detail, profile, user notes, explore feed, like, bookmark via Vue SSR + button interaction',
+  description: 'Xiaohongshu (小红书) — search, detail, profile, notes, explore, comments, collections, likes, related notes, follow, like, bookmark, comment via Vue SSR + API interception',
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()

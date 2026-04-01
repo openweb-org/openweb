@@ -131,12 +131,6 @@ async function getEntityWord(page: Page, params: Record<string, unknown>): Promi
   })
 }
 
-async function getAnswerRelationship(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const answerId = params.answer_id ?? params.id
-  if (!answerId) throw OpenWebError.missingParam('id')
-  return fetchApi(page, `/api/v4/answers/${answerId}/relationship`)
-}
-
 async function listMemberMutuals(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const urlToken = String(params.url_token ?? '')
   if (!urlToken) throw OpenWebError.missingParam('url_token')
@@ -176,16 +170,9 @@ async function followQuestion(page: Page, params: Record<string, unknown>): Prom
   return postApi(page, `/api/v4/questions/${encodeURIComponent(questionId)}/followers`)
 }
 
-async function followTopic(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const topicId = String(params.topic_id ?? '')
-  if (!topicId) throw OpenWebError.missingParam('topic_id')
-  return postApi(page, `/api/v4/topics/${encodeURIComponent(topicId)}/followers`)
-}
-
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
-  // v5 names (primary)
   searchContent,
   getMember,
   getUserAnswers,
@@ -195,18 +182,11 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   listMemberActivities,
   getMe,
   getEntityWord,
-  getAnswerRelationship,
   listMemberMutuals,
   listQuestionFollowers,
   upvoteAnswer,
   followUser,
   followQuestion,
-  followTopic,
-  // v1 aliases for backward compat
-  getUserProfile: getMember,
-  getSimilarQuestions: listSimilarQuestions,
-  getRecommendFeed: getFeedRecommend,
-  getUserActivities: listMemberActivities,
 }
 
 const adapter: CodeAdapter = {

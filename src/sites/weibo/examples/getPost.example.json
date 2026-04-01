@@ -5,7 +5,7 @@
     {
       "input": {
         "id": "Qyj0ifs0m",
-        "isGetLongText": "true",
+        "isGetLongText": true,
         "locale": "en-US"
       },
       "assertions": {

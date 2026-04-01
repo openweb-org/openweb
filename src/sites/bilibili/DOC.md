@@ -72,6 +72,27 @@ openweb bilibili exec likeVideo '{"aid": 123456, "like": 1}'
 - `code: 0` = success, negative codes = error (e.g. `-403` = access denied)
 - Wbi signing: endpoints with `/wbi/` in path require MD5 hash of sorted params + rotating mixing key
 
+## Workflows
+
+### Browse trending and drill into a video
+1. `getPopularVideos` — browse trending/popular videos
+2. `getVideoDetail` (bvid from step 1) — full metadata, stats, tags
+3. `getVideoComments` (oid = aid from step 2) — read comments
+4. `getDanmaku` (oid = cid from step 2) — read bullet comments
+
+### Explore a creator's content
+1. `getUserProfile` (mid) — bio, level, follower count
+2. `searchUserVideos` (mid) — paginated list of uploads
+
+### Search and engage
+1. `searchVideos` (keyword) — find videos by keyword
+2. `getVideoDetail` (bvid from step 1) — inspect a result
+3. `likeVideo` / `addToFavorites` — engage (requires auth + write permission)
+
+### Follow/unfollow flow
+1. `getUserProfile` (mid) — check user info
+2. `followUploader` (fid = mid, act = 1 to follow, 2 to unfollow)
+
 ## Known Issues
 - Wbi-signed endpoints return -403 via node transport — use `--browser` flag
 - Rate limiting on search and user profile endpoints

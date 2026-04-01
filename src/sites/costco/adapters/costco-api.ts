@@ -4,9 +4,11 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  * Costco L3 adapter — POST-based APIs via Playwright request context.
  *
  * Search: POST gdx-api.costco.com/catalog/search/api/v1/search
+ * Suggest: POST gdx-api.costco.com/catalog/search/api/v1/suggest
  * Product: POST ecom-api.costco.com/ebusiness/product/v1/products/graphql
- * Reviews: GET apps.bazaarvoice.com/.../reviews.json (BazaarVoice)
+ * Reviews: page.evaluate BV widget state (BazaarVoice)
  * Warehouses: GET ecom-api.costco.com/core/warehouse-locator/v1/salesLocations.json
+ * Delivery: GET ecom-api.costco.com/ebusiness/order/v1/delivery/options
  * Cart: POST www.costco.com/AjaxManageShoppingCartCmd (requires auth)
  *
  * PerimeterX intercepts window.fetch/XHR on costco.com, so we use
@@ -16,9 +18,11 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import type { CodeAdapter } from '../../../types/adapter.js'
 
 const SEARCH_URL = 'https://gdx-api.costco.com/catalog/search/api/v1/search'
+const SUGGEST_URL = 'https://gdx-api.costco.com/catalog/search/api/v1/suggest'
 const PRODUCT_GRAPHQL_URL = 'https://ecom-api.costco.com/ebusiness/product/v1/products/graphql'
 const WAREHOUSE_LOCATOR_URL = 'https://ecom-api.costco.com/core/warehouse-locator/v1/salesLocations.json'
-const ADD_TO_CART_URL = 'https://www.costco.com/AjaxManageShoppingCartCmd'
+const DELIVERY_OPTIONS_URL = 'https://ecom-api.costco.com/ebusiness/order/v1/delivery/options'
+const CART_URL = 'https://www.costco.com/AjaxManageShoppingCartCmd'
 const SEARCH_CLIENT_ID = '168287ea-1201-45f6-9b45-5bbea49f8ee7'
 const PRODUCT_CLIENT_ID = '4900eb1f-0c10-4bd9-99c3-c59e6c1ecebf'
 const WAREHOUSE_CLIENT_ID = '7c71124c-7bf1-44db-bc9d-498584cd66e5'
@@ -375,27 +379,446 @@ async function findWarehouses(page: Page, params: Record<string, unknown>): Prom
   return { warehouses, totalCount: warehouses.length }
 }
 
-/* ---------- add to cart ---------- */
+/* ---------- search suggestions ---------- */
 
-async function addToCart(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const itemNumber = String(params.itemNumber ?? params.partNumber ?? '')
-  if (!itemNumber) throw OpenWebError.missingParam('itemNumber')
-  const quantity = Number(params.quantity ?? 1)
+async function searchSuggestions(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const query = String(params.query ?? '')
+  if (!query) throw OpenWebError.missingParam('query')
+  const limit = Number(params.limit ?? 10)
 
-  const qs = new URLSearchParams({
-    ajaxFlag: 'true',
-    checkOmsInventory: 'true',
-    isPdpPage: 'true',
-    isRestrictedPostalCode: 'false',
-    partNumber: itemNumber,
-    actionType: 'add',
-    quantity: String(quantity),
-    isShipRestrictionStore: 'true',
-    productPartnumber: itemNumber,
-    isFsaChdItem: 'false',
+  const body = {
+    query,
+    limit,
+    warehouseId: '249-wh',
+    shipToPostal: '95050',
+    shipToState: 'CA',
+  }
+
+  const resp = (await postJson(page, SUGGEST_URL, body, {
+    'client-identifier': SEARCH_CLIENT_ID,
+    client_id: 'USBC',
+    locale: 'en-US',
+    searchresultprovider: 'GRS',
+  })) as Record<string, unknown>
+
+  const suggestions = (resp.suggestions ?? resp.results ?? []) as Array<Record<string, unknown>>
+
+  return {
+    query,
+    suggestions: suggestions.map((s) => ({
+      term: s.term ?? s.query ?? s.text ?? s.suggestion,
+      type: s.type ?? 'keyword',
+    })),
+  }
+}
+
+/* ---------- multiple products ---------- */
+
+async function getMultipleProducts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const itemNumbers = params.itemNumbers as string[] | undefined
+  if (!itemNumbers?.length) throw OpenWebError.missingParam('itemNumbers')
+
+  const quotedItems = itemNumbers.map((n) => `"${n}"`).join(', ')
+  const query = PRODUCT_QUERY.replace('ITEM_NUMBERS', quotedItems)
+  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query }, {
+    'client-identifier': PRODUCT_CLIENT_ID,
+    'costco.env': 'ecom',
+    'costco.service': 'restProduct',
+  })) as Record<string, unknown>
+
+  const data = resp.data as Record<string, unknown>
+  const products = data?.products as Record<string, unknown>
+  const catalogData = (products?.catalogData as Array<Record<string, unknown>>) ?? []
+
+  return {
+    products: catalogData.map((item) => {
+      const attrs = (item.attributes as Array<Record<string, unknown>>) ?? []
+      const desc = (item.description as Record<string, string>) ?? {}
+      const priceData = (item.priceData as Record<string, string>) ?? {}
+      const additionalData = (item.additionalFieldData as Record<string, unknown>) ?? {}
+      const fieldData = (item.fieldData as Record<string, unknown>) ?? {}
+
+      const attributes: Record<string, string[]> = {}
+      for (const attr of attrs) {
+        const key = String(attr.key)
+        const value = String(attr.value)
+        if (!attributes[key]) attributes[key] = []
+        attributes[key].push(value)
+      }
+
+      return {
+        itemNumber: item.itemNumber,
+        title: desc.shortDescription ?? null,
+        price: priceData.price ? Number.parseFloat(priceData.price) : null,
+        listPrice: priceData.listPrice && priceData.listPrice !== '-1.00000'
+          ? Number.parseFloat(priceData.listPrice)
+          : null,
+        brand: attributes.Brand?.[0] ?? (fieldData.mfName !== 'DO NOT DELETE' ? fieldData.mfName : null) ?? null,
+        rating: additionalData.rating != null ? Number(additionalData.rating) : null,
+        buyable: item.buyable === 1,
+      }
+    }),
+    totalCount: catalogData.length,
+  }
+}
+
+/* ---------- browse category ---------- */
+
+async function browseCategory(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const category = String(params.category ?? '')
+  if (!category) throw OpenWebError.missingParam('category')
+  const pageSize = Number(params.pageSize ?? 24)
+  const offset = Number(params.offset ?? 0)
+
+  const body = {
+    visitorId: '0',
+    query: '',
+    pageSize,
+    offset,
+    orderBy: null,
+    searchMode: 'page',
+    personalizationEnabled: false,
+    warehouseId: '249-wh',
+    shipToPostal: '95050',
+    shipToState: 'CA',
+    deliveryLocations: ['653-bd', '848-bd', '249-wh', '847_0-wm'],
+    filterBy: [],
+    pageCategories: [category],
+    userInfo: { userId: '0' },
+  }
+
+  const resp = (await postJson(page, SEARCH_URL, body, {
+    'client-identifier': SEARCH_CLIENT_ID,
+    client_id: 'USBC',
+    locale: 'en-US',
+    searchresultprovider: 'GRS',
+  })) as Record<string, unknown>
+
+  const searchResult = resp.searchResult as Record<string, unknown>
+  const results = (searchResult?.results ?? []) as Array<Record<string, unknown>>
+
+  const products = results.map((r) => {
+    const product = r.product as Record<string, unknown>
+    const attrs = (product?.attributes ?? {}) as Record<string, Record<string, unknown>>
+    const primaryImage = (attrs.primary_image?.text as string[])?.[0] ?? null
+    const pills = (attrs.pills?.text as string[]) ?? []
+    const marketingStatement = (attrs.marketing_statement?.text as string[])?.[0] ?? null
+
+    return {
+      itemNumber: r.id,
+      title: product?.title,
+      brands: product?.brands,
+      categories: product?.categories,
+      imageUrl: primaryImage,
+      pills,
+      marketingStatement,
+    }
   })
 
-  const url = `${ADD_TO_CART_URL}?${qs.toString()}`
+  // Extract available facets/filters from response
+  const facets = (searchResult?.facets ?? []) as Array<Record<string, unknown>>
+  const availableFilters = facets.map((f) => ({
+    name: f.name,
+    count: (f.values as Array<unknown>)?.length ?? 0,
+  }))
+
+  return {
+    category,
+    totalCount: searchResult?.totalCount ?? results.length,
+    products,
+    availableFilters,
+  }
+}
+
+/* ---------- delivery options ---------- */
+
+async function getDeliveryOptions(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const itemNumber = String(params.itemNumber ?? '')
+  if (!itemNumber) throw OpenWebError.missingParam('itemNumber')
+  const zipCode = String(params.zipCode ?? '95050')
+
+  // Use the product GraphQL with delivery fields
+  const deliveryQuery = `query {
+    products(
+      itemNumbers: ["${itemNumber}"],
+      clientId: "${PRODUCT_CLIENT_ID}",
+      locale: "en-us",
+      warehouseNumber: "847"
+    ) {
+      catalogData {
+        itemNumber
+        buyable
+        programTypes
+        priceData { price }
+        description { shortDescription }
+        additionalFieldData {
+          membershipReqd
+          maxItemOrderQty
+        }
+      }
+    }
+  }`
+
+  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query: deliveryQuery }, {
+    'client-identifier': PRODUCT_CLIENT_ID,
+    'costco.env': 'ecom',
+    'costco.service': 'restProduct',
+  })) as Record<string, unknown>
+
+  const data = resp.data as Record<string, unknown>
+  const products = data?.products as Record<string, unknown>
+  const catalogData = (products?.catalogData as Array<Record<string, unknown>>) ?? []
+
+  if (catalogData.length === 0) {
+    return { itemNumber, available: false, options: [] }
+  }
+
+  const item = catalogData[0]
+  const priceData = (item.priceData as Record<string, string>) ?? {}
+  const additionalData = (item.additionalFieldData as Record<string, unknown>) ?? {}
+  const desc = (item.description as Record<string, string>) ?? {}
+  const programTypes = (item.programTypes as string[]) ?? []
+
+  const options: Array<Record<string, unknown>> = []
+
+  if (programTypes.includes('SHIPPING')) {
+    options.push({
+      type: 'shipping',
+      label: 'Standard Shipping',
+      zipCode,
+      available: item.buyable === 1,
+    })
+  }
+  if (programTypes.includes('BD')) {
+    options.push({
+      type: 'business_delivery',
+      label: 'Business Delivery',
+      zipCode,
+      available: true,
+    })
+  }
+  if (programTypes.includes('WH')) {
+    options.push({
+      type: 'warehouse_pickup',
+      label: 'Warehouse Pickup',
+      available: true,
+    })
+  }
+
+  return {
+    itemNumber,
+    title: desc.shortDescription ?? null,
+    price: priceData.price ? Number.parseFloat(priceData.price) : null,
+    available: item.buyable === 1,
+    membershipRequired: additionalData.membershipReqd === 'Y',
+    maxQuantity: additionalData.maxItemOrderQty != null ? Number(additionalData.maxItemOrderQty) : null,
+    options,
+  }
+}
+
+/* ---------- warehouse details ---------- */
+
+async function getWarehouseDetails(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const warehouseId = params.warehouseId != null ? String(params.warehouseId) : null
+  if (!warehouseId) throw OpenWebError.missingParam('warehouseId')
+
+  const url = `${WAREHOUSE_LOCATOR_URL}?salesLocationId=${warehouseId}`
+  const resp = (await getJson(page, url, {
+    'client-identifier': WAREHOUSE_CLIENT_ID,
+    'Accept-Language': 'en-us',
+  })) as Record<string, unknown>
+
+  const salesLocations = (resp.salesLocations ?? []) as Array<Record<string, unknown>>
+
+  if (salesLocations.length === 0) {
+    return { warehouse: null }
+  }
+
+  const w = salesLocations[0]
+  const address = (w.address as Record<string, unknown>) ?? {}
+  const names = (w.name as Array<Record<string, string>>) ?? []
+  const name = names.find((n) => n.localeCode === 'en-US')?.value ?? names[0]?.value ?? null
+
+  const formatHours = (entries: Array<Record<string, unknown>>): string | null => {
+    if (!entries?.length) return null
+    return entries
+      .filter((h) => {
+        const type = (h.hoursType as Record<string, unknown>)?.code
+        return type === 'open'
+      })
+      .map((h) => {
+        const titles = (h.title as Array<Record<string, string>>) ?? []
+        const label = titles.find((t) => t.localeCode === 'en-US')?.value ?? ''
+        return `${label}: ${h.open} - ${h.close}`
+      }).join('; ') || null
+  }
+
+  const warehouseHours = formatHours((w.hours as Array<Record<string, unknown>>) ?? [])
+
+  const svcs = (w.services as Array<Record<string, unknown>>) ?? []
+  const services: Array<Record<string, unknown>> = []
+  for (const svc of svcs) {
+    const svcNames = (svc.name as Array<Record<string, string>>) ?? []
+    const svcName = svcNames.find((n) => n.localeCode === 'en-US')?.value ?? ''
+    const svcHours = formatHours((svc.hours as Array<Record<string, unknown>>) ?? [])
+    services.push({
+      name: svcName,
+      code: svc.code,
+      hours: svcHours,
+      phone: svc.phone ?? null,
+    })
+  }
+
+  return {
+    warehouse: {
+      warehouseId: w.salesLocationId ?? null,
+      name,
+      phone: w.phone ?? null,
+      address: {
+        street: address.line1 ?? null,
+        city: address.city ?? null,
+        state: address.territory ?? null,
+        zipCode: address.postalCode ?? null,
+        country: address.countryName ?? null,
+      },
+      latitude: address.latitude ?? null,
+      longitude: address.longitude ?? null,
+      hours: warehouseHours,
+      services,
+      hasGasStation: svcs.some((s) => s.code === 'gas'),
+      hasPharmacy: svcs.some((s) => s.code === 'pharmacy'),
+      hasTireCenter: svcs.some((s) => s.code === 'auto'),
+      hasFoodCourt: svcs.some((s) => s.code === 'food-court'),
+    },
+  }
+}
+
+/* ---------- check warehouse stock ---------- */
+
+async function checkWarehouseStock(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const itemNumber = String(params.itemNumber ?? '')
+  if (!itemNumber) throw OpenWebError.missingParam('itemNumber')
+  const warehouseNumber = String(params.warehouseNumber ?? '847')
+
+  const stockQuery = `query {
+    products(
+      itemNumbers: ["${itemNumber}"],
+      clientId: "${PRODUCT_CLIENT_ID}",
+      locale: "en-us",
+      warehouseNumber: "${warehouseNumber}"
+    ) {
+      catalogData {
+        itemNumber
+        buyable
+        programTypes
+        priceData { price listPrice }
+        description { shortDescription }
+        additionalFieldData {
+          membershipReqd
+          maxItemOrderQty
+        }
+      }
+    }
+  }`
+
+  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query: stockQuery }, {
+    'client-identifier': PRODUCT_CLIENT_ID,
+    'costco.env': 'ecom',
+    'costco.service': 'restProduct',
+  })) as Record<string, unknown>
+
+  const data = resp.data as Record<string, unknown>
+  const products = data?.products as Record<string, unknown>
+  const catalogData = (products?.catalogData as Array<Record<string, unknown>>) ?? []
+
+  if (catalogData.length === 0) {
+    return { itemNumber, warehouseNumber, available: false, product: null }
+  }
+
+  const item = catalogData[0]
+  const priceData = (item.priceData as Record<string, string>) ?? {}
+  const additionalData = (item.additionalFieldData as Record<string, unknown>) ?? {}
+  const desc = (item.description as Record<string, string>) ?? {}
+  const programTypes = (item.programTypes as string[]) ?? []
+
+  return {
+    itemNumber,
+    warehouseNumber,
+    available: item.buyable === 1,
+    inWarehouse: programTypes.includes('WH'),
+    onlineOnly: !programTypes.includes('WH') && programTypes.includes('SHIPPING'),
+    product: {
+      title: desc.shortDescription ?? null,
+      price: priceData.price ? Number.parseFloat(priceData.price) : null,
+      membershipRequired: additionalData.membershipReqd === 'Y',
+      maxQuantity: additionalData.maxItemOrderQty != null ? Number(additionalData.maxItemOrderQty) : null,
+    },
+  }
+}
+
+/* ---------- compare products ---------- */
+
+async function compareProducts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const itemNumbers = params.itemNumbers as string[] | undefined
+  if (!itemNumbers?.length || itemNumbers.length < 2) {
+    throw OpenWebError.missingParam('itemNumbers (at least 2)')
+  }
+
+  const quotedItems = itemNumbers.map((n) => `"${n}"`).join(', ')
+  const query = PRODUCT_QUERY.replace('ITEM_NUMBERS', quotedItems)
+  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query }, {
+    'client-identifier': PRODUCT_CLIENT_ID,
+    'costco.env': 'ecom',
+    'costco.service': 'restProduct',
+  })) as Record<string, unknown>
+
+  const data = resp.data as Record<string, unknown>
+  const products = data?.products as Record<string, unknown>
+  const catalogData = (products?.catalogData as Array<Record<string, unknown>>) ?? []
+
+  return {
+    products: catalogData.map((item) => {
+      const attrs = (item.attributes as Array<Record<string, unknown>>) ?? []
+      const desc = (item.description as Record<string, string>) ?? {}
+      const priceData = (item.priceData as Record<string, string>) ?? {}
+      const additionalData = (item.additionalFieldData as Record<string, unknown>) ?? {}
+      const fieldData = (item.fieldData as Record<string, unknown>) ?? {}
+
+      const attributes: Record<string, string[]> = {}
+      for (const attr of attrs) {
+        const key = String(attr.key)
+        const value = String(attr.value)
+        if (!attributes[key]) attributes[key] = []
+        attributes[key].push(value)
+      }
+
+      return {
+        itemNumber: item.itemNumber,
+        title: desc.shortDescription ?? null,
+        price: priceData.price ? Number.parseFloat(priceData.price) : null,
+        listPrice: priceData.listPrice && priceData.listPrice !== '-1.00000'
+          ? Number.parseFloat(priceData.listPrice)
+          : null,
+        brand: attributes.Brand?.[0] ?? (fieldData.mfName !== 'DO NOT DELETE' ? fieldData.mfName : null) ?? null,
+        rating: additionalData.rating != null ? Number(additionalData.rating) : null,
+        numberOfRatings: additionalData.numberOfRating != null ? Number(additionalData.numberOfRating) : null,
+        buyable: item.buyable === 1,
+        attributes,
+      }
+    }),
+    comparedCount: catalogData.length,
+  }
+}
+
+/* ---------- cart operations ---------- */
+
+async function cartRequest(page: Page, queryParams: Record<string, string>): Promise<unknown> {
+  const qs = new URLSearchParams({
+    ajaxFlag: 'true',
+    ...queryParams,
+  })
+
+  const url = `${CART_URL}?${qs.toString()}`
 
   const resp = await page.request.fetch(url, {
     method: 'POST',
@@ -418,19 +841,69 @@ async function addToCart(page: Page, params: Record<string, unknown>): Promise<u
   }
 }
 
+async function addToCart(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const itemNumber = String(params.itemNumber ?? params.partNumber ?? '')
+  if (!itemNumber) throw OpenWebError.missingParam('itemNumber')
+  const quantity = Number(params.quantity ?? 1)
+
+  return cartRequest(page, {
+    checkOmsInventory: 'true',
+    isPdpPage: 'true',
+    isRestrictedPostalCode: 'false',
+    partNumber: itemNumber,
+    actionType: 'add',
+    quantity: String(quantity),
+    isShipRestrictionStore: 'true',
+    productPartnumber: itemNumber,
+    isFsaChdItem: 'false',
+  })
+}
+
+async function removeFromCart(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const orderItemId = String(params.orderItemId ?? '')
+  if (!orderItemId) throw OpenWebError.missingParam('orderItemId')
+
+  return cartRequest(page, {
+    orderItemId,
+    actionType: 'remove',
+    quantity: '0',
+  })
+}
+
+async function updateCartQuantity(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const orderItemId = String(params.orderItemId ?? '')
+  if (!orderItemId) throw OpenWebError.missingParam('orderItemId')
+  const quantity = Number(params.quantity ?? 1)
+
+  return cartRequest(page, {
+    orderItemId,
+    actionType: 'update',
+    quantity: String(quantity),
+  })
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
   searchProducts,
+  searchSuggestions,
   getProductDetail,
+  getMultipleProducts,
   getProductReviews,
+  getDeliveryOptions,
+  browseCategory,
   findWarehouses,
+  getWarehouseDetails,
+  checkWarehouseStock,
+  compareProducts,
   addToCart,
+  removeFromCart,
+  updateCartQuantity,
 }
 
 const adapter: CodeAdapter = {
   name: 'costco-api',
-  description: 'Costco product search, detail, reviews, warehouse locator, and cart — via Playwright request',
+  description: 'Costco product search, detail, reviews, warehouses, delivery, and cart — via Playwright request',
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()

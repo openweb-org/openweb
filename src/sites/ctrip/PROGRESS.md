@@ -25,3 +25,25 @@ searchFlights, getFlightCalendarPrices, getFlightComfort, getGeneralInfo, getHot
 **Verification:** All 10 operations PASS (2026-03-24)
 
 **Knowledge updates:** Trip.com uses a POST-only REST API pattern with numbered service IDs — novel for the project. Hotel APIs require framework-specific headers.
+
+## 2026-03-31: Curation — enriched schemas, 14 operations, DOC.md rewrite
+
+**What changed:**
+- Added `auth: cookie_session` to server-level x-openweb (browser session provides locale/source context)
+- Enriched all bare `type: object` response schemas with properties inferred from error responses and API patterns
+- Added 4 new operations: getFlightFilters (ct0011), getAttractionDetail (ct0012), getTrainCalendar (ct0013), getCityList (ct0014)
+- Added request params for searchTrains (departStation, arriveStation, departDate) — previously had only bare head object
+- Updated searchPOI response schema to match actual response fields (results, isRecommend, key)
+- Updated getFlightCalendarPrices response to match actual field name (lowPriceInCalenderDtoInfoList)
+- Improved all operation summaries with 3-5 key response fields
+- Rewrote DOC.md with workflows, operations table with data flow annotations, quick start commands
+- Updated getHotDestinations response with code, iconName fields from live exec
+
+**Why:**
+- Bare schemas gave agents no information about response structure
+- Missing workflows made it unclear how operations connect
+- 4 new operations complete the travel workflow coverage (filter flights, attraction detail, train calendar, city browsing)
+
+**Verification:** Original 10 operations PASS via `pnpm dev verify ctrip` (no examples for 4 new ops)
+
+**Known issue:** Trip.com APIs return HTTP 200 with error content (SourceEnum/locale errors) when browser session context is stale. Verify passes on status code but response may not contain useful data without a fresh Trip.com page session.

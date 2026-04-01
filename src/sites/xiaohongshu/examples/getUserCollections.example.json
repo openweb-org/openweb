@@ -1,0 +1,12 @@
+{
+  "operation_id": "getUserCollections",
+  "cases": [
+    {
+      "input": { "userId": "661358f70000000003030d89" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

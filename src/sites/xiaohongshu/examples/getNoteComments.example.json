@@ -1,0 +1,12 @@
+{
+  "operation_id": "getNoteComments",
+  "cases": [
+    {
+      "input": { "noteId": "6912d7eb000000000402a319" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
