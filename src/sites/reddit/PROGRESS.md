@@ -1,3 +1,16 @@
+## 2026-03-31: Doc Verify — align DOC.md with site-doc template
+
+**What changed:**
+- Restructured DOC.md: added Workflows section, reordered to Workflows → Operations → Quick Start
+- Operations table: replaced Method column with Key Input (← source) and Key Output columns
+- Added data flow annotations (← getSubredditPosts) and entry point markers
+- Added Site Internals divider
+
+**Why:**
+- DOC.md did not follow site-doc.md template — missing workflows, wrong table columns, no data flow graph
+
+**Verification:** Doc Verify checklist pass. All 10 openapi.yaml operations present in Operations table. `openweb verify reddit` — 8/8 PASS.
+
 ## 2026-03-30: Release QA — full site audit
 
 **What changed:**

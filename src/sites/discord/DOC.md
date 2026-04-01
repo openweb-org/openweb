@@ -3,6 +3,37 @@
 ## Overview
 Real-time messaging platform. Archetype: Messaging.
 
+## Workflows
+
+### Browse server messages
+1. `listGuilds` → pick guild → `guildId`
+2. `listGuildChannels(guildId)` → pick channel → `channelId`
+3. `getChannelMessages(channelId, limit)` → messages with content, author, timestamps
+
+### Search a server
+1. `listGuilds` → pick guild → `guildId`
+2. `searchMessages(guildId, content)` → matching messages with context
+
+### Inspect a server
+1. `listGuilds` → pick guild → `guildId`
+2. `getGuildInfo(guildId)` → server details, member count, features
+3. `getGuildRoles(guildId)` → role list with permissions
+
+## Operations
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| getCurrentUser | get my profile | — | username, email, avatar, premium_type | entry point |
+| listGuilds | list my servers | — | id, name, icon, owner, permissions | entry point |
+| getDirectMessages | list DM channels | — | id, type, recipients, last_message_id | entry point |
+| getGuildInfo | server details | guildId ← listGuilds | name, description, owner_id, member count, features, roles | |
+| listGuildChannels | channels in server | guildId ← listGuilds | id, name, type, topic, position | |
+| getGuildRoles | server roles | guildId ← listGuilds | name, permissions, color, position | |
+| searchMessages | search in server | guildId ← listGuilds, content (query) | total_results, messages with context | |
+| getChannelInfo | channel details | channelId ← listGuildChannels | name, type, topic, guild_id | |
+| getChannelMessages | read messages | channelId ← listGuildChannels | content, author, timestamp, attachments, embeds | paginated (limit, before, after) |
+| getPinnedMessages | pinned messages | channelId ← listGuildChannels | content, author, timestamp | no pagination |
+
 ## Quick Start
 
 ```bash
@@ -11,9 +42,6 @@ openweb discord exec getCurrentUser '{}'
 
 # List my servers (guilds)
 openweb discord exec listGuilds '{}'
-
-# Get server info
-openweb discord exec getGuildInfo '{"guildId":"GUILD_ID"}'
 
 # List channels in a server
 openweb discord exec listGuildChannels '{"guildId":"GUILD_ID"}'
@@ -25,20 +53,9 @@ openweb discord exec getChannelMessages '{"channelId":"CHANNEL_ID","limit":50}'
 openweb discord exec searchMessages '{"guildId":"GUILD_ID","content":"search term"}'
 ```
 
-## Operations
+---
 
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| getCurrentUser | Get my profile | GET /api/v9/users/@me | Auth required |
-| listGuilds | List my servers | GET /api/v9/users/@me/guilds | Returns partial guild objects |
-| getGuildInfo | Get server details | GET /api/v9/guilds/{guildId} | Full guild object |
-| listGuildChannels | List server channels | GET /api/v9/guilds/{guildId}/channels | All channel types |
-| getChannelInfo | Get channel details | GET /api/v9/channels/{channelId} | Single channel |
-| getChannelMessages | Read messages | GET /api/v9/channels/{channelId}/messages | Paginated, limit param |
-| getPinnedMessages | Get pinned messages | GET /api/v9/channels/{channelId}/pins | No pagination |
-| getDirectMessages | List DM channels | GET /api/v9/users/@me/channels | DM and group DM |
-| searchMessages | Search in guild | GET /api/v9/guilds/{guildId}/messages/search | Query params |
-| getGuildRoles | Get server roles | GET /api/v9/guilds/{guildId}/roles | Role list |
+## Site Internals
 
 ## API Architecture
 - REST API on `discord.com/api/v9/`

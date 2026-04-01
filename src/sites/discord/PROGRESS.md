@@ -9,4 +9,4 @@
 - Net-new site package for Discord messaging platform
 - Target intents: user info, server listing, channel browsing, message reading, search
 
-**Verification:** pending browser verify
+**Verification:** 10/10 PASS with --browser. getCurrentUser returns live data.

@@ -3,19 +3,48 @@
 ## Overview
 Social media platform — link aggregation, discussion, communities (subreddits). Social Media archetype.
 
+## Workflows
+
+### Browse and read a subreddit
+1. `getSubredditPosts(subreddit)` → pick post → `post_id`, `subreddit`
+2. `getPostComments(subreddit, post_id)` → post detail + comment tree
+
+### Search and dive into a post
+1. `searchPosts(q)` → results with `subreddit`, post `id`
+2. `getPostComments(subreddit, post_id)` → full post + comments
+
+### Investigate a user
+1. `getUserProfile(username)` → karma, account age, verified status
+2. `getUserPosts(username)` → recent posts and comments
+
+## Operations
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| getSubredditPosts | get subreddit feed | subreddit | title, author, score, url, after | entry point; paginated |
+| getPopularPosts | get trending posts | — | title, subreddit, score, url, after | entry point |
+| searchPosts | search posts by keyword | q | title, subreddit, score, url | entry point; sort, time, type filters |
+| getPostComments | get post + comment tree | subreddit, post_id ← getSubredditPosts | title, selftext, comment tree | returns [post, comments] array |
+| getUserProfile | get user profile | username | karma, created, verified, is_gold | entry point |
+| getUserPosts | get user activity | username | title, body, subreddit, score | entry point; sort: new/hot/top |
+| getSubredditAbout | get subreddit metadata | subreddit | subscribers, description, active_users | entry point |
+| vote | vote on post/comment | id ← getSubredditPosts | — | requires auth, write permission |
+| savePost | bookmark post/comment | id ← getSubredditPosts | — | requires auth, write permission |
+| getMe | authenticated user profile | — | name, karma, verified | requires auth; oauth.reddit.com |
+
 ## Quick Start
 
 ```bash
-# Search posts by keyword
-openweb reddit exec searchPosts '{"q": "typescript"}'
-
 # Get subreddit posts
 openweb reddit exec getSubredditPosts '{"subreddit": "programming"}'
+
+# Search posts
+openweb reddit exec searchPosts '{"q": "typescript"}'
 
 # Get popular posts
 openweb reddit exec getPopularPosts '{}'
 
-# Get post with comments
+# Get post with comments (post_id from a listing)
 openweb reddit exec getPostComments '{"subreddit": "programming", "post_id": "1s5ja3a"}'
 
 # Get user profile
@@ -28,19 +57,9 @@ openweb reddit exec getUserPosts '{"username": "spez"}'
 openweb reddit exec getSubredditAbout '{"subreddit": "programming"}'
 ```
 
-## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| searchPosts | Search posts by keyword | GET /search.json | Sort, time filter, type filter (posts/subreddits/users) |
-| getSubredditPosts | Get subreddit feed | GET /r/{subreddit}.json | Sort (hot/new/top/rising), pagination via after cursor |
-| getPopularPosts | Get popular posts | GET /r/popular.json | Cross-subreddit popular feed |
-| getPostComments | Get post with comments | GET /r/{subreddit}/comments/{post_id}.json | Returns [post, comments] array |
-| getUserProfile | Get user profile | GET /user/{username}/about.json | Karma, created date, verified status |
-| getUserPosts | Get user's posts/comments | GET /user/{username}.json | Sort by new/hot/top, paginated |
-| getSubredditAbout | Get subreddit metadata | GET /r/{subreddit}/about.json | Subscribers, description, active users |
-| vote | Vote on post/comment | POST /api/vote | Requires auth. Reversible (dir: 1/0/-1) |
-| savePost | Bookmark a post/comment | POST /api/save | Requires auth |
-| getMe | Authenticated user profile | GET /api/v1/me | Requires auth. Uses oauth.reddit.com |
+---
+
+## Site Internals
 
 ## API Architecture
 - Public read API via `www.reddit.com` — append `.json` to any Reddit URL for JSON
@@ -50,12 +69,11 @@ openweb reddit exec getSubredditAbout '{"subreddit": "programming"}'
 - Pagination via `after` cursor parameter (fullname like `t3_1s5ja3a`)
 
 ## Auth
-No auth required for public read operations (8 ops). The `.json` API works without authentication.
+No auth required for public read operations (7 ops). The `.json` API works without authentication.
 
-Write operations (`vote`, `savePost`) and `getMe` require authentication. Without auth:
-- `getMe` returns features config instead of user profile
+Write operations (`vote`, `savePost`) and `getMe` require authentication:
+- `getMe` returns features config instead of user profile without auth
 - `vote` and `savePost` need `write` permission + authenticated session
-- Auth flow (not configured in this package): cookie CSRF → POST shreddit/token → bearer JWT → oauth.reddit.com
 
 ## Transport
 Node transport — all public read operations work via direct HTTP fetch.
