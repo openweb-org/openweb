@@ -1,28 +1,14 @@
-## 2026-03-26: Initial documentation
+## 2026-04-01: Initial discovery and compilation
 
 **What changed:**
-- Created DOC.md and PROGRESS.md from existing openapi.yaml spec
+- Discovered Bluesky AT Protocol API at public.api.bsky.app
+- 9 operations: getProfile, getAuthorFeed, getPostThread, getFeed, searchPosts, searchActors, getFollowers, getFollows, getPosts
+- Manual spec curation required — compiler path normalization merged all XRPC methods into single parameterized endpoint
+- Public API (no auth) for 8/9 operations; searchPosts requires auth (403)
 
 **Why:**
-- Document 3 verified operations with AT Protocol XRPC pattern
+- Net-new site discovery targeting user-requested operations (getFeed, getPost, getProfile, searchPosts, getNotifications)
+- getNotifications excluded — requires auth not available on public API
 
-**Verification:** spec review only — no new capture or compilation
-
-## 2026-03-26: Expand coverage from 3 to 12 ops
-
-**What changed:**
-- Added 9 new operations: getPostThread, getAuthorFeed, getActorLikes, searchPosts, getPosts, getFollowers, getFollows, createRecord, deleteRecord
-- 8 read operations covering timeline, posts, threads, search, social graph
-- 2 write operations for like/repost/follow (and undo)
-- Test files for all 10 read operations
-- Updated DOC.md with full operation table and API architecture details
-
-**Why:**
-- Expand beyond the initial 3 ops to cover all major Bluesky user flows
-- AT Protocol XRPC endpoints follow a consistent, well-documented pattern
-
-**Verification:**
-- 7/10 read ops verified PASS via public.api.bsky.app (no auth needed)
-- 3 ops require auth: getTimeline, searchPosts, getActorLikes
-- 2 write ops (createRecord, deleteRecord) require auth — not verified
-- openweb verify hangs due to localStorage_jwt auth resolution requiring logged-in browser
+**Verification:** Runtime verify 8/9 public operations pass, searchPosts expected 403
+**Commit:** pending

@@ -1,0 +1,7 @@
+{
+  "operation_id": "getPostComments",
+  "cases": [{
+    "input": { "subdomain": "astralcodexten", "postId": 158504113, "all_comments": true, "sort": "best_first" },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

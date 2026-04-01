@@ -1,0 +1,7 @@
+{
+  "operation_id": "getPostThread",
+  "cases": [{
+    "input": { "uri": "at://did:plc:ragtjsm2j2vknwkz3zp4oxrd/app.bsky.feed.post/3mihga6anwc2k", "depth": 3 },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

@@ -1,10 +1,10 @@
 openapi: '3.1.0'
 info:
-  title: Substack API
+  title: Substack
   version: '1.0.0'
   x-openweb:
     spec_version: '2.0'
-    compiled_at: '2026-03-24T00:00:00Z'
+    compiled_at: '2026-04-01T00:00:00Z'
     requires_auth: false
 servers:
   - url: https://substack.com
@@ -12,18 +12,14 @@ servers:
       transport: page
 paths:
   /search/posts:
-    post:
+    get:
       operationId: searchPosts
-      summary: Search articles/posts by keyword across all of Substack
+      summary: Search posts across all of Substack by keyword — returns title, subtitle, slug, post_date, canonical_url, publication info, reaction/comment counts
       x-openweb:
         permission: read
         build:
-          verified: true
           stable_id: ss0001
-          signature_id: ss0001s
-          tool_version: 1
-          signals:
-            - adapter-verified
+          tool_version: 2
         adapter:
           name: substack-api
           operation: searchPosts
@@ -34,20 +30,13 @@ paths:
           schema:
             type: string
           description: Search keyword (e.g. "artificial intelligence", "climate change").
-        - name: offset
+        - name: page
           in: query
           required: false
           schema:
             type: integer
             default: 0
-          description: Pagination offset.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 25
-          description: Number of results to return.
+          description: Page number for pagination (0-indexed).
       responses:
         '200':
           description: Search results with matching posts.
@@ -59,239 +48,79 @@ paths:
                   results:
                     type: array
                     items:
-                      $ref: '#/components/schemas/PostSearchResult'
-  /search/publications:
-    post:
-      operationId: searchPublications
-      summary: Search newsletters/publications by keyword
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: ss0002
-          signature_id: ss0002s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: substack-api
-          operation: searchPublications
-      parameters:
-        - name: query
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search keyword (e.g. "tech", "politics", "science").
-        - name: offset
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Pagination offset.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 25
-          description: Number of results to return.
-      responses:
-        '200':
-          description: Matching publications/newsletters.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  results:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/PublicationSummary'
-  /search/people:
-    post:
-      operationId: searchPeople
-      summary: Search authors/people on Substack
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: ss0003
-          signature_id: ss0003s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: substack-api
-          operation: searchPeople
-      parameters:
-        - name: query
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search keyword for people/authors.
-        - name: offset
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Pagination offset.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 25
-          description: Number of results to return.
-      responses:
-        '200':
-          description: Matching people/authors.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  results:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/AuthorSummary'
-  /categories:
-    get:
-      operationId: getCategories
-      summary: Get all newsletter categories (technology, culture, politics, etc.)
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: ss0004
-          signature_id: ss0004s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: substack-api
-          operation: getCategories
-      parameters: []
-      responses:
-        '200':
-          description: List of categories.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Category'
-  /category/{categorySlug}/newsletters:
-    get:
-      operationId: getCategoryNewsletters
-      summary: Get newsletters in a category — ranked by popularity
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: ss0005
-          signature_id: ss0005s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: substack-api
-          operation: getCategoryNewsletters
-      parameters:
-        - name: categorySlug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Category slug (e.g. "technology", "culture", "politics", "finance").
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number for pagination.
-        - name: paid
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: false
-          description: If true, return paid newsletters. If false, return free.
-      responses:
-        '200':
-          description: Newsletters in the category.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  publications:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/PublicationSummary'
-  /leaderboard:
-    get:
-      operationId: getLeaderboard
-      summary: Get top paid newsletters — Substack leaderboard
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: ss0006
-          signature_id: ss0006s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: substack-api
-          operation: getLeaderboard
-      parameters:
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number for pagination.
-      responses:
-        '200':
-          description: Top paid newsletters.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  publications:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/PublicationSummary'
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        title:
+                          type: string
+                        subtitle:
+                          type: [string, 'null']
+                        slug:
+                          type: string
+                        post_date:
+                          type: string
+                        canonical_url:
+                          type: string
+                        publishedBylines:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                        publication:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            name:
+                              type: string
+                            subdomain:
+                              type: string
+                        reaction_count:
+                          type: integer
+                        comment_count:
+                          type: integer
+                        audience:
+                          type: string
+                  more:
+                    type: boolean
   /publication/{subdomain}/archive:
     get:
-      operationId: getPublicationArchive
-      summary: Get recent posts from a newsletter — paginated archive
+      operationId: getArchive
+      summary: List or search posts in a publication — title, subtitle, slug, post_date, audience, reaction/comment counts, cover image
       x-openweb:
         permission: read
         build:
-          verified: true
-          stable_id: ss0007
-          signature_id: ss0007s
-          tool_version: 1
-          signals:
-            - adapter-verified
+          stable_id: ss0002
+          tool_version: 2
         adapter:
           name: substack-api
-          operation: getPublicationArchive
+          operation: getArchive
       parameters:
         - name: subdomain
           in: path
           required: true
           schema:
             type: string
-          description: Publication subdomain (e.g. "platformer", "stratechery", "theatlantic").
+          description: Publication subdomain (e.g. "astralcodexten", "platformer", "mattstoller").
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [new, top]
+            default: new
+          description: Sort order — "new" (chronological) or "top" (by popularity).
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search keyword to filter posts within this publication.
         - name: offset
           in: query
           required: false
@@ -305,14 +134,7 @@ paths:
           schema:
             type: integer
             default: 12
-          description: Number of posts to return.
-        - name: sort
-          in: query
-          required: false
-          schema:
-            type: string
-            default: new
-          description: Sort order ("new" or "top").
+          description: Number of posts to return (max ~50).
       responses:
         '200':
           description: List of posts from the publication.
@@ -321,20 +143,53 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Post'
-  /publication/{subdomain}/post/{slug}:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    title:
+                      type: string
+                    subtitle:
+                      type: [string, 'null']
+                    slug:
+                      type: string
+                    type:
+                      type: string
+                    post_date:
+                      type: string
+                      format: date-time
+                    canonical_url:
+                      type: string
+                    audience:
+                      type: string
+                    description:
+                      type: [string, 'null']
+                    word_count:
+                      type: [integer, 'null']
+                    reaction_count:
+                      type: integer
+                    comment_count:
+                      type: integer
+                    cover_image:
+                      type: [string, 'null']
+                    publishedBylines:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+  /publication/{subdomain}/posts/{slug}:
     get:
       operationId: getPost
-      summary: Get full article/post details by slug
+      summary: Get full post/article by slug — title, body_html, word_count, post_date, audience, reaction/comment counts, author bylines, cover image
       x-openweb:
         permission: read
         build:
-          verified: true
-          stable_id: ss0008
-          signature_id: ss0008s
-          tool_version: 1
-          signals:
-            - adapter-verified
+          stable_id: ss0003
+          tool_version: 2
         adapter:
           name: substack-api
           operation: getPost
@@ -344,33 +199,75 @@ paths:
           required: true
           schema:
             type: string
-          description: Publication subdomain (e.g. "platformer").
+          description: Publication subdomain (e.g. "astralcodexten").
         - name: slug
           in: path
           required: true
           schema:
             type: string
-          description: Post slug (e.g. "why-tech-companies-are-laying-off").
+          description: Post slug from archive or search results (e.g. "against-the-concept-of-telescopic").
       responses:
         '200':
           description: Full post details.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Post'
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  title:
+                    type: string
+                  subtitle:
+                    type: [string, 'null']
+                  slug:
+                    type: string
+                  type:
+                    type: string
+                  post_date:
+                    type: string
+                    format: date-time
+                  canonical_url:
+                    type: string
+                  audience:
+                    type: string
+                  description:
+                    type: [string, 'null']
+                  body_html:
+                    type: [string, 'null']
+                    description: Full HTML content (may be truncated for paywalled posts).
+                  truncated_body_text:
+                    type: [string, 'null']
+                  word_count:
+                    type: [integer, 'null']
+                  reaction_count:
+                    type: integer
+                  comment_count:
+                    type: integer
+                  cover_image:
+                    type: [string, 'null']
+                  publishedBylines:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        handle:
+                          type: [string, 'null']
+                        photo_url:
+                          type: [string, 'null']
   /publication/{subdomain}/post/{postId}/comments:
     get:
       operationId: getPostComments
-      summary: Get comments/discussion on a post
+      summary: Get comments on a post — body, author name, date, reaction count, nested children
       x-openweb:
         permission: read
         build:
-          verified: true
-          stable_id: ss0009
-          signature_id: ss0009s
-          tool_version: 1
-          signals:
-            - adapter-verified
+          stable_id: ss0004
+          tool_version: 2
         adapter:
           name: substack-api
           operation: getPostComments
@@ -386,14 +283,22 @@ paths:
           required: true
           schema:
             type: integer
-          description: Post numeric ID.
+          description: Post numeric ID (from getArchive or getPost response).
         - name: all_comments
           in: query
           required: false
           schema:
             type: boolean
             default: true
-          description: If true, return all comments (not just top-level).
+          description: If true, return all comments including replies.
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [best_first, newest_first, oldest_first]
+            default: best_first
+          description: Comment sort order.
       responses:
         '200':
           description: Comments on the post.
@@ -405,220 +310,88 @@ paths:
                   comments:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Comment'
-  /author/{handle}/profile:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        body:
+                          type: string
+                        date:
+                          type: string
+                        name:
+                          type: string
+                        user_id:
+                          type: integer
+                        photo_url:
+                          type: [string, 'null']
+                        reaction_count:
+                          type: integer
+                        children:
+                          type: array
+                          items:
+                            type: object
+  /trending:
     get:
-      operationId: getAuthorProfile
-      summary: Get author profile — name, bio, publications
+      operationId: getTrending
+      summary: Get trending posts across Substack — title, subtitle, slug, post_date, publication info
       x-openweb:
         permission: read
         build:
-          verified: true
-          stable_id: ss0010
-          signature_id: ss0010s
-          tool_version: 1
-          signals:
-            - adapter-verified
+          stable_id: ss0005
+          tool_version: 2
         adapter:
           name: substack-api
-          operation: getAuthorProfile
+          operation: getTrending
       parameters:
-        - name: handle
-          in: path
-          required: true
+        - name: limit
+          in: query
+          required: false
           schema:
-            type: string
-          description: Author handle/username (e.g. "caseyNewton", "mattyglesias").
+            type: integer
+            default: 25
+          description: Number of trending posts to return.
       responses:
         '200':
-          description: Author profile information.
+          description: Trending posts.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthorProfile'
-components:
-  schemas:
-    PostSearchResult:
-      type: object
-      properties:
-        id:
-          type: integer
-        title:
-          type: string
-        subtitle:
-          type: [string, 'null']
-        slug:
-          type: string
-        post_date:
-          type: string
-          description: ISO 8601 date string.
-        canonical_url:
-          type: string
-        publishedBylines:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              name:
-                type: string
-              handle:
-                type: [string, 'null']
-              photo_url:
-                type: [string, 'null']
-        publication:
-          type: object
-          properties:
-            id:
-              type: integer
-            name:
-              type: string
-            subdomain:
-              type: string
-            logo_url:
-              type: [string, 'null']
-        reaction_count:
-          type: integer
-        comment_count:
-          type: integer
-        audience:
-          type: string
-          description: '"everyone" or "only_paid"'
-    PublicationSummary:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        subdomain:
-          type: string
-        custom_domain:
-          type: [string, 'null']
-        logo_url:
-          type: [string, 'null']
-        author_name:
-          type: [string, 'null']
-        description:
-          type: [string, 'null']
-        subscriber_count:
-          type: [integer, 'null']
-        rankingDetail:
-          type: [string, 'null']
-          description: Ranking info when from leaderboard/category.
-    AuthorSummary:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        handle:
-          type: [string, 'null']
-        photo_url:
-          type: [string, 'null']
-        bio:
-          type: [string, 'null']
-    Category:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        slug:
-          type: string
-    Post:
-      type: object
-      properties:
-        id:
-          type: integer
-        title:
-          type: string
-        subtitle:
-          type: [string, 'null']
-        slug:
-          type: string
-        post_date:
-          type: string
-        canonical_url:
-          type: string
-        audience:
-          type: string
-        type:
-          type: string
-          description: '"newsletter" or "podcast" or "thread"'
-        description:
-          type: [string, 'null']
-        body_html:
-          type: [string, 'null']
-          description: Full HTML content (may be truncated for paywalled posts).
-        truncated_body_text:
-          type: [string, 'null']
-        word_count:
-          type: [integer, 'null']
-        reaction_count:
-          type: integer
-        comment_count:
-          type: integer
-        publishedBylines:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              name:
-                type: string
-              handle:
-                type: [string, 'null']
-              photo_url:
-                type: [string, 'null']
-        cover_image:
-          type: [string, 'null']
-    Comment:
-      type: object
-      properties:
-        id:
-          type: integer
-        body:
-          type: string
-        body_json:
-          type: [object, 'null']
-        date:
-          type: string
-        name:
-          type: string
-        user_id:
-          type: integer
-        photo_url:
-          type: [string, 'null']
-        reaction_count:
-          type: integer
-        children:
-          type: array
-          items:
-            $ref: '#/components/schemas/Comment'
-    AuthorProfile:
-      type: object
-      properties:
-        handle:
-          type: string
-        name:
-          type: string
-        bio:
-          type: string
-        imageUrl:
-          type: string
-        subscriberInfo:
-          type: string
-        publications:
-          type: array
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              url:
-                type: string
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        title:
+                          type: string
+                        subtitle:
+                          type: [string, 'null']
+                        slug:
+                          type: string
+                        type:
+                          type: string
+                        post_date:
+                          type: string
+                          format: date-time
+                        canonical_url:
+                          type: string
+                        audience:
+                          type: string
+                        reaction_count:
+                          type: integer
+                        comment_count:
+                          type: integer
+                        cover_image:
+                          type: [string, 'null']
+                        publishedBylines:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string

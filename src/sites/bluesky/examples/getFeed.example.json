@@ -1,0 +1,7 @@
+{
+  "operation_id": "getFeed",
+  "cases": [{
+    "input": { "feed": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot", "limit": 5 },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

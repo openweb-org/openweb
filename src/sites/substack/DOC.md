@@ -1,47 +1,75 @@
 # Substack
 
 ## Overview
-Newsletter publishing platform. Search posts and newsletters, browse categories, explore publication archives, read articles, view comments, and discover authors via Substack's REST API.
+Newsletter and long-form content platform. Content platform archetype.
+
+## Workflows
+
+### Find and read a post
+1. `searchPosts(query)` → results with `slug`, `publication.subdomain`
+2. `getPost(subdomain, slug)` → full article with body_html
+
+### Browse a publication's posts
+1. `getArchive(subdomain)` → list of posts with `id`, `slug`
+2. `getPost(subdomain, slug)` → full article
+3. `getPostComments(subdomain, postId)` → discussion
+
+### Search within a publication
+1. `getArchive(subdomain, search="keyword")` → filtered posts
+
+### Discover trending content
+1. `getTrending(limit)` → popular posts across Substack
 
 ## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| searchPosts | search articles by keyword | REST POST | `/api/v1/post/search`; returns titles, authors, publications |
-| searchPublications | search newsletters by keyword | REST POST | `/api/v1/publication/search`; returns publication metadata |
-| searchPeople | search authors/people | REST POST | `/api/v1/search/profiles`; returns author info |
-| getCategories | list all newsletter categories | REST GET | `/api/v1/category/public/all`; technology, culture, politics, etc. |
-| getCategoryNewsletters | get newsletters in a category | REST GET | paginated by page number; paid/free filter |
-| getLeaderboard | get top paid newsletters | REST GET | ranked by subscriber count/revenue |
-| getPublicationArchive | get recent posts from a newsletter | REST GET | `{subdomain}.substack.com/api/v1/archive`; paginated |
-| getPost | get full article details by slug | REST GET | `{subdomain}.substack.com/api/v1/posts/{slug}`; includes body HTML |
-| getPostComments | get comments on a post | REST GET | `{subdomain}.substack.com/api/v1/post/{id}/comments`; threaded |
-| getAuthorProfile | get author profile | DOM | navigates to `@handle` page, extracts from rendered HTML |
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| searchPosts | find posts by keyword | query | title, slug, publication.subdomain, post_date | entry point; cross-publication |
+| getArchive | list/search posts in a publication | subdomain ← searchPosts | id, title, slug, post_date, audience | paginated (offset, limit) |
+| getPost | read full article | subdomain, slug ← getArchive | title, body_html, word_count, reaction_count | slug from archive or search |
+| getPostComments | read discussion | subdomain, postId ← getArchive | body, name, date, reaction_count, children | nested replies via children |
+| getTrending | discover popular posts | limit | title, slug, post_date | entry point; cross-publication |
+
+## Quick Start
+
+```bash
+# Search for posts about AI
+openweb substack exec searchPosts '{"query":"artificial intelligence"}'
+
+# List recent posts from a publication
+openweb substack exec getArchive '{"subdomain":"astralcodexten","sort":"new","limit":5}'
+
+# Read a specific post
+openweb substack exec getPost '{"subdomain":"astralcodexten","slug":"open-thread-427"}'
+
+# Get comments on a post
+openweb substack exec getPostComments '{"subdomain":"astralcodexten","postId":158504113}'
+
+# See what's trending
+openweb substack exec getTrending '{"limit":10}'
+```
+
+---
+
+## Site Internals
 
 ## API Architecture
-- **REST-first**: Data served through `/api/v1/*` JSON endpoints
-- **Decentralized**: Main site (substack.com) handles search/discovery; each publication has its own subdomain with archive/post/comment APIs
-- **Custom domains**: Publications can use custom domains (e.g., platformer.news) which proxy to substack infra
-- **Server-side rendering**: Some pages (author profiles) render server-side without separate API calls
+REST API at `/api/v1/*` on each publication's domain. Main site (`substack.com`)
+hosts search and trending. Each publication lives on `{subdomain}.substack.com`
+(or a custom domain that redirects). The adapter navigates to the correct domain
+before making same-origin API calls.
 
 ## Auth
-- Most operations work without auth (`requires_auth: false`)
-- Logged-in users get personalized feeds and subscriber-only content
-- Session tracked via `substack.sid` cookie
-- No CSRF token required for read operations
+No auth required for public read operations. Paywalled posts return truncated
+`body_html`. Login required only for subscriber-only content.
 
 ## Transport
-- `transport: page` — browser fetch for all operations
-- Publication APIs require navigating to the publication's domain first (cross-origin)
-- API calls use `credentials: 'include'` for cookie propagation
-
-## Extraction
-- **Adapter-based**: All operations use the `substack-api` adapter
-- 9 operations use REST API calls via `page.evaluate(fetch(...))`
-- 1 operation (getAuthorProfile) uses page navigation + DOM extraction
+`page` — adapter navigates the browser to the publication's subdomain, then uses
+`page.evaluate(fetch())` for same-origin API calls. Required because publications
+live on different subdomains; node transport cannot dynamically switch origins.
 
 ## Known Issues
-- **Cross-origin publication APIs**: Operations like getPublicationArchive require navigating to the publication's subdomain first, which adds latency
-- **Custom domain variability**: Some publications use custom domains; the adapter normalizes to `{subdomain}.substack.com`
-- **Paywalled content**: Posts with `audience: "only_paid"` return truncated body HTML
-- **Author profile DOM scraping**: Profile data extracted from rendered page, may break if layout changes
-- **Rate limiting**: Substack may rate-limit heavy API usage
+- `/api/v1/publication` returns 403 on some publications (not available for all pubs).
+- Custom domain publications (e.g., platformer.news) redirect from `*.substack.com`.
+  The adapter uses `{subdomain}.substack.com` which follows redirects automatically.
+- Paywalled posts (`audience: "only_paid"`) have truncated content in `body_html`.
