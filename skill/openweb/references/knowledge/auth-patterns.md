@@ -23,6 +23,18 @@ Guide to authentication primitives detected by `classify.ts`. Organized by primi
 | sapisidhash | Signing | SAPISID + origin → SHA-1 header |
 | custom_signing | Signing | Per-request computed params (VM) |
 
+## Per-Operation Override
+
+Auth, CSRF, and signing are normally **site-level** — declared once on the server
+and applied to all operations. However, individual operations can override or
+disable these primitives by setting `auth: false`, `csrf: false`, or
+`signing: false` in their `x-openweb` block. The runtime merges operation-level
+overrides on top of server config via `getServerXOpenWeb()` in
+`src/runtime/operation-context.ts`.
+
+Use this when a site has auth configured but specific operations are genuinely
+public (e.g., health checks, public search, category listings).
+
 ## cookie_session
 
 **Detection**: Correlate cookies set in responses with cookies sent in subsequent requests. Exclude tracking cookies (Google Analytics, Cloudflare, Meta, consent banners — see TRACKING_COOKIE_PREFIXES in classify.ts).

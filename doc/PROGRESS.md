@@ -1,3 +1,9 @@
+## 2026-04-02: Per-operation auth/csrf/signing override
+
+- `getServerXOpenWeb()` merges op-level `x-openweb` overrides on top of server-level config
+- `auth: false` / `csrf: false` / `signing: false` disables the respective primitive at op level
+- Key file: `src/runtime/operation-context.ts`
+
 ## 2026-04-02: Skill doc updates — mixed transport, adapter best practices
 
 **What changed:**

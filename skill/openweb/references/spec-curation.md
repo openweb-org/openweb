@@ -133,6 +133,23 @@ Do not remove auth to make read-only verify pass. If the site has any write
 operations (createIssue, likePost, addToCart, etc.), auth must be preserved even
 if read operations work without it.
 
+**Per-operation override:** If a site has auth configured but some operations are
+public (no auth needed), set `auth: false` on those operations rather than
+removing site-wide auth. The same pattern works for `csrf: false` and
+`signing: false`. The runtime merges operation-level overrides on top of server
+config.
+
+```yaml
+paths:
+  /api/v1/public/categories:
+    get:
+      operationId: getCategories
+      x-openweb:
+        permission: read
+        auth: false      # public endpoint, no auth needed
+        csrf: false
+```
+
 ### `x-openweb` Auth/CSRF Shape
 
 If analysis review found auth issues, edit `servers[0].x-openweb`:

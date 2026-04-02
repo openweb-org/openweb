@@ -33,10 +33,26 @@ Applied to the server object. Every field here affects ALL operations.
 
 ### Auth
 
-Auth is **site-level**. It applies to ALL operations — do not remove auth
-because read operations happen to work without it. Write operations depend on
-it. See `auth-patterns.md` for the full type catalog (cookie_session,
+Auth is **site-level** by default. It applies to ALL operations — do not remove
+auth because read operations happen to work without it. Write operations depend
+on it. See `auth-patterns.md` for the full type catalog (cookie_session,
 localStorage_jwt, exchange_chain, etc.).
+
+**Per-operation override:** If specific operations are genuinely public (no auth
+needed), set `auth: false` at the operation level rather than removing site-wide
+auth. The same applies to `csrf: false` and `signing: false`. The runtime merges
+operation-level `x-openweb` overrides on top of server-level config via
+`getServerXOpenWeb()`.
+
+```yaml
+paths:
+  /api/v1/public/health:
+    get:
+      operationId: getHealth
+      x-openweb:
+        auth: false    # disable server-level auth for this op
+        csrf: false    # disable server-level CSRF for this op
+```
 
 ### CSRF
 
@@ -63,7 +79,9 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `permission` | `read` \| `write` \| `delete` \| `transact` | Controls verify behavior and permission gates. GET = `read`, mutations = `write`/`delete`. |
 | `build` | object | Compiler metadata: `stable_id`, `signature_id`, `tool_version`, `verified`, `signals`. **Do not edit** — managed by the compiler. |
 | `transport` | `node` \| `page` | Override server-level transport for this operation. Rare — use only when one operation needs a different transport than the rest. |
-| `csrf` | CsrfPrimitive + `scope` | Override server-level CSRF for this operation. |
+| `auth` | AuthPrimitive \| `false` | Override server-level auth for this operation. Set `false` to disable auth for a public operation when the server declares site-wide auth. |
+| `csrf` | CsrfPrimitive + `scope` \| `false` | Override server-level CSRF for this operation. Set `false` to disable CSRF for this operation. |
+| `signing` | SigningPrimitive \| `false` | Override server-level signing for this operation. Set `false` to disable signing for this operation. |
 | `pagination` | PaginationPrimitive | Cursor or link-header pagination config. |
 | `extraction` | ExtractionPrimitive | SSR/DOM data extraction. See `extraction-patterns.md`. |
 | `adapter` | AdapterRef | Delegates execution to a TypeScript adapter. The spec path becomes a logical namespace — the runtime does NOT use it for navigation. See below. |
@@ -147,6 +165,15 @@ paths:
       summary: "Like a post"
       x-openweb:
         permission: write
+
+  /api/v1/status:
+    get:
+      operationId: getStatus
+      summary: "Public health check — no auth required"
+      x-openweb:
+        permission: read
+        auth: false
+        csrf: false
 ```
 
 ## Common Mistakes
@@ -154,7 +181,8 @@ paths:
 1. **Removing site-level auth to make read-only verify pass.** Auth is
    site-level — it exists for write operations. Read ops may work without auth,
    but removing it breaks writes. Never remove auth just because `openweb verify`
-   passes without it.
+   passes without it. If an operation is genuinely public, use `auth: false` at
+   the operation level instead.
 
 2. **Confusing `transport: node` + `auth: cookie_session` with "needs browser
    for each request."** With `node` transport, the runtime extracts cookies from
