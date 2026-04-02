@@ -1,3 +1,54 @@
+## 2026-04-02: Skill doc updates — mixed transport, adapter best practices
+
+**What changed:**
+- Added mixed transport site pattern to `x-openweb-extensions.md` (sites that use both node and page transport across operations)
+- Added adapter init/navigation best practices to `spec-curation.md` (permissive init, per-operation navigation, ERR_ABORTED handling)
+
+**Key files:** `skill/openweb/references/knowledge/x-openweb-extensions.md`, `skill/openweb/references/spec-curation.md`
+
+## 2026-04-02: Fidelity adapter — 13/13 PASS
+
+**What changed:**
+- New `fidelity-api` adapter with CSRF token fetch via `page.evaluate`
+- Bypasses browser-fetch CSRF path entirely; handles redirect domain mismatch (fidelity.com → digital.fidelity.com)
+- All 13 operations pass verify
+
+**Key files:** `src/sites/fidelity/adapters/fidelity-api.ts`, `src/sites/fidelity/openapi.yaml`
+**Verification:** `pnpm dev verify fidelity` — 13/13 PASS
+
+## 2026-04-02: Boss adapter navigation fix — 7/7 PASS
+
+**What changed:**
+- Adapter now navigates per-operation (same pattern as google-search/booking/redfin)
+- Permissive `init()` — accepts any boss.com URL
+- Catches `ERR_ABORTED` during navigation (common on heavy SPA pages)
+
+**Key files:** `src/sites/boss/adapters/boss.ts`
+**Verification:** `pnpm dev verify boss` — 7/7 PASS
+
+## 2026-04-02: browser-fetch-executor ssrfValidator fix (A3 resolved)
+
+**What changed:**
+- Propagated `ssrfValidator` to `resolveAuth`, `resolveCsrf`, and `resolveSigning` in `browser-fetch-executor.ts`
+- Same bug as session-executor.ts (fixed earlier for ChatGPT) — `ssrfValidator` was `undefined`, causing sites with page-transport auth resolvers to fail
+
+**Why:**
+- Fidelity's 7 page ops failed because the auth/CSRF/signing resolvers received `undefined` ssrfValidator
+- This resolves the A3 open question from pipeline-gap triage: ssrfValidator is now propagated in ALL executors (session, browser-fetch, http)
+
+**Key files:** `src/runtime/browser-fetch-executor.ts`
+
+## 2026-04-02: build-sites.js clean sync fix
+
+**What changed:**
+- `~/.openweb/sites/` sync now deletes stale cache directory before copying fresh build output (`rmSync` + `cpSync`)
+- Previously, deleted operations' example files lingered in the cache, causing verify to run against ghost operations ("Tool not found" errors)
+
+**Why:**
+- After pruning operations from a site package, `pnpm build` would copy new files over old, but never removed files that no longer exist in source. Verify then tried to load examples for deleted ops.
+
+**Key files:** `scripts/build-sites.js`
+
 ## 2026-04-02: X (Twitter) L3 adapter — dynamic hash resolution + request signing
 
 **What changed:**

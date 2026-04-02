@@ -194,6 +194,14 @@ prior package needed. Only use this when the key is truly public (not user-scope
 - Sites using custom_signing often also serve content via SSR rather than API calls, requiring page.evaluate() extraction.
 - **Webpack signing functions**: When the signing function lives in a webpack module, it can be called via `require(moduleId).exportName(args)` from within `page.evaluate`. Find the module ID by grep-ing the bundle for the header name being set. Module IDs are numeric and may change across deploys — document how to re-find them.
 
+## Runtime: ssrfValidator Propagation
+
+All three HTTP executors — `session-executor.ts`, `browser-fetch-executor.ts`, and
+`http-executor.ts` — now propagate `ssrfValidator` to `resolveAuth`, `resolveCsrf`, and
+`resolveSigning`. This was the A3 open question from pipeline-gap triage: browser-fetch
+executor previously passed `undefined`, causing auth resolution failures on page-transport
+sites (e.g., Fidelity). The gap is closed as of 2026-04-02.
+
 ## No Auth Detected
 
 If classify.ts detects no auth primitive:

@@ -4,6 +4,12 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 
 ## Auth Failures
 
+### ssrfValidator Undefined in Executor (Resolved)
+
+- **Symptoms:** page-transport sites fail auth resolution with undefined ssrfValidator errors
+- **Status:** **Resolved 2026-04-02.** `ssrfValidator` is now propagated in all three executors (`session-executor.ts`, `browser-fetch-executor.ts`, `http-executor.ts`). This was the A3 open question from pipeline-gap triage.
+- **Historical context:** session-executor was fixed first (ChatGPT), then browser-fetch-executor (Fidelity). If a new executor is added, ensure it propagates `ssrfValidator` to `resolveAuth`/`resolveCsrf`/`resolveSigning`.
+
 ### Expired or Missing Cookie
 
 - **Symptoms:** `401` or `403` on operations that previously worked
@@ -51,6 +57,13 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 - **Action:** merge during compile review. URL params that vary per request (pagination, timestamps) should be parameterized, not create new operations.
 
 ## Verify Failures
+
+### Tool Not Found for Deleted Operation (Stale Cache)
+
+- **Symptoms:** `openweb verify` reports "Tool not found" for an operation that was removed from the site package
+- **Detection signals:** the operation exists in `~/.openweb/sites/<site>/examples/` but not in the current `openapi.yaml`
+- **Root cause:** `pnpm build` previously copied new files over old cache without deleting removed files. Fixed 2026-04-02 — `build-sites.js` now does `rmSync` + `cpSync` (clean sync).
+- **Action:** run `pnpm build` to clean sync. The build script deletes the stale cache directory before copying fresh output.
 
 ### DRIFT
 
