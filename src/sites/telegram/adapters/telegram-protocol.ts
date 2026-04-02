@@ -1,12 +1,13 @@
 /**
- * Telegram Web A (web.telegram.org/a/) L3 adapter.
+ * Telegram Web L3 adapter.
  *
- * Telegram-t uses teact (custom React-like framework) with a webpack-bundled
- * global state. State is accessed via getGlobal() found dynamically in the
- * webpack module cache. Contains chats, users, messages as plain objects.
+ * Supports both Web A (/a/ — teact, webpackChunktelegram_t) and
+ * Web K (/k/ — webpackChunkwebk). Reads global state via webpack
+ * module cache. Never navigates or reloads — uses whatever page
+ * the executor provides.
  *
- * Key pitfall: module IDs and export names are mangled and change per deploy.
- * The adapter finds getGlobal dynamically by testing function return shapes.
+ * Key pitfall: module IDs and export names are mangled per deploy.
+ * The adapter finds getGlobal dynamically by testing return shapes.
  */
 
 // Inline CodeAdapter interface — avoid external imports so adapter works from compile cache
@@ -24,9 +25,15 @@ interface CodeAdapter {
 
 type Page = import('playwright-core').Page
 
-/** Inlined in every page.evaluate — finds teact getGlobal by walking webpack modules */
+/**
+ * Find teact/webk getGlobal by walking webpack modules.
+ * Supports both Web A (webpackChunktelegram_t) and Web K (webpackChunkwebk).
+ * Does NOT require currentUserId — works pre-auth so isAuthenticated() can run.
+ */
 function findGetGlobal(): (() => Record<string, unknown>) | null {
-  const wp = (window as Record<string, unknown>).webpackChunktelegram_t as unknown[] | undefined
+  const w = window as Record<string, unknown>
+  // Try Web A first, then Web K
+  const wp = (w.webpackChunktelegram_t ?? w.webpackChunkwebk) as unknown[] | undefined
   if (!wp || !Array.isArray(wp)) return null
   let require: Record<string, unknown> | null = null
   wp.push([[Symbol()], {}, (r: Record<string, unknown>) => { require = r }])
@@ -41,7 +48,7 @@ function findGetGlobal(): (() => Record<string, unknown>) | null {
         if (typeof (mod as Record<string, unknown>)[key] !== 'function') continue
         try {
           const r = ((mod as Record<string, unknown>)[key] as () => Record<string, unknown>)()
-          if (r?.chats && r.users && r.currentUserId) {
+          if (r && typeof r === 'object' && 'chats' in r && 'users' in r) {
             return (mod as Record<string, unknown>)[key] as () => Record<string, unknown>
           }
         } catch { /* module function call may throw */ }
@@ -60,14 +67,26 @@ function makeError(message: string, failureClass: string, retriable = false): Er
   return err
 }
 
+// --- helpers ---
+
+/** Run findGetGlobal in page context and throw if missing */
+function evalGetGlobal(page: Page) {
+  return page.evaluate((fnSrc: string) => {
+    const getGlobal = new Function(`return (${fnSrc})()`)() as (() => Record<string, unknown>) | null
+    if (!getGlobal) throw new Error('getGlobal not found')
+    return getGlobal()
+  }, FIND_GET_GLOBAL_SRC)
+}
+
 // --- Operation handlers ---
 
 async function getChats(page: Page, params: Readonly<Record<string, unknown>>) {
-  return page.evaluate((args: { fnSrc: string; limit: number; folderId?: number }) => {
+  const limit = Number(params.limit) || 50
+  return page.evaluate((args: { fnSrc: string; limit: number }) => {
     const getGlobal = new Function(`return (${args.fnSrc})()`)() as (() => Record<string, unknown>) | null
     if (!getGlobal) throw new Error('getGlobal not found')
     const global = getGlobal() as {
-      chats: { byId: Record<string, { id: string; title?: string; type: string; membersCount?: number; lastMessage?: { date?: number } }>;
+      chats: { byId: Record<string, { id: string; title?: string; type: string; membersCount?: number; lastMessage?: { date?: number } }>
         listIds?: { active?: string[] } }
       users: { byId: Record<string, { id: string; firstName?: string; lastName?: string; usernames?: Array<{ username: string }> }> }
     }
@@ -85,7 +104,7 @@ async function getChats(page: Page, params: Readonly<Record<string, unknown>>) {
         lastMessageDate: chat?.lastMessage?.date,
       }
     })
-  }, { fnSrc: FIND_GET_GLOBAL_SRC, limit: Number(params.limit) || 50, folderId: params.folderId as number | undefined })
+  }, { fnSrc: FIND_GET_GLOBAL_SRC, limit })
 }
 
 async function getMessages(page: Page, params: Readonly<Record<string, unknown>>) {
@@ -224,29 +243,17 @@ async function sendMessage(page: Page, params: Readonly<Record<string, unknown>>
   const text = String(params.text ?? '')
   if (!chatId) throw makeError('chatId is required', 'fatal')
   if (!text) throw makeError('text is required', 'fatal')
-  // Use Telegram's internal message input rather than direct state mutation
-  // Navigate to the chat, type message, and submit
   return page.evaluate(async (args: { chatId: string; text: string }) => {
-    // Find the compose area and type into it
-    // Telegram Web A uses a contenteditable div for message input
-    const input = document.querySelector<HTMLDivElement>('#editable-message-text')
+    // Web A: #editable-message-text, Web K: .input-message-input
+    const input = document.querySelector<HTMLDivElement>('#editable-message-text, .input-message-input')
     if (!input) throw new Error('Message input not found — navigate to a chat first')
-
-    // Focus and clear
     input.focus()
     input.textContent = ''
-
-    // Insert text via execCommand to trigger SPA reactivity
     document.execCommand('insertText', false, args.text)
-
-    // Wait for send button to become active
     await new Promise(r => setTimeout(r, 300))
-
-    // Click send button
-    const sendBtn = document.querySelector<HTMLButtonElement>('button.send, button[aria-label="Send"], .send-button')
+    const sendBtn = document.querySelector<HTMLButtonElement>('button.send, button[aria-label="Send"], .send-button, .btn-send')
     if (!sendBtn) throw new Error('Send button not found')
     sendBtn.click()
-
     await new Promise(r => setTimeout(r, 500))
     return { success: true, chatId: args.chatId, text: args.text }
   }, { chatId, text })
@@ -256,12 +263,30 @@ async function sendMessage(page: Page, params: Readonly<Record<string, unknown>>
 
 const adapter: CodeAdapter = {
   name: 'telegram-protocol',
-  description: 'Telegram Web A global state access via teact/webpack',
+  description: 'Telegram Web global state access via webpack (supports /a/ and /k/)',
 
   async init(page: Page): Promise<boolean> {
-    return page.evaluate(() => {
-      return Array.isArray((window as Record<string, unknown>).webpackChunktelegram_t)
+    // Never navigate — just check if the current page has Telegram state
+    if (!page.url().includes('web.telegram.org')) return false
+
+    // Quick check — state is usually available immediately on a loaded page
+    const ready = await page.evaluate(() => {
+      const w = window as Record<string, unknown>
+      return Array.isArray(w.webpackChunktelegram_t) || Array.isArray(w.webpackChunkwebk)
     })
+    if (!ready) return false
+
+    // Verify getGlobal is accessible (state has bootstrapped)
+    try {
+      const found = await page.evaluate((fnSrc: string) => {
+        try {
+          return new Function(`return (${fnSrc})()`)() !== null
+        } catch { return false }
+      }, FIND_GET_GLOBAL_SRC)
+      return found
+    } catch {
+      return false
+    }
   },
 
   async isAuthenticated(page: Page): Promise<boolean> {

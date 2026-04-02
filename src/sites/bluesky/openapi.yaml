@@ -159,6 +159,17 @@ paths:
     get:
       operationId: searchPosts
       summary: "Search posts by keyword — returns matching posts with author, content, embeds, engagement counts. Requires auth."
+      servers:
+        - url: https://bsky.social
+          x-openweb:
+            transport: node
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
       x-openweb:
         permission: read
         build:
