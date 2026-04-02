@@ -1,10 +1,8 @@
 {
-  "operation_id": "getServiceCfGeo",
-  "method": "get",
-  "replay_safety": "safe_read",
+  "operation_id": "getRecommendedFeed",
   "cases": [
     {
-      "input": {},
+      "input": { "limit": 5 },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

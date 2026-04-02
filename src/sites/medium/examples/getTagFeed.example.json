@@ -1,10 +1,8 @@
 {
-  "operation_id": "getSiteApiManifest",
-  "method": "get",
-  "replay_safety": "safe_read",
+  "operation_id": "getTagFeed",
   "cases": [
     {
-      "input": {},
+      "input": { "tagSlug": "programming" },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

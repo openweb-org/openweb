@@ -1,3 +1,16 @@
+## 2026-04-02: Fix malformed schemas (Ajv compilation)
+
+**What changed:**
+- Fixed `pic_ids.items` — malformed YAML `type: type: object` → `type: string`
+- Fixed `pic_infos.additionalProperties` — replaced broken nesting with typed image object (thumbnail/bmiddle/large/original)
+- Fixed `retweeted_status` — inlined cycle-broken post schema with basic properties instead of bare `type: object`
+
+**Why:**
+- 8/14 operations failed Ajv compilation due to malformed schemas from prior $ref inlining
+- Bare `type: object` on retweeted_status violated spec verify rules
+
+**Verification:** 14/14 Ajv compile pass. Runtime verify pending (page transport, needs CDP browser).
+
 ## 2026-04-01: Enrich response schemas
 
 **What changed:**

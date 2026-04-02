@@ -1,7 +1,5 @@
 {
-  "operation_id": "get",
-  "method": "get",
-  "replay_safety": "safe_read",
+  "operation_id": "getRecommendedWriters",
   "cases": [
     {
       "input": {},

@@ -1,0 +1,12 @@
+{
+  "operation_id": "clapArticle",
+  "cases": [
+    {
+      "input": { "postId": "70d2a62246c0", "numClaps": 1 },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

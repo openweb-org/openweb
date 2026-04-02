@@ -146,19 +146,108 @@ paths:
                         pic_ids:
                           type: array
                           items:
-                            type:
-                              type: object
+                            type: string
                         pic_num:
                           type: integer
                         pic_infos:
                           type: object
                           additionalProperties:
-                            type:
-                              type: object
+                            type: object
                             properties:
-                              type: object
+                              thumbnail:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              bmiddle:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              large:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              original:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              pic_id:
+                                type: string
+                              photo_tag:
+                                type: integer
+                              type:
+                                type: string
+                                description: Image type (pic/gif/livephoto).
                         retweeted_status:
                           type: object
+                          description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                          properties:
+                            id:
+                              type: integer
+                            idstr:
+                              type: string
+                            mid:
+                              type: string
+                            mblogid:
+                              type: string
+                            created_at:
+                              type: string
+                            text:
+                              type: string
+                              description: Post content (HTML).
+                            text_raw:
+                              type: string
+                              description: Post content (plain text).
+                            source:
+                              type: string
+                            user:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                idstr:
+                                  type: string
+                                screen_name:
+                                  type: string
+                                  description: Display name.
+                                profile_image_url:
+                                  type: string
+                                verified:
+                                  type: boolean
+                                avatar_hd:
+                                  type: string
+                            reposts_count:
+                              type: integer
+                            comments_count:
+                              type: integer
+                            attitudes_count:
+                              type: integer
+                              description: Likes count.
+                            pic_ids:
+                              type: array
+                              items:
+                                type: string
+                            pic_num:
+                              type: integer
                   since_id:
                     type:
                       - string
@@ -317,19 +406,108 @@ paths:
                         pic_ids:
                           type: array
                           items:
-                            type:
-                              type: object
+                            type: string
                         pic_num:
                           type: integer
                         pic_infos:
                           type: object
                           additionalProperties:
-                            type:
-                              type: object
+                            type: object
                             properties:
-                              type: object
+                              thumbnail:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              bmiddle:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              large:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              original:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              pic_id:
+                                type: string
+                              photo_tag:
+                                type: integer
+                              type:
+                                type: string
+                                description: Image type (pic/gif/livephoto).
                         retweeted_status:
                           type: object
+                          description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                          properties:
+                            id:
+                              type: integer
+                            idstr:
+                              type: string
+                            mid:
+                              type: string
+                            mblogid:
+                              type: string
+                            created_at:
+                              type: string
+                            text:
+                              type: string
+                              description: Post content (HTML).
+                            text_raw:
+                              type: string
+                              description: Post content (plain text).
+                            source:
+                              type: string
+                            user:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                idstr:
+                                  type: string
+                                screen_name:
+                                  type: string
+                                  description: Display name.
+                                profile_image_url:
+                                  type: string
+                                verified:
+                                  type: boolean
+                                avatar_hd:
+                                  type: string
+                            reposts_count:
+                              type: integer
+                            comments_count:
+                              type: integer
+                            attitudes_count:
+                              type: integer
+                              description: Likes count.
+                            pic_ids:
+                              type: array
+                              items:
+                                type: string
+                            pic_num:
+                              type: integer
                   total_number:
                     type: integer
                   since_id:
@@ -691,19 +869,108 @@ paths:
                             pic_ids:
                               type: array
                               items:
-                                type:
-                                  type: object
+                                type: string
                             pic_num:
                               type: integer
                             pic_infos:
                               type: object
                               additionalProperties:
-                                type:
-                                  type: object
+                                type: object
                                 properties:
-                                  type: object
+                                  thumbnail:
+                                    type: object
+                                    properties:
+                                      url:
+                                        type: string
+                                      width:
+                                        type: integer
+                                      height:
+                                        type: integer
+                                  bmiddle:
+                                    type: object
+                                    properties:
+                                      url:
+                                        type: string
+                                      width:
+                                        type: integer
+                                      height:
+                                        type: integer
+                                  large:
+                                    type: object
+                                    properties:
+                                      url:
+                                        type: string
+                                      width:
+                                        type: integer
+                                      height:
+                                        type: integer
+                                  original:
+                                    type: object
+                                    properties:
+                                      url:
+                                        type: string
+                                      width:
+                                        type: integer
+                                      height:
+                                        type: integer
+                                  pic_id:
+                                    type: string
+                                  photo_tag:
+                                    type: integer
+                                  type:
+                                    type: string
+                                    description: Image type (pic/gif/livephoto).
                             retweeted_status:
                               type: object
+                              description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                              properties:
+                                id:
+                                  type: integer
+                                idstr:
+                                  type: string
+                                mid:
+                                  type: string
+                                mblogid:
+                                  type: string
+                                created_at:
+                                  type: string
+                                text:
+                                  type: string
+                                  description: Post content (HTML).
+                                text_raw:
+                                  type: string
+                                  description: Post content (plain text).
+                                source:
+                                  type: string
+                                user:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: integer
+                                    idstr:
+                                      type: string
+                                    screen_name:
+                                      type: string
+                                      description: Display name.
+                                    profile_image_url:
+                                      type: string
+                                    verified:
+                                      type: boolean
+                                    avatar_hd:
+                                      type: string
+                                reposts_count:
+                                  type: integer
+                                comments_count:
+                                  type: integer
+                                attitudes_count:
+                                  type: integer
+                                  description: Likes count.
+                                pic_ids:
+                                  type: array
+                                  items:
+                                    type: string
+                                pic_num:
+                                  type: integer
                       total:
                         type: integer
   /ajax/statuses/show:
@@ -823,19 +1090,108 @@ paths:
                   pic_ids:
                     type: array
                     items:
-                      type:
-                        type: object
+                      type: string
                   pic_num:
                     type: integer
                   pic_infos:
                     type: object
                     additionalProperties:
-                      type:
-                        type: object
+                      type: object
                       properties:
-                        type: object
+                        thumbnail:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                            width:
+                              type: integer
+                            height:
+                              type: integer
+                        bmiddle:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                            width:
+                              type: integer
+                            height:
+                              type: integer
+                        large:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                            width:
+                              type: integer
+                            height:
+                              type: integer
+                        original:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                            width:
+                              type: integer
+                            height:
+                              type: integer
+                        pic_id:
+                          type: string
+                        photo_tag:
+                          type: integer
+                        type:
+                          type: string
+                          description: Image type (pic/gif/livephoto).
                   retweeted_status:
                     type: object
+                    description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                    properties:
+                      id:
+                        type: integer
+                      idstr:
+                        type: string
+                      mid:
+                        type: string
+                      mblogid:
+                        type: string
+                      created_at:
+                        type: string
+                      text:
+                        type: string
+                        description: Post content (HTML).
+                      text_raw:
+                        type: string
+                        description: Post content (plain text).
+                      source:
+                        type: string
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          idstr:
+                            type: string
+                          screen_name:
+                            type: string
+                            description: Display name.
+                          profile_image_url:
+                            type: string
+                          verified:
+                            type: boolean
+                          avatar_hd:
+                            type: string
+                      reposts_count:
+                        type: integer
+                      comments_count:
+                        type: integer
+                      attitudes_count:
+                        type: integer
+                        description: Likes count.
+                      pic_ids:
+                        type: array
+                        items:
+                          type: string
+                      pic_num:
+                        type: integer
   /ajax/statuses/longtext:
     get:
       operationId: getLongtext
@@ -1169,19 +1525,108 @@ paths:
                         pic_ids:
                           type: array
                           items:
-                            type:
-                              type: object
+                            type: string
                         pic_num:
                           type: integer
                         pic_infos:
                           type: object
                           additionalProperties:
-                            type:
-                              type: object
+                            type: object
                             properties:
-                              type: object
+                              thumbnail:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              bmiddle:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              large:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              original:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                              pic_id:
+                                type: string
+                              photo_tag:
+                                type: integer
+                              type:
+                                type: string
+                                description: Image type (pic/gif/livephoto).
                         retweeted_status:
                           type: object
+                          description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                          properties:
+                            id:
+                              type: integer
+                            idstr:
+                              type: string
+                            mid:
+                              type: string
+                            mblogid:
+                              type: string
+                            created_at:
+                              type: string
+                            text:
+                              type: string
+                              description: Post content (HTML).
+                            text_raw:
+                              type: string
+                              description: Post content (plain text).
+                            source:
+                              type: string
+                            user:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                idstr:
+                                  type: string
+                                screen_name:
+                                  type: string
+                                  description: Display name.
+                                profile_image_url:
+                                  type: string
+                                verified:
+                                  type: boolean
+                                avatar_hd:
+                                  type: string
+                            reposts_count:
+                              type: integer
+                            comments_count:
+                              type: integer
+                            attitudes_count:
+                              type: integer
+                              description: Likes count.
+                            pic_ids:
+                              type: array
+                              items:
+                                type: string
+                            pic_num:
+                              type: integer
                   total_number:
                     type: integer
                   max_page:
@@ -1308,19 +1753,108 @@ paths:
                       pic_ids:
                         type: array
                         items:
-                          type:
-                            type: object
+                          type: string
                       pic_num:
                         type: integer
                       pic_infos:
                         type: object
                         additionalProperties:
-                          type:
-                            type: object
+                          type: object
                           properties:
-                            type: object
+                            thumbnail:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            bmiddle:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            large:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            original:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            pic_id:
+                              type: string
+                            photo_tag:
+                              type: integer
+                            type:
+                              type: string
+                              description: Image type (pic/gif/livephoto).
                       retweeted_status:
                         type: object
+                        description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                        properties:
+                          id:
+                            type: integer
+                          idstr:
+                            type: string
+                          mid:
+                            type: string
+                          mblogid:
+                            type: string
+                          created_at:
+                            type: string
+                          text:
+                            type: string
+                            description: Post content (HTML).
+                          text_raw:
+                            type: string
+                            description: Post content (plain text).
+                          source:
+                            type: string
+                          user:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              idstr:
+                                type: string
+                              screen_name:
+                                type: string
+                                description: Display name.
+                              profile_image_url:
+                                type: string
+                              verified:
+                                type: boolean
+                              avatar_hd:
+                                type: string
+                          reposts_count:
+                            type: integer
+                          comments_count:
+                            type: integer
+                          attitudes_count:
+                            type: integer
+                            description: Likes count.
+                          pic_ids:
+                            type: array
+                            items:
+                              type: string
+                          pic_num:
+                            type: integer
   /ajax/statuses/repost:
     post:
       operationId: repost
@@ -1442,19 +1976,108 @@ paths:
                       pic_ids:
                         type: array
                         items:
-                          type:
-                            type: object
+                          type: string
                       pic_num:
                         type: integer
                       pic_infos:
                         type: object
                         additionalProperties:
-                          type:
-                            type: object
+                          type: object
                           properties:
-                            type: object
+                            thumbnail:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            bmiddle:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            large:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            original:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            pic_id:
+                              type: string
+                            photo_tag:
+                              type: integer
+                            type:
+                              type: string
+                              description: Image type (pic/gif/livephoto).
                       retweeted_status:
                         type: object
+                        description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                        properties:
+                          id:
+                            type: integer
+                          idstr:
+                            type: string
+                          mid:
+                            type: string
+                          mblogid:
+                            type: string
+                          created_at:
+                            type: string
+                          text:
+                            type: string
+                            description: Post content (HTML).
+                          text_raw:
+                            type: string
+                            description: Post content (plain text).
+                          source:
+                            type: string
+                          user:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              idstr:
+                                type: string
+                              screen_name:
+                                type: string
+                                description: Display name.
+                              profile_image_url:
+                                type: string
+                              verified:
+                                type: boolean
+                              avatar_hd:
+                                type: string
+                          reposts_count:
+                            type: integer
+                          comments_count:
+                            type: integer
+                          attitudes_count:
+                            type: integer
+                            description: Likes count.
+                          pic_ids:
+                            type: array
+                            items:
+                              type: string
+                          pic_num:
+                            type: integer
   /ajax/friendships/create:
     post:
       operationId: followUser
@@ -1653,19 +2276,108 @@ paths:
                       pic_ids:
                         type: array
                         items:
-                          type:
-                            type: object
+                          type: string
                       pic_num:
                         type: integer
                       pic_infos:
                         type: object
                         additionalProperties:
-                          type:
-                            type: object
+                          type: object
                           properties:
-                            type: object
+                            thumbnail:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            bmiddle:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            large:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            original:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            pic_id:
+                              type: string
+                            photo_tag:
+                              type: integer
+                            type:
+                              type: string
+                              description: Image type (pic/gif/livephoto).
                       retweeted_status:
                         type: object
+                        description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                        properties:
+                          id:
+                            type: integer
+                          idstr:
+                            type: string
+                          mid:
+                            type: string
+                          mblogid:
+                            type: string
+                          created_at:
+                            type: string
+                          text:
+                            type: string
+                            description: Post content (HTML).
+                          text_raw:
+                            type: string
+                            description: Post content (plain text).
+                          source:
+                            type: string
+                          user:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              idstr:
+                                type: string
+                              screen_name:
+                                type: string
+                                description: Display name.
+                              profile_image_url:
+                                type: string
+                              verified:
+                                type: boolean
+                              avatar_hd:
+                                type: string
+                          reposts_count:
+                            type: integer
+                          comments_count:
+                            type: integer
+                          attitudes_count:
+                            type: integer
+                            description: Likes count.
+                          pic_ids:
+                            type: array
+                            items:
+                              type: string
+                          pic_num:
+                            type: integer
                   tags:
                     type: array
                     items:

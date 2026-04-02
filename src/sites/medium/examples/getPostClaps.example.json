@@ -1,10 +1,8 @@
 {
-  "operation_id": "getSophiWebConfig",
-  "method": "get",
-  "replay_safety": "safe_read",
+  "operation_id": "getPostClaps",
   "cases": [
     {
-      "input": {},
+      "input": { "postId": "70d2a62246c0" },
       "assertions": {
         "status": 200,
         "response_schema_valid": true
