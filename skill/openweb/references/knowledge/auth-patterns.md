@@ -125,7 +125,9 @@ Guide to authentication primitives detected by `classify.ts`. Organized by primi
 - Global variable matching `webpackChunk*`
 - Token in module exports (often deeply nested)
 
-**Examples**: Discord (token in webpack module cache, page transport required)
+**`app_path`**: Some SPAs only load the webpack bundle on authenticated app pages, not the landing page (e.g., Discord loads at `/channels/@me`, not `/`). Set `app_path` so the resolver auto-navigates when the cache is empty.
+
+**Examples**: Discord (token in webpack module cache, page transport required, `app_path: /channels/@me`)
 
 **Export key convention**: Webpack minifies export names in production builds.
 The runtime checks keys in order: `default`, `Z`, `ZP`. This covers most

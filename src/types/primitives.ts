@@ -47,6 +47,7 @@ export type AuthPrimitive =
       readonly chunk_global: string
       readonly module_test: string
       readonly call: string
+      readonly app_path?: string
       readonly inject: Inject
     }
   | {

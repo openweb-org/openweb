@@ -1,3 +1,4 @@
+import { logger } from '../../lib/logger.js'
 import { OpenWebError } from '../../lib/errors.js'
 import type { BrowserHandle, ResolvedInjections } from './types.js'
 
@@ -5,6 +6,8 @@ export interface WebpackModuleWalkConfig {
   readonly chunk_global: string
   readonly module_test: string
   readonly call: string
+  /** Path where the app actually loads its webpack bundle (e.g. /channels/@me for Discord) */
+  readonly app_path?: string
   readonly inject: {
     readonly header?: string
     readonly prefix?: string
@@ -19,20 +22,18 @@ export interface WebpackModuleWalkConfig {
  *
  * This MUST run in browser page context (browser_fetch mode) because the
  * webpack module cache only exists in the page's JS heap.
+ *
+ * When app_path is configured and the cache is empty, auto-navigates
+ * to the app page where the webpack bundle loads (e.g. /channels/@me
+ * for Discord).
  */
-export async function resolveWebpackModuleWalk(
+
+/** Probe the page for the webpack chunk global and attempt to extract the token. */
+async function probeWebpackCache(
   handle: BrowserHandle,
   config: WebpackModuleWalkConfig,
-): Promise<ResolvedInjections & { queryParams?: Record<string, string> }> {
-  validateConfig(config)
-
-  const MAX_RETRIES = 3
-  const RETRY_DELAY_MS = 800
-
-  let result: { status: 'cache_empty' } | { status: 'token_missing' } | { status: 'ok'; token: string } = { status: 'cache_empty' }
-
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    result = await handle.page.evaluate(
+): Promise<{ status: 'cache_empty' } | { status: 'token_missing' } | { status: 'ok'; token: string }> {
+  return handle.page.evaluate(
     (args: { chunkGlobal: string; moduleTest: string; call: string }) => {
       const wp = (window as Record<string, unknown>)[args.chunkGlobal] as
         | Array<unknown>
@@ -67,29 +68,57 @@ export async function resolveWebpackModuleWalk(
         },
       ])
       wp.pop()
-      if (!sawModules) {
-        return { status: 'cache_empty' as const }
-      }
-      if (!found) {
-        return { status: 'token_missing' as const }
-      }
+      if (!sawModules) return { status: 'cache_empty' as const }
+      if (!found) return { status: 'token_missing' as const }
       return { status: 'ok' as const, token: found }
     },
     { chunkGlobal: config.chunk_global, moduleTest: config.module_test, call: config.call },
   )
+}
 
-    if (result.status !== 'cache_empty') break
-    if (attempt < MAX_RETRIES - 1) {
-      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+export async function resolveWebpackModuleWalk(
+  handle: BrowserHandle,
+  config: WebpackModuleWalkConfig,
+  serverUrl?: string,
+): Promise<ResolvedInjections & { queryParams?: Record<string, string> }> {
+  validateConfig(config)
+
+  const MAX_RETRIES = 3
+  const RETRY_DELAY_MS = 800
+
+  let result = await probeWebpackCache(handle, config)
+
+  // Auto-navigate to app_path when cache is empty on the current page
+  if (result.status === 'cache_empty' && config.app_path && serverUrl) {
+    const appUrl = new URL(config.app_path, serverUrl).toString()
+    logger.debug(`webpack_module_walk: cache empty, navigating to ${appUrl}`)
+    try {
+      await handle.page.goto(appUrl, { waitUntil: 'load', timeout: 15_000 })
+      await new Promise(r => setTimeout(r, 3000))
+    } catch (err) {
+      logger.debug(`webpack_module_walk: app_path navigation failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+    result = await probeWebpackCache(handle, config)
+  }
+
+  // Retry loop for transient cache misses
+  if (result.status === 'cache_empty') {
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS))
+      result = await probeWebpackCache(handle, config)
+      if (result.status !== 'cache_empty') break
     }
   }
 
   if (result.status === 'cache_empty') {
+    const action = config.app_path
+      ? `Open a tab to ${config.app_path} and ensure the app finishes loading, then retry.`
+      : 'Keep the tab active until the app finishes loading, then retry.'
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: `webpack_module_walk: webpack cache is not ready for ${config.chunk_global}`,
-      action: 'Keep the tab active until the app finishes loading, then retry.',
+      action,
       retriable: true,
       failureClass: 'retriable',
     })
@@ -164,4 +193,4 @@ function validateConfig(config: WebpackModuleWalkConfig): void {
 
 import { registerResolver } from './registry.js'
 registerResolver('webpack_module_walk', async (ctx, config) =>
-  resolveWebpackModuleWalk(ctx.handle, config as unknown as Parameters<typeof resolveWebpackModuleWalk>[1]))
+  resolveWebpackModuleWalk(ctx.handle, config as unknown as Parameters<typeof resolveWebpackModuleWalk>[1], ctx.serverUrl))

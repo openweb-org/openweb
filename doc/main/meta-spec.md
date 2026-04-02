@@ -100,7 +100,7 @@ paths:
 | `localStorage_jwt` | JWT from localStorage | `key`, `path`, `inject` |
 | `sessionStorage_msal` | MSAL token from sessionStorage | `key_pattern`, `scope_filter`, `token_field`, `inject` |
 | `page_global` | Window global expression | `expression`, `inject`, `values[]` |
-| `webpack_module_walk` | Webpack module cache walk | `chunk_global`, `module_test`, `call`, `inject` |
+| `webpack_module_walk` | Webpack module cache walk | `chunk_global`, `module_test`, `call`, `app_path?`, `inject` |
 | `exchange_chain` | Multi-step token exchange | `steps[]`, `inject` |
 | `fallback` | Ordered auth strategy list (TS type only — not in JSON schema, no runtime resolver) | `strategies[]` |
 

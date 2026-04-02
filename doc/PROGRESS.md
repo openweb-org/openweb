@@ -1,3 +1,19 @@
+## 2026-04-02: Add app_path to webpack_module_walk — Discord auto-navigation fix
+
+**What changed:**
+- Added `app_path` optional field to `webpack_module_walk` auth config
+- When webpack cache is empty and `app_path` is set, the resolver auto-navigates to `{origin}{app_path}` before retrying
+- Discord openapi.yaml: added `app_path: /channels/@me` — webpack bundle only loads on the app page, not the landing page
+- Extracted `probeWebpackCache()` helper for cleaner probe/navigate/retry flow
+
+**Why:**
+- Discord's webpack bundle (`webpackChunkdiscord_app`) only loads at `/channels/@me`, not at `discord.com/`. Without `app_path`, users had to manually open a tab to the correct URL before running any Discord operation.
+
+**Key files:** `src/runtime/primitives/webpack-module-walk.ts`, `src/sites/discord/openapi.yaml`, `src/types/primitives.ts`, `src/types/primitive-schemas.ts`
+**Verification:** `pnpm build` passed, `pnpm test` 780/780 passed, `pnpm dev verify discord` 10/10 PASS
+**Next:** None
+**Blockers:** None
+
 ## 2026-04-02: Fix google-flights adapter — 5/5 PASS
 
 **What changed:**

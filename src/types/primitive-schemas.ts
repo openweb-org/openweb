@@ -106,6 +106,7 @@ export const authPrimitiveSchema = {
         chunk_global: { type: 'string' },
         module_test: { type: 'string' },
         call: { type: 'string' },
+        app_path: { type: 'string' },
         inject: injectSchema,
       },
       additionalProperties: false,

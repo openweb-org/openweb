@@ -15,6 +15,7 @@ servers:
         chunk_global: webpackChunkdiscord_app
         module_test: getToken
         call: getToken
+        app_path: /channels/@me
         inject:
           header: Authorization
 paths:

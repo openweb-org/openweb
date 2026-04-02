@@ -65,6 +65,7 @@ openweb discord exec searchMessages '{"guildId":"GUILD_ID","content":"search ter
 ## Auth
 - **Type:** `webpack_module_walk` — token stored in webpack module cache
 - **Chunk global:** `webpackChunkdiscord_app`
+- **app_path:** `/channels/@me` — webpack bundle only loads on the app page, not the landing page
 - **Transport must be `page`** — token cannot be extracted without browser context
 
 ## Transport

@@ -100,10 +100,13 @@ auth:
   chunk_global: "webpackChunkdiscord_app"
   module_test: "getToken"
   call: "getToken"
+  app_path: "/channels/@me"
   inject: { header: "Authorization" }
 ```
 
 Used by Discord — the auth token lives inside a webpack module.
+
+When `app_path` is set and the webpack cache is empty on the current page, the resolver auto-navigates to `{origin}{app_path}` to load the app bundle before retrying. This handles SPAs where the webpack bundle only loads on authenticated app pages, not the landing page.
 
 -> See: `src/runtime/primitives/webpack-module-walk.ts`
 
