@@ -120,6 +120,8 @@ if (existsSync(outDir)) {
     if (!site.isDirectory()) continue
     const src = path.join(outDir, site.name)
     const dst = path.join(cacheDir, site.name)
+    // Clean sync: delete stale cache dir first, then copy fresh
+    if (existsSync(dst)) rmSync(dst, { recursive: true })
     mkdirSync(dst, { recursive: true })
     cpSync(src, dst, { recursive: true })
     synced++
