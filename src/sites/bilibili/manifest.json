@@ -1,6 +1,6 @@
 {
   "name": "bilibili",
-  "display_name": "Bilibili (哔哩哔哩)",
+  "display_name": "Bilibili (\u54d4\u54e9\u54d4\u54e9)",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.bilibili.com",
@@ -8,7 +8,6 @@
   "requires_auth": false,
   "transport": "page",
   "last_verified": "2026-03-30T21:09:38.972Z",
-  "quarantined": true,
   "fingerprint": {
     "response_shape_hash": "getNavInfo:5a950c37c5cac87c,getVideoOnlineCount:46e53445b9e8640a,getVideoUserRelation:9878574f1f30f335",
     "last_validated": "2026-03-30T21:09:38.973Z"

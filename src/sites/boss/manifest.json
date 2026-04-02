@@ -1,16 +1,16 @@
 {
   "name": "boss",
-  "display_name": "Boss直聘 (BOSS Zhipin)",
+  "display_name": "Boss\u76f4\u8058 (BOSS Zhipin)",
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.zhipin.com",
-  "description": "China job search — search jobs, job details, company profiles, salary statistics, reference data (cities, industries, filters) via page-based DOM extraction and API",
+  "description": "China job search \u2014 search jobs, job details, company profiles, salary statistics, reference data (cities, industries, filters) via page-based DOM extraction and API",
   "requires_auth": false,
   "dependencies": {
-    "searchJobs → getJobDetail": "searchJobs returns jobLink used by getJobDetail",
-    "getJobDetail → getCompanyProfile": "getJobDetail returns company.link used by getCompanyProfile",
-    "searchJobs → getSalary": "getSalary uses same query+city as searchJobs",
-    "getCities → searchJobs": "getCities returns city codes used by searchJobs"
+    "searchJobs \u2192 getJobDetail": "searchJobs returns jobLink used by getJobDetail",
+    "getJobDetail \u2192 getCompanyProfile": "getJobDetail returns company.link used by getCompanyProfile",
+    "searchJobs \u2192 getSalary": "getSalary uses same query+city as searchJobs",
+    "getCities \u2192 searchJobs": "getCities returns city codes used by searchJobs"
   },
   "stats": {
     "operation_count": 7,
@@ -20,7 +20,6 @@
     "ws_count": 0
   },
   "last_verified": "2026-04-01T00:00:00.000Z",
-  "quarantined": true,
   "fingerprint": {
     "response_shape_hash": "",
     "last_validated": "2026-04-01T00:00:00.000Z"
