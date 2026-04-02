@@ -1,15 +1,15 @@
-import type { Page } from 'playwright-core'
 /**
- * WhatsApp Web L3 adapter — accesses internal module system via require().
+ * WhatsApp Web L3 adapter — accesses internal Metro-style module system.
  *
  * WhatsApp Web uses Meta's proprietary module system (__d/__w/require).
- * Data lives in Backbone-style collections accessible via require('WAWeb*Collection').
- * There is no REST/GraphQL API — all data access goes through these internal modules.
+ * Data lives in Backbone-style collections accessible via require('WAWeb*').
+ * No REST/GraphQL API exists — all data goes through internal modules.
  */
+import type { Page } from 'playwright-core'
 import { OpenWebError } from '../../../lib/errors.js'
 import type { CodeAdapter } from '../../../types/adapter.js'
 
-function fatalAdapterError(message: string): OpenWebError {
+function fatal(message: string): OpenWebError {
   return new OpenWebError({
     error: 'execution_failed',
     code: 'EXECUTION_FAILED',
@@ -20,20 +20,15 @@ function fatalAdapterError(message: string): OpenWebError {
   })
 }
 
-function normalizeWhatsAppError(error: unknown): OpenWebError {
-  if (error instanceof OpenWebError) {
-    return error
-  }
-
-  const message = error instanceof Error ? error.message : String(error)
-  if (message.startsWith('Unknown operation:') || message.startsWith('Chat not found:')) {
-    return fatalAdapterError(message)
-  }
-
+function toOpenWebError(error: unknown): OpenWebError {
+  if (error instanceof OpenWebError) return error
+  const msg = error instanceof Error ? error.message : String(error)
+  if (msg.startsWith('Unknown operation:') || msg.startsWith('Chat not found:'))
+    return fatal(msg)
   return new OpenWebError({
     error: 'execution_failed',
     code: 'EXECUTION_FAILED',
-    message,
+    message: msg,
     action: 'Retry after WhatsApp Web finishes loading.',
     retriable: true,
     failureClass: 'retriable',
@@ -50,7 +45,6 @@ export default {
         return typeof (window as Record<string, unknown>).require === 'function'
           && !!(window as Record<string, unknown>).require('WAWebChatCollection' as never)
       } catch {
-        // intentional: WA module not loaded in page context
         return false
       }
     })
@@ -63,7 +57,6 @@ export default {
         const col = req('WAWebChatCollection').ChatCollection as { getModelsArray?: () => unknown[] }
         return (col?.getModelsArray?.()?.length ?? 0) > 0
       } catch {
-        // intentional: WA module not available in page context
         return false
       }
     })
@@ -195,7 +188,6 @@ export default {
                 (c) => (c.id as Record<string, unknown>)?._serialized === args.chatId,
               )
               if (!chat) throw new Error(`Chat not found: ${args.chatId}`)
-
               const bridge = req('WAWebChatSeenBridge') as Record<string, (...a: unknown[]) => Promise<unknown>>
               if (args.read) {
                 bridge.markConversationSeen(chat.id, 0)
@@ -208,18 +200,18 @@ export default {
           )
 
         default:
-          throw fatalAdapterError(`Unknown operation: ${operation}`)
+          throw fatal(`Unknown operation: ${operation}`)
       }
     } catch (error) {
-      throw normalizeWhatsAppError(error)
+      throw toOpenWebError(error)
     }
   },
 } satisfies CodeAdapter
 
 // ── sendMessage ─────────────────────────────────────────────────
 // Uses Playwright keyboard to type into the compose box and press Enter.
-// This is the proven approach — Store-level addAndSendMsgToChat silently
-// drops messages in the adapter execution context.
+// Store-level addAndSendMsgToChat silently drops messages in the adapter
+// execution context, so DOM interaction is the reliable approach.
 
 const COMPOSE_SELECTOR = 'div[contenteditable="true"][data-tab="10"]'
 
@@ -242,7 +234,7 @@ async function sendMessage(
     cmd.Cmd.openChatBottom({ chat })
   }, chatId)
 
-  // 2. Wait for compose box to appear
+  // 2. Wait for compose box
   await page.waitForSelector(COMPOSE_SELECTOR, { timeout: 5000 })
   await page.click(COMPOSE_SELECTOR)
   await page.waitForTimeout(200)

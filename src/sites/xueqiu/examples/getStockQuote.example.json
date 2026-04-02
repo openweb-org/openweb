@@ -1,8 +1,8 @@
 {
-  "operation_id": "getProductRatings",
+  "operation_id": "getStockQuote",
   "cases": [
     {
-      "input": { "productId": "3251376", "retailerId": "57" },
+      "input": { "symbol": "SH600519" },
       "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]

@@ -12,7 +12,7 @@ paths:
   /internal/chats:
     get:
       operationId: getChats
-      summary: Get chat list from internal module system
+      summary: Get chat list — id, name, isGroup, unreadCount, timestamp
       x-openweb:
         permission: read
         build:
@@ -30,7 +30,7 @@ paths:
           schema:
             type: integer
             default: 50
-          description: Max number of chats to return
+          description: Max chats to return
       responses:
         '200':
           description: Array of chat objects
@@ -59,7 +59,7 @@ paths:
   /internal/chats/search:
     get:
       operationId: searchChats
-      summary: Search chats by name or phone number
+      summary: Search chats by name or phone number — id, name, isGroup
       x-openweb:
         permission: read
         build:
@@ -83,7 +83,7 @@ paths:
           schema:
             type: integer
             default: 20
-          description: Max results to return
+          description: Max results
       responses:
         '200':
           description: Array of matching chat objects
@@ -112,7 +112,7 @@ paths:
   /internal/chats/{chatId}:
     get:
       operationId: getChatById
-      summary: Get detailed info for a specific chat
+      summary: Get detailed chat info — name, group status, muted, pinned, lastMessage
       x-openweb:
         permission: read
         build:
@@ -176,7 +176,7 @@ paths:
   /internal/messages:
     get:
       operationId: getMessages
-      summary: Get messages from a specific chat
+      summary: Get messages from a chat — id, fromMe, body, timestamp, type
       x-openweb:
         permission: read
         build:
@@ -200,7 +200,7 @@ paths:
           schema:
             type: integer
             default: 50
-          description: Max number of messages to return
+          description: Max messages to return
       responses:
         '200':
           description: Array of message objects
@@ -274,7 +274,7 @@ paths:
   /internal/contacts:
     get:
       operationId: getContacts
-      summary: Get contact list from internal module system
+      summary: Get contact list — id, name, isMe
       x-openweb:
         permission: read
         build:
@@ -292,7 +292,7 @@ paths:
           schema:
             type: integer
             default: 100
-          description: Max number of contacts to return
+          description: Max contacts to return
       responses:
         '200':
           description: Array of contact objects

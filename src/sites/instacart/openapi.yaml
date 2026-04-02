@@ -15,12 +15,12 @@ paths:
   /internal/searchProducts:
     get:
       operationId: searchProducts
-      summary: Search grocery products by keyword — returns product names, prices, brands, availability
+      summary: Search grocery products by keyword — returns product names, prices, brands, availability, and autocomplete suggestions
       x-openweb:
         permission: read
         build:
           stable_id: ic0001
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
@@ -70,7 +70,7 @@ paths:
                           type: string
                         productId:
                           type: string
-                          description: Instacart product ID (use with getProductRatings, getProductNutrition).
+                          description: Instacart product ID.
                         name:
                           type: string
                         size:
@@ -78,518 +78,64 @@ paths:
                         brandName:
                           type: string
                         price:
-                          type:
-                            - string
-                            - 'null'
-                          description: Display price (e.g. "$2.89").
+                          type: string
+                          description: Display price (e.g. "$1.40 each (est.)").
                         pricePerUnit:
-                          type:
-                            - string
-                            - 'null'
-                          description: Per-unit price (e.g. "$0.16/ct").
+                          type: string
+                        imageUrl:
+                          type: string
                         available:
-                          type:
-                            - boolean
-                            - 'null'
+                          type: boolean
                         stockLevel:
-                          type:
-                            - string
-                            - 'null'
-                          description: Stock status (e.g. "Many in stock").
+                          type: string
                   count:
                     type: integer
-  /internal/getProductDetail:
+
+  /internal/getStoreProducts:
     get:
-      operationId: getProductDetail
-      summary: Get grocery product details — price, availability, brand, size
+      operationId: getStoreProducts
+      summary: Browse products in a store department — returns product names, prices, brands for a specific store and category
       x-openweb:
         permission: read
         build:
           stable_id: ic0002
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
         adapter:
           name: instacart-graphql
-          operation: getProductDetail
-      parameters:
-        - name: productId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Product ID with slug (e.g. "17533153-banana-1-lb").
-        - name: retailerSlug
-          in: query
-          required: false
-          schema:
-            type: string
-            default: publix
-          description: Retailer slug (e.g. "publix", "wegmans", "costco").
-      responses:
-        '200':
-          description: Product details.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  product:
-                    type:
-                      - object
-                      - 'null'
-                    properties:
-                      id:
-                        type: string
-                      productId:
-                        type: string
-                      name:
-                        type: string
-                      size:
-                        type: string
-                      brandName:
-                        type: string
-                      price:
-                        type:
-                          - string
-                          - 'null'
-                      pricePerUnit:
-                        type:
-                          - string
-                          - 'null'
-                      available:
-                        type:
-                          - boolean
-                          - 'null'
-                      stockLevel:
-                        type:
-                          - string
-                          - 'null'
-                  detail:
-                    type:
-                      - object
-                      - 'null'
-                    description: Extended detail data from ItemDetailData query.
-  /internal/getProductRatings:
-    get:
-      operationId: getProductRatings
-      summary: Get product ratings — average rating and star distribution
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ic0003
-          tool_version: 1
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: instacart-graphql
-          operation: getProductRatings
-      parameters:
-        - name: productId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Product ID (numeric, e.g. "17533153").
-        - name: retailerId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Retailer ID (numeric, e.g. "57" for Publix).
-      responses:
-        '200':
-          description: Product ratings.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  averageRating:
-                    type:
-                      - number
-                      - 'null'
-                    description: Average rating on 5-star scale.
-                  totalRatings:
-                    type: integer
-                  distribution:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        stars:
-                          type: integer
-                        count:
-                          type: integer
-                        percent:
-                          type: number
-  /internal/getProductNutrition:
-    get:
-      operationId: getProductNutrition
-      summary: Get product nutritional information — calories, macros, serving size
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ic0004
-          tool_version: 1
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: instacart-graphql
-          operation: getProductNutrition
-      parameters:
-        - name: productId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Product ID with slug (e.g. "3251376-chobani-greek-yogurt-non-fat-plain").
-        - name: retailerSlug
-          in: query
-          required: false
-          schema:
-            type: string
-            default: publix
-          description: Retailer slug (e.g. "publix", "wegmans").
-      responses:
-        '200':
-          description: Nutritional info.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  nutrition:
-                    type:
-                      - object
-                      - 'null'
-                    properties:
-                      calories:
-                        type: number
-                      fat:
-                        type: number
-                      saturatedFat:
-                        type: number
-                      transFat:
-                        type: number
-                      cholesterol:
-                        type: number
-                      sodium:
-                        type: number
-                      carbohydrate:
-                        type: number
-                      fiber:
-                        type: number
-                      sugars:
-                        type: number
-                      addedSugars:
-                        type:
-                          - number
-                          - 'null'
-                      protein:
-                        type: number
-                      servingSize:
-                        type: string
-                      servingsPerContainer:
-                        type: string
-  /internal/getNearbyStores:
-    get:
-      operationId: getNearbyStores
-      summary: Get nearby store delivery ETAs — available retailers and estimated delivery times
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ic0005
-          tool_version: 1
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: instacart-graphql
-          operation: getNearbyStores
-      parameters:
-        - name: postalCode
-          in: query
-          required: true
-          schema:
-            type: string
-          description: ZIP/postal code (e.g. "27704").
-        - name: shopIds
-          in: query
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-          description: Shop IDs to query ETAs for (required, at least one).
-      responses:
-        '200':
-          description: Nearby stores with ETAs.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - stores
-                  - count
-                properties:
-                  stores:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        retailerId:
-                          type: string
-                        etaMinutes:
-                          type:
-                            - integer
-                            - 'null'
-                          description: Estimated delivery time in minutes.
-                        etaDisplay:
-                          type:
-                            - string
-                            - 'null'
-                          description: Display string (e.g. "25 min").
-                  count:
-                    type: integer
-  /internal/getDeliveryWindows:
-    get:
-      operationId: getDeliveryWindows
-      summary: Get delivery time windows — available hours by retailer and date
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ic0006
-          tool_version: 1
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: instacart-graphql
-          operation: getDeliveryWindows
-      parameters:
-        - name: shopIds
-          in: query
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-          description: Shop IDs to query delivery windows for.
-        - name: startDate
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Start date (DD/M/YYYY format, e.g. "24/3/2026").
-        - name: endDate
-          in: query
-          required: true
-          schema:
-            type: string
-          description: End date (DD/M/YYYY format).
-      responses:
-        '200':
-          description: Delivery windows per retailer.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  retailers:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        retailerId:
-                          type: string
-                        deliveryHours:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              date:
-                                type: string
-                              startHour:
-                                type: integer
-                              endHour:
-                                type: integer
-  /internal/getStoreCategories:
-    get:
-      operationId: getStoreCategories
-      summary: Get store department/category navigation — departments, aisles, deals collections
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ic0007
-          tool_version: 1
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: instacart-graphql
-          operation: getStoreCategories
-      parameters:
-        - name: shopId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Shop ID (numeric).
-        - name: retailerSlug
-          in: query
-          required: false
-          schema:
-            type: string
-            default: publix
-          description: Retailer slug, used to auto-extract session token if not provided.
-        - name: retailerInventorySessionToken
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Session token (auto-extracted from store page if omitted).
-      responses:
-        '200':
-          description: Store categories/departments.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - categories
-                  - count
-                properties:
-                  categories:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        name:
-                          type: string
-                          description: Category name (e.g. "Produce", "Dairy", "BOGO").
-                        slug:
-                          type: string
-                          description: URL slug for the collection.
-                        parentId:
-                          type:
-                            - string
-                            - 'null'
-                  count:
-                    type: integer
-  /internal/getStoreInfo:
-    get:
-      operationId: getStoreInfo
-      summary: Get retailer metadata — store name, description, SEO info
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ic0008
-          tool_version: 1
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: instacart-graphql
-          operation: getStoreInfo
+          operation: getStoreProducts
       parameters:
         - name: retailerSlug
           in: query
           required: true
           schema:
             type: string
-          description: Retailer URL slug (e.g. "publix", "costco", "wegmans").
-        - name: retailerId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Retailer ID (numeric).
-        - name: zoneId
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Zone ID for location-specific info.
-      responses:
-        '200':
-          description: Store metadata.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type:
-                      - string
-                      - 'null'
-                  title:
-                    type:
-                      - string
-                      - 'null'
-                    description: Store title template.
-                  description:
-                    type:
-                      - string
-                      - 'null'
-                    description: Store description template.
-                  noIndex:
-                    type: boolean
-  /internal/getCategoryProducts:
-    get:
-      operationId: getCategoryProducts
-      summary: Get products in a store category — browse departments like Produce, Dairy, Frozen
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ic0009
-          tool_version: 1
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: instacart-graphql
-          operation: getCategoryProducts
-      parameters:
-        - name: shopId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Shop ID (numeric).
+          description: Store slug (e.g. "costco", "sprouts", "publix").
         - name: slug
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: Collection slug (e.g. "produce", "dairy", "frozen").
-        - name: postalCode
+            default: produce
+          description: Category slug (e.g. "produce", "dairy", "snacks"). Defaults to "produce".
+        - name: shopId
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: ZIP/postal code.
-        - name: zoneId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Zone ID.
+          description: Shop ID. Auto-resolved from retailerSlug if omitted.
         - name: first
           in: query
           required: false
           schema:
             type: integer
             default: 20
-          description: Number of products to return.
+          description: Max products to return.
       responses:
         '200':
-          description: Collection products.
+          description: Store category products.
           content:
             application/json:
               schema:
@@ -599,9 +145,8 @@ paths:
                   - count
                 properties:
                   collection:
-                    type:
-                      - object
-                      - 'null'
+                    type: object
+                    nullable: true
                     properties:
                       id:
                         type: string
@@ -625,76 +170,75 @@ paths:
                         brandName:
                           type: string
                         price:
-                          type:
-                            - string
-                            - 'null'
+                          type: string
                         pricePerUnit:
-                          type:
-                            - string
-                            - 'null'
+                          type: string
+                        imageUrl:
+                          type: string
                         available:
-                          type:
-                            - boolean
-                            - 'null'
+                          type: boolean
                         stockLevel:
-                          type:
-                            - string
-                            - 'null'
+                          type: string
                   count:
                     type: integer
                   hasMore:
                     type: boolean
-  /internal/getRecipesByProduct:
+
+  /internal/getNearbyStores:
     get:
-      operationId: getRecipesByProduct
-      summary: Get recipe suggestions for a product — recipe names and images
+      operationId: getNearbyStores
+      summary: Find nearby stores with delivery ETAs — returns retailer IDs, estimated delivery times, and display strings
       x-openweb:
         permission: read
         build:
-          stable_id: ic0010
-          tool_version: 1
+          stable_id: ic0003
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
         adapter:
           name: instacart-graphql
-          operation: getRecipesByProduct
+          operation: getNearbyStores
       parameters:
-        - name: productId
+        - name: postalCode
           in: query
           required: true
           schema:
             type: string
-          description: Product ID (numeric).
-        - name: retailerInventorySessionToken
+          description: ZIP/postal code for delivery area (e.g. "90210", "27705").
+        - name: shopIds
           in: query
           required: false
           schema:
-            type: string
-          description: Session token (from store page responses).
+            type: array
+            items:
+              type: string
+          description: Specific shop IDs to check. If empty, returns all available stores.
       responses:
         '200':
-          description: Recipe suggestions.
+          description: Nearby stores with delivery estimates.
           content:
             application/json:
               schema:
                 type: object
                 required:
-                  - recipes
+                  - stores
                   - count
                 properties:
-                  recipes:
+                  stores:
                     type: array
                     items:
                       type: object
                       properties:
-                        id:
+                        retailerId:
                           type: string
-                        name:
+                        etaMinutes:
+                          type: integer
+                          nullable: true
+                          description: Estimated delivery time in minutes.
+                        etaDisplay:
                           type: string
-                        imageUrl:
-                          type:
-                            - string
-                            - 'null'
+                          nullable: true
+                          description: Human-readable ETA (e.g. "25 min").
                   count:
                     type: integer

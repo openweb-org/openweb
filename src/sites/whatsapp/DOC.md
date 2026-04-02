@@ -1,73 +1,83 @@
-# WhatsApp Web — Technical Documentation
+# WhatsApp Web
 
-## Transport
+## Overview
+Messaging platform — L3 adapter accessing Meta's internal module system via `require('WAWeb*')`.
 
-WhatsApp Web uses **encrypted binary WebSocket** (Signal Protocol). All WS frames are opcode 2 (binary), zero JSON. Two concurrent connections:
+## Workflows
 
+### List and read conversations
+1. `getChats` → pick chat → `chatId`
+2. `getMessages(chatId)` → messages with body, timestamp, type
+
+### Find a specific chat
+1. `searchChats(query)` → matching chats → `chatId`
+2. `getChatById(chatId)` → detailed info (archived, pinned, muted, lastMessage)
+
+### Send a message
+1. `getChats` or `searchChats(query)` → `chatId`
+2. `sendMessage(chatId, message)` → success + timestamp
+
+## Operations
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| getChats | list conversations | limit | id, name, isGroup, unreadCount | entry point |
+| getMessages | read messages | chatId ← getChats | id, body, fromMe, timestamp, type | most recent N messages |
+| getContacts | list contacts | limit | id, name, isMe | entry point |
+| searchChats | find chats by name | query | id, name, isGroup | client-side filter |
+| getChatById | chat detail | chatId ← getChats | archived, pinned, muted, lastMessage | |
+| sendMessage | send text | chatId ← getChats, message | success, timestamp | write — uses DOM keyboard input |
+| markAsRead | mark read/unread | chatId ← getChats, read | success | write |
+
+## Quick Start
+
+```bash
+# List recent chats
+openweb whatsapp exec getChats '{"limit": 10}'
+
+# Read messages from a chat
+openweb whatsapp exec getMessages '{"chatId": "1234567890@c.us", "limit": 20}'
+
+# Search for a chat
+openweb whatsapp exec searchChats '{"query": "John"}'
+
+# Get chat details
+openweb whatsapp exec getChatById '{"chatId": "1234567890@c.us"}'
+
+# List contacts
+openweb whatsapp exec getContacts '{"limit": 50}'
+```
+
+---
+
+## Site Internals
+
+## API Architecture
+No REST/GraphQL API. WhatsApp Web uses encrypted binary WebSocket (Signal Protocol) for all communication. Two concurrent WS connections:
 - `wss://web.whatsapp.com/ws/chat` (port 443)
-- `wss://web.whatsapp.com:5222/ws/chat` (port 5222, XMPP-derived)
+- `wss://web.whatsapp.com:5222/ws/chat` (XMPP-derived)
 
-No REST/HTTP API calls — all communication goes through the encrypted WS.
-
-## Application-Level Access
-
-WhatsApp Web uses a **Metro-style module system** (not webpack). Modules are accessible via `require('WAWeb*')` string IDs from `page.evaluate()`.
+All data access goes through Meta's Metro-style module system (`require('WAWeb*')`), not HTTP.
 
 ### Key Modules
 
 | Module | Exports |
-|---|---|
+|--------|---------|
 | `WAWebChatCollection` | `ChatCollection` — all chats with metadata |
-| `WAWebMsgCollection` | `MsgCollection` — messages per chat |
 | `WAWebContactCollection` | `ContactCollection` — all contacts |
-| `WAWebCollections` | Master store: Chat, Msg, Contact, Presence, Label, etc. |
-| `WAWebSendMsgChatAction` | `addAndSendMsgToChat` — send messages |
-| `WAWebCmd` | UI commands (openChat, sendStar, etc.) |
-| `WAWebWidFactory` | `createWid` — create WhatsApp IDs |
-
-### Reading Messages
-
-```javascript
-// In page context (via page.evaluate):
-const { ChatCollection } = require('WAWebChatCollection')
-const chat = ChatCollection.getModelsArray()
-  .find(c => c.id._serialized === '1234567890@c.us')
-const msgs = chat.msgs.getModelsArray()
-
-// msg.body     — decrypted plaintext
-// msg.type     — "chat", "image", "video", etc.
-// msg.t        — Unix timestamp
-// msg.ack      — 0=pending, 1=server, 2=delivered, 3=read
-// msg.id.fromMe — boolean
-```
-
-### Sending Messages
-
-Compose box + Enter key (DOM interaction), or `addAndSendMsgToChat()` via Store.
-
-### IndexedDB
-
-`model-storage` database (version 1910), 100 object stores. Message body field is **empty** in IDB — messages are decrypted in memory only.
-
-## Pipeline Implications
-
-| Aspect | Current WS Pipeline | WhatsApp Needs |
-|---|---|---|
-| Capture layer | CDP Network events | `page.evaluate()` into Store |
-| Data format | JSON WS frames | JS objects from internal models |
-| Schema source | Frame clustering | Model class inspection |
-| Send/receive | WS frame direction | `msg.id.fromMe` boolean |
-
-A **Store-level capture adapter** is needed to bridge WhatsApp's internal API to the JSONL format `ws-load.ts` expects.
+| `WAWebCollections` | Master store: Chat, Msg, Contact, Presence, Label |
+| `WAWebCmd` | UI commands (openChat, sendStar) |
+| `WAWebChatSeenBridge` | Mark read/unread |
 
 ## Auth
+QR code scan in headed browser. Session persists in browser profile. No standard auth primitive — adapter checks `ChatCollection.length > 0` to verify auth.
 
-QR code scan via headed browser. Session persists in browser profile.
+## Transport
+`page` transport only. All operations execute via `page.evaluate()` against internal modules. Node transport is impossible — no HTTP API exists.
 
-## Scripts
-
-| Script | Purpose |
-|---|---|
-| `scripts/explore-whatsapp-ws.ts` | WS binary frame analysis |
-| `scripts/whatsapp-store-extract.ts` | Store data extraction (chats, msgs) |
-| `scripts/whatsapp-final-send.ts` | Send + capture + verify end-to-end |
+## Known Issues
+- **QR scan required**: User must scan QR code in managed browser before operations work.
+- **Binary WS**: Standard capture produces 0 usable API samples — adapter-only site.
+- **sendMessage uses DOM input**: Store-level `addAndSendMsgToChat` silently drops messages in adapter context. Compose box keyboard input is the reliable approach.
+- **Messages decrypted in memory only**: IndexedDB stores empty message bodies — messages only exist decrypted in the in-memory Store.
+- **Module names may change**: Meta can rename `WAWeb*` module IDs in updates.

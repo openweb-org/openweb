@@ -1,0 +1,9 @@
+{
+  "operation_id": "getTimeline",
+  "cases": [
+    {
+      "input": { "since_id": -1, "max_id": -1, "size": 15 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

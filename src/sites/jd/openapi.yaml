@@ -4,263 +4,20 @@ info:
   version: '2.0'
   x-openweb:
     spec_version: '2.0'
-    requires_auth: optional
+    requires_auth: false
 servers:
   - url: https://jd.com
     x-openweb:
       transport: page
 paths:
-  /internal/getRecommendations:
+  /internal/searchProducts:
     get:
-      operationId: getRecommendations
-      summary: Get homepage product recommendations — names, prices, ratings, shops
+      operationId: searchProducts
+      summary: Search products by keyword — name, price, shop, sales volume
       x-openweb:
         permission: read
         build:
           stable_id: jd0001
-          tool_version: 1
-          verified: false
-          signals:
-            - adapter-verified
-        adapter:
-          name: jd-global-api
-          operation: getRecommendations
-      parameters: []
-      responses:
-        '200':
-          description: Product recommendations with full detail.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  title:
-                    type: string
-                  count:
-                    type: integer
-                  products:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        skuId:
-                          type: string
-                          description: JD product SKU ID.
-                        name:
-                          type: string
-                          description: Product name in Chinese.
-                        jdPrice:
-                          type: string
-                          description: JD listed price (CNY).
-                        originalPrice:
-                          type: string
-                          description: Original/suggested retail price (CNY).
-                        promotionalPrice:
-                          type: string
-                          description: Current promotional price (CNY).
-                        shopName:
-                          type: string
-                          description: Seller store name.
-                        shopId:
-                          type: integer
-                        commentCount:
-                          type: string
-                          description: Number of reviews (e.g. "20000").
-                        goodRate:
-                          type: string
-                          description: Positive review percentage (e.g. "98%").
-                        image:
-                          type: string
-                          description: Product image URL.
-                        categoryL1:
-                          type: integer
-                        categoryL2:
-                          type: integer
-                        categoryL3:
-                          type: integer
-                        brandId:
-                          type: string
-  /internal/getPromoBanners:
-    get:
-      operationId: getPromoBanners
-      summary: Get homepage promotional banners — images and links
-      x-openweb:
-        permission: read
-        build:
-          stable_id: jd0002
-          tool_version: 1
-          verified: false
-          signals:
-            - adapter-verified
-        adapter:
-          name: jd-global-api
-          operation: getPromoBanners
-      parameters: []
-      responses:
-        '200':
-          description: Promotional banner ads.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  title:
-                    type: string
-                  banners:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        name:
-                          type: string
-                        image:
-                          type: string
-                        link:
-                          type: string
-                        description:
-                          type: string
-  /internal/getSquarePromotions:
-    get:
-      operationId: getSquarePromotions
-      summary: Get square promotional modules — campaign banners and event links
-      x-openweb:
-        permission: read
-        build:
-          stable_id: jd0003
-          tool_version: 1
-          verified: false
-          signals:
-            - adapter-verified
-        adapter:
-          name: jd-global-api
-          operation: getSquarePromotions
-      parameters: []
-      responses:
-        '200':
-          description: Square promotional modules (left and right).
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  left:
-                    type: object
-                    properties:
-                      title:
-                        type: string
-                      items:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            image:
-                              type: string
-                            link:
-                              type: string
-                  right:
-                    type: object
-                    properties:
-                      title:
-                        type: string
-                      items:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            image:
-                              type: string
-                            link:
-                              type: string
-  /internal/getNewsMessages:
-    get:
-      operationId: getNewsMessages
-      summary: Get site news and announcements — shipping updates, policy notices
-      x-openweb:
-        permission: read
-        build:
-          stable_id: jd0004
-          tool_version: 1
-          verified: false
-          signals:
-            - adapter-verified
-        adapter:
-          name: jd-global-api
-          operation: getNewsMessages
-      parameters: []
-      responses:
-        '200':
-          description: News and announcement messages.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  title:
-                    type: string
-                  messages:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        title:
-                          type: string
-                        link:
-                          type: string
-                        description:
-                          type: string
-  /internal/getCategoryNavigation:
-    get:
-      operationId: getCategoryNavigation
-      summary: Get product category navigation — category names and links
-      x-openweb:
-        permission: read
-        build:
-          stable_id: jd0005
-          tool_version: 1
-          verified: false
-          signals:
-            - adapter-verified
-        adapter:
-          name: jd-global-api
-          operation: getCategoryNavigation
-      parameters: []
-      responses:
-        '200':
-          description: Category navigation tree.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  categories:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        name:
-                          type: string
-                        url:
-                          type: string
-  /internal/searchProducts:
-    get:
-      operationId: searchProducts
-      summary: Search products by keyword — names, prices, ratings, shops
-      x-openweb:
-        permission: read
-        build:
-          stable_id: jd0006
           tool_version: 1
           verified: false
           signals:
@@ -284,7 +41,7 @@ paths:
           description: Page number (30 results per page).
       responses:
         '200':
-          description: Search results with products.
+          description: Search results with product listings.
           content:
             application/json:
               schema:
@@ -296,7 +53,6 @@ paths:
                     type: integer
                   resultCount:
                     type: integer
-                    description: Total number of matching products.
                   products:
                     type: array
                     items:
@@ -304,43 +60,30 @@ paths:
                       properties:
                         skuId:
                           type: string
+                          description: JD product SKU ID.
                         name:
-                          type: string
-                        jdPrice:
-                          type: string
+                          type: ['string', 'null']
+                          description: Product name.
+                        price:
+                          type: ['string', 'null']
                           description: Current price (CNY).
-                        originalPrice:
-                          type: string
-                          description: Original price (CNY).
-                        averageScore:
-                          type: string
-                          description: Average review score (1-5).
-                        goodRate:
-                          type: string
-                          description: Positive review percentage.
-                        commentCount:
-                          type: string
-                          description: Number of reviews.
-                        totalSales:
-                          type: string
-                          description: Sales volume (e.g. "400+").
-                        shopId:
-                          type: string
                         shopName:
-                          type: string
+                          type: ['string', 'null']
+                          description: Seller store name.
+                        sales:
+                          type: ['string', 'null']
+                          description: Sales volume (e.g. "800+").
                         image:
-                          type: string
-                        isJdSelf:
-                          type: boolean
-                          description: Whether sold by JD directly.
+                          type: ['string', 'null']
+                          description: Product image URL.
   /internal/getProductDetail:
     get:
       operationId: getProductDetail
-      summary: Get product detail by SKU ID — name, price, images, variants, reviews
+      summary: Get product detail by SKU ID — name, price, images, variants, review count
       x-openweb:
         permission: read
         build:
-          stable_id: jd0007
+          stable_id: jd0002
           tool_version: 1
           verified: false
           signals:
@@ -377,36 +120,31 @@ paths:
                   brand:
                     type: integer
                   brandName:
-                    type: string
+                    type: ['string', 'null']
                   categories:
                     type: array
                     items:
                       type: integer
-                    description: Category IDs [L1, L2, L3].
                   images:
                     type: array
                     items:
                       type: string
-                    description: Product image URLs.
                   variants:
                     type: array
                     items:
                       type: object
-                      description: SKU variants with color/size/storage options.
                   reviewCount:
-                    type: integer
-                  goodRate:
                     type: string
                   inStock:
                     type: boolean
   /internal/getProductReviews:
     get:
       operationId: getProductReviews
-      summary: Get product reviews by SKU ID — review count, rate, and comments
+      summary: Get product reviews by SKU ID — count, good rate, tags, individual reviews
       x-openweb:
         permission: read
         build:
-          stable_id: jd0008
+          stable_id: jd0003
           tool_version: 1
           verified: false
           signals:
@@ -430,11 +168,20 @@ paths:
                 type: object
                 properties:
                   totalCount:
-                    type: integer
+                    type: string
                     description: Total number of reviews.
                   goodRate:
                     type: string
                     description: Positive review percentage.
+                  tags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        label:
+                          type: string
+                        count:
+                          type: integer
                   reviews:
                     type: array
                     items:
@@ -442,77 +189,52 @@ paths:
                       properties:
                         user:
                           type: string
-                          description: Reviewer username (masked).
                         content:
                           type: string
-                          description: Review text.
-  /internal/getCart:
+  /internal/getProductPrice:
     get:
-      operationId: getCart
-      summary: Get shopping cart contents — item names, prices, shops
+      operationId: getProductPrice
+      summary: Get product price by SKU ID — current price, original price, promotions, stock
       x-openweb:
         permission: read
         build:
-          stable_id: jd0009
+          stable_id: jd0004
           tool_version: 1
           verified: false
           signals:
             - adapter-verified
         adapter:
           name: jd-global-api
-          operation: getCart
-      parameters: []
+          operation: getProductPrice
+      parameters:
+        - name: skuId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JD product SKU ID.
       responses:
         '200':
-          description: Shopping cart contents.
+          description: Product pricing information.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  totalCount:
-                    type: integer
-                    description: Number of items in cart.
-                  items:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        name:
-                          type: string
-                          description: Product name.
-                        price:
-                          type: string
-                          description: Item price (CNY).
-                        shop:
-                          type: string
-                          description: Seller store name.
-  /internal/getHotSearchWords:
-    get:
-      operationId: getHotSearchWords
-      summary: Get trending search keywords — popular search terms on JD
-      x-openweb:
-        permission: read
-        build:
-          stable_id: jd0010
-          tool_version: 1
-          verified: false
-          signals:
-            - adapter-verified
-        adapter:
-          name: jd-global-api
-          operation: getHotSearchWords
-      parameters: []
-      responses:
-        '200':
-          description: Trending search keywords.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  words:
-                    type: array
+                  skuId:
+                    type: string
+                  currentPrice:
+                    type: string
+                    description: Current selling price (CNY).
+                  originalPrice:
+                    type: ['string', 'null']
+                    description: Original/reference price (CNY).
+                  currency:
+                    type: string
+                    enum: [CNY]
+                  inStock:
+                    type: boolean
+                  promotions:
+                    type: ['array', 'null']
                     items:
                       type: string
-                    description: List of trending search terms.

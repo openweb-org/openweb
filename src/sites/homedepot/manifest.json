@@ -4,20 +4,15 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.homedepot.com",
-  "description": "Product search, details, pricing, reviews, images, specs, departments, and store info via browser LD+JSON/DOM extraction",
+  "description": "Product search, product details, and store locator via GraphQL API and DOM extraction",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
-    "operation_count": 10,
+    "operation_count": 3,
     "l1_count": 0,
-    "l2_count": 10,
+    "l2_count": 3,
     "l3_count": 0,
     "ws_count": 0
   },
-  "last_verified": "2026-03-24T00:00:00.000Z",
-  "quarantined": false,
-  "fingerprint": {
-    "response_shape_hash": "searchProducts:pending,getProductDetail:pending",
-    "last_validated": "2026-03-24T00:00:00.000Z"
-  }
+  "quarantined": false
 }

@@ -1,7 +1,7 @@
 {
-  "operation_id": "searchProducts",
+  "operation_id": "getContacts",
   "cases": [{
-    "input": { "query": "bananas", "limit": 5 },
+    "input": { "limit": 10 },
     "assertions": { "status": 200, "response_schema_valid": true }
   }]
 }

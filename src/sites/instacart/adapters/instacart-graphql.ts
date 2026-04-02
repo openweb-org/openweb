@@ -1,18 +1,6 @@
 import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-/**
- * Instacart L3 adapter — GraphQL API via persisted queries (GET).
- *
- * Instacart uses Apollo Client persisted queries: all GraphQL requests are GET
- * with operationName, variables, and extensions (sha256Hash) as query params.
- * Full query strings are rejected (PersistedQueryNotSupported).
- *
- * Auth is via cookie_session (credentials: 'include' in browser fetch).
- */
 import type { CodeAdapter } from '../../../types/adapter.js'
-import { getSearchResults, graphqlGet, normalizeItem } from './queries.js'
-
-/* ---------- operation handlers ---------- */
+import { graphqlGet, normalizeItem } from './queries.js'
 
 async function searchProducts(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const query = String(params.query ?? '')
@@ -28,8 +16,29 @@ async function searchProducts(page: Page, params: Record<string, unknown>): Prom
 
   const suggestions = (data.crossRetailerSearchAutosuggestions ?? []) as Array<Record<string, unknown>>
 
-  // Now use the search to get actual product results via page navigation + interception
-  const items = await getSearchResults(page, query)
+  // Navigate to search results page to trigger Items query via response interception
+  const items: unknown[] = []
+  const handler = async (response: { url(): string; json(): Promise<unknown> }) => {
+    if (response.url().includes('operationName=Items')) {
+      try {
+        const body = (await response.json()) as { data?: { items?: unknown[] } }
+        if (body.data?.items) {
+          for (const item of body.data.items) {
+            items.push(normalizeItem(item as Record<string, unknown>))
+          }
+        }
+      } catch { /* ignore parse errors from non-JSON responses */ }
+    }
+  }
+
+  page.on('response', handler)
+  try {
+    const searchUrl = `https://www.instacart.com/store/s?k=${encodeURIComponent(query)}`
+    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+    await page.waitForTimeout(5000)
+  } finally {
+    page.off('response', handler)
+  }
 
   return {
     suggestions: suggestions.map((s) => ({
@@ -41,248 +50,63 @@ async function searchProducts(page: Page, params: Record<string, unknown>): Prom
   }
 }
 
-async function getProductDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const productId = String(params.productId ?? '')
-  const retailerSlug = String(params.retailerSlug ?? 'publix')
+async function getStoreProducts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const retailerSlug = String(params.retailerSlug ?? '')
+  const slug = String(params.slug ?? '')
+  const first = Number(params.first ?? 20)
 
-  // Navigate to product page and intercept responses
-  const detail: Record<string, unknown> = {}
+  // Navigate to store page to get shopId and session token
+  let shopId = String(params.shopId ?? '')
+  let zoneId = ''
+  let postalCode = ''
+  let token = ''
 
-  const handler = async (response: { url(): string; json(): Promise<unknown> }) => {
-    const url = response.url()
-    try {
-      if (url.includes('operationName=ItemDetailData')) {
-        const body = (await response.json()) as { data?: { itemDetail?: unknown } }
-        if (body.data?.itemDetail) detail.itemDetail = body.data.itemDetail
-      }
-      if (url.includes('operationName=Items') && !detail.items) {
-        const body = (await response.json()) as { data?: { items?: unknown[] } }
-        if (body.data?.items?.length) {
-          detail.items = body.data.items.map((i) => normalizeItem(i as Record<string, unknown>))
-        }
-      }
-    } catch { /* ignore */ }
-  }
-
-  page.on('response', handler)
-  try {
-    const productUrl = `https://www.instacart.com/products/${productId}?retailerSlug=${retailerSlug}`
-    await page.goto(productUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {}) // intentional: best-effort navigation
-    await page.waitForTimeout(5000)
-  } finally {
-    page.off('response', handler)
-  }
-
-  const product = detail.items ? (detail.items as unknown[])[0] : null
-  return { product, detail: detail.itemDetail ?? null }
-}
-
-async function getProductRatings(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const productId = String(params.productId ?? '')
-  const retailerId = String(params.retailerId ?? '')
-
-  const data = (await graphqlGet(page, 'GetProductRatings', {
-    id: productId,
-    retailerId,
-  })) as Record<string, unknown>
-
-  const ratings = data.productRatings as Record<string, unknown>
-  const productRating = ratings?.productRating as Record<string, unknown> | undefined
-  const unitRatings = (ratings?.productUnitRatings ?? []) as Array<Record<string, unknown>>
-
-  return {
-    averageRating: productRating?.value ? Number(productRating.value) / 20 : null,
-    totalRatings: productRating?.amount ?? 0,
-    distribution: unitRatings.map((r) => ({
-      stars: Math.round(Number(r.value) / 20),
-      count: r.amount,
-      percent: r.percent,
-    })),
-  }
-}
-
-async function getProductNutrition(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const productId = String(params.productId ?? '')
-  const retailerSlug = String(params.retailerSlug ?? 'publix')
-
-  // Navigate to product page to get nutrition in context (direct API returns null without session)
-  let info: Record<string, unknown> | undefined
-
-  const handler = async (response: { url(): string; json(): Promise<unknown> }) => {
-    if (response.url().includes('operationName=ProductNutritionalInfo') && !info) {
-      try {
-        const body = (await response.json()) as { data?: { productNutritionalInfo?: { nutritionalInfo?: Record<string, unknown> } } }
-        if (body.data?.productNutritionalInfo?.nutritionalInfo) {
-          info = body.data.productNutritionalInfo.nutritionalInfo
-        }
-      } catch { /* ignore */ }
-    }
-  }
-
-  page.on('response', handler)
-  try {
-    const productUrl = `https://www.instacart.com/products/${productId}?retailerSlug=${retailerSlug}`
-    await page.goto(productUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {}) // intentional: best-effort navigation
-    await page.waitForTimeout(5000)
-  } finally {
-    page.off('response', handler)
-  }
-
-  if (!info) return { nutrition: null }
-
-  return {
-    nutrition: {
-      calories: info.calories,
-      fat: info.fat,
-      saturatedFat: info.saturatedFat,
-      transFat: info.transFat,
-      cholesterol: info.cholesterol,
-      sodium: info.sodium,
-      carbohydrate: info.carbohydrate,
-      fiber: info.fiber,
-      sugars: info.sugars,
-      addedSugars: info.addedSugars,
-      protein: info.protein,
-      servingSize: info.servingSize,
-      servingsPerContainer: info.servingsPerContainer,
-    },
-  }
-}
-
-async function getNearbyStores(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const postalCode = String(params.postalCode ?? '')
-  const shopIds = (params.shopIds ?? []) as string[]
-
-  const data = (await graphqlGet(page, 'GetAccurateRetailerEtas', {
-    addressId: null,
-    homeLoadUuid: '',
-    postalCode,
-    retailerIds: [],
-    serviceType: 'DELIVERY',
-    shopIds,
-  })) as Record<string, unknown>
-
-  const etas = (data.getAccurateRetailerEtas ?? []) as Array<Record<string, unknown>>
-
-  return {
-    stores: etas.map((eta) => {
-      const vs = eta.viewSection as Record<string, unknown> | undefined
-      return {
-        retailerId: eta.retailerId,
-        etaMinutes: eta.etaSeconds ? Math.round(Number(eta.etaSeconds) / 60) : null,
-        etaDisplay: vs?.homeCondensedEtaString ?? null,
-      }
-    }),
-    count: etas.length,
-  }
-}
-
-async function getDeliveryWindows(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const shopIds = (params.shopIds ?? []) as string[]
-  const startDate = String(params.startDate ?? '')
-  const endDate = String(params.endDate ?? '')
-
-  const data = (await graphqlGet(page, 'DeliveryHoursInfo', {
-    startDate,
-    endDate,
-    shopIds,
-    retailerLocations: null,
-  })) as Record<string, unknown>
-
-  const info = (data.deliveryHoursInfo ?? []) as Array<Record<string, unknown>>
-
-  return {
-    retailers: info.map((r) => ({
-      retailerId: r.retailerId,
-      deliveryHours: ((r.deliveryHours ?? []) as Array<Record<string, unknown>>).map((h) => ({
-        date: h.date,
-        startHour: h.startHour,
-        endHour: h.endHour,
-      })),
-    })),
-  }
-}
-
-async function getStoreCategories(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const shopId = String(params.shopId ?? '')
-  let token = String(params.retailerInventorySessionToken ?? '')
-
-  // If no token provided, navigate to store page to extract it
-  if (!token) {
-    const handler = async (response: { url(): string; json(): Promise<unknown> }) => {
-      if (response.url().includes('operationName=ShopCollectionScoped') && !token) {
+  if (!shopId) {
+    const storeHandler = async (response: { url(): string; json(): Promise<unknown> }) => {
+      if (response.url().includes('operationName=ShopCollectionScoped') && !shopId) {
         try {
-          const body = (await response.json()) as { data?: { shopCollection?: { shops?: Array<{ retailerInventorySessionToken?: string }> } } }
+          const body = (await response.json()) as {
+            data?: { shopCollection?: { shops?: Array<{ shopId?: string; retailerInventorySessionToken?: string; zoneId?: string; postalCode?: string }> } }
+          }
           const shops = body.data?.shopCollection?.shops
-          if (shops?.[0]?.retailerInventorySessionToken) {
-            token = shops[0].retailerInventorySessionToken
+          if (shops?.[0]) {
+            shopId = shops[0].shopId ?? ''
+            token = shops[0].retailerInventorySessionToken ?? ''
           }
         } catch { /* ignore */ }
       }
     }
 
-    page.on('response', handler)
+    page.on('response', storeHandler)
     try {
-      const retailerSlug = String(params.retailerSlug ?? 'publix')
-      await page.goto(`https://www.instacart.com/store/${retailerSlug}/storefront`, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {}) // intentional: best-effort navigation
+      await page.goto(`https://www.instacart.com/store/${retailerSlug}/storefront`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 15000,
+      }).catch(() => {})
       await page.waitForTimeout(5000)
     } finally {
-      page.off('response', handler)
+      page.off('response', storeHandler)
     }
   }
 
-  const data = (await graphqlGet(page, 'DepartmentNavCollections', {
-    retailerInventorySessionToken: token,
-    includeSlugs: [],
-    shopId,
-  })) as Record<string, unknown>
+  // Extract zone and postal from page context
+  const geoInfo = await page.evaluate(() => {
+    try {
+      const stateEl = document.querySelector('script#node-state')
+      if (stateEl?.textContent) {
+        const state = JSON.parse(stateEl.textContent)
+        return { zoneId: state.zoneId || '', postalCode: state.postalCode || '' }
+      }
+    } catch { /* ignore */ }
+    return { zoneId: '', postalCode: '' }
+  })
+  zoneId = geoInfo.zoneId || '714'
+  postalCode = geoInfo.postalCode || ''
 
-  const collections = (data.deptCollections ?? []) as Array<Record<string, unknown>>
-
-  return {
-    categories: collections.map((c) => ({
-      id: c.id,
-      name: c.name,
-      slug: c.slug,
-      parentId: c.parentId,
-    })),
-    count: collections.length,
-  }
-}
-
-async function getStoreInfo(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const retailerSlug = String(params.retailerSlug ?? '')
-  const retailerId = String(params.retailerId ?? '')
-  const zoneId = String(params.zoneId ?? '')
-
-  const data = (await graphqlGet(page, 'LandingRetailerMetas', {
-    retailerSlug,
-    retailerId,
-    zoneId,
-    pageType: 'default',
-  })) as Record<string, unknown>
-
-  const metas = data.landingRetailerMetas as Record<string, unknown> | undefined
-  const vs = metas?.viewSection as Record<string, unknown> | undefined
-
-  return {
-    id: metas?.id ?? null,
-    title: vs?.titleString ?? null,
-    description: vs?.descriptionString ?? null,
-    noIndex: metas?.noIndex ?? false,
-  }
-}
-
-async function getCategoryProducts(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const shopId = String(params.shopId ?? '')
-  const slug = String(params.slug ?? '')
-  const postalCode = String(params.postalCode ?? '')
-  const zoneId = String(params.zoneId ?? '')
-  const first = Number(params.first ?? 20)
-
+  // Fetch collection products
   const data = (await graphqlGet(page, 'CollectionProductsWithFeaturedProducts', {
     shopId,
-    slug,
+    slug: slug || 'produce',
     filters: [],
     pageViewId: crypto.randomUUID(),
     itemsDisplayType: 'collections_all_items_grid',
@@ -296,11 +120,10 @@ async function getCategoryProducts(page: Page, params: Record<string, unknown>):
   const collection = coll?.collection as Record<string, unknown> | undefined
   const itemIds = (coll?.itemIds ?? []) as string[]
 
-  // Fetch actual item data using Items query
   let products: unknown[] = []
   if (itemIds.length > 0) {
     const itemsData = (await graphqlGet(page, 'Items', {
-      ids: itemIds,
+      ids: itemIds.slice(0, first),
       shopId,
       zoneId,
       postalCode,
@@ -318,65 +141,97 @@ async function getCategoryProducts(page: Page, params: Record<string, unknown>):
   }
 }
 
-async function getRecipesByProduct(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const productId = String(params.productId ?? '')
-  const retailerInventorySessionToken = String(params.retailerInventorySessionToken ?? '')
+async function getNearbyStores(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const postalCode = String(params.postalCode ?? '')
+  const shopIds = (params.shopIds ?? []) as string[]
 
-  const data = (await graphqlGet(page, 'RecipesByProductId', {
-    retailerInventorySessionToken,
-    productId,
-  })) as Record<string, unknown>
+  // If shopIds provided, call GetAccurateRetailerEtas directly
+  if (shopIds.length > 0) {
+    const data = (await graphqlGet(page, 'GetAccurateRetailerEtas', {
+      addressId: null,
+      homeLoadUuid: '',
+      postalCode,
+      retailerIds: [],
+      serviceType: 'DELIVERY',
+      shopIds,
+    })) as Record<string, unknown>
 
-  const recipes = (data.recipesByProductId ?? []) as Array<Record<string, unknown>>
+    const etas = (data.getAccurateRetailerEtas ?? []) as Array<Record<string, unknown>>
+    return formatEtas(etas)
+  }
 
+  // No shopIds — navigate to store directory and intercept the ETA response
+  const etas: Array<Record<string, unknown>> = []
+  const handler = async (response: { url(): string; json(): Promise<unknown> }) => {
+    if (response.url().includes('operationName=GetAccurateRetailerEtas') && etas.length === 0) {
+      try {
+        const body = (await response.json()) as {
+          data?: { getAccurateRetailerEtas?: Array<Record<string, unknown>> }
+        }
+        if (body.data?.getAccurateRetailerEtas?.length) {
+          etas.push(...body.data.getAccurateRetailerEtas)
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  page.on('response', handler)
+  try {
+    // Navigate to a different page first to force fresh load
+    if (page.url().includes('instacart.com/store/directory')) {
+      await page.goto('https://www.instacart.com/', { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+      await page.waitForTimeout(2000)
+    }
+    await page.goto('https://www.instacart.com/store/directory?filter=all', {
+      waitUntil: 'domcontentloaded',
+      timeout: 15000,
+    }).catch(() => {})
+    await page.waitForTimeout(6000)
+  } finally {
+    page.off('response', handler)
+  }
+
+  return formatEtas(etas)
+}
+
+function formatEtas(etas: Array<Record<string, unknown>>) {
   return {
-    recipes: recipes.map((r) => ({
-      id: r.id,
-      name: r.name,
-      imageUrl: (r.image as Record<string, string>)?.url ?? null,
-    })),
-    count: recipes.length,
+    stores: etas.map((eta) => {
+      const vs = eta.viewSection as Record<string, unknown> | undefined
+      return {
+        retailerId: eta.retailerId,
+        etaMinutes: eta.etaSeconds ? Math.round(Number(eta.etaSeconds) / 60) : null,
+        etaDisplay: vs?.homeCondensedEtaString ?? null,
+      }
+    }),
+    count: etas.length,
   }
 }
 
-/* ---------- adapter export ---------- */
-
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
   searchProducts,
-  getProductDetail,
-  getProductRatings,
-  getProductNutrition,
+  getStoreProducts,
   getNearbyStores,
-  getDeliveryWindows,
-  getStoreCategories,
-  getStoreInfo,
-  getCategoryProducts,
-  getRecipesByProduct,
 }
 
 const adapter: CodeAdapter = {
   name: 'instacart-graphql',
-  description: 'Instacart GraphQL API — grocery search, product details, pricing, delivery, stores',
+  description: 'Instacart GraphQL API — grocery search, store products, nearby stores with delivery ETAs',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('instacart.com')
   },
 
-  async isAuthenticated(page: Page): Promise<boolean> {
-    const cookies = await page.context().cookies('https://www.instacart.com')
-    return cookies.some((c) => c.name === '_instacart_session' || c.name === 'session_token')
+  async isAuthenticated(_page: Page): Promise<boolean> {
+    return true // guest access — read ops work without login
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
     const handler = OPERATIONS[operation]
     if (!handler) {
-      throw OpenWebError.unknownOp(operation)
+      throw Object.assign(new Error(`Unknown operation: ${operation}`), { failureClass: 'fatal' })
     }
-    try {
-      return await handler(page, { ...params })
-    } catch (error) {
-      throw toOpenWebError(error)
-    }
+    return handler(page, { ...params })
   },
 }
 

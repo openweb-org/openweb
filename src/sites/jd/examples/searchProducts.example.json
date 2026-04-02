@@ -1,7 +1,7 @@
 {
   "operation_id": "searchProducts",
   "cases": [{
-    "input": { "query": "bananas", "limit": 5 },
+    "input": { "keyword": "手机" },
     "assertions": { "status": 200, "response_schema_valid": true }
   }]
 }

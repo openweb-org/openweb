@@ -1,0 +1,9 @@
+{
+  "operation_id": "getOrderBook",
+  "cases": [
+    {
+      "input": { "symbol": "SH600519" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "operation_id": "searchStocks",
+  "cases": [
+    {
+      "input": { "q": "茅台", "count": 10 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

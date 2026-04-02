@@ -1,0 +1,9 @@
+{
+  "operation_id": "getIndustryStocks",
+  "cases": [
+    {
+      "input": { "code": "SH600519", "type": 1, "size": 30 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

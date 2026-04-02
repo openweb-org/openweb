@@ -1,24 +1,15 @@
 # WhatsApp Web — Progress
 
-## 2026-03-25: WS Exploration
+## 2026-04-01: Full rediscovery (adapter-only)
 
-### Wire-level capture
-- 30s passive capture: 288 frames, **100% binary** (opcode 2), zero JSON
-- Frame sizes: 44B–54KB, median 84B
-- Signal Protocol end-to-end encryption — pipeline `ws-load.ts` skips all frames
-- **Wire-level WS capture is not viable**
+**What changed:**
+- Standard capture attempted: 2 requests, 0 WS, 0 usable API samples (encrypted binary WS)
+- Confirmed adapter-only path: Metro-style `require('WAWeb*')` module system
+- 7 operations: getChats, getMessages, getContacts, searchChats, getChatById, sendMessage, markAsRead
+- All operations use page transport + adapter (no HTTP API exists)
 
-### Store-level breakthrough
-- Discovered Metro-style module system: `require('WAWeb*')` with string IDs
-- Note: `webpackChunkwhatsapp_web_client.push` is `[native code]` — classic webpack injection does NOT work
-- Accessed 42 chats, 2,253 contacts, decrypted messages via `page.evaluate()`
-- Successfully sent 3 test messages to safe contact, verified delivery (ack=1)
+**Why:**
+- Rediscovery from scratch — prior package deleted from worktree
+- WhatsApp Web uses Signal Protocol encrypted binary WebSocket, no REST/GraphQL
 
-### Current status
-- HTTP adapter exists (openapi.yaml with existing operations)
-- WS capture blocked by encryption — needs Store-level capture adapter
-- Store-level access proven viable but not yet integrated into pipeline
-
-### Next steps
-- Design Store-level capture adapter that converts WhatsApp Store data → JSONL
-- Consider: is this a WhatsApp-specific adapter, or a general pattern for encrypted-WS sites?
+**Verification:** adapter probe confirmed module system accessible, collections available

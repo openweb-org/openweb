@@ -1,7 +1,7 @@
 {
-  "operation_id": "searchProducts",
+  "operation_id": "getProductReviews",
   "cases": [{
-    "input": { "query": "bananas", "limit": 5 },
+    "input": { "skuId": "100085781898" },
     "assertions": { "status": 200, "response_schema_valid": true }
   }]
 }

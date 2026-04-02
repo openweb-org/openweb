@@ -1,9 +1,16 @@
-# JD.com Fixture Progress
+## 2026-04-01: Rediscovery — DOM extraction (4 ops)
 
-## 2026-03-24: Initial discovery
+**What changed:**
+- Complete rewrite from prior h5st-signed API + login-required ops to pure DOM extraction
+- 4 operations: searchProducts, getProductDetail, getProductReviews, getProductPrice
+- No auth required — all data from public pages
+- Replaced CSS class selectors with attribute-based selectors (`[data-sku]`, `[title]`) for resilience against CSS module hash changes
 
-**What:** Discovered and compiled JD Global (global.jd.com) fixture with 5 operations via CDP capture. Uses h5st-signed internal API through api.m.jd.com with L3 page adapter.
+**Why:**
+- Prior adapter required login for search/detail/reviews (api.m.jd.com returned 403 without cookies)
+- h5st signing via PSign was fragile and domain-specific
+- DOM extraction works without any authentication
+- CSS module selectors from prior version broke on deployment
 
-**Operations:** getRecommendations, getPromoBanners, getSquarePromotions, getNewsMessages, getCategoryNavigation
-
-**Note:** Limited to global.jd.com homepage operations. Main JD search/product detail (search.jd.com, item.jd.com) requires login and has heavier bot detection.
+**Verification:** adapter-verified via openweb verify jd
+**Commit:** pending

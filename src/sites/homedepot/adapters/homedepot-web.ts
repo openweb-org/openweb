@@ -1,352 +1,306 @@
 import type { Page } from 'playwright-core'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-/**
- * Home Depot adapter — LD+JSON and DOM extraction from browser-rendered pages.
- *
- * Product pages embed LD+JSON Product schema with rich data.
- * Search/browse pages use ProductPod DOM components.
- * Store pages embed LD+JSON LocalBusiness + FAQPage schemas.
- */
-import type { CodeAdapter } from '../../../types/adapter.js'
 
-/* ---------- helpers ---------- */
+interface CodeAdapter {
+  readonly name: string
+  readonly description: string
+  init(page: Page): Promise<boolean>
+  isAuthenticated(page: Page): Promise<boolean>
+  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
+}
 
-function parseLdJson(scripts: NodeListOf<Element>): any[] {
-  const results: any[] = []
-  for (const s of scripts) {
-    try {
-      results.push(JSON.parse(s.textContent ?? ''))
-    } catch { /* skip */ }
+function validationError(msg: string): Error {
+  return Object.assign(new Error(msg), { failureClass: 'fatal' })
+}
+function unknownOpError(op: string): Error {
+  return Object.assign(new Error(`Unknown operation: ${op}`), { failureClass: 'fatal' })
+}
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+const GRAPHQL_URL = '/federation-gateway/graphql'
+
+const SEARCH_QUERY = `query searchModel($keyword: String, $storeId: String, $storefilter: StoreFilter, $startIndex: Int, $pageSize: Int, $orderBy: ProductSort, $filter: ProductFilter, $channel: Channel, $navParam: String) {
+  searchModel(keyword: $keyword, storeId: $storeId, storefilter: $storefilter, channel: $channel, navParam: $navParam) {
+    id
+    searchReport { totalProducts keyword }
+    products(startIndex: $startIndex, pageSize: $pageSize, orderBy: $orderBy, filter: $filter) {
+      itemId
+      dataSources
+      identifiers { productLabel canonicalUrl brandName itemId modelNumber productType storeSkuNumber }
+      media { images { url sizes } }
+      pricing { original value alternatePriceDisplay message }
+      reviews { ratingsReviews { averageRating totalReviews } }
+      availabilityType { type }
+      badges { label }
+      info { isSponsored }
+      fulfillment { fulfillmentOptions { type services { type hasFreeShipping } } }
+    }
   }
-  return results
-}
+}`
 
-/* ---------- Search ---------- */
+const PRODUCT_QUERY = `query productClientOnlyProduct($itemId: String!, $storeId: String, $zipCode: String) {
+  product(itemId: $itemId) {
+    itemId
+    dataSources
+    identifiers { productLabel canonicalUrl brandName itemId modelNumber productType storeSkuNumber }
+    details { collection description descriptiveAttributes { name value } highlights }
+    media { images { url sizes type subType } }
+    pricing { original value alternatePriceDisplay message }
+    reviews { ratingsReviews { averageRating totalReviews } }
+    specificationGroup { specTitle specifications { specName specValue } }
+    availabilityType { type }
+    fulfillment(storeId: $storeId, zipCode: $zipCode) { fulfillmentOptions { type services { type hasFreeShipping deliveryTimeline } } }
+    taxonomy { breadCrumbs { label url } }
+  }
+}`
 
-async function searchProducts(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const pods = document.querySelectorAll('[data-component*="ProductPod"]')
-    const seen = new Set<string>()
-    const products: {
-      name: string
-      url: string
-      price: string | null
-      wasPrice: string | null
-      savings: string | null
-      rating: string | null
-      reviewCount: string | null
-      brand: string | null
-      image: string | null
-    }[] = []
+async function graphqlFetch(
+  page: Page,
+  operationName: string,
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<unknown> {
+  const url = `${GRAPHQL_URL}?opname=${operationName}`
+  const body = JSON.stringify({ operationName, variables, query })
 
-    for (const pod of pods) {
-      const titleEl = pod.querySelector('span[data-testid="attribute-product-label"]')
-        || pod.querySelector('[data-testid="product-header"] span')
-      const name = titleEl?.textContent?.trim()
-      if (!name || name.length < 5) continue
-
-      const link = pod.querySelector('a[href*="/p/"]') as HTMLAnchorElement | null
-      const href = link?.href ?? ''
-      if (seen.has(href)) continue
-      seen.add(href)
-
-      const priceText = pod.querySelector('[data-testid="price-format"]')?.textContent?.trim() ?? ''
-      const priceMatch = priceText.match(/\$([\d,.]+)/)
-      const wasMatch = priceText.match(/Was\s*\$([\d,.]+)/)
-      const saveMatch = priceText.match(/Save\s*\$([\d,.]+)/)
-
-      const ratingEl = pod.querySelector('[data-testid="ratings"], [aria-label*="star"]')
-      const ratingText = ratingEl?.textContent?.trim() ?? ratingEl?.getAttribute('aria-label') ?? ''
-      const ratingMatch = ratingText.match(/([\d.]+)\s*\/?\s*(\d+)?/)
-      const reviewMatch = ratingText.match(/(\d[\d,]*)\)/)
-
-      const brandEl = pod.querySelector('[data-testid="attribute-product-brand"]')
-      const img = (pod.querySelector('img[src*="thdstatic.com"]') as HTMLImageElement)?.src ?? null
-
-      products.push({
-        name,
-        url: href,
-        price: priceMatch ? `$${priceMatch[1]}` : null,
-        wasPrice: wasMatch ? `$${wasMatch[1]}` : null,
-        savings: saveMatch ? `$${saveMatch[1]}` : null,
-        rating: ratingMatch?.[1] ?? null,
-        reviewCount: reviewMatch?.[1]?.replace(/,/g, '') ?? null,
-        brand: brandEl?.textContent?.trim() ?? null,
-        image: img,
-      })
-    }
-
-    return { count: products.length, products: products.slice(0, 30) }
-  })
-}
-
-/* ---------- Product detail ---------- */
-
-async function getProductDetail(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
-    for (const s of scripts) {
+  const result = await page.evaluate(`
+    (async () => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 15000);
       try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] !== 'Product') continue
-        return {
-          name: data.name ?? null,
-          brand: data.brand?.name ?? null,
-          description: data.description ?? null,
-          productId: data.productID ?? null,
-          sku: data.sku ?? null,
-          model: data.model ?? null,
-          gtin13: data.gtin13 ?? null,
-          color: data.color ?? null,
-          dimensions: {
-            depth: data.depth ?? null,
-            height: data.height ?? null,
-            width: data.width ?? null,
+        const r = await fetch(${JSON.stringify(url)}, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'x-experience-name': 'general-merchandise',
+            'x-debug': 'false',
+            'x-current-url': window.location.pathname,
           },
-          weight: data.weight ?? null,
-          rating: data.aggregateRating?.ratingValue ?? null,
-          reviewCount: data.aggregateRating?.reviewCount ?? null,
-          price: data.offers?.price ?? null,
-          priceCurrency: data.offers?.priceCurrency ?? null,
-          image: Array.isArray(data.image) ? data.image[0] : data.image ?? null,
-          url: data.offers?.url ?? null,
-        }
-      } catch { /* skip */ }
-    }
-    return null
-  })
-}
-
-/* ---------- Product pricing ---------- */
-
-async function getProductPricing(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
-    for (const s of scripts) {
-      try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] !== 'Product') continue
-        const offers = data.offers ?? {}
-        const strikethrough = offers.priceSpecification ?? null
-        return {
-          price: offers.price ?? null,
-          priceCurrency: offers.priceCurrency ?? null,
-          priceValidUntil: offers.priceValidUntil ?? null,
-          strikethroughPrice: strikethrough?.price ?? null,
-          returnDays: offers.hasMerchantReturnPolicy?.merchantReturnDays ?? null,
-        }
-      } catch { /* skip */ }
-    }
-    return null
-  })
-}
-
-/* ---------- Product reviews ---------- */
-
-async function getProductReviews(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
-    for (const s of scripts) {
-      try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] !== 'Product') continue
-        const reviews = (data.review ?? []).map((r: any) => ({
-          rating: r.reviewRating?.ratingValue ?? null,
-          author: r.author?.name ?? null,
-          headline: r.headline ?? null,
-          body: r.reviewBody ?? null,
-        }))
-        return {
-          overallRating: data.aggregateRating?.ratingValue ?? null,
-          reviewCount: data.aggregateRating?.reviewCount ?? null,
-          reviews,
-        }
-      } catch { /* skip */ }
-    }
-    return null
-  })
-}
-
-/* ---------- Product images ---------- */
-
-async function getProductImages(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
-    for (const s of scripts) {
-      try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] !== 'Product') continue
-        const images = Array.isArray(data.image) ? data.image : data.image ? [data.image] : []
-        return { count: images.length, images }
-      } catch { /* skip */ }
-    }
-    return { count: 0, images: [] }
-  })
-}
-
-/* ---------- Product specifications ---------- */
-
-async function getProductSpecs(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
-    for (const s of scripts) {
-      try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] !== 'Product') continue
-        return {
-          model: data.model ?? null,
-          sku: data.sku ?? null,
-          gtin13: data.gtin13 ?? null,
-          color: data.color ?? null,
-          depth: data.depth ?? null,
-          height: data.height ?? null,
-          width: data.width ?? null,
-          weight: data.weight ?? null,
-          brand: data.brand?.name ?? null,
-        }
-      } catch { /* skip */ }
-    }
-    return null
-  })
-}
-
-/* ---------- Departments ---------- */
-
-async function getDepartments(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const links = document.querySelectorAll('a[href*="/b/"]')
-    const seen = new Set<string>()
-    const departments: { name: string; url: string }[] = []
-
-    for (const a of links) {
-      const el = a as HTMLAnchorElement
-      const name = el.textContent?.trim() ?? ''
-      if (name.length < 3 || name.length > 60 || seen.has(el.href)) continue
-      if (el.href.includes('/b/') && !el.href.includes('?')) {
-        seen.add(el.href)
-        departments.push({ name, url: el.href })
+          body: ${JSON.stringify(body)},
+          credentials: 'same-origin',
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        if (!r.ok) return { __error: true, status: r.status, text: await r.text() };
+        return await r.json();
+      } catch (e) {
+        clearTimeout(timer);
+        return { __error: true, message: e.message };
       }
-    }
+    })()
+  `)
 
-    return { count: departments.length, departments: departments.slice(0, 40) }
-  })
+  if (result && typeof result === 'object' && '__error' in result) {
+    const msg = (result as any).message || `HTTP ${(result as any).status}`
+    throw Object.assign(new Error(`GraphQL ${operationName} failed: ${msg}`), { failureClass: 'retriable' })
+  }
+  return result
 }
 
-/* ---------- Store details ---------- */
+async function searchProducts(page: Page, params: Record<string, unknown>) {
+  const keyword = String(params.keyword || params.query || params.q || '')
+  if (!keyword) throw validationError('keyword is required')
+  const pageSize = Number(params.pageSize) || 24
+  const startIndex = Number(params.startIndex) || 0
 
-async function getStoreDetails(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
-    for (const s of scripts) {
-      try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] !== 'LocalBusiness') continue
-        return {
-          name: data.aggregateRating?.itemReviewed ?? null,
-          address: data.address
-            ? {
-                street: data.address.streetAddress ?? null,
-                city: data.address.addressLocality ?? null,
-                region: data.address.addressRegion ?? null,
-                postalCode: data.address.postalCode ?? null,
-              }
-            : null,
-          rating: data.aggregateRating?.ratingValue ?? null,
-          reviewCount: data.aggregateRating?.reviewCount ?? null,
-          phone: data.telephone ?? null,
+  // Navigate to HD homepage for cookie/session warm-up
+  if (!page.url().includes('homedepot.com')) {
+    await page.goto('https://www.homedepot.com', { waitUntil: 'load', timeout: 30_000 })
+    await wait(3000)
+  }
+
+  const variables: Record<string, unknown> = {
+    keyword,
+    storefilter: 'ALL',
+    channel: 'DESKTOP',
+    startIndex,
+    pageSize,
+  }
+
+  const result = await graphqlFetch(page, 'searchModel', SEARCH_QUERY, variables) as any
+  const searchModel = result?.data?.searchModel
+  if (!searchModel) return { totalProducts: 0, keyword, products: [] }
+
+  const report = searchModel.searchReport || {}
+  const products = (searchModel.products || []).map((p: any) => ({
+    itemId: p.identifiers?.itemId || p.itemId || '',
+    name: p.identifiers?.productLabel || '',
+    brand: p.identifiers?.brandName || '',
+    modelNumber: p.identifiers?.modelNumber || '',
+    url: p.identifiers?.canonicalUrl ? `https://www.homedepot.com${p.identifiers.canonicalUrl}` : '',
+    price: p.pricing?.value ?? p.pricing?.original ?? null,
+    priceDisplay: p.pricing?.alternatePriceDisplay || p.pricing?.message || '',
+    rating: p.reviews?.ratingsReviews?.averageRating ?? null,
+    reviewCount: p.reviews?.ratingsReviews?.totalReviews ?? 0,
+    image: p.media?.images?.[0]?.url || '',
+    availability: p.availabilityType?.type || '',
+    badges: (p.badges || []).map((b: any) => b.label),
+    sponsored: p.info?.isSponsored || false,
+  }))
+
+  return {
+    totalProducts: report.totalProducts || products.length,
+    keyword: report.keyword || keyword,
+    startIndex,
+    pageSize,
+    products,
+  }
+}
+
+async function getProductDetail(page: Page, params: Record<string, unknown>) {
+  const itemId = String(params.itemId || params.id || '')
+  if (!itemId) throw validationError('itemId is required (e.g. "314138390")')
+
+  if (!page.url().includes('homedepot.com')) {
+    await page.goto('https://www.homedepot.com', { waitUntil: 'load', timeout: 30_000 })
+    await wait(3000)
+  }
+
+  const variables: Record<string, unknown> = { itemId }
+  if (params.storeId) variables.storeId = String(params.storeId)
+  if (params.zipCode) variables.zipCode = String(params.zipCode)
+
+  const result = await graphqlFetch(page, 'productClientOnlyProduct', PRODUCT_QUERY, variables) as any
+  const product = result?.data?.product
+  if (!product) throw Object.assign(new Error(`Product ${itemId} not found`), { failureClass: 'fatal' })
+
+  const ids = product.identifiers || {}
+  const det = product.details || {}
+  const pricing = product.pricing || {}
+  const reviews = product.reviews?.ratingsReviews || {}
+  const specs = (product.specificationGroup || []).flatMap((g: any) =>
+    (g.specifications || []).map((s: any) => ({ group: g.specTitle, name: s.specName, value: s.specValue })),
+  )
+  const breadcrumbs = (product.taxonomy?.breadCrumbs || []).map((b: any) => b.label)
+  const images = (product.media?.images || []).map((i: any) => i.url)
+
+  return {
+    itemId: ids.itemId || itemId,
+    name: ids.productLabel || '',
+    brand: ids.brandName || '',
+    modelNumber: ids.modelNumber || '',
+    productType: ids.productType || '',
+    url: ids.canonicalUrl ? `https://www.homedepot.com${ids.canonicalUrl}` : '',
+    description: det.description || '',
+    highlights: det.highlights || [],
+    price: pricing.value ?? pricing.original ?? null,
+    priceDisplay: pricing.alternatePriceDisplay || pricing.message || '',
+    rating: reviews.averageRating ?? null,
+    reviewCount: reviews.totalReviews ?? 0,
+    images,
+    specifications: specs,
+    breadcrumbs,
+    availability: product.availabilityType?.type || '',
+  }
+}
+
+async function getStoreLocator(page: Page, params: Record<string, unknown>) {
+  const zipCode = String(params.zipCode || params.zip || '')
+  if (!zipCode) throw validationError('zipCode is required (e.g. "10001")')
+
+  // Navigate to store locator results page
+  await page.goto(`https://www.homedepot.com/l/search/${encodeURIComponent(zipCode)}`, {
+    waitUntil: 'load',
+    timeout: 30_000,
+  })
+  await wait(4000)
+
+  return page.evaluate(`
+    (() => {
+      const stores = [];
+      // Try Apollo cache extraction from window.__APOLLO_STATE__
+      // Otherwise fall back to DOM extraction
+
+      // Look for store cards in the DOM
+      const cards = document.querySelectorAll('[data-testid*="store"], .store-pod, .storeResult, [class*="storeCard"], [class*="StoreCard"]');
+
+      if (cards.length > 0) {
+        cards.forEach(card => {
+          const nameEl = card.querySelector('h2, h3, [class*="storeName"], [class*="StoreName"]');
+          const addrEl = card.querySelector('[class*="address"], [class*="Address"], address');
+          const phoneEl = card.querySelector('[class*="phone"], [class*="Phone"], a[href^="tel:"]');
+          const distEl = card.querySelector('[class*="distance"], [class*="Distance"], [class*="miles"]');
+          const hoursEl = card.querySelector('[class*="hours"], [class*="Hours"]');
+          const storeLink = card.querySelector('a[href*="/l/"]');
+
+          if (nameEl) {
+            stores.push({
+              name: nameEl.textContent?.trim() || '',
+              address: addrEl ? addrEl.textContent?.trim().replace(/\\s+/g, ' ') : '',
+              phone: phoneEl ? (phoneEl.getAttribute('href')?.replace('tel:', '') || phoneEl.textContent?.trim()) : '',
+              distance: distEl ? distEl.textContent?.trim() : '',
+              hours: hoursEl ? hoursEl.textContent?.trim() : '',
+              url: storeLink ? 'https://www.homedepot.com' + storeLink.getAttribute('href') : '',
+            });
+          }
+        });
+      }
+
+      // Fallback: parse the page for store information blocks
+      if (stores.length === 0) {
+        const allLinks = [...document.querySelectorAll('a[href*="/l/"][href*="/"]')];
+        const storeLinks = allLinks.filter(a => {
+          const href = a.getAttribute('href') || '';
+          return href.match(/\\/l\\/[A-Za-z]+-[A-Za-z]+/) && !href.includes('/search');
+        });
+
+        const seen = new Set();
+        for (const link of storeLinks) {
+          const href = link.getAttribute('href') || '';
+          if (seen.has(href)) continue;
+          seen.add(href);
+          const text = link.textContent?.trim() || '';
+          if (text.length < 3 || text.length > 100) continue;
+
+          // Try to find address info near this link
+          const container = link.closest('div, li, article, section') || link.parentElement;
+          const containerText = container ? container.textContent?.trim() || '' : '';
+          const addrMatch = containerText.match(/(\\d+[^,]+,\\s*[A-Za-z]+,?\\s*[A-Z]{2}\\s*\\d{5})/);
+          const phoneMatch = containerText.match(/(\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4})/);
+
+          stores.push({
+            name: text.split('\\n')[0].trim(),
+            address: addrMatch ? addrMatch[1] : '',
+            phone: phoneMatch ? phoneMatch[1] : '',
+            distance: '',
+            hours: '',
+            url: 'https://www.homedepot.com' + href,
+          });
         }
-      } catch { /* skip */ }
-    }
-    return null
-  })
+      }
+
+      return {
+        zipCode: ${JSON.stringify(zipCode)},
+        count: stores.length,
+        stores,
+      };
+    })()
+  `)
 }
-
-/* ---------- Store reviews ---------- */
-
-async function getStoreReviews(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
-    for (const s of scripts) {
-      try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] !== 'LocalBusiness') continue
-        const reviews = (data.review ?? []).map((r: any) => ({
-          author: r.author ?? null,
-          title: r.name ?? null,
-          body: r.reviewBody ?? null,
-          rating: r.reviewRating?.ratingValue ?? null,
-        }))
-        return {
-          storeName: data.aggregateRating?.itemReviewed ?? null,
-          overallRating: data.aggregateRating?.ratingValue ?? null,
-          reviewCount: data.aggregateRating?.reviewCount ?? null,
-          reviews,
-        }
-      } catch { /* skip */ }
-    }
-    return null
-  })
-}
-
-/* ---------- Store FAQ ---------- */
-
-async function getStoreFAQ(page: Page, _params: Record<string, unknown>): Promise<unknown> {
-  return page.evaluate(() => {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
-    for (const s of scripts) {
-      try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] !== 'FAQPage') continue
-        const questions = (data.mainEntity ?? []).map((q: any) => ({
-          question: q.name ?? null,
-          answer: q.acceptedAnswer?.text ?? null,
-        }))
-        return { count: questions.length, questions }
-      } catch { /* skip */ }
-    }
-    return { count: 0, questions: [] }
-  })
-}
-
-/* ---------- Adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
   searchProducts,
   getProductDetail,
-  getProductPricing,
-  getProductReviews,
-  getProductImages,
-  getProductSpecs,
-  getDepartments,
-  getStoreDetails,
-  getStoreReviews,
-  getStoreFAQ,
+  getStoreLocator,
 }
 
 const adapter: CodeAdapter = {
   name: 'homedepot-web',
-  description: 'Home Depot — LD+JSON and DOM extraction for product search, details, pricing, reviews, store info',
+  description: 'Home Depot — product search, detail, store locator via GraphQL API and DOM extraction',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('homedepot.com')
   },
 
   async isAuthenticated(_page: Page): Promise<boolean> {
-    return true // Public browsing works without auth
+    return true // No login required for public data
   },
 
-  async execute(
-    page: Page,
-    operation: string,
-    params: Readonly<Record<string, unknown>>,
-  ): Promise<unknown> {
-    try {
-      const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
-      return await handler(page, { ...params })
-    } catch (error) {
-      throw toOpenWebError(error)
-    }
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+    const handler = OPERATIONS[operation]
+    if (!handler) throw unknownOpError(operation)
+    return handler(page, { ...params })
   },
 }
 
