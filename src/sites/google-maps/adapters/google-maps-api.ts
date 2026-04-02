@@ -1,7 +1,7 @@
 import type { Page } from 'playwright-core'
 import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
- * Google Maps L3 adapter — SPA navigation + DOM extraction / internal preview API.
+ * Google Maps L3 adapter — page.goto() navigation + DOM extraction / internal preview API.
  *
  * Search:       Navigate to /maps/search/{query}/, extract from DOM
  * Place:        GET /maps/preview/place via page.evaluate(fetch()) with pb param
@@ -11,12 +11,12 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  * Hours:        GET /maps/preview/place — operating schedule extraction
  * About:        GET /maps/preview/place — description, category, attributes
  * Nearby:       Navigate to /maps/search/{category}+near+{location}/, extract from DOM
- * Autocomplete: GET /maps/suggest via page.evaluate(fetch())
+ * Autocomplete: DOM interaction — type into search box, extract suggestions
  * Geocode:      Navigate to /maps/search/{address}/, extract first result coords
  * RevGeocode:   Navigate to /@{lat},{lng},17z, extract address from DOM
  *
- * Search, directions, nearby, geocode, and reverse geocode use SPA navigation.
- * Place details, reviews, photos, hours, about, and autocomplete work via fetch.
+ * Search, directions, nearby, geocode, and reverse geocode use page.goto() navigation.
+ * Place details, reviews, photos, hours, and about work via fetch inside page context.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 
@@ -35,13 +35,22 @@ function dig(arr: unknown, ...indices: number[]): unknown {
   return cur
 }
 
+/** Re-inject esbuild __name polyfill after navigation destroys browser context */
+async function injectPolyfill(page: Page): Promise<void> {
+  await page.evaluate(`
+    if (typeof globalThis.__name === 'undefined') {
+      Object.defineProperty(globalThis, '__name', {
+        value: (target, value) => Object.defineProperty(target, 'name', { value, configurable: true }),
+        configurable: true, writable: true,
+      });
+    }
+  `)
+}
+
 async function ensureMapsPage(page: Page): Promise<void> {
   if (!page.url().includes('google.com/maps')) {
-    await page.evaluate(() => {
-      window.location.href = 'https://www.google.com/maps'
-    })
-    await sleep(3000)
-    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {}) // intentional: best-effort wait
+    await page.goto('https://www.google.com/maps', { waitUntil: 'domcontentloaded', timeout: 15_000 })
+    await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {}) // intentional: best-effort wait
   }
 }
 
@@ -49,12 +58,9 @@ async function ensureMapsPage(page: Page): Promise<void> {
 async function navigateAndExtractPlaces(page: Page, searchUrl: string): Promise<Array<Record<string, unknown>>> {
   await ensureMapsPage(page)
 
-  await page.evaluate((url: string) => {
-    window.location.href = url
-  }, searchUrl)
-  await sleep(5000)
-  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {}) // intentional: best-effort wait
-  await page.waitForSelector('a.hfpxzc', { timeout: 10000 }).catch(() => {}) // intentional: best-effort wait
+  await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 })
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {}) // intentional: best-effort wait
+  await page.waitForSelector('a.hfpxzc', { timeout: 10_000 }).catch(() => {}) // intentional: best-effort wait
 
   return page.evaluate(() => {
     const items = document.querySelectorAll('div[role="feed"] > div')
@@ -294,30 +300,34 @@ async function getAutocompleteSuggestions(page: Page, params: Record<string, unk
   if (!input) throw OpenWebError.missingParam('input')
 
   await ensureMapsPage(page)
-  await sleep(1000) // wait for SPA context to stabilize after navigation
 
-  const raw = await page.evaluate(async (q: string) => {
-    const resp = await fetch(`/maps/suggest?authuser=0&hl=en&gl=us&q=${encodeURIComponent(q)}`, { credentials: 'include' })
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    return resp.text()
-  }, input)
-
-  const cleaned = raw.replace(/^\)\]\}'\n/, '')
-  try {
-    const data = JSON.parse(cleaned) as unknown[]
-    const suggestArr = (Array.isArray(data[0]) ? data[0] : data) as unknown[][]
-    const suggestions = suggestArr
-      .filter(Array.isArray)
-      .map((s) => ({
-        text: (dig(s, 0, 0) as string | null) ?? (dig(s, 0) as string | null),
-        placeId: dig(s, 0, 1) as string | null,
-        description: dig(s, 0, 2) as string | null,
-      }))
-      .filter((s) => s.text && typeof s.text === 'string')
-    return { input, suggestions }
-  } catch {
-    return { input, suggestions: [], raw: cleaned.substring(0, 500) }
+  // Type into the Maps search box and extract suggestions from the dropdown
+  const searchBox = await page.waitForSelector('#searchboxinput, input[name="q"]', { timeout: 10_000 }).catch(() => null)
+  if (!searchBox) {
+    return { input, suggestions: [] }
   }
+
+  // Clear existing text and type the query
+  await searchBox.click({ clickCount: 3 })
+  await searchBox.fill(input)
+  await sleep(1500) // wait for suggestions to populate
+
+  // Extract suggestions from the autocomplete dropdown
+  const suggestions = await page.evaluate(() => {
+    const results: Array<{ text: string | null; placeId: string | null; description: string | null }> = []
+    const items = document.querySelectorAll('[role="listbox"] [role="option"], .sbsb_b li, .pac-item, .suggest-item')
+    for (const item of items) {
+      const text = item.textContent?.trim() || null
+      if (!text) continue
+      const placeId = item.getAttribute('data-place-id') || item.getAttribute('data-cid') || null
+      const secondary = item.querySelector('.pac-item-query + span, .sbsb_d, [class*="secondary"]')
+      const description = secondary?.textContent?.trim() || null
+      results.push({ text, placeId, description })
+    }
+    return results
+  })
+
+  return { input, suggestions }
 }
 
 /* ---------- directions (shared helper) ---------- */
@@ -332,11 +342,11 @@ async function getDirectionsForMode(page: Page, params: Record<string, unknown>,
 
   const modeParam = mode > 0 ? `data=!3m1!4b1!4m2!4m1!3e${mode}` : ''
   const dirUrl = `${MAPS_BASE}/dir/${encodeURIComponent(origin)}/${encodeURIComponent(destination)}/${modeParam}`
-  await page.evaluate((url: string) => {
-    window.location.href = url
-  }, dirUrl)
-  await sleep(8000)
-  await page.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => {}) // intentional: best-effort wait
+  await page.goto(dirUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 })
+  await page.waitForLoadState('networkidle', { timeout: 12_000 }).catch(() => {}) // intentional: best-effort wait
+
+  // Re-inject polyfill after page.goto() navigation
+  await injectPolyfill(page)
 
   const routes = await page.evaluate(() => {
     const parseRoute = (text: string) => {
@@ -422,11 +432,8 @@ async function reverseGeocode(page: Page, params: Record<string, unknown>): Prom
   const lng = Number(params.lng)
   if (Number.isNaN(lat) || Number.isNaN(lng)) throw OpenWebError.missingParam('lat and lng')
 
-  await ensureMapsPage(page)
-  await page.evaluate((url: string) => { window.location.href = url },
-    `${MAPS_BASE}/@${lat},${lng},17z`)
-  await sleep(5000)
-  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {}) // intentional: best-effort wait
+  await page.goto(`${MAPS_BASE}/@${lat},${lng},17z`, { waitUntil: 'domcontentloaded', timeout: 15_000 })
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {}) // intentional: best-effort wait
 
   const result = await page.evaluate(() => {
     const title = document.title.replace(' - Google Maps', '').trim()

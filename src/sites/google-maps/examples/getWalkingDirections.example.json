@@ -1,11 +1,15 @@
 {
-  "operationId": "getWalkingDirections",
-  "parameters": {
-    "origin": "Central Park, New York",
-    "destination": "Times Square, New York"
-  },
-  "expect": {
-    "status": 200
-  },
-  "replay_safety": "safe_read"
+  "operation_id": "getWalkingDirections",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "origin": "Central Park, New York",
+        "destination": "Times Square, New York"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
 }
