@@ -60,6 +60,7 @@ export const authPrimitiveSchema = {
         type: { const: 'localStorage_jwt' },
         key: { type: 'string' },
         path: { type: 'string' },
+        app_path: { type: 'string' },
         inject: injectSchema,
       },
       additionalProperties: false,
