@@ -4,7 +4,9 @@
   "replay_safety": "unsafe_mutation",
   "cases": [
     {
-      "input": {},
+      "input": {
+        "tweet_id": "1234567890"
+      },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

@@ -1,3 +1,25 @@
+## 2026-04-02: X (Twitter) L3 adapter — dynamic hash resolution + request signing
+
+**What changed:**
+- Added `x-graphql` adapter that extracts GraphQL query hashes at runtime from the main.js webpack bundle (not hardcoded) — survives Twitter deploys
+- Added `x-client-transaction-id` signing via Twitter's webpack signing function (module 938838, export `jJ`) — required for Followers and SearchTimeline
+- Bearer token, CSRF, cookies handled inline by adapter
+- Rewired all 14 ops from browser_fetch to adapter; params simplified to user-facing (no more `{id}`, `variables`, `features`)
+- Removed searchTypeahead (REST v1.1 endpoint deprecated, returns 410)
+- Fixed `encodeQueryValue` in request-builder.ts — was not encoding JSON chars (`{`, `}`, `"`), causing 400s on browser_fetch URLs
+- Updated skill knowledge: compile.md (adapter escalation signals), auth-patterns.md, bot-detection-patterns.md, graphql-patterns.md, troubleshooting-patterns.md
+
+**Why:**
+- Query hashes rotate on every Twitter deploy — hardcoded hashes broke within hours
+- Some endpoints (Followers, SearchTimeline) require per-request `x-client-transaction-id` signing that browser_fetch can't provide
+- Previous attempt (commit 2499248) correctly identified hash rotation but missed the URL encoding bug and signing requirement
+
+**Key files:** `src/sites/x/adapters/x-graphql.ts`, `src/sites/x/openapi.yaml`, `src/runtime/request-builder.ts`
+**Verification:** `pnpm dev verify x` — 8/8 PASS, `pnpm test` 780/780 passed
+**Commit:** pending
+**Next:** Monitor webpack signing module ID stability across Twitter deploys
+**Blockers:** None
+
 ## 2026-04-02: Add app_path to webpack_module_walk — Discord auto-navigation fix
 
 **What changed:**

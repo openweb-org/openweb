@@ -150,24 +150,20 @@ export function resolveAllParameters(spec: OpenApiSpec, operation: OpenApiOperat
 }
 
 /**
- * Minimal query-param encoder: only encode characters that break URL
- * structure (&, =, #, space, +) while preserving sub-delimiters like
- * ( ) : , that many APIs expect unencoded.
- * Any existing percent-encoding in the value (e.g., %3A in URNs) is preserved.
+ * Encode query parameter values using standard encodeURIComponent.
+ * Any existing percent-encoding in the value is preserved (not double-encoded).
  */
 function encodeQueryValue(value: string): string {
   // Temporarily protect existing %XX sequences
   const protected_ = value.replace(/%([0-9A-Fa-f]{2})/g, '\0$1')
-  const encoded = protected_
-    .replace(/%/g, '%25')   // encode bare % signs
-    .replace(/ /g, '%20')
-    .replace(/\t/g, '%09')
-    .replace(/&/g, '%26')
-    .replace(/=/g, '%3D')
-    .replace(/#/g, '%23')
-    .replace(/\+/g, '%2B')
-  // Restore protected %XX sequences
-  return encoded.replace(/\0([0-9A-Fa-f]{2})/g, '%$1')
+  // Encode all special characters using standard encodeURIComponent,
+  // but first restore any bare % that wasn't part of a %XX sequence
+  const withBarePercent = protected_.replace(/%/g, '%25')
+  // Apply full encoding: this ensures JSON characters ({, }, ", :, ,) are encoded
+  const encoded = encodeURIComponent(withBarePercent.replace(/\0([0-9A-Fa-f]{2})/g, '%$1'))
+  // encodeURIComponent encodes % as %25, but our already-encoded sequences
+  // would be double-encoded. Restore them.
+  return encoded.replace(/%25([0-9A-Fa-f]{2})/g, '%$1')
 }
 
 /** Build a URL from server base, resolved path, and query parameters.

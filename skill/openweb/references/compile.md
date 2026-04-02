@@ -125,6 +125,20 @@ the server may accept the full query as a fallback — write an adapter that sen
 the full query text when the hash fails. See `references/knowledge/graphql-patterns.md`
 for hash lifecycle details.
 
+**Adapter escalation signals:** The following patterns in traffic or verify
+results indicate that `browser_fetch` transport alone is insufficient — the
+site needs an **L3 adapter** that reads the site's JavaScript at runtime:
+
+| Signal in traffic / verify | What it means | Action |
+|---|---|---|
+| Per-request headers that change every call (not session-scoped) | Custom request signing (antibot) | Read the JS bundle to find the signing function. Search for the header name being set in minified JS. Call it via webpack `require(moduleId)` from `page.evaluate`. See `bot-detection-patterns.md` "Custom request signing". |
+| Same operation returns different hashes across captures | Persisted query hashes rotate on deploy | Extract hashes at runtime from the JS bundle instead of hardcoding them. Parse `queryId:"xxx",operationName:"yyy"` from the main bundle. |
+| Operation works in browser but returns 404 from `page.evaluate(fetch(...))` | Server validates a header that browser's own JS adds but our fetch doesn't | Capture the browser's request via CDP `Network.requestWillBeSent`, compare headers with what we send. The missing header is likely a signing header — find its generator in the bundle. |
+
+When you see these signals, don't iterate on compile — switch to writing an
+adapter. The adapter handles auth, hashing, and signing internally via
+`page.evaluate`, making the operation resilient to site deploys.
+
 **Now read `references/analysis-review.md`.** It covers how to read
 `analysis.json` in detail: auth candidates, clusters, extraction signals,
 WebSocket analysis, and coverage decisions.

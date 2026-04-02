@@ -44,7 +44,7 @@ Some sites roll their own detection in addition to (or instead of) commercial so
 
 | Pattern | Examples | Signal |
 |---------|----------|--------|
-| Custom request signing | Amazon, LinkedIn | Requests include `x-amzn-*` or custom HMAC headers computed client-side |
+| Custom request signing | Amazon, LinkedIn, X/Twitter | Requests include `x-amzn-*`, custom HMAC, or `x-client-transaction-id` headers computed client-side. X/Twitter: signing function in webpack module, called via `require(moduleId).exportName(host, path, method)` from adapter |
 | Custom required headers | Pinterest, Instagram | Requests require `x-requested-with: XMLHttpRequest`, `x-pinterest-appstate`, `x-pinterest-pws-handler` (Pinterest) or `x-ig-app-id` (Instagram) — returns 400/403 without them |
 | Encrypted payloads | Google, Facebook | Request body or params are base64/protobuf — can't be replayed without the encoder |
 | Rate-based blocking | Most APIs | `429` or silent empty responses after N requests/minute |

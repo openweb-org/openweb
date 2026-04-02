@@ -88,6 +88,30 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 
 ### Heartbeat Timeout / Disconnect
 
+### Rotating GraphQL Hashes (HTTP 404)
+
+- **Symptoms:** `HTTP 404` on GraphQL endpoints that previously worked, verify shows all ops failing
+- **Detection signals:** persisted query hash in URL path doesn't match server's current hash (server returns 404, not 400)
+- **Root cause:** site rotates query hashes on each frontend deploy (e.g., X/Twitter deploys several times per week)
+- **Action:** do NOT hardcode hashes in example files. Use an L3 adapter that extracts hashes at runtime from the JS bundle. Pattern: parse `queryId:"xxx",operationName:"yyy"` from the main.js bundle in `page.evaluate`
+- **Example:** X/Twitter `x-graphql` adapter
+
+### Missing Request Signing (HTTP 404)
+
+- **Symptoms:** `HTTP 404` on some endpoints but not others, even with correct hashes and auth
+- **Detection signals:** browser's own requests succeed (they include `x-client-transaction-id` or similar signing header), but `page.evaluate(fetch(...))` without the header returns 404
+- **Root cause:** site requires a per-request computed signature on certain endpoints
+- **Action:** find the signing function in the webpack bundle. Grep the minified JS for the header name being set (e.g., `"x-client-transaction-id"]=await`), trace back to the signing module, then call it via webpack `require(moduleId)` in `page.evaluate`
+- **Example:** X/Twitter — `x-client-transaction-id` from webpack module 938838 export `jJ`, function signature `(host, path, method) → string`
+
+### URL Encoding Issues (HTTP 400)
+
+- **Symptoms:** `HTTP 400` with empty response body from `page.evaluate(fetch(...))`
+- **Detection signals:** URL contains unencoded JSON characters (`{`, `}`, `"`) in query string — server rejects malformed URL
+- **Root cause:** `encodeQueryValue` or URL builder doesn't encode all special characters
+- **Action:** ensure query parameter values are fully URL-encoded via `encodeURIComponent`. Compare the URL being sent (add debug logging to browser-fetch-executor) with the URL the browser sends natively (capture via CDP Network.requestWillBeSent)
+
+
 - **Symptoms:** WS connection drops after 30–60 seconds of inactivity
 - **Detection signals:** `close` event with code `1000` or `1006`, server sends no data after initial connection
 - **Action:** the site expects heartbeat/ping frames at a specific interval. Check captured traffic for the heartbeat pattern (see [ws-patterns.md](ws-patterns.md)). Implement the heartbeat in the adapter.

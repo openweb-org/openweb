@@ -18,6 +18,7 @@ The client sends a hash instead of the full query string. The server looks up th
 - **Impact:** cannot construct new queries — only the pre-registered hashes work. site package must store the exact hash per operation.
 - **Capture strategy:** record the hash + variables for each operation. The hash is the operation identity.
 - **site package modeling:** store hash in `x-persisted-query-hash` extension in openapi.yaml.
+- **Hash rotation:** some sites (e.g., X/Twitter) rotate persisted query hashes on every deploy. For these, hardcoding hashes in the spec or example files is fragile. Use an **L3 adapter** that extracts hashes at runtime from the site's JS bundle. Pattern: `page.evaluate(() => fetch(mainBundleUrl).then(text => regex-parse queryId+operationName pairs))`.
 
 ## Query Hashing (Client-Side)
 
