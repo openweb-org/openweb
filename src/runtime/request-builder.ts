@@ -81,6 +81,27 @@ export function buildHeaderParams(
   return headers
 }
 
+/** Recursively build an object from schema, applying defaults for missing values */
+function applySchemaDefaults(schema: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!schema || schema.type !== 'object' || !schema.properties) return undefined
+  const props = schema.properties as Record<string, Record<string, unknown>>
+  const result: Record<string, unknown> = {}
+  let hasValue = false
+  for (const [key, propSchema] of Object.entries(props)) {
+    if (propSchema.default !== undefined) {
+      result[key] = propSchema.default
+      hasValue = true
+    } else if (propSchema.type === 'object') {
+      const nested = applySchemaDefaults(propSchema)
+      if (nested) {
+        result[key] = nested
+        hasValue = true
+      }
+    }
+  }
+  return hasValue ? result : undefined
+}
+
 /** Build JSON request body from operation schema and params */
 export function buildJsonRequestBody(operation: OpenApiOperation, params: Record<string, unknown>): string | undefined {
   const bodySchema = getRequestBodySchema(operation)
@@ -95,7 +116,7 @@ export function buildJsonRequestBody(operation: OpenApiOperation, params: Record
     if (value !== undefined) {
       body[param.name] = value
     } else if (param.schema?.type === 'object') {
-      body[param.name] = {}
+      body[param.name] = applySchemaDefaults(param.schema as Record<string, unknown>) ?? {}
     }
   }
 

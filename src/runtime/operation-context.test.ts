@@ -32,6 +32,32 @@ describe('getServerXOpenWeb', () => {
     if (!op) throw new Error('missing op')
     expect(getServerXOpenWeb(spec, op)).toBeUndefined()
   })
+
+  it('reads x-openweb from operation-level servers when spec servers differ', () => {
+    const spec: OpenApiSpec = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0' },
+      servers: [{
+        url: 'https://us.example.com',
+        'x-openweb': { transport: 'node' },
+      } as unknown as { url: string }],
+      paths: {
+        '/api/data': {
+          post: {
+            operationId: 'getData',
+            servers: [{
+              url: 'https://www.example.com',
+              'x-openweb': { transport: 'page' },
+            }],
+          },
+        },
+      },
+    }
+    const op = spec.paths?.['/api/data']?.post
+    if (!op) throw new Error('missing op')
+    const ext = getServerXOpenWeb(spec, op)
+    expect(ext?.transport).toBe('page')
+  })
 })
 
 describe('resolveTransport', () => {

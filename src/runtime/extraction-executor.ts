@@ -38,7 +38,8 @@ async function findPageForTarget(
     for (const page of pages) {
       try {
         const current = new URL(page.url())
-        if (current.origin === target.origin && current.pathname === target.pathname) {
+        if (current.origin === target.origin
+          && decodeURIComponent(current.pathname) === decodeURIComponent(target.pathname)) {
           return page
         }
       } catch {

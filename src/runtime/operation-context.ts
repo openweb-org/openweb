@@ -10,6 +10,13 @@ export function getServerXOpenWeb(spec: OpenApiSpec, operation: OpenApiOperation
   const serverUrl = operation.servers?.[0]?.url ?? spec.servers?.[0]?.url
   if (!serverUrl) return undefined
 
+  // Check operation-level servers first (operation overrides spec)
+  for (const server of operation.servers ?? []) {
+    if (server.url === serverUrl) {
+      return (server as Record<string, unknown>)['x-openweb'] as XOpenWebServer | undefined
+    }
+  }
+
   for (const server of spec.servers ?? []) {
     if (server.url === serverUrl) {
       return (server as Record<string, unknown>)['x-openweb'] as XOpenWebServer | undefined

@@ -19,11 +19,28 @@ function asRecord(val: unknown): Record<string, unknown> {
   return (val && typeof val === 'object' ? val : {}) as Record<string, unknown>
 }
 
+function loginRequired(detail: string): OpenWebError {
+  return new OpenWebError({
+    error: 'auth',
+    code: 'AUTH_FAILED',
+    message: `Xiaohongshu: ${detail}`,
+    action: 'Log in to xiaohongshu.com in the browser and retry.',
+    retriable: true,
+    failureClass: 'needs_login',
+  })
+}
+
 /* ---------- operation handlers ---------- */
 
 async function searchNotes(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const keyword = String(params.keyword ?? params.query ?? '')
   if (!keyword) throw OpenWebError.missingParam('keyword')
+
+  // Intercept the search API response (fires when user is logged in)
+  const searchApiPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/api/sns/web/v1/search/notes') && resp.status() === 200,
+    { timeout: 15000 },
+  ).catch(() => null)
 
   await page.goto(
     `${BASE}/search_result?keyword=${encodeURIComponent(keyword)}&source=web_search_result_notes`,
@@ -31,13 +48,22 @@ async function searchNotes(page: Page, params: Record<string, unknown>): Promise
   )
   await page.waitForTimeout(4000)
 
-  return page.evaluate(() => {
+  // Detect login gate — XHS now requires login for search
+  const loginRequired = await page.evaluate(() => {
+    return document.body.innerText.includes('登录后查看搜索结果')
+  })
+  if (loginRequired) {
+    throw loginRequired('Login required for search')
+  }
+
+  // Try SSR state first
+  const ssrResult = await page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
-    if (!state?.search) return { notes: [], count: 0 }
+    if (!state?.search) return null
 
     const feedsRef = state.search.feeds
     const feeds: any[] = feedsRef?._rawValue ?? feedsRef ?? []
-    if (!Array.isArray(feeds)) return { notes: [], count: 0 }
+    if (!Array.isArray(feeds) || feeds.length === 0) return null
 
     const notes = feeds
       .filter((f: any) => f.modelType === 'note' && f.noteCard)
@@ -58,8 +84,43 @@ async function searchNotes(page: Page, params: Record<string, unknown>): Promise
         }
       })
 
-    return { notes, count: notes.length }
+    return notes.length > 0 ? { notes, count: notes.length } : null
   })
+
+  if (ssrResult) return ssrResult
+
+  // Fallback: try search API interception
+  const searchResp = await searchApiPromise
+  if (searchResp) {
+    try {
+      const json = (await searchResp.json()) as Record<string, unknown>
+      const data = asRecord(json.data)
+      const items = data.items as Array<Record<string, unknown>> | undefined
+      if (Array.isArray(items) && items.length > 0) {
+        const notes = items
+          .filter((item: any) => item.model_type === 'note' && item.note_card)
+          .map((item: any) => {
+            const card = item.note_card
+            return {
+              noteId: item.id,
+              xsecToken: item.xsec_token,
+              type: card.type,
+              displayTitle: card.display_title,
+              user: card.user
+                ? { userId: card.user.user_id, nickname: card.user.nickname, avatar: card.user.avatar }
+                : null,
+              likedCount: card.interact_info?.liked_count ?? null,
+              cover: card.cover
+                ? { url: card.cover.url_default ?? card.cover.url, width: card.cover.width, height: card.cover.height }
+                : null,
+            }
+          })
+        return { notes, count: notes.length }
+      }
+    } catch { /* intentional: API parse failed — fall through */ }
+  }
+
+  return { notes: [], count: 0 }
 }
 
 async function getNoteDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
@@ -78,7 +139,18 @@ async function getNoteDetail(page: Page, params: Record<string, unknown>): Promi
     `${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`,
     { waitUntil: 'domcontentloaded', timeout: 30000 },
   )
-  await page.waitForTimeout(4000)
+
+  // Wait for SSR state to be populated — poll until noteDetailMap has our entry
+  await page.waitForFunction(
+    (id: string) => {
+      const state = (window as any).__INITIAL_STATE__
+      if (!state?.note?.noteDetailMap) return false
+      const map = state.note.noteDetailMap._rawValue ?? state.note.noteDetailMap
+      return !!(map && typeof map === 'object' && map[id])
+    },
+    noteId,
+    { timeout: 10000 },
+  ).catch(() => null) // intentional: fall through to extraction attempt
 
   // Extract note from SSR state — map entry is { note, comments, currentTime }
   const noteData = await page.evaluate((id: string) => {
@@ -155,9 +227,12 @@ async function getUserProfile(page: Page, params: Record<string, unknown>): Prom
 
   await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
 
-  // Check for CAPTCHA redirect
-  if (page.url().includes('captcha') || page.url().includes('login')) {
-    throw OpenWebError.apiError('Xiaohongshu', 'CAPTCHA triggered — please solve it in the browser and retry')
+  // Check for login redirect or CAPTCHA
+  if (page.url().includes('login')) {
+    throw loginRequired('Login required for user profiles')
+  }
+  if (page.url().includes('captcha')) {
+    throw loginRequired('CAPTCHA triggered — solve it in the browser and retry')
   }
 
   await page.waitForTimeout(4000)
@@ -197,8 +272,11 @@ async function getUserNotes(page: Page, params: Record<string, unknown>): Promis
 
   await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
 
-  if (page.url().includes('captcha') || page.url().includes('login')) {
-    throw OpenWebError.apiError('Xiaohongshu', 'CAPTCHA triggered — please solve it in the browser and retry')
+  if (page.url().includes('login')) {
+    throw loginRequired('Login required for user profiles')
+  }
+  if (page.url().includes('captcha')) {
+    throw loginRequired('CAPTCHA triggered — solve it in the browser and retry')
   }
 
   await page.waitForTimeout(4000)
@@ -286,7 +364,17 @@ async function navigateToNote(page: Page, params: Record<string, unknown>): Prom
     `${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`,
     { waitUntil: 'domcontentloaded', timeout: 30000 },
   )
-  await page.waitForTimeout(4000)
+  // Wait for SSR state to populate
+  await page.waitForFunction(
+    (id: string) => {
+      const state = (window as any).__INITIAL_STATE__
+      if (!state?.note?.noteDetailMap) return false
+      const map = state.note.noteDetailMap._rawValue ?? state.note.noteDetailMap
+      return !!(map && typeof map === 'object' && map[id])
+    },
+    noteId,
+    { timeout: 10000 },
+  ).catch(() => null)
   return noteId
 }
 
@@ -348,22 +436,26 @@ async function getHotSearch(page: Page, _params: Record<string, unknown>): Promi
   await page.goto(`${BASE}/explore`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForTimeout(3000)
 
-  // Click search bar to trigger hot search display, then extract from SSR state
+  // Try multiple SSR state paths — XHS moves hot search data between keys
   return page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     if (!state?.search) return { items: [], count: 0 }
 
-    const hotRef = state.search.hotSearch
-    const hot: any[] = hotRef?._rawValue ?? hotRef ?? []
-    if (!Array.isArray(hot)) return { items: [], count: 0 }
+    // Try: hotSearch (legacy) → searchHotSpots → searchCardHotSpots
+    for (const key of ['hotSearch', 'searchHotSpots', 'searchCardHotSpots']) {
+      const ref = (state.search as Record<string, any>)[key]
+      const arr: any[] = ref?._rawValue ?? ref ?? []
+      if (Array.isArray(arr) && arr.length > 0) {
+        const items = arr.map((h: any, i: number) => ({
+          keyword: h.name ?? h.word ?? h.keyword ?? '',
+          score: h.score ?? null,
+          rank: h.rank ?? i + 1,
+        }))
+        return { items, count: items.length }
+      }
+    }
 
-    const items = hot.map((h: any, i: number) => ({
-      keyword: h.name ?? h.word ?? '',
-      score: h.score ?? null,
-      rank: h.rank ?? i + 1,
-    }))
-
-    return { items, count: items.length }
+    return { items: [], count: 0 }
   })
 }
 
@@ -383,7 +475,11 @@ async function getNoteComments(page: Page, params: Record<string, unknown>): Pro
     `${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`,
     { waitUntil: 'domcontentloaded', timeout: 30000 },
   )
-  await page.waitForTimeout(4000)
+  // Wait for page to settle
+  await page.waitForFunction(
+    () => !!(window as any).__INITIAL_STATE__?.note,
+    { timeout: 10000 },
+  ).catch(() => null)
 
   const commentResp = await commentPromise
   if (!commentResp) return { comments: [], count: 0, hasMore: false }
@@ -425,8 +521,11 @@ async function getUserCollections(page: Page, params: Record<string, unknown>): 
 
   await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
 
-  if (page.url().includes('captcha') || page.url().includes('login')) {
-    throw OpenWebError.apiError('Xiaohongshu', 'CAPTCHA triggered — please solve it in the browser and retry')
+  if (page.url().includes('login')) {
+    throw loginRequired('Login required for user profiles')
+  }
+  if (page.url().includes('captcha')) {
+    throw loginRequired('CAPTCHA triggered — solve it in the browser and retry')
   }
 
   // Click the "收藏" (collections) tab
@@ -477,8 +576,11 @@ async function getUserLiked(page: Page, params: Record<string, unknown>): Promis
 
   await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
 
-  if (page.url().includes('captcha') || page.url().includes('login')) {
-    throw OpenWebError.apiError('Xiaohongshu', 'CAPTCHA triggered — please solve it in the browser and retry')
+  if (page.url().includes('login')) {
+    throw loginRequired('Login required for user profiles')
+  }
+  if (page.url().includes('captcha')) {
+    throw loginRequired('CAPTCHA triggered — solve it in the browser and retry')
   }
 
   // Click the "赞过" (liked) tab
@@ -539,7 +641,17 @@ async function getRelatedNotes(page: Page, params: Record<string, unknown>): Pro
     `${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`,
     { waitUntil: 'domcontentloaded', timeout: 30000 },
   )
-  await page.waitForTimeout(5000)
+  // Wait for SSR state to populate
+  await page.waitForFunction(
+    (id: string) => {
+      const state = (window as any).__INITIAL_STATE__
+      if (!state?.note?.noteDetailMap) return false
+      const map = state.note.noteDetailMap._rawValue ?? state.note.noteDetailMap
+      return !!(map && typeof map === 'object' && map[id])
+    },
+    noteId,
+    { timeout: 10000 },
+  ).catch(() => null)
 
   // Try intercept first
   const recommendResp = await recommendPromise
@@ -603,8 +715,11 @@ async function followUser(page: Page, params: Record<string, unknown>): Promise<
 
   await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
 
-  if (page.url().includes('captcha') || page.url().includes('login')) {
-    throw OpenWebError.apiError('Xiaohongshu', 'CAPTCHA triggered — please solve it in the browser and retry')
+  if (page.url().includes('login')) {
+    throw loginRequired('Login required for user profiles')
+  }
+  if (page.url().includes('captcha')) {
+    throw loginRequired('CAPTCHA triggered — solve it in the browser and retry')
   }
 
   await page.waitForTimeout(3000)
