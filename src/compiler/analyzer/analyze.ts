@@ -31,6 +31,7 @@ import { buildAuthCandidates } from './auth-candidates.js'
 import type { ExtractionSignal } from './classify.js'
 import { classify } from './classify.js'
 import { clusterSamples } from './cluster.js'
+import { detectConstantHeaders } from './constant-headers.js'
 import { differentiateParameters } from './differentiate.js'
 import { selectExample } from './example-select.js'
 import { detectGraphqlEndpoint, subClusterGraphql } from './graphql-cluster.js'
@@ -190,6 +191,10 @@ function buildClusteredEndpoint(
 
   // Merge path + query parameters
   const parameters: ParameterDescriptor[] = [...pathParams, ...queryParams]
+
+  // Detect constant non-standard headers across this cluster
+  const constantHeaders = detectConstantHeaders(samples)
+  parameters.push(...constantHeaders)
 
   // Annotate operation — use GraphQL discriminator when available
   const { operationId, summary } = graphql
@@ -491,12 +496,18 @@ export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisRep
   // 7. Enrich each cluster (graphql, parameters, schema)
   const clusters = enrichClusters(v1Clusters, sampleIdMap, pathNormMap)
 
-  // 8. Load capture data and build auth candidates
+  // 8. Load capture data and build auth candidates (scoped to API-labeled entries)
   const captureData = await loadCaptureData(bundle.captureDir, har, {
     stateSnapshotDir: bundle.stateSnapshotDir,
     domHtmlPath: bundle.domHtmlPath,
   })
-  const { candidates: authCandidates, csrfOptions } = buildAuthCandidates(captureData)
+  const apiUrls = new Set(labeled.filter((s) => s.category === 'api').map((s) => s.sample.url))
+  const apiCaptureData: typeof captureData = {
+    harEntries: captureData.harEntries.filter((e) => apiUrls.has(e.request.url)),
+    stateSnapshots: captureData.stateSnapshots,
+    domHtml: captureData.domHtml,
+  }
+  const { candidates: authCandidates, csrfOptions } = buildAuthCandidates(apiCaptureData)
 
   // 9. Get extraction signals from classify
   const classifyResult = classify(captureData)

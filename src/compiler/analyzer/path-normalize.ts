@@ -9,6 +9,11 @@ const BASE64_RE = /^[A-Za-z0-9+/=_-]{16,}$/
 /** Minimum distinct values to "learn" a segment as a parameter in batch mode */
 const MIN_LEARNED_CARDINALITY = 3
 
+/** Well-known literal path segments that must never be parameterized */
+const RESERVED_SEGMENTS = new Set([
+  'graphql', 'gql', 'api', 'v1', 'v2', 'v3', 'oauth', 'token', 'auth',
+])
+
 type SegmentKind = PathNormalization['normalizedSegments'][number]['kind']
 
 interface NormalizedSegment {
@@ -94,6 +99,10 @@ export function normalizePathBatch(
       // Require enough distinct values to be confident this is a parameter,
       // not just two different endpoints (e.g. /feed/ vs /jobs/)
       if (values.size < MIN_LEARNED_CARDINALITY) continue
+
+      // Never parameterize well-known API path segments
+      const hasReserved = [...values].some((v) => RESERVED_SEGMENTS.has(v.toLowerCase()))
+      if (hasReserved) continue
 
       const allAlreadyNormalized = group.every((p) => {
         const n = preNormalized.get(p)

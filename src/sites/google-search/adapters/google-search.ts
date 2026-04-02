@@ -12,15 +12,20 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
 
-/** Read the current query from the search input on the page. */
-function readQuery(): string {
-  const input = document.querySelector('textarea[name=q]') || document.querySelector('input[name=q]')
-  return (input as HTMLInputElement | HTMLTextAreaElement | null)?.value || ''
+/** Navigate to a Google search URL and wait for results to load. */
+async function navigateToSearch(page: Page, q: string, extra?: Record<string, string>): Promise<void> {
+  const url = new URL('https://www.google.com/search')
+  url.searchParams.set('q', q)
+  if (extra) for (const [k, v] of Object.entries(extra)) url.searchParams.set(k, v)
+  await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 15_000 })
+  // Wait for search results or knowledge panel to appear
+  await page.waitForSelector('#search, #rso, [data-attrid="title"], #wob_wc', { timeout: 10_000 }).catch(() => {})
 }
 
 /* ---------- searchWeb ---------- */
 
-async function searchWeb(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function searchWeb(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     const items: Array<{ title: string; link: string; displayUrl: string; snippet: string }> = []
     const containers = document.querySelectorAll('div.tF2Cxc, div.Ww4FFb')
@@ -49,7 +54,8 @@ async function searchWeb(page: Page, _params: Record<string, unknown>): Promise<
 
 /* ---------- searchImages ---------- */
 
-async function searchImages(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function searchImages(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''), { udm: '2' })
   return page.evaluate(() => {
     const items: Array<{ sourceUrl: string; alt: string; width: number; height: number }> = []
     const containers = document.querySelectorAll('[data-lpage]')
@@ -77,7 +83,8 @@ async function searchImages(page: Page, _params: Record<string, unknown>): Promi
 
 /* ---------- searchNews ---------- */
 
-async function searchNews(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function searchNews(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''), { tbm: 'nws' })
   return page.evaluate(() => {
     const items: Array<{ title: string; link: string; source: string; snippet: string; publishedAt: string }> = []
     const containers = document.querySelectorAll('div.SoaBEf')
@@ -110,7 +117,8 @@ async function searchNews(page: Page, _params: Record<string, unknown>): Promise
 
 /* ---------- searchVideos ---------- */
 
-async function searchVideos(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function searchVideos(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''), { tbm: 'vid' })
   return page.evaluate(() => {
     const items: Array<{ title: string; link: string; source: string; snippet: string }> = []
     const containers = document.querySelectorAll('.Ww4FFb')
@@ -139,7 +147,8 @@ async function searchVideos(page: Page, _params: Record<string, unknown>): Promi
 
 /* ---------- searchShopping ---------- */
 
-async function searchShopping(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function searchShopping(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''), { udm: '28' })
   return page.evaluate(() => {
     const items: Array<{ title: string; price: string; originalPrice: string; merchant: string; reviewCount: string }> = []
     const units = document.querySelectorAll('.pla-unit')
@@ -171,7 +180,8 @@ async function searchShopping(page: Page, _params: Record<string, unknown>): Pro
 
 /* ---------- getKnowledgePanel ---------- */
 
-async function getKnowledgePanel(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getKnowledgePanel(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     const title = document.querySelector('[data-attrid="title"]')?.textContent?.trim() || null
     const subtitle = document.querySelector('[data-attrid="subtitle"]')?.textContent?.trim() || null
@@ -195,7 +205,8 @@ async function getKnowledgePanel(page: Page, _params: Record<string, unknown>): 
 
 /* ---------- getFeaturedSnippet ---------- */
 
-async function getFeaturedSnippet(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getFeaturedSnippet(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     const container = document.querySelector('.xpdopen .hgKElc')
       || document.querySelector('[data-attrid="wa:/description"] .kno-rdesc span')
@@ -215,7 +226,8 @@ async function getFeaturedSnippet(page: Page, _params: Record<string, unknown>):
 
 /* ---------- getPeopleAlsoAsk ---------- */
 
-async function getPeopleAlsoAsk(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getPeopleAlsoAsk(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     const items: Array<{ question: string }> = []
     const rows = document.querySelectorAll('[jsname="Cpkphb"] [data-q], .related-question-pair [data-q]')
@@ -237,7 +249,8 @@ async function getPeopleAlsoAsk(page: Page, _params: Record<string, unknown>): P
 
 /* ---------- getRelatedSearches ---------- */
 
-async function getRelatedSearches(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getRelatedSearches(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     const items: string[] = []
     const links = document.querySelectorAll('#brs a, .k8XOCe a, [data-ved] .s75CSd a')
@@ -251,7 +264,8 @@ async function getRelatedSearches(page: Page, _params: Record<string, unknown>):
 
 /* ---------- searchLocal ---------- */
 
-async function searchLocal(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function searchLocal(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     const items: Array<{ name: string; rating: string; reviews: string; type: string; address: string }> = []
     const cards = document.querySelectorAll('[jscontroller="AtSb"] .VkpGBb, .rllt__details')
@@ -278,7 +292,8 @@ async function searchLocal(page: Page, _params: Record<string, unknown>): Promis
 
 /* ---------- getCalculation ---------- */
 
-async function getCalculation(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getCalculation(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     // Calculator / unit converter / currency converter widget
     const resultEl = document.querySelector('#cwos, .qv3Wpe, .dDoNo .vXQmIe, .dDoNo [data-value]')
@@ -299,7 +314,8 @@ async function getCalculation(page: Page, _params: Record<string, unknown>): Pro
 
 /* ---------- getWeather ---------- */
 
-async function getWeather(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getWeather(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     const container = document.querySelector('#wob_wc')
     if (!container) return { location: null, temperature: null, condition: null, humidity: null, wind: null }
@@ -316,7 +332,8 @@ async function getWeather(page: Page, _params: Record<string, unknown>): Promise
 
 /* ---------- getTranslation ---------- */
 
-async function getTranslation(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getTranslation(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     const container = document.querySelector('#tw-container, .MERaBe')
     if (!container) return { sourceText: null, translatedText: null, sourceLang: null, targetLang: null }

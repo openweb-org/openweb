@@ -86,6 +86,35 @@ describe('detectGraphqlEndpoint', () => {
     ]
     expect(detectGraphqlEndpoint(samples)).toBe(false)
   })
+
+  it('returns true for /gql path (cross-domain GraphQL)', () => {
+    const samples = [
+      makeSample({ path: '/gql', url: 'https://api.example.com/gql' }),
+      makeSample({ path: '/gql', url: 'https://api.example.com/gql' }),
+    ]
+    expect(detectGraphqlEndpoint(samples)).toBe(true)
+  })
+
+  it('returns true for /api/gql path', () => {
+    const samples = [
+      makeSample({ path: '/api/gql', url: 'https://api.example.com/api/gql' }),
+    ]
+    expect(detectGraphqlEndpoint(samples)).toBe(true)
+  })
+
+  it('returns true for batched array payloads on non-graphql path', () => {
+    const samples = [
+      makeSample({
+        path: '/api/v1',
+        url: 'https://api.example.com/api/v1',
+        requestBody: JSON.stringify([
+          { operationName: 'GetUser', query: '{ user { id } }' },
+          { operationName: 'GetPosts', query: '{ posts { id } }' },
+        ]),
+      }),
+    ]
+    expect(detectGraphqlEndpoint(samples)).toBe(true)
+  })
 })
 
 describe('subClusterGraphql', () => {
@@ -372,6 +401,47 @@ describe('subClusterGraphql', () => {
       const clusters = subClusterGraphql(samples)
       expect(clusters).toHaveLength(1)
       expect(clusters[0].graphql.discriminator).toBe('queryShape')
+    })
+  })
+
+  describe('Batched array payloads', () => {
+    it('sub-clusters batched array requests by each element', () => {
+      const samples = [
+        makeSample({
+          requestBody: JSON.stringify([
+            { operationName: 'GetUser', query: 'query GetUser { user { id } }' },
+            { operationName: 'GetPosts', query: 'query GetPosts { posts { id } }' },
+          ]),
+        }),
+      ]
+
+      const clusters = subClusterGraphql(samples)
+      expect(clusters).toHaveLength(2)
+
+      const user = clusters.find((c) => c.graphql.operationName === 'GetUser')
+      expect(user).toBeDefined()
+      expect(user?.graphql.discriminator).toBe('operationName')
+
+      const posts = clusters.find((c) => c.graphql.operationName === 'GetPosts')
+      expect(posts).toBeDefined()
+      expect(posts?.graphql.discriminator).toBe('operationName')
+    })
+
+    it('keeps original sample reference for batched elements', () => {
+      const batchedSample = makeSample({
+        requestBody: JSON.stringify([
+          { operationName: 'OpA', query: 'query OpA { a }' },
+          { operationName: 'OpA', query: 'query OpA { a }' },
+        ]),
+      })
+
+      const clusters = subClusterGraphql([batchedSample])
+      // Both elements have the same operationName, so they go to one cluster
+      expect(clusters).toHaveLength(1)
+      expect(clusters[0].samples).toHaveLength(2)
+      // Both sample references point to the original sample
+      expect(clusters[0].samples[0]).toBe(batchedSample)
+      expect(clusters[0].samples[1]).toBe(batchedSample)
     })
   })
 })

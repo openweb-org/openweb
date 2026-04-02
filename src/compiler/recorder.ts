@@ -176,6 +176,10 @@ export function extractSamples(har: HarLog): ExtractResult {
       referer: entry.request?.headers
         ?.find((h) => h.name?.toLowerCase() === 'referer')
         ?.value || undefined,
+      requestHeaders: (entry.request?.headers ?? [])
+        .filter((h): h is { name: string; value: string } =>
+          Boolean(h?.name && h.value !== undefined))
+        .map((h) => ({ name: h.name, value: h.value })),
     })
   }
 

@@ -418,7 +418,7 @@ export async function loginCommand(site: string): Promise<void> {
 export async function getManagedCdpEndpoint(): Promise<string | undefined> {
   const port = await readPort()
   if (!port) return undefined
-  if (await isCdpReady(port)) return `http://localhost:${port}`
+  if (await isCdpReady(port)) return `http://127.0.0.1:${port}`
   return undefined
 }
 

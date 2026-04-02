@@ -34,7 +34,7 @@ export interface CompileSiteResult {
 }
 
 function siteSlugFromUrl(urlString: string): string {
-  const hostname = new URL(urlString).hostname.replace(/^www\./, '')
+  const hostname = new URL(urlString).hostname.replace(/^(www|web|m|app|mobile)\./, '')
   const [label] = hostname.split('.')
   return label || 'site'
 }
@@ -102,19 +102,8 @@ export async function compileSite(
     }
   }
 
-  if (report.clusters.length === 0 && report.extractionSignals.length === 0) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: 'No API clusters or extraction signals found in capture.',
-      action: 'Record richer interactions or inspect filter rules.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
-
   // Persist analysis.json — handoff artifact from discover agent to compile agent.
-  // Strip JSON response bodies to keep file size manageable (full bodies in analysis-full.json).
+  // Written before early-exit checks so the artifact is available for debugging.
   const strippedReport = stripResponseBodies(report)
   await Promise.all([
     fs.writeFile(
@@ -126,6 +115,30 @@ export async function compileSite(
       `${JSON.stringify(buildAnalysisSummary(strippedReport), null, 2)}\n`,
     ),
   ])
+
+  // Early-exit: 0 API-labeled samples → adapter-only site
+  const apiSampleCount = report.summary.byCategory.api ?? 0
+  if (apiSampleCount === 0) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: '0 API samples detected. This site likely delivers data via HTML (SSR, LD+JSON, DOM) rather than JSON APIs.',
+      action: "See discover.md 'Adapter-Only Sites' for the adapter workflow. Analysis artifacts written to: " + reportDir,
+      retriable: false,
+      failureClass: 'fatal',
+    })
+  }
+
+  if (report.clusters.length === 0 && report.extractionSignals.length === 0) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: 'No API clusters or extraction signals found in capture.',
+      action: 'Record richer interactions or inspect filter rules.',
+      retriable: false,
+      failureClass: 'fatal',
+    })
+  }
 
   // Phase 3: Curate (auto-curation — accept all, top auth candidate, suggested names)
   let curationDecisions: CurationDecisionSet = {}

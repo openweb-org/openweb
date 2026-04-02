@@ -180,6 +180,20 @@ describe('findPageForOrigin', () => {
 
     expect(page).toBeUndefined()
   })
+
+  it('matches when target hostname is a subdomain of the page host (suffix match)', async () => {
+    const podcastsPage = {
+      url: () => 'https://podcasts.apple.com/us/browse',
+      content: vi.fn(async () => '<html><body>podcasts</body></html>'),
+    }
+    const context = {
+      pages: () => [podcastsPage],
+    } as unknown as import('playwright').BrowserContext
+
+    const page = await findPageForOrigin(context, 'https://amp-api.podcasts.apple.com/v1/catalog')
+
+    expect(page).toBe(podcastsPage)
+  })
 })
 
 describe('createNeedsPageError', () => {
@@ -227,6 +241,35 @@ describe('executeSessionHttp', () => {
     expect(headers.Cookie).toBe('sessionid=sess_abc; csrftoken=csrf_xyz')
     // CSRF header is sent on all methods (including GET) by default
     expect(headers['X-CSRFToken']).toBe('csrf_xyz')
+  })
+
+  it('sends DEFAULT_USER_AGENT header on node transport requests', async () => {
+    const browser = mockBrowser([
+      { name: 'sessionid', value: 'sess_abc' },
+      { name: 'csrftoken', value: 'csrf_xyz' },
+    ])
+
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ items: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch
+
+    const spec = instagramSpec()
+    await executeSessionHttp(
+      browser,
+      spec,
+      '/feed/timeline/',
+      'get',
+      spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
+      {},
+      { fetchImpl: fetchMock, ssrfValidator: async () => {} },
+    )
+
+    const calledInit = (fetchMock as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as RequestInit
+    const headers = calledInit.headers as Record<string, string>
+    expect(headers['User-Agent']).toMatch(/^Mozilla/)
   })
 
   it('injects CSRF header for POST (mutation) request', async () => {
@@ -1172,7 +1215,7 @@ describe('RC2: autoNavigate', () => {
     expect(result!.owned).toBe(true)
     expect(gotoFn).toHaveBeenCalledWith(
       'https://www.instagram.com/',
-      expect.objectContaining({ waitUntil: 'networkidle', timeout: 15_000 }),
+      expect.objectContaining({ waitUntil: 'load', timeout: 15_000 }),
     )
   })
 

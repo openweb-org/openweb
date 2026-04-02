@@ -61,6 +61,119 @@ describe('differentiateParameters', () => {
     expect(daily?.schema).toEqual({ type: 'string' })
   })
 
+  it('treats tuple-like values as scalar string, not array', () => {
+    const endpoint = {
+      method: 'GET',
+      host: 'api.example.com',
+      path: '/search',
+      samples: [
+        {
+          method: 'GET',
+          host: 'api.example.com',
+          path: '/search',
+          url: 'https://api.example.com/search?filter=(type:job,status:active)',
+          query: { filter: ['(type:job,status:active)'] },
+          status: 200,
+          contentType: 'application/json',
+          response: { kind: 'json' as const, body: {} },
+        },
+        {
+          method: 'GET',
+          host: 'api.example.com',
+          path: '/search',
+          url: 'https://api.example.com/search?filter=(type:user,role:admin)',
+          query: { filter: ['(type:user,role:admin)'] },
+          status: 200,
+          contentType: 'application/json',
+          response: { kind: 'json' as const, body: {} },
+        },
+      ],
+    }
+
+    const params = differentiateParameters(endpoint)
+    const filter = params.find((p) => p.name === 'filter')
+
+    // Should be string, not array — commas inside parens are structural
+    expect(filter?.schema).toEqual({ type: 'string' })
+  })
+
+  it('treats JSON-like values as scalar string, not array', () => {
+    const endpoint = {
+      method: 'GET',
+      host: 'api.example.com',
+      path: '/query',
+      samples: [
+        {
+          method: 'GET',
+          host: 'api.example.com',
+          path: '/query',
+          url: 'https://api.example.com/query?q={"a":1,"b":2}',
+          query: { q: ['{"a":1,"b":2}'] },
+          status: 200,
+          contentType: 'application/json',
+          response: { kind: 'json' as const, body: {} },
+        },
+      ],
+    }
+
+    const params = differentiateParameters(endpoint)
+    const q = params.find((p) => p.name === 'q')
+
+    expect(q?.schema).toEqual({ type: 'string' })
+  })
+
+  it('treats bracket-wrapped values as scalar string, not array', () => {
+    const endpoint = {
+      method: 'GET',
+      host: 'api.example.com',
+      path: '/data',
+      samples: [
+        {
+          method: 'GET',
+          host: 'api.example.com',
+          path: '/data',
+          url: 'https://api.example.com/data?ids=[1,2,3]',
+          query: { ids: ['[1,2,3]'] },
+          status: 200,
+          contentType: 'application/json',
+          response: { kind: 'json' as const, body: {} },
+        },
+      ],
+    }
+
+    const params = differentiateParameters(endpoint)
+    const ids = params.find((p) => p.name === 'ids')
+
+    // Even though it contains commas, the brackets signal a structured value
+    expect(ids?.schema).toEqual({ type: 'string' })
+  })
+
+  it('still splits plain comma-separated values as array', () => {
+    const endpoint = {
+      method: 'GET',
+      host: 'api.example.com',
+      path: '/items',
+      samples: [
+        {
+          method: 'GET',
+          host: 'api.example.com',
+          path: '/items',
+          url: 'https://api.example.com/items?tags=red,blue',
+          query: { tags: ['red,blue'] },
+          status: 200,
+          contentType: 'application/json',
+          response: { kind: 'json' as const, body: {} },
+        },
+      ],
+    }
+
+    const params = differentiateParameters(endpoint)
+    const tags = params.find((p) => p.name === 'tags')
+
+    // Plain comma-separated should still be treated as array
+    expect(tags?.schema).toEqual({ type: 'array', items: { type: 'string' } })
+  })
+
   it('infers integer type when all numeric values are integers', () => {
     const endpoint = {
       method: 'GET',

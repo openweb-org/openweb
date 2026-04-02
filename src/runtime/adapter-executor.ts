@@ -96,10 +96,15 @@ export async function loadAdapter(siteRoot: string, adapterName: string): Promis
   return adapter
 }
 
+export interface AdapterExecOptions {
+  /** When false, skip the isAuthenticated check. Default: true. */
+  readonly requiresAuth?: boolean
+}
+
 /**
  * Execute an adapter operation:
  * 1. Init (if needed)
- * 2. Check auth
+ * 2. Check auth (only when the spec declares auth)
  * 3. Execute operation
  */
 export async function executeAdapter(
@@ -107,6 +112,7 @@ export async function executeAdapter(
   adapter: CodeAdapter,
   operation: string,
   params: Readonly<Record<string, unknown>>,
+  options?: AdapterExecOptions,
 ): Promise<unknown> {
   await ensurePagePolyfills(page)
   let ready = await adapter.init(page)
@@ -127,16 +133,18 @@ export async function executeAdapter(
     })
   }
 
-  const authenticated = await adapter.isAuthenticated(page)
-  if (!authenticated) {
-    throw new OpenWebError({
-      error: 'auth',
-      code: 'AUTH_FAILED',
-      message: `Adapter "${adapter.name}": not authenticated.`,
-      action: 'Log in to the site and try again.',
-      retriable: true,
-      failureClass: 'needs_login',
-    })
+  if (options?.requiresAuth !== false) {
+    const authenticated = await adapter.isAuthenticated(page)
+    if (!authenticated) {
+      throw new OpenWebError({
+        error: 'auth',
+        code: 'AUTH_FAILED',
+        message: `Adapter "${adapter.name}": not authenticated.`,
+        action: 'Log in to the site and try again.',
+        retriable: true,
+        failureClass: 'needs_login',
+      })
+    }
   }
 
   return adapter.execute(page, operation, params)

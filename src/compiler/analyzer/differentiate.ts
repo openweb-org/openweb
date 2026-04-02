@@ -15,6 +15,14 @@ function maybeNumber(value: string): number | string {
   return parsed
 }
 
+/** Detect structured values (tuple-like or JSON-like) that should not be split on commas. */
+function isStructuredValue(value: string): boolean {
+  if (value.startsWith('(') && value.endsWith(')')) return true
+  if (value.startsWith('{') && value.endsWith('}')) return true
+  if (value.startsWith('[') && value.endsWith(']')) return true
+  return false
+}
+
 function inferPrimitiveSchema(values: Array<number | string>): JsonSchema {
   const allNumbers = values.every((value) => typeof value === 'number')
   if (allNumbers) {
@@ -50,7 +58,7 @@ export function differentiateParameters(endpoint: ClusteredEndpoint): ParameterD
     const required = present.length === endpoint.samples.length
     const isArray =
       present.some((values) => values.length > 1) ||
-      present.some((values) => values.some((value) => value.includes(',')))
+      present.some((values) => values.some((value) => value.includes(',') && !isStructuredValue(value)))
 
     const typedValues = present.map((values) =>
       values

@@ -128,4 +128,33 @@ describe('normalizePathBatch', () => {
     expect(r.template).toBe('/api/v1/ab')
     expect(r.normalization).toBeUndefined()
   })
+
+  it('does not learn reserved segments like graphql as {param}', () => {
+    const paths = ['/api/graphql', '/api/gql', '/api/token']
+    const result = normalizePathBatch(paths)
+
+    // All three have a reserved segment in position 2 — should not be parameterized
+    expect(result.get('/api/graphql')?.template).toBe('/api/graphql')
+    expect(result.get('/api/gql')?.template).toBe('/api/gql')
+    expect(result.get('/api/token')?.template).toBe('/api/token')
+  })
+
+  it('does not learn reserved segments case-insensitively', () => {
+    const paths = ['/v2/GraphQL', '/v2/GRAPHQL', '/v2/graphql']
+    const result = normalizePathBatch(paths)
+
+    for (const p of paths) {
+      expect(result.get(p)?.template).toBe(p)
+    }
+  })
+
+  it('does not learn when one value in the group is a reserved segment', () => {
+    const paths = ['/data/api', '/data/search', '/data/feed']
+    const result = normalizePathBatch(paths)
+
+    // 'api' is reserved, so the segment should not be learned as a param
+    expect(result.get('/data/api')?.template).toBe('/data/api')
+    expect(result.get('/data/search')?.template).toBe('/data/search')
+    expect(result.get('/data/feed')?.template).toBe('/data/feed')
+  })
 })

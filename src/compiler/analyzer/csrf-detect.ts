@@ -2,8 +2,23 @@ import type { CaptureData } from './classify.js'
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
-/** Headers to skip during CSRF detection — standard non-CSRF headers */
-const SKIP_HEADERS = new Set(['cookie', 'content-type', 'accept', 'user-agent', 'host', 'origin', 'referer'])
+/** Headers to skip during CSRF detection — standard HTTP headers that can never be CSRF targets */
+const SKIP_HEADERS = new Set([
+  'cookie',
+  'content-type',
+  'content-length',
+  'accept',
+  'host',
+  'user-agent',
+  'accept-encoding',
+  'accept-language',
+  'connection',
+  'origin',
+  'referer',
+  'dpr',
+  'screen-dpr',
+  'viewport-width',
+])
 
 /** Well-known CSRF header names — prioritized over random header matches */
 const CSRF_HEADER_NAMES = new Set(['csrf-token', 'x-csrf-token', 'x-csrftoken', '_csrf'])
@@ -13,9 +28,9 @@ function stripQuotes(value: string): string {
   return value.replace(/^"|"$/g, '')
 }
 
-/** Check if a header is a browser client hint (sec-ch-*) — never CSRF */
-function isClientHint(headerName: string): boolean {
-  return headerName.toLowerCase().startsWith('sec-ch-')
+/** Check if a header is a standard non-CSRF header (sec-* prefix — never CSRF) */
+function isStandardSecHeader(headerName: string): boolean {
+  return headerName.toLowerCase().startsWith('sec-')
 }
 
 interface CookieHeaderMatch {
@@ -37,7 +52,7 @@ function findCookieHeaderMatches(
     for (const header of entry.request.headers) {
       const name = header.name.toLowerCase()
       if (SKIP_HEADERS.has(name)) continue
-      if (isClientHint(header.name)) continue
+      if (isStandardSecHeader(header.name)) continue
 
       for (const [cookieName, rawCookieValue] of cookieValues) {
         const cookieValue = stripQuotes(rawCookieValue)
@@ -108,7 +123,7 @@ export function detectMetaTag(data: CaptureData): { name: string; header: string
     for (const header of entry.request.headers) {
       const name = header.name.toLowerCase()
       if (SKIP_HEADERS.has(name)) continue
-      if (isClientHint(header.name)) continue
+      if (isStandardSecHeader(header.name)) continue
 
       for (const [metaName, metaValue] of metaTags) {
         if (header.value === metaValue && metaValue.length > 0) {

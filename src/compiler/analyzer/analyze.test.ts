@@ -207,4 +207,88 @@ describe('analyzeCapture', () => {
     expect(first.clusters.map((c) => c.id)).toEqual(second.clusters.map((c) => c.id))
     expect(first.authCandidates.map((a) => a.id)).toEqual(second.authCandidates.map((a) => a.id))
   })
+
+  it('scopes auth inference to API-labeled entries only (B1)', async () => {
+    // Create a HAR where a tracking-domain entry carries a cookie header
+    // that would incorrectly trigger cookie_session auth if not filtered.
+    const harWithTracking = {
+      log: {
+        entries: [
+          // API entry — no auth cookies
+          {
+            startedDateTime: '2025-01-01T00:00:00Z',
+            time: 50,
+            request: {
+              method: 'GET',
+              url: 'https://api.example.com/v1/public',
+              headers: [{ name: 'Accept', value: 'application/json' }],
+            },
+            response: {
+              status: 200,
+              statusText: 'OK',
+              headers: [{ name: 'content-type', value: 'application/json' }],
+              content: { size: 10, mimeType: 'application/json', text: '{}' },
+            },
+          },
+          // Tracking entry — has cookie that would trigger auth
+          {
+            startedDateTime: '2025-01-01T00:00:01Z',
+            time: 30,
+            request: {
+              method: 'GET',
+              url: 'https://www.google-analytics.com/collect',
+              headers: [{ name: 'Cookie', value: 'sessionid=abc123' }],
+            },
+            response: {
+              status: 200,
+              statusText: 'OK',
+              headers: [{ name: 'content-type', value: 'image/gif' }],
+              content: { size: 1, mimeType: 'image/gif' },
+            },
+          },
+        ],
+      },
+    }
+
+    const trackingDir = await mkdtemp(path.join(os.tmpdir(), 'analyze-b1-'))
+    await writeFile(path.join(trackingDir, 'traffic.har'), JSON.stringify(harWithTracking))
+    // State snapshot with the cookie name matching the tracking entry
+    await writeFile(path.join(trackingDir, 'state_snapshots.json'), JSON.stringify([{
+      timestamp: '2025-01-01T00:00:00Z',
+      trigger: 'initial',
+      url: 'https://example.com',
+      localStorage: {},
+      sessionStorage: {},
+      cookies: [{
+        name: 'sessionid',
+        value: 'abc123',
+        domain: '.example.com',
+        path: '/',
+        httpOnly: false,
+        secure: true,
+        sameSite: 'Lax',
+        expires: -1,
+      }],
+    }]))
+    await mkdir(path.join(trackingDir, 'dom_extractions'), { recursive: true })
+
+    try {
+      const bundle: CaptureBundle = {
+        site: 'test-b1',
+        sourceUrl: 'https://example.com',
+        captureDir: trackingDir,
+        harPath: path.join(trackingDir, 'traffic.har'),
+      }
+
+      const report = await analyzeCapture(bundle)
+      // The tracking entry should be labeled non-api (tracking/off_domain)
+      // so auth should NOT detect cookie_session from it
+      const cookieAuth = report.authCandidates.find(c => c.auth?.type === 'cookie_session')
+      expect(cookieAuth).toBeUndefined()
+      // Should have a "none" candidate since the API entry has no auth
+      expect(report.authCandidates.find(c => c.auth === undefined)).toBeDefined()
+    } finally {
+      await rm(trackingDir, { recursive: true, force: true })
+    }
+  })
 })

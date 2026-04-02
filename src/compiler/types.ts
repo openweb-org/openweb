@@ -19,6 +19,8 @@ export interface RecordedRequestSample {
   readonly startedDateTime?: string
   /** Referer header value from the request (for navigation grouping) */
   readonly referer?: string
+  /** Non-standard request headers (for constant header detection) */
+  readonly requestHeaders?: ReadonlyArray<{ readonly name: string; readonly value: string }>
 }
 
 export interface ClusteredEndpoint {

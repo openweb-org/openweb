@@ -9,16 +9,16 @@ Nine Chinese websites with shared technical patterns distinct from Western web. 
 | Site | Category | Auth | Ops | Status |
 |------|----------|------|-----|--------|
 | Bilibili | Video / Social | cookie_session | 10 | Active |
-| Boss Zhipin | Recruiting | none | 10 | Quarantined — bot detection |
+| Boss Zhipin | Recruiting | none | 7 | Quarantined — bot detection; ref data APIs work via node |
 | Ctrip (Trip.com) | Travel | none | 10 | Active |
 | Douban | Media reviews | none | 10 | Active |
-| JD.com | E-commerce | none | 5 | Active (limited) |
+| JD.com | E-commerce | none | 4 | Active — DOM extraction, no auth needed |
 | Weibo | Social media | cookie_session | 10 | Active (login required) |
 | Xiaohongshu | Social commerce | cookie_session | 3 | Active |
-| Xueqiu | Finance / Social | none* | 10 | Active |
+| Xueqiu | Finance / Social | cookie_session | 6 | Active — node transport for most ops, page for timeline |
 | Zhihu | Q&A / Knowledge | cookie_session | 10 | Quarantined — fingerprints pending |
 
-*Xueqiu: `xq_a_token` cookie set automatically on page load (24h expiry).
+*Xueqiu: `xq_a_token` cookie set automatically on page load (24h expiry). Most APIs work via node transport with cookie_session — exception is timeline endpoint which requires page transport due to `md5__1038` anti-bot hash. The `stock.xueqiu.com` quote/pankou APIs accept cross-domain cookies from xueqiu.com.
 
 ## Expected Operations
 
@@ -32,9 +32,13 @@ Operations vary by category — use the relevant archetype profile (social, comm
 
 ## Cross-Site Common Patterns
 
-### All Sites Use Page Transport
+### Most Sites Use Page Transport
 
-Every Chinese site requires page (L3 adapter) transport. Direct HTTP fails due to custom signing, anti-bot measures, or SPA-only rendering. No exceptions in the current set.
+Most Chinese sites require page (L3 adapter) transport for core operations (search, detail, profiles). Direct HTTP fails due to custom signing, anti-bot measures, or SPA-only rendering.
+
+**Exception: Xueqiu.** Xueqiu's search, quote, order book, and industry APIs work via node transport with `cookie_session` auth (`xq_a_token`). Only the social timeline endpoint needs page transport due to `md5__1038` anti-bot hash. This makes Xueqiu the most node-friendly Chinese site.
+
+**Exception: reference data APIs.** Many Chinese sites expose public reference data endpoints (`/wapi/zpCommon/*`, `/api/config/*`) that work via node transport without bot detection. These include city lists, industry codes, filter options, and other static reference data. Use operation-level `transport: node` override for these endpoints while keeping page transport for core operations.
 
 ### Custom Anti-Bot Signing
 
@@ -43,7 +47,7 @@ Most Chinese sites implement proprietary request signing beyond standard CSRF:
 | Site | Signing | Mechanism |
 |------|---------|-----------|
 | Bilibili | Wbi signing | MD5 hash of sorted params + mixing key (rotates) |
-| JD | h5st signing | `window.PSign.sign()` with appId |
+| JD | h5st signing (global.jd.com) | `window.PSign.sign()` with appId — not used in current adapter (DOM extraction) |
 | Xiaohongshu | X-s / X-t / X-s-common | Obfuscated signatures from `as.xiaohongshu.com` |
 | Boss | Fingerprint-based | Blocks new tabs, detects automation |
 
@@ -63,6 +67,16 @@ Several sites embed data in the initial HTML rather than (or alongside) API call
 ### Rate Limiting and Session
 
 Chinese sites are aggressive about rate limiting. Weibo rotates XSRF tokens; Xiaohongshu triggers CAPTCHA on profiles; Xueqiu tokens expire after 24h; Boss/Zhihu are quarantined due to bot detection. All sites default to zh-CN content (Ctrip has international version at us.trip.com).
+
+### International Redirect
+
+Some Chinese sites detect non-CN IP addresses and redirect to an international
+version (e.g., `ctrip.com` redirects to `trip.com`, `jd.com` to `global.jd.com`).
+The international site may have a different API surface, different auth, and
+different bot detection. During capture, check whether you landed on the Chinese
+or international domain. If you need the Chinese version, use a CN-region proxy
+or set `Accept-Language: zh-CN` headers. Document which version the package
+targets in DOC.md.
 
 ## Curation Expectations
 

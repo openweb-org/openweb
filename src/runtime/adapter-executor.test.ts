@@ -106,6 +106,49 @@ describe('executeAdapter', () => {
     expect(adapter.execute).not.toHaveBeenCalled()
   })
 
+  it('skips isAuthenticated when requiresAuth is false', async () => {
+    const page = mockPage()
+    const adapter = mockAdapter({
+      isAuthenticated: vi.fn(async () => false),
+    })
+
+    const result = await executeAdapter(page, adapter, 'getJobs', { query: 'test' }, { requiresAuth: false })
+
+    expect(adapter.init).toHaveBeenCalledWith(page)
+    expect(adapter.isAuthenticated).not.toHaveBeenCalled()
+    expect(adapter.execute).toHaveBeenCalledWith(page, 'getJobs', { query: 'test' })
+    expect(result).toEqual({ result: 'ok' })
+  })
+
+  it('still checks auth when requiresAuth is true', async () => {
+    const page = mockPage()
+    const adapter = mockAdapter({
+      isAuthenticated: vi.fn(async () => false),
+    })
+
+    await expect(
+      executeAdapter(page, adapter, 'getChats', {}, { requiresAuth: true }),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
+    })
+    expect(adapter.isAuthenticated).toHaveBeenCalledWith(page)
+    expect(adapter.execute).not.toHaveBeenCalled()
+  })
+
+  it('checks auth by default when no options provided', async () => {
+    const page = mockPage()
+    const adapter = mockAdapter({
+      isAuthenticated: vi.fn(async () => false),
+    })
+
+    await expect(
+      executeAdapter(page, adapter, 'getChats', {}),
+    ).rejects.toMatchObject({
+      payload: { code: 'AUTH_FAILED' },
+    })
+    expect(adapter.isAuthenticated).toHaveBeenCalledWith(page)
+  })
+
   it('propagates adapter execute errors', async () => {
     const page = mockPage()
     const adapter = mockAdapter({

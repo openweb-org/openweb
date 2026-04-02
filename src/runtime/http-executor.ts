@@ -137,7 +137,9 @@ export async function executeOperation(
           mergedParams,
         )
 
-        body = await executeAdapter(page, adapter, adapterRef.operation, adapterParams)
+        const serverExt = getServerXOpenWeb(spec, operationRef.operation)
+        const requiresAuth = !!(serverExt?.auth)
+        body = await executeAdapter(page, adapter, adapterRef.operation, adapterParams, { requiresAuth })
         status = 200
       } finally {
         if (ownedPage) await page.close().catch(() => {})

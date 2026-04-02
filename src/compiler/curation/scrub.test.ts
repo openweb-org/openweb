@@ -42,9 +42,28 @@ describe('scrubExamples', () => {
     expect(result.email).toBe('user@example.com')
   })
 
-  it('replaces phone numbers', () => {
+  it('replaces phone numbers for phone-like keys', () => {
     const result = scrubExamples({ phone: '+1 (555) 123-4567' })
     expect(result.phone).toBe('+1-555-0100')
+    expect(scrubExamples({ mobile: '555-123-4567' }).mobile).toBe('+1-555-0100')
+    expect(scrubExamples({ tel: '555 123 4567' }).tel).toBe('+1-555-0100')
+    expect(scrubExamples({ fax: '555-123-4567' }).fax).toBe('+1-555-0100')
+    expect(scrubExamples({ cellNumber: '+44 20 7946 0958' }).cellNumber).toBe('+1-555-0100')
+  })
+
+  it('does not scrub numeric API identifiers as phone numbers', () => {
+    const result = scrubExamples({
+      id: '1234567890',
+      asin: 'B08N5WRWNW',
+      media_id: '9876543210',
+      pk: '1122334455',
+      postId: '555-1234',
+    })
+    expect(result.id).toBe('1234567890')
+    expect(result.asin).toBe('B08N5WRWNW')
+    expect(result.media_id).toBe('9876543210')
+    expect(result.pk).toBe('1122334455')
+    expect(result.postId).toBe('555-1234')
   })
 
   it('keeps normal string values', () => {

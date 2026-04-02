@@ -236,6 +236,26 @@ nested sub-objects. For arrays, describe the item schema. Mark nullable fields.
 **Acceptable bare schemas:** operations that return truly opaque objects (e.g.,
 raw API proxy responses) or empty 204 responses.
 
+### Nullable Fields in Adapter-Only Packages
+
+Adapter-only packages (no compiled spec) have hand-written schemas. Mark fields
+as nullable when the adapter may return `null` for optional data:
+
+```yaml
+properties:
+  bio:
+    type: string
+    nullable: true
+  avatar_url:
+    type: string
+    nullable: true
+```
+
+Common nullable fields: user bio, profile image, optional metadata, pagination
+cursors (null on last page). If the adapter extracts from DOM and an element is
+missing, the field should be `nullable: true` rather than omitted — this gives
+agents a stable schema contract.
+
 ### Empty-Array Fallback
 
 When a captured response contains an empty array (e.g., `{"items": []}`), the

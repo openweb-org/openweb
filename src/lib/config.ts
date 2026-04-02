@@ -16,7 +16,7 @@ export function openwebHome(): string {
 // ── CDP ──────────────────────────────────────────
 
 export const CDP_PORT = process.env.OPENWEB_CDP_PORT ?? '9222'
-export const CDP_ENDPOINT = `http://localhost:${CDP_PORT}`
+export const CDP_ENDPOINT = `http://127.0.0.1:${CDP_PORT}`
 
 // ── User-Agent ───────────────────────────────────
 

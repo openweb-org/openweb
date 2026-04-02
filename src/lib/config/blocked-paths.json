@@ -22,5 +22,10 @@
   "\\/security\\/csp\\b",
   "\\/px\\/",
   "\\/tscp\\/",
-  "\\/realtimeFrontendClientConnectivityTracking"
+  "\\/realtimeFrontendClientConnectivityTracking",
+  "\\/stats\\/qoe\\b",
+  "\\/log_event\\b",
+  "\\/verify_session\\b",
+  "\\/youtubei\\/v1\\/log_event\\b",
+  "\\/collector\\b"
 ]

@@ -1,11 +1,15 @@
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 
+import { connectWithRetry } from '../capture/connection.js'
 import { type AsyncApiSpec, loadAsyncApi } from '../lib/asyncapi.js'
+import { CDP_ENDPOINT } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import { loadManifest, saveManifest } from '../lib/manifest.js'
 import { listOperations, listSites, loadOpenApi, pathExists, resolveSiteRoot } from '../lib/openapi.js'
 import { type ExecuteDependencies, executeOperation } from '../runtime/executor.js'
+import { resolveTransport } from '../runtime/operation-context.js'
+import { autoNavigate, findPageForOrigin } from '../runtime/session-executor.js'
 import { executeWsOperation, streamWsOperation } from '../runtime/ws-executor.js'
 import { WsConnectionPool } from '../runtime/ws-pool.js'
 import { openWsSession } from '../runtime/ws-runtime.js'
@@ -128,14 +132,42 @@ export async function verifySite(
 
   // Build permission lookup for replaySafety resolution (best-effort)
   const permissionMap = new Map<string, string>()
+  let needsBrowser = false
+  let siteBaseUrl = ''
   try {
     const openapi = await loadOpenApi(site)
     for (const ref of listOperations(openapi)) {
       const ext = ref.operation['x-openweb'] as Record<string, unknown> | undefined
       if (ext?.permission) permissionMap.set(ref.operation.operationId, ext.permission as string)
+      if (!needsBrowser) {
+        const hasAdapter = !!ext?.adapter
+        const transport = resolveTransport(openapi, ref.operation)
+        if (hasAdapter || transport === 'page') {
+          needsBrowser = true
+          siteBaseUrl = ref.operation.servers?.[0]?.url ?? openapi.servers?.[0]?.url ?? ''
+        }
+      }
     }
   } catch {
     // No openapi or broken spec — fall back to method-based replaySafety check
+  }
+
+  // Warm-up: navigate to site base URL so page/adapter ops find a matching tab
+  if (needsBrowser && siteBaseUrl) {
+    try {
+      const browser = deps?.browser ?? await connectWithRetry(deps?.cdpEndpoint ?? CDP_ENDPOINT)
+      try {
+        const context = browser.contexts()[0]
+        if (context) {
+          const existing = await findPageForOrigin(context, siteBaseUrl)
+          if (!existing) {
+            await autoNavigate(context, siteBaseUrl)
+          }
+        }
+      } finally {
+        if (!deps?.browser) browser.close().catch(() => {})
+      }
+    } catch { /* warm-up is best-effort — don't fail verify */ }
   }
 
   const examplesDir = path.join(siteRoot, 'examples')
@@ -164,7 +196,16 @@ export async function verifySite(
     const testFile = JSON.parse(raw) as TestFile
 
     // Skip files with incompatible structure (legacy format without cases array)
-    if (!Array.isArray(testFile.cases)) continue
+    if (!Array.isArray(testFile.cases)) {
+      const opId = testFile.operation_id ?? fileName.replace('.example.json', '')
+      operations.push({
+        operationId: opId,
+        status: 'FAIL',
+        driftType: 'error',
+        detail: 'malformed example file: missing cases array',
+      })
+      continue
+    }
 
     // Skip unsafe mutations — not safe to replay
     if (testFile.protocol !== 'ws' && resolveReplaySafety(testFile, permissionMap) === 'unsafe_mutation') {
@@ -284,7 +325,7 @@ async function verifyOperation(
     // Compute and compare fingerprint
     const newFingerprint = computeResponseFingerprint(result.body)
 
-    if (storedFingerprint && storedFingerprint !== newFingerprint) {
+    if (storedFingerprint && storedFingerprint !== 'pending' && storedFingerprint !== newFingerprint) {
       return {
         operationId,
         status: 'DRIFT',
@@ -407,7 +448,7 @@ async function verifyWsOperation(
 
     // Fingerprint comparison
     const newFingerprint = computeResponseFingerprint(body)
-    if (storedFingerprint && storedFingerprint !== newFingerprint) {
+    if (storedFingerprint && storedFingerprint !== 'pending' && storedFingerprint !== newFingerprint) {
       return {
         operationId,
         status: 'DRIFT',

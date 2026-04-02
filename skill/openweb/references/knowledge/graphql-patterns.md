@@ -106,6 +106,29 @@ GraphQL operations map to openapi.yaml with a single path and operation-level di
 4. **Missing fragments** — queries may reference fragments defined elsewhere. Capture the full query text including fragments.
 5. **CSRF on GraphQL** — many GraphQL endpoints require a CSRF token even though they accept JSON. Check for `x-csrf-token` or similar headers.
 
+## Ephemeral queryId / doc_id Hashes
+
+Some sites (notably Meta/Facebook, Instagram) use ephemeral `doc_id` or `queryId`
+parameters instead of the standard Apollo persisted-query mechanism. These are
+opaque numeric IDs that map to server-side query definitions.
+
+**Key difference from Apollo persisted queries:**
+- Apollo hashes are SHA-256 of the query text — deterministic and reproducible
+- `doc_id` / `queryId` values are server-assigned and change on every deploy
+- There is no fallback to full query text — the hash is the only way to call the operation
+
+**Impact on site packages:**
+- Operations using ephemeral queryIds break silently after site redeploys
+- Verify will report `FAIL` with 400/500 status or "query not found" errors
+- Re-capture is the only fix — you cannot compute new hashes
+
+**Mitigation:**
+- Document queryId-dependent operations in DOC.md Known Issues
+- Set up regular verify cadence for these sites (weekly or on failure)
+- When re-capturing, record the same operations to get updated hashes
+- Consider writing an adapter that extracts queryIds from the site's JavaScript
+  bundles at runtime (complex but more durable)
+
 ## Related References
 
 - `references/compile.md` — compile review for GraphQL operations

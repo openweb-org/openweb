@@ -28,6 +28,7 @@ How major bot detection systems work, their impact on openweb transport and capt
 - **Symptoms:** `403` with JSON `{"appId":"PX...","vid":"...","uuid":"..."}`, block page HTML with `/captcha/` path
 - **Impact on transport:** Node transport fails. `page` transport works if the browser has solved the initial challenge.
 - **Capture strategy:** Same as Akamai — real browser, short sessions.
+- **CDP tab closure:** Some PX-heavy sites (e.g., GoodRx) close browser tabs after 1-2 sequential `page.goto()` calls via Playwright CDP. Workaround: for adapter-only sites (DOM/JSON-LD data, no JSON APIs), skip capture→compile and write the adapter directly.
 
 ### DataDome
 
@@ -44,6 +45,7 @@ Some sites roll their own detection in addition to (or instead of) commercial so
 | Pattern | Examples | Signal |
 |---------|----------|--------|
 | Custom request signing | Amazon, LinkedIn | Requests include `x-amzn-*` or custom HMAC headers computed client-side |
+| Custom required headers | Pinterest, Instagram | Requests require `x-requested-with: XMLHttpRequest`, `x-pinterest-appstate`, `x-pinterest-pws-handler` (Pinterest) or `x-ig-app-id` (Instagram) — returns 400/403 without them |
 | Encrypted payloads | Google, Facebook | Request body or params are base64/protobuf — can't be replayed without the encoder |
 | Rate-based blocking | Most APIs | `429` or silent empty responses after N requests/minute |
 | Rate-based redirect loops | LinkedIn | Rapid sequential node requests trigger redirect loops (>5 redirects), individual requests work but batch verify fails |

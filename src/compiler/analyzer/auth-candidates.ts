@@ -22,17 +22,32 @@ const EXCHANGE_URL_PATTERN = /(token|oauth|auth|login|session|authenticate|sso)/
 // ── Mutation methods for CSRF detection ─────────────────────────────────────
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
-/** Headers to skip during CSRF detection — standard non-CSRF headers */
-const SKIP_HEADERS = new Set(['cookie', 'content-type', 'accept', 'user-agent', 'host', 'origin', 'referer'])
+/** Headers to skip during CSRF detection — standard HTTP headers that can never be CSRF targets */
+const SKIP_HEADERS = new Set([
+  'cookie',
+  'content-type',
+  'content-length',
+  'accept',
+  'host',
+  'user-agent',
+  'accept-encoding',
+  'accept-language',
+  'connection',
+  'origin',
+  'referer',
+  'dpr',
+  'screen-dpr',
+  'viewport-width',
+])
 
 /** Strip surrounding double quotes from cookie values (e.g. LinkedIn JSESSIONID) */
 function stripQuotes(value: string): string {
   return value.replace(/^"|"$/g, '')
 }
 
-/** Check if a header is a browser client hint (sec-ch-*) — never CSRF */
-function isClientHint(headerName: string): boolean {
-  return headerName.toLowerCase().startsWith('sec-ch-')
+/** Check if a header is a standard non-CSRF header (sec-* prefix — never CSRF) */
+function isStandardSecHeader(headerName: string): boolean {
+  return headerName.toLowerCase().startsWith('sec-')
 }
 
 // ── Object traversal helpers ────────────────────────────────────────────────
@@ -275,7 +290,7 @@ function detectAllCookieToHeaderMatches(data: CaptureData): CookieToHeaderMatch[
     for (const header of entry.request.headers) {
       const name = header.name.toLowerCase()
       if (SKIP_HEADERS.has(name)) continue
-      if (isClientHint(header.name)) continue
+      if (isStandardSecHeader(header.name)) continue
 
       for (const [cookieName, rawCookieValue] of cookieValues) {
         const cookieValue = stripQuotes(rawCookieValue)
@@ -314,7 +329,7 @@ function detectMetaTagEvidence(data: CaptureData): MetaTagResult | undefined {
     for (const header of entry.request.headers) {
       const name = header.name.toLowerCase()
       if (SKIP_HEADERS.has(name)) continue
-      if (isClientHint(header.name)) continue
+      if (isStandardSecHeader(header.name)) continue
 
       for (const [metaName, metaValue] of metaTags) {
         if (header.value === metaValue && metaValue.length > 0) {
@@ -340,6 +355,34 @@ function detectSapisidhashEvidence(data: CaptureData): SapisidhashResult | undef
     }
   }
   return undefined
+}
+
+// ── Bot-protection cookie detection ──────────────────────────────────────────
+// Well-known bot-protection cookie prefixes/names by vendor.
+
+const BOT_PROTECTION_PATTERNS: ReadonlyArray<{ prefix: string; vendor: string }> = [
+  { prefix: '_px', vendor: 'PerimeterX' },
+  { prefix: 'datadome', vendor: 'DataDome' },
+  { prefix: '_abck', vendor: 'Akamai' },
+  { prefix: 'bm_', vendor: 'Akamai' },
+]
+
+/** Detect well-known bot-protection cookies in state snapshots. */
+function detectBotProtectionCookies(
+  data: CaptureData,
+): { detected: true; vendors: string[] } | undefined {
+  const vendors = new Set<string>()
+  for (const snapshot of data.stateSnapshots) {
+    for (const cookie of snapshot.cookies) {
+      const lower = cookie.name.toLowerCase()
+      for (const pat of BOT_PROTECTION_PATTERNS) {
+        if (lower.startsWith(pat.prefix)) {
+          vendors.add(pat.vendor)
+        }
+      }
+    }
+  }
+  return vendors.size > 0 ? { detected: true, vendors: [...vendors] } : undefined
 }
 
 // ── Candidate builder ───────────────────────────────────────────────────────
@@ -405,10 +448,17 @@ export function buildAuthCandidates(data: CaptureData): AuthCandidatesResult {
   const cookieToHeader = cookieToHeaderMatches[0]
   const metaTag = detectMetaTagEvidence(data)
   const sapisidhash = detectSapisidhashEvidence(data)
+  const botProtection = detectBotProtectionCookies(data)
 
   const csrf = buildCsrf(cookieToHeader, metaTag)
   const csrfOptions = buildCsrfOptions(cookieToHeaderMatches, metaTag)
   const signing = buildSigning(sapisidhash)
+
+  // Prefer page transport when bot protection is detected
+  const transport = botProtection ? 'page' as const : 'node' as const
+  const botNote = botProtection
+    ? `Bot protection detected (${botProtection.vendors.join(', ')}); preferring page transport`
+    : undefined
 
   // Build evidence helpers
   const csrfHeaderBindings = cookieToHeader
@@ -417,12 +467,14 @@ export function buildAuthCandidates(data: CaptureData): AuthCandidatesResult {
 
   // ── localStorage_jwt candidate (rank 1, confidence 0.95) ──
   if (localStorageJwt) {
+    const notes = [`localStorage key "${localStorageJwt.key}" path "${localStorageJwt.path}" matches Authorization header`]
+    if (botNote) notes.push(botNote)
     const evidence: AuthEvidence = {
       matchedEntries: 0,
       totalEntries: data.harEntries.length,
       storageKeys: [localStorageJwt.key],
       headerBindings: csrfHeaderBindings,
-      notes: [`localStorage key "${localStorageJwt.key}" path "${localStorageJwt.path}" matches Authorization header`],
+      notes,
     }
     const auth: AuthPrimitive = {
       type: 'localStorage_jwt',
@@ -433,7 +485,7 @@ export function buildAuthCandidates(data: CaptureData): AuthCandidatesResult {
     candidates.push({
       id: nextId(),
       rank: 1,
-      transport: 'node',
+      transport,
       auth,
       csrf,
       signing,
@@ -444,12 +496,14 @@ export function buildAuthCandidates(data: CaptureData): AuthCandidatesResult {
 
   // ── exchange_chain candidate (rank 2, confidence 0.9) ──
   if (exchangeChain) {
+    const notes = [`Token exchange via ${exchangeChain.tokenEndpoints.join(', ')}`]
+    if (botNote) notes.push(botNote)
     const evidence: AuthEvidence = {
       matchedEntries: 0,
       totalEntries: data.harEntries.length,
       tokenEndpoints: exchangeChain.tokenEndpoints,
       headerBindings: csrfHeaderBindings,
-      notes: [`Token exchange via ${exchangeChain.tokenEndpoints.join(', ')}`],
+      notes,
     }
     const auth: AuthPrimitive = {
       type: 'exchange_chain',
@@ -459,7 +513,7 @@ export function buildAuthCandidates(data: CaptureData): AuthCandidatesResult {
     candidates.push({
       id: nextId(),
       rank: 2,
-      transport: 'node',
+      transport,
       auth,
       csrf,
       signing,
@@ -471,20 +525,22 @@ export function buildAuthCandidates(data: CaptureData): AuthCandidatesResult {
   // ── cookie_session candidate (rank 3, confidence = coverage ratio) ──
   if (cookieSession) {
     const coverage = cookieSession.matchedEntries / cookieSession.totalEntries
+    const notes = [
+      `Cookie coverage: ${cookieSession.matchedEntries}/${cookieSession.totalEntries} entries (${(coverage * 100).toFixed(0)}%)`,
+      `Matched cookies: ${cookieSession.matchedCookies.join(', ')}`,
+    ]
+    if (botNote) notes.push(botNote)
     const evidence: AuthEvidence = {
       matchedEntries: cookieSession.matchedEntries,
       totalEntries: cookieSession.totalEntries,
       matchedCookies: cookieSession.matchedCookies,
       headerBindings: csrfHeaderBindings,
-      notes: [
-        `Cookie coverage: ${cookieSession.matchedEntries}/${cookieSession.totalEntries} entries (${(coverage * 100).toFixed(0)}%)`,
-        `Matched cookies: ${cookieSession.matchedCookies.join(', ')}`,
-      ],
+      notes,
     }
     candidates.push({
       id: nextId(),
       rank: 3,
-      transport: 'node',
+      transport,
       auth: { type: 'cookie_session' },
       csrf,
       signing,
@@ -504,16 +560,18 @@ export function buildAuthCandidates(data: CaptureData): AuthCandidatesResult {
       checkedSignals.push('No cookie session overlap found')
     }
 
+    const notes = ['No auth mechanism detected']
+    if (botNote) notes.push(botNote)
     const evidence: AuthEvidence = {
       matchedEntries: 0,
       totalEntries: data.harEntries.length,
       rejectedSignals: checkedSignals,
-      notes: ['No auth mechanism detected'],
+      notes,
     }
     candidates.push({
       id: nextId(),
       rank: 99,
-      transport: 'node',
+      transport,
       auth: undefined,
       csrf: undefined,
       signing,

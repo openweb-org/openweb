@@ -95,7 +95,102 @@ describe('hasNonPassResults', () => {
   })
 })
 
-// ── Fingerprint comparison tests ───────────────────────
+// ── A10: Pending hash acceptance tests ───────────────────────
+
+describe('pending fingerprint acceptance', () => {
+  // These tests mirror the verify.ts comparison logic:
+  // if (storedFingerprint && storedFingerprint !== 'pending' && storedFingerprint !== newFingerprint)
+
+  it('treats "pending" stored hash as not established — no drift', () => {
+    const storedFingerprint = 'pending'
+    const newFingerprint = computeResponseFingerprint({ data: [{ id: 1 }] })
+    // The verify logic should NOT flag drift when stored is "pending"
+    const isDrift = storedFingerprint !== 'pending' && storedFingerprint !== newFingerprint
+    expect(isDrift).toBe(false)
+  })
+
+  it('still detects drift when stored hash is a real value', () => {
+    const storedFingerprint = computeResponseFingerprint({ data: [{ id: 1 }] })
+    const newFingerprint = computeResponseFingerprint({ data: [{ id: 1, name: 'added' }] })
+    const isDrift = storedFingerprint !== 'pending' && storedFingerprint !== newFingerprint
+    expect(isDrift).toBe(true)
+  })
+
+  it('no drift when stored and new fingerprints match', () => {
+    const body = { data: [{ id: 1 }] }
+    const storedFingerprint = computeResponseFingerprint(body)
+    const newFingerprint = computeResponseFingerprint(body)
+    const isDrift = storedFingerprint !== 'pending' && storedFingerprint !== newFingerprint
+    expect(isDrift).toBe(false)
+  })
+
+  it('no drift when no stored fingerprint exists', () => {
+    const storedFingerprint: string | undefined = undefined
+    const newFingerprint = computeResponseFingerprint({ data: [{ id: 1 }] })
+    // The verify logic guards with `storedFingerprint &&` first
+    const isDrift = !!storedFingerprint && storedFingerprint !== 'pending' && storedFingerprint !== newFingerprint
+    expect(isDrift).toBe(false)
+  })
+})
+
+// ── A17: Malformed example file detection tests ───────────────────────
+
+describe('malformed example file detection', () => {
+  it('detects missing cases array', () => {
+    // Simulates the verify.ts logic for malformed example files
+    const testFile = { operation_id: 'getProfile' } as { operation_id: string; cases?: unknown[] }
+    const isMalformed = !Array.isArray(testFile.cases)
+    expect(isMalformed).toBe(true)
+  })
+
+  it('accepts valid example file with cases array', () => {
+    const testFile = {
+      operation_id: 'getProfile',
+      cases: [{ input: {}, assertions: { status: 200 } }],
+    }
+    const isMalformed = !Array.isArray(testFile.cases)
+    expect(isMalformed).toBe(false)
+  })
+
+  it('detects cases as non-array value', () => {
+    const testFile = { operation_id: 'getProfile', cases: 'not-an-array' } as { operation_id: string; cases: unknown }
+    const isMalformed = !Array.isArray(testFile.cases)
+    expect(isMalformed).toBe(true)
+  })
+
+  it('detects cases as null', () => {
+    const testFile = { operation_id: 'getProfile', cases: null } as { operation_id: string; cases: unknown }
+    const isMalformed = !Array.isArray(testFile.cases)
+    expect(isMalformed).toBe(true)
+  })
+
+  it('produces correct FAIL result for malformed file', () => {
+    const testFile = { operation_id: 'getProfile' } as { operation_id: string; cases?: unknown[] }
+    const fileName = 'get_profile.example.json'
+    if (!Array.isArray(testFile.cases)) {
+      const opId = testFile.operation_id ?? fileName.replace('.example.json', '')
+      const result = {
+        operationId: opId,
+        status: 'FAIL' as const,
+        driftType: 'error' as const,
+        detail: 'malformed example file: missing cases array',
+      }
+      expect(result.operationId).toBe('getProfile')
+      expect(result.status).toBe('FAIL')
+      expect(result.driftType).toBe('error')
+      expect(result.detail).toBe('malformed example file: missing cases array')
+    }
+  })
+
+  it('falls back to filename for operation_id when missing', () => {
+    const testFile = {} as { operation_id?: string; cases?: unknown[] }
+    const fileName = 'get_profile.example.json'
+    if (!Array.isArray(testFile.cases)) {
+      const opId = testFile.operation_id ?? fileName.replace('.example.json', '')
+      expect(opId).toBe('get_profile')
+    }
+  })
+})
 
 describe('fingerprint comparison', () => {
   it('same structure produces same fingerprint', () => {

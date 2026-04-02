@@ -13,12 +13,12 @@ export function detectGraphqlEndpoint(samples: RecordedRequestSample[]): boolean
   // Path contains 'graphql' (case-insensitive)
   if (/graphql/i.test(firstPath)) return true
 
-  // All POST to same path with GraphQL body fields
+  // Path ends with '/gql' (case-insensitive) — cross-domain GraphQL endpoints
+  if (/\/gql$/i.test(firstPath)) return true
+
+  // All POST to same path with GraphQL body fields (including batched arrays)
   if (!samples.every((s) => s.method.toUpperCase() === 'POST')) return false
-  return samples.some((s) => {
-    const body = parseJsonBody(s.requestBody)
-    return body !== undefined && ('operationName' in body || 'query' in body)
-  })
+  return samples.some((s) => hasGraphqlBody(s.requestBody))
 }
 
 /** Sub-clusters GraphQL samples by discriminator (priority: queryId > operationName > persistedQueryHash > parsed query name > queryShape). */
@@ -31,12 +31,30 @@ export function subClusterGraphql(
   const groups = new Map<string, { samples: RecordedRequestSample[]; graphql: GraphqlClusterInfo }>()
 
   for (const sample of samples) {
-    const { key, graphql } = extractDiscriminator(sample, endpointPath)
-    const group = groups.get(key)
-    if (group) {
-      group.samples.push(sample)
+    // Unbatch array payloads: each element becomes a virtual sample for clustering
+    const bodies = parseBatchBody(sample.requestBody)
+
+    if (bodies.length > 1) {
+      // Batched request — cluster each element individually, but keep the original sample reference
+      for (const body of bodies) {
+        const syntheticBody = JSON.stringify(body)
+        const virtualSample = { ...sample, requestBody: syntheticBody }
+        const { key, graphql } = extractDiscriminator(virtualSample, endpointPath)
+        const group = groups.get(key)
+        if (group) {
+          group.samples.push(sample)
+        } else {
+          groups.set(key, { samples: [sample], graphql })
+        }
+      }
     } else {
-      groups.set(key, { samples: [sample], graphql })
+      const { key, graphql } = extractDiscriminator(sample, endpointPath)
+      const group = groups.get(key)
+      if (group) {
+        group.samples.push(sample)
+      } else {
+        groups.set(key, { samples: [sample], graphql })
+      }
     }
   }
 
@@ -167,4 +185,47 @@ function parseJsonBody(body: string | undefined): Record<string, any> | undefine
   } catch {
     return undefined
   }
+}
+
+/** Check if a request body contains GraphQL fields (single object or batched array). */
+// biome-ignore lint/suspicious/noExplicitAny: GraphQL request bodies have dynamic structure
+function isGraphqlObject(obj: Record<string, any>): boolean {
+  return 'operationName' in obj || 'query' in obj
+}
+
+function hasGraphqlBody(body: string | undefined): boolean {
+  if (!body) return false
+  try {
+    const parsed = JSON.parse(body)
+    if (typeof parsed === 'object' && parsed !== null) {
+      if (Array.isArray(parsed)) {
+        return parsed.some((item) =>
+          typeof item === 'object' && item !== null && !Array.isArray(item) && isGraphqlObject(item),
+        )
+      }
+      return isGraphqlObject(parsed)
+    }
+  } catch { /* not JSON */ }
+  return false
+}
+
+/**
+ * Parse a request body, returning an array of GraphQL operation objects.
+ * Handles both single `{query, variables}` and batched `[{query, variables}, ...]` payloads.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: GraphQL request bodies have dynamic structure
+function parseBatchBody(body: string | undefined): Array<Record<string, any>> {
+  if (!body) return []
+  try {
+    const parsed = JSON.parse(body)
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
+        (item) => typeof item === 'object' && item !== null && !Array.isArray(item),
+      )
+    }
+    if (typeof parsed === 'object' && parsed !== null) {
+      return [parsed]
+    }
+  } catch { /* not JSON */ }
+  return []
 }

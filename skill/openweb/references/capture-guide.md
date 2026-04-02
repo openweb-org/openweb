@@ -232,7 +232,16 @@ const cdpEndpoint = `http://localhost:${process.env.OPENWEB_CDP_PORT ?? '9222'}`
 const browser = await chromium.connectOverCDP(cdpEndpoint)
 const context = browser.contexts()[0]!
 const page = context.pages()[0]!  // use the page capture is already monitoring
+```
 
+**Important: use the existing Playwright connection.** Each `chromium.connectOverCDP()`
+call creates a separate CDP connection. Capture only monitors pages from the
+connection it was started on. If your script opens a second `connectOverCDP()`
+connection, `page.evaluate(fetch(...))` traffic from that connection will NOT
+appear in the HAR. Always reuse `context.pages()[0]` from the same connection,
+or open new tabs via `context.newPage()` on the existing context.
+
+```typescript
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // Navigate — use 'load', never 'networkidle'

@@ -116,6 +116,15 @@ write operations, do not remove auth/csrf from `servers[0].x-openweb`.
 
 **SSR-heavy sites:** If compile produces many noise operations (telemetry, config, analytics) but zero usable data operations, the site likely delivers data via HTML (SSR, LD+JSON, DOM) rather than JSON APIs. In this case, skip further compile iterations and write an adapter directly — see `capture-guide.md` scripted capture templates for the adapter pattern.
 
+**GraphQL persisted queries / APQ:** If the site uses persisted queries (hashes
+instead of full query text), the compiled spec stores the hash per operation.
+These hashes are tied to a specific deployment and may break on site redeploy.
+If replay verify starts failing with "PersistedQueryNotFound" errors, the site
+has redeployed and hashes need re-capture. For Automatic Persisted Queries (APQ),
+the server may accept the full query as a fallback — write an adapter that sends
+the full query text when the hash fails. See `references/knowledge/graphql-patterns.md`
+for hash lifecycle details.
+
 **Now read `references/analysis-review.md`.** It covers how to read
 `analysis.json` in detail: auth candidates, clusters, extraction signals,
 WebSocket analysis, and coverage decisions.

@@ -28,6 +28,7 @@ const COOKIE_KEYS = new Set(['cookie', 'set-cookie'])
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE_RE = /^\+?[\d\s\-().]{7,20}$/
+const PHONE_KEY_RE = /phone|mobile|tel|fax|cell|sms/i
 const BASE64_RE = /^[A-Za-z0-9+/=_-]+$/
 
 /** Matches URL path segments that look like user slugs (e.g., /in/williamhgates/) */
@@ -59,7 +60,7 @@ function scrubValue(key: string, value: unknown): unknown {
   // Coordinate-like values (lat/lng) — checked before phone to avoid false matches
   if (COORD_KEY_RE.test(key) && COORD_VALUE_RE.test(value)) return EXAMPLE_COORD
 
-  if (PHONE_RE.test(value)) return SAFE_PHONE
+  if (PHONE_KEY_RE.test(key) && PHONE_RE.test(value)) return SAFE_PHONE
 
   // User slugs from profile URLs
   if (SLUG_KEY_RE.test(key) && SLUG_VALUE_RE.test(value)) return EXAMPLE_SLUG

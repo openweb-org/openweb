@@ -785,5 +785,185 @@ describe('buildAuthCandidates', () => {
       )
       expect(secChOption).toBeUndefined()
     })
+
+    it('skips content-length header from CSRF matching', () => {
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+          makeHarEntry({
+            method: 'POST',
+            headers: [
+              { name: 'Cookie', value: 'sessionid=abc' },
+              { name: 'content-length', value: 'abc123' },
+            ],
+          }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [
+            { name: 'sessionid', value: 'abc', httpOnly: true },
+            { name: 'len_cookie', value: 'abc123', httpOnly: false },
+          ],
+        })],
+      }
+
+      const { csrfOptions } = buildAuthCandidates(data)
+      const clOption = csrfOptions.find(
+        (o) => o.type === 'cookie_to_header' && o.header === 'content-length',
+      )
+      expect(clOption).toBeUndefined()
+    })
+
+    it('skips sec-fetch-* headers from CSRF matching (not just sec-ch-*)', () => {
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+          makeHarEntry({
+            method: 'POST',
+            headers: [
+              { name: 'Cookie', value: 'sessionid=abc' },
+              { name: 'sec-fetch-mode', value: 'navigate' },
+            ],
+          }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [
+            { name: 'sessionid', value: 'abc', httpOnly: true },
+            { name: 'mode_cookie', value: 'navigate', httpOnly: false },
+          ],
+        })],
+      }
+
+      const { csrfOptions } = buildAuthCandidates(data)
+      const secFetchOption = csrfOptions.find(
+        (o) => o.type === 'cookie_to_header' && o.header.startsWith('sec-'),
+      )
+      expect(secFetchOption).toBeUndefined()
+    })
+  })
+
+  // ── Bot protection detection (B7) ──
+
+  describe('bot protection detection', () => {
+    it('detects PerimeterX cookies and prefers page transport', () => {
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [
+            { name: 'sessionid', value: 'abc' },
+            { name: '_px3', value: 'pxval123' },
+            { name: '_pxvid', value: 'pxvidval456' },
+          ],
+        })],
+      }
+
+      const { candidates } = buildAuthCandidates(data)
+      const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
+      expect(cookieCandidate).toBeDefined()
+      expect(cookieCandidate?.transport).toBe('page')
+      expect(cookieCandidate?.evidence.notes).toContainEqual(
+        expect.stringContaining('Bot protection detected'),
+      )
+      expect(cookieCandidate?.evidence.notes).toContainEqual(
+        expect.stringContaining('PerimeterX'),
+      )
+    })
+
+    it('detects DataDome cookies and prefers page transport', () => {
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [
+            { name: 'sessionid', value: 'abc' },
+            { name: 'datadome', value: 'ddval789' },
+          ],
+        })],
+      }
+
+      const { candidates } = buildAuthCandidates(data)
+      const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
+      expect(cookieCandidate?.transport).toBe('page')
+      expect(cookieCandidate?.evidence.notes).toContainEqual(
+        expect.stringContaining('DataDome'),
+      )
+    })
+
+    it('detects Akamai cookies and prefers page transport', () => {
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [
+            { name: 'sessionid', value: 'abc' },
+            { name: '_abck', value: 'akval123' },
+          ],
+        })],
+      }
+
+      const { candidates } = buildAuthCandidates(data)
+      const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
+      expect(cookieCandidate?.transport).toBe('page')
+      expect(cookieCandidate?.evidence.notes).toContainEqual(
+        expect.stringContaining('Akamai'),
+      )
+    })
+
+    it('detects Akamai bm_ cookies and prefers page transport', () => {
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [
+            { name: 'sessionid', value: 'abc' },
+            { name: 'bm_sz', value: 'bmval789' },
+          ],
+        })],
+      }
+
+      const { candidates } = buildAuthCandidates(data)
+      const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
+      expect(cookieCandidate?.transport).toBe('page')
+      expect(cookieCandidate?.evidence.notes).toContainEqual(
+        expect.stringContaining('Akamai'),
+      )
+    })
+
+    it('uses node transport when no bot protection cookies detected', () => {
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Cookie', value: 'sessionid=abc' }] }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [{ name: 'sessionid', value: 'abc' }],
+        })],
+      }
+
+      const { candidates } = buildAuthCandidates(data)
+      const cookieCandidate = candidates.find(c => c.auth?.type === 'cookie_session')
+      expect(cookieCandidate?.transport).toBe('node')
+    })
+
+    it('includes bot note in none candidate when no auth detected', () => {
+      const data: CaptureData = {
+        harEntries: [
+          makeHarEntry({ headers: [{ name: 'Accept', value: 'application/json' }] }),
+        ],
+        stateSnapshots: [makeSnapshot({
+          cookies: [{ name: '_px3', value: 'pxval' }],
+        })],
+      }
+
+      const { candidates } = buildAuthCandidates(data)
+      expect(candidates).toHaveLength(1)
+      expect(candidates[0]?.transport).toBe('page')
+      expect(candidates[0]?.evidence.notes).toContainEqual(
+        expect.stringContaining('Bot protection detected'),
+      )
+    })
   })
 })

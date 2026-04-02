@@ -1,6 +1,7 @@
 import type { Browser, BrowserContext, Page } from 'playwright-core'
 
 import { formatCookieString } from '../lib/cookies.js'
+import { DEFAULT_USER_AGENT } from '../lib/config.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
@@ -49,6 +50,8 @@ export async function findPageForOrigin(context: BrowserContext, serverUrl: stri
       try {
         const pageHost = new URL(page.url()).hostname
         if (pageHost === baseDomain || pageHost === `www.${baseDomain}` || pageHost.endsWith(`.${baseDomain}`)) return page
+        // Suffix-match: target is a subdomain of the page (e.g. amp-api.podcasts.apple.com → podcasts.apple.com)
+        if (targetHost.endsWith(`.${pageHost}`)) return page
       } catch { /* skip */ }
     }
 
@@ -89,7 +92,9 @@ export async function autoNavigate(context: BrowserContext, serverUrl: string): 
   try {
     logger.debug(`auto-navigating to ${siteUrl}`)
     const newPage = await context.newPage()
-    await newPage.goto(siteUrl, { waitUntil: 'networkidle', timeout: 15_000 })
+    await newPage.goto(siteUrl, { waitUntil: 'load', timeout: 15_000 })
+    // Settle wait: SPAs redirect during load; need stable URL for findPageForOrigin
+    await new Promise(r => setTimeout(r, 2000))
     const matched = await findPageForOrigin(context, serverUrl)
     if (!matched) {
       await newPage.close().catch(() => {})
@@ -187,6 +192,7 @@ export async function executeSessionHttp(
     const serverOrigin = new URL(serverUrl).origin
     const headers: Record<string, string> = {
       Accept: 'application/json',
+      'User-Agent': DEFAULT_USER_AGENT,
       Referer: `${serverOrigin}/`,
       ...buildHeaderParams(allParams, inputParams),
     }

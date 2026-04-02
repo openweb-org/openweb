@@ -134,6 +134,22 @@ describe('labelSamples', () => {
     }
   })
 
+  it('labels telemetry noise paths as tracking', () => {
+    const input = [
+      makeSample({ path: '/stats/qoe' }),
+      makeSample({ path: '/log_event' }),
+      makeSample({ path: '/verify_session' }),
+      makeSample({ path: '/youtubei/v1/log_event' }),
+      makeSample({ path: '/collector' }),
+    ]
+
+    const result = labelSamples(input, TARGET)
+    expect(byCategory(result, 'tracking')).toHaveLength(5)
+    for (const ls of result) {
+      expect(ls.reasons[0]).toContain('blocked-paths')
+    }
+  })
+
   // -----------------------------------------------------------------------
   // Rule 4: static content-type → static
   // -----------------------------------------------------------------------

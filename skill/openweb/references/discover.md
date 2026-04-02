@@ -197,6 +197,17 @@ For these, the standard capture → compile flow produces no usable operations.
 - All data is in SSR HTML, LD+JSON, or DOM (no XHR/fetch JSON responses)
 - Site uses a proprietary protocol (e.g., Telegram MTProto)
 
+**Probing checklist before committing to adapter-only:**
+1. Open DevTools Network tab, filter by XHR/Fetch, and browse the site. If zero
+   JSON responses appear, the site is SSR/DOM-only.
+2. Check `view-source:` for `__NEXT_DATA__`, `__INITIAL_STATE__`, or LD+JSON
+   (`<script type="application/ld+json">`). These are extraction targets, not
+   adapter-only signals — use `x-openweb.extraction` instead.
+3. Try a search with the on-page search box (not URL bar). Some sites serve SSR
+   for direct navigation but use JSON APIs for in-app search/pagination.
+4. If the site has a mobile app, check if it calls a public API that the web
+   version does not use — this is rare but sometimes reveals a hidden JSON API.
+
 **Adapter-only workflow:**
 1. Frame target intents (Step 1 — same as normal)
 2. Write adapter directly: `src/sites/<site>/adapters/<site>.ts`

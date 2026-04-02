@@ -312,6 +312,7 @@ paths:
       summary: Get full city list — hot cities and province-grouped hierarchy with numeric codes for search
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: boss0005
           signature_id: boss0005s
@@ -319,9 +320,6 @@ paths:
           verified: true
           signals:
             - status-match
-        adapter:
-          name: boss-web
-          operation: getCities
       responses:
         '200':
           description: City list with codes.
@@ -357,6 +355,7 @@ paths:
       summary: Get industry categories — top-level industries with sub-categories and codes
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: boss0006
           signature_id: boss0006s
@@ -364,9 +363,6 @@ paths:
           verified: true
           signals:
             - status-match
-        adapter:
-          name: boss-web
-          operation: getIndustries
       responses:
         '200':
           description: Industry list.
@@ -404,6 +400,7 @@ paths:
       summary: Get search filter options — salary ranges, experience levels, education, company stages, job types
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: boss0007
           signature_id: boss0007s
@@ -411,9 +408,6 @@ paths:
           verified: true
           signals:
             - status-match
-        adapter:
-          name: boss-web
-          operation: getFilterConditions
       responses:
         '200':
           description: Filter condition lists.
