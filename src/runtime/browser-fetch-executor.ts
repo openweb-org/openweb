@@ -73,9 +73,10 @@ export async function executeBrowserFetch(
 
   try {
     await ensurePagePolyfills(page)
+    const ssrfValidator = deps.ssrfValidator ?? validateSSRF
     const handle: BrowserHandle = { page, context }
     const authResult = serverExt?.auth
-      ? await resolveAuth(handle, serverExt.auth, serverUrl, deps)
+      ? await resolveAuth(handle, serverExt.auth, serverUrl, { ...deps, ssrfValidator })
       : undefined
 
     // Resolve parameters
@@ -130,6 +131,7 @@ export async function executeBrowserFetch(
         }
         const csrfResult = await resolveCsrf(handle, serverExt.csrf, serverUrl, {
           ...deps,
+          ssrfValidator,
           authHeaders,
         })
         Object.assign(headers, csrfResult.headers)
@@ -138,7 +140,7 @@ export async function executeBrowserFetch(
 
     // Resolve signing
     if (serverExt?.signing) {
-      const signingResult = await resolveSigning(handle, serverExt.signing, serverUrl, deps)
+      const signingResult = await resolveSigning(handle, serverExt.signing, serverUrl, { ...deps, ssrfValidator })
       Object.assign(headers, signingResult.headers)
     }
 
@@ -148,7 +150,6 @@ export async function executeBrowserFetch(
     // returns opaqueredirect (status 0, no headers) — unusable for per-hop
     // validation. This is the correct model: browser_fetch exists precisely
     // because we need browser-native request behavior.
-    const ssrfValidator = deps.ssrfValidator ?? validateSSRF
     await ssrfValidator(target)
 
     // Execute fetch inside the browser page context
