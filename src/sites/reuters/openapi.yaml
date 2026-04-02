@@ -79,65 +79,6 @@ paths:
                             thumbnail:
                               type: object
 
-  /pf/api/v3/content/fetch/article-by-id-or-url-v1:
-    get:
-      operationId: getArticle
-      summary: "Get full article by URL path — returns headline, body paragraphs, authors, published date, section, related content"
-      x-openweb:
-        permission: read
-        build:
-          stable_id: reuters_getArticle_v1
-          tool_version: 2
-        adapter:
-          name: reuters-api
-          operation: getArticle
-      parameters:
-        - name: website_url
-          in: query
-          required: true
-          description: "Article URL path (e.g., /world/us/trump-tariffs-2025-04-01/)"
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Article detail
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: object
-                    properties:
-                      _id:
-                        type: string
-                      headlines:
-                        type: object
-                        properties:
-                          basic:
-                            type: string
-                      subheadlines:
-                        type: object
-                      description:
-                        type: object
-                        properties:
-                          basic:
-                            type: string
-                      content_elements:
-                        type: array
-                        items:
-                          type: object
-                      authors:
-                        type: array
-                        items:
-                          type: object
-                      publish_date:
-                        type: string
-                      taxonomy:
-                        type: object
-                      related_content:
-                        type: object
-
   /pf/api/v3/content/fetch/articles-by-section-alias-or-id-v1:
     get:
       operationId: getTopicArticles

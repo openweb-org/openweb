@@ -8,16 +8,16 @@
   "requires_auth": false,
   "dependencies": {},
   "stats": {
-    "operation_count": 10,
+    "operation_count": 6,
     "l1_count": 0,
-    "l2_count": 10,
+    "l2_count": 6,
     "l3_count": 0,
     "ws_count": 0
   },
   "last_verified": "2026-04-02T15:31:52.579Z",
   "quarantined": false,
   "fingerprint": {
-    "response_shape_hash": "getBoardMembers:838206e3006b0a6f,getCompanyProfile:5668f39719196a72,getIndexMembers:fa5ac57f851882ad,getLatestNews:c7ad25f72c32d70d,getNewsHeadlines:77c115aa3e7e8649,getPriceChart:c062b322a88b4a60,getPriceMovements:2eff621880777a91,getQuote:130ed89e2cbba519,getTickerBar:0c00ab57aee61dba,searchBloomberg:6c408148c1f67499",
+    "response_shape_hash": "getBoardMembers:838206e3006b0a6f,getIndexMembers:fa5ac57f851882ad,getLatestNews:c7ad25f72c32d70d,getNewsHeadlines:77c115aa3e7e8649,getTickerBar:0c00ab57aee61dba,searchBloomberg:6c408148c1f67499",
     "last_validated": "2026-04-02T15:31:52.582Z"
   }
 }

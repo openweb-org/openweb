@@ -53,14 +53,6 @@ async function searchArticles(page: Page, params: Record<string, unknown>) {
   })
 }
 
-async function getArticle(page: Page, params: Record<string, unknown>) {
-  const websiteUrl = String(params.website_url ?? '')
-  if (!websiteUrl) throw validationError('website_url is required (e.g., /world/us/article-slug-2025-01-01/)')
-  return pfFetch(page, 'article-by-id-or-url-v1', {
-    published: 'true', section_optional_fields: 'all', website: 'reuters', website_url: websiteUrl,
-  })
-}
-
 async function getTopicArticles(page: Page, params: Record<string, unknown>) {
   const sectionId = String(params.section_id ?? '')
   if (!sectionId) throw validationError('section_id is required (e.g., /world/, /business/, /technology/)')
@@ -83,7 +75,6 @@ async function getMarketQuotes(page: Page, params: Record<string, unknown>) {
 
 const operations: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
   searchArticles,
-  getArticle,
   getTopicArticles,
   getMarketQuotes,
 }

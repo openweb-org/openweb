@@ -1,7 +1,0 @@
-{
-  "operation_id": "getArticle",
-  "cases": [{
-    "input": { "website_url": "/world/" },
-    "assertions": { "status": 200, "response_schema_valid": true }
-  }]
-}
