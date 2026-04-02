@@ -1,50 +1,63 @@
-# Twitch Fixture
+# Twitch
 
 ## Overview
 
-Twitch is a live streaming platform. All public data is served through a GraphQL API at `gql.twitch.tv/gql` using **persisted queries** (sha256 hashes, no inline query text). A public `Client-ID` header is required but no auth token for public data.
+Live streaming platform. All public data served through a GraphQL API at `gql.twitch.tv/gql` using persisted queries (sha256 hashes). No auth needed for public reads.
 
-## Architecture
+## Workflows
 
-- **Transport**: `page` — browser fetch via same-origin to avoid bot detection
-- **API type**: GraphQL with persisted queries (operationName + sha256Hash) for reads; inline mutations for writes
-- **Auth**: None for public data; `auth-token` cookie for write operations (follow)
-- **Client-ID**: `kimne78kx3ncx6brgo4mv6wki5h1ko` (public anonymous key)
+### Find a streamer and check if they're live
+1. `searchChannels(query)` → pick channel → `channelLogin` (from `login` field)
+2. `getStream(channelLogin)` → stream status (null = offline)
 
-## Operations (11)
+### Browse a channel profile
+1. `getChannel(channelLogin)` → description, followers, social links, partner status
 
-### Read Operations (10)
+### Discover popular games
+1. `getTopGames(limit, sort)` → top categories with viewer/broadcaster counts
 
-| Operation | Description |
-|-----------|-------------|
-| `searchChannels` | Search channels/streams by keyword |
-| `getChannelInfo` | Channel profile, followers, social links, partner status |
-| `getStreamInfo` | Current stream status (live/offline, game, viewers) |
-| `getChannelSchedule` | Weekly schedule segments, recent VODs, live status |
-| `getChannelVideos` | Video shelves (featured clips, broadcasts, highlights) |
-| `getChannelClips` | Channel clips with time filter and pagination |
-| `browseCategories` | Top categories/games by viewer count |
-| `getCategoryStreams` | Live streams within a specific category |
-| `getTopStreams` | Homepage stream shelves (top live across categories) |
-| `getFeaturedStreams` | Editorially featured/promoted streams |
+## Operations
 
-### Write Operations (1)
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| searchChannels | find channels by keyword | query | login, displayName, followers, broadcastTitle | entry point; cursor pagination |
+| getChannel | channel profile | channelLogin ← searchChannels.login | displayName, followers, isPartner, socialMedias | |
+| getStream | live stream status | channelLogin ← searchChannels.login | stream (null=offline), game, lastBroadcastTitle | |
+| getTopGames | top categories/games | limit, sort | displayName, viewersCount, broadcastersCount, tags | entry point |
 
-| Operation | Description | Safety |
-|-----------|-------------|--------|
-| `followChannel` | Follow a channel (requires auth) | ✅ SAFE — reversible (unfollow via Twitch UI) |
+## Quick Start
 
-## Key Patterns
+```bash
+# Search for channels
+openweb twitch exec searchChannels '{"query":"valorant"}'
 
-- **Persisted queries**: Twitch does not accept inline GQL queries for reads. Each read operation is identified by a sha256 hash that maps to a server-side query. Hashes may change when Twitch deploys new frontend versions.
-- **Inline mutations**: Write operations (follow) use inline GraphQL mutation text with an OAuth authorization header.
-- **Batched requests**: The browser often batches multiple GQL operations in a single POST. The adapter sends one operation per request for simplicity.
-- **Auth for writes**: Read operations work without login. Write operations require `auth-token` cookie (set via `openweb login twitch`).
-- **Cursor pagination**: Clips and search use cursor-based pagination.
+# Get channel profile
+openweb twitch exec getChannel '{"channelLogin":"shroud"}'
 
-## Limitations
+# Check if a channel is live
+openweb twitch exec getStream '{"channelLogin":"shroud"}'
 
-- Persisted query hashes are tied to Twitch's frontend version and may break on updates
-- Chat messages require WebSocket (not supported)
-- Subscriber-only content requires auth
-- VOD playback tokens require additional API calls
+# Browse top games/categories
+openweb twitch exec getTopGames '{"limit":10}'
+```
+
+---
+
+## Site Internals
+
+## API Architecture
+
+GraphQL API at `gql.twitch.tv/gql` with persisted queries. Each read operation uses a sha256 hash that maps to a server-side query — no inline query text accepted for reads. Requests require a public `Client-ID` header (`kimne78kx3ncx6brgo4mv6wki5h1ko`).
+
+## Auth
+
+No auth required for public data. Write operations (follow, etc.) would require `auth-token` cookie via OAuth.
+
+## Transport
+
+`page` transport — requests made via `page.evaluate(fetch)` in the browser context. Required because Twitch's GQL endpoint checks request origin and the adapter needs to run from a Twitch page.
+
+## Known Issues
+
+- **Persisted query hashes** are tied to Twitch's frontend version and may break on deploys. Hashes in `queries.ts` need periodic updates.
+- **No viewer count on getStream** — the StreamMetadata GQL query doesn't return viewer count (that's in a separate query). Use getChannel or searchChannels for follower counts.

@@ -1,8 +1,13 @@
 {
   "operation_id": "searchPins",
+  "method": "get",
+  "replay_safety": "safe_read",
   "cases": [
     {
-      "input": { "query": "minimalist interior design" },
+      "input": {
+        "source_url": "/search/pins/?q=cats",
+        "data": "{\"options\":{\"query\":\"cats\",\"scope\":\"pins\",\"page_size\":25},\"context\":{}}"
+      },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

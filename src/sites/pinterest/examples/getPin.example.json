@@ -1,11 +1,12 @@
 {
-  "operation_id": "getUserProfile",
+  "operation_id": "getPin",
   "method": "get",
   "replay_safety": "safe_read",
   "cases": [
     {
       "input": {
-        "username": "instagram"
+        "source_url": "/pin/1149473504911636509/",
+        "data": "{\"options\":{\"id\":\"1149473504911636509\",\"field_set_key\":\"detailed\"},\"context\":{}}"
       },
       "assertions": {
         "status": 200,

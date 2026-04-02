@@ -1,8 +1,8 @@
 {
-  "operation_id": "getTopStreams",
+  "operation_id": "getTopGames",
   "cases": [
     {
-      "input": { "limit": 8 },
+      "input": { "limit": 10 },
       "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]

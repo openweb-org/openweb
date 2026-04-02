@@ -4,8 +4,8 @@ info:
   version: '1.0.0'
   x-openweb:
     spec_version: '2.0'
-    compiled_at: '2026-03-24T00:00:00Z'
-    requires_auth: optional
+    compiled_at: '2026-04-01T00:00:00Z'
+    requires_auth: false
 servers:
   - url: https://www.twitch.tv
     x-openweb:
@@ -14,7 +14,7 @@ paths:
   /search:
     get:
       operationId: searchChannels
-      summary: Search channels and streams by keyword — returns channel names, follower counts, descriptions
+      summary: Search channels and streams by keyword — returns channel names, follower counts, descriptions, broadcast titles
       x-openweb:
         permission: read
         build:
@@ -63,10 +63,10 @@ paths:
                           type: integer
                         broadcastTitle:
                           type: [string, 'null']
-  /channel/{channelLogin}/info:
+  /channel/{channelLogin}:
     get:
-      operationId: getChannelInfo
-      summary: Get channel profile — description, follower count, social links, partner status
+      operationId: getChannel
+      summary: Get channel profile — description, follower count, social links, partner/affiliate status, next schedule segment
       x-openweb:
         permission: read
         build:
@@ -78,7 +78,7 @@ paths:
             - adapter-verified
         adapter:
           name: twitch-graphql
-          operation: getChannelInfo
+          operation: getChannel
       parameters:
         - name: channelLogin
           in: path
@@ -132,8 +132,8 @@ paths:
                         type: boolean
   /channel/{channelLogin}/stream:
     get:
-      operationId: getStreamInfo
-      summary: Get current stream status — live/offline, game, viewer count
+      operationId: getStream
+      summary: Get current stream status — live/offline, game name, stream type, last broadcast title
       x-openweb:
         permission: read
         build:
@@ -145,17 +145,17 @@ paths:
             - adapter-verified
         adapter:
           name: twitch-graphql
-          operation: getStreamInfo
+          operation: getStream
       parameters:
         - name: channelLogin
           in: path
           required: true
           schema:
             type: string
-          description: Channel login name.
+          description: Channel login name (e.g. "shroud", "xqc").
       responses:
         '200':
-          description: Stream metadata (null stream means offline).
+          description: Stream status (null stream means offline).
           content:
             application/json:
               schema:
@@ -189,10 +189,10 @@ paths:
                             type: string
                           name:
                             type: string
-  /channel/{channelLogin}/schedule:
+  /directory/all:
     get:
-      operationId: getChannelSchedule
-      summary: Get channel schedule — upcoming segments, recent VODs, live status
+      operationId: getTopGames
+      summary: Browse top categories/games by viewer count — game names, viewer/broadcaster counts, tags
       x-openweb:
         permission: read
         build:
@@ -204,238 +204,7 @@ paths:
             - adapter-verified
         adapter:
           name: twitch-graphql
-          operation: getChannelSchedule
-      parameters:
-        - name: channelLogin
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Channel login name.
-      responses:
-        '200':
-          description: Schedule segments and recent VODs.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  isLive:
-                    type: boolean
-                  currentStream:
-                    type: [object, 'null']
-                    properties:
-                      id:
-                        type: string
-                      viewersCount:
-                        type: integer
-                      createdAt:
-                        type: string
-                      game:
-                        type: [string, 'null']
-                  recentVideos:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        title:
-                          type: string
-                        createdAt:
-                          type: string
-                        lengthSeconds:
-                          type: integer
-                  scheduleSegments:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        startAt:
-                          type: string
-                        endAt:
-                          type: string
-                        title:
-                          type: [string, 'null']
-                        categories:
-                          type: array
-                          items:
-                            type: string
-  /channel/{channelLogin}/videos:
-    get:
-      operationId: getChannelVideos
-      summary: Get channel video shelves — featured clips, recent broadcasts, highlights
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: tw0005
-          signature_id: tw0005s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: twitch-graphql
-          operation: getChannelVideos
-      parameters:
-        - name: channelLogin
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Channel login name.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 5
-          description: Number of shelves to return.
-      responses:
-        '200':
-          description: Video shelves (clips, broadcasts, highlights).
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  shelves:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        title:
-                          type: string
-                        type:
-                          type: string
-                        items:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                              slug:
-                                type: [string, 'null']
-                              title:
-                                type: string
-                              viewCount:
-                                type: integer
-                              createdAt:
-                                type: [string, 'null']
-                              durationSeconds:
-                                type: [integer, 'null']
-  /channel/{channelLogin}/clips:
-    get:
-      operationId: getChannelClips
-      summary: Get channel clips — top clips by time period with pagination
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: tw0006
-          signature_id: tw0006s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: twitch-graphql
-          operation: getChannelClips
-      parameters:
-        - name: channelLogin
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Channel login name.
-        - name: filter
-          in: query
-          required: false
-          schema:
-            type: string
-            default: LAST_WEEK
-            enum: [LAST_DAY, LAST_WEEK, LAST_MONTH, ALL_TIME]
-          description: Time period filter for clips.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of clips to return.
-        - name: cursor
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Pagination cursor from previous response.
-      responses:
-        '200':
-          description: Channel clips with pagination.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  hasNextPage:
-                    type: boolean
-                  clips:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        slug:
-                          type: string
-                        title:
-                          type: string
-                        url:
-                          type: string
-                        viewCount:
-                          type: integer
-                        language:
-                          type: string
-                        createdAt:
-                          type: [string, 'null']
-                        durationSeconds:
-                          type: [integer, 'null']
-                        thumbnailURL:
-                          type: [string, 'null']
-                        curator:
-                          type: [object, 'null']
-                          properties:
-                            login:
-                              type: string
-                            displayName:
-                              type: string
-                        game:
-                          type: [object, 'null']
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            slug:
-                              type: string
-  /directory/categories:
-    get:
-      operationId: browseCategories
-      summary: Browse top categories/games — viewer counts, tags
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: tw0007
-          signature_id: tw0007s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: twitch-graphql
-          operation: browseCategories
+          operation: getTopGames
       parameters:
         - name: limit
           in: query
@@ -443,10 +212,18 @@ paths:
           schema:
             type: integer
             default: 30
-          description: Number of categories to return.
+          description: Number of categories to return (default 30).
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [VIEWER_COUNT, RELEVANCE]
+            default: VIEWER_COUNT
+          description: Sort order (VIEWER_COUNT or RELEVANCE).
       responses:
         '200':
-          description: Top categories sorted by relevance.
+          description: Top categories/games.
           content:
             application/json:
               schema:
@@ -463,293 +240,13 @@ paths:
                           type: string
                         displayName:
                           type: string
+                        viewersCount:
+                          type: integer
+                        broadcastersCount:
+                          type: integer
                         avatarURL:
                           type: string
-                        viewersCount:
-                          type: integer
                         tags:
                           type: array
                           items:
                             type: string
-  /directory/category/{slug}/streams:
-    get:
-      operationId: getCategoryStreams
-      summary: Get live streams for a category/game — streamer names, viewer counts, titles
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: tw0008
-          signature_id: tw0008s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: twitch-graphql
-          operation: getCategoryStreams
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Category slug (e.g. "just-chatting", "league-of-legends", "valorant").
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 30
-          description: Number of streams to return.
-      responses:
-        '200':
-          description: Live streams in the category.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  category:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                      name:
-                        type: string
-                  streams:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        title:
-                          type: string
-                        viewersCount:
-                          type: integer
-                        previewImageURL:
-                          type: [string, 'null']
-                        broadcaster:
-                          type: [object, 'null']
-                          properties:
-                            login:
-                              type: string
-                            displayName:
-                              type: string
-                            profileImageURL:
-                              type: [string, 'null']
-                        game:
-                          type: [object, 'null']
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                        tags:
-                          type: array
-                          items:
-                            type: string
-  /top-streams:
-    get:
-      operationId: getTopStreams
-      summary: Get top live streams across all categories — homepage shelves
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: tw0009
-          signature_id: tw0009s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: twitch-graphql
-          operation: getTopStreams
-      parameters:
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 8
-          description: Number of streams per shelf.
-      responses:
-        '200':
-          description: Homepage stream shelves.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  shelves:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        title:
-                          type: string
-                        streams:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                              title:
-                                type: string
-                              viewersCount:
-                                type: integer
-                              previewImageURL:
-                                type: [string, 'null']
-                              broadcaster:
-                                type: [object, 'null']
-                                properties:
-                                  login:
-                                    type: string
-                                  displayName:
-                                    type: string
-                              game:
-                                type: [object, 'null']
-                                properties:
-                                  id:
-                                    type: string
-                                  name:
-                                    type: string
-  /featured-streams:
-    get:
-      operationId: getFeaturedStreams
-      summary: Get featured/promoted streams from carousel — editorially selected content
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: tw0010
-          signature_id: tw0010s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: twitch-graphql
-          operation: getFeaturedStreams
-      parameters:
-        - name: language
-          in: query
-          required: false
-          schema:
-            type: string
-            default: en
-          description: Language filter (ISO 639-1 code).
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 8
-          description: Number of featured streams.
-      responses:
-        '200':
-          description: Featured/promoted streams.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  streams:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        isSponsored:
-                          type: boolean
-                        sourceType:
-                          type: string
-                        stream:
-                          type: [object, 'null']
-                          properties:
-                            id:
-                              type: string
-                            type:
-                              type: string
-                            viewersCount:
-                              type: integer
-                            previewImageURL:
-                              type: [string, 'null']
-                            broadcaster:
-                              type: [object, 'null']
-                              properties:
-                                login:
-                                  type: string
-                                displayName:
-                                  type: string
-                            game:
-                              type: [object, 'null']
-                              properties:
-                                id:
-                                  type: string
-                                name:
-                                  type: string
-                                displayName:
-                                  type: string
-                            tags:
-                              type: array
-                              items:
-                                type: string
-  /channel/{channelLogin}/follow:
-    post:
-      operationId: followChannel
-      summary: Follow a channel — requires auth, reversible (unfollow via Twitch UI)
-      x-openweb:
-        permission: write
-        safety: safe
-        build:
-          stable_id: tw0011
-          tool_version: 1
-          verified: false
-          signals:
-            - adapter-verified
-        adapter:
-          name: twitch-graphql
-          operation: followChannel
-      parameters:
-        - name: channelLogin
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Channel login name to follow (e.g. "shroud", "pokimane").
-        - name: disableNotifications
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: false
-          description: Disable live notifications for this follow.
-      responses:
-        '200':
-          description: Channel followed successfully.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - channelId
-                  - channelLogin
-                  - isFollowing
-                properties:
-                  channelId:
-                    type: string
-                    description: Twitch user ID of the followed channel.
-                  channelLogin:
-                    type: string
-                    description: Login name of the followed channel.
-                  displayName:
-                    type: string
-                    description: Display name of the followed channel.
-                  isFollowing:
-                    type: boolean
-                    description: Always true on success.
-                  disableNotifications:
-                    type: boolean
-                    description: Whether live notifications are disabled.

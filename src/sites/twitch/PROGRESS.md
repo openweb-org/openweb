@@ -1,10 +1,13 @@
-# Twitch Fixture Progress
+## 2026-04-01: Rediscovery — 4 operations (searchChannels, getChannel, getStream, getTopGames)
 
-## 2026-03-24: Initial creation
+**What changed:**
+- Fresh capture via `--isolate --url` with scripted GQL calls
+- Auto-compile produced noise (single GQL endpoint); switched to adapter-only approach
+- Wrote adapter with 4 operations using persisted query hashes
+- Confirmed all hashes still valid (status 200 on all captures)
 
-- Captured traffic from 15 page navigations covering homepage, directory, categories, search, channels, about, schedule, videos, clips
-- 514 HAR entries, 138 unique GraphQL operations identified
-- Compiler auto-compile produced only 3 operations (ads endpoints) because Twitch uses POST-only GraphQL — manually crafted L3 adapter
-- 10 operations implemented via persisted query hashes
-- All operations target public (no-auth) data
-- Transport: `page` (browser fetch required for Client-ID header and bot detection)
+**Why:**
+- Old package deleted from worktree; rediscovery from scratch
+- Focused on 4 core operations per user request
+
+**Verification:** All 4 operations returned 200 during capture. Pending `openweb verify`.

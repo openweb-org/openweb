@@ -1,91 +1,73 @@
 # Instagram
 
 ## Overview
-Social media platform (Meta). Photo/video sharing, stories, reels, explore feed.
+Social media platform (Meta). Photo/video sharing, stories, reels.
+
+## Workflows
+
+### Look up a user profile
+1. `getUserProfile(username)` → user info with `id`, bio, follower/following counts
+
+### Browse a user's posts
+1. `getUserProfile(username)` → `id`
+2. `getFeed(id, count)` → posts with `pk`, `code`, captions, like counts
+3. `getFeed(id, count, max_id)` → next page (cursor from `next_max_id`)
+
+### View a specific post
+1. `getPost(id)` → media detail with caption, likes, comments, media URLs
+   - `id` is the numeric PK from `getFeed` items (`items[].pk`)
+
+### Search for users
+1. `searchUsers(query)` → user list with usernames, full names, verification status
+
+## Operations
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| getUserProfile | view user profile | username | id, biography, follower/following counts, is_verified | entry point |
+| getPost | view post detail | id (numeric PK) ← getFeed items[].pk | caption, like_count, comment_count, media URLs | — |
+| getFeed | browse user posts | id (user ID) ← getUserProfile data.user.id | posts with pk, code, caption, like_count | paginated via next_max_id |
+| searchUsers | find users | query (search term) | users with username, full_name, is_verified, follower_count | entry point |
 
 ## Quick Start
 
 ```bash
-# Search users/hashtags/places
-openweb instagram exec searchTopSearch '{"query": "nature", "context": "blended"}'
+# Get a user profile
+openweb instagram exec getUserProfile '{"username":"instagram"}'
 
-# Get user profile by username
-openweb instagram exec getUserProfile '{"username": "natgeo"}'
+# Get user's feed (first page)
+openweb instagram exec getFeed '{"id":"25025320","count":12}'
 
-# Get user profile by numeric ID
-openweb instagram exec getUserById '{"userId": "787132"}'
+# View a specific post (use pk from feed)
+openweb instagram exec getPost '{"id":"3865890235180097425"}'
 
-# Get user's posts (use userId from profile)
-openweb instagram exec getUserFeed '{"userId": "787132", "count": 12}'
-
-# Get media details
-openweb instagram exec getMediaInfo '{"mediaId": "3854796740277763042"}'
-
-# Get comments on a post
-openweb instagram exec getMediaComments '{"mediaId": "3854796740277763042"}'
-
-# Get home timeline (authenticated)
-openweb instagram exec getTimeline '{}'
-
-# Get stories tray
-openweb instagram exec getReelsTray '{}'
-
-# Get user's stories
-openweb instagram exec getUserStories '{"userId": "787132"}'
+# Search users
+openweb instagram exec searchUsers '{"query":"nasa"}'
 ```
 
-## Operations
+---
 
-| Operation | Intent | Method | Safety | Notes |
-|-----------|--------|--------|--------|-------|
-| searchTopSearch | Search users/hashtags/places by keyword | GET | read | Returns users, hashtags, places |
-| getUserProfile | Get user profile by username | GET | read | Returns bio, followers, media count |
-| getUserById | Get user profile by numeric ID | GET | read | Use when you have userId but not username |
-| getTimeline | Get authenticated user's home feed | GET | read | Paginated via max_id cursor |
-| getUserFeed | Get user's posts feed | GET | read | Paginated via max_id cursor |
-| getMediaInfo | Get detailed media post info | GET | read | Returns full media details |
-| getMediaComments | Get comments on a post | GET | read | Threaded comments, paginated |
-| getReelsTray | Get stories tray for followed users | GET | read | List of active story reels |
-| getUserStories | Get a user's active stories | GET | read | Story items with media URLs |
-| likeMedia | Like a post | POST | SAFE write | Reversible via unlikeMedia |
-| unlikeMedia | Unlike a post | POST | SAFE write | Reverses likeMedia |
-| saveMedia | Bookmark a post | POST | SAFE write | Reversible via unsaveMedia |
-| unsaveMedia | Remove bookmark | POST | SAFE write | Reverses saveMedia |
-| followUser | Follow a user | POST | SAFE write | Reversible via unfollowUser |
-| unfollowUser | Unfollow a user | POST | SAFE write | Reverses followUser |
-
-## Operation Dependencies
-
-```
-searchTopSearch → getUserProfile → getUserById
-                                 → getUserFeed → getMediaInfo
-                                               → getMediaComments
-                                 → getUserStories
-getTimeline → getUserProfile, getMediaInfo, getMediaComments
-getReelsTray → getUserStories
-```
+## Site Internals
 
 ## API Architecture
-- REST API at `https://www.instagram.com/api/v1/`
-- Also has GraphQL endpoints at `/graphql/query` and `/api/graphql` (not yet covered)
-- All API calls require `x-ig-app-id: 936619743392459` header (constant)
-- Responses are JSON with `status: "ok"` on success
+- REST API v1 at `https://www.instagram.com/api/v1/`
+- Search at `https://www.instagram.com/web/search/topsearch/`
+- Also has GraphQL at `/graphql/query/` and `/api/graphql` (not used in this package)
+- All JSON responses
 
 ## Auth
-- Type: `cookie_session` with CSRF (`cookie_to_header`)
-- CSRF: `csrftoken` cookie → `x-csrftoken` header
-- CSRF required on all write operations (POST)
-- Login required — unauthenticated requests return 400/401
+- `cookie_session` — session cookies from logged-in browser (`sessionid`, `ds_user_id`, `csrftoken`)
+- CSRF: `csrftoken` cookie → `x-csrftoken` header (POST/PUT/DELETE only)
+- Additional headers sent automatically: `x-ig-app-id`, `x-ig-www-claim`
 
 ## Transport
-- **`page`** — Meta's bot detection blocks node transport
-- Browser must have Instagram loaded and be logged in
-- `page.evaluate(fetch(...))` with `credentials: 'include'` for cookie auth
-- CDP capture must be on the same target (doesn't intercept fetch from tabs created after capture starts)
+- `page` — Meta bot detection blocks direct node HTTP requests
+- Requests execute via `page.evaluate(fetch(...))` in the browser tab
+- Page URL: `https://www.instagram.com/`
 
 ## Known Issues
-- Heavy bot detection — `node` transport does not work, must use `page`
-- `x-ig-app-id` header required on most endpoints (hardcoded constant `936619743392459`)
-- GraphQL endpoints not yet sub-clustered — single `/api/graphql` handles many ops via `doc_id` discriminator
-- Rate limiting may apply after many rapid requests
-- Two profile endpoints: `getUserProfile` (by username, web_profile_info) and `getUserById` (by numeric ID, users/{id}/info) — use whichever matches your input
+- Meta bot detection: aggressive TLS fingerprinting, blocks all non-browser requests
+- Rate limiting on API endpoints — avoid rapid sequential calls
+- Requires logged-in session for all API endpoints
+- Media PK is a large numeric string, not the URL shortcode
+- GraphQL doc_id hashes change frequently — REST v1 endpoints are more stable

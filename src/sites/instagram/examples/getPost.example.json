@@ -1,14 +1,15 @@
 {
-  "operation_id": "getUserById",
+  "operation_id": "getPost",
   "method": "get",
   "replay_safety": "safe_read",
   "cases": [
     {
       "input": {
-        "userId": "25025320"
+        "id": "3865890235180097425"
       },
       "assertions": {
-        "status": 200
+        "status": 200,
+        "response_schema_valid": true
       }
     }
   ]

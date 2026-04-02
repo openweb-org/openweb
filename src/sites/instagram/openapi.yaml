@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: instagram
-  version: 1.1.0
+  version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-03-29T06:38:08.774Z
+    compiled_at: 2026-04-02T00:10:59.917Z
     requires_auth: true
 servers:
   - url: https://www.instagram.com
@@ -16,48 +16,366 @@ servers:
         type: cookie_to_header
         cookie: csrftoken
         header: x-csrftoken
+        scope: [POST, PUT, DELETE]
 paths:
-  # ── Read operations ─────────────────────────────────────────────────
-
-  /api/v1/web/search/topsearch/:
+  /api/v1/users/web_profile_info/:
     get:
-      operationId: searchTopSearch
-      summary: >-
-        Search users, hashtags, and places by keyword — returns user profiles
-        (username, full_name, profile_pic, follower_count), matching hashtags,
-        and places
+      operationId: getUserProfile
+      summary: "Get user profile — biography, follower/following counts, profile pic, post count, verification status"
       x-openweb:
         permission: read
+        build:
+          stable_id: 4f0f32e129855418
+          tool_version: 2
       parameters:
-        - name: context
+        - name: username
           in: query
           required: true
+          description: Instagram username (without @ prefix)
           schema:
             type: string
-            enum: [blended]
-          description: Search context type
-        - name: query
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search keyword
-        - name: include_reel
-          in: query
-          required: false
-          schema:
-            type: boolean
-          description: Include reel/story data in results
+          example: instagram
         - name: x-ig-app-id
           in: header
           required: true
           schema:
             type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
       responses:
         "200":
-          description: Search results
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          biography:
+                            type: string
+                          bio_links:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                title:
+                                  type: string
+                                url:
+                                  type: string
+                                  format: uri
+                          blocked_by_viewer:
+                            type: boolean
+                          external_url:
+                            type: string
+                            format: uri
+                          edge_followed_by:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                          edge_follow:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                          full_name:
+                            type: string
+                          id:
+                            type: string
+                          is_private:
+                            type: boolean
+                          is_verified:
+                            type: boolean
+                          profile_pic_url:
+                            type: string
+                            format: uri
+                          profile_pic_url_hd:
+                            type: string
+                            format: uri
+                          username:
+                            type: string
+                          edge_owner_to_timeline_media:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                required:
+                  - data
+  /api/v1/media/{id}/info/:
+    get:
+      operationId: getPost
+      summary: "Get post/media detail — caption, like count, comment count, media URLs, author info, timestamps"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 6d5414f7e1b7991e
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "Numeric media PK (not shortcode). Get from getFeed items[].pk"
+          schema:
+            type: string
+          example: "3865890235180097425"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  num_results:
+                    type: integer
+                  more_available:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        pk:
+                          type: string
+                        code:
+                          type: string
+                          description: Shortcode for URL (instagram.com/p/{code}/)
+                        media_type:
+                          type: integer
+                          description: "1=photo, 2=video, 8=carousel"
+                        caption:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                            created_at:
+                              type: integer
+                        like_count:
+                          type: integer
+                        comment_count:
+                          type: integer
+                        taken_at:
+                          type: integer
+                        image_versions2:
+                          type: object
+                          properties:
+                            candidates:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                                  url:
+                                    type: string
+                                    format: uri
+                        video_versions:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              width:
+                                type: integer
+                              height:
+                                type: integer
+                              url:
+                                type: string
+                                format: uri
+                        user:
+                          type: object
+                          properties:
+                            pk:
+                              type: string
+                            username:
+                              type: string
+                            full_name:
+                              type: string
+                            profile_pic_url:
+                              type: string
+                              format: uri
+                            is_verified:
+                              type: boolean
+                  status:
+                    type: string
+                required:
+                  - num_results
+                  - items
+                  - status
+  /api/v1/feed/user/{id}/:
+    get:
+      operationId: getFeed
+      summary: "Get user feed — posts with thumbnails, captions, like/comment counts, pagination via next_max_id"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 294082907d0d38bc
+          tool_version: 2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "User ID (numeric). Get from getUserProfile data.user.id"
+          schema:
+            type: string
+          example: "25025320"
+        - name: count
+          in: query
+          required: false
+          description: Number of posts to return (default 12)
+          schema:
+            type: integer
+          example: 12
+        - name: max_id
+          in: query
+          required: false
+          description: Pagination cursor from previous response next_max_id
+          schema:
+            type: string
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  num_results:
+                    type: integer
+                  more_available:
+                    type: boolean
+                  next_max_id:
+                    type: string
+                    description: Cursor for next page
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        pk:
+                          type: string
+                        code:
+                          type: string
+                          description: Shortcode for URL
+                        media_type:
+                          type: integer
+                        caption:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                        like_count:
+                          type: integer
+                        comment_count:
+                          type: integer
+                        taken_at:
+                          type: integer
+                        image_versions2:
+                          type: object
+                          properties:
+                            candidates:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                                  url:
+                                    type: string
+                                    format: uri
+                        user:
+                          type: object
+                          properties:
+                            pk:
+                              type: string
+                            username:
+                              type: string
+                  auto_load_more_enabled:
+                    type: boolean
+                  status:
+                    type: string
+                required:
+                  - num_results
+                  - more_available
+                  - items
+                  - status
+  /web/search/topsearch/:
+    get:
+      operationId: searchUsers
+      summary: "Search users and content — returns users with profile pics, usernames, verification status, follower counts"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: 53427dabc7addb4e
+          tool_version: 2
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Search query string
+          schema:
+            type: string
+          example: nasa
+        - name: context
+          in: query
+          required: false
+          description: Search context type
+          schema:
+            type: string
+            default: blended
+          example: blended
+        - name: include_reel
+          in: query
+          required: false
+          description: Include reel data
+          schema:
+            type: string
+            default: "true"
+          example: "true"
+      responses:
+        "200":
+          description: Success.
           content:
             application/json:
               schema:
@@ -75,7 +393,7 @@ paths:
                           properties:
                             pk:
                               type: string
-                            username:
+                            id:
                               type: string
                             full_name:
                               type: string
@@ -85,759 +403,30 @@ paths:
                               type: boolean
                             profile_pic_url:
                               type: string
-                  hashtags:
+                              format: uri
+                            username:
+                              type: string
+                            follower_count:
+                              type: integer
+                            friendship_status:
+                              type: object
+                              properties:
+                                following:
+                                  type: boolean
+                                is_private:
+                                  type: boolean
+                  places:
                     type: array
                     items:
                       type: object
-                  places:
+                  hashtags:
                     type: array
                     items:
                       type: object
                   has_more:
                     type: boolean
-                  rank_token:
-                    type: string
                   status:
                     type: string
-
-  /api/v1/users/web_profile_info/:
-    get:
-      operationId: getUserProfile
-      summary: >-
-        Get user profile by username — returns user ID, full_name, biography,
-        follower_count, following_count, media_count, profile_pic_url,
-        is_private, is_verified
-      x-openweb:
-        permission: read
-      parameters:
-        - name: username
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Instagram username (without @ prefix)
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: User profile data
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      user:
-                        type: object
-                        properties:
-                          id:
-                            type: string
-                          username:
-                            type: string
-                          full_name:
-                            type: string
-                          biography:
-                            type: string
-                          profile_pic_url:
-                            type: string
-                          profile_pic_url_hd:
-                            type: string
-                          is_private:
-                            type: boolean
-                          is_verified:
-                            type: boolean
-                          external_url:
-                            type: string
-                            nullable: true
-                          edge_followed_by:
-                            type: object
-                            properties:
-                              count:
-                                type: integer
-                          edge_follow:
-                            type: object
-                            properties:
-                              count:
-                                type: integer
-                          edge_owner_to_timeline_media:
-                            type: object
-                            properties:
-                              count:
-                                type: integer
-                          is_business_account:
-                            type: boolean
-                          is_professional_account:
-                            type: boolean
-                          highlight_reel_count:
-                            type: integer
-                  status:
-                    type: string
-
-  /api/v1/users/{userId}/info/:
-    get:
-      operationId: getUserById
-      summary: >-
-        Get user profile by numeric ID — returns username, full_name,
-        profile_pic_url, biography, follower/following counts
-      x-openweb:
-        permission: read
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric user ID
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: User profile data
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  user:
-                    type: object
-                    properties:
-                      pk:
-                        type: string
-                      username:
-                        type: string
-                      full_name:
-                        type: string
-                      biography:
-                        type: string
-                      profile_pic_url:
-                        type: string
-                      is_private:
-                        type: boolean
-                      is_verified:
-                        type: boolean
-                      follower_count:
-                        type: integer
-                      following_count:
-                        type: integer
-                      media_count:
-                        type: integer
-                      external_url:
-                        type: string
-                        nullable: true
-                      is_business_account:
-                        type: boolean
-                      is_professional_account:
-                        type: boolean
-                      category_name:
-                        type: string
-                        nullable: true
-                      pronouns:
-                        type: array
-                        items:
-                          type: string
-                  status:
-                    type: string
-
-  /api/v1/feed/timeline/:
-    get:
-      operationId: getTimeline
-      summary: >-
-        Get the authenticated user's home feed — returns feed_items with media,
-        captions, like counts, supports cursor pagination
-      x-openweb:
-        permission: read
-        pagination:
-          type: cursor
-          response_field: next_max_id
-          request_param: max_id
-      parameters:
-        - name: max_id
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Pagination cursor — next_max_id from previous response
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: Home feed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  feed_items:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        media_or_ad:
-                          type: object
-                          properties:
-                            pk:
-                              type: string
-                            id:
-                              type: string
-                            media_type:
-                              type: integer
-                            code:
-                              type: string
-                            taken_at:
-                              type: integer
-                            like_count:
-                              type: integer
-                            comment_count:
-                              type: integer
-                            caption:
-                              type: object
-                            image_versions2:
-                              type: object
-                            video_versions:
-                              type: array
-                              nullable: true
-                              items:
-                                type: object
-                            user:
-                              type: object
-                  num_results:
-                    type: integer
-                  more_available:
-                    type: boolean
-                  next_max_id:
-                    type: string
-                  status:
-                    type: string
-
-  /api/v1/feed/user/{userId}/:
-    get:
-      operationId: getUserFeed
-      summary: >-
-        Get a user's posts feed — returns media items with shortcode, media_type,
-        caption, like_count, comment_count, image/video URLs, timestamp
-      x-openweb:
-        permission: read
-        pagination:
-          type: cursor
-          response_field: next_max_id
-          request_param: max_id
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric user ID (get from getUserProfile)
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 12
-          description: Number of posts to return (max ~33)
-        - name: max_id
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Pagination cursor — next_max_id from previous response
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: User feed posts
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        pk:
-                          type: string
-                        id:
-                          type: string
-                        media_type:
-                          type: integer
-                        code:
-                          type: string
-                        taken_at:
-                          type: integer
-                        like_count:
-                          type: integer
-                        comment_count:
-                          type: integer
-                        caption:
-                          type: object
-                        image_versions2:
-                          type: object
-                        video_versions:
-                          type: array
-                          nullable: true
-                          items:
-                            type: object
-                        user:
-                          type: object
-                  num_results:
-                    type: integer
-                  more_available:
-                    type: boolean
-                  next_max_id:
-                    type: string
-                  user:
-                    type: object
-                  status:
-                    type: string
-
-  /api/v1/media/{mediaId}/info/:
-    get:
-      operationId: getMediaInfo
-      summary: >-
-        Get detailed information about a media post — returns media_type,
-        caption, like_count, comment_count, image/video URLs, user info
-      x-openweb:
-        permission: read
-      parameters:
-        - name: mediaId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric media/post ID (pk field from feed)
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: Media details
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        pk:
-                          type: string
-                        id:
-                          type: string
-                        media_type:
-                          type: integer
-                        code:
-                          type: string
-                        taken_at:
-                          type: integer
-                        like_count:
-                          type: integer
-                        comment_count:
-                          type: integer
-                        caption:
-                          type: object
-                        image_versions2:
-                          type: object
-                        video_versions:
-                          type: array
-                          nullable: true
-                          items:
-                            type: object
-                        user:
-                          type: object
-                  num_results:
-                    type: integer
-                  more_available:
-                    type: boolean
-                  status:
-                    type: string
-
-  /api/v1/media/{mediaId}/comments/:
-    get:
-      operationId: getMediaComments
-      summary: >-
-        Get comments on a media post — returns comment text, username, timestamp,
-        like_count, reply_count, has_more_comments
-      x-openweb:
-        permission: read
-      parameters:
-        - name: mediaId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric media/post ID (pk field from feed or media info)
-        - name: can_support_threading
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: true
-          description: Enable threaded comment replies
-        - name: permalink_enabled
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: false
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: Comments list
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  comments:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        pk:
-                          type: string
-                        text:
-                          type: string
-                        created_at:
-                          type: integer
-                        comment_like_count:
-                          type: integer
-                        child_comment_count:
-                          type: integer
-                        has_liked_comment:
-                          type: boolean
-                        user:
-                          type: object
-                          properties:
-                            pk:
-                              oneOf:
-                                - type: string
-                                - type: integer
-                            username:
-                              type: string
-                            full_name:
-                              type: string
-                            profile_pic_url:
-                              type: string
-                            is_private:
-                              type: boolean
-                            is_verified:
-                              type: boolean
-                  comment_count:
-                    type: integer
-                  has_more_comments:
-                    type: boolean
-                  next_min_id:
-                    type: string
-                  caption:
-                    type: object
-                    nullable: true
-                  status:
-                    type: string
-
-  /api/v1/feed/reels_tray/:
-    get:
-      operationId: getReelsTray
-      summary: >-
-        Get stories tray for followed users — returns list of active story reels
-        with owner info and expiration times
-      x-openweb:
-        permission: read
-      parameters:
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: Stories tray
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  tray:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        expiring_at:
-                          type: integer
-                        has_besties_media:
-                          type: boolean
-                        latest_reel_media:
-                          type: integer
-                        seen:
-                          type: integer
-                        user:
-                          type: object
-                  story_ranking_token:
-                    type: string
-                  broadcasts:
-                    type: array
-                    items:
-                      type: object
-                  has_new_nux_story:
-                    type: boolean
-                  status:
-                    type: string
-
-  /api/v1/feed/user/{userId}/story/:
-    get:
-      operationId: getUserStories
-      summary: >-
-        Get a user's active stories — returns story items with media URLs,
-        timestamps, and interactive elements
-      x-openweb:
-        permission: read
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric user ID
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: User stories
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  reel:
-                    type: object
-                    nullable: true
-                    properties:
-                      id:
-                        type: string
-                      expiring_at:
-                        type: integer
-                      items:
-                        type: array
-                        items:
-                          type: object
-                      user:
-                        type: object
-                  broadcast:
-                    type: object
-                    nullable: true
-                  status:
-                    type: string
-
-  # ── Write operations ────────────────────────────────────────────────
-
-  /api/v1/web/likes/{mediaId}/like/:
-    post:
-      operationId: likeMedia
-      summary: Like a media post
-      x-openweb:
-        permission: write
-      parameters:
-        - name: mediaId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric media/post ID (pk field)
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: Like result
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /api/v1/web/likes/{mediaId}/unlike/:
-    post:
-      operationId: unlikeMedia
-      summary: Unlike a media post (reverses likeMedia)
-      x-openweb:
-        permission: write
-      parameters:
-        - name: mediaId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric media/post ID (pk field)
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: Unlike result
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /api/v1/web/save/{mediaId}/save/:
-    post:
-      operationId: saveMedia
-      summary: Bookmark/save a media post to your saved collection
-      x-openweb:
-        permission: write
-      parameters:
-        - name: mediaId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric media/post ID (pk field)
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: Save result
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /api/v1/web/save/{mediaId}/unsave/:
-    post:
-      operationId: unsaveMedia
-      summary: Remove a media post from saved collection (reverses saveMedia)
-      x-openweb:
-        permission: write
-      parameters:
-        - name: mediaId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric media/post ID (pk field)
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: Unsave result
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /api/v1/friendships/create/{userId}/:
-    post:
-      operationId: followUser
-      summary: Follow a user
-      x-openweb:
-        permission: write
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric user ID to follow
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: Follow result
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /api/v1/friendships/destroy/{userId}/:
-    post:
-      operationId: unfollowUser
-      summary: Unfollow a user (reverses followUser)
-      x-openweb:
-        permission: write
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Numeric user ID to unfollow
-        - name: x-ig-app-id
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "936619743392459"
-          description: Instagram web app ID (constant)
-      responses:
-        "200":
-          description: Unfollow result
-          content:
-            application/json:
-              schema:
-                type: object
+                required:
+                  - users
+                  - status

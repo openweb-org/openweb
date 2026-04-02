@@ -1,9 +1,0 @@
-{
-  "operation_id": "getChannelInfo",
-  "cases": [
-    {
-      "input": { "channelLogin": "shroud" },
-      "assertions": { "status": 200, "response_schema_valid": true }
-    }
-  ]
-}

@@ -1,8 +1,13 @@
 {
   "operation_id": "getUserProfile",
+  "method": "get",
+  "replay_safety": "safe_read",
   "cases": [
     {
-      "input": { "username": "pinterest" },
+      "input": {
+        "source_url": "/pinterest/",
+        "data": "{\"options\":{\"username\":\"pinterest\",\"field_set_key\":\"profile\"},\"context\":{}}"
+      },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

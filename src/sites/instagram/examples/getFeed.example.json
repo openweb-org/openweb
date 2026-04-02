@@ -1,15 +1,16 @@
 {
-  "operation_id": "searchTopSearch",
+  "operation_id": "getFeed",
   "method": "get",
   "replay_safety": "safe_read",
   "cases": [
     {
       "input": {
-        "context": "blended",
-        "query": "instagram"
+        "id": "25025320",
+        "count": 12
       },
       "assertions": {
-        "status": 200
+        "status": 200,
+        "response_schema_valid": true
       }
     }
   ]

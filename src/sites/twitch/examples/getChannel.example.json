@@ -1,12 +1,12 @@
 {
-  "operation_id": "searchChannels",
+  "operation_id": "getChannel",
   "cases": [
     {
-      "input": { "query": "valorant" },
+      "input": { "channelLogin": "shroud" },
       "assertions": { "status": 200, "response_schema_valid": true }
     },
     {
-      "input": { "query": "minecraft" },
+      "input": { "channelLogin": "pokimane" },
       "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]

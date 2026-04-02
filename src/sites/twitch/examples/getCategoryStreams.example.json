@@ -1,9 +1,0 @@
-{
-  "operation_id": "getCategoryStreams",
-  "cases": [
-    {
-      "input": { "slug": "just-chatting", "limit": 10 },
-      "assertions": { "status": 200, "response_schema_valid": true }
-    }
-  ]
-}
