@@ -1,3 +1,28 @@
+## 2026-04-02: localStorage_jwt app_path — cross-domain token resolution
+
+**What changed:**
+- Replaced `page_url` hack with unified `app_path` field on `localStorage_jwt` auth primitive
+- Same semantics as `webpack_module_walk`'s `app_path`: relative paths resolve against server URL, absolute URLs work cross-domain
+- When `app_path` points to a different origin, the resolver opens a temporary page, reads localStorage, then closes it
+
+**Why:**
+- Bluesky's API lives on `bsky.social` but JWT tokens are stored in localStorage on `bsky.app`. Without `app_path`, the resolver tried to read localStorage from the wrong origin.
+
+**Key files:** `src/runtime/primitives/localstorage-jwt.ts`, `src/types/primitive-schemas.ts`
+**Example:** Bluesky — `app_path: https://bsky.app` reads localStorage from bsky.app, injects bearer token into bsky.social API calls
+
+## 2026-04-02: build-sites.js stale cache dir cleanup
+
+**What changed:**
+- `scripts/build-sites.js` sync now removes cache site dirs in `~/.openweb/sites/` that are not present in `dist/`
+- Previously only cleaned per-site files within known dirs; rogue dirs from compile mishaps lingered
+
+**Key files:** `scripts/build-sites.js`
+
+## 2026-04-02: Final score — 49/50 PASS
+
+All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), doordash(3/3), bluesky(9/9), uber(2/2), telegram(4/5), youtube(6/6), homedepot(3/3), instacart(3/3), boss(7/7), fidelity(13/13), x(8/8), google-search(9/9), google-flights(5/5), medium(10/10), jd(4/4). Only yahoo-finance rate limited.
+
 ## 2026-04-02: Per-operation auth/csrf/signing override
 
 - `getServerXOpenWeb()` merges op-level `x-openweb` overrides on top of server-level config

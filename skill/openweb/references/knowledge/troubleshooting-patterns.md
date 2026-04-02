@@ -65,6 +65,13 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 - **Root cause:** `pnpm build` previously copied new files over old cache without deleting removed files. Fixed 2026-04-02 — `build-sites.js` now does `rmSync` + `cpSync` (clean sync).
 - **Action:** run `pnpm build` to clean sync. The build script deletes the stale cache directory before copying fresh output.
 
+### Stale Site Dirs in Cache
+
+- **Symptoms:** `openweb sites` shows unexpected sites that no longer exist in the source tree
+- **Detection signals:** directory exists in `~/.openweb/sites/` but not in `dist/sites/`
+- **Root cause:** rogue cache dirs from compile mishaps or deleted sites were not cleaned up. Fixed 2026-04-02 — `build-sites.js` sync now removes cache site dirs not present in `dist/`.
+- **Action:** run `pnpm build`. The build script auto-cleans stale dirs during sync.
+
 ### DRIFT
 
 - **Symptoms:** `openweb verify` returns `DRIFT` for an operation

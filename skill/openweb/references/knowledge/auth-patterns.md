@@ -96,6 +96,10 @@ public (e.g., health checks, public search, category listings).
 - localStorage keys like `jwtToken`, `access_token`, `auth_token`
 - Value is a JWT (three dot-separated base64 segments)
 
+**`app_path`**: When the token storage domain differs from the API domain, use `app_path` with an absolute URL. The resolver opens a temporary page to read localStorage, then closes it. Relative paths resolve against the server URL (same-domain, different route). This is the same `app_path` concept as `webpack_module_walk`.
+
+**Examples**: Bluesky — API on `bsky.social`, tokens in localStorage on `bsky.app`: `app_path: https://bsky.app`
+
 **Pitfalls**:
 - JWT expiry — check `exp` claim. Short-lived tokens need frequent refresh.
 

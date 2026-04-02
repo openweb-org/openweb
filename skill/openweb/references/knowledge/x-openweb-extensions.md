@@ -38,6 +38,25 @@ auth because read operations happen to work without it. Write operations depend
 on it. See `auth-patterns.md` for the full type catalog (cookie_session,
 localStorage_jwt, exchange_chain, etc.).
 
+#### localStorage_jwt `app_path`
+
+When the JWT is stored in localStorage on a **different domain** than the API,
+set `app_path` to an absolute URL pointing to the token domain. The resolver
+opens a temporary page at that URL, reads localStorage, then closes the page.
+For same-domain cases, use a relative path (resolves against the server URL).
+Same concept as `webpack_module_walk`'s `app_path`.
+
+```yaml
+auth:
+  type: localStorage_jwt
+  key: BSKY_STORAGE
+  path: session.currentAccount.accessJwt
+  app_path: https://bsky.app    # cross-domain: token lives on bsky.app, API on bsky.social
+  inject:
+    header: Authorization
+    prefix: "Bearer "
+```
+
 **Per-operation override:** If specific operations are genuinely public (no auth
 needed), set `auth: false` at the operation level rather than removing site-wide
 auth. The same applies to `csrf: false` and `signing: false`. The runtime merges
