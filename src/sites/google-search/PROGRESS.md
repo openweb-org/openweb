@@ -1,5 +1,25 @@
 # Google Search — Progress
 
+## 2026-04-02: Fix adapter navigation, trim to 9 verified ops
+
+**What changed:**
+- Added `navigateToSearch()` helper — all ops now navigate to the correct
+  Google URL with query params before DOM extraction (was extracting from
+  homepage, returning empty results)
+- Trimmed from 14 to 9 operations: removed getFeaturedSnippet, getCalculation,
+  getWeather, getTranslation (selectors stale, low value)
+- Updated PAA, related searches, and local selectors for current Google DOM
+- Removed unused `readQuery()` helper; all ops use params instead of `_params`
+
+**Why:**
+- Adapter received page at `google.com/` but never navigated to `/search?q=...`.
+  Root cause: adapter functions ignored params and extracted from whatever page
+  was loaded. This is a systemic adapter-pattern bug documented in spec-curation.md.
+
+**Key files:** `adapters/google-search.ts`, `openapi.yaml`, `DOC.md`, `manifest.json`
+**Verification:** `searchWeb '{"q":"hello world"}'` → 7 results; all 9 ops return data
+**Commit:** b237c7c
+
 ## 2026-03-31: Curate to 14 operations, add auth, DOC polish
 
 **What changed:**

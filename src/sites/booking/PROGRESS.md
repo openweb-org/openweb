@@ -1,3 +1,19 @@
+## 2026-04-02: Fix adapter navigation
+
+**What changed:**
+- Added `navigateTo()` helper — searchHotels, getHotelDetail, searchFlights
+  now build and navigate to the correct URL before DOM extraction
+- getHotelReviews/getHotelPrices remain virtual-path ops (extract from current
+  hotel page, cannot navigate independently)
+
+**Why:**
+- Adapter received page at `booking.com/` but never navigated to search/detail
+  URLs. All ops returned empty results.
+
+**Key files:** `adapters/booking-web.ts`
+**Verification:** `searchHotels '{"ss":"Tokyo"}'` → 25 hotels; `searchHotels '{"ss":"Paris"}'` → 25 hotels
+**Commit:** b237c7c
+
 ## 2026-04-01: Fresh discovery — 5 operations
 
 **What changed:**

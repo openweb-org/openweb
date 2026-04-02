@@ -1,3 +1,26 @@
+## 2026-04-02: Fix adapter navigation — 3 sites, docs update
+
+**What changed:**
+- google-search, booking, redfin adapters now navigate to correct URLs before
+  DOM extraction (was extracting from server origin homepage → empty/wrong data)
+- Added `navigateToSearch()`/`navigateTo()` helpers to each adapter
+- google-search trimmed from 14 to 9 ops (removed stale-selector ops)
+- Documented "Adapter Path Semantics" in spec-curation.md and x-openweb-extensions.md:
+  adapter paths are logical namespaces, runtime does NOT auto-navigate, adapter
+  must use params to navigate
+- Also discovered: stale .ts files in `~/.openweb/sites/*/adapters/` caused
+  `preferTypeScriptAdapter()` to load old code over updated .js builds
+
+**Why:**
+- Systemic adapter-pattern bug: all DOM-extraction adapters that didn't do their
+  own `page.goto()` were broken. The runtime only opens a page at the server
+  origin — adapter paths are logical, not real URLs (OpenAPI doesn't allow
+  multiple ops on same path+method).
+
+**Key files:** `src/sites/{google-search,booking,redfin}/adapters/*.ts`, `skill/openweb/references/spec-curation.md`, `skill/openweb/references/knowledge/x-openweb-extensions.md`
+**Verification:** google-search 7 results, booking 25 Tokyo hotels, redfin 41 Seattle listings
+**Commit:** b237c7c
+
 ## 2026-03-31: Multi-worker capture isolation
 
 **What changed:**

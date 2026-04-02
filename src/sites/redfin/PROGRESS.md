@@ -1,3 +1,20 @@
+## 2026-04-02: Fix adapter navigation
+
+**What changed:**
+- Added `navigateTo()` helper — all 3 ops now navigate to the correct Redfin
+  URL using path params before DOM/JSON-LD extraction
+- searchHomes: `/city/{regionId}/{state}/{city}`
+- getPropertyDetails: `/{state}/{city}/{address}/home/{propertyId}`
+- getMarketData: `/city/{regionId}/{state}/{city}/housing-market`
+
+**Why:**
+- Adapter received page at `redfin.com/` but never navigated. searchHomes
+  returned listings from the wrong city (whatever was cached on the page).
+
+**Key files:** `adapters/redfin-dom.ts`
+**Verification:** `searchHomes '{"regionId":"16163","state":"WA","city":"Seattle"}'` → 41 Seattle listings; `getMarketData` → Seattle median $849k
+**Commit:** b237c7c
+
 ## 2026-04-01: Initial discovery — 3 operations
 
 **What changed:**
