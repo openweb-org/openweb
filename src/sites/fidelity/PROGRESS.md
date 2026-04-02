@@ -1,22 +1,16 @@
-# Fidelity Fixture — Progress
-
-## 2026-03-25: Initial discovery — 10 operations
+## 2026-04-02: Rediscovery — 13 operations (6 verified)
 
 **What changed:**
-- Created fidelity with 10 operations: getStockQuote, getCompanyProfile, getNewsHeadlines, getMarketIndices, getIndexQuotes, getResearchData, getCompanyLogo, getMutualFundPerformance, getMutualFundSummary, getFundPicks
-- Created openapi.yaml, manifest.json, DOC.md, PROGRESS.md
+- Full rediscovery from scratch (prior package deleted from worktree)
+- Captured traffic via SPA navigation on digital.fidelity.com and fundresearch.fidelity.com
+- 13 operations: 7 page-transport (digital.fidelity.com), 6 node-transport (fundresearch.fidelity.com)
+- Renamed operations to match user targets: getQuote, getMarketSummary, searchFunds
+- Added fund-screener operations: searchFunds, listAssetClasses, listFundFamilies
+- Kept prior ops: getQuote, getMarketSummary, getCompanyProfile, getNewsHeadlines, getIndexQuotes, getResearchData, getCompanyLogo, getFundPicks, getFundPerformance, getFundSummary
 
 **Why:**
-- Fidelity is a major financial services platform — public market data pages provide stock quotes, company profiles, news, analyst ratings, sector data, and mutual fund research without login
-- 7 POST operations on digital.fidelity.com (page transport, CSRF required) + 3 GET operations on fundresearch.fidelity.com (node transport)
-- Account/trading/screener endpoints excluded — require full authentication
+- Prior package was deleted; user requested fresh discovery targeting getQuote, getMarketSummary, searchFunds, getPortfolio
+- getPortfolio requires login (not captured); all other targets covered
+- searchFunds added via fund-screener POST API discovered during capture
 
-**Discovery process:**
-1. Browsed Fidelity systematically via managed browser: stock quote pages (AAPL, TSLA, MSFT, NVDA, SPY), market overview, news, sectors, mutual fund page (FXAIX), research overview
-2. Compiled captured traffic via `pnpm dev compile` — 24 raw operations generated, 8 verified via probe
-3. Curated to 10 operations: removed noise (PerimeterX bot detection, LaunchDarkly feature flags, Markit OAuth internal tokens, app initialization, visitor tracking, login-related endpoints, legal disclosures)
-4. POST endpoints use page transport (CSRF + bot detection), GET fund endpoints use node transport
-
-**Verification:** GET endpoints verified PASS via node probe. POST endpoints require browser context — verified via page transport.
-
-**Knowledge updates:** None — Fidelity follows standard BFF pattern (Angular frontend → POST API gateway with CSRF). No novel auth or extraction techniques.
+**Verification:** 6/13 PASS (all node-transport fundresearch.fidelity.com ops). Page-transport ops (digital.fidelity.com) fail with ssrfValidator bug in browser-fetch-executor CSRF resolution — runtime issue, not spec issue.

@@ -1,10 +1,10 @@
 {
-  "operation_id": "getFundPicks",
+  "operation_id": "getFundSummary",
   "method": "get",
   "replay_safety": "safe_read",
   "cases": [
     {
-      "input": { "mstarAssetClassCd": "DSTK", "mstarCtgyCd": "LB" },
+      "input": { "cusip": "315911750", "funduniverse": "RETAIL", "documentId": "315911750", "period": "10YR" },
       "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]

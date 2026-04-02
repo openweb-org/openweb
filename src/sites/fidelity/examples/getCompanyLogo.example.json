@@ -1,14 +1,11 @@
 {
   "operation_id": "getCompanyLogo",
+  "method": "post",
+  "replay_safety": "safe_read",
   "cases": [
     {
-      "input": {
-        "fvSymbols": "AAPL"
-      },
-      "assertions": {
-        "status": 200,
-        "response_schema_valid": true
-      }
+      "input": { "fvSymbols": "AAPL" },
+      "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]
 }

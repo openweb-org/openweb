@@ -1,10 +1,10 @@
 {
-  "operation_id": "getCompanyProfile",
+  "operation_id": "getMarketSummary",
   "method": "post",
   "replay_safety": "safe_read",
   "cases": [
     {
-      "input": { "symbols": ["AAPL"] },
+      "input": { "supportCrypto": "N" },
       "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]

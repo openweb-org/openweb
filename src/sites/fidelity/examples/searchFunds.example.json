@@ -1,0 +1,23 @@
+{
+  "operation_id": "searchFunds",
+  "method": "post",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "searchFilter": {
+          "includeLeveragedAndInverseFunds": "N",
+          "openToNewInvestors": "OPEN",
+          "investmentTypeCode": "MFN"
+        },
+        "sortBy": "legalName",
+        "sortOrder": "ASC",
+        "currentPageNumber": 1,
+        "businessChannel": "RETAIL",
+        "noOfRowsPerPage": 5,
+        "subjectAreaCode": "fundInformation,mstarRatings"
+      },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

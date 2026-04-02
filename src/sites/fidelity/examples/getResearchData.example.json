@@ -1,16 +1,11 @@
 {
   "operation_id": "getResearchData",
+  "method": "post",
+  "replay_safety": "safe_read",
   "cases": [
     {
-      "input": {
-        "method": "GET",
-        "apiTokenName": "analyticRatings",
-        "params": "?symbols=SPY"
-      },
-      "assertions": {
-        "status": 200,
-        "response_schema_valid": true
-      }
+      "input": { "method": "GET", "apiTokenName": "analyticRatings", "params": "?symbols=AAPL" },
+      "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]
 }

@@ -1,14 +1,11 @@
 {
   "operation_id": "getIndexQuotes",
+  "method": "post",
+  "replay_safety": "safe_read",
   "cases": [
     {
-      "input": {
-        "symbol": ".SPTSE,.MXX,.E1DOW,.FTSE,.DEDOW,.FRDOW,.N225,.HKDOW,.AXJO"
-      },
-      "assertions": {
-        "status": 200,
-        "response_schema_valid": true
-      }
+      "input": { "symbol": ".SPTSE,.FTSE,.N225" },
+      "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]
 }

@@ -1,10 +1,10 @@
 {
-  "operation_id": "getCompanyProfile",
-  "method": "post",
+  "operation_id": "listFundFamilies",
+  "method": "get",
   "replay_safety": "safe_read",
   "cases": [
     {
-      "input": { "symbols": ["AAPL"] },
+      "input": {},
       "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]
