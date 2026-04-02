@@ -17,7 +17,6 @@ const EXCLUDED_SITES = new Set([
   'coingecko',
   'digital',
   'finance',
-  'google-flights',
   'httpbin',
   'jsonplaceholder',
   'microsoft-word',
