@@ -1,3 +1,14 @@
+## 2026-04-02: Fix google-flights adapter — 5/5 PASS
+
+**What changed:**
+- Fixed adapter init (permissive URL check) + execute (navigate to operation URL with params)
+- Added missing examples for exploreDestinations, getPriceInsights
+- Same pattern as google-search/booking/redfin adapter fix earlier today
+
+**Key files:** `src/sites/google-flights/adapters/google-flights.ts`
+**Verification:** `pnpm dev verify google-flights` — 5/5 PASS
+**Commit:** pending
+
 ## 2026-04-02: Fix adapter navigation — 3 sites, docs update
 
 **What changed:**

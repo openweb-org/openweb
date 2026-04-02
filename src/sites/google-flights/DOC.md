@@ -38,7 +38,6 @@ None — public search pages.
 - Origin/destination read from `input[aria-label*="Where from/to"]`
 
 ## Known Issues
-- Site is **quarantined** (manifest `quarantined: true`)
 - `tfs` parameter encoding is opaque — must be captured from actual Google Flights URLs
 - searchFlights may extract duplicate entries (departing + returning legs counted separately)
 - Date grid/calendar prices visible in date picker overlay not yet captured as a separate operation

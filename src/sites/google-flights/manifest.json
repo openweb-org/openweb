@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.google.com/travel/flights",
-  "description": "Google Flights search and pricing \u2014 page_global_data extraction from search results pages",
+  "description": "Google Flights search and pricing — page_global_data extraction from search results pages",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
@@ -14,9 +14,9 @@
     "l3_count": 0,
     "ws_count": 0
   },
-  "last_verified": "2026-03-23T23:26:32.558Z",
+  "last_verified": "2026-04-02T15:15:59.121Z",
   "fingerprint": {
-    "response_shape_hash": "searchFlights:2a4192a7a46368bf",
-    "last_validated": "2026-03-23T23:26:32.558Z"
+    "response_shape_hash": "exploreDestinations:03eb5e312f8d9d17,getFlightBookingDetails:265dc897a03c346f,getFlightOverview:04685f9e1817c020,getPriceInsights:2639aff0a6e7acb1,searchFlights:4ba257aa09d34e52",
+    "last_validated": "2026-04-02T15:15:59.123Z"
   }
 }

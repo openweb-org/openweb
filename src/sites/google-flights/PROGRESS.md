@@ -1,3 +1,17 @@
+## 2026-04-02: Fix adapter — 5/5 PASS
+
+**What changed:**
+- Fixed `init()`: relaxed URL check from `/travel/flights` to `google.com` (autoNavigate only reaches server origin)
+- Fixed `execute()`: added `OP_PATHS` mapping + `page.goto()` with tfs/tfu params + 3s settle wait
+- Added missing examples for `exploreDestinations` and `getPriceInsights`
+- Removed stale quarantine note from DOC.md
+- Updated manifest fingerprints for all 5 ops
+
+**Why:**
+- Same systemic adapter-pattern bug as google-search/booking/redfin: runtime navigates to server origin, adapter must handle navigation to operation URL
+
+**Verification:** `pnpm build && pnpm dev verify google-flights` — 5/5 PASS
+
 ## 2026-03-26: Initial documentation
 
 **What changed:**

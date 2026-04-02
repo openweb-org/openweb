@@ -1,15 +1,15 @@
 import type { Page } from 'playwright-core'
 import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-/**
- * Google Flights adapter — DOM extraction from search, overview, booking, explore, and insights pages.
- *
- * searchFlights:          Extract flight listings from /travel/flights/search
- * getFlightOverview:      Extract cheapest fares from /travel/flights route page
- * getFlightBookingDetails: Extract itinerary details from a booking detail page
- * exploreDestinations:    Extract destination cards from /travel/explore
- * getPriceInsights:       Extract price trends and popular airlines from search overview
- */
 import type { CodeAdapter } from '../../../types/adapter.js'
+
+/** Map operationId → Google Flights page path for navigation */
+const OP_PATHS: Record<string, string> = {
+	searchFlights: '/travel/flights/search',
+	getFlightOverview: '/travel/flights',
+	getFlightBookingDetails: '/travel/flights/booking',
+	exploreDestinations: '/travel/explore',
+	getPriceInsights: '/travel/flights/search/insights',
+}
 
 /* ---------- searchFlights ---------- */
 
@@ -261,8 +261,7 @@ const adapter: CodeAdapter = {
 	description: 'Google Flights — search, overview, booking, explore destinations, price insights via DOM extraction',
 
 	async init(page: Page): Promise<boolean> {
-		const url = page.url()
-		return url.includes('google.com/travel/flights') || url.includes('google.com/travel/explore')
+		return page.url().includes('google.com')
 	},
 
 	async isAuthenticated(): Promise<boolean> {
@@ -273,6 +272,16 @@ const adapter: CodeAdapter = {
 		try {
 			const handler = OPERATIONS[operation]
 			if (!handler) throw OpenWebError.unknownOp(operation)
+
+			const basePath = OP_PATHS[operation]
+			if (basePath) {
+				const url = new URL(basePath, 'https://www.google.com')
+				if (params.tfs) url.searchParams.set('tfs', String(params.tfs))
+				if (params.tfu) url.searchParams.set('tfu', String(params.tfu))
+				await page.goto(url.toString(), { waitUntil: 'load', timeout: 30000 })
+				await new Promise((r) => setTimeout(r, 3000))
+			}
+
 			return await handler(page)
 		} catch (error) {
 			throw toOpenWebError(error)
