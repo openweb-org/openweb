@@ -225,6 +225,25 @@ the same path + method, so adapter paths are logical groupings:
 3. **Path naming is free.** Choose paths that are clear to API consumers
    (`/search/images`, `/search/weather`). They do not need to match real URLs.
 
+#### Adapter Implementation Patterns
+
+**init() should be permissive.** Only check that the page URL is on the correct origin (hostname match). Do NOT navigate during init — navigation belongs in execute(). A strict init() that tries to load a specific page can hang on bot detection or slow SPAs.
+
+```typescript
+async init(page) {
+  return new URL(page.url()).hostname.includes('example.com')
+}
+```
+
+**execute() must navigate.** Each operation should call `page.goto(url, { waitUntil: 'load', timeout: 15000 })` with the operation-specific URL built from params. Catch `ERR_ABORTED` — SPA routers intercept navigation and abort the initial load, but the page still arrives at the correct state.
+
+```typescript
+await page.goto(url, { waitUntil: 'load', timeout: 15000 }).catch(() => {})
+await page.waitForSelector('.content', { timeout: 10000 }).catch(() => {})
+```
+
+**Use waitForSelector over fixed delays.** After goto, wait for a content selector instead of `setTimeout(5000)`. Use `.catch(() => {})` on waitForSelector to avoid failing on slow loads — the DOM extraction will handle missing elements.
+
 ### Does Data Come from WebSocket?
 
 Yes → curate WS operations in `asyncapi.yaml` alongside HTTP operations.

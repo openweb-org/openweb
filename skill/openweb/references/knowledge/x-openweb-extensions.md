@@ -29,6 +29,8 @@ Applied to the server object. Every field here affects ALL operations.
   DataDome) blocks direct HTTP from Node.js. Slower but bypasses client-side
   checks.
 
+**Mixed transport sites:** A site can use both `node` and `page` transport. Common pattern: reference data APIs (search filters, city lists, categories) work via node (no bot detection), while core data operations (search results, detail pages) need page adapter for DOM extraction. Set server-level transport to `page` and override individual node-friendly ops with per-operation `transport: node`.
+
 ### Auth
 
 Auth is **site-level**. It applies to ALL operations — do not remove auth
