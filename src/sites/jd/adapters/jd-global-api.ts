@@ -127,14 +127,13 @@ async function getProductDetail(
 	});
 	await sleep(4000);
 
-	return page.evaluate(() => {
+	return page.evaluate((paramSkuId: string) => {
 		const pc = (
 			window as unknown as {
 				pageConfig?: { product?: Record<string, unknown> };
 			}
 		).pageConfig;
-		if (!pc?.product) throw new Error("Product data not found on page");
-		const p = pc.product;
+		const p = pc?.product as Record<string, unknown> | undefined;
 
 		// Price from DOM
 		const priceEl = document.querySelector(".p-price .price, span.price");
@@ -145,16 +144,20 @@ async function getProductDetail(
 		const countText = countEl?.textContent?.trim() || "";
 		const countMatch = countText.match(/([\d万+]+)/);
 
+		// Name from DOM fallback
+		const titleEl = document.querySelector(".sku-name, .itemInfo-wrap .sku-name");
+		const domName = titleEl?.textContent?.trim() || null;
+
 		return {
-			skuId: String(p.skuid),
-			name: p.name as string,
+			skuId: p ? String(p.skuid) : paramSkuId,
+			name: (p?.name as string) || domName,
 			price,
-			shopId: p.shopId as string,
-			venderId: p.venderId as number,
-			brand: p.brand as number,
-			brandName: (p.brandName as string) || null,
-			categories: p.cat as number[],
-			images: ((p.imageList as string[]) || []).map((img: string) =>
+			shopId: p ? String(p.shopId) : null,
+			venderId: (p?.venderId as number) ?? null,
+			brand: (p?.brand as number) ?? null,
+			brandName: (p?.brandName as string) || null,
+			categories: (p?.cat as number[]) || [],
+			images: ((p?.imageList as string[]) || []).map((img: string) =>
 				img.startsWith("//")
 					? `https:${img}`
 					: img.startsWith("http")
@@ -162,7 +165,7 @@ async function getProductDetail(
 						: `https://img14.360buyimg.com/n1/${img}`,
 			),
 			variants: (
-				(p.colorSize as Array<Record<string, unknown>>) || []
+				(p?.colorSize as Array<Record<string, unknown>>) || []
 			).map((v) => ({
 				skuId: String(v.skuId),
 				...Object.fromEntries(
@@ -170,9 +173,9 @@ async function getProductDetail(
 				),
 			})),
 			reviewCount: countMatch ? countMatch[1] : null,
-			inStock: (p.warestatus as number) !== 0,
+			inStock: p ? (p.warestatus as number) !== 0 : null,
 		};
-	});
+	}, skuId);
 }
 
 /* ---------- getProductReviews ---------- */

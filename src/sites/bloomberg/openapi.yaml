@@ -162,6 +162,7 @@ paths:
             - next_data
         extraction:
           type: ssr_next_data
+          page_url: /quote/{ticker}
           path: props.pageProps.quote
       parameters:
         - name: ticker
@@ -210,13 +211,19 @@ paths:
                   marketCap:
                     type: [string, 'null']
                   dayRange:
-                    type: [string, 'null']
+                    type: [array, 'null']
+                    items:
+                      type: string
+                    description: Low and high prices as [low, high] strings.
                   fiftyTwoWeekRange:
-                    type: [string, 'null']
+                    type: [array, 'null']
+                    items:
+                      type: string
+                    description: 52-week low and high as [low, high] strings.
                   lowPrice52Week:
-                    type: [string, 'null']
+                    type: [number, 'null']
                   highPrice52Week:
-                    type: [string, 'null']
+                    type: [number, 'null']
                   totalReturnYtd:
                     type: [string, 'null']
                   bicsSector:
@@ -313,7 +320,7 @@ paths:
                   foundedYear:
                     type: [string, 'null']
                   numberOfEmployees:
-                    type: [string, 'null']
+                    type: [integer, 'null']
                   companyWebsite:
                     type: [string, 'null']
                   companyPhone:
