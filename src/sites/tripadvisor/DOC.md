@@ -1,49 +1,50 @@
 # TripAdvisor
 
 ## Overview
-Travel review and booking platform. Archetype: Travel.
-
-## Target Intents
-- [ ] Search hotels by location and dates
-- [ ] Get hotel detail page (reviews, amenities, pricing)
-- [ ] Get restaurant detail page (reviews, menu, photos)
-- [ ] Get attraction reviews
-- [ ] Search restaurants by location
+Travel review and booking platform. Archetype: Travel. Adapter-only site — all data extracted from LD+JSON structured data and DOM on SSR pages.
 
 ## Workflows
 
-### Find and compare hotels
-1. `searchHotels(location, checkIn, checkOut)` → hotel list with `locationId`
-2. `getHotel(locationId)` → full hotel detail, reviews, pricing
+### Search hotels in a city
+1. `searchLocation(query)` → pick location → `geoId`, `locationSlug`
+2. `searchHotels(geoId, location)` → hotel list with names, ratings, addresses
 
-### Find restaurants
-1. `searchRestaurants(location)` → restaurant list with `locationId`
-2. `getRestaurant(locationId)` → full restaurant detail, reviews, menu
+### Get restaurant detail
+1. `searchLocation(query)` → `geoId`
+2. `getRestaurant(geoId, locationId, slug)` → name, cuisine, rating, hours, address, menu URL
 
 ### Read attraction reviews
-1. `getAttractionReviews(locationId)` → paginated reviews
+1. `searchLocation(query)` → `geoId`
+2. `getAttractionReviews(geoId, locationId, slug)` → attraction info + review titles, text, dates
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchHotels | find hotels in a location | location, checkIn, checkOut | name, rating, price, locationId | entry point |
-| getHotel | hotel detail | locationId ← searchHotels | name, rating, reviews, amenities, pricing | |
-| searchRestaurants | find restaurants in a location | location | name, rating, cuisine, locationId | entry point |
-| getRestaurant | restaurant detail | locationId ← searchRestaurants | name, rating, reviews, menu, photos | |
-| getAttractionReviews | reviews for an attraction | locationId | review text, rating, date, author | paginated |
+| searchLocation | find geoId for a city/region | query | geoId, locationSlug, type | entry point; typeahead |
+| searchHotels | list hotels in a city | geoId ← searchLocation, location ← locationSlug | name, rating, reviewCount, priceRange, address | LD+JSON `ItemList` |
+| getRestaurant | restaurant detail | geoId ← searchLocation, locationId, slug | name, cuisine, rating, reviewCount, hours, menuUrl | LD+JSON `FoodEstablishment` |
+| getAttractionReviews | attraction info + reviews | geoId ← searchLocation, locationId, slug | name, rating, reviewCount, reviews[] | LD+JSON `LocalBusiness` + DOM |
+
+**Parameter format:**
+- `geoId` — TripAdvisor numeric geo ID (e.g. `60763` = New York City, `187147` = Paris)
+- `locationId` — numeric ID from the URL (e.g. `d457808` → `457808`)
+- `location` / `slug` — URL path segment (e.g. `New_York_City_New_York`, `Le_Bernardin-New_York_City_New_York`)
 
 ## Quick Start
 
 ```bash
-# Search hotels in New York
-openweb tripadvisor exec searchHotels '{"location":"New York"}'
+# Find geoId for a city
+openweb tripadvisor exec searchLocation '{"query":"Tokyo"}'
 
-# Get hotel details
-openweb tripadvisor exec getHotel '{"locationId":"123456"}'
+# Search hotels (use geoId and locationSlug from searchLocation)
+openweb tripadvisor exec searchHotels '{"geoId":"298184","location":"Tokyo_Tokyo_Prefecture_Kanto"}'
 
-# Search restaurants
-openweb tripadvisor exec searchRestaurants '{"location":"Paris"}'
+# Get restaurant detail
+openweb tripadvisor exec getRestaurant '{"geoId":"60763","locationId":"457808","slug":"Le_Bernardin-New_York_City_New_York"}'
+
+# Get attraction reviews
+openweb tripadvisor exec getAttractionReviews '{"geoId":"60763","locationId":"104365","slug":"Statue_of_Liberty-New_York_City_New_York"}'
 ```
 
 ---
@@ -51,17 +52,24 @@ openweb tripadvisor exec searchRestaurants '{"location":"Paris"}'
 ## Site Internals
 
 ## API Architecture
-TripAdvisor uses a mix of:
-- Internal GraphQL/REST APIs on `www.tripadvisor.com`
-- LD+JSON structured data embedded in SSR HTML pages
-- DataDome bot protection on all endpoints
+TripAdvisor embeds rich LD+JSON structured data in SSR HTML pages:
+- Hotel search pages: `ItemList` with `Hotel` items (name, rating, address, priceRange)
+- Restaurant detail pages: `FoodEstablishment` (name, cuisine, hours, rating, address)
+- Attraction detail pages: `LocalBusiness` (name, rating, address) + DOM review cards
+- DataDome bot protection blocks all direct HTTP/fetch — requires real browser
 
 ## Auth
-cookie_session expected. Public browsing works for read-only ops without login.
+No auth required. All operations read public data.
 
 ## Transport
-Page transport likely required due to DataDome. Real Chrome profile needed.
+Page transport (real Chrome via CDP). DataDome blocks node transport entirely.
+
+## Extraction
+- **searchLocation**: DOM typeahead links from homepage search bar → parse geoId and slug from URLs
+- **searchHotels**: LD+JSON `ItemList` → `itemListElement[].item` (type `Hotel`)
+- **getRestaurant**: LD+JSON `FoodEstablishment` from `<script type="application/ld+json">`
+- **getAttractionReviews**: LD+JSON `LocalBusiness` for attraction info + DOM `[data-automation="reviewCard"]` for reviews
 
 ## Known Issues
-- **DataDome:** Aggressive bot detection. Must use real Chrome profile. Sessions should be short.
-- **LD+JSON:** Product pages embed structured data as JSON-LD — may be viable extraction path.
+- **DataDome:** Aggressive bot detection on all endpoints. Must use page transport with real Chrome profile.
+- **Review ratings:** Individual review bubble ratings are not reliably extractable from DOM (SVG-based, no aria-label).

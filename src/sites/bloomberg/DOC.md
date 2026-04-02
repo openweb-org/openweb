@@ -80,11 +80,11 @@ No auth required. All 10 operations work on public Bloomberg pages. Bloomberg Te
 - Slow navigation required — rapid page loads trigger CAPTCHA
 
 ## Extraction
-- `ssr_next_data` — direct path into `__NEXT_DATA__` JSON for simple extractions (getTickerBar, getQuote, getPriceChart, getBoardMembers, getIndexMembers)
-- `page_global_data` — JavaScript expressions for complex extractions (getNewsHeadlines, getCompanyProfile, getPriceMovements, getLatestNews, searchBloomberg)
+- `ssr_next_data` — direct path into `__NEXT_DATA__` JSON for simple extractions (getTickerBar, getQuote)
+- `page_global_data` — JavaScript expressions for complex extractions (getNewsHeadlines, getCompanyProfile, getPriceMovements, getPriceChart, getBoardMembers, getIndexMembers, getLatestNews, searchBloomberg)
 - All data is in `__NEXT_DATA__` under `props.pageProps`
 - Homepage: `initialState.tickerBar`, `initialState.modulesById`
-- Quote pages: `pageProps.quote`, `pageProps.barCharts`, `pageProps.boardMembersAndExecutives`, `pageProps.indexMembers`
+- Quote pages: `pageProps.quote` (includes priceMovements), `pageProps.boardMembersAndExecutives` (object with boardMembers + executives arrays), `pageProps.barCharts` (financial statements, not price charts)
 
 ## Known Issues
 - **PerimeterX rate limiting**: Navigating too many pages in rapid succession triggers CAPTCHA. Space requests 5-10 seconds apart.

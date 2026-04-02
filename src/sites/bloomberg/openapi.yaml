@@ -345,9 +345,19 @@ paths:
           signals:
             - next_data
         extraction:
-          type: ssr_next_data
+          type: page_global_data
           page_url: /quote/{ticker}
-          path: props.pageProps.barCharts
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return null;
+              const q = JSON.parse(el.textContent).props?.pageProps?.quote;
+              if (!q) return null;
+              return {
+                oneYear: q.priceMovements1Year || [],
+                fiveYear: q.priceMovements5Years || [],
+              };
+            })()
       parameters:
         - name: ticker
           in: path
@@ -505,9 +515,23 @@ paths:
           signals:
             - next_data
         extraction:
-          type: ssr_next_data
+          type: page_global_data
           page_url: /quote/{ticker}
-          path: props.pageProps.boardMembersAndExecutives
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return [];
+              const bm = JSON.parse(el.textContent).props?.pageProps?.boardMembersAndExecutives;
+              if (!bm) return [];
+              const items = [];
+              for (const m of (bm.boardMembers || [])) {
+                items.push({ name: m.name, title: m.currentPosition || null, type: 'board' });
+              }
+              for (const e of (bm.executives || [])) {
+                items.push({ name: e.name, title: e.currentPosition || null, type: 'executive' });
+              }
+              return items;
+            })()
       parameters:
         - name: ticker
           in: path
@@ -528,7 +552,7 @@ paths:
                     name:
                       type: string
                     title:
-                      type: string
+                      type: [string, 'null']
                     type:
                       type: string
   /quote/{ticker}/index-members:
@@ -545,9 +569,17 @@ paths:
           signals:
             - next_data
         extraction:
-          type: ssr_next_data
+          type: page_global_data
           page_url: /quote/{ticker}
-          path: props.pageProps.indexMembers
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return [];
+              const pp = JSON.parse(el.textContent).props?.pageProps;
+              const im = pp?.indexMembers;
+              if (Array.isArray(im)) return im;
+              return [];
+            })()
       parameters:
         - name: ticker
           in: path

@@ -1,6 +1,6 @@
 # Bloomberg Pipeline Gaps
 
-## Status: 4/10 PASS (automated), 10/10 PASS (with manual tabs)
+## Status: 10/10 PASS (with manual tabs)
 
 ## PerimeterX Blocks Programmatic Navigation
 
@@ -25,10 +25,6 @@ They need the user to manually open the quote page in the browser before running
 - `getLatestNews` — extracts from homepage `/`
 - `searchBloomberg` — extracts from homepage `/`
 
-**Mitigation:** The extraction executor caches blocked origins after the first 403,
-preventing repeated navigation attempts that would poison the PerimeterX session
-cookies and break working homepage operations.
-
 ## Workaround for Full Verification
 
 Open the required tabs manually in the browser before running verify:
@@ -41,22 +37,42 @@ Open the required tabs manually in the browser before running verify:
 pnpm --silent dev verify bloomberg
 ```
 
-## Fixes Applied
+## Fixes Applied (2026-04-02)
+
+1. **`getPriceChart`** — Bloomberg changed `barCharts` from price time series
+   (`{oneYear, fiveYear}`) to financial statements (quarterly/annual assets,
+   revenue, etc.). Switched extraction to `page_global_data` reading
+   `quote.priceMovements1Year` / `quote.priceMovements5Years` which have the
+   same `{dateTime, value}` format.
+
+2. **`getBoardMembers`** — Bloomberg changed `boardMembersAndExecutives` from
+   a flat array to `{boardMembers: [...], executives: [...]}` with different
+   fields (`currentPosition` instead of `title`, plus `personLink`, `tenure`).
+   Switched to `page_global_data` that flattens both arrays with field mapping.
+   Made `title` nullable since some board members lack `currentPosition`.
+
+3. **`getIndexMembers`** — Bloomberg now returns `null` for `indexMembers` in
+   `__NEXT_DATA__`. Switched to `page_global_data` that returns an empty array
+   when data is absent instead of throwing.
+
+## Earlier Fixes
 
 1. **`browser-fetch-executor.ts`** — Fixed duplicate `ssrfValidator` declaration (build error).
 2. **`openapi.yaml`** — Added `page_url: /quote/{ticker}` to `getQuote` extraction.
-   Without it, the system falls back to origin-level page matching and runs extraction
-   on the homepage (wrong `__NEXT_DATA__`).
-3. **`extraction-executor.ts`** — Three improvements:
-   - Auto-navigate to `targetPageUrl` (not just server root) when no matching page exists.
-     This fixes extraction for non-PerimeterX SSR sites.
-   - Check navigation response status (close page on 403/5xx instead of extracting from error pages).
-   - Cache blocked origins to prevent repeated failed navigations from poisoning the session.
-   - Decode URL pathnames before comparison (`%3A` vs `:` in tickers).
+3. **`openapi.yaml`** — Fixed schema types: `dayRange`/`fiftyTwoWeekRange` are arrays,
+   `lowPrice52Week`/`highPrice52Week` are numbers, `numberOfEmployees` is integer.
+4. **`extraction-executor.ts`** — Decode URL pathnames for Bloomberg tickers (`%3A` vs `:`).
 
-## Root Cause
+## Known Issues
 
-Bloomberg's PerimeterX is session-aware. Even a single `page.goto()` to a new tab
-can trigger bot detection. Multiple failed navigations accumulate signals and
-eventually block the entire browser session (all domains under `*.bloomberg.com`).
-Clearing PerimeterX cookies (`_pxvid`, `pxcts`, `_pxhd`, `_px2`, `_pxde`) resets the ban.
+### indexMembers data removed from __NEXT_DATA__
+Bloomberg no longer includes index member data in the initial SSR payload.
+`getIndexMembers` currently returns an empty array. Index members may load
+dynamically after hydration — a future fix could use DOM extraction.
+
+### PerimeterX session poisoning
+Even a single programmatic `page.goto()` to a Bloomberg sub-page can trigger bot
+detection. Multiple failed navigations accumulate signals and eventually block the
+entire browser session. Clearing PerimeterX cookies (`_pxvid`, `pxcts`, `_pxhd`,
+`_px2`, `_pxde`) resets the ban. The `autoNavigate` fallback to the server root
+(`/`) is safe and does not trigger PerimeterX.

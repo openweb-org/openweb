@@ -1,0 +1,305 @@
+openapi: '3.1.0'
+info:
+  title: TripAdvisor
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-04-02T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.tripadvisor.com
+    x-openweb:
+      transport: page
+paths:
+  /internal/searchLocation:
+    get:
+      operationId: searchLocation
+      summary: Search for a location by name — returns geoId, locationSlug, and category links needed by other operations
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ta0004
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: tripadvisor
+          operation: searchLocation
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Location search query (e.g. "Paris", "Tokyo", "New York").'
+      responses:
+        '200':
+          description: Location search results with geoIds and slugs.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, results]
+                properties:
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [geoId, name, type]
+                      properties:
+                        geoId:
+                          type: string
+                          description: 'TripAdvisor geo ID (use in searchHotels, getRestaurant, getAttractionReviews).'
+                        name:
+                          type: string
+                        type:
+                          type: string
+                          enum: [location, hotels, restaurants, attractions]
+                        locationSlug:
+                          type: [string, 'null']
+                          description: 'URL slug for the location (use as "location" param in searchHotels).'
+                        url:
+                          type: string
+
+  /internal/searchHotels:
+    get:
+      operationId: searchHotels
+      summary: Search hotels by location — names, ratings, review counts, addresses, price ranges from LD+JSON ItemList
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ta0001
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: tripadvisor
+          operation: searchHotels
+      parameters:
+        - name: geoId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'TripAdvisor geo ID for the location (e.g. "60763" for New York City, "187147" for Paris).'
+        - name: location
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Location name as URL slug (e.g. "New_York_City_New_York", "Paris_Ile_de_France").'
+      responses:
+        '200':
+          description: List of hotels from LD+JSON ItemList.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, hotels]
+                properties:
+                  count:
+                    type: integer
+                  hotels:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, url]
+                      properties:
+                        name:
+                          type: string
+                        url:
+                          type: string
+                        rating:
+                          type: [number, 'null']
+                          description: Aggregate rating out of 5.
+                        reviewCount:
+                          type: [integer, 'null']
+                        priceRange:
+                          type: [string, 'null']
+                        address:
+                          type: [object, 'null']
+                          properties:
+                            street:
+                              type: [string, 'null']
+                            city:
+                              type: [string, 'null']
+                            region:
+                              type: [string, 'null']
+                            country:
+                              type: [string, 'null']
+                            postalCode:
+                              type: [string, 'null']
+                        telephone:
+                          type: [string, 'null']
+                        image:
+                          type: [string, 'null']
+
+  /internal/getRestaurant:
+    get:
+      operationId: getRestaurant
+      summary: Get restaurant detail — name, cuisine, rating, reviews, hours, address from LD+JSON FoodEstablishment
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ta0002
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: tripadvisor
+          operation: getRestaurant
+      parameters:
+        - name: geoId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'TripAdvisor geo ID (e.g. "60763").'
+        - name: locationId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Restaurant location ID (e.g. "457808" for Le Bernardin).'
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Restaurant URL slug (e.g. "Le_Bernardin-New_York_City_New_York").'
+      responses:
+        '200':
+          description: Restaurant detail from LD+JSON FoodEstablishment schema.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: [string, 'null']
+                  url:
+                    type: [string, 'null']
+                  cuisine:
+                    type: array
+                    items:
+                      type: string
+                  rating:
+                    type: [number, 'null']
+                    description: Aggregate rating out of 5.
+                  reviewCount:
+                    type: [integer, 'null']
+                  priceRange:
+                    type: [string, 'null']
+                  telephone:
+                    type: [string, 'null']
+                  menuUrl:
+                    type: [string, 'null']
+                  address:
+                    type: [object, 'null']
+                    properties:
+                      street:
+                        type: [string, 'null']
+                      city:
+                        type: [string, 'null']
+                      region:
+                        type: [string, 'null']
+                      country:
+                        type: [string, 'null']
+                      postalCode:
+                        type: [string, 'null']
+                  openingHours:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        day:
+                          type: string
+                        opens:
+                          type: string
+                        closes:
+                          type: string
+                  image:
+                    type: [string, 'null']
+
+  /internal/getAttractionReviews:
+    get:
+      operationId: getAttractionReviews
+      summary: Get attraction info and reviews — name, rating, address plus review titles, text, and dates from DOM
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ta0003
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: tripadvisor
+          operation: getAttractionReviews
+      parameters:
+        - name: geoId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'TripAdvisor geo ID (e.g. "60763").'
+        - name: locationId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Attraction location ID (e.g. "104365" for Statue of Liberty).'
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Attraction URL slug (e.g. "Statue_of_Liberty-New_York_City_New_York").'
+      responses:
+        '200':
+          description: Attraction info from LD+JSON plus reviews from DOM.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: [string, 'null']
+                  rating:
+                    type: [number, string, 'null']
+                    description: Aggregate rating out of 5.
+                  reviewCount:
+                    type: [integer, 'null']
+                  address:
+                    type: [object, 'null']
+                    properties:
+                      street:
+                        type: [string, 'null']
+                      city:
+                        type: [string, 'null']
+                      region:
+                        type: [string, 'null']
+                      country:
+                        type: [string, 'null']
+                      postalCode:
+                        type: [string, 'null']
+                  telephone:
+                    type: [string, 'null']
+                  image:
+                    type: [string, 'null']
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: [string, 'null']
+                        text:
+                          type: [string, 'null']
+                        date:
+                          type: [string, 'null']
