@@ -64,7 +64,7 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `csrf` | CsrfPrimitive + `scope` | Override server-level CSRF for this operation. |
 | `pagination` | PaginationPrimitive | Cursor or link-header pagination config. |
 | `extraction` | ExtractionPrimitive | SSR/DOM data extraction. See `extraction-patterns.md`. |
-| `adapter` | AdapterRef | Path to a TypeScript adapter file for complex request/response transforms. |
+| `adapter` | AdapterRef | Delegates execution to a TypeScript adapter. The spec path becomes a logical namespace — the runtime does NOT use it for navigation. See below. |
 | `actual_path` | string | Real URL path when the spec key is a virtual path (e.g., GraphQL dedup). |
 
 ### Permission
@@ -93,6 +93,21 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `script_json` | Parse `<script type="application/json">` blocks. Fields: `selector`, `path`. |
 
 See `extraction-patterns.md` for decision flow and usage guidance.
+
+### Adapter
+
+When an operation has `x-openweb.adapter`, the runtime bypasses URL construction
+entirely. It finds (or auto-opens) a page on the server origin, then calls
+`adapter.execute(page, operationId, params)`. The adapter handles all navigation,
+interaction, and data extraction.
+
+**Key difference from all other transports:** the OpenAPI path is a logical
+namespace, not a real URL. The runtime never navigates to `serverUrl + path`.
+Multiple adapter operations can share the same real URL (differentiated by query
+params or by which DOM region they extract). The adapter must use `params` to
+navigate the page to the correct URL before extracting.
+
+See `spec-curation.md` "Adapter Path Semantics" for path naming guidance.
 
 ## Complete YAML Example
 
@@ -152,3 +167,8 @@ paths:
 
 4. **Editing `build` fields.** These are compiler-managed metadata. Do not
    change `stable_id`, `tool_version`, or `verified` manually.
+
+5. **Adapter ignoring params and not navigating.** When writing an adapter,
+   every operation that needs a specific URL must use `params` to build it
+   and call `page.goto()`. The runtime only opens the server origin — it does
+   NOT navigate to the OpenAPI path. Writing `_params` (unused) is a bug.

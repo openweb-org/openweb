@@ -2,7 +2,16 @@ import type { Page } from 'playwright-core'
 import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import type { CodeAdapter } from '../../../types/adapter.js'
 
-async function searchHomes(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+/** Navigate to a Redfin URL and wait for content to load. */
+async function navigateTo(page: Page, path: string): Promise<void> {
+  const url = `https://www.redfin.com${path}`
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
+  await page.waitForSelector('script[type="application/ld+json"], h1, [data-rf-test-id]', { timeout: 10_000 }).catch(() => {})
+}
+
+async function searchHomes(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const { regionId, state, city } = params as { regionId: string; state: string; city: string }
+  await navigateTo(page, `/city/${regionId}/${state}/${city}`)
   return page.evaluate(() => {
     const listings: Record<string, unknown>[] = []
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
@@ -40,7 +49,9 @@ async function searchHomes(page: Page, _params: Record<string, unknown>): Promis
   })
 }
 
-async function getPropertyDetails(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getPropertyDetails(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const { state, city, address, propertyId } = params as { state: string; city: string; address: string; propertyId: string }
+  await navigateTo(page, `/${state}/${city}/${address}/home/${propertyId}`)
   return page.evaluate(() => {
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
@@ -112,7 +123,9 @@ async function getPropertyDetails(page: Page, _params: Record<string, unknown>):
   })
 }
 
-async function getMarketData(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getMarketData(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const { regionId, state, city } = params as { regionId: string; state: string; city: string }
+  await navigateTo(page, `/city/${regionId}/${state}/${city}/housing-market`)
   return page.evaluate(() => {
     // Try the housing-market page structure first
     const text = document.body.innerText || ''

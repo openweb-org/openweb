@@ -203,45 +203,19 @@ async function getKnowledgePanel(page: Page, params: Record<string, unknown>): P
   })
 }
 
-/* ---------- getFeaturedSnippet ---------- */
-
-async function getFeaturedSnippet(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  await navigateToSearch(page, String(params.q ?? ''))
-  return page.evaluate(() => {
-    const container = document.querySelector('.xpdopen .hgKElc')
-      || document.querySelector('[data-attrid="wa:/description"] .kno-rdesc span')
-      || document.querySelector('.IZ6rdc')
-    const titleEl = document.querySelector('.xpdopen .LC20lb')
-      || document.querySelector('.ifM9O .r21Kzd')
-    const sourceEl = document.querySelector('.xpdopen cite')
-    const linkEl = document.querySelector('.xpdopen a[href]')
-    return {
-      snippet: container?.textContent?.trim() || null,
-      title: titleEl?.textContent?.trim() || null,
-      sourceUrl: linkEl?.getAttribute('href') || null,
-      displayUrl: sourceEl?.textContent?.trim() || null,
-    }
-  })
-}
-
 /* ---------- getPeopleAlsoAsk ---------- */
 
 async function getPeopleAlsoAsk(page: Page, params: Record<string, unknown>): Promise<unknown> {
   await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     const items: Array<{ question: string }> = []
-    const rows = document.querySelectorAll('[jsname="Cpkphb"] [data-q], .related-question-pair [data-q]')
+    const seen = new Set<string>()
+    // Each .related-question-pair is one PAA row; question text lives in .dnXCYb
+    const rows = document.querySelectorAll('.related-question-pair')
     for (const row of rows) {
-      const q = row.getAttribute('data-q') || row.textContent?.trim() || ''
-      if (q) items.push({ question: q })
-    }
-    // Fallback: aria-expanded divs
-    if (items.length === 0) {
-      const expandables = document.querySelectorAll('[jsname="Cpkphb"] [role="button"]')
-      for (const el of expandables) {
-        const text = el.textContent?.trim() || ''
-        if (text) items.push({ question: text })
-      }
+      const textEl = row.querySelector('.dnXCYb') || row.querySelector('span[jsname="r4nke"]')
+      const q = textEl?.textContent?.trim() || ''
+      if (q && !seen.has(q)) { seen.add(q); items.push({ question: q }) }
     }
     return { questions: items, count: items.length }
   })
@@ -253,7 +227,8 @@ async function getRelatedSearches(page: Page, params: Record<string, unknown>): 
   await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     const items: string[] = []
-    const links = document.querySelectorAll('#brs a, .k8XOCe a, [data-ved] .s75CSd a')
+    // Related searches live in #botstuff; .AJLUJb / .oIk2Cb / .EIaa9b hold the links
+    const links = document.querySelectorAll('#botstuff .AJLUJb a, .oIk2Cb a, .EIaa9b a')
     for (const a of links) {
       const text = a.textContent?.trim() || ''
       if (text && !items.includes(text)) items.push(text)
@@ -268,80 +243,33 @@ async function searchLocal(page: Page, params: Record<string, unknown>): Promise
   await navigateToSearch(page, String(params.q ?? ''))
   return page.evaluate(() => {
     const items: Array<{ name: string; rating: string; reviews: string; type: string; address: string }> = []
-    const cards = document.querySelectorAll('[jscontroller="AtSb"] .VkpGBb, .rllt__details')
+    // Use .VkpGBb as the card container (contains .rllt__details inside)
+    const cards = document.querySelectorAll('[jscontroller="AtSb"] .VkpGBb')
     for (const card of cards) {
-      const nameEl = card.querySelector('[role="heading"], .dbg0pd, .OSrXXb')
-      const ratingEl = card.querySelector('.MW4etd, .yi40Hd')
-      const reviewsEl = card.querySelector('.UY7F9, .RDApEe')
-      const typeEl = card.querySelector('.rllt__details > div:nth-child(2), .W4Efsd > span:first-child')
-      const addrEl = card.querySelector('.rllt__details > div:nth-child(3), .W4Efsd > span:nth-child(2)')
+      const details = card.querySelector('.rllt__details')
+      if (!details) continue
+      const nameEl = details.querySelector('[role="heading"], .dbg0pd, .OSrXXb')
+      const ratingEl = details.querySelector('.MW4etd, .yi40Hd')
+      const reviewsEl = details.querySelector('.UY7F9, .RDApEe')
+      // Structure: div[0]=name, div[1]=rating row, div[2]=type/price, div[3]=address
+      // Type/price/address are in the last two child divs after name and rating
+      const divs = Array.from(details.children) as HTMLElement[]
       const name = nameEl?.textContent?.trim() || ''
       if (name) {
+      // div[1] has "rating · price · type" inline; extract type from after last " · "
+      const infoText = divs[1]?.textContent?.trim() || ''
+      const infoParts = infoText.split(/\s*·\s*/)
+      const type = infoParts.length > 1 ? infoParts[infoParts.length - 1] : ''
         items.push({
           name,
           rating: ratingEl?.textContent?.trim() || '',
           reviews: reviewsEl?.textContent?.trim().replace(/[()]/g, '') || '',
-          type: typeEl?.textContent?.trim() || '',
-          address: addrEl?.textContent?.trim() || '',
+          type,
+          address: divs[2]?.textContent?.trim() || '',
         })
       }
     }
     return { results: items, resultCount: items.length }
-  })
-}
-
-/* ---------- getCalculation ---------- */
-
-async function getCalculation(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  await navigateToSearch(page, String(params.q ?? ''))
-  return page.evaluate(() => {
-    // Calculator / unit converter / currency converter widget
-    const resultEl = document.querySelector('#cwos, .qv3Wpe, .dDoNo .vXQmIe, .dDoNo [data-value]')
-    const formulaEl = document.querySelector('.vUGUtc, .bjhkR, .dDoNo .vk_bk')
-    // Currency / unit conversion
-    const fromEl = document.querySelector('#knowledge-currency__src-input, .CWGqFd input')
-    const toEl = document.querySelector('#knowledge-currency__tgt-input, .dDoNo .vk_bk .SwHCTb')
-    const fromUnit = document.querySelector('#knowledge-currency__src-selector, .vLqKYe select')
-    const toUnit = document.querySelector('#knowledge-currency__tgt-selector, .bjhkR select')
-    return {
-      result: resultEl?.textContent?.trim() || toEl?.getAttribute('value') || null,
-      expression: formulaEl?.textContent?.trim() || fromEl?.getAttribute('value') || null,
-      fromUnit: fromUnit?.textContent?.trim() || null,
-      toUnit: toUnit?.textContent?.trim() || null,
-    }
-  })
-}
-
-/* ---------- getWeather ---------- */
-
-async function getWeather(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  await navigateToSearch(page, String(params.q ?? ''))
-  return page.evaluate(() => {
-    const container = document.querySelector('#wob_wc')
-    if (!container) return { location: null, temperature: null, condition: null, humidity: null, wind: null }
-    const location = container.querySelector('#wob_loc')?.textContent?.trim() || null
-    const temp = container.querySelector('#wob_tm')?.textContent?.trim() || null
-    const unit = container.querySelector('.wob_t')?.textContent?.includes('°F') ? 'F' : 'C'
-    const condition = container.querySelector('#wob_dc')?.textContent?.trim() || null
-    const humidity = container.querySelector('#wob_hm')?.textContent?.trim() || null
-    const wind = container.querySelector('#wob_ws')?.textContent?.trim() || null
-    const precipitation = container.querySelector('#wob_pp')?.textContent?.trim() || null
-    return { location, temperature: temp ? `${temp}°${unit}` : null, condition, humidity, wind, precipitation }
-  })
-}
-
-/* ---------- getTranslation ---------- */
-
-async function getTranslation(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  await navigateToSearch(page, String(params.q ?? ''))
-  return page.evaluate(() => {
-    const container = document.querySelector('#tw-container, .MERaBe')
-    if (!container) return { sourceText: null, translatedText: null, sourceLang: null, targetLang: null }
-    const sourceText = container.querySelector('#tw-source-text-ta, .tw-src-ltr span')?.textContent?.trim() || null
-    const translatedText = container.querySelector('#tw-target-text .Y2IQFc, .tw-ta-container .Y2IQFc, .result-container .tw-ta-text-message-container')?.textContent?.trim() || null
-    const sourceLang = container.querySelector('#tw-sl, .source-language .jfk-button-checked')?.textContent?.trim() || null
-    const targetLang = container.querySelector('#tw-tl, .target-language .jfk-button-checked')?.textContent?.trim() || null
-    return { sourceText, translatedText, sourceLang, targetLang }
   })
 }
 
@@ -354,18 +282,14 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   searchVideos,
   searchShopping,
   getKnowledgePanel,
-  getFeaturedSnippet,
   getPeopleAlsoAsk,
   getRelatedSearches,
   searchLocal,
-  getCalculation,
-  getWeather,
-  getTranslation,
 }
 
 const adapter: CodeAdapter = {
   name: 'google-search',
-  description: 'Google Search — web, image, news, video, shopping, local, knowledge panel, featured snippets, PAA, weather, calculator, translation via DOM extraction',
+  description: 'Google Search — web, image, news, video, shopping, local, knowledge panel, PAA, related searches via DOM extraction',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('google.com')

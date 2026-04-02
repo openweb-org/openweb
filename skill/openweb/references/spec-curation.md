@@ -184,9 +184,46 @@ Use an adapter instead when you need:
 - Dynamic waits or interaction sequences (click, scroll, waitForSelector)
 - Proprietary protocols or complex request signing
 - DOM interaction beyond a single `page.evaluate()` expression
+- Multiple operations that share the same real URL but extract different data
 
 See `references/knowledge/extraction-patterns.md` for the extraction type
 decision flow and pattern catalog.
+
+#### Adapter Path Semantics
+
+For non-adapter operations (node, page/browser_fetch, extraction), the OpenAPI
+path **is** the real URL path — the runtime uses it directly to build the
+request URL. If the path is wrong, the request 404s.
+
+For adapter operations, the OpenAPI path is a **logical namespace** — the
+runtime does NOT use it for navigation. It only uses the `operationId` to
+route to the adapter's `execute()` method. The adapter is responsible for all
+URL construction and page navigation.
+
+This distinction exists because adapter operations often cannot map 1:1 to URL
+paths. For example, Google Search has 13 operations that all share `/search`
+as the real path, differing only by query parameters (`udm=2`, `tbm=nws`) or
+by which DOM region they extract. OpenAPI does not allow multiple operations on
+the same path + method, so adapter paths are logical groupings:
+
+```yaml
+# These are logical paths, NOT real URLs:
+/search/images:     # real URL: /search?q=...&udm=2
+/search/news:       # real URL: /search?q=...&tbm=nws
+/search/knowledge:  # real URL: /search?q=... (extracts sidebar)
+/search/weather:    # real URL: /search?q=... (extracts weather card)
+```
+
+**Consequences for adapter authors:**
+
+1. **The adapter must navigate.** The runtime only opens a page at the server
+   origin (e.g., `https://www.google.com/`). The adapter's `execute()` receives
+   `params` and must use them to navigate to the correct URL before extracting.
+2. **Do not ignore params.** Write `params: Record<string, unknown>`, not
+   `_params`. Use `params.q` (or whatever the spec declares) to build the
+   target URL.
+3. **Path naming is free.** Choose paths that are clear to API consumers
+   (`/search/images`, `/search/weather`). They do not need to match real URLs.
 
 ### Does Data Come from WebSocket?
 

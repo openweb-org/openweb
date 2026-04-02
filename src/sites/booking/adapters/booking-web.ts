@@ -21,9 +21,23 @@ function unknownOpError(op: string): Error {
  * Flights: flights.booking.com — search results via data-testid flight cards.
  */
 
+/** Navigate to a Booking.com URL and wait for content. */
+async function navigateTo(page: Page, url: string, waitSelector?: string): Promise<void> {
+  await page.goto(url, { waitUntil: 'load', timeout: 15_000 })
+  const selector = waitSelector ?? '[data-testid], script[type="application/ld+json"]'
+  await page.waitForSelector(selector, { timeout: 10_000 }).catch(() => {})
+}
+
 /* ---------- Hotel search ---------- */
 
-async function searchHotels(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function searchHotels(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const url = new URL('https://www.booking.com/searchresults.html')
+  url.searchParams.set('ss', String(params.ss ?? ''))
+  if (params.checkin) url.searchParams.set('checkin', String(params.checkin))
+  if (params.checkout) url.searchParams.set('checkout', String(params.checkout))
+  url.searchParams.set('group_adults', String(params.group_adults ?? 2))
+  url.searchParams.set('no_rooms', String(params.no_rooms ?? 1))
+  await navigateTo(page, url.toString(), '[data-testid="property-card"]')
   return page.evaluate(() => {
     const cards = document.querySelectorAll('[data-testid="property-card"]')
     const hotels: {
@@ -62,7 +76,12 @@ async function searchHotels(page: Page, _params: Record<string, unknown>): Promi
 
 /* ---------- Hotel detail ---------- */
 
-async function getHotelDetail(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getHotelDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const { country, slug } = params as { country: string; slug: string }
+  const url = new URL(`https://www.booking.com/hotel/${country}/${slug}.html`)
+  if (params.checkin) url.searchParams.set('checkin', String(params.checkin))
+  if (params.checkout) url.searchParams.set('checkout', String(params.checkout))
+  await navigateTo(page, url.toString())
   return page.evaluate(() => {
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
@@ -111,6 +130,7 @@ async function getHotelDetail(page: Page, _params: Record<string, unknown>): Pro
 /* ---------- Hotel reviews ---------- */
 
 async function getHotelReviews(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+  // Virtual path — extracts from the current hotel detail page. Cannot navigate independently (no country param).
   return page.evaluate(() => {
     const scoreComponent = document.querySelector('[data-testid="review-score-component"]')
     const scoreText = scoreComponent?.textContent?.trim() ?? ''
@@ -148,6 +168,7 @@ async function getHotelReviews(page: Page, _params: Record<string, unknown>): Pr
 /* ---------- Hotel prices (room availability) ---------- */
 
 async function getHotelPrices(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+  // Virtual path — extracts from the current hotel detail page. Cannot navigate independently (no country param).
   return page.evaluate(() => {
     const table = document.querySelector('table.hprt-table')
     if (!table) return { count: 0, rooms: [] }
@@ -194,7 +215,18 @@ async function getHotelPrices(page: Page, _params: Record<string, unknown>): Pro
 
 /* ---------- Flights search ---------- */
 
-async function searchFlights(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function searchFlights(page: Page, params: Record<string, unknown>): Promise<unknown> {
+  const route = String(params.route ?? '')
+  const url = new URL(`https://flights.booking.com/flights/${route}/`)
+  if (params.type) url.searchParams.set('type', String(params.type))
+  if (params.depart) url.searchParams.set('depart', String(params.depart))
+  if (params.return) url.searchParams.set('return', String(params.return))
+  if (params.adults) url.searchParams.set('adults', String(params.adults))
+  if (params.cabinClass) url.searchParams.set('cabinClass', String(params.cabinClass))
+  if (params.from) url.searchParams.set('from', String(params.from))
+  if (params.to) url.searchParams.set('to', String(params.to))
+  if (params.sort) url.searchParams.set('sort', String(params.sort))
+  await navigateTo(page, url.toString())
   return page.evaluate(() => {
     const cards = document.querySelectorAll('[data-testid="searchresults_card"]')
     const flights: {
