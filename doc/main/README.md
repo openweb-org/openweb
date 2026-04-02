@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-03-31 (skill doc refactor)
+> Last updated: 2026-04-01 (batch0/1/2 rediscovery, pipeline gap fixes)
 
 ## Quick Start
 
@@ -85,6 +85,7 @@ src/
 │   │   ├── path-normalize.ts   #     Path template normalization
 │   │   ├── graphql-cluster.ts  #     GraphQL sub-clustering
 │   │   ├── auth-candidates.ts  #     Ranked auth bundling with evidence + CSRF options
+│   │   ├── constant-headers.ts #     Detect constant headers across cluster samples
 │   │   ├── schema-v2.ts        #     Schema inference with enum/format controls
 │   │   ├── example-select.ts   #     Tiered example value selection with PII scrub
 │   │   └── classify.ts         #     Extraction signal detection (SSR, script_json, page_global)
@@ -122,15 +123,14 @@ src/
 │   ├── cookies.ts              #   Cookie management
 │   └── config/                 #   Config files: blocked-domains, blocked-paths, tracking-cookies, static-extensions
 │
-└── sites/                      # Site packages (68 sites)
-    ├── open-meteo/             #   L1 (no x-openweb)
+└── sites/                      # Site packages (56 sites)
+    ├── github/                 #   L1 (no x-openweb)
     ├── instagram/              #   L2 (cookie_session + cookie_to_header)
     ├── youtube/                #   L2 (page_global + sapisidhash)
     ├── discord/                #   L2 (webpack_module_walk, page transport)
-    ├── coinbase/               #   WS (AsyncAPI, compiler-generated)
     ├── whatsapp/               #   L3 adapter (Meta require() module system)
     ├── telegram/               #   L3 adapter (teact global state)
-    └── ...                     #   61 more sites
+    └── ...                     #   50 more sites
 ```
 
 ---
