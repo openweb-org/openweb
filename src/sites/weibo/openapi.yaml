@@ -784,7 +784,9 @@ paths:
                     type: object
                     properties:
                       since_id:
-                        type: string
+                        oneOf:
+                          - type: string
+                          - type: integer
                       list:
                         type: array
                         items:
@@ -943,21 +945,23 @@ paths:
                                 source:
                                   type: string
                                 user:
-                                  type: object
-                                  properties:
-                                    id:
-                                      type: integer
-                                    idstr:
-                                      type: string
-                                    screen_name:
-                                      type: string
-                                      description: Display name.
-                                    profile_image_url:
-                                      type: string
-                                    verified:
-                                      type: boolean
-                                    avatar_hd:
-                                      type: string
+                                  oneOf:
+                                    - type: object
+                                      properties:
+                                        id:
+                                          type: integer
+                                        idstr:
+                                          type: string
+                                        screen_name:
+                                          type: string
+                                          description: Display name.
+                                        profile_image_url:
+                                          type: string
+                                        verified:
+                                          type: boolean
+                                        avatar_hd:
+                                          type: string
+                                    - type: 'null'
                                 reposts_count:
                                   type: integer
                                 comments_count:
@@ -1448,21 +1452,23 @@ paths:
                             source:
                               type: string
                             user:
-                              type: object
-                              properties:
-                                id:
-                                  type: integer
-                                idstr:
-                                  type: string
-                                screen_name:
-                                  type: string
-                                  description: Display name.
-                                profile_image_url:
-                                  type: string
-                                verified:
-                                  type: boolean
-                                avatar_hd:
-                                  type: string
+                              oneOf:
+                                - type: object
+                                  properties:
+                                    id:
+                                      type: integer
+                                    idstr:
+                                      type: string
+                                    screen_name:
+                                      type: string
+                                      description: Display name.
+                                    profile_image_url:
+                                      type: string
+                                    verified:
+                                      type: boolean
+                                    avatar_hd:
+                                      type: string
+                                - type: 'null'
                             reposts_count:
                               type: integer
                             comments_count:
@@ -1479,7 +1485,9 @@ paths:
                   total_number:
                     type: integer
                   max_page:
-                    type: integer
+                    oneOf:
+                      - type: integer
+                      - type: 'null'
                   next_cursor:
                     type: integer
   /ajax/statuses/setLike:
