@@ -327,68 +327,6 @@ paths:
               schema:
                 type: object
 
-  /youtubei/v1/get_transcript:
-    post:
-      operationId: getTranscript
-      summary: "Get video transcript/subtitles — requires params token from getVideoDetail engagement panel"
-      x-openweb:
-        permission: read
-        build:
-          stable_id: yt0009
-          tool_version: 2
-          signals:
-            - status-match
-      parameters:
-        - name: key
-          in: query
-          required: true
-          description: "Innertube API key"
-          schema:
-            type: string
-          example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
-        - name: prettyPrint
-          in: query
-          required: false
-          schema:
-            type: string
-          example: "false"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - context
-                - params
-              properties:
-                context:
-                  type: object
-                  properties:
-                    client:
-                      type: object
-                      properties:
-                        clientName:
-                          type: string
-                          example: WEB
-                        clientVersion:
-                          type: string
-                          example: "2.20260325.08.00"
-                params:
-                  type: string
-                  description: "Transcript params token (from getVideoDetail engagement panel)"
-      responses:
-        "200":
-          description: Transcript segments.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  actions:
-                    type: array
-                    description: "Transcript segments with timestamps"
-
   /youtubei/v1/notification/get_unseen_count:
     post:
       operationId: getNotificationCount

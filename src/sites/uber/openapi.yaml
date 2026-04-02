@@ -93,80 +93,6 @@ paths:
                             - string
                             - 'null'
                           description: Relative URL to store page.
-  /internal/getRideHistory:
-    get:
-      operationId: getRideHistory
-      summary: Get Uber ride history — destinations, dates, fares, trip UUIDs
-      x-openweb:
-        permission: read
-        build:
-          stable_id: ub0002
-          tool_version: 1
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: uber-api
-          operation: getRideHistory
-      parameters:
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 10
-          description: Number of rides to return (max 20).
-        - name: nextPageToken
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Pagination token from previous response.
-      responses:
-        '200':
-          description: Ride history.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - rides
-                  - count
-                properties:
-                  count:
-                    type: integer
-                  nextPageToken:
-                    type:
-                      - string
-                      - 'null'
-                    description: Token for next page of results.
-                  rides:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        uuid:
-                          type: string
-                          description: Trip UUID.
-                        title:
-                          type: string
-                          description: Destination name or address.
-                        subtitle:
-                          type: string
-                          description: Date and time (e.g. "Mar 22 • 6:25 PM").
-                        fare:
-                          type: string
-                          description: Fare amount or cancellation note (e.g. "$7.95", "$0.00 • Canceled").
-                        detailsUrl:
-                          type:
-                            - string
-                            - 'null'
-                          description: URL to trip receipt/details page.
-                        mapImageUrl:
-                          type:
-                            - string
-                            - 'null'
-                          description: Static map image URL showing the route.
   /internal/getEatsOrderHistory:
     get:
       operationId: getEatsOrderHistory
@@ -239,7 +165,7 @@ paths:
                           type: boolean
                         totalPrice:
                           type:
-                            - integer
+                            - number
                             - 'null'
                           description: Total in cents.
                         items:
@@ -250,7 +176,7 @@ paths:
                               title:
                                 type: string
                               price:
-                                type: integer
+                                type: number
                                 description: Price in cents.
                               quantity:
                                 type: integer

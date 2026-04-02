@@ -1,66 +1,12 @@
 import type { Page } from 'playwright-core'
 import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
- * Uber L3 adapter — Eats REST API + Rides GraphQL via browser fetch.
+ * Uber L3 adapter — Eats REST API via browser fetch.
  *
- * Uber uses two distinct API surfaces:
- * - Uber Eats: REST at ubereats.com/_p/api/* (POST JSON, x-csrf-token: x)
- * - Uber Rides: GraphQL at riders.uber.com/graphql (POST JSON, x-csrf-token: x)
+ * Uber Eats: REST at ubereats.com/_p/api/* (POST JSON, x-csrf-token: x)
  * Auth is via cookie_session (credentials: 'include' in browser fetch).
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
-
-/* ---------- Rides GraphQL ---------- */
-
-const RIDES_GRAPHQL_URL = 'https://riders.uber.com/graphql'
-
-const ACTIVITIES_QUERY = `query Activities($includePast: Boolean = true, $includeUpcoming: Boolean = true, $limit: Int = 5, $nextPageToken: String, $orderTypes: [RVWebCommonActivityOrderType!] = [RIDES, TRAVEL], $profileType: RVWebCommonActivityProfileType = PERSONAL) {
-  activities {
-    cityID
-    past(
-      limit: $limit
-      nextPageToken: $nextPageToken
-      orderTypes: $orderTypes
-      profileType: $profileType
-    ) @include(if: $includePast) {
-      activities {
-        ...RVWebCommonActivityFragment
-        __typename
-      }
-      nextPageToken
-      __typename
-    }
-    upcoming @include(if: $includeUpcoming) {
-      activities {
-        ...RVWebCommonActivityFragment
-        __typename
-      }
-      __typename
-    }
-    __typename
-  }
-}
-
-fragment RVWebCommonActivityFragment on RVWebCommonActivity {
-  buttons {
-    isDefault
-    startEnhancerIcon
-    text
-    url
-    __typename
-  }
-  cardURL
-  description
-  imageURL {
-    light
-    dark
-    __typename
-  }
-  subtitle
-  title
-  uuid
-  __typename
-}`
 
 /* ---------- Eats REST ---------- */
 
@@ -89,40 +35,6 @@ async function eatsPost(page: Page, endpoint: string, body: Record<string, unkno
 
   const json = JSON.parse(result.text) as { status?: string; data?: unknown }
   return json.data ?? json
-}
-
-async function ridesGraphql(
-  page: Page,
-  operationName: string,
-  query: string,
-  variables: Record<string, unknown>,
-): Promise<unknown> {
-  const body = JSON.stringify({ operationName, variables, query })
-
-  const result = await page.evaluate(
-    async (args: { url: string; body: string }) => {
-      const resp = await fetch(args.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-csrf-token': 'x' },
-        body: args.body,
-        credentials: 'include',
-      })
-      return { status: resp.status, text: await resp.text() }
-    },
-    { url: RIDES_GRAPHQL_URL, body },
-  )
-
-  if (result.status >= 400) {
-    throw OpenWebError.httpError(result.status)
-  }
-
-  const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
-  if (json.errors) {
-    const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Unknown GraphQL error'
-    throw OpenWebError.apiError('Rides GraphQL', msg)
-  }
-
-  return json.data
 }
 
 /* ---------- operation handlers ---------- */
@@ -182,40 +94,6 @@ async function searchRestaurants(page: Page, params: Record<string, unknown>): P
   }
 }
 
-async function getRideHistory(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const limit = Number(params.limit ?? 10)
-  const nextPageToken = params.nextPageToken as string | undefined
-
-  const variables: Record<string, unknown> = {
-    includePast: true,
-    includeUpcoming: false,
-    limit,
-    orderTypes: ['RIDES', 'TRAVEL'],
-    profileType: 'PERSONAL',
-  }
-  if (nextPageToken) variables.nextPageToken = nextPageToken
-
-  const data = (await ridesGraphql(page, 'Activities', ACTIVITIES_QUERY, variables)) as Record<string, unknown>
-  const activities = data.activities as Record<string, unknown>
-  const past = activities?.past as Record<string, unknown>
-  const items = (past?.activities ?? []) as Array<Record<string, unknown>>
-
-  const rides = items.map((item) => ({
-    uuid: item.uuid,
-    title: item.title,
-    subtitle: item.subtitle,
-    fare: item.description,
-    detailsUrl: item.cardURL,
-    mapImageUrl: (item.imageURL as Record<string, string>)?.light,
-  }))
-
-  return {
-    rides,
-    count: rides.length,
-    nextPageToken: past?.nextPageToken as string | undefined,
-  }
-}
-
 async function getEatsOrderHistory(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const lastWorkflowUUID = (params.lastWorkflowUUID as string) ?? ''
 
@@ -265,13 +143,12 @@ async function getEatsOrderHistory(page: Page, params: Record<string, unknown>):
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
   searchRestaurants,
-  getRideHistory,
   getEatsOrderHistory,
 }
 
 const adapter: CodeAdapter = {
   name: 'uber-api',
-  description: 'Uber — Eats restaurant search, ride history, Eats order history',
+  description: 'Uber — Eats restaurant search, Eats order history',
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()
@@ -280,9 +157,7 @@ const adapter: CodeAdapter = {
 
   async isAuthenticated(page: Page): Promise<boolean> {
     const uberCookies = await page.context().cookies('https://www.ubereats.com')
-    const ridersCookies = await page.context().cookies('https://riders.uber.com')
-    const allCookies = [...uberCookies, ...ridersCookies]
-    return allCookies.some((c) => c.name === 'sid' || c.name === 'csid' || c.name === 'jwt-session')
+    return uberCookies.some((c) => c.name === 'sid' || c.name === 'csid' || c.name === 'jwt-session')
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {

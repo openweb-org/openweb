@@ -128,7 +128,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Product item ID (e.g. "314138390"). Get from searchProducts results.
+          description: Product item ID (e.g. "306283873"). Get from searchProducts results.
         - name: slug
           in: path
           required: false

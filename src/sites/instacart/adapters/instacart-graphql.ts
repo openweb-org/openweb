@@ -6,15 +6,17 @@ async function searchProducts(page: Page, params: Record<string, unknown>): Prom
   const query = String(params.query ?? '')
   const limit = Number(params.limit ?? 10)
 
-  const data = (await graphqlGet(page, 'CrossRetailerSearchAutosuggestions', {
-    query,
-    limit,
-    retailerIds: [],
-    zoneId: '',
-    autosuggestionSessionId: crypto.randomUUID(),
-  })) as Record<string, unknown>
-
-  const suggestions = (data.crossRetailerSearchAutosuggestions ?? []) as Array<Record<string, unknown>>
+  let suggestions: Array<Record<string, unknown>> = []
+  try {
+    const data = (await graphqlGet(page, 'CrossRetailerSearchAutosuggestions', {
+      query,
+      limit,
+      retailerIds: [],
+      zoneId: '',
+      autosuggestionSessionId: crypto.randomUUID(),
+    })) as Record<string, unknown>
+    suggestions = (data.crossRetailerSearchAutosuggestions ?? []) as Array<Record<string, unknown>>
+  } catch { /* autosuggestions optional — proceed to page-based product search */ }
 
   // Navigate to search results page to trigger Items query via response interception
   const items: unknown[] = []
@@ -66,18 +68,34 @@ async function getStoreProducts(page: Page, params: Record<string, unknown>): Pr
       if (response.url().includes('operationName=ShopCollectionScoped') && !shopId) {
         try {
           const body = (await response.json()) as {
-            data?: { shopCollection?: { shops?: Array<{ shopId?: string; retailerInventorySessionToken?: string; zoneId?: string; postalCode?: string }> } }
+            data?: { shopCollection?: { shops?: Array<{ id?: string; shopId?: string; retailerInventorySessionToken?: string }> } }
           }
           const shops = body.data?.shopCollection?.shops
           if (shops?.[0]) {
-            shopId = shops[0].shopId ?? ''
+            shopId = shops[0].id ?? shops[0].shopId ?? ''
             token = shops[0].retailerInventorySessionToken ?? ''
           }
         } catch { /* ignore */ }
       }
     }
 
+    // Also capture postalCode/zoneId from outgoing request variables
+    const reqHandler = (request: { url(): string }) => {
+      if (!postalCode) {
+        const u = new URL(request.url(), 'https://www.instacart.com')
+        const vars = u.searchParams.get('variables')
+        if (vars) {
+          try {
+            const v = JSON.parse(vars) as Record<string, unknown>
+            if (v.postalCode && typeof v.postalCode === 'string') postalCode = v.postalCode
+            if (v.zoneId && typeof v.zoneId === 'string') zoneId = v.zoneId
+          } catch { /* ignore */ }
+        }
+      }
+    }
+
     page.on('response', storeHandler)
+    page.on('request', reqHandler)
     try {
       await page.goto(`https://www.instacart.com/store/${retailerSlug}/storefront`, {
         waitUntil: 'domcontentloaded',
@@ -86,22 +104,12 @@ async function getStoreProducts(page: Page, params: Record<string, unknown>): Pr
       await page.waitForTimeout(5000)
     } finally {
       page.off('response', storeHandler)
+      page.off('request', reqHandler)
     }
   }
 
-  // Extract zone and postal from page context
-  const geoInfo = await page.evaluate(() => {
-    try {
-      const stateEl = document.querySelector('script#node-state')
-      if (stateEl?.textContent) {
-        const state = JSON.parse(stateEl.textContent)
-        return { zoneId: state.zoneId || '', postalCode: state.postalCode || '' }
-      }
-    } catch { /* ignore */ }
-    return { zoneId: '', postalCode: '' }
-  })
-  zoneId = geoInfo.zoneId || '714'
-  postalCode = geoInfo.postalCode || ''
+  // Fallback zone/postal
+  if (!zoneId) zoneId = '714'
 
   // Fetch collection products
   const data = (await graphqlGet(page, 'CollectionProductsWithFeaturedProducts', {

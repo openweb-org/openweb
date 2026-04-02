@@ -43,7 +43,7 @@ const PRODUCT_QUERY = `query productClientOnlyProduct($itemId: String!, $storeId
     itemId
     dataSources
     identifiers { productLabel canonicalUrl brandName itemId modelNumber productType storeSkuNumber }
-    details { collection description descriptiveAttributes { name value } highlights }
+    details { description descriptiveAttributes { name value } highlights }
     media { images { url sizes type subType } }
     pricing { original value alternatePriceDisplay message }
     reviews { ratingsReviews { averageRating totalReviews } }
@@ -150,7 +150,7 @@ async function searchProducts(page: Page, params: Record<string, unknown>) {
 
 async function getProductDetail(page: Page, params: Record<string, unknown>) {
   const itemId = String(params.itemId || params.id || '')
-  if (!itemId) throw validationError('itemId is required (e.g. "314138390")')
+  if (!itemId) throw validationError('itemId is required (e.g. "306283873")')
 
   if (!page.url().includes('homedepot.com')) {
     await page.goto('https://www.homedepot.com', { waitUntil: 'load', timeout: 30_000 })
@@ -186,8 +186,8 @@ async function getProductDetail(page: Page, params: Record<string, unknown>) {
     highlights: det.highlights || [],
     price: pricing.value ?? pricing.original ?? null,
     priceDisplay: pricing.alternatePriceDisplay || pricing.message || '',
-    rating: reviews.averageRating ?? null,
-    reviewCount: reviews.totalReviews ?? 0,
+    rating: reviews.averageRating != null ? Number(reviews.averageRating) : null,
+    reviewCount: Number(reviews.totalReviews) || 0,
     images,
     specifications: specs,
     breadcrumbs,

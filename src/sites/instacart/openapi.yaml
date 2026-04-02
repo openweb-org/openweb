@@ -76,18 +76,24 @@ paths:
                         size:
                           type: string
                         brandName:
-                          type: string
+                          type:
+                            - string
+                            - 'null'
                         price:
                           type: string
                           description: Display price (e.g. "$1.40 each (est.)").
                         pricePerUnit:
-                          type: string
+                          type:
+                            - string
+                            - 'null'
                         imageUrl:
                           type: string
                         available:
                           type: boolean
                         stockLevel:
-                          type: string
+                          type:
+                            - string
+                            - 'null'
                   count:
                     type: integer
 
@@ -168,17 +174,23 @@ paths:
                         size:
                           type: string
                         brandName:
-                          type: string
+                          type:
+                            - string
+                            - 'null'
                         price:
                           type: string
                         pricePerUnit:
-                          type: string
+                          type:
+                            - string
+                            - 'null'
                         imageUrl:
                           type: string
                         available:
                           type: boolean
                         stockLevel:
-                          type: string
+                          type:
+                            - string
+                            - 'null'
                   count:
                     type: integer
                   hasMore:
