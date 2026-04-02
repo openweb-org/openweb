@@ -127,11 +127,16 @@ How the site's API works — the non-obvious parts:
 - Any CSRF/signing requirements
 
 ## Transport
-- node or page? Why?
-- If page: what page URL must be open?
+- node, page, or adapter? Why?
+- If mixed transport (common): which ops use node, which use adapter? Why the split?
+  Example: "Reference data APIs (getCities, getIndustries) use node — public endpoints
+  that bypass bot detection. Core ops (searchJobs, getJobDetail) use page adapter for
+  DOM extraction."
+- If adapter: name the adapter file (`adapters/<site>.ts`)
 
 ## Extraction
-- How data is extracted (direct JSON response, ssr_next_data, html_selector, page_global, etc.)
+- How data is extracted (direct JSON response, ssr_next_data, html_selector, page_global, adapter DOM extraction)
+- If adapter: briefly describe the extraction strategy (LD+JSON, CSS selectors, page.evaluate fetch)
 - Any parsing quirks
 
 ## Known Issues
