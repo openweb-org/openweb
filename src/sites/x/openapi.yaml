@@ -10,6 +10,8 @@ servers:
   - url: https://x.com
     x-openweb:
       transport: page
+      constant_headers:
+        authorization: "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs=1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
       auth:
         type: cookie_session
       csrf:
