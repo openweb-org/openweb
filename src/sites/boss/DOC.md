@@ -54,11 +54,12 @@ openweb boss exec getSalary '{"query":"产品经理","city":"101020100"}'
 No auth required for reading job data. Session cookie `__zp_stoken__` exists but is not needed for core operations.
 
 ## Transport
-- `page` (L3 adapter) — all operations via page context with DOM extraction
-- Cannot downgrade to `node` — bot detection blocks direct HTTP requests
+- `page` (L3 adapter) — all core operations via page context with DOM extraction
+- Reference data ops (getCities, getIndustries, getFilterConditions) use `node` transport — public APIs that bypass bot detection
+- Adapter navigates to operation-specific URLs before DOM extraction (adapter paths are logical namespaces, not real URLs)
 
 ## Known Issues
-- **Bot detection (quarantined)**: Fingerprint-based detection blocks new automated tabs. Adapter works in a browser session where a human has already passed verification.
-- **SPA rendering timing**: Job search results load asynchronously; 5-second wait may not suffice under slow connections.
+- **Bot detection**: Fingerprint-based detection blocks new automated tabs. Adapter works in a browser session where a human has already passed verification.
+- **SPA navigation**: zhipin.com's Vue router may abort Playwright `page.goto()` with `ERR_ABORTED` — adapter catches this since the SPA handles the route internally.
 - **DOM selectors may drift**: Boss直聘 updates frontend frequently; CSS class names may change.
 - **getSalary is search-based**: Salary statistics are aggregated from visible search results on page 1, not a dedicated salary API.

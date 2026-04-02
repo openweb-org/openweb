@@ -125,7 +125,9 @@ export async function executeOperation(
         if (nav) { page = nav.page; ownedPage = nav.owned }
       }
       if (!page) {
-        throw createNeedsPageError(serverUrl)
+        // Adapter handles its own navigation — give it a fresh page
+        page = await context.newPage()
+        ownedPage = true
       }
       try {
         const mergedParams = { ...params, ...adapterRef.params }

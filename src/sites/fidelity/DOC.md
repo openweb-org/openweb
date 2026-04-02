@@ -25,13 +25,13 @@ Financial services platform. Stock quotes, market indices, mutual fund research,
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| getQuote | real-time stock price | symbol | lastPrice, netChgToday, pctChgToday, volume, marketCap | page transport |
-| getMarketSummary | major US indices | — | quotes[].label, lastPrice, netChgToday | page transport |
-| getCompanyProfile | company details | symbols[] | companyName, sector, industry, employeeCount | page transport |
-| getNewsHeadlines | stock/market news | symbol | headlines[].text, provider, resDate, impactRating | page transport |
-| getIndexQuotes | global indices/forex | symbol (comma-separated) | quotes[].name, pctChgToday | page transport |
-| getResearchData | analyst ratings/holdings | apiTokenName, params | varies by apiTokenName | page transport, proxy endpoint |
-| getCompanyLogo | company logo URL | fvSymbols | logo URL | page transport |
+| getQuote | real-time stock price | symbol | lastPrice, netChgToday, pctChgToday, volume, marketCap | adapter: fidelity-api |
+| getMarketSummary | major US indices | — | quotes[].label, lastPrice, netChgToday | adapter: fidelity-api |
+| getCompanyProfile | company details | symbols[] | companyName, sector, industry, employeeCount | adapter: fidelity-api |
+| getNewsHeadlines | stock/market news | symbol | headlines[].text, provider, resDate, impactRating | adapter: fidelity-api |
+| getIndexQuotes | global indices/forex | symbol (comma-separated) | quotes[].name, pctChgToday | adapter: fidelity-api |
+| getResearchData | analyst ratings/holdings | apiTokenName, params | varies by apiTokenName | adapter: fidelity-api, proxy endpoint |
+| getCompanyLogo | company logo URL | fvSymbols | logo URL | adapter: fidelity-api |
 | searchFunds | browse/filter mutual funds | searchFilter, pageNumber, noOfRowsPerPage | funds[].fundInformation, mstarOverallRating | entry point for fund research |
 | listAssetClasses | asset class/category codes | — | code, description, categories[] | entry point for screening |
 | listFundFamilies | fund family names | — | code, description | |
@@ -69,15 +69,15 @@ openweb fidelity exec getFundPerformance '{"cusip":"315911750","funduniverse":"R
 
 ## Auth
 - No login required for included operations (all public market data)
-- POST endpoints on digital.fidelity.com use CSRF tokens (`api_response` type from `/prgw/digital/research/api/tokens`)
+- POST endpoints on digital.fidelity.com use CSRF tokens (`api_response` type from `/prgw/digital/research/api/tokens`, field: `csrfToken`)
+- Adapter fetches CSRF automatically before each API call
 - Account/trading endpoints require full auth (not included)
 
 ## Transport
-- **digital.fidelity.com**: `page` transport required (PerimeterX bot detection blocks node)
+- **digital.fidelity.com**: `page` transport with `fidelity-api` adapter — navigates to `/research/quote-and-research/`, fetches CSRF, calls APIs via `page.evaluate(fetch)`
 - **fundresearch.fidelity.com**: `node` transport (direct HTTP works)
 
 ## Known Issues
-- **PerimeterX**: Active on digital.fidelity.com — node transport blocked, must use page transport with browser tab open
-- **ssrfValidator propagation**: Page transport CSRF resolution hits ssrfValidator bug (see chatgpt/pipeline-gaps.md) — digital.fidelity.com operations may fail until runtime fix is applied
+- **PerimeterX**: Active on digital.fidelity.com — node transport blocked, adapter uses browser context
 - **Fund CUSIPs**: Mutual fund endpoints use CUSIP identifiers. Common: FXAIX=315911750, FBGRX=316071109
 - **Numeric strings**: Prices and percentages returned as strings, not numbers

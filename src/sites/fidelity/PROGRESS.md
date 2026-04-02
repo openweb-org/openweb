@@ -1,3 +1,18 @@
+## 2026-04-02: Adapter fix — 13/13 PASS
+
+**What changed:**
+- Created `adapters/fidelity-api.ts` — navigates to `/research/quote-and-research/`, fetches CSRF token (`csrfToken` field), calls APIs via `page.evaluate(fetch)` with `X-CSRF-TOKEN` header
+- Added `adapter: { name: fidelity-api, operation: <op> }` to all 7 page-transport operations in openapi.yaml
+- Fixed CSRF extract field: `csrf` → `csrfToken` (matches actual API response)
+- Fixed `http-executor.ts` adapter path: create fresh page when `autoNavigate` fails (adapter handles its own navigation)
+
+**Why:**
+- `digital.fidelity.com/` auto-navigate fails in `findPageForOrigin` (redirect mismatch), blocking all 7 page-transport ops with "no browser tab open"
+- `browser-fetch-executor` CSRF resolution hits ssrfValidator bug — adapter bypasses this entirely
+- Same fix pattern as google-search/booking/redfin: adapter does `page.goto()` + extraction
+
+**Verification:** 13/13 PASS — all operations verified via `pnpm dev verify fidelity`
+
 ## 2026-04-02: Rediscovery — 13 operations (6 verified)
 
 **What changed:**
