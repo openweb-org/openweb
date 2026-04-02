@@ -11,9 +11,10 @@ import type { CodeAdapter } from '../../../types/adapter.js'
 
 const SITE = 'https://www.zhipin.com'
 
-async function navigateAndWait(page: Page, url: string, timeout = 30_000): Promise<void> {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout })
-  await page.waitForTimeout(5000)
+async function navigateTo(page: Page, url: string, waitSelector?: string): Promise<void> {
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 }).catch(() => {})
+  const selector = waitSelector ?? '.inner-wrap, [class*="job-"], [class*="company-"]'
+  await page.waitForSelector(selector, { timeout: 10_000 }).catch(() => {})
 }
 
 async function fetchJson(page: Page, url: string): Promise<unknown> {
@@ -36,7 +37,7 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
   url.searchParams.set('city', city)
   if (pageNum > 1) url.searchParams.set('page', String(pageNum))
 
-  await navigateAndWait(page, url.toString())
+  await navigateTo(page, url.toString(), '.job-card-wrapper, [class*="job-card"]')
 
   return page.evaluate(() => {
     const result: Record<string, unknown> = {}
@@ -93,7 +94,7 @@ async function getJobDetail(page: Page, params: Record<string, unknown>): Promis
     : jobId.startsWith('/') ? `${SITE}${jobId}`
     : `${SITE}/job_detail/${jobId}`
 
-  await navigateAndWait(page, url)
+  await navigateTo(page, url, '.job-detail-section, .job-banner, [class*="job-detail"]')
 
   return page.evaluate(() => {
     const result: Record<string, unknown> = {}
@@ -143,7 +144,7 @@ async function getCompanyProfile(page: Page, params: Record<string, unknown>): P
     : companyId.startsWith('/') ? `${SITE}${companyId}`
     : `${SITE}/gongsi/${companyId}`
 
-  await navigateAndWait(page, url)
+  await navigateTo(page, url, '.company-banner, [class*="company-info"]')
 
   return page.evaluate(() => {
     const result: Record<string, unknown> = {}
@@ -184,7 +185,7 @@ async function getSalary(page: Page, params: Record<string, unknown>): Promise<u
   url.searchParams.set('query', query)
   url.searchParams.set('city', city)
 
-  await navigateAndWait(page, url.toString())
+  await navigateTo(page, url.toString(), '.job-card-wrapper, [class*="job-card"]')
 
   return page.evaluate(() => {
     const salaries: Array<{ min: number; max: number; unit: string }> = []
@@ -264,12 +265,7 @@ const adapter: CodeAdapter = {
   description: 'Boss直聘 — job search, detail, company profiles, salary data via page DOM extraction',
 
   async init(page: Page): Promise<boolean> {
-    if (!page.url().includes('zhipin.com')) {
-      try {
-        await page.goto('https://www.zhipin.com/', { waitUntil: 'domcontentloaded', timeout: 15_000 })
-      } catch { /* navigation may fail due to bot detection */ }
-    }
-    return page.url().includes('zhipin.com')
+    return page.url().includes('zhipin.com') || page.url().startsWith('about:')
   },
 
   async isAuthenticated(_page: Page): Promise<boolean> {

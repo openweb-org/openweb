@@ -13,7 +13,7 @@ servers:
       csrf:
         type: api_response
         endpoint: https://digital.fidelity.com/prgw/digital/research/api/tokens
-        extract: csrf
+        extract: csrfToken
         inject:
           header: X-CSRF-TOKEN
 paths:
@@ -26,6 +26,9 @@ paths:
         build:
           stable_id: fid0001
           tool_version: 2
+        adapter:
+          name: fidelity-api
+          operation: getQuote
       requestBody:
         required: true
         content:
@@ -103,6 +106,9 @@ paths:
         build:
           stable_id: fid0004
           tool_version: 2
+        adapter:
+          name: fidelity-api
+          operation: getMarketSummary
       requestBody:
         required: true
         content:
@@ -150,6 +156,9 @@ paths:
         build:
           stable_id: fid0002
           tool_version: 2
+        adapter:
+          name: fidelity-api
+          operation: getCompanyProfile
       requestBody:
         required: true
         content:
@@ -205,6 +214,9 @@ paths:
         build:
           stable_id: fid0003
           tool_version: 2
+        adapter:
+          name: fidelity-api
+          operation: getNewsHeadlines
       requestBody:
         required: true
         content:
@@ -261,6 +273,9 @@ paths:
         build:
           stable_id: fid0005
           tool_version: 2
+        adapter:
+          name: fidelity-api
+          operation: getIndexQuotes
       requestBody:
         required: true
         content:
@@ -310,6 +325,9 @@ paths:
         build:
           stable_id: fid0006
           tool_version: 2
+        adapter:
+          name: fidelity-api
+          operation: getResearchData
       requestBody:
         required: true
         content:
@@ -362,6 +380,9 @@ paths:
         build:
           stable_id: fid0007
           tool_version: 2
+        adapter:
+          name: fidelity-api
+          operation: getCompanyLogo
       requestBody:
         required: true
         content:
