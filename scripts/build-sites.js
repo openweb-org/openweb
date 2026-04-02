@@ -126,6 +126,17 @@ if (existsSync(outDir)) {
     cpSync(src, dst, { recursive: true })
     synced++
   }
+
+  // Remove cache entries that don't exist in dist (stale compile artifacts)
+  if (existsSync(cacheDir)) {
+    const distNames = new Set(readdirSync(outDir, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name))
+    for (const entry of readdirSync(cacheDir, { withFileTypes: true })) {
+      if (entry.isDirectory() && !distNames.has(entry.name)) {
+        rmSync(path.join(cacheDir, entry.name), { recursive: true })
+      }
+    }
+  }
+
   if (synced > 0) {
     console.log(`Synced ${String(synced)} site(s) to ${cacheDir}`)
   }
