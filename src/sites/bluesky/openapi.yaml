@@ -167,6 +167,7 @@ paths:
               type: localStorage_jwt
               key: BSKY_STORAGE
               path: session.currentAccount.accessJwt
+              page_url: https://bsky.app
               inject:
                 header: Authorization
                 prefix: "Bearer "
