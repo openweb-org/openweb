@@ -14,7 +14,7 @@ paths:
   /:
     get:
       operationId: getTickerBar
-      summary: Get market ticker bar — top indices, bonds, commodities with live prices
+      summary: Get market ticker bar — id, shortName, price, percentChange1Day, lastYield
       x-openweb:
         permission: read
         build:
@@ -147,110 +147,11 @@ paths:
                           type: array
                           items:
                             type: object
-  /quote/{ticker}/board-members:
-    get:
-      operationId: getBoardMembers
-      summary: Get board members and executives — name, title, type (executive/board)
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: bb0007
-          signature_id: bb0007s
-          tool_version: 1
-          signals:
-            - next_data
-        extraction:
-          type: page_global_data
-          page_url: /quote/{ticker}
-          expression: |
-            (() => {
-              const el = document.getElementById('__NEXT_DATA__');
-              if (!el) return [];
-              const bm = JSON.parse(el.textContent).props?.pageProps?.boardMembersAndExecutives;
-              if (!bm) return [];
-              const items = [];
-              for (const m of (bm.boardMembers || [])) {
-                items.push({ name: m.name, title: m.currentPosition || null, type: 'board' });
-              }
-              for (const e of (bm.executives || [])) {
-                items.push({ name: e.name, title: e.currentPosition || null, type: 'executive' });
-              }
-              return items;
-            })()
-      parameters:
-        - name: ticker
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Bloomberg ticker (e.g. "AAPL:US", "MSFT:US").
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                    title:
-                      type: [string, 'null']
-                    type:
-                      type: string
-  /quote/{ticker}/index-members:
-    get:
-      operationId: getIndexMembers
-      summary: Get component securities of an index — ticker, name, price, daily change
-      x-openweb:
-        permission: read
-        build:
-          verified: true
-          stable_id: bb0008
-          signature_id: bb0008s
-          tool_version: 1
-          signals:
-            - next_data
-        extraction:
-          type: page_global_data
-          page_url: /quote/{ticker}
-          expression: |
-            (() => {
-              const el = document.getElementById('__NEXT_DATA__');
-              if (!el) return [];
-              const pp = JSON.parse(el.textContent).props?.pageProps;
-              const im = pp?.indexMembers;
-              if (Array.isArray(im)) return im;
-              return [];
-            })()
-      parameters:
-        - name: ticker
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Bloomberg index ticker (e.g. "SPX:IND", "INDU:IND").
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    percentChange1Day:
-                      type: number
-                    price:
-                      type: number
+                            properties:
+                              name:
+                                type: string
+                              url:
+                                type: [string, 'null']
   /latest-news:
     get:
       operationId: getLatestNews
@@ -324,7 +225,7 @@ paths:
   /search:
     get:
       operationId: searchBloomberg
-      summary: Search Bloomberg for news, quotes, and people by keyword
+      summary: Search Bloomberg for news, quotes, and people — headline, abstract, url, publishedAt, type
       x-openweb:
         permission: read
         build:

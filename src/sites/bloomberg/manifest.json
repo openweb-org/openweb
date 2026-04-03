@@ -4,20 +4,20 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.bloomberg.com",
-  "description": "Financial news, market data, stock quotes, and company profiles via Bloomberg SSR extraction",
+  "description": "Financial news and market data via Bloomberg SSR extraction",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
-    "operation_count": 6,
+    "operation_count": 4,
     "l1_count": 0,
-    "l2_count": 6,
+    "l2_count": 4,
     "l3_count": 0,
     "ws_count": 0
   },
   "last_verified": "2026-04-02T21:33:15.648Z",
   "quarantined": false,
   "fingerprint": {
-    "response_shape_hash": "getBoardMembers:fa5ac57f851882ad,getIndexMembers:fa5ac57f851882ad,getLatestNews:c7ad25f72c32d70d,getNewsHeadlines:77c115aa3e7e8649,getTickerBar:0c00ab57aee61dba,searchBloomberg:6c408148c1f67499",
+    "response_shape_hash": "getLatestNews:c7ad25f72c32d70d,getNewsHeadlines:77c115aa3e7e8649,getTickerBar:0c00ab57aee61dba,searchBloomberg:6c408148c1f67499",
     "last_validated": "2026-04-02T21:33:15.649Z"
   }
 }
