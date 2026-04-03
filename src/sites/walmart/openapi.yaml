@@ -12,7 +12,7 @@ paths:
   /search:
     get:
       operationId: searchProducts
-      summary: Search Walmart products by keyword
+      summary: Search products — name, usItemId, linePrice, averageRating, canonicalUrl
       x-openweb:
         permission: read
         build:
@@ -79,7 +79,7 @@ paths:
   /ip/{slug}/{itemId}:
     get:
       operationId: getProductDetail
-      summary: Get Walmart product detail page
+      summary: Get product detail — name, brand, priceInfo, averageRating, numberOfReviews, imageInfo
       x-openweb:
         permission: read
         build:
@@ -143,10 +143,20 @@ paths:
                             type: string
                   imageInfo:
                     type: object
+                    properties:
+                      thumbnailUrl:
+                        type: string
+                      allImages:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
   /ip/{itemId}:
     get:
       operationId: getProductPricing
-      summary: Get Walmart product pricing details
+      summary: Get product pricing — currentPrice, wasPrice, savingsAmount, isPriceReduced
       x-openweb:
         permission: read
         build:
@@ -201,7 +211,7 @@ paths:
   /internal/addToCart:
     post:
       operationId: addToCart
-      summary: Add a product to the shopping cart by Walmart item ID
+      summary: Add product to cart — cartId, cartCount, item (name, quantity, price)
       x-openweb:
         permission: write
         safety: caution
