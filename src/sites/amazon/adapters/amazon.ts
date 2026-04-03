@@ -125,12 +125,12 @@ async function searchDeals(page: Page, params: Record<string, unknown>) {
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), 15000)
     try {
-      const r = await fetch('/d2b/api/v1/products/search?' + qs, {
+      const r = await fetch(`/d2b/api/v1/products/search?${qs}`, {
         credentials: 'same-origin',
         headers: { Accept: 'application/json' },
         signal: ctrl.signal,
       })
-      if (!r.ok) throw new Error('HTTP ' + r.status)
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
       return r.json()
     } finally {
       clearTimeout(timer)

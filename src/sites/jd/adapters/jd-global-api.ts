@@ -47,13 +47,14 @@ async function searchProducts(
 					item,
 					NodeFilter.SHOW_TEXT,
 				);
-				let node: Node | null;
-				while ((node = walker.nextNode())) {
+				let node: Node | null = walker.nextNode();
+				while (node) {
 					const match = node.textContent?.match(/[¥￥]([\d,.]+)/);
 					if (match) {
 						price = match[1];
 						break;
 					}
+					node = walker.nextNode();
 				}
 
 				// Shop from mall/shop links

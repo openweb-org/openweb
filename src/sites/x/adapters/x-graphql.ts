@@ -68,9 +68,10 @@ async function loadQueryIds(page: Page): Promise<Record<string, string>> {
 
     const map: Record<string, string> = {}
     const re = /queryId:"([^"]+)",operationName:"([^"]+)"/g
-    let m: RegExpExecArray | null
-    while ((m = re.exec(text)) !== null) {
+    let m: RegExpExecArray | null = re.exec(text)
+    while (m !== null) {
       map[m[2]] = m[1]
+      m = re.exec(text)
     }
     return map
   })

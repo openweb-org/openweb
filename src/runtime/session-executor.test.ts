@@ -1211,8 +1211,8 @@ describe('RC2: autoNavigate', () => {
 
     const result = await autoNavigate(context, 'https://www.instagram.com/api/v1')
     expect(result).toBeDefined()
-    expect(result!.page).toBeDefined()
-    expect(result!.owned).toBe(true)
+    expect(result?.page).toBeDefined()
+    expect(result?.owned).toBe(true)
     expect(gotoFn).toHaveBeenCalledWith(
       'https://www.instagram.com/',
       expect.objectContaining({ waitUntil: 'load', timeout: 15_000 }),
@@ -1253,8 +1253,8 @@ describe('RC2: autoNavigate', () => {
 
     const result = await autoNavigate(context, 'https://www.instagram.com/api/v1')
     expect(result).toBeDefined()
-    expect(result!.page).toBe(existingPage)
-    expect(result!.owned).toBe(false)
+    expect(result?.page).toBe(existingPage)
+    expect(result?.owned).toBe(false)
     // The newly created page should have been closed since it wasn't the match
     expect(newPageObj.close).toHaveBeenCalled()
   })

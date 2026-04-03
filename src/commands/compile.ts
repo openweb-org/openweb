@@ -123,7 +123,7 @@ export async function compileSite(
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: '0 API samples detected. This site likely delivers data via HTML (SSR, LD+JSON, DOM) rather than JSON APIs.',
-      action: "See discover.md 'Adapter-Only Sites' for the adapter workflow. Analysis artifacts written to: " + reportDir,
+      action: `See discover.md 'Adapter-Only Sites' for the adapter workflow. Analysis artifacts written to: ${reportDir}`,
       retriable: false,
       failureClass: 'fatal',
     })
