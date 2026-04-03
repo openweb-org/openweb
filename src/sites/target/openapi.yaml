@@ -80,30 +80,35 @@ paths:
           schema:
             type: string
             default: 'true'
+          description: Filter to purchasable items only.
         - name: include_sponsored
           in: query
           required: false
           schema:
             type: string
             default: 'true'
+          description: Include sponsored products in results.
         - name: new_search
           in: query
           required: false
           schema:
             type: string
             default: 'true'
+          description: New search session flag.
         - name: spellcheck
           in: query
           required: false
           schema:
             type: string
             default: 'true'
+          description: Enable spellcheck suggestions.
         - name: platform
           in: query
           required: false
           schema:
             type: string
             default: desktop
+          description: Client platform (desktop or mobile).
         - name: page
           in: query
           required: false
@@ -262,6 +267,7 @@ paths:
           schema:
             type: string
             default: 'true'
+          description: Flag indicating pricing store ID is provided.
         - name: channel
           in: query
           required: true
@@ -549,7 +555,7 @@ paths:
           transport: node
     post:
       operationId: addToCart
-      summary: Add a product to the shopping cart by TCIN
+      summary: Add a product to the shopping cart by TCIN — returns cart_id, quantity, pricing, fulfillment
       x-openweb:
         permission: write
         safety: caution
