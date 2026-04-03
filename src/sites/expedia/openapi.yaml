@@ -302,13 +302,41 @@ paths:
                         type: array
                         items:
                           type: object
-                          description: Flight listing with airline, times, stops, price.
+                          properties:
+                            __typename:
+                              type: string
+                              description: Listing type (FlightsHeaderListing or FlightsStandardOffer).
+                            heading:
+                              type: string
+                              nullable: true
+                              description: Section heading (for header listings).
+                            journeys:
+                              type: array
+                              nullable: true
+                              description: Flight journey legs with details and fares.
+                              items:
+                                type: object
+                            flightsShoppingOfferContent:
+                              type: object
+                              nullable: true
+                              description: Offer content with departure/arrival times, stops, route.
+                            priceDisplay:
+                              type: object
+                              nullable: true
+                              description: Price rows with per-person fare.
+                            badgesList:
+                              type: object
+                              nullable: true
+                              description: Promotion or feature badges.
                       moreListingsAvailable:
-                        type: ['boolean', 'null']
+                        type: boolean
+                        nullable: true
                   pageTitle:
                     type: object
+                    description: Search context with date and route labels.
                   cheapestListingInfo:
                     type: object
+                    description: Cheapest available fare summary with price string.
 
   /flights/detail:
     get:
@@ -372,6 +400,33 @@ paths:
                 properties:
                   listingResult:
                     type: object
+                    properties:
+                      listings:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            __typename:
+                              type: string
+                              description: Listing type (FlightsHeaderListing or FlightsStandardOffer).
+                            journeys:
+                              type: array
+                              nullable: true
+                              description: Flight journey legs with details and fares.
+                              items:
+                                type: object
+                            flightsShoppingOfferContent:
+                              type: object
+                              nullable: true
+                              description: Offer content with departure/arrival times, stops, route.
+                            priceDisplay:
+                              type: object
+                              nullable: true
+                              description: Price rows with per-person fare.
+                      moreListingsAvailable:
+                        type: boolean
+                        nullable: true
                     description: Flight listings with full fare details.
                   pageTitle:
                     type: object
+                    description: Search context with date and route labels.
