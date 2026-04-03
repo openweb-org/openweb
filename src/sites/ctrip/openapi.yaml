@@ -1040,6 +1040,12 @@ paths:
               schema:
                 type: object
                 properties:
+                  typename:
+                    type: string
+                    nullable: true
+                  serverTime:
+                    type: string
+                    nullable: true
                   list:
                     type: array
                     nullable: true
@@ -1060,6 +1066,18 @@ paths:
                           type: string
                         category:
                           type: string
+                  authUser:
+                    type: object
+                    nullable: true
+                  claimAllButtonText:
+                    type: string
+                    nullable: true
+                  nextAvailableTime:
+                    type: string
+                    nullable: true
+                  disableClaimAllButton:
+                    type: boolean
+                    nullable: true
                   sortRuleList:
                     type: array
                     nullable: true
@@ -1072,10 +1090,17 @@ paths:
                           type: string
                   resultStatus:
                     type: object
+                    nullable: true
                     properties:
+                      flag:
+                        type: string
                       success:
                         type: boolean
+                      code:
+                        type: integer
                       errorCode:
+                        type: string
+                      errorMessage:
                         type: string
   /restapi/soa2/14427/getFlightFilters:
     post:

@@ -14,10 +14,10 @@
     "l3_count": 0,
     "ws_count": 0
   },
-  "last_verified": "2026-04-01T05:54:47.784Z",
+  "last_verified": "2026-04-03T02:00:51.967Z",
   "quarantined": false,
   "fingerprint": {
-    "response_shape_hash": "getDestinationInfo:12a3130fdc31ada1,getFlightCalendarPrices:97526a8de09381fb,getFlightComfort:54e776de5f94f750,getGeneralInfo:a160216469b9bc7b,getHotDestinations:87d680a807b49670,getTrainStations:3bb3ec8c0d19a76e,searchAttractions:7a542432f407fa3a,searchFlights:f551d27d04d5cf57,searchPOI:1c9cc4a120e78611,searchTrains:3bb3ec8c0d19a76e",
-    "last_validated": "2026-04-01T05:54:47.785Z"
+    "response_shape_hash": "getDestinationInfo:12a3130fdc31ada1,getFlightCalendarPrices:97526a8de09381fb,getFlightComfort:54e776de5f94f750,getGeneralInfo:a160216469b9bc7b,getHotDestinations:87d680a807b49670,getTrainStations:3bb3ec8c0d19a76e,searchAttractions:aaf13dbad15df889,searchFlights:aa0580821a9e96e8,searchPOI:1c9cc4a120e78611,searchTrains:3bb3ec8c0d19a76e",
+    "last_validated": "2026-04-03T02:00:51.969Z"
   }
 }

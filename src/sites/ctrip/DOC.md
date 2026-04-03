@@ -39,7 +39,7 @@ China's largest travel platform (Ctrip International). Flights, trains, attracti
 | getHotDestinations | trending destinations | — | data[]{id, word, url} | entry point for exploration |
 | getCityList | cities in a country | countryId | cityList[]{districtId, cityName, imageUrl} | entry point for exploration |
 | getDestinationInfo | destination travel guide | districtId ← getHotDestinations/getCityList | hotDistrict, classicRecommendSight[]{poiName, rating}, classicRecommendHotel[]{hotelName, price}, hotComment[]{content, rating} | www.trip.com |
-| searchAttractions | things to do | baseInfo, sceneParams | list[]{productId, productName, rating, price}, sortRuleList[]{sortType, sortName} | www.trip.com |
+| searchAttractions | things to do | sceneCode (e.g., city_sight_list) | list[]{productId, productName, rating, price}, sortRuleList[]{sortType, sortName} | www.trip.com |
 | getAttractionDetail | attraction detail | productId ← searchAttractions | description, rating, reviewCount, tickets, hours | www.trip.com |
 | getGeneralInfo | site info/announcements | — | savedTips, travelTipsList[]{title, content}, promotionList[]{title, linkUrl}, noticeList[]{title, content} | utility |
 
@@ -87,9 +87,14 @@ openweb ctrip exec searchAttractions '{"baseInfo":{"channelId":24,"locale":"en-U
 - Trip.com uses bot detection that blocks direct Node.js HTTP requests (403).
 - Operations on `us.trip.com` need a `us.trip.com` tab open; `www.trip.com` ops need a `www.trip.com` tab.
 
+## Extraction
+- All operations return direct JSON — no SSR, DOM, or page_global extraction.
+
 ## Known Issues
-- **Head/locale context**: Many APIs return "SourceEnum cannot be null" or "locale cannot be blank" when called without proper browser session context. Verify may pass (HTTP 200 returned) but response contains error content. The Trip.com JS framework injects locale/source context that cannot be replicated via simple fetch.
+- **Head/locale context**: Most `us.trip.com` APIs (searchPOI, searchFlights, getFlightCalendarPrices, getFlightComfort) return "SourceEnum cannot be null" or "grade is null" without proper browser session context. Verify passes (HTTP 200, shape matches) but response contains error content. Trip.com's JS framework injects locale/source context that cannot be replicated via simple fetch.
+- **Train APIs return 609**: getTrainStations and searchTrains return error code 609 ("something went wrong") without proper session cookies. Verify passes because shape matches.
+- **getDestinationInfo sparse**: Returns `result: 1` but no module data without full browser session. Works in verify with captured examples.
+- **searchAttractions response drift**: Endpoint response shape changed — now includes `typename`, `serverTime`, `authUser`, `claimAllButtonText` fields. Returns empty list without proper session context.
 - **Hotel search unavailable**: fetchHotelList API requires Trip.com's JavaScript framework headers (anti-CSRF/bot). Cannot be called via browser fetch.
 - **Flight search SSE**: Primary flight search (FlightListSearchSSE) uses Server-Sent Events. This package uses the non-SSE variant (FlightListSearch) which returns standard JSON.
-- **A/B testing**: Request headers contain A/B test flags that may affect response format.
-- **New operations unverified**: getFlightFilters, getAttractionDetail, getTrainCalendar, getCityList are inferred from the API surface pattern but do not have example fixtures. They may need path or param adjustments.
+- **Unverified ops**: getFlightFilters, getAttractionDetail, getTrainCalendar, getCityList lack example fixtures. getAttractionDetail fails with CORS when page is on wrong origin.
