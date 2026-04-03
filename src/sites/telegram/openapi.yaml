@@ -12,7 +12,7 @@ paths:
   /internal/chats:
     get:
       operationId: getChats
-      summary: List user's chats/dialogs from Telegram global state
+      summary: List user's chats — id, title, type, membersCount, lastMessageDate
       x-openweb:
         permission: read
         build:
@@ -61,7 +61,7 @@ paths:
   /internal/messages:
     get:
       operationId: getMessages
-      summary: Get messages from a specific chat
+      summary: Get messages from a chat — id, text, senderName, date, isOutgoing
       x-openweb:
         permission: read
         build:
@@ -124,7 +124,7 @@ paths:
   /internal/search:
     get:
       operationId: searchMessages
-      summary: Search messages by keyword across chats or within a specific chat
+      summary: Search messages by keyword — id, text, chatTitle, senderName, date
       x-openweb:
         permission: read
         build:
@@ -187,7 +187,7 @@ paths:
   /internal/user:
     get:
       operationId: getUserInfo
-      summary: Get user profile information by user ID
+      summary: Get user profile by ID — firstName, username, status, isPremium, phoneNumber
       x-openweb:
         permission: read
         build:
@@ -237,7 +237,7 @@ paths:
   /internal/me:
     get:
       operationId: getMe
-      summary: Get current authenticated user info
+      summary: Get current user — id, firstName, username, isPremium
       x-openweb:
         permission: read
         build:
@@ -275,7 +275,7 @@ paths:
   /internal/messages/send:
     post:
       operationId: sendMessage
-      summary: Send a text message to a chat
+      summary: Send a text message to a chat — returns success, chatId, text
       x-openweb:
         permission: write
         build:
