@@ -1,3 +1,23 @@
+## 2026-04-03: Archive completed todo projects — clean slate for v0.2
+
+**What changed:**
+- Archived 10 completed `doc/todo/` projects to `doc/archive/20260403_*/`:
+  CI, browser, ergonomics, graphql-design, improve-thought, pipeline-gap-fixes,
+  pipeline-gap-triage, pre-release, test_infra, ssr-dom-extraction
+- Remaining active in `doc/todo/`: cleanup/ (v0.1.1), prerelease-review/ (v0.1.0),
+  release-qa/ (v0.1.0), roadmap.md, blocked.md
+
+**Why:**
+- All 10 archived projects either completed (ergonomics RC1-RC6 all fixed, pipeline gaps
+  triaged + fixed) or deferred to post-release (graphql-design, ssr-dom-extraction, CI, test_infra)
+- Clean `doc/todo/` focuses attention on the remaining v0.1.0 publish step
+
+**Key files:** doc/todo/ → doc/archive/20260403_*/
+**Verification:** `ls doc/todo/` shows only active items
+**Commit:** (this commit)
+**Next:** npm publish
+**Blockers:** None
+
 ## 2026-04-03: Pre-release review round 2 — bug fixes, schema/doc sync
 
 **What changed:**
