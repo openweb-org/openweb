@@ -71,9 +71,10 @@ export async function executeOperation(
   deps: ExecuteDependencies = {},
 ): Promise<ExecuteResult> {
   // Quarantine warning: emit to stderr but continue execution
+  let manifest: Awaited<ReturnType<typeof loadManifest>> | undefined
   try {
     const siteRoot = await resolveSiteRoot(site)
-    const manifest = await loadManifest(siteRoot)
+    manifest = await loadManifest(siteRoot)
     if (manifest?.quarantined) {
       process.stderr.write(`warning: site ${site} is quarantined — verification failed, results may be unreliable\n`)
     }
@@ -264,6 +265,9 @@ export async function executeOperation(
         } catch (err) {
           if (!(err instanceof OpenWebError && err.payload.failureClass === 'needs_login')) throw err
 
+          // Skip tiers 3-4 when using external CDP — can't restart someone else's browser
+          if (deps.cdpEndpoint || deps.browser) throw err
+
           try {
             // Tier 3: Profile refresh — re-copy default Chrome profile, retry
             await refreshProfile()
@@ -276,8 +280,9 @@ export async function executeOperation(
             if (!(err2 instanceof OpenWebError && err2.payload.failureClass === 'needs_login')) throw err2
 
             // Tier 4: User login — open system browser, poll with backoff
-            const serverUrl = getServerUrl(spec, operationRef.operation)
-            await handleLoginRequired(serverUrl, async () => {
+            // Use site_url from manifest (human login page), not API server URL
+            const loginUrl = manifest?.site_url ?? getServerUrl(spec, operationRef.operation)
+            await handleLoginRequired(loginUrl, async () => {
               try {
                 const { result, browser } = await browserSessionExec()
                 if (!deps.browser) browser.close().catch(() => {})

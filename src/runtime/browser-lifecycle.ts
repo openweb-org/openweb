@@ -153,6 +153,7 @@ export async function ensureBrowser(cdpEndpoint?: string): Promise<Browser> {
   }
 
   // No managed browser — auto-start with filesystem lock
+  await mkdir(openwebHome(), { recursive: true })
   const release = await acquireLock()
   try {
     // Re-check after acquiring lock (another process may have started Chrome)
@@ -160,9 +161,6 @@ export async function ensureBrowser(cdpEndpoint?: string): Promise<Browser> {
     if (recheck.running && recheck.port) {
       return connectWithRetry(`http://127.0.0.1:${recheck.port}`)
     }
-
-    // Ensure $OPENWEB_HOME exists
-    await mkdir(openwebHome(), { recursive: true })
 
     // Start headless Chrome
     const config = getBrowserConfig()
