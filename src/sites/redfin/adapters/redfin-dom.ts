@@ -5,7 +5,7 @@ import type { CodeAdapter } from '../../../types/adapter.js'
 /** Navigate to a Redfin URL and wait for content to load. */
 async function navigateTo(page: Page, path: string): Promise<void> {
   const url = `https://www.redfin.com${path}`
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 }).catch(() => {})
   await page.waitForSelector('script[type="application/ld+json"], h1, [data-rf-test-id]', { timeout: 10_000 }).catch(() => {})
 }
 

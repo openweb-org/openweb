@@ -186,7 +186,7 @@ paths:
                       - 'null'
                   bathrooms:
                     type:
-                      - integer
+                      - number
                       - 'null'
                   sqft:
                     type:
