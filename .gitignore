@@ -7,7 +7,7 @@ dist/
 coverage/
 .DS_Store
 # Capture data (may contain session tokens/cookies)
-capture/
+/capture/
 # Built adapter .js files (source is .ts, compiled by scripts/build-adapters.js)
 src/sites/*/adapters/*.js
 # Task progress state (local only)
