@@ -71,3 +71,4 @@ openweb instagram exec searchUsers '{"query":"nasa"}'
 - Requires logged-in session for all API endpoints
 - Media PK is a large numeric string, not the URL shortcode
 - GraphQL doc_id hashes change frequently — REST v1 endpoints are more stable
+- `searchUsers` `places` and `hashtags` arrays return empty — bare `type: object` item schemas cannot be enriched
