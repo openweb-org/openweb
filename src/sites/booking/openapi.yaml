@@ -213,7 +213,22 @@ paths:
                     type: [string, 'null']
                   subscores:
                     type: [object, 'null']
-                    description: Category scores — staff, facilities, cleanliness, comfort, value_for_money, location, free_wifi.
+                    description: Category scores by dimension.
+                    properties:
+                      staff:
+                        type: [string, 'null']
+                      facilities:
+                        type: [string, 'null']
+                      cleanliness:
+                        type: [string, 'null']
+                      comfort:
+                        type: [string, 'null']
+                      value_for_money:
+                        type: [string, 'null']
+                      location:
+                        type: [string, 'null']
+                      free_wifi:
+                        type: [string, 'null']
                   featured:
                     type: array
                     items:

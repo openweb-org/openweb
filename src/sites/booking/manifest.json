@@ -14,10 +14,10 @@
     "l3_count": 0,
     "ws_count": 0
   },
-  "last_verified": "2026-04-01T18:24:35.169Z",
+  "last_verified": "2026-04-03T01:46:37.056Z",
   "quarantined": false,
   "fingerprint": {
-    "response_shape_hash": "getHotelDetail:56af99f7f56f06ea,getHotelPrices:a3f4179cfa68fc9d,getHotelReviews:9c8e553cb1f9b02b,searchFlights:957701a69688312e,searchHotels:b0a3467cd33c000f",
-    "last_validated": "2026-04-01T18:24:35.182Z"
+    "response_shape_hash": "getHotelDetail:bbe4397a9c2ef074,getHotelPrices:a3f4179cfa68fc9d,getHotelReviews:f960dcb2d9919951,searchFlights:957701a69688312e,searchHotels:ef8cb42d2fed859e",
+    "last_validated": "2026-04-03T01:46:37.057Z"
   }
 }

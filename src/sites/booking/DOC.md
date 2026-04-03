@@ -47,6 +47,9 @@ openweb booking exec searchFlights '{"route":"NYC-PAR","from":"NYC.CITY","to":"P
 
 ## Site Internals
 
+Everything below is for discover/compile operators and deep debugging.
+Not needed for basic site usage.
+
 ## API Architecture
 - **LD+JSON Hotel schema** on property detail pages: name, aggregateRating, description, address, image, priceRange
 - **GraphQL at /dml/graphql** — used internally but not stable; not exposed as operations
@@ -63,6 +66,11 @@ No auth required for public browsing and search.
 - Bot detection (likely PerimeterX) blocks direct HTTP requests
 - All operations use the `booking-web` adapter for DOM/LD+JSON extraction
 - Flights require navigating to flights.booking.com subdomain
+
+## Extraction
+- All operations use the `booking-web` adapter (`adapters/booking-web.ts`)
+- Hotel detail uses LD+JSON `@type: Hotel` schema embedded in the page
+- Search results, reviews, prices, and flights use CSS selector-based DOM extraction (`data-testid` attributes)
 
 ## Known Issues
 - **All ops require pre-navigation** — the adapter extracts from the current page DOM; the browser must already be on the correct URL (search results page for searchHotels, hotel detail page for getHotelDetail/getHotelReviews/getHotelPrices, flights page for searchFlights)
