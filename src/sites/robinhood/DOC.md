@@ -87,8 +87,8 @@ openweb robinhood exec getTagCollection '{"slug": "100-most-popular"}'
 - Trading/account endpoints (not included) require OAuth tokens
 
 ### Transport
-- `transport: page` — requests execute in browser context on robinhood.com
-- Cookies from the active browser session provide implicit auth context
+- `transport: node` — requests execute via direct HTTP (no browser context needed)
+- Cookie session auth forwarded with requests
 
 ### Extraction
 - All operations return JSON directly — no SSR or DOM extraction
