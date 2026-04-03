@@ -107,14 +107,20 @@ paths:
                                   type: string
                                 link:
                                   type: string
+                                  nullable: true
                                 dominant_color:
+                                  type: string
+                                domain:
                                   type: string
                                 pinner:
                                   type: object
                                 board:
                                   type: object
+                                created_at:
+                                  type: string
                           bookmark:
                             type: string
+                            nullable: true
 
   /resource/PinResource/get/:
     get:
@@ -198,6 +204,7 @@ paths:
                             type: string
                           link:
                             type: string
+                            nullable: true
                           images:
                             type: object
                           dominant_color:
@@ -210,8 +217,8 @@ paths:
                             type: integer
                           repin_count:
                             type: integer
-                          like_count:
-                            type: integer
+                          reaction_counts:
+                            type: object
 
   /resource/BoardResource/get/:
     get:

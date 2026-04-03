@@ -6,26 +6,26 @@ Visual discovery and bookmarking platform. Social media archetype.
 ## Workflows
 
 ### Search and explore pins
-1. `searchPins(data)` → results with pin `id`, images, titles, board/pinner info
-2. `getPin(data)` → full pin detail with description, link, engagement stats
+1. `searchPins(query)` → results with pin `id`, images, titles, board/pinner info
+2. `getPin(id)` → full pin detail with description, link, engagement stats
 
 ### Explore boards and users
-1. `searchPins(data)` → results include `board` and `pinner` objects
-2. `getBoard(data)` → board detail with pin count, followers, cover images
-3. `getUserProfile(data)` → user profile with follower/following counts, bio
+1. `searchPins(query)` → results include `pinner.username` and `board` slug
+2. `getBoard(username, slug)` → board detail with pin count, followers
+3. `getUserProfile(username)` → user profile with follower/following counts, bio
 
 ### Quick search suggestions
-1. `searchTypeahead(data)` → autocomplete suggestions for pins, boards, users
+1. `searchTypeahead(term)` → autocomplete suggestions for pins, boards, users
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchPins | search pins by keyword | `data` JSON with `options.query`, `options.scope`, `options.page_size` | pin id, images, grid_title, description, pinner, board | entry point; paginated via `bookmark` |
-| getPin | get pin details | `data` JSON with `options.id` (pin ID from searchPins) | title, description, link, images, pinner, board, repin/like/comment counts | |
-| getBoard | get board details | `data` JSON with `options.slug` (e.g. `username/board-name`) | name, description, pin_count, follower_count, owner, cover images | |
-| getUserProfile | get user profile | `data` JSON with `options.username` or `options.user_id` | username, full_name, about, follower/following/pin/board counts | |
-| searchTypeahead | typeahead suggestions | `data` JSON with `options.term` | suggestion items with label, type, id | |
+| searchPins | search pins by keyword | query, scope, page_size | id, images, grid_title, description, pinner, board, bookmark | entry point; paginated via `bookmark` |
+| getPin | get pin details | id ← searchPins | title, description, link, images, pinner, board, repin/reaction/comment counts | |
+| getBoard | get board details | username + slug (e.g. `WhoWhatWear/travel`) | name, description, pin_count, follower_count, owner, cover images | |
+| getUserProfile | get user profile | username | full_name, about, follower/following/pin/board counts, image | |
+| searchTypeahead | typeahead suggestions | term | label, type, id, images | |
 
 ## Quick Start
 
@@ -70,4 +70,5 @@ Key resources:
 ## Known Issues
 - **Bot detection:** All direct HTTP requests return 403. Even `page.evaluate(fetch)` returns 403 without the correct Pinterest-specific headers. The spec includes these as const header parameters.
 - **data parameter:** The `data` query parameter is a JSON-encoded string, requiring double-escaping when passed via CLI.
+- **searchPins DRIFT:** Search results are heterogeneous (promoted vs organic pins have different field sets), causing the response shape hash to vary between runs. Verify may report DRIFT for searchPins even when data is correct.
 - **x-app-version:** Pinterest's JavaScript includes an `x-app-version` header (commit hash) that changes per deployment. Currently not required for API access, but if requests start failing, this header may need to be added.
