@@ -1,0 +1,12 @@
+{
+  "operation_id": "getRelatedSearches",
+  "cases": [
+    {
+      "input": { "q": "machine learning" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
