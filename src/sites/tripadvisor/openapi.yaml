@@ -271,7 +271,7 @@ paths:
                   name:
                     type: [string, 'null']
                   rating:
-                    type: [number, string, 'null']
+                    type: [number, 'null']
                     description: Aggregate rating out of 5.
                   reviewCount:
                     type: [integer, 'null']

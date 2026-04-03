@@ -225,14 +225,16 @@ async function getAttractionReviews(page: Page, params: Readonly<Record<string, 
           const agg = data.aggregateRating as Record<string, unknown> | null
           attraction = {
             name: data.name ?? null,
-            rating: agg?.ratingValue ?? null,
-            reviewCount: agg?.reviewCount ?? null,
+            rating: agg?.ratingValue != null ? Number(agg.ratingValue) : null,
+            reviewCount: agg?.reviewCount != null ? Number(agg.reviewCount) : null,
             address: addr
               ? {
                   street: addr.streetAddress ?? null,
                   city: addr.addressLocality ?? null,
                   region: addr.addressRegion ?? null,
-                  country: addr.addressCountry ?? null,
+                  country: typeof addr.addressCountry === 'object' && addr.addressCountry
+                    ? (addr.addressCountry as Record<string, unknown>).name ?? null
+                    : addr.addressCountry ?? null,
                   postalCode: addr.postalCode ?? null,
                 }
               : null,
