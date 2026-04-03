@@ -1,7 +1,7 @@
 # Medium
 
 ## Overview
-Blogging and publishing platform. Content platform archetype. Search articles, browse topic feeds, discover curated lists, explore writers, view user profiles, clap articles, follow writers, and save bookmarks via Medium's GraphQL API.
+Blogging and publishing platform. Content platform archetype. Search articles, browse topic feeds, discover curated lists, explore writers, clap articles, follow writers, and save bookmarks via Medium's GraphQL API.
 
 ## Workflows
 
@@ -16,8 +16,7 @@ Blogging and publishing platform. Content platform archetype. Search articles, b
 3. `getArticle(postId)` → full detail
 
 ### Explore writers for a topic
-1. `getTagWriters(tagSlug)` → writers/publications with `userId`
-2. `getUserProfile(username)` → name, bio, followers
+1. `getTagWriters(tagSlug)` → writers/publications with `userId`, bio, follower count
 
 ### Discover curated content
 1. `getTagCuratedLists(tagSlug)` → staff-picked reading lists
@@ -27,7 +26,7 @@ Blogging and publishing platform. Content platform archetype. Search articles, b
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchArticles | search articles by keyword | query | title, subtitle, author, url | DOM extraction; entry point |
+| searchArticles | search articles by keyword | query | title, subtitle, url | DOM extraction; entry point |
 | getArticle | get full article detail | postId ← getTagFeed/searchArticles | title, author, claps, readingTime, isLocked | GraphQL PostDetailQuery |
 | getTagFeed | latest articles for a tag | tagSlug | posts[], pageInfo | GraphQL; paginated |
 | getTagCuratedLists | curated reading lists for a tag | tagSlug | lists[] with post items | GraphQL |
@@ -36,7 +35,6 @@ Blogging and publishing platform. Content platform archetype. Search articles, b
 | getRecommendedTags | trending topic tags | — | tags[] with slug | entry point |
 | getPostClaps | clap count for a post | postId ← getTagFeed | postId, clapCount | GraphQL |
 | getRecommendedWriters | writers to follow | — | publishers[] | GraphQL |
-| getUserProfile | user/author profile | username | name, bio, followers, imageUrl | DOM extraction |
 | clapArticle | clap (upvote) a post | postId | clapCount, viewerClapCount | SAFE write; requires auth |
 | followWriter | follow a writer | userId ← getTagWriters | isFollowing | SAFE write; requires auth |
 | saveArticle | save to reading list | postId | saved, catalogItemId | SAFE write; requires auth |
@@ -53,11 +51,11 @@ openweb medium exec getTagFeed '{"tagSlug":"programming"}'
 # Get article detail
 openweb medium exec getArticle '{"postId":"70d2a62246c0"}'
 
-# Get user profile
-openweb medium exec getUserProfile '{"username":"Netflix_TechBlog"}'
-
 # Get trending tags
 openweb medium exec getRecommendedTags '{}'
+
+# Get recommended writers
+openweb medium exec getRecommendedWriters '{}'
 ```
 
 ---
@@ -67,7 +65,7 @@ openweb medium exec getRecommendedTags '{}'
 ## API Architecture
 - **GraphQL-first**: Most data served through `medium.com/_/graphql` POST endpoint
 - **Batched requests**: GraphQL operations sent as JSON arrays (single ops wrapped in array)
-- **SSR for search/profiles**: Search results and user profiles rendered server-side, extracted via DOM
+- **SSR for search**: Search results rendered server-side, extracted via DOM
 - **Apollo Client**: Frontend uses Apollo for state management and caching
 
 ## Auth
@@ -82,8 +80,8 @@ openweb medium exec getRecommendedTags '{}'
 - Responses are JSON arrays (one element per batched operation)
 
 ## Known Issues
-- **Search uses DOM scraping**: Medium SSR-renders search results, no dedicated search GraphQL query. May break if layout changes.
-- **User profile DOM scraping**: Profile data extracted from rendered page. Layout-dependent.
+- **Search uses DOM scraping**: Medium SSR-renders search results, no dedicated search GraphQL query. Author field may contain clap/response icons instead of author name. May break if layout changes.
+- **getUserProfile removed**: DOM scraping returned garbage (wrong name, boilerplate bio, empty followers). Adapter code retained for future GraphQL migration.
 - **Paywall content**: `isLocked: true` articles have limited preview content.
 - **Personalized feed**: `getRecommendedFeed` may return null when not logged in.
 - **GraphQL typos**: Medium's schema contains `AddToPredefinedCatalogSucces` (missing 's') and `preprend` (misspelled) — adapter uses exact spellings.

@@ -14,7 +14,7 @@ paths:
   /search:
     get:
       operationId: searchArticles
-      summary: Search articles by keyword — returns titles, subtitles, authors, URLs
+      summary: Search articles by keyword — returns title, subtitle, URL, total count
       x-openweb:
         permission: read
         build:
@@ -37,11 +37,35 @@ paths:
           description: Search results with matching articles.
           content:
             application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  articles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        subtitle:
+                          type: string
+                        url:
+                          type: string
+                          nullable: true
+                        author:
+                          type: string
+                          nullable: true
+                        publishedAt:
+                          type: string
+                          nullable: true
+                  totalResults:
+                    type: integer
   /post/{postId}:
     get:
       operationId: getArticle
-      summary: Get article detail by ID — title, author, claps, reading time, locked status
+      summary: Get article detail by ID — title, author, claps, reading time, locked status, collection
       x-openweb:
         permission: read
         build:
@@ -64,11 +88,65 @@ paths:
           description: Full article detail.
           content:
             application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  mediumUrl:
+                    type: string
+                  visibility:
+                    type: string
+                  isLocked:
+                    type: boolean
+                  clapCount:
+                    type: integer
+                  readingTime:
+                    type: number
+                  firstPublishedAt:
+                    type: integer
+                  latestPublishedAt:
+                    type: integer
+                  creator:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      username:
+                        type: string
+                  collection:
+                    type: object
+                    nullable: true
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      slug:
+                        type: string
+                      domain:
+                        type: string
+                        nullable: true
+                  extendedPreviewContent:
+                    type: object
+                    properties:
+                      subtitle:
+                        type: string
+                      isFullContent:
+                        type: boolean
+                  postResponses:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
   /tag/{tagSlug}/feed:
     get:
       operationId: getTagFeed
-      summary: Get latest articles for a tag/topic — titles, authors, claps, reading time
+      summary: Get latest articles for a tag/topic — titles, authors, claps, reading time, pagination
       x-openweb:
         permission: read
         build:
@@ -91,11 +169,48 @@ paths:
           description: Latest posts for the tag.
           content:
             application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  tagSlug:
+                    type: string
+                  posts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        mediumUrl:
+                          type: string
+                        isLocked:
+                          type: boolean
+                        clapCount:
+                          type: integer
+                        readingTime:
+                          type: number
+                        creator:
+                          type: object
+                        collection:
+                          type: object
+                          nullable: true
+                        extendedPreviewContent:
+                          type: object
+                        postResponses:
+                          type: object
+                  pageInfo:
+                    type: object
+                    properties:
+                      hasNextPage:
+                        type: boolean
+                      endCursor:
+                        type: string
   /tag/{tagSlug}/curated-lists:
     get:
       operationId: getTagCuratedLists
-      summary: Get curated reading lists for a tag — staff-picked article collections
+      summary: Get curated reading lists for a tag — list name, creator, post items with titles and claps
       x-openweb:
         permission: read
         build:
@@ -118,11 +233,44 @@ paths:
           description: Curated reading lists for the tag.
           content:
             application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  tagSlug:
+                    type: string
+                  lists:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        creator:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            username:
+                              type: string
+                        itemsConnection:
+                          type: object
+                          properties:
+                            items:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  entity:
+                                    type: object
+                                    nullable: true
   /tag/{tagSlug}/writers:
     get:
       operationId: getTagWriters
-      summary: Get recommended writers and publications for a tag — name, bio, followers
+      summary: Get recommended writers and publications for a tag — name, bio, follower count, pagination
       x-openweb:
         permission: read
         build:
@@ -158,11 +306,45 @@ paths:
           description: Recommended writers for the tag.
           content:
             application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  tagSlug:
+                    type: string
+                  publishers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        bio:
+                          type: string
+                          nullable: true
+                        username:
+                          type: string
+                          nullable: true
+                        socialStats:
+                          type: object
+                          nullable: true
+                          properties:
+                            followerCount:
+                              type: integer
+                  pageInfo:
+                    type: object
+                    properties:
+                      hasNextPage:
+                        type: boolean
+                      endCursor:
+                        type: string
+                      startCursor:
+                        type: string
   /feed/recommended:
     get:
       operationId: getRecommendedFeed
-      summary: Get recommended article feed — trending and top posts globally
+      summary: Get recommended article feed — trending and top posts with titles, claps, reading time
       x-openweb:
         permission: read
         build:
@@ -186,11 +368,50 @@ paths:
           description: Recommended feed posts.
           content:
             application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        mediumUrl:
+                          type: string
+                        isLocked:
+                          type: boolean
+                        clapCount:
+                          type: integer
+                        readingTime:
+                          type: number
+                        creator:
+                          type: object
+                        collection:
+                          type: object
+                          nullable: true
+                        feedId:
+                          type: string
+                        reason:
+                          type: integer
+                  pagingInfo:
+                    type: object
+                    properties:
+                      next:
+                        type: object
+                        nullable: true
+                        properties:
+                          limit:
+                            type: integer
+                          to:
+                            type: string
   /tags/recommended:
     get:
       operationId: getRecommendedTags
-      summary: Get recommended/trending topic tags — tag names and slugs
+      summary: Get recommended/trending topic tags — tag id, display title, slug
       x-openweb:
         permission: read
         build:
@@ -207,11 +428,24 @@ paths:
           description: Recommended tags.
           content:
             application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        displayTitle:
+                          type: string
+                        slug:
+                          type: string
   /post/{postId}/claps:
     get:
       operationId: getPostClaps
-      summary: Get clap count for a specific post
+      summary: Get clap count for a specific post — postId, clapCount
       x-openweb:
         permission: read
         build:
@@ -234,11 +468,17 @@ paths:
           description: Post clap count.
           content:
             application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  postId:
+                    type: string
+                  clapCount:
+                    type: integer
   /writers/recommended:
     get:
       operationId: getRecommendedWriters
-      summary: Get recommended writers and publications to follow — name, bio, image
+      summary: Get recommended writers and publications to follow — name, bio, username
       x-openweb:
         permission: read
         build:
@@ -255,34 +495,24 @@ paths:
           description: Recommended writers and publications.
           content:
             application/json:
-              type: object
-  /user/{username}/profile:
-    get:
-      operationId: getUserProfile
-      summary: Get user/author profile — name, bio, follower count, avatar
-      x-openweb:
-        permission: read
-        build:
-          stable_id: md0010
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: medium-graphql
-          operation: getUserProfile
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Medium username (e.g. "Netflix_TechBlog", "towardsdatascience").
-      responses:
-        "200":
-          description: User profile information.
-          content:
-            application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  publishers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        bio:
+                          type: string
+                          nullable: true
+                        username:
+                          type: string
+                          nullable: true
   /post/{postId}/clap:
     post:
       operationId: clapArticle
@@ -317,7 +547,15 @@ paths:
           description: Clap result with updated counts.
           content:
             application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  postId:
+                    type: string
+                  clapCount:
+                    type: integer
+                  viewerClapCount:
+                    type: integer
   /user/{userId}/follow:
     post:
       operationId: followWriter
@@ -346,7 +584,17 @@ paths:
           description: Follow result.
           content:
             application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                  name:
+                    type: string
+                  username:
+                    type: string
+                  isFollowing:
+                    type: boolean
   /post/{postId}/save:
     post:
       operationId: saveArticle
@@ -375,4 +623,13 @@ paths:
           description: Save result.
           content:
             application/json:
-              type: object
+              schema:
+                type: object
+                properties:
+                  postId:
+                    type: string
+                  catalogItemId:
+                    type: string
+                    nullable: true
+                  saved:
+                    type: boolean
