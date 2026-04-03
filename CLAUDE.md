@@ -18,8 +18,8 @@ pnpm dev <site> exec <op> '{...}'   # execute an operation
 - **Architecture & system docs:** `doc/main/README.md`
 - **Dev workflow & guides:** `doc/dev/development.md`
 - **Progress history:** `doc/PROGRESS.md`
-- **Active work:** `doc/internal/todo/`
-- **Historical docs:** `doc/internal/archive/`
+- **Active work:** `doc/todo/`
+- **Historical docs:** `doc/archive/`
 
 ## Project Structure
 

@@ -1,4 +1,4 @@
-/** Capture-module types — aligned with doc/internal/todo/v2/browser-integration.md */
+/** Capture-module types — aligned with doc/todo/v2/browser-integration.md */
 
 // ── WebSocket frame (JSONL rows) ────────────────────────────────
 

@@ -11,7 +11,8 @@ coverage/
 # Built adapter .js files (source is .ts, compiled by scripts/build-adapters.js)
 src/sites/*/adapters/*.js
 # Internal docs (separate repo, symlinked locally)
-doc/internal
+doc/todo
+doc/archive
 .multmux
 # Personal agent memory (not for OSS)
 .claude/projects/
