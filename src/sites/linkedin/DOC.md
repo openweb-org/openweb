@@ -80,11 +80,12 @@ LinkedIn uses a hybrid Voyager REST + GraphQL API:
 - **Key cookies**: `li_at` (auth token), `JSESSIONID` (session/CSRF), `liap` (premium flag)
 
 ## Transport
-- **Default**: `node` — LinkedIn's API works with cookie-based auth from Node.js
-- Bot detection is moderate (PerimeterX `_px3` cookie observed) but node transport with valid cookies works
+- **Default**: `page` — LinkedIn uses PerimeterX bot detection (`_px3` cookie); page transport needed for reliable access
+- All operations use page transport (browser-fetch with cookie session)
 
 ## Known Issues
-- **GraphQL queryIds are versioned**: If operations stop working, queryIds may have changed. Re-capture to get fresh queryIds.
+- **GraphQL queryIds are versioned**: queryIds rotate with LinkedIn deploys. `getProfile`, `getFeed`, and `getCompany` queryIds are currently stale (HTTP 400). Re-capture to get fresh queryIds.
+- **getNotificationCards DRIFT**: Response shape has evolved — verify reports DRIFT but the operation returns valid data.
 - **Rest.li tuple encoding**: Variables must use LinkedIn's tuple format `(key:value)`, not JSON. Nested tuples and List() are supported.
 - **Decoration IDs**: Profile and notification endpoints use `decorationId` to control response depth. Wrong decoration may return partial data.
-- **Search 500s**: Search can return 500 if the variables string encoding is malformed. Ensure proper URL-encoding of spaces and special characters.
+- **Verify status**: 6 PASS (getMe, getConnectionsSummary, getInvitations, getMyNetworkNotifications, getNewsStorylines, getProfileByUrn), 3 FAIL (getProfile, getFeed, getCompany — stale queryIds), 1 DRIFT (getNotificationCards).

@@ -35,6 +35,30 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  plainId:
+                    type: integer
+                  miniProfile:
+                    type: object
+                    properties:
+                      firstName:
+                        type: string
+                      lastName:
+                        type: string
+                      occupation:
+                        type: string
+                      publicIdentifier:
+                        type: string
+                      entityUrn:
+                        type: string
+                      dashEntityUrn:
+                        type: string
+                      picture:
+                        type: object
+                  publicContactInfo:
+                    type: object
+                  premiumSubscriber:
+                    type: boolean
 
   /voyager/api/graphql~getProfile:
     get:
@@ -75,6 +99,13 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  data:
+                    type: object
+                  included:
+                    type: array
+                    items:
+                      type: object
 
   /voyager/api/identity/dash/profiles/{id}:
     get:
@@ -107,6 +138,31 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  firstName:
+                    type: string
+                  lastName:
+                    type: string
+                  headline:
+                    type: string
+                  summary:
+                    type: string
+                    nullable: true
+                  publicIdentifier:
+                    type: string
+                  entityUrn:
+                    type: string
+                  industry:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                  geoLocation:
+                    type: object
+                  profilePicture:
+                    type: object
+                  premium:
+                    type: boolean
 
   /voyager/api/graphql~getFeed:
     get:
@@ -146,6 +202,13 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  data:
+                    type: object
+                  included:
+                    type: array
+                    items:
+                      type: object
 
   /voyager/api/relationships/connectionsSummary:
     get:
@@ -164,6 +227,11 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  entityUrn:
+                    type: string
+                  numConnections:
+                    type: integer
 
   /voyager/api/relationships/invitationViews:
     get:
@@ -210,6 +278,57 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  metadata:
+                    type: object
+                    properties:
+                      paginationToken:
+                        type: string
+                  elements:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        entityUrn:
+                          type: string
+                        insights:
+                          type: array
+                          items:
+                            type: object
+                        invitation:
+                          type: object
+                          properties:
+                            mailboxItemId:
+                              type: string
+                            fromMember:
+                              type: object
+                              properties:
+                                firstName:
+                                  type: string
+                                lastName:
+                                  type: string
+                                occupation:
+                                  type: string
+                                publicIdentifier:
+                                  type: string
+                            message:
+                              type: string
+                              nullable: true
+                            sentTime:
+                              type: integer
+                            customMessage:
+                              type: boolean
+                            invitationType:
+                              type: string
+                  paging:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      start:
+                        type: integer
+                      total:
+                        type: integer
 
   /voyager/api/voyagerIdentityDashNotificationCards:
     get:
@@ -249,6 +368,47 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  metadata:
+                    type: object
+                    properties:
+                      numUnseen:
+                        type: integer
+                      nextStart:
+                        type: integer
+                      latestPublishedAt:
+                        type: integer
+                  elements:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        entityUrn:
+                          type: string
+                        read:
+                          type: boolean
+                        publishedAt:
+                          type: integer
+                        headline:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                        headerImage:
+                          type: object
+                        cardAction:
+                          type: object
+                        actions:
+                          type: array
+                          items:
+                            type: object
+                  paging:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      start:
+                        type: integer
 
   /voyager/api/graphql~getNewsStorylines:
     get:
@@ -288,6 +448,37 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      newsDashStorylinesByBreakingNews:
+                        type: object
+                        properties:
+                          elements:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                entityUrn:
+                                  type: string
+                                headline:
+                                  type: object
+                                  properties:
+                                    text:
+                                      type: string
+                                summary:
+                                  type: object
+                                  properties:
+                                    text:
+                                      type: string
+                                readerCount:
+                                  type: integer
+                                storylineTag:
+                                  type: string
+                                  nullable: true
+                                lastUpdatedAt:
+                                  type: integer
 
   /voyager/api/graphql~getCompany:
     get:
@@ -327,6 +518,13 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  data:
+                    type: object
+                  included:
+                    type: array
+                    items:
+                      type: object
 
   /voyager/api/relationships/myNetworkNotifications:
     get:
@@ -345,3 +543,22 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  metadata:
+                    type: object
+                    properties:
+                      numUnseen:
+                        type: integer
+                      latestPublishedAt:
+                        type: integer
+                  elements:
+                    type: array
+                    items:
+                      type: object
+                  paging:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      start:
+                        type: integer
