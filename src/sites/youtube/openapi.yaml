@@ -207,6 +207,13 @@ paths:
                   contents:
                     type: object
                     description: "Comments and related videos"
+                  engagementPanels:
+                    type: array
+                    description: "Engagement panels including transcript params"
+                    items:
+                      type: object
+                  currentVideoEndpoint:
+                    type: object
 
   /youtubei/v1/player:
     post:
@@ -272,6 +279,9 @@ paths:
                     type: object
                   streamingData:
                     type: object
+                  playabilityStatus:
+                    type: object
+                    description: "Playability status — may be UNPLAYABLE without auth"
 
   /youtubei/v1/guide:
     post:
@@ -326,6 +336,14 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  items:
+                    type: array
+                    description: "Guide sections (guideSectionRenderer) with navigation entries"
+                    items:
+                      type: object
+                  responseContext:
+                    type: object
 
   /youtubei/v1/notification/get_unseen_count:
     post:
@@ -380,6 +398,14 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  actions:
+                    type: array
+                    description: "Contains updateNotificationsUnseenCountAction with unseenCount"
+                    items:
+                      type: object
+                  responseContext:
+                    type: object
 
   /youtubei/v1/like/like:
     post:
