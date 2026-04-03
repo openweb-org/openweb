@@ -1,44 +1,73 @@
 # Google Flights
 
 ## Overview
-Google Flights — flight search, route overview, booking details, destination explorer, and price insights. Adapter-based DOM extraction from rendered pages.
+Flight search and pricing — adapter-based DOM extraction from rendered Google Flights pages.
+
+## Workflows
+
+### Search flights on a route
+1. `searchFlights(tfs)` → flight results with airline, times, price, stops
+
+### Explore destinations from an origin
+1. `exploreDestinations()` → destination cards with flight/hotel prices, dates
+2. Pick a destination → `searchFlights(tfs)` for specific route
+
+### Price research for a route
+1. `searchFlights(tfs)` → current flight options and prices
+2. `getPriceInsights(tfs)` → cheapest/most expensive months, price trend, popular airlines
+
+### Book a specific itinerary
+1. `searchFlights(tfs)` → pick a flight
+2. `getFlightBookingDetails(tfs)` → leg details, baggage policies, booking links
 
 ## Operations
-| Operation | Intent | Method | Notes |
-|-----------|--------|--------|-------|
-| searchFlights | search flight results by route and dates | GET /travel/flights/search | adapter: google-flights, verified |
-| getFlightOverview | route cheapest fares and fastest flight | GET /travel/flights | adapter: google-flights |
-| getFlightBookingDetails | booking/itinerary details with baggage | GET /travel/flights/booking | adapter: google-flights |
-| exploreDestinations | browse destinations by budget from origin | GET /travel/explore | adapter: google-flights, new |
-| getPriceInsights | monthly price trends, predictions, popular airlines | GET /travel/flights/search/insights | adapter: google-flights, new |
+
+| Operation | Intent | Key Input | Key Output | Notes |
+|-----------|--------|-----------|------------|-------|
+| searchFlights | search flights by route and dates | tfs (encoded route+dates) | origin, destination, flights[].airline, price, stops, duration | entry point; verified |
+| getFlightOverview | cheapest fares and fastest flight for a route | tfs (encoded route) | cheapestOptions[].price, airline, fastestFlight, nonstopFrequency | |
+| getFlightBookingDetails | itinerary details with baggage | tfs (encoded itinerary) | totalPrice, legs[].airline, duration, bagPolicies, bookWith | |
+| exploreDestinations | browse destinations by budget from origin | — (uses default origin) | destinations[].destination, flightPrice, hotelPricePerNight, dates | entry point |
+| getPriceInsights | monthly price trends and predictions | tfs (encoded route) | priceTrend, cheapestMonth, mostExpensiveMonth, popularAirlines | |
+
+## Quick Start
+
+```bash
+# Search flights RDU → LGA (tfs from Google Flights URL)
+openweb google-flights exec searchFlights '{"tfs":"CBwQAhopEgoyMDI2LTA0LTMwagwIAhIIL20vMGZ2eWdyDQgDEgkvbS8wMl8yODYaKRIKMjAyNi0wNS0wNGoNCAMSCS9tLzAyXzI4NnIMCAISCC9tLzBmdnlnQAFIAXABggELCP___________wGYAQE"}'
+
+# Explore destinations (default origin)
+openweb google-flights exec exploreDestinations '{}'
+
+# Price insights for a route
+openweb google-flights exec getPriceInsights '{"tfs":"CBwQAhopEgoyMDI2LTA0LTMwagwIAhIIL20vMGZ2eWdyDQgDEgkvbS8wMl8yODYaKRIKMjAyNi0wNS0wNGoNCAMSCS9tLzAyXzI4NnIMCAISCC9tLzBmdnlnQAFIAXABggELCP___________wGYAQE"}'
+```
+
+---
+
+## Site Internals
 
 ## API Architecture
-- **No REST API** — all data extracted from rendered Google Flights pages via adapter
+- No REST API — all data extracted from rendered Google Flights pages via adapter
 - `tfs` query param encodes flight search parameters (origin, destination, dates) in an opaque protobuf-based format
 - All 5 operations use the `google-flights` adapter for DOM extraction
-- searchFlights: extracts `li.pIav2d` flight result items (times, airline, price, stops, CO2)
-- getFlightOverview: extracts "Cheapest" price blocks, fastest flight, nonstop frequency
-- getFlightBookingDetails: extracts leg details, baggage policies, booking links via regex
-- exploreDestinations: extracts `li` destination cards from explore map page (flight price, hotel price, dates, stops)
-- getPriceInsights: extracts cheapest/most expensive months, price ranges, trend predictions, popular airlines
 
 ## Auth
-None — public search pages.
+No auth required — public search pages.
 
 ## Transport
-- `page` — requires Google Flights page loaded in browser for DOM extraction
-- exploreDestinations uses `/travel/explore` page
-- All other operations use `/travel/flights` or `/travel/flights/search` pages
+`page` — requires browser for DOM extraction. All operations use the `google-flights` adapter (`adapters/google-flights.ts`).
 
 ## Extraction
-- DOM text content parsed with regex patterns
-- searchFlights uses CSS selector `li.pIav2d` for flight result items
-- Other operations use `document.body.innerText` regex matching
-- exploreDestinations splits on `$` delimiter to separate flight/hotel prices
-- Origin/destination read from `input[aria-label*="Where from/to"]`
+- searchFlights: CSS selector `li.pIav2d` for flight result items, regex for fields
+- getFlightOverview: `document.body.innerText` regex for "Cheapest" blocks, fastest flight
+- getFlightBookingDetails: `document.body.innerText` regex for leg details, baggage policies
+- exploreDestinations: `li` elements filtered by price delimiter `$`, regex for fields
+- getPriceInsights: `document.body.innerText` regex for price trends, months, airlines
 
 ## Known Issues
 - `tfs` parameter encoding is opaque — must be captured from actual Google Flights URLs
 - searchFlights may extract duplicate entries (departing + returning legs counted separately)
-- Date grid/calendar prices visible in date picker overlay not yet captured as a separate operation
-- Filters (stops, airlines, duration, etc.) are client-side — adapter extracts whatever is currently displayed
+- getFlightOverview and getFlightBookingDetails require page-specific tfs values (route overview / itinerary selection) — a search tfs will return empty data
+- getPriceInsights month/airline data depends on route availability — some routes only return priceTrend
+- Filters (stops, airlines, duration) are client-side — adapter extracts whatever is currently displayed

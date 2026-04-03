@@ -297,7 +297,7 @@ paths:
   /travel/flights/search/insights:
     get:
       operationId: getPriceInsights
-      summary: Extract price trends, cheapest months, and popular airlines for a route — when to book, price predictions
+      summary: Extract price trends, cheapest months, and popular airlines for a route — priceTrend, cheapestMonth, mostExpensiveMonth, popularAirlines
       x-openweb:
         permission: read
         build:

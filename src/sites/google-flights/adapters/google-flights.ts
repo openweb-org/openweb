@@ -278,7 +278,7 @@ const adapter: CodeAdapter = {
 				const url = new URL(basePath, 'https://www.google.com')
 				if (params.tfs) url.searchParams.set('tfs', String(params.tfs))
 				if (params.tfu) url.searchParams.set('tfu', String(params.tfu))
-				await page.goto(url.toString(), { waitUntil: 'load', timeout: 30000 })
+				await page.goto(url.toString(), { waitUntil: 'load', timeout: 30000 }).catch(() => {})
 				await new Promise((r) => setTimeout(r, 3000))
 			}
 
