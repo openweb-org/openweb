@@ -52,6 +52,9 @@ openweb youtube-music exec getArtist '{"browseId": "UCiMhD4jzUqG-IgPzUmmytRQ"}'
 # Get song metadata
 openweb youtube-music exec getSong '{"videoId": "dQw4w9WgXcQ"}'
 
+# Get up-next queue and related tracks
+openweb youtube-music exec getUpNext '{"videoId": "dQw4w9WgXcQ"}'
+
 # Get search suggestions
 openweb youtube-music exec getSearchSuggestions '{"input": "taylor sw"}'
 

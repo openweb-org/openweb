@@ -65,12 +65,14 @@ paths:
                 properties:
                   contents:
                     type: object
+                    description: "Search results grouped by category (songs, albums, artists, playlists)"
                     properties:
                       tabbedSearchResultsRenderer:
                         type: object
                         properties:
                           tabs:
                             type: array
+                            description: "Result tabs containing categorized music shelf sections"
                             items:
                               type: object
 
@@ -127,12 +129,18 @@ paths:
               schema:
                 type: object
                 properties:
-                  header:
-                    type: object
                   contents:
                     type: object
+                    description: "Album content in twoColumnBrowseResultsRenderer with tabs and secondaryContents"
+                    properties:
+                      twoColumnBrowseResultsRenderer:
+                        type: object
                   background:
                     type: object
+                    description: "Album artwork thumbnail"
+                    properties:
+                      musicThumbnailRenderer:
+                        type: object
 
   /browse/playlist:
     post:
@@ -187,10 +195,18 @@ paths:
               schema:
                 type: object
                 properties:
-                  header:
-                    type: object
                   contents:
                     type: object
+                    description: "Playlist content in twoColumnBrowseResultsRenderer with tabs and secondaryContents"
+                    properties:
+                      twoColumnBrowseResultsRenderer:
+                        type: object
+                  background:
+                    type: object
+                    description: "Playlist artwork thumbnail"
+                    properties:
+                      musicThumbnailRenderer:
+                        type: object
 
   /browse/artist:
     post:
@@ -247,8 +263,27 @@ paths:
                 properties:
                   header:
                     type: object
+                    description: "Artist header with name, thumbnail, subscriber count"
+                    properties:
+                      musicImmersiveHeaderRenderer:
+                        type: object
+                        properties:
+                          title:
+                            type: object
+                          description:
+                            type: object
+                          thumbnail:
+                            type: object
+                          subscriptionButton:
+                            type: object
+                          monthlyListenerCount:
+                            type: object
                   contents:
                     type: object
+                    description: "Artist sections (top songs, albums, singles, videos, related artists)"
+                    properties:
+                      singleColumnBrowseResultsRenderer:
+                        type: object
 
   /youtubei/v1/player:
     post:
@@ -325,6 +360,7 @@ paths:
                         type: string
                   playabilityStatus:
                     type: object
+                    description: "Playback status (OK, UNPLAYABLE, LOGIN_REQUIRED)"
 
   /youtubei/v1/next:
     post:
@@ -380,6 +416,19 @@ paths:
                 properties:
                   contents:
                     type: object
+                    description: "Watch next content with tabbed renderer (Up Next, Related, Lyrics)"
+                    properties:
+                      singleColumnMusicWatchNextResultsRenderer:
+                        type: object
+                  currentVideoEndpoint:
+                    type: object
+                    description: "Currently playing video reference"
+                    properties:
+                      watchEndpoint:
+                        type: object
+                        properties:
+                          videoId:
+                            type: string
 
   /youtubei/v1/music/get_search_suggestions:
     post:
@@ -435,8 +484,12 @@ paths:
                 properties:
                   contents:
                     type: array
+                    description: "Suggestion sections with searchSuggestionsSectionRenderer"
                     items:
                       type: object
+                      properties:
+                        searchSuggestionsSectionRenderer:
+                          type: object
 
   /browse/home:
     post:
@@ -489,6 +542,16 @@ paths:
                 properties:
                   contents:
                     type: object
+                    description: "Homepage sections (recommendations, trending, new releases)"
+                    properties:
+                      singleColumnBrowseResultsRenderer:
+                        type: object
+                  background:
+                    type: object
+                    description: "Background artwork thumbnail"
+                    properties:
+                      musicThumbnailRenderer:
+                        type: object
 
   /browse/charts:
     post:
@@ -541,5 +604,13 @@ paths:
                 properties:
                   contents:
                     type: object
+                    description: "Chart sections (top songs, trending, top artists, top music videos)"
+                    properties:
+                      singleColumnBrowseResultsRenderer:
+                        type: object
                   header:
                     type: object
+                    description: "Charts page header"
+                    properties:
+                      musicHeaderRenderer:
+                        type: object
