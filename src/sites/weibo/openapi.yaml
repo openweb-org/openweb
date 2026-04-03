@@ -1199,7 +1199,7 @@ paths:
   /ajax/statuses/longtext:
     get:
       operationId: getLongtext
-      summary: Get long text content for a post that was truncated
+      summary: Get long text content for a truncated post — longTextContent, longTextContent_raw, url_struct
       x-openweb:
         permission: read
         build:
@@ -2019,7 +2019,7 @@ paths:
   /ajax/statuses/createFavorites:
     post:
       operationId: bookmarkPost
-      summary: Bookmark/favorite a post — reversible via destoryFavorites
+      summary: Bookmark/favorite a post — reversible via destroyFavorites
       x-openweb:
         permission: write
         safety: safe

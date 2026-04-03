@@ -9,7 +9,6 @@ Chinese microblogging platform (social media). China's Twitter/X equivalent with
 1. `getHotSearch` → pick topic → `word`
 2. `getHotFeed(group_id, containerid, extparam)` → pick post → `mid`
 3. `getPost(id=mid)` → full post with text, images, engagement
-4. `listComments(id=mid)` → comments on the post
 
 ### Explore a user's profile and posts
 1. `getUserProfile(uid)` → screen name, bio, followers, verification
@@ -40,7 +39,6 @@ Chinese microblogging platform (social media). China's Twitter/X equivalent with
 | getUserStatuses | user's posts | uid ← getUserProfile, page | list[], total | page-based pagination |
 | getPost | post detail | id ← feed/statuses mid | text_raw, reposts_count, comments_count, attitudes_count, user, pic_infos | |
 | getLongtext | full text for truncated post | id ← getPost (when isLongText=true) | longTextContent, longTextContent_raw | |
-| listComments | post comments | id ← getPost mid, count, flow | data[].text, user, like_count, reply_count | paginate via max_id; flow 0=hot 1=time |
 | listReposts | post reposts | id ← getPost id (numeric) | data[], total_number | page-based |
 | likePost | like a post | id ← getPost mid | ok, attitude | SAFE: reversible |
 | repost | repost/retweet | id ← getPost mid, reason | ok, statuses | SAFE: reversible (adapter) |
@@ -68,8 +66,8 @@ openweb weibo exec getUserStatuses '{"uid": 1706699904, "page": 1}'
 # Get a specific post
 openweb weibo exec getPost '{"id": "Qyj0ifs0m"}'
 
-# Get comments on a post
-openweb weibo exec listComments '{"id": "5281762063682574", "count": 20, "flow": 0}'
+# Get reposts of a post
+openweb weibo exec listReposts '{"id": 5281762063682574, "page": 1, "count": 10}'
 ```
 
 ---
@@ -102,3 +100,4 @@ openweb weibo exec listComments '{"id": "5281762063682574", "count": 20, "flow":
 - **CSRF rotation** — XSRF-TOKEN rotates every response; adapter handles automatically
 - **Long text truncation** — posts over ~140 chars truncated; use `isGetLongText=true` in getPost or getLongtext
 - **listReposts empty** — may return empty data array with "前方拥堵" tip when rate-limited or session weak
+- **listComments missing** — comments endpoint (`/ajax/comment/buildComments`) not yet compiled; DOC workflows reference it but op not in spec

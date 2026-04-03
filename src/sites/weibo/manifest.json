@@ -11,14 +11,13 @@
     "getPost → listComments": "post detail shows comments_count; listComments fetches them by mid",
     "getPost → listReposts": "post detail shows reposts_count; listReposts fetches them by id",
     "getUserProfile → getUserStatuses": "profile returns uid used by getUserStatuses",
-    "getHotSearch → searchSuggest": "hot search shows trending keywords usable as search queries",
     "getFriendsFeed → getPost": "home feed returns post mids usable by getPost"
   },
   "stats": {
-    "operation_count": 14,
+    "operation_count": 13,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 14,
+    "l3_count": 13,
     "ws_count": 0
   },
   "last_verified": "2026-03-29T06:26:04.728Z",
