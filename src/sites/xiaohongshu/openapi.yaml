@@ -65,8 +65,10 @@ paths:
                             - normal
                             - video
                         displayTitle:
-                          type: string
-                          description: Note title.
+                          type:
+                            - string
+                            - 'null'
+                          description: Note title (absent for some results).
                         user:
                           type: object
                           properties:
@@ -373,7 +375,7 @@ paths:
   /internal/getExploreFeed:
     get:
       operationId: getExploreFeed
-      summary: Get explore/discover feed — trending and recommended notes
+      summary: Get explore/discover feed — trending and recommended notes with titles, authors, covers, like counts
       x-openweb:
         permission: read
         build:
@@ -810,7 +812,7 @@ paths:
   /internal/getRelatedNotes:
     get:
       operationId: getRelatedNotes
-      summary: Get related/recommended notes for a note — similar content suggestions
+      summary: Get related/recommended notes — titles, authors, covers, like counts
       x-openweb:
         permission: read
         build:

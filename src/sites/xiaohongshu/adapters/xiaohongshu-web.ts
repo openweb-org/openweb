@@ -49,10 +49,10 @@ async function searchNotes(page: Page, params: Record<string, unknown>): Promise
   await page.waitForTimeout(4000)
 
   // Detect login gate — XHS now requires login for search
-  const loginRequired = await page.evaluate(() => {
+  const needsLogin = await page.evaluate(() => {
     return document.body.innerText.includes('登录后查看搜索结果')
   })
-  if (loginRequired) {
+  if (needsLogin) {
     throw loginRequired('Login required for search')
   }
 

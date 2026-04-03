@@ -111,7 +111,8 @@ openweb xiaohongshu exec likeNote '{"noteId": "6912d7eb000000000402a319"}'
 - Cannot downgrade to `node` — API signing is mandatory and deeply obfuscated
 
 ## Known Issues
-- **CAPTCHA on user profiles**: Rapid page navigation triggers CAPTCHA (`verifyType=124`). Rate-limit based, not auth-based. Affects getUserProfile, getUserNotes, getUserCollections, getUserLiked. Resolve by solving CAPTCHA in browser or waiting.
+- **searchNotes DRIFT**: `displayTitle` is absent in some search results (~10% of notes). Schema marks it nullable. Verify reports DRIFT due to fingerprint mismatch from this inconsistency.
+- **User profile ops may require login**: getUserProfile, getUserNotes, getUserCollections, getUserLiked navigate to user profile pages which may redirect to login. Also subject to CAPTCHA (`verifyType=124`) under rapid access. Rate-limit based — resolve by logging in at xiaohongshu.com in the browser, or waiting.
 - **Vue reactive wrappers**: State values may be plain objects or Vue refs depending on hydration timing. Adapter handles both via `?._rawValue ?? val` pattern.
 - **xsecToken**: Note detail URLs require a `xsec_token` parameter for reliable access. Token comes from search results or explore feed.
 - **Collections/liked privacy**: getUserCollections and getUserLiked return empty arrays if the user has set these to private.
