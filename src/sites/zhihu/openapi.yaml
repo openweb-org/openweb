@@ -149,12 +149,6 @@ paths:
           schema:
             type: string
           example: down
-        - name: ad_interval
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 1
         - name: after_id
           in: query
           required: false
@@ -181,12 +175,6 @@ paths:
           schema:
             type: integer
           example: 1
-        - name: session_token
-          in: query
-          required: false
-          schema:
-            type: string
-          example: <REDACTED_TOKEN>
       responses:
         "200":
           description: Success.
@@ -653,12 +641,6 @@ paths:
             type: integer
           example: 1
         - name: page_num
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 1
-        - name: ws_qiangzhisafe
           in: query
           required: false
           schema:
@@ -2191,8 +2173,6 @@ paths:
                     type: "null"
                   uid:
                     type: string
-                  email:
-                    type: string
                   default_notifications_count:
                     type: integer
                   follow_notifications_count:
@@ -2701,7 +2681,30 @@ paths:
                     type: array
                     items:
                       type: object
-                      description: Object with variable structure
+                      properties:
+                        id:
+                          type: string
+                        url_token:
+                          type: string
+                        name:
+                          type: string
+                        headline:
+                          type: string
+                        avatar_url:
+                          type: string
+                          description: URL
+                        follower_count:
+                          type: integer
+                        answer_count:
+                          type: integer
+                        gender:
+                          type: integer
+                        user_type:
+                          type: string
+                        is_following:
+                          type: boolean
+                        is_followed:
+                          type: boolean
                 required:
                   - paging
                   - data
@@ -2823,30 +2826,6 @@ paths:
           stable_id: 6a562013f2198726
           tool_version: 2
       parameters:
-        - name: correction
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 1
-        - name: filter_fields
-          in: query
-          required: false
-          schema:
-            type: string
-          example: ""
-        - name: gk_version
-          in: query
-          required: false
-          schema:
-            type: string
-          example: gz-gaokao
-        - name: lc_idx
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 1
         - name: limit
           in: query
           required: false
@@ -2870,18 +2849,6 @@ paths:
             type: string
           example: 人工智能
           description: Search query text
-        - name: search_source
-          in: query
-          required: false
-          schema:
-            type: string
-          example: Normal
-        - name: show_all_topics
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 1
         - name: t
           in: query
           required: false
@@ -2938,7 +2905,6 @@ paths:
                                   type: string
                                 id:
                                   type: string
-                                  format: uuid
                                 degree:
                                   type: array
                                   items:
@@ -3019,17 +2985,6 @@ paths:
                               required:
                                 - name
                                 - id
-                                - degree
-                                - genre
-                                - years
-                                - classification
-                                - top_area
-                                - top_industry
-                                - top_position
-                                - avg_salary
-                                - topic_id
-                                - top_majors
-                                - discussions
                             attached_info_bytes:
                               type: string
                             header:
@@ -3352,7 +3307,11 @@ paths:
                                                 badge:
                                                   type: array
                                                 authority_info:
-                                                  type: "null"
+                                                  anyOf:
+                                                    - type: "null"
+                                                    - type: array
+                                                      items:
+                                                        type: object
                                                 voteup_count:
                                                   type: integer
                                                 follower_count:
@@ -3495,7 +3454,12 @@ paths:
                             updated_time:
                               type: integer
                             content:
-                              type: string
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                                - type: array
+                                  items:
+                                    type: object
                             thumbnail_info:
                               type: object
                               properties:
@@ -4067,19 +4031,7 @@ paths:
         build:
           stable_id: 11773b7de3ae021f
           tool_version: 2
-      parameters:
-        - name: content_token
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 1
-        - name: content_type
-          in: query
-          required: false
-          schema:
-            type: string
-          example: question
+      parameters: []
       responses:
         "200":
           description: Success.
@@ -4226,7 +4178,49 @@ paths:
                     type: array
                     items:
                       type: object
-                      description: Object with variable structure
+                      properties:
+                        id:
+                          type: string
+                        type:
+                          type: string
+                        question:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            type:
+                              type: string
+                            title:
+                              type: string
+                            url:
+                              type: string
+                              description: URL
+                        excerpt:
+                          type: string
+                        content:
+                          type: string
+                        voteup_count:
+                          type: integer
+                        comment_count:
+                          type: integer
+                        created_time:
+                          type: integer
+                        updated_time:
+                          type: integer
+                        author:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            url_token:
+                              type: string
+                            name:
+                              type: string
+                            headline:
+                              type: string
+                            avatar_url:
+                              type: string
+                              description: URL
                   need_force_login:
                     type: boolean
                 required:

@@ -5,12 +5,10 @@
     {
       "input": {
         "action": "down",
-        "ad_interval": 1,
         "after_id": 1,
         "desktop": "true",
         "end_offset": 1,
-        "page_number": 1,
-        "session_token": "<REDACTED_TOKEN>"
+        "page_number": 1
       },
       "assertions": {
         "status": 200,

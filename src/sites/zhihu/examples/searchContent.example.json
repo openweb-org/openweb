@@ -4,15 +4,9 @@
   "cases": [
     {
       "input": {
-        "correction": 1,
-        "filter_fields": "",
-        "gk_version": "gz-gaokao",
-        "lc_idx": 1,
         "limit": 1,
         "offset": 1,
         "q": "人工智能",
-        "search_source": "Normal",
-        "show_all_topics": 1,
         "t": "general"
       },
       "assertions": {

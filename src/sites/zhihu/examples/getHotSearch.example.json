@@ -3,10 +3,7 @@
   "method": "get",
   "cases": [
     {
-      "input": {
-        "content_token": 1,
-        "content_type": "question"
-      },
+      "input": {},
       "assertions": {
         "status": 200,
         "response_schema_valid": true

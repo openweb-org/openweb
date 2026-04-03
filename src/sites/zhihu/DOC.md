@@ -24,10 +24,10 @@ Chinese Q&A knowledge-sharing platform (Quora archetype). Users ask questions, w
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | **searchContent** | Search questions/answers/articles | `q` | data[].object.{id, question, author, excerpt} | Entry point |
-| **getHotSearch** | Trending search terms | — | hot_search_queries[].{query, display_query} | Entry point |
+| **getHotSearch** | Trending search terms | — | hot_search_queries[].{query, hot_show} | Entry point |
 | **getFeedRecommend** | Personalized homepage feed | — | data[].target.{question, author, voteup_count} | Entry point |
 | **getMe** | Current user info | — | id, name, follower_count, answer_count | Entry point |
-| **getMember** | User profile details | `url_token` ← searchContent author | name, headline, follower_count, answer_count |
+| **getMember** | User profile details | `url_token` ← searchContent author | name, headline, follower_count, answer_count | pass `include` for full fields |
 | **getUserAnswers** | List user's answers | `url_token` ← getMember | data[].{question, voteup_count, content, excerpt} |
 | **listMemberActivities** | User's recent activity | `url_token` ← getMember | data[].{verb, target.{title, author}} |
 | **listMemberMutuals** | Mutual followers | `url_token` ← getMember | data[].{name, url_token, answer_count} |
@@ -89,4 +89,3 @@ openweb zhihu exec getMe '{}'
 - Rate limiting is aggressive — space requests
 - `include` parameter controls response fields — omitting returns minimal data
 - Comments API exists but was not captured
-- Topic APIs return error 10003 — require additional signing headers (x-zse-93, x-zse-96)
