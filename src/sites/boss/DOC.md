@@ -23,7 +23,7 @@ China's leading direct-recruiting job platform (Chinese web / job board archetyp
 | getSalary | salary statistics for a position | query, city | averageMin, averageMax, minRange, maxRange, samples | aggregated from search listings |
 | getCities | get all cities with codes | — | hotCityList, cityList (province-grouped) | entry point; reference data |
 | getIndustries | get industry categories | — | code, name, subLevelModelList | reference data |
-| getFilterConditions | get search filter options | — | salaryList, experienceList, degreeList, stageList | reference data |
+| getFilterConditions | get search filter options | — | salaryList, experienceList, degreeList, stageList, scaleList, jobTypeList | reference data |
 
 ## Quick Start
 
@@ -45,6 +45,9 @@ openweb boss exec getSalary '{"query":"产品经理","city":"101020100"}'
 
 ## Site Internals
 
+Everything below is for discover/compile operators and deep debugging.
+Not needed for basic site usage.
+
 ## API Architecture
 - **Vue.js SPA**: `/web/geek/job` serves an HTML shell; all content rendered client-side
 - **Response format**: DOM extraction — no JSON API for search/detail/company pages
@@ -58,8 +61,13 @@ No auth required for reading job data. Session cookie `__zp_stoken__` exists but
 - Reference data ops (getCities, getIndustries, getFilterConditions) use `node` transport — public APIs that bypass bot detection
 - Adapter navigates to operation-specific URLs before DOM extraction (adapter paths are logical namespaces, not real URLs)
 
+## Extraction
+- All core ops use adapter DOM extraction (`adapters/boss-web.ts`): navigate to operation URL, wait for content selectors, then `page.evaluate()` to extract structured data from CSS selectors
+- Reference data ops (getCities, getIndustries, getFilterConditions) return JSON directly — no extraction needed
+
 ## Known Issues
 - **Bot detection**: Fingerprint-based detection blocks new automated tabs. Adapter works in a browser session where a human has already passed verification.
+- **Job detail / company pages may require login**: Detail and company profile pages intermittently show login prompts under bot detection. Search results are more reliable.
+- **Salary hidden on search cards**: Boss直聘 hides salary text in search result cards from automated extraction (anti-scraping). `salaryDesc` may return empty. `getSalary` depends on this and may return empty results.
 - **SPA navigation**: zhipin.com's Vue router may abort Playwright `page.goto()` with `ERR_ABORTED` — adapter catches this since the SPA handles the route internally.
 - **DOM selectors may drift**: Boss直聘 updates frontend frequently; CSS class names may change.
-- **getSalary is search-based**: Salary statistics are aggregated from visible search results on page 1, not a dedicated salary API.

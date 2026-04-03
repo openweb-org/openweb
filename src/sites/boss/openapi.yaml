@@ -348,6 +348,24 @@ paths:
                       cityList:
                         type: array
                         description: Province-grouped city hierarchy.
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                              description: Province code.
+                            name:
+                              type: string
+                            subLevelModelList:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  code:
+                                    type: integer
+                                    description: City code for search queries.
+                                  name:
+                                    type: string
 
   /wapi/zpCommon/data/industry.json:
     get:
@@ -443,6 +461,36 @@ paths:
                               type: string
                       degreeList:
                         type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                      stageList:
+                        type: array
+                        description: Company funding stage options.
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                      scaleList:
+                        type: array
+                        description: Company size options.
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: integer
+                            name:
+                              type: string
+                      jobTypeList:
+                        type: array
+                        description: Job type options (full-time, part-time).
                         items:
                           type: object
                           properties:
