@@ -11,7 +11,8 @@ Live streaming platform. All public data served through a GraphQL API at `gql.tw
 2. `getStream(channelLogin)` → stream status (null = offline)
 
 ### Browse a channel profile
-1. `getChannel(channelLogin)` → description, followers, social links, partner status
+1. `searchChannels(query)` → pick channel → `channelLogin` (from `login` field)
+2. `getChannel(channelLogin)` → description, followers, social links, partner status
 
 ### Discover popular games
 1. `getTopGames(limit, sort)` → top categories with viewer/broadcaster counts
@@ -44,6 +45,9 @@ openweb twitch exec getTopGames '{"limit":10}'
 ---
 
 ## Site Internals
+
+Everything below is for discover/compile operators and deep debugging.
+Not needed for basic site usage.
 
 ## API Architecture
 
