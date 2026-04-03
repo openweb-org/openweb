@@ -80,6 +80,9 @@ openweb google-maps exec reverseGeocode '{"lat": 37.7749, "lng": -122.4194}'
 
 ## Site Internals
 
+Everything below is for discover/compile operators and deep debugging.
+Not needed for basic site usage.
+
 ## API Architecture
 
 - **No public REST API** — all 14 operations use the `google-maps-api` L3 adapter
@@ -114,4 +117,6 @@ No auth required — public pages. Transport uses `cookie_session` for session c
 - **DOM selectors**: Google Maps SPA uses obfuscated class names (`.hfpxzc`, `.MW4etd`, `.W4Efsd`) that may change without notice.
 - **Internal API indices**: Preview API data is position-dependent (`info[11]` = name, `info[4][7]` = rating). Indices may shift with API updates, causing DRIFT.
 - **Hours schedule**: The `getPlaceHours` schedule extraction depends on specific array indices in the preview API response; may return empty schedule if indices shift.
-- **Reverse geocode**: Extraction quality depends on what Google Maps renders at the given coordinates — sparse areas may return minimal info.
+- **Reverse geocode**: Extraction quality depends on what Google Maps renders at the given coordinates — sparse areas may return minimal info. Verify FAIL — browser context closes before extraction completes.
+- **Unverified ops**: getBicyclingDirections, getPlaceHours, getPlaceAbout, geocode lack verify examples — not tested during verify pass.
+- **Flaky empty results**: SPA navigation ops (nearbySearch, directions variants) may return empty arrays under bot detection pressure. searchPlaces and getPlaceDetails are the most reliable entry points.

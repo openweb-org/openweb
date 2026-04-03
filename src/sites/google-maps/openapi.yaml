@@ -403,7 +403,7 @@ paths:
   /internal/nearbySearch:
     get:
       operationId: nearbySearch
-      summary: Search places by category near a location — restaurants, hotels, etc.
+      summary: Search places by category near a location — names, addresses, ratings, coordinates
       x-openweb:
         permission: read
         build:
@@ -476,7 +476,7 @@ paths:
   /internal/getAutocompleteSuggestions:
     get:
       operationId: getAutocompleteSuggestions
-      summary: Get autocomplete suggestions for a partial search query
+      summary: Get autocomplete suggestions — suggestion text, placeId, description
       x-openweb:
         permission: read
         build:
