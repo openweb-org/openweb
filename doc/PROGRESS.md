@@ -1,3 +1,25 @@
+## 2026-04-03: Pre-release review — 24 fixes from 14 parallel agents
+
+**What changed:**
+- Two-round review: 9 Claude agents + 5 Codex agents covering security, correctness, packaging, docs, skill quality, test coverage, build pipeline, dependencies, public API
+- **Release blocker fixed**: `readFileSync` + `import.meta.url` breaks in tsup bundle — inlined all JSON configs (tracking-cookies, blocked-domains, blocked-paths, static-extensions)
+- Security: WS SSRF validation, yaml CVE fix, redirect header mutation, WS reconnect socket leak, autoNavigate page leak
+- Packaging: pack-check regex, playwright→playwright-core everywhere, author field, PROGRESS.md removed from tarball, .gitignore fix, dead EXCLUDED_SITES cleaned
+- Types: op-level auth/signing overrides added to schema + TS interface, app_path added to localStorage_jwt type, tracking cookie misclassification fixed
+- Code quality: shared-constants.ts extracted, OpenWebError used consistently, response-parser 204 handling
+- Docs/skill: 20+ stale references fixed (dropped sites, wrong counts, broken links, ghost --verbose flag, missing CLI flags)
+- Deferred items documented in `doc/todo/prerelease-review/`
+
+**Why:**
+- Final polish before v0.1.0 open-source npm publish
+- Codex found the critical bundle issue that would have made the published CLI unusable
+
+**Key files:** src/runtime/ws-runtime.ts, src/compiler/analyzer/labeler.ts, src/types/schema.ts, src/types/extensions.ts, scripts/pack-check.js, src/capture/connection.ts, skill/openweb/references/cli.md
+**Verification:** 780/780 tests pass, lint clean, build succeeds, `node dist/cli.js` starts correctly, pack check passes
+**Commit:** 438b829
+**Next:** npm publish
+**Blockers:** None
+
 ## 2026-04-02: localStorage_jwt app_path — cross-domain token resolution
 
 **What changed:**

@@ -1,7 +1,7 @@
 # Security Model
 
 > SSRF protection, redirect safety, error handling, and risk tiers.
-> Last updated: 2026-03-26 (M38)
+> Last updated: 2026-04-03 (pre-release review)
 
 ## Overview
 
@@ -43,6 +43,16 @@ async function validateSSRF(urlString: string): Promise<void>
 | `fc00::/7` | IPv6 unique local |
 | `fe80::/10` | IPv6 link-local |
 | `::ffff:*` | IPv6-mapped IPv4 (re-checked against IPv4 blocklist) |
+
+### Coverage
+
+SSRF validation is enforced across all network paths:
+- **HTTP executors**: `fetchWithRedirects()` calls `ssrfValidator` per hop
+- **Browser-fetch executor**: validates before `page.evaluate(fetch(...))`
+- **Node SSR executor**: validates before `fetch()`
+- **Exchange chain steps**: validates each step URL
+- **WebSocket connections**: `ws-runtime.ts` converts `wss://` → `https://` for DNS check before connecting
+- **WS HTTP handshake**: validates handshake endpoint URL
 
 -> See: `src/lib/ssrf.ts`
 
