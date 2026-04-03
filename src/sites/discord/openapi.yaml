@@ -227,14 +227,47 @@ paths:
                     type: array
                     items:
                       type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        permissions:
+                          type: string
+                        position:
+                          type: integer
+                        color:
+                          type: integer
+                        hoist:
+                          type: boolean
+                        mentionable:
+                          type: boolean
                   emojis:
                     type: array
                     items:
                       type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        animated:
+                          type: boolean
+                        available:
+                          type: boolean
                   stickers:
                     type: array
                     items:
                       type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        type:
+                          type: integer
+                        format_type:
+                          type: integer
   /api/v9/guilds/{guildId}/channels:
     get:
       operationId: listGuildChannels
@@ -290,6 +323,15 @@ paths:
                       type: array
                       items:
                         type: object
+                        properties:
+                          id:
+                            type: string
+                          type:
+                            type: integer
+                          allow:
+                            type: string
+                          deny:
+                            type: string
                     last_message_id:
                       type:
                         - string
@@ -383,8 +425,32 @@ paths:
                       type: array
                       items:
                         type: object
-                  analytics_id:
-                    type: string
+                        properties:
+                          id:
+                            type: string
+                          content:
+                            type: string
+                          author:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              username:
+                                type: string
+                              global_name:
+                                type:
+                                  - string
+                                  - "null"
+                              avatar:
+                                type:
+                                  - string
+                                  - "null"
+                          channel_id:
+                            type: string
+                          timestamp:
+                            type: string
+                          hit:
+                            type: boolean
   /api/v9/channels/{channelId}:
     get:
       operationId: getChannelInfo
@@ -546,6 +612,11 @@ paths:
                       type: array
                       items:
                         type: object
+                        properties:
+                          id:
+                            type: string
+                          username:
+                            type: string
                     mention_roles:
                       type: array
                       items:
@@ -554,18 +625,55 @@ paths:
                       type: array
                       items:
                         type: object
+                        properties:
+                          id:
+                            type: string
+                          filename:
+                            type: string
+                          url:
+                            type: string
+                          size:
+                            type: integer
+                          content_type:
+                            type: string
                     embeds:
                       type: array
                       items:
                         type: object
+                        properties:
+                          type:
+                            type: string
+                          title:
+                            type: string
+                          url:
+                            type: string
+                          description:
+                            type: string
                     components:
                       type: array
                       items:
                         type: object
+                        properties:
+                          type:
+                            type: integer
                     reactions:
                       type: array
                       items:
                         type: object
+                        properties:
+                          emoji:
+                            type: object
+                            properties:
+                              id:
+                                type:
+                                  - string
+                                  - "null"
+                              name:
+                                type: string
+                          count:
+                            type: integer
+                          me:
+                            type: boolean
   /api/v9/channels/{channelId}/pins:
     get:
       operationId: getPinnedMessages

@@ -57,6 +57,9 @@ openweb discord exec searchMessages '{"guildId":"GUILD_ID","content":"search ter
 
 ## Site Internals
 
+Everything below is for discover/compile operators and deep debugging.
+Not needed for basic site usage.
+
 ## API Architecture
 - REST API on `discord.com/api/v9/`
 - JSON responses
@@ -73,6 +76,7 @@ openweb discord exec searchMessages '{"guildId":"GUILD_ID","content":"search ter
 - Page URL: `https://discord.com/channels/@me`
 
 ## Known Issues
+- Verify: all ops PASS (schema-level); live exec requires active Discord browser session (webpack_module_walk auth)
 - Bot detection: Low — browser-only SPA, no commercial bot detection
 - Rate limiting: Discord enforces per-route rate limits with `Retry-After` headers
 - webpack_module_walk auth cannot be auto-detected by compiler — must be manually configured
