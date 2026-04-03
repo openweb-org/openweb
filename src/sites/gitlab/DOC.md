@@ -26,7 +26,6 @@ GitLab REST API v4 — code hosting and DevOps platform (developer tools archety
 1. `searchProjects(search)` → `projectId`
 2. `listProjectBranches(projectId)` → pick branch → `ref`
 3. `getProjectFile(projectId, filePath, ref)` → base64 content + metadata
-4. `getProjectFileRaw(projectId, filePath, ref)` → plain text content
 
 ## Operations
 
@@ -38,8 +37,7 @@ GitLab REST API v4 — code hosting and DevOps platform (developer tools archety
 | listProjectMergeRequests | list MRs | projectId ← searchProjects, state | iid, title, state, source_branch, target_branch | paginated |
 | listProjectPipelines | list pipelines | projectId ← searchProjects | id, status, ref, sha | paginated |
 | listProjectBranches | list branches | projectId ← searchProjects, search | name, merged, protected, default | paginated |
-| getProjectFile | file metadata | projectId ← searchProjects, filePath, ref ← listProjectBranches | file_name, size, content (base64) | |
-| getProjectFileRaw | raw file content | projectId ← searchProjects, filePath, ref ← listProjectBranches | plain text body | |
+| getProjectFile | file metadata + content | projectId ← searchProjects, filePath, ref ← listProjectBranches | file_name, size, content (base64) | |
 | searchUsers | search users | search or username | id, username, name, state | entry point |
 | starProject | star a project | projectId ← searchProjects | star_count | write, SAFE |
 | unstarProject | unstar a project | projectId ← searchProjects | star_count | write, SAFE |
@@ -68,14 +66,20 @@ openweb gitlab exec listProjectPipelines '{"projectId": 278964, "per_page": 5}'
 # Search users
 openweb gitlab exec searchUsers '{"search": "gitlab-bot", "per_page": 5}'
 
-# Search groups and list their projects
-openweb gitlab exec searchGroups '{"search": "gitlab-org", "per_page": 5}'
+# Get group detail and list their projects
+openweb gitlab exec getGroup '{"groupId": 9970}'
 openweb gitlab exec listGroupProjects '{"groupId": 9970, "per_page": 5}'
+
+# Get a file from a repository (returns base64 content)
+openweb gitlab exec getProjectFile '{"projectId": 278964, "filePath": "README.md", "ref": "master"}'
 ```
 
 ---
 
 ## Site Internals
+
+Everything below is for discover/compile operators and deep debugging.
+Not needed for basic site usage.
 
 ## API Architecture
 - Standard REST v4 at `gitlab.com/api/v4/`
@@ -93,4 +97,6 @@ openweb gitlab exec listGroupProjects '{"groupId": 9970, "per_page": 5}'
 
 ## Known Issues
 - Write operations (starProject, unstarProject) require an active login session
+- `searchGroups` search parameter returns empty results without authentication; use `getGroup` with a known `groupId` instead
 - File path parameter must be URL-encoded (slashes become `%2F`, dots become `%2E`)
+- `getProjectFileRaw` removed — runtime does not support text/plain responses; use `getProjectFile` (returns base64 content) instead

@@ -462,44 +462,6 @@ paths:
                     type: string
                   content:
                     type: string
-  /api/v4/projects/{projectId}/repository/files/{filePath}/raw:
-    get:
-      operationId: getProjectFileRaw
-      summary: Get raw file content from repository — returns plain text body
-      x-openweb:
-        permission: read
-        build:
-          stable_id: gl0010
-          tool_version: 1
-          verified: false
-          signals:
-            - status-match
-      parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
-        - name: filePath
-          in: path
-          required: true
-          schema:
-            type: string
-          description: URL-encoded full path to the file (e.g. README%2Emd).
-        - name: ref
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Branch name, tag, or commit SHA.
-      responses:
-        '200':
-          description: Raw file content.
-          content:
-            text/plain:
-              schema:
-                type: string
   /api/v4/users:
     get:
       operationId: searchUsers
