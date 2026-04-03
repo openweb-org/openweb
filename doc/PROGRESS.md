@@ -1,3 +1,21 @@
+## 2026-04-03: Pre-release review round 2 — bug fixes, schema/doc sync
+
+**What changed:**
+- Auth query params doubled: `buildTargetUrl()` now deduplicates via `seen` set + `extraQueryParams`, removed manual append loops in session/browser-fetch executors
+- Token lock poisoning: `withLock()` always releases in finally, clears timeout on success — previously timed-out locks permanently poisoned the site key
+- Bare `Error` → `OpenWebError` in ws-pool, ws-cli-executor, ws-connection, token-cache
+- TS type sync: `app_path` on localStorage_jwt, `adapter`/`method` on page_global_data (already in JSON schema)
+- Skill doc sync: `custom_signing` clarified as non-primitive pattern, `safety`/`requires_auth` added to op-level table, dropped sites cleaned from 8 archetype/knowledge files
+
+**Why:**
+- Codex second-round review found real bugs (auth doubled, lock poisoning) and doc drift
+
+**Key files:** src/runtime/request-builder.ts, src/runtime/token-cache.ts, src/runtime/ws-*.ts, src/types/primitives.ts, skill/openweb/references/knowledge/*.md
+**Verification:** 780/780 tests, lint clean, build passes, `node dist/cli.js` works
+**Commit:** 363d4f4
+**Next:** npm publish
+**Blockers:** None
+
 ## 2026-04-03: Pre-release review — 24 fixes from 14 parallel agents
 
 **What changed:**

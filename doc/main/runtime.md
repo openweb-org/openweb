@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-03-28 (pipeline v2 session)
+> Last updated: 2026-04-03 (pre-release review fixes)
 
 ## Overview
 
@@ -82,7 +82,7 @@ All HTTP executors share the same path/query/header/body binding pipeline.
 
 Path/query/header parameters come from OpenAPI `parameters[]`.
 Body parameters come from `requestBody.content['application/json'].schema.properties`.
-Defaults apply before binding, including body defaults. Body fields are validated against their declared schema types before request construction, and only fields declared in `requestBody` are serialized into the JSON body. Auth-injected query params (for example YouTube's `key`) are merged before validation.
+Defaults apply before binding, including body defaults. Body fields are validated against their declared schema types before request construction, and only fields declared in `requestBody` are serialized into the JSON body. Auth-injected query params (for example YouTube's `key`) are merged into the input map before URL construction; `buildTargetUrl()` deduplicates spec-declared params via a `seen` set and appends any remaining auth params via `extraQueryParams`, preventing double-append.
 If an object `requestBody` is marked `required: true`, the runtime sends `{}` even when no explicit body fields are supplied, so the request still includes a JSON body.
 
 -> See: `src/runtime/session-executor.ts`, `src/runtime/request-builder.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`; `src/runtime/executor.ts` — direct HTTP reuse
@@ -135,7 +135,7 @@ The primary L2 execution path. Uses a real HTTP client with cookies/headers extr
 ```
 
 **Page matching**: The runtime finds a real browser tab matching the API's origin.
-Worker-like pages (`*.js`, empty content) are ignored. There is no fallback to an unrelated tab. If no matching page is found, the runtime attempts **auto-navigation**: it opens a new tab to the site's origin URL (with `networkidle` wait, 15s timeout) and re-checks. If auto-navigate also fails, the runtime raises `needs_page` with a concrete URL to open.
+Worker-like pages (`*.js`, empty content) are ignored. There is no fallback to an unrelated tab. If no matching page is found, the runtime attempts **auto-navigation**: it opens a new tab to the site's origin URL (with `load` wait + 2s SPA settle, 15s timeout) and re-checks. If navigation fails, the created page is cleaned up immediately. If auto-navigate also fails, the runtime raises `needs_page` with a concrete URL to open.
 
 -> See: `src/runtime/session-executor.ts`, `src/runtime/redirect.ts`, `src/runtime/request-builder.ts`, `src/runtime/operation-context.ts`
 
