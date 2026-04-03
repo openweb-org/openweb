@@ -23,7 +23,7 @@ paths:
   /repos/{owner}/{repo}:
     get:
       operationId: getRepo
-      summary: Get a repository
+      summary: Get repository details — full_name, description, stargazers_count, forks_count, language, default_branch
       x-openweb:
         permission: read
         build:
@@ -63,10 +63,29 @@ paths:
                     type: string
                   description:
                     type: string
+                    nullable: true
+                  html_url:
+                    type: string
+                  language:
+                    type: string
+                    nullable: true
+                  stargazers_count:
+                    type: integer
+                  forks_count:
+                    type: integer
+                  open_issues_count:
+                    type: integer
+                  default_branch:
+                    type: string
+                  owner:
+                    type: object
+                    properties:
+                      login:
+                        type: string
   /repos/{owner}/{repo}/issues:
     get:
       operationId: listIssues
-      summary: List repository issues
+      summary: List repository issues — title, state, user, labels, created_at
       x-openweb:
         permission: read
         build:
@@ -118,9 +137,25 @@ paths:
                   properties:
                     id:
                       type: integer
+                    number:
+                      type: integer
                     title:
                       type: string
                     state:
+                      type: string
+                    user:
+                      type: object
+                      properties:
+                        login:
+                          type: string
+                    labels:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                    created_at:
                       type: string
     post:
       operationId: createIssue
@@ -186,7 +221,7 @@ paths:
   /search/repositories:
     get:
       operationId: searchRepos
-      summary: Search repositories by keyword
+      summary: Search repositories by keyword — total_count, full_name, description, stargazers_count, language
       x-openweb:
         permission: read
         build:
@@ -264,7 +299,7 @@ paths:
   /users/{username}:
     get:
       operationId: getUserProfile
-      summary: Get a user profile
+      summary: Get user profile — login, name, bio, public_repos, followers, following
       x-openweb:
         permission: read
         build:
@@ -297,16 +332,24 @@ paths:
                     type: string
                   name:
                     type: string
+                    nullable: true
                   bio:
                     type: string
+                    nullable: true
                   public_repos:
                     type: integer
                   followers:
                     type: integer
+                  following:
+                    type: integer
+                  html_url:
+                    type: string
+                  created_at:
+                    type: string
   /repos/{owner}/{repo}/readme:
     get:
       operationId: getRepoReadme
-      summary: Get repository README
+      summary: Get repository README — name, content (base64), encoding, size
       x-openweb:
         permission: read
         build:
@@ -352,7 +395,7 @@ paths:
   /repos/{owner}/{repo}/pulls:
     get:
       operationId: listPullRequests
-      summary: List repository pull requests
+      summary: List repository pull requests — title, state, user, head, base, created_at
       x-openweb:
         permission: read
         build:
@@ -411,6 +454,8 @@ paths:
                   properties:
                     id:
                       type: integer
+                    number:
+                      type: integer
                     title:
                       type: string
                     state:
@@ -420,10 +465,26 @@ paths:
                       properties:
                         login:
                           type: string
+                    head:
+                      type: object
+                      properties:
+                        ref:
+                          type: string
+                        label:
+                          type: string
+                    base:
+                      type: object
+                      properties:
+                        ref:
+                          type: string
+                        label:
+                          type: string
+                    created_at:
+                      type: string
   /repos/{owner}/{repo}/contributors:
     get:
       operationId: listContributors
-      summary: List repository contributors
+      summary: List repository contributors — login, contributions, avatar_url
       x-openweb:
         permission: read
         build:
@@ -538,7 +599,7 @@ paths:
       operationId: starRepo
       summary: Star a repository
       x-openweb:
-        permission: read
+        permission: write
         build:
           stable_id: gh0003
           tool_version: 1

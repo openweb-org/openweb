@@ -24,15 +24,15 @@ GitHub REST + GraphQL API — code hosting platform (developer tools archetype).
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchRepos | find repositories | q | total_count, items[].full_name, stargazers_count | entry point, paginated |
-| getRepo | repository details | owner, repo | id, full_name, description | entry point |
-| getUserProfile | user profile | username | login, name, bio, public_repos, followers | entry point |
+| searchRepos | find repositories | q | total_count, items[].full_name, stargazers_count, language | entry point, paginated |
+| getRepo | repository details | owner, repo | full_name, description, stargazers_count, forks_count, language | entry point |
+| getUserProfile | user profile | username | login, name, bio, public_repos, followers, following | entry point |
 | getRepoReadme | repository README | owner ← getRepo, repo ← getRepo | name, content (base64), encoding | |
-| listIssues | repository issues | owner ← getRepo, repo ← getRepo | id, title, state | paginated |
-| listPullRequests | repository PRs | owner ← getRepo, repo ← getRepo | id, title, state, user.login | paginated |
+| listIssues | repository issues | owner ← getRepo, repo ← getRepo | number, title, state, user.login, labels | paginated |
+| listPullRequests | repository PRs | owner ← getRepo, repo ← getRepo | number, title, state, user.login, head.ref, base.ref | paginated |
 | listContributors | repository contributors | owner ← getRepo, repo ← getRepo | login, contributions | paginated |
-| createIssue | create an issue | owner ← getRepo, repo ← getRepo, title, body | id, number, html_url | write, CAUTION |
-| forkRepo | fork a repository | owner ← getRepo, repo ← getRepo | id, full_name | write, CAUTION |
+| createIssue | create an issue | owner ← getRepo, repo ← getRepo, title, body | number, html_url | write, CAUTION |
+| forkRepo | fork a repository | owner ← getRepo, repo ← getRepo | full_name | write, CAUTION |
 | starRepo | star a repository | owner ← getRepo, repo ← getRepo | — (204) | write, SAFE |
 | graphqlQuery | execute GraphQL | query, variables | data | write (unrestricted mutations possible) |
 
@@ -73,5 +73,4 @@ openweb github exec getUserProfile '{"username":"anthropics"}'
 ## Known Issues
 - Write ops (`createIssue`, `forkRepo`, `starRepo`) require a logged-in browser session — run `openweb browser start` and log in first
 - `graphqlQuery` has `write` permission since arbitrary mutations are possible via the query string
-- `starRepo` permission is set to `read` in the spec but is actually a write action (PUT) — kept as-is since verify skips it either way
 - Rate limit: 60 requests/hour unauthenticated, 5000/hour authenticated
