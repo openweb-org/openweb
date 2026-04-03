@@ -10,8 +10,8 @@ coverage/
 /capture/
 # Built adapter .js files (source is .ts, compiled by scripts/build-adapters.js)
 src/sites/*/adapters/*.js
-# Task progress state (local only)
-doc/todo/progress.json
+# Internal docs (separate repo, symlinked locally)
+doc/internal
 .multmux
 # Personal agent memory (not for OSS)
 .claude/projects/

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Write-only operations on doc/todo/tasks.json with cross-record validation."""
+"""Write-only operations on doc/internal/todo/tasks.json with cross-record validation."""
 import json, sys
 from pathlib import Path
 
-FILE = Path("doc/todo/tasks.json")
+FILE = Path("doc/internal/todo/tasks.json")
 STATES = {"ready", "running", "done", "blocked", "cancelled"}
 TERMINAL = {"done", "cancelled"}
 
