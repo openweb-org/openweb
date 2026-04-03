@@ -364,7 +364,7 @@ paths:
   /internal/addToCart:
     post:
       operationId: addToCart
-      summary: Add a menu item to DoorDash cart — requires item ID from getRestaurantMenu
+      summary: Add a menu item to DoorDash cart — returns success, cartId, subtotal, item list
       x-openweb:
         permission: write
         build:
