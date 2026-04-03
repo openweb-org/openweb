@@ -51,9 +51,15 @@ No auth required. All operations access public drug pricing data.
 ## Transport
 - `transport: page` — PerimeterX blocks all node/direct HTTP requests
 - Homepage warm-up required: navigate to goodrx.com before drug pages to build PerimeterX cookies
+- Adapter: `adapters/goodrx-web.ts`
+
+## Extraction
+- **searchDrugs**: `page.evaluate` fetch to `/api/autocomplete` endpoint from page context, with DOM link fallback
+- **getDrugPrices**: JSON-LD `@type: Drug` for drug name + DOM `<li>` parsing for pharmacy/price pairs
+- **getPharmacies**: DOM link extraction from `a[href*="/pharmacy/"]` elements
 
 ## Known Issues
+- **Empty results in headless mode**: All ops verify (schema-valid) but return empty arrays. PerimeterX likely blocks headless Playwright; DOM selectors may also be outdated.
 - **PerimeterX warm-up**: Adapter navigates to homepage first before drug pages. Direct navigation may trigger blocks.
 - **Location-dependent pricing**: Pharmacy prices vary by detected geolocation.
-- **Search input visibility**: Homepage search input may be hidden behind overlays; adapter uses Playwright click/fill.
 - **DOM structure changes**: Adapter parses DOM elements directly — GoodRx UI changes may break extraction.
