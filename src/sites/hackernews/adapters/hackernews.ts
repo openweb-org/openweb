@@ -4,6 +4,64 @@ import type { CodeAdapter } from '../../../types/adapter.js'
 const HN_ORIGIN = 'https://news.ycombinator.com'
 const INDENT_UNIT = 40 // HN uses 40px per nesting level
 
+async function extractFeed(page: Page, path: string): Promise<unknown> {
+  await page.goto(`${HN_ORIGIN}${path}`, { waitUntil: 'domcontentloaded' })
+  return page.evaluate(() => {
+    const items = document.querySelectorAll('.athing')
+    return Array.from(items).map((row) => {
+      const subtext = row.nextElementSibling
+      return {
+        title: row.querySelector('.titleline > a')?.textContent ?? null,
+        score: subtext?.querySelector('.score')?.textContent ?? null,
+        author: subtext?.querySelector('.hnuser')?.textContent ?? null,
+        age: subtext?.querySelector('.age a')?.textContent ?? null,
+      }
+    })
+  })
+}
+
+async function extractJobFeed(page: Page): Promise<unknown> {
+  await page.goto(`${HN_ORIGIN}/jobs`, { waitUntil: 'domcontentloaded' })
+  return page.evaluate(() => {
+    const items = document.querySelectorAll('.athing')
+    return Array.from(items).map((row) => {
+      const subtext = row.nextElementSibling
+      return {
+        title: row.querySelector('.titleline > a')?.textContent ?? null,
+        age: subtext?.querySelector('.age a')?.textContent ?? null,
+      }
+    })
+  })
+}
+
+async function getTopStories(page: Page, _params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  return extractFeed(page, '/news')
+}
+
+async function getNewestStories(page: Page, _params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  return extractFeed(page, '/newest')
+}
+
+async function getBestStories(page: Page, _params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  return extractFeed(page, '/best')
+}
+
+async function getAskStories(page: Page, _params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  return extractFeed(page, '/ask')
+}
+
+async function getShowStories(page: Page, _params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  return extractFeed(page, '/show')
+}
+
+async function getJobPostings(page: Page, _params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  return extractJobFeed(page)
+}
+
+async function getFrontPageStories(page: Page, _params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  return extractFeed(page, '/front')
+}
+
 async function getStoryDetail(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const id = params.id
   if (!id) throw new Error('id parameter is required')
@@ -82,19 +140,16 @@ async function getUserProfile(page: Page, params: Readonly<Record<string, unknow
 async function getNewComments(page: Page, _params: Readonly<Record<string, unknown>>): Promise<unknown> {
   await page.goto(`${HN_ORIGIN}/newcomments`, { waitUntil: 'domcontentloaded' })
 
-  return page.evaluate((indentUnit: number) => {
-    const commentRows = document.querySelectorAll('.comtr')
-    return Array.from(commentRows).map((tr) => {
-      const indentPx = Number(tr.querySelector('.ind img')?.getAttribute('width') ?? '0')
-      return {
-        id: tr.id,
-        author: tr.querySelector('.hnuser')?.textContent ?? null,
-        age: tr.querySelector('.age a')?.textContent ?? null,
-        text: tr.querySelector('.commtext')?.textContent?.trim() ?? null,
-        indent: Math.round(indentPx / indentUnit),
-      }
-    })
-  }, INDENT_UNIT)
+  return page.evaluate(() => {
+    const rows = document.querySelectorAll('.athing')
+    return Array.from(rows).map((tr) => ({
+      id: tr.id,
+      author: tr.querySelector('.hnuser')?.textContent ?? null,
+      age: tr.querySelector('.age a')?.textContent ?? null,
+      text: tr.querySelector('.commtext')?.textContent?.trim() ?? null,
+      indent: 0,
+    }))
+  })
 }
 
 async function getStoriesByDomain(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
@@ -159,6 +214,13 @@ async function getUserComments(page: Page, params: Readonly<Record<string, unkno
 }
 
 const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, unknown>>) => Promise<unknown>> = {
+  getTopStories,
+  getNewestStories,
+  getBestStories,
+  getAskStories,
+  getShowStories,
+  getJobPostings,
+  getFrontPageStories,
   getStoryDetail,
   getStoryComments,
   getUserProfile,

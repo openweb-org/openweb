@@ -81,12 +81,11 @@ No auth required for all read operations. Cookie session declared at site level 
 
 ## Transport
 - `page` — browser-based extraction (DOM parsing requires rendered page)
-- Feed ops (7): `html_selector` extraction on browser tabs matching `page_url`
-- Adapter ops (7): navigate to target URL via `page.goto()`, extract with `page.evaluate()`
+- All 14 ops use the adapter (`adapters/hackernews.ts`) for DOM extraction via `page.goto()` + `page.evaluate()`
 
 ## Known Issues
-- Feed html_selector ops require the correct page to be loaded (page_url matching)
 - Last story on some feed pages may have null score/author (ad or announcement row)
 - Comment indent calculated from `.ind img[width]` attribute (40px per level)
 - No bot detection — DOM extraction is reliable
 - Feed ops don't return item IDs — only title, score, author, age
+- `getNewComments` always returns indent=0 (newcomments page shows flat list)

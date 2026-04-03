@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://news.ycombinator.com
     x-openweb:
-      transport: node
+      transport: page
       auth:
         type: cookie_session
 paths:
@@ -22,16 +22,10 @@ paths:
           tool_version: 2
           verified: true
           signals:
-            - dom_only
-        extraction:
-          type: html_selector
-          page_url: /news
-          selectors:
-            title: .titleline > a
-            score: .score
-            author: .hnuser
-            age: .age a
-          multiple: true
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: getTopStories
       responses:
         '200':
           description: Array of top stories (typically 30 per page).
@@ -73,16 +67,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - dom_only
-        extraction:
-          type: html_selector
-          page_url: /newest
-          selectors:
-            title: .titleline > a
-            score: .score
-            author: .hnuser
-            age: .age a
-          multiple: true
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: getNewestStories
       responses:
         '200':
           description: Array of newest stories.
@@ -97,18 +85,22 @@ paths:
                       type:
                         - string
                         - 'null'
+                      description: Story title text.
                     score:
                       type:
                         - string
                         - 'null'
+                      description: 'Point count, e.g. "305 points".'
                     author:
                       type:
                         - string
                         - 'null'
+                      description: Submitter username.
                     age:
                       type:
                         - string
                         - 'null'
+                      description: 'Relative time, e.g. "2 hours ago".'
   /best:
     get:
       operationId: getBestStories
@@ -120,16 +112,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - dom_only
-        extraction:
-          type: html_selector
-          page_url: /best
-          selectors:
-            title: .titleline > a
-            score: .score
-            author: .hnuser
-            age: .age a
-          multiple: true
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: getBestStories
       responses:
         '200':
           description: Array of highest-voted stories.
@@ -144,18 +130,22 @@ paths:
                       type:
                         - string
                         - 'null'
+                      description: Story title text.
                     score:
                       type:
                         - string
                         - 'null'
+                      description: 'Point count, e.g. "305 points".'
                     author:
                       type:
                         - string
                         - 'null'
+                      description: Submitter username.
                     age:
                       type:
                         - string
                         - 'null'
+                      description: 'Relative time, e.g. "2 hours ago".'
   /ask:
     get:
       operationId: getAskStories
@@ -167,16 +157,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - dom_only
-        extraction:
-          type: html_selector
-          page_url: /ask
-          selectors:
-            title: .titleline > a
-            score: .score
-            author: .hnuser
-            age: .age a
-          multiple: true
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: getAskStories
       responses:
         '200':
           description: Array of Ask HN posts.
@@ -191,18 +175,22 @@ paths:
                       type:
                         - string
                         - 'null'
+                      description: Story title text.
                     score:
                       type:
                         - string
                         - 'null'
+                      description: 'Point count, e.g. "305 points".'
                     author:
                       type:
                         - string
                         - 'null'
+                      description: Submitter username.
                     age:
                       type:
                         - string
                         - 'null'
+                      description: 'Relative time, e.g. "2 hours ago".'
   /show:
     get:
       operationId: getShowStories
@@ -214,16 +202,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - dom_only
-        extraction:
-          type: html_selector
-          page_url: /show
-          selectors:
-            title: .titleline > a
-            score: .score
-            author: .hnuser
-            age: .age a
-          multiple: true
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: getShowStories
       responses:
         '200':
           description: Array of Show HN posts.
@@ -238,18 +220,22 @@ paths:
                       type:
                         - string
                         - 'null'
+                      description: Story title text.
                     score:
                       type:
                         - string
                         - 'null'
+                      description: 'Point count, e.g. "305 points".'
                     author:
                       type:
                         - string
                         - 'null'
+                      description: Submitter username.
                     age:
                       type:
                         - string
                         - 'null'
+                      description: 'Relative time, e.g. "2 hours ago".'
   /jobs:
     get:
       operationId: getJobPostings
@@ -261,14 +247,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - dom_only
-        extraction:
-          type: html_selector
-          page_url: /jobs
-          selectors:
-            title: .titleline > a
-            age: .age a
-          multiple: true
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: getJobPostings
       responses:
         '200':
           description: Array of job postings. Jobs have no score or author.
@@ -300,16 +282,10 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - dom_only
-        extraction:
-          type: html_selector
-          page_url: /front
-          selectors:
-            title: .titleline > a
-            score: .score
-            author: .hnuser
-            age: .age a
-          multiple: true
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: getFrontPageStories
       responses:
         '200':
           description: Array of front page stories (time-sorted view).
@@ -324,18 +300,22 @@ paths:
                       type:
                         - string
                         - 'null'
+                      description: Story title text.
                     score:
                       type:
                         - string
                         - 'null'
+                      description: 'Point count, e.g. "305 points".'
                     author:
                       type:
                         - string
                         - 'null'
+                      description: Submitter username.
                     age:
                       type:
                         - string
                         - 'null'
+                      description: 'Relative time, e.g. "2 hours ago".'
   /internal/getStoryDetail:
     get:
       operationId: getStoryDetail
