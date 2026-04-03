@@ -89,7 +89,7 @@ export async function executeBrowserFetch(
     const headerParams = buildHeaderParams(allParams, inputParams)
 
     // Build URL (returns raw string with minimal encoding)
-    let target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams)
+    const target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams, authResult?.queryParams)
 
     // Build request body
     let jsonBody: string | undefined
@@ -107,15 +107,9 @@ export async function executeBrowserFetch(
       headers['Content-Type'] = 'application/json'
     }
 
-    // Resolve auth (headers + query params, but skip cookie injection)
+    // Resolve auth headers (query params already handled by buildTargetUrl)
     if (authResult) {
       Object.assign(headers, authResult.headers)
-      if (authResult.queryParams) {
-        for (const [key, value] of Object.entries(authResult.queryParams)) {
-          const sep = target.includes('?') ? '&' : '?'
-          target = `${target}${sep}${encodeURIComponent(key)}=${encodeURIComponent(value)}`
-        }
-      }
       // Note: cookieString is NOT injected — browser handles cookies via credentials:'include'
     }
 

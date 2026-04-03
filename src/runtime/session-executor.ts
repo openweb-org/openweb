@@ -187,7 +187,7 @@ export async function executeSessionHttp(
       { ...params, ...authResult?.queryParams },
     )
     const resolvedPath = substitutePath(operationPath, allParams, inputParams)
-    let target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams)
+    const target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams, authResult?.queryParams)
 
     const upperMethod = method.toUpperCase()
     let jsonBody: string | undefined
@@ -208,12 +208,6 @@ export async function executeSessionHttp(
     if (authResult) {
       Object.assign(headers, authResult.headers)
       cookieString = authResult.cookieString
-      if (authResult.queryParams) {
-        for (const [key, value] of Object.entries(authResult.queryParams)) {
-          const sep = target.includes('?') ? '&' : '?'
-          target = `${target}${sep}${encodeURIComponent(key)}=${encodeURIComponent(value)}`
-        }
-      }
     }
 
     // D-14: node transport always sends browser cookies

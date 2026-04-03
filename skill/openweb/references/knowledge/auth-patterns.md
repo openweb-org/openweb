@@ -21,7 +21,8 @@ Guide to authentication primitives detected by `classify.ts`. Organized by primi
 | webpack_module_walk | Auth | Token in webpack chunk cache |
 | page_global | Auth | Auth data in JS global |
 | sapisidhash | Signing | SAPISID + origin → SHA-1 header |
-| custom_signing | Signing | Per-request computed params (VM) |
+
+**Note:** Sites with per-request computed signing (X-Bogus, x-client-transaction-id) are handled via **adapter + page transport**, not a runtime signing primitive. See `custom_signing` section below.
 
 ## Per-Operation Override
 
@@ -191,7 +192,9 @@ prior package needed. Only use this when the key is truly public (not user-scope
 **Pitfalls**:
 - Requires both the SAPISID cookie AND the correct origin to compute the hash.
 
-## custom_signing (X-Bogus / VM-based)
+## custom_signing (X-Bogus / VM-based) — Not a Runtime Primitive
+
+This is NOT a runtime primitive type — it describes a **pattern** handled via adapter + page transport.
 
 **Detection**: Query parameters like `X-Bogus`, `X-Gnarly`, `msToken` that change on every request and don't match any cookie or localStorage value.
 

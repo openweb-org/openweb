@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { promisify } from 'node:util'
 
 import { openwebHome } from '../lib/config.js'
+import { OpenWebError } from '../lib/errors.js'
 
 const pbkdf2Async = promisify(pbkdf2)
 
@@ -161,18 +162,28 @@ const locks = new Map<string, Promise<void>>()
 
 async function withLock<T>(key: string, fn: () => Promise<T>, timeoutMs = 10_000): Promise<T> {
   const prev = locks.get(key) ?? Promise.resolve()
-  let release: () => void
+  let release: (() => void) | undefined
   const next = new Promise<void>(resolve => { release = resolve })
   locks.set(key, next)
-  await Promise.race([
-    prev,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Lock acquisition timed out for ${key} after ${timeoutMs}ms`)), timeoutMs),
-    ),
-  ])
+  let timer: ReturnType<typeof setTimeout> | undefined
   try {
+    await Promise.race([
+      prev,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: `Lock acquisition timed out for ${key} after ${timeoutMs}ms`,
+          action: 'Retry the operation — another request may be holding the lock.',
+          retriable: true,
+          failureClass: 'retriable',
+        })), timeoutMs)
+      }),
+    ])
+    if (timer !== undefined) clearTimeout(timer)
     return await fn()
   } finally {
+    if (timer !== undefined) clearTimeout(timer)
     release?.()
     if (locks.get(key) === next) locks.delete(key)
   }

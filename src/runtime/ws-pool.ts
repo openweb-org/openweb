@@ -1,3 +1,4 @@
+import { OpenWebError } from '../lib/errors.js'
 import { type WsConnectionConfig, WsConnectionManager } from './ws-connection.js'
 
 // ── Pool Config ───────────────────────────────────
@@ -68,7 +69,14 @@ export class WsConnectionPool {
         return s !== 'CLOSED' && s !== 'DISCONNECTED'
       }).sort((a, b) => a.refCount - b.refCount)
       const entry = sorted?.[0]
-      if (!entry) throw new Error('No active connection found for pool key')
+      if (!entry) throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: 'No active connection found for pool key',
+        action: 'Retry the WebSocket operation or check connection limits.',
+        retriable: true,
+        failureClass: 'retriable',
+      })
       entry.refCount++
       return entry.connection
     }

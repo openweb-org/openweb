@@ -174,17 +174,27 @@ export function buildTargetUrl(
   resolvedPath: string,
   allParams: OpenApiParameter[],
   inputParams: Record<string, unknown>,
+  extraQueryParams?: Readonly<Record<string, string>>,
 ): string {
   const baseUrl = new URL(serverUrl)
   const basePath = baseUrl.origin + baseUrl.pathname.replace(/\/$/, '') + resolvedPath
   const pairs: string[] = []
+  const seen = new Set<string>()
   for (const param of allParams.filter((p) => p.in === 'query')) {
     const value = inputParams[param.name]
     if (value === undefined || value === null) continue
+    seen.add(param.name)
     if (Array.isArray(value)) {
       for (const item of value) pairs.push(`${encodeQueryValue(param.name)}=${encodeQueryValue(String(item))}`)
     } else {
       pairs.push(`${encodeQueryValue(param.name)}=${encodeQueryValue(String(value))}`)
+    }
+  }
+  if (extraQueryParams) {
+    for (const [key, value] of Object.entries(extraQueryParams)) {
+      if (!seen.has(key)) {
+        pairs.push(`${encodeQueryValue(key)}=${encodeQueryValue(value)}`)
+      }
     }
   }
   return pairs.length > 0 ? `${basePath}?${pairs.join('&')}` : basePath

@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events'
 
+import { OpenWebError } from '../lib/errors.js'
 import type { WsAuthConfig, WsHeartbeat, WsMessageTemplate } from '../types/ws-primitives.js'
 import { getValueAtPath, setValueAtPath } from './value-path.js'
 import type { WsSocketFactory } from './ws-socket.js'
@@ -234,7 +235,14 @@ export class WsConnectionManager extends EventEmitter<WsConnectionEvents> {
     })
 
     ws.addEventListener('error', () => {
-      const err = new Error(`WebSocket error on ${this.config.url}`)
+      const err = new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `WebSocket error on ${this.config.url}`,
+        action: 'Check the WebSocket URL and network connectivity.',
+        retriable: true,
+        failureClass: 'retriable',
+      })
       this.emit('error', err)
       // The 'close' event fires after 'error', which handles reconnect
     })
@@ -258,7 +266,14 @@ export class WsConnectionManager extends EventEmitter<WsConnectionEvents> {
     if (!rc || this.retries >= rc.max_retries) {
       this.state = 'CLOSED' // force closed
       this.emit('stateChange', 'RECONNECTING', 'CLOSED')
-      this.emit('error', new Error(`Max reconnect retries (${rc?.max_retries ?? 0}) exceeded`))
+      this.emit('error', new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `Max reconnect retries (${rc?.max_retries ?? 0}) exceeded`,
+        action: 'Check the WebSocket server availability and retry later.',
+        retriable: false,
+        failureClass: 'fatal',
+      }))
       return
     }
 

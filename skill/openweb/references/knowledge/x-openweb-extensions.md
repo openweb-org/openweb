@@ -4,7 +4,7 @@ OpenWeb extends OpenAPI 3.1 with `x-openweb` at two levels: **server-level**
 (shared across all operations) and **operation-level** (per-operation overrides
 and metadata).
 
-Source of truth: `src/types/extensions.ts` and `src/types/primitives.ts`.
+Source of truth: `src/types/extensions.ts`, `src/types/primitives.ts`, and `src/types/schema.ts`.
 
 ## Server-Level (`servers[0].x-openweb`)
 
@@ -105,6 +105,8 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `extraction` | ExtractionPrimitive | SSR/DOM data extraction. See `extraction-patterns.md`. |
 | `adapter` | AdapterRef | Delegates execution to a TypeScript adapter. The spec path becomes a logical namespace — the runtime does NOT use it for navigation. See below. |
 | `actual_path` | string | Real URL path when the spec key is a virtual path (e.g., GraphQL dedup). |
+| `safety` | `safe` \| `caution` | Compiler hint — `caution` for ops that modify state. Not enforced at runtime. |
+| `requires_auth` | boolean | Compiler hint — whether the operation needs auth. Not enforced at runtime. |
 
 ### Permission
 

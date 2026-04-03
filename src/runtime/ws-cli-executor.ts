@@ -21,9 +21,23 @@ export interface WsExecOptions {
 
 function getWsOperation(asyncapi: AsyncApiSpec, operationId: string): XOpenWebWsOperation {
   const op = asyncapi.operations?.[operationId]
-  if (!op) throw new Error(`WS operation not found in asyncapi: ${operationId}`)
+  if (!op) throw new OpenWebError({
+    error: 'execution_failed',
+    code: 'TOOL_NOT_FOUND',
+    message: `WS operation not found in asyncapi: ${operationId}`,
+    action: 'Check the operation name against the asyncapi spec.',
+    retriable: false,
+    failureClass: 'fatal',
+  })
   const ext = op['x-openweb']
-  if (!ext) throw new Error(`WS operation ${operationId} missing x-openweb extension`)
+  if (!ext) throw new OpenWebError({
+    error: 'execution_failed',
+    code: 'EXECUTION_FAILED',
+    message: `WS operation ${operationId} missing x-openweb extension`,
+    action: 'Recompile the site to generate x-openweb metadata.',
+    retriable: false,
+    failureClass: 'fatal',
+  })
   return ext
 }
 
