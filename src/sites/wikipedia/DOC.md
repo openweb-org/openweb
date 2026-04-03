@@ -85,12 +85,10 @@ openweb wikipedia exec getPageRevisions '{"title":"Albert_Einstein","limit":5}'
 - Action API pagination uses continuation tokens (`sroffset`, `clcontinue`, `plcontinue`, etc.) returned in the `continue` object.
 
 ## Auth
-- Transport: `page` with `cookie_session`.
-- No auth required for any read operations — all APIs are public.
-- Cookie session enables logged-in features if available.
+- Cookie session configured but no auth required for any read operations — all APIs are public.
 
 ## Transport
-- `page` — browser-based fetch for all operations.
+- `node` — direct HTTP for all operations (public APIs, no bot detection).
 - All operations return JSON directly (no SSR extraction needed).
 
 ## Known Issues
