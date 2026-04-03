@@ -5,13 +5,11 @@ International news agency. News archetype — articles, topic feeds, search, fin
 
 ## Workflows
 
-### Search and read an article
-1. `searchArticles(keyword)` → results with `canonical_url`
-2. `getArticle(website_url)` → full article with body paragraphs
+### Search news
+1. `searchArticles(keyword)` → articles with title, description, canonical_url
 
 ### Browse a topic
 1. `getTopicArticles(section_id)` → article list for `/world/`, `/business/`, `/technology/`, `/markets/`, `/science/`
-2. `getArticle(website_url)` → full article from any result's `canonical_url`
 
 ### Check market data
 1. `getMarketQuotes(rics)` → price and percent change for indices, currencies, commodities
@@ -20,19 +18,15 @@ International news agency. News archetype — articles, topic feeds, search, fin
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchArticles | search news by keyword | keyword | title, description, canonical_url, published_time | paginated (offset, size) |
-| getArticle | read full article | website_url ← searchArticles or getTopicArticles | headlines, content_elements, authors, publish_date | URL path format: /section/slug/ |
-| getTopicArticles | browse section feed | section_id (e.g., /world/) | articles[].title, canonical_url, published_time | paginated (offset, size); entry point |
-| getMarketQuotes | get market prices | rics (e.g., .SPX,.DJI) | ric, name, last, pctChange | entry point; RIC codes |
+| searchArticles | search news by keyword | keyword | title, description, canonical_url, published_time | paginated (offset, size); entry point |
+| getTopicArticles | browse section feed | section_id (e.g., /world/) | title, description, canonical_url, published_time | paginated (offset, size); entry point |
+| getMarketQuotes | get market prices | rics (e.g., .SPX,.DJI) | ric, name, last, percent_change | entry point; RIC codes |
 
 ## Quick Start
 
 ```bash
 # Search for articles about technology
 openweb reuters exec searchArticles '{"keyword":"technology","size":5}'
-
-# Get a specific article
-openweb reuters exec getArticle '{"website_url":"/world/us/some-article-slug-2025-01-01/"}'
 
 # Browse world news
 openweb reuters exec getTopicArticles '{"section_id":"/world/","size":10}'
@@ -65,4 +59,5 @@ No user authentication required. The API requires browser session cookies (set b
 
 ## Known Issues
 - **DataDome bot detection**: Reuters uses DataDome. The managed browser's real Chrome profile handles this, but the page/tab can crash after ~6-8 rapid API calls. Space out requests if making many sequential calls.
+- **getTopicArticles verify flaky**: Occasionally fails with "page closed" during verify — the browser tab crashes under DataDome pressure. The operation works when called individually.
 - **Market quotes RIC codes**: Common codes — indices: `.SPX`, `.DJI`, `.IXIC`, `.STOXX`, `.FTSE`, `.N225`; currencies: `EUR=`, `GBP=`, `JPY=`; commodities: `CLc1`, `GCv1`, `SIv1`.

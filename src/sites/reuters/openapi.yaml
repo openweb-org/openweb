@@ -14,7 +14,7 @@ paths:
   /pf/api/v3/content/fetch/articles-by-search-v2:
     get:
       operationId: searchArticles
-      summary: "Search articles by keyword — returns title, description, canonical URL, published date, section, thumbnail"
+      summary: "Search articles by keyword — title, description, canonical_url, published_time, word_count, authors, thumbnail"
       x-openweb:
         permission: read
         build:
@@ -55,6 +55,13 @@ paths:
                   result:
                     type: object
                     properties:
+                      pagination:
+                        type: object
+                        properties:
+                          size:
+                            type: integer
+                          total_size:
+                            type: integer
                       articles:
                         type: array
                         items:
@@ -72,17 +79,33 @@ paths:
                               type: string
                             updated_time:
                               type: string
+                            word_count:
+                              type: integer
+                            read_minutes:
+                              type: integer
                             authors:
                               type: array
                               items:
                                 type: object
+                                properties:
+                                  name:
+                                    type: string
+                                  topic_url:
+                                    type: string
                             thumbnail:
                               type: object
+                              properties:
+                                url:
+                                  type: string
+                                caption:
+                                  type: string
+                                alt_text:
+                                  type: string
 
   /pf/api/v3/content/fetch/articles-by-section-alias-or-id-v1:
     get:
       operationId: getTopicArticles
-      summary: "Get articles by topic/section — returns article list for a section like /world/, /business/, /technology/, /markets/"
+      summary: "Get articles by topic/section — title, description, canonical_url, published_time, word_count, authors, thumbnail"
       x-openweb:
         permission: read
         build:
@@ -123,6 +146,13 @@ paths:
                   result:
                     type: object
                     properties:
+                      pagination:
+                        type: object
+                        properties:
+                          size:
+                            type: integer
+                          total_size:
+                            type: integer
                       articles:
                         type: array
                         items:
@@ -138,17 +168,33 @@ paths:
                               type: string
                             published_time:
                               type: string
+                            word_count:
+                              type: integer
+                            read_minutes:
+                              type: integer
                             authors:
                               type: array
                               items:
                                 type: object
+                                properties:
+                                  name:
+                                    type: string
+                                  topic_url:
+                                    type: string
                             thumbnail:
                               type: object
+                              properties:
+                                url:
+                                  type: string
+                                caption:
+                                  type: string
+                                alt_text:
+                                  type: string
 
   /pf/api/v3/content/fetch/quote-by-rics-v2:
     get:
       operationId: getMarketQuotes
-      summary: "Get market quotes by RIC codes — returns price, percent change, name for indices, currencies, commodities"
+      summary: "Get market quotes by RIC codes — ric, name, last, percent_change, currency for indices, currencies, commodities"
       x-openweb:
         permission: read
         build:
@@ -175,7 +221,7 @@ paths:
                   result:
                     type: object
                     properties:
-                      markets:
+                      market_data:
                         type: array
                         items:
                           type: object
@@ -186,9 +232,9 @@ paths:
                               type: string
                             last:
                               type: number
-                            pctChange:
+                            percent_change:
                               type: number
                             currency:
                               type: string
-                            ricType:
+                            type:
                               type: string
