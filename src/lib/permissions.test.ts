@@ -1,65 +1,52 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { type MockInstance, afterEach, describe, expect, it, vi } from 'vitest'
 
-import { afterEach, describe, expect, it } from 'vitest'
-
+import type { OpenWebConfig } from './config.js'
+import * as configModule from './config.js'
 import { type PermissionsConfig, checkPermission, loadPermissions } from './permissions.js'
 
 describe('loadPermissions', () => {
-  const dirs: string[] = []
-
-  function tmpConfig(content: string): string {
-    const dir = mkdtempSync(join(tmpdir(), 'openweb-perm-test-'))
-    dirs.push(dir)
-    const filePath = join(dir, 'permissions.yaml')
-    writeFileSync(filePath, content, 'utf8')
-    return filePath
-  }
+  let spy: MockInstance<() => OpenWebConfig>
 
   afterEach(() => {
-    for (const d of dirs) rmSync(d, { recursive: true, force: true })
-    dirs.length = 0
+    spy?.mockRestore()
   })
 
-  it('returns defaults when file does not exist', () => {
-    const config = loadPermissions('/nonexistent/path/permissions.yaml')
+  it('returns defaults when config has no permissions', () => {
+    spy = vi.spyOn(configModule, 'loadConfig').mockReturnValue({})
+    const config = loadPermissions()
     expect(config.defaults.read).toBe('allow')
     expect(config.defaults.write).toBe('prompt')
     expect(config.defaults.delete).toBe('prompt')
     expect(config.defaults.transact).toBe('deny')
   })
 
-  it('loads valid config from file', () => {
-    const path = tmpConfig(`
-defaults:
-  read: allow
-  write: allow
-  delete: prompt
-  transact: deny
-sites:
-  instagram:
-    write: deny
-`)
-    const config = loadPermissions(path)
+  it('loads valid permissions from config', () => {
+    spy = vi.spyOn(configModule, 'loadConfig').mockReturnValue({
+      permissions: {
+        defaults: { read: 'allow', write: 'allow', delete: 'prompt', transact: 'deny' },
+        sites: { instagram: { write: 'deny' } },
+      },
+    })
+    const config = loadPermissions()
     expect(config.defaults.write).toBe('allow')
     expect(config.sites?.instagram?.write).toBe('deny')
   })
 
-  it('falls back to defaults on invalid config', () => {
-    const path = tmpConfig('invalid: yaml: config')
-    const config = loadPermissions(path)
+  it('falls back to defaults on invalid permissions structure', () => {
+    spy = vi.spyOn(configModule, 'loadConfig').mockReturnValue({
+      permissions: 'not-an-object' as unknown as OpenWebConfig['permissions'],
+    })
+    const config = loadPermissions()
     expect(config.defaults.read).toBe('allow')
   })
 
   it('accepts config with only sites (no defaults key)', () => {
-    const path = tmpConfig(`
-sites:
-  bank:
-    read: deny
-    write: deny
-`)
-    const config = loadPermissions(path)
+    spy = vi.spyOn(configModule, 'loadConfig').mockReturnValue({
+      permissions: {
+        sites: { bank: { read: 'deny', write: 'deny' } },
+      },
+    })
+    const config = loadPermissions()
     // Should merge with built-in defaults
     expect(config.defaults.read).toBe('allow')
     expect(config.defaults.write).toBe('prompt')
@@ -68,14 +55,17 @@ sites:
   })
 
   it('ignores invalid policy values in defaults', () => {
-    const path = tmpConfig(`
-defaults:
-  read: invalid_policy
-  write: allow
-  delete: prompt
-  transact: deny
-`)
-    const config = loadPermissions(path)
+    spy = vi.spyOn(configModule, 'loadConfig').mockReturnValue({
+      permissions: {
+        defaults: {
+          read: 'invalid_policy' as 'allow',
+          write: 'allow',
+          delete: 'prompt',
+          transact: 'deny',
+        },
+      },
+    })
+    const config = loadPermissions()
     // invalid_policy ignored → falls back to built-in default for read
     expect(config.defaults.read).toBe('allow')
     expect(config.defaults.write).toBe('allow')

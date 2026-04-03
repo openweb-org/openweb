@@ -1,14 +1,14 @@
 /**
- * Minimal logger respecting OPENWEB_DEBUG env var.
+ * Minimal logger. Debug output controlled by config.json `debug` field.
  *
- * - debug(): only outputs when OPENWEB_DEBUG=1
+ * - debug(): only outputs when debug is enabled
  * - warn():  always outputs to stderr
  * - error(): always outputs to stderr
  */
 
-function isDebug(): boolean {
-  return process.env.OPENWEB_DEBUG === '1'
-}
+import { loadConfig } from './config.js'
+
+const debug = loadConfig().debug ?? false
 
 function formatMessage(level: string, msg: string): string {
   return `[openweb:${level}] ${msg}\n`
@@ -16,7 +16,7 @@ function formatMessage(level: string, msg: string): string {
 
 export const logger = {
   debug(msg: string): void {
-    if (isDebug()) {
+    if (debug) {
       process.stderr.write(formatMessage('debug', msg))
     }
   },

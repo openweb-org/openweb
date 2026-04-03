@@ -69,7 +69,7 @@ If all pass → continue to next dimension.
 If any fail → diagnose below.
 
 Common issues at this stage:
-- `needs_browser` → run `openweb browser start`
+- `needs_browser` → browser auto-starts; if it fails, check Chrome installation. Manual fallback: `openweb browser start`
 - `needs_login` → log in to the site in the managed browser
 - Hangs → check if token cache is stale (restart browser)
 - Empty response → the API may need different parameters

@@ -1,6 +1,5 @@
 import type { Browser } from 'playwright-core'
 
-import { connectWithRetry } from '../capture/connection.js'
 import { OpenWebError } from '../lib/errors.js'
 import {
   type SiteOverallStatus,
@@ -11,7 +10,7 @@ import {
   verifyAll,
   verifySite,
 } from '../lifecycle/verify.js'
-import { browserStartCommand, getManagedCdpEndpoint } from './browser.js'
+import { ensureBrowser } from '../runtime/browser-lifecycle.js'
 
 function statusIcon(status: SiteOverallStatus): string {
   switch (status) {
@@ -30,28 +29,10 @@ export interface VerifyCommandOptions {
   readonly write?: boolean
 }
 
-async function acquireBrowser(): Promise<Browser> {
-  let cdpEndpoint = await getManagedCdpEndpoint()
-  if (!cdpEndpoint) {
-    process.stderr.write('Starting managed browser for verify...\n')
-    await browserStartCommand()
-    cdpEndpoint = await getManagedCdpEndpoint()
-    if (!cdpEndpoint) {
-      throw new OpenWebError({
-        error: 'execution_failed', code: 'EXECUTION_FAILED',
-        message: 'Failed to start managed browser.',
-        action: 'Run `openweb browser start` manually.',
-        retriable: true, failureClass: 'needs_browser',
-      })
-    }
-  }
-  return connectWithRetry(cdpEndpoint, 1)
-}
-
 export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
   let browser: Browser | undefined
   if (opts.browser) {
-    browser = await acquireBrowser()
+    browser = await ensureBrowser()
   }
 
   const deps = browser ? { browser } : undefined

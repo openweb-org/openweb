@@ -83,10 +83,10 @@ openweb <site> <operation>                 # operation detail + params
 openweb <site> <op> '{...}'                # execute
 ```
 
-For browser-required sites:
+For browser-required sites (auth-required sites may prompt for login):
 
 ```bash
-openweb browser start                      # launch managed browser
+openweb browser start                      # optional — auto-starts when needed
 openweb login <site>                       # authenticate
 openweb <site> <op> '{...}'                # execute with auth
 ```

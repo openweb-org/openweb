@@ -90,7 +90,7 @@ Known failure patterns organized by category. Referenced from [troubleshooting.m
 
 - **Symptoms:** `Error: connect ECONNREFUSED 127.0.0.1:9222`
 - **Detection signals:** no Chrome process running, or Chrome launched without `--remote-debugging-port`
-- **Action:** run `openweb browser start`. If already running, check `openweb browser status`. Port conflict: check if another process uses 9222.
+- **Action:** browser auto-starts when needed. If auto-start fails, check that Chrome/Chromium is installed and in PATH. Manual fallback: `openweb browser start`. If already running, check `openweb browser status`. Port conflict: check if another process uses 9222.
 
 ### Stale Browser Session
 

@@ -55,7 +55,7 @@ executeOperation(site, operationId, params, deps)
 If an operation has `x-openweb.adapter`, L3 adapter takes priority regardless of transport.
 If an operation has `x-openweb.extraction`, the runtime dispatches to `executeExtraction()` before the HTTP executors.
 
-**Operation timeout:** All operations are wrapped in a 30s timeout (configurable via `OPENWEB_TIMEOUT` env variable in milliseconds). The timer is properly cleaned up on completion to avoid resource leaks.
+**Operation timeout:** All operations are wrapped in a 30s timeout (configurable via `"timeout"` in `~/.openweb/config.json`, in milliseconds). The timer is properly cleaned up on completion to avoid resource leaks.
 
 ---
 

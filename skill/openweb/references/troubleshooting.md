@@ -21,7 +21,7 @@ Read `references/knowledge/troubleshooting-patterns.md` for the matching categor
 1. Check the exact error message and HTTP status
 2. Check `openweb browser status` — is Chrome running?
 3. Check if the site is in `doc/blocked.md` — known blocker?
-4. Try with `OPENWEB_DEBUG=1 openweb <site> exec <op> '{...}'` for more detail
+4. Set `"debug": true` in `~/.openweb/config.json` and re-run for more detail
 5. Check the site's `openapi.yaml` — is the endpoint/auth correct?
 
 ## Step 4: Fix and verify

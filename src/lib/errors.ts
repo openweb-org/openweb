@@ -111,7 +111,7 @@ export class OpenWebError extends Error {
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: `Permission denied: ${category} on ${site}/${operationId}`,
-      action: `Update ${openwebHome()}/permissions.yaml to allow '${category}' for '${site}'.`,
+      action: `Update ${openwebHome()}/config.json to allow '${category}' for '${site}'.`,
       retriable: false,
       failureClass: 'permission_denied',
     })
@@ -149,7 +149,7 @@ export class OpenWebError extends Error {
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: `Permission required: ${category} on ${site}/${operationId}`,
-      action: `This operation requires '${category}' permission. Update ${openwebHome()}/permissions.yaml to allow it.`,
+      action: `This operation requires '${category}' permission. Update ${openwebHome()}/config.json to allow it.`,
       retriable: false,
       failureClass: 'permission_required',
     })

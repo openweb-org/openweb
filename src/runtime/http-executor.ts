@@ -1,8 +1,7 @@
 import Ajv from 'ajv'
 import type { Browser } from 'playwright-core'
 
-import { connectWithRetry } from '../capture/connection.js'
-import { CDP_ENDPOINT, DEFAULT_USER_AGENT } from '../lib/config.js'
+import { DEFAULT_USER_AGENT, loadConfig } from '../lib/config.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
@@ -23,9 +22,11 @@ import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types/extensions.js'
 import { executeAdapter, loadAdapter } from './adapter-executor.js'
+import { ensureBrowser, handleLoginRequired, refreshProfile } from './browser-lifecycle.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
-import { clearTokenCache, clearTokenCacheUnsafe, executeCachedFetch, readTokenCache, readTokenCacheUnsafe, withTokenLock, writeBrowserCookiesToCache } from './cache-manager.js'
+import { clearTokenCache, executeCachedFetch, readTokenCache, writeBrowserCookiesToCache } from './cache-manager.js'
 import { executeExtraction } from './extraction-executor.js'
+import type { ExecutorResult } from './executor-result.js'
 import { withHttpRetry } from './http-retry.js'
 import { executeNodeSsr } from './node-ssr-executor.js'
 import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
@@ -103,7 +104,7 @@ export async function executeOperation(
   const adapterRef = opExt?.adapter as AdapterRef | undefined
   if (adapterRef) {
     const siteRoot = await resolveSiteRoot(site)
-    const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? CDP_ENDPOINT)
+    const browser = deps.browser ?? await ensureBrowser(deps.cdpEndpoint)
     try {
       const adapter = await loadAdapter(siteRoot, adapterRef.name)
       const context = browser.contexts()[0]
@@ -174,7 +175,7 @@ export async function executeOperation(
       body = result.body
       responseHeaders = { ...result.responseHeaders }
     } else {
-      const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? CDP_ENDPOINT)
+      const browser = deps.browser ?? await ensureBrowser(deps.cdpEndpoint)
       try {
         const result = await executeExtraction(browser, spec, operationRef.operation, operationRef.path, params)
         status = result.status
@@ -187,7 +188,7 @@ export async function executeOperation(
       }
     }
   } else if (transport === 'page') {
-    const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? CDP_ENDPOINT)
+    const browser = deps.browser ?? await ensureBrowser(deps.cdpEndpoint)
     try {
       const result = await executeBrowserFetch(
         browser,
@@ -212,50 +213,84 @@ export async function executeOperation(
     const needsBrowser = !!(serverExt?.auth || serverExt?.csrf || serverExt?.signing)
 
     if (needsBrowser) {
-      // Token cache: serialize read→try→fallback→write per site to prevent race conditions
-      const cacheResult = await withTokenLock(site, async () => {
-        const cached = await readTokenCacheUnsafe(site, deps.tokenCacheDir)
+      // ── 4-tier auth cascade ──────────────────────────
+      // Lock is held only for brief cache reads/writes, never during browser ops.
 
-        if (cached && (cached.cookies.length > 0 || Object.keys(cached.localStorage).length > 0)) {
+      // Tier 1: Token cache — brief locked read, release immediately
+      let cacheHit = false
+      const cached = await readTokenCache(site, deps.tokenCacheDir)
+      if (cached && (cached.cookies.length > 0 || Object.keys(cached.localStorage).length > 0)) {
+        try {
+          const cacheResult = await executeCachedFetch(spec, operationRef, serverExt, params, cached, deps)
+          if (cacheResult) {
+            status = cacheResult.status
+            body = cacheResult.body
+            responseHeaders = cacheResult.responseHeaders
+            cacheHit = true
+          }
+        } catch (err) {
+          if (!(err instanceof OpenWebError && err.payload.failureClass === 'needs_login')) throw err
+          // 401/403 from cache — clear stale tokens, fall through to tier 2
+          await clearTokenCache(site, deps.tokenCacheDir)
+        }
+      }
+
+      if (!cacheHit) {
+        // Helper: connect browser, execute, write cache on success
+        const browserSessionExec = async (): Promise<{ result: ExecutorResult; browser: Browser }> => {
+          const browser = deps.browser ?? await ensureBrowser(deps.cdpEndpoint)
           try {
-            return await executeCachedFetch(spec, operationRef, serverExt, params, cached, deps)
+            const result = await executeSessionHttp(
+              browser, spec, operationRef.path, operationRef.method,
+              operationRef.operation, params,
+              { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator },
+            )
+            // Write cache (writeTokenCache inside writeBrowserCookiesToCache has its own lock)
+            await writeBrowserCookiesToCache(browser, site, spec, deps.tokenCacheDir)
+            return { result, browser }
           } catch (err) {
-            // 401/403 means cache is stale — clear and fall through to browser
-            if (err instanceof OpenWebError && err.payload.failureClass === 'needs_login') {
-              await clearTokenCacheUnsafe(site, deps.tokenCacheDir)
-            } else {
-              throw err
-            }
+            if (!deps.browser) browser.close().catch(() => {})
+            throw err
           }
         }
-        return null
-      })
 
-      if (cacheResult) {
-        status = cacheResult.status
-        body = cacheResult.body
-        responseHeaders = cacheResult.responseHeaders
-      } else {
-        const browser = deps.browser ?? await connectWithRetry(deps.cdpEndpoint ?? CDP_ENDPOINT)
         try {
-          const result = await executeSessionHttp(
-            browser,
-            spec,
-            operationRef.path,
-            operationRef.method,
-            operationRef.operation,
-            params,
-            { fetchImpl: deps.fetchImpl, ssrfValidator: deps.ssrfValidator },
-          )
+          // Tier 2: Browser extract — ensureBrowser() → execute in browser context
+          const { result, browser } = await browserSessionExec()
+          if (!deps.browser) browser.close().catch(() => {})
           status = result.status
           body = result.body
           responseHeaders = { ...result.responseHeaders }
+        } catch (err) {
+          if (!(err instanceof OpenWebError && err.payload.failureClass === 'needs_login')) throw err
 
-          // Write cookies to cache for future requests
-          await writeBrowserCookiesToCache(browser, site, spec, deps.tokenCacheDir)
-        } finally {
-          if (!deps.browser) {
-            browser.close().catch(() => {}) // intentional: cleanup — browser may already be closed
+          try {
+            // Tier 3: Profile refresh — re-copy default Chrome profile, retry
+            await refreshProfile()
+            const { result, browser } = await browserSessionExec()
+            if (!deps.browser) browser.close().catch(() => {})
+            status = result.status
+            body = result.body
+            responseHeaders = { ...result.responseHeaders }
+          } catch (err2) {
+            if (!(err2 instanceof OpenWebError && err2.payload.failureClass === 'needs_login')) throw err2
+
+            // Tier 4: User login — open system browser, poll with backoff
+            const serverUrl = getServerUrl(spec, operationRef.operation)
+            await handleLoginRequired(serverUrl, async () => {
+              try {
+                const { result, browser } = await browserSessionExec()
+                if (!deps.browser) browser.close().catch(() => {})
+                status = result.status
+                body = result.body
+                responseHeaders = { ...result.responseHeaders }
+                return true
+              } catch (retryErr) {
+                if (retryErr instanceof OpenWebError && retryErr.payload.failureClass === 'needs_login') return false
+                throw retryErr
+              }
+            })
+            // If handleLoginRequired returns without throwing, status is set
           }
         }
       }
@@ -323,7 +358,7 @@ export async function executeOperation(
 
 // ── Unified Protocol Dispatch ───────────────────────
 
-const OPERATION_TIMEOUT = Number(process.env.OPENWEB_TIMEOUT) || 30_000
+const OPERATION_TIMEOUT = loadConfig().timeout ?? 30_000
 
 /**
  * Route an operation to the correct executor based on protocol.
@@ -352,7 +387,7 @@ export async function dispatchOperation(
         error: 'execution_failed',
         code: 'EXECUTION_FAILED',
         message: `Operation ${operationId} timed out after ${OPERATION_TIMEOUT}ms`,
-        action: 'Increase timeout via OPENWEB_TIMEOUT env variable (milliseconds).',
+        action: 'Increase timeout in $OPENWEB_HOME/config.json (milliseconds).',
         retriable: true,
         failureClass: 'retriable',
       })), OPERATION_TIMEOUT)

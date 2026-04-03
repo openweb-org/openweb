@@ -1,5 +1,6 @@
 import type { Browser, BrowserContext, Page } from 'playwright-core'
 
+import { CDP_PORT } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import type { OpenApiOperation, OpenApiSpec } from '../lib/openapi.js'
 import type { ExtractionPrimitive } from '../types/primitives.js'
@@ -113,7 +114,7 @@ export async function executeExtraction(
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: 'No browser context available. Is Chrome open with the site loaded?',
-      action: `Open Chrome with --remote-debugging-port=${process.env.OPENWEB_CDP_PORT ?? '9222'} and navigate to the site.`,
+      action: `Open Chrome with --remote-debugging-port=${CDP_PORT} and navigate to the site.`,
       retriable: true,
       failureClass: 'needs_browser',
     })

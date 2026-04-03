@@ -4,13 +4,12 @@ import { chmod, copyFile, mkdir, mkdtemp, readFile, readdir, rm, unlink, writeFi
 import { homedir, platform, tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { CDP_PORT, TIMEOUT, openwebHome } from '../lib/config.js'
+import { TIMEOUT, getBrowserConfig, openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 
 const PID_FILE = () => join(openwebHome(), 'browser.pid')
 const PORT_FILE = () => join(openwebHome(), 'browser.port')
 const PROFILE_DIR_FILE = () => join(openwebHome(), 'browser.profile')
-const DEFAULT_PORT = Number(CDP_PORT)
 
 function getDefaultProfilePath(): string {
   const os = platform()
@@ -51,7 +50,7 @@ function getChromePath(): string {
 }
 
 /** Copy only auth-relevant files from Chrome profile (not cache/history) */
-async function copyProfileSelective(src: string, dest: string): Promise<void> {
+export async function copyProfileSelective(src: string, dest: string): Promise<void> {
   await mkdir(dest, { recursive: true, mode: 0o700 })
 
   // Only copy files needed for auth: Cookies, Local Storage, Session Storage, Web Data
@@ -164,7 +163,7 @@ async function killManaged(): Promise<boolean> {
 
   // PID alive but CDP unreachable — cannot verify identity. Don't kill, don't clean up.
   process.stderr.write(
-    `warning: Chrome process (PID ${pid}) may still be running but CDP is unreachable on port ${port ?? DEFAULT_PORT}. ` +
+    `warning: Chrome process (PID ${pid}) may still be running but CDP is unreachable on port ${port ?? getBrowserConfig().port}. ` +
     `Use \`kill -TERM ${pid}\` manually if needed.\n`,
   )
   return false
@@ -182,21 +181,24 @@ async function cleanTempProfile(): Promise<void> {
   } catch { /* already gone */ }
 }
 
-export async function browserStartCommand(options: { headless?: boolean; port?: number; profile?: string } = {}): Promise<void> {
-  const port = options.port ?? DEFAULT_PORT
+export async function browserStartCommand(options: { headless?: boolean; port?: number; profile?: string; silent?: boolean } = {}): Promise<void> {
+  const log = options.silent ? (_msg: string) => {} : (msg: string) => process.stdout.write(msg)
+  const browserConfig = getBrowserConfig()
+  const port = options.port ?? browserConfig.port
+  const headless = options.headless ?? browserConfig.headless
 
   // Check if already running
   const existingPid = await readPid()
   if (existingPid && isProcessAlive(existingPid)) {
     const existingPort = await readPort() ?? port
     if (await isCdpReady(existingPort)) {
-      process.stdout.write(`Chrome already running (PID ${existingPid}) at http://localhost:${existingPort}\n`)
+      log(`Chrome already running (PID ${existingPid}) at http://localhost:${existingPort}\n`)
       return
     }
   }
 
   // Get and copy profile
-  const profilePath = options.profile ?? getDefaultProfilePath()
+  const profilePath = options.profile ?? browserConfig.profile ?? getDefaultProfilePath()
   if (!existsSync(profilePath)) {
     throw new OpenWebError({
       error: 'execution_failed', code: 'EXECUTION_FAILED',
@@ -220,7 +222,7 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
     '--no-first-run',
     '--no-default-browser-check',
   ]
-  if (options.headless) {
+  if (headless) {
     args.push('--headless=new')
   }
 
@@ -247,13 +249,14 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
 
   // Wait for CDP
   await waitForCdp(port)
-  process.stdout.write(`Chrome started (PID ${child.pid}) at http://localhost:${port}\n`)
+  log(`Chrome started (PID ${child.pid}) at http://localhost:${port}\n`)
 }
 
-export async function browserStopCommand(): Promise<void> {
+export async function browserStopCommand(options: { silent?: boolean } = {}): Promise<void> {
+  const log = options.silent ? (_msg: string) => {} : (msg: string) => process.stdout.write(msg)
   const pid = await readPid()
   if (!pid || !isProcessAlive(pid)) {
-    process.stdout.write('No managed Chrome process running.\n')
+    log('No managed Chrome process running.\n')
     try { await unlink(PID_FILE()) } catch { /* already gone */ }
     try { await unlink(PORT_FILE()) } catch { /* already gone */ }
     await cleanTempProfile()
@@ -263,7 +266,7 @@ export async function browserStopCommand(): Promise<void> {
   const stopped = await killManaged()
   if (stopped) {
     await cleanTempProfile()
-    process.stdout.write('Chrome stopped.\n')
+    log('Chrome stopped.\n')
   }
   // If not stopped, killManaged already printed the warning
 }
@@ -294,8 +297,8 @@ export async function restoreTabs(port: number, urls: string[]): Promise<void> {
   }
 }
 
-export async function browserRestartCommand(options: { headless?: boolean; port?: number; profile?: string } = {}): Promise<void> {
-  const port = options.port ?? (await readPort()) ?? DEFAULT_PORT
+export async function browserRestartCommand(options: { headless?: boolean; port?: number; profile?: string; silent?: boolean } = {}): Promise<void> {
+  const port = options.port ?? (await readPort()) ?? getBrowserConfig().port
 
   // Save open tab URLs before killing
   const tabUrls = await getOpenTabUrls(port)
@@ -319,15 +322,17 @@ export async function browserRestartCommand(options: { headless?: boolean; port?
 
   // Restore previously open tabs
   if (tabUrls.length > 0) {
-    const activePort = options.port ?? (await readPort()) ?? DEFAULT_PORT
+    const activePort = options.port ?? (await readPort()) ?? getBrowserConfig().port
     await restoreTabs(activePort, tabUrls)
-    process.stdout.write(`Restored ${tabUrls.length} tab(s).\n`)
+    if (!options.silent) {
+      process.stdout.write(`Restored ${tabUrls.length} tab(s).\n`)
+    }
   }
 }
 
 export async function browserStatusCommand(): Promise<void> {
   const pid = await readPid()
-  const port = await readPort() ?? DEFAULT_PORT
+  const port = await readPort() ?? getBrowserConfig().port
 
   if (!pid) {
     process.stdout.write('No managed Chrome. Run: openweb browser start\n')

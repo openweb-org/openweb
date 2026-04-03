@@ -2,10 +2,10 @@ import crypto from 'node:crypto'
 import { readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
-import { chromium } from 'playwright-core'
 
 import { createCaptureSession } from '../capture/session.js'
 import { OpenWebError } from '../lib/errors.js'
+import { ensureBrowser } from '../runtime/browser-lifecycle.js'
 
 const PID_PREFIX = '.openweb-capture-'
 const PID_SUFFIX = '.pid'
@@ -19,7 +19,7 @@ function generateSessionId(): string {
 }
 
 export interface CaptureStartOptions {
-  readonly cdpEndpoint: string
+  readonly cdpEndpoint?: string
   readonly output?: string
   readonly isolate?: boolean
   readonly url?: string
@@ -31,7 +31,7 @@ export async function captureStartCommand(opts: CaptureStartOptions): Promise<vo
       error: 'invalid_params',
       code: 'INVALID_PARAMS',
       message: '--isolate requires --url <url>',
-      action: 'Provide a URL: openweb capture start --isolate --url https://example.com --cdp-endpoint ...',
+      action: 'Provide a URL: openweb capture start --isolate --url https://example.com',
       retriable: false,
       failureClass: 'fatal',
     })
@@ -44,10 +44,11 @@ export async function captureStartCommand(opts: CaptureStartOptions): Promise<vo
   // Print session ID first (stdout) so callers can capture it: SESSION=$(openweb capture start ...)
   process.stdout.write(`${sessionId}\n`)
 
+  // Resolve CDP endpoint: use explicit flag, or auto-start managed browser
   let isolatedPage: import('playwright-core').Page | undefined
 
   if (opts.isolate) {
-    const browser = await chromium.connectOverCDP(opts.cdpEndpoint)
+    const browser = await ensureBrowser(opts.cdpEndpoint)
     const context = browser.contexts()[0]
     if (!context) throw new Error('No browser context found')
     isolatedPage = await context.newPage()
@@ -104,7 +105,7 @@ export async function captureStopCommand(opts?: CaptureStopOptions): Promise<voi
         error: 'execution_failed',
         code: 'EXECUTION_FAILED',
         message: 'No active capture session found.',
-        action: 'Start a capture first with: openweb capture start --cdp-endpoint <url>',
+        action: 'Start a capture first with: openweb capture start',
         retriable: false,
         failureClass: 'fatal',
       })
@@ -135,7 +136,7 @@ export async function captureStopCommand(opts?: CaptureStopOptions): Promise<voi
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
       message: `No active capture session found for session ${sessionId}.`,
-      action: 'Start a capture first with: openweb capture start --cdp-endpoint <url>',
+      action: 'Start a capture first with: openweb capture start',
       retriable: false,
       failureClass: 'fatal',
     })

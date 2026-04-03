@@ -151,7 +151,7 @@ Playwright connection.
 For complex programmatic capture (many endpoints, varied parameters), use a
 two-phase approach instead of inline `page.evaluate` calls:
 
-1. **Phase 1 — Capture:** `openweb capture start` → run your script → `openweb capture stop`
+1. **Phase 1 — Capture:** `openweb capture start` (auto-starts browser if not running) → run your script → `openweb capture stop`
 2. **Phase 2 — Compile:** `openweb compile <site-url> --capture-dir ./capture`
 
 This separates capture from compilation, giving you direct stderr visibility
@@ -228,7 +228,7 @@ For use with `openweb capture start` → script → `openweb capture stop`:
 ```typescript
 import { chromium } from 'playwright'
 
-const cdpEndpoint = `http://localhost:${process.env.OPENWEB_CDP_PORT ?? '9222'}`
+const cdpEndpoint = 'http://localhost:9222' // auto-detected from managed browser; override via "browser.port" in ~/.openweb/config.json
 const browser = await chromium.connectOverCDP(cdpEndpoint)
 const context = browser.contexts()[0]!
 const page = context.pages()[0]!  // use the page capture is already monitoring
@@ -240,6 +240,11 @@ connection it was started on. If your script opens a second `connectOverCDP()`
 connection, `page.evaluate(fetch(...))` traffic from that connection will NOT
 appear in the HAR. Always reuse `context.pages()[0]` from the same connection,
 or open new tabs via `context.newPage()` on the existing context.
+
+**Note:** `openweb capture start` auto-starts the managed browser if one isn't
+already running. You don't need to run `openweb browser start` first. If you need
+a custom CDP endpoint (e.g., an external browser), pass `--cdp-endpoint <url>`
+to `openweb capture start`.
 
 ```typescript
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -295,7 +300,7 @@ const { values } = parseArgs({ options: { out: { type: 'string' } }, strict: fal
 const outputDir = values.out
 if (!outputDir) { process.stderr.write('Usage: --out <dir>\n'); process.exit(1) }
 
-const cdpEndpoint = `http://localhost:${process.env.OPENWEB_CDP_PORT ?? '9222'}`
+const cdpEndpoint = 'http://localhost:9222' // auto-detected from managed browser; override via "browser.port" in ~/.openweb/config.json
 const browser = await chromium.connectOverCDP(cdpEndpoint)
 const context = browser.contexts()[0]!
 const page = await context.newPage()
@@ -339,13 +344,13 @@ worker starts its own **isolated** capture session — no cross-contamination.
 
 ```bash
 # Worker A (discovering discord.com)
-SESSION_A=$(openweb capture start --isolate --url https://discord.com --cdp-endpoint http://localhost:9222)
+SESSION_A=$(openweb capture start --isolate --url https://discord.com)
 # browse discord in the auto-opened tab, or use page.evaluate(fetch) in a script
 openweb capture stop --session $SESSION_A
 openweb compile https://discord.com --capture-dir ./capture-$SESSION_A
 
 # Worker B (discovering reddit.com) — simultaneously
-SESSION_B=$(openweb capture start --isolate --url https://reddit.com --cdp-endpoint http://localhost:9222)
+SESSION_B=$(openweb capture start --isolate --url https://reddit.com)
 # browse reddit
 openweb capture stop --session $SESSION_B
 openweb compile https://reddit.com --capture-dir ./capture-$SESSION_B

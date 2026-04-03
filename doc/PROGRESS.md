@@ -232,7 +232,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 
 **What changed:**
 - `recorder.ts`: 120s timeout on child process (SIGTERM → SIGKILL after 5s grace). Restores timeout lost in blanket revert of commit 1b910e9.
-- `config.ts`: `TIMEOUT.recording` (env-overridable via `OPENWEB_RECORDING_TIMEOUT`)
+- `config.ts`: `TIMEOUT.recording` (configurable via `"recordingTimeout"` in `~/.openweb/config.json`)
 - `capture-script-guide.md`: new reference doc — timeout discipline table, two-phase and --script templates
 - `record_discord.ts`: reference script with `waitUntil:'load'`, AbortController on fetch, bounded cleanup, `process.exit(0)`
 - Updated SKILL.md, cli.md, discover.md to reference capture-script-guide.md
@@ -501,7 +501,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 - `risk_tier` removed from generator and schema (unused)
 
 **Runtime ergonomics:**
-- Operation timeout (30s default, `OPENWEB_TIMEOUT` configurable) with timer leak fix
+- Operation timeout (30s default, `"timeout"` in config.json) with timer leak fix
 - Token cache deadlock fix: 10s lock acquisition timeout, `_unsafe` lock-free variants
 - Auto-navigate fallback: opens new tab when no matching page exists
 - JSON auto-stringify: object values auto-stringify for string params with `x-openweb-json-schema`
@@ -558,7 +558,7 @@ All sites verified: bloomberg(6/6), reuters(3/3), weibo(8/8), tripadvisor(4/4), 
 ## 2026-03-27: Runtime ergonomics fixes
 
 **What changed:**
-- Operation timeout in `dispatchOperation` — 30s default, configurable via `OPENWEB_TIMEOUT` env. Fixed timer leak (cleared via `.finally()`)
+- Operation timeout in `dispatchOperation` — 30s default, configurable via `"timeout"` in `~/.openweb/config.json`. Fixed timer leak (cleared via `.finally()`)
 - Auto-navigate fallback in session-executor — when no matching page exists, opens a new tab to the site URL before throwing `needs_page`
 - Token cache `withLock` — 10s lock acquisition timeout prevents deadlocks on stale locks
 - JSON auto-stringify in param-validator — object values auto-stringify for string params with `x-openweb-json-schema`

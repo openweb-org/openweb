@@ -14,7 +14,7 @@ import { showCommand } from './commands/show.js'
 import { sitesCommand } from './commands/sites.js'
 import { testCommand } from './commands/test.js'
 import { verifyCommand } from './commands/verify.js'
-import { CDP_ENDPOINT, CDP_PORT, openwebHome } from './lib/config.js'
+import { CDP_ENDPOINT, openwebHome } from './lib/config.js'
 import { OpenWebError, toOpenWebError, writeErrorToStderr } from './lib/errors.js'
 
 function isJsonObject(s: string): boolean {
@@ -196,8 +196,7 @@ await yargs(argv)
             sub
               .option('cdp-endpoint', {
                 type: 'string',
-                demandOption: true,
-                describe: `Chrome DevTools Protocol endpoint (e.g. ${CDP_ENDPOINT})`,
+                describe: `Chrome DevTools Protocol endpoint (e.g. ${CDP_ENDPOINT}). Auto-starts managed browser if omitted.`,
               })
               .option('output', { type: 'string', describe: 'Output directory (default: ./capture)' })
               .option('isolate', { type: 'boolean', describe: 'Isolate capture to a single page (for multi-worker)' })
@@ -205,7 +204,7 @@ await yargs(argv)
           async (args) => {
             await withErrorHandling(async () => {
               await captureStartCommand({
-                cdpEndpoint: String(args['cdp-endpoint']),
+                cdpEndpoint: args['cdp-endpoint'] ? String(args['cdp-endpoint']) : undefined,
                 output: args.output ? String(args.output) : undefined,
                 isolate: args.isolate ?? false,
                 url: args.url ? String(args.url) : undefined,
@@ -291,13 +290,17 @@ await yargs(argv)
           choices: ['start', 'stop', 'restart', 'status'] as const,
           describe: 'Browser action',
         })
-        .option('headless', { type: 'boolean', default: false, describe: 'Run headless' })
-        .option('port', { type: 'number', default: Number(CDP_PORT), describe: 'CDP port' })
-        .option('profile', { type: 'string', describe: 'Chrome profile directory to copy from (default: system Chrome default profile)' }),
+        .option('headless', { type: 'boolean', describe: 'Run headless (default: from config, true)' })
+        .option('port', { type: 'number', describe: 'CDP port (default: from config, 9222)' })
+        .option('profile', { type: 'string', describe: 'Chrome profile directory to copy from (default: from config or system Chrome default profile)' }),
     async (args) => {
       await withErrorHandling(async () => {
         const action = String(args.action)
-        const opts = { headless: Boolean(args.headless), port: Number(args.port), profile: args.profile ? String(args.profile) : undefined }
+        const opts = {
+          headless: args.headless as boolean | undefined,
+          port: args.port as number | undefined,
+          profile: args.profile ? String(args.profile) : undefined,
+        }
         if (action === 'start') await browserStartCommand(opts)
         else if (action === 'stop') await browserStopCommand()
         else if (action === 'restart') await browserRestartCommand(opts)

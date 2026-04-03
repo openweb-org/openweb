@@ -1,8 +1,8 @@
 import type { Browser, BrowserContext, CDPSession, Page } from 'playwright'
 
 import { logger } from '../lib/logger.js'
+import { ensureBrowser } from '../runtime/browser-lifecycle.js'
 import { writeCaptureBundle } from './bundle.js'
-import { connectWithRetry } from './connection.js'
 import { captureDomAndGlobals } from './dom-capture.js'
 import { type HarCapture, attachHarCapture, buildHarLog } from './har-capture.js'
 import { captureStateSnapshot } from './state-capture.js'
@@ -10,7 +10,7 @@ import type { CaptureMetadata, DomExtraction, StateSnapshot } from './types.js'
 import { type WsCapture, attachWsCapture } from './ws-capture.js'
 
 export interface CaptureSessionOptions {
-  readonly cdpEndpoint: string
+  readonly cdpEndpoint?: string
   readonly outputDir: string
   readonly onLog?: (message: string) => void
   /** If provided, capture attaches to this specific page instead of pages()[0] */
@@ -221,8 +221,8 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
   // Main capture loop
   void (async () => {
     try {
-      log(`connecting to ${opts.cdpEndpoint} ...`)
-      const browser = await connectWithRetry(opts.cdpEndpoint, 3, abortController.signal)
+      log(`connecting to ${opts.cdpEndpoint ?? 'managed browser'} ...`)
+      const browser = await ensureBrowser(opts.cdpEndpoint)
       browserRef = browser
       const context = browser.contexts()[0]
       if (!context) throw new Error('No browser context found. Open a page in Chrome first.')

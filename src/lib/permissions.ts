@@ -1,11 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-
-import { parse } from 'yaml'
-
 import type { PermissionCategory } from '../types/extensions.js'
-import { openwebHome } from './config.js'
-import { logger } from './logger.js'
+import { loadConfig } from './config.js'
 
 export type Policy = 'allow' | 'prompt' | 'deny'
 
@@ -66,22 +60,10 @@ function parseConfig(raw: unknown): PermissionsConfig | null {
   return { defaults, sites }
 }
 
-export function loadPermissions(configPath?: string): PermissionsConfig {
-  const filePath = configPath ?? join(openwebHome(), 'permissions.yaml')
-  try {
-    const raw = readFileSync(filePath, 'utf8')
-    const parsed = parse(raw) as unknown
-    const config = parseConfig(parsed)
-    if (config) return config
-    logger.warn(`permissions file ${filePath} has invalid structure — using defaults`)
-  } catch (err) {
-    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
-      logger.debug(`permissions file not found: ${filePath}`)
-    } else {
-      logger.warn(`failed to read permissions file ${filePath}: ${err instanceof Error ? err.message : String(err)}`)
-    }
-  }
-  return DEFAULT_PERMISSIONS
+export function loadPermissions(): PermissionsConfig {
+  const config = loadConfig()
+  if (!config.permissions) return DEFAULT_PERMISSIONS
+  return parseConfig(config.permissions) ?? DEFAULT_PERMISSIONS
 }
 
 export function checkPermission(

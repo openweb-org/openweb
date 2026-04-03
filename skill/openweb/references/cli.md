@@ -42,13 +42,26 @@ openweb <site> exec <op> '{}' --output file
 - Exit 0 = success, 1 = failure
 - Auto-spill: responses over `--max-response` (default 4096 bytes) write to temp file; stdout returns `{status, output, size, truncated}`
 
-**Environment variables:**
-- `OPENWEB_DEBUG=1` — verbose debug output (request/response details)
-- `OPENWEB_TIMEOUT=<ms>` — operation timeout (default 30000ms)
-- `OPENWEB_CDP_PORT=<port>` — CDP port override
-- `OPENWEB_USER_AGENT=<string>` — custom User-Agent
+**Configuration (`~/.openweb/config.json`):**
+```json
+{
+  "debug": true,                // verbose debug output (request/response details)
+  "timeout": 30000,             // operation timeout in ms (default 30000)
+  "recordingTimeout": 120000,   // compile --script timeout in ms (default 120000)
+  "userAgent": "...",           // custom User-Agent
+  "browser": {
+    "port": 9222,               // CDP port (default 9222)
+    "headless": true,           // headless mode (default true)
+    "profile": "/path/to/dir"   // Chrome profile directory
+  }
+}
+```
 
 ## Browser Management
+
+The CLI auto-starts a managed headless browser when an operation requires one. No manual setup needed — `exec` launches Chrome on demand and connects automatically.
+
+For manual control, these commands are available as optional overrides:
 
 ```bash
 openweb browser start [--headless] [--port 9222] [--profile <dir>]
@@ -57,7 +70,7 @@ openweb browser restart        # re-copy profile + clear token cache
 openweb browser status
 ```
 
-**How it works:** `browser start` copies auth-relevant files from your default Chrome profile (or `--profile <dir>`) to a temp directory, then launches Chrome with `--remote-debugging-port=9222`. When running, `exec` auto-detects it — no `--cdp-endpoint` needed.
+**How it works:** When a browser is needed, the CLI copies auth-relevant files from your default Chrome profile (or `--profile <dir>`) to a temp directory, then launches Chrome with `--remote-debugging-port=9222`. `exec` auto-detects the running instance — no `--cdp-endpoint` needed. `browser start` is only needed if you want to pre-launch with specific options (e.g., a custom profile or port).
 
 **Token caching:** Successful auth requests cache cookies in `$OPENWEB_HOME/tokens/<site>/` (default `~/.openweb/tokens/<site>/`). Cache auto-expires by TTL (1h default or JWT exp). `browser restart` clears the cache.
 
@@ -74,8 +87,9 @@ After login: `openweb verify <site>` to confirm auth works.
 ## Capture
 
 ```bash
-openweb capture start --cdp-endpoint http://localhost:9222
-openweb capture start --isolate --url https://example.com --cdp-endpoint http://localhost:9222
+openweb capture start                       # auto-starts browser if not running
+openweb capture start --cdp-endpoint http://localhost:9222  # explicit CDP endpoint
+openweb capture start --isolate --url https://example.com   # isolated tab capture
 openweb capture stop
 openweb capture stop --session <id>
 ```
@@ -84,7 +98,7 @@ Records browser traffic for later compilation. Prints a session ID to stdout.
 
 | Flag | Purpose |
 |------|---------|
-| `--cdp-endpoint <url>` | Chrome DevTools Protocol endpoint (required) |
+| `--cdp-endpoint <url>` | Chrome DevTools Protocol endpoint (optional — auto-detected from managed browser) |
 | `--output <dir>` | Output directory (default: `./capture/` or `./capture-<session>/` with `--isolate`) |
 | `--isolate` | Isolate capture to a single new tab (for multi-worker) |
 | `--url <url>` | URL to navigate (required with `--isolate`) |
