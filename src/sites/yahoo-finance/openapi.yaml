@@ -12,7 +12,7 @@ paths:
   /v1/finance/search:
     get:
       operationId: searchTickers
-      summary: Search for tickers, companies, ETFs, indices by keyword
+      summary: Search tickers by keyword — returns symbol, shortname, quoteType, exchange, sector; related news
       x-openweb:
         transport: node
         permission: read
@@ -116,7 +116,7 @@ paths:
   /v8/finance/chart/{symbol}:
     get:
       operationId: getChart
-      summary: Get historical OHLCV chart data for a symbol
+      summary: Get historical OHLCV chart data — timestamp, open, high, low, close, volume; meta has regularMarketPrice
       x-openweb:
         transport: node
         permission: read
@@ -277,7 +277,7 @@ paths:
   /v7/finance/spark:
     get:
       operationId: getSparkline
-      summary: Get sparkline (mini chart) data for multiple symbols
+      summary: Get sparkline price data for multiple symbols — regularMarketPrice, previousClose, close[] per symbol
       x-openweb:
         transport: node
         permission: read
@@ -384,7 +384,7 @@ paths:
   /v1/finance/screener/predefined/saved:
     get:
       operationId: getScreener
-      summary: Get predefined stock screener results (most active, gainers, losers)
+      summary: Get predefined stock screener — symbol, shortName, regularMarketPrice, change, changePercent, volume, marketCap
       x-openweb:
         transport: node
         permission: read
@@ -532,7 +532,7 @@ paths:
   /v2/ratings/top/{symbol}:
     get:
       operationId: getRatings
-      summary: Get top analyst ratings for a symbol
+      summary: Get top analyst ratings — analyst, rating_current, pt_current, rating_sentiment per category (dir, mm, pt, fin_score)
       x-openweb:
         transport: node
         permission: read
@@ -577,6 +577,36 @@ paths:
                         type: string
                       ticker:
                         type: string
+                      dir:
+                        type: object
+                        properties:
+                          raw:
+                            type: number
+                          fmt:
+                            type: integer
+                      mm:
+                        type: object
+                        properties:
+                          raw:
+                            type: number
+                          fmt:
+                            type: integer
+                      pt:
+                        type: object
+                        properties:
+                          raw:
+                            type: number
+                          fmt:
+                            type: integer
+                      fin_score:
+                        type: object
+                        properties:
+                          raw:
+                            type: number
+                          fmt:
+                            type: integer
+                      datapoints:
+                        type: integer
                       rating_current:
                         type: [string, 'null']
                       rating_sentiment:
@@ -594,6 +624,13 @@ paths:
                         type: string
                       ticker:
                         type: string
+                      mm:
+                        type: object
+                        properties:
+                          raw:
+                            type: number
+                          fmt:
+                            type: integer
                       rating_current:
                         type: [string, 'null']
                       pt_current:
@@ -605,6 +642,13 @@ paths:
                         type: string
                       ticker:
                         type: string
+                      pt:
+                        type: object
+                        properties:
+                          raw:
+                            type: number
+                          fmt:
+                            type: integer
                       rating_current:
                         type: [string, 'null']
                       pt_current:
@@ -616,6 +660,13 @@ paths:
                         type: string
                       ticker:
                         type: string
+                      fin_score:
+                        type: object
+                        properties:
+                          raw:
+                            type: number
+                          fmt:
+                            type: integer
                       rating_current:
                         type: [string, 'null']
                       pt_current:
@@ -790,7 +841,7 @@ paths:
   /ws/fundamentals-timeseries/v1/finance/timeseries/{symbol}:
     get:
       operationId: getTimeSeries
-      summary: Get financial fundamentals time series (revenue, earnings, etc.)
+      summary: Get financial fundamentals time series — reportedValue.raw per metric type (annualTotalRevenue, annualNetIncome, etc.) with timestamps
       x-openweb:
         transport: node
         permission: read
@@ -880,6 +931,27 @@ paths:
                               type: array
                               items:
                                 type: integer
+                          additionalProperties:
+                            type: array
+                            description: Dynamic key matching the requested metric type (e.g. annualTotalRevenue).
+                            items:
+                              type: object
+                              properties:
+                                dataId:
+                                  type: integer
+                                asOfDate:
+                                  type: string
+                                periodType:
+                                  type: string
+                                currencyCode:
+                                  type: string
+                                reportedValue:
+                                  type: object
+                                  properties:
+                                    raw:
+                                      type: number
+                                    fmt:
+                                      type: string
                       error:
                         type: ['null', string]
       servers:
@@ -982,6 +1054,28 @@ paths:
                             type: array
                             items:
                               type: object
+                              properties:
+                                timestamp:
+                                  type: integer
+                                timestampString:
+                                  type: string
+                                count:
+                                  type: integer
+                                records:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      ticker:
+                                        type: string
+                                      companyShortName:
+                                        type: string
+                                      splitFrom:
+                                        type: string
+                                      splitTo:
+                                        type: string
+                                      optionableDate:
+                                        type: string
       servers:
         - url: https://query2.finance.yahoo.com
   /v1/finance/quoteType/:
