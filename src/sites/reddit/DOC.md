@@ -61,6 +61,8 @@ openweb reddit exec getSubredditAbout '{"subreddit": "programming"}'
 
 ## Site Internals
 
+Everything below is for discover/compile operators and deep debugging.
+
 ## API Architecture
 - Public read API via `www.reddit.com` — append `.json` to any Reddit URL for JSON
 - Authenticated ops use `oauth.reddit.com` (getMe) or www.reddit.com with cookies (vote, savePost)

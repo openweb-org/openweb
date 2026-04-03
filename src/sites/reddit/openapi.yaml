@@ -94,6 +94,42 @@ paths:
                               type: string
                             data:
                               type: object
+                              properties:
+                                id:
+                                  type: string
+                                name:
+                                  type: string
+                                title:
+                                  type: string
+                                author:
+                                  type: string
+                                subreddit:
+                                  type: string
+                                score:
+                                  type: integer
+                                num_comments:
+                                  type: integer
+                                url:
+                                  type: string
+                                permalink:
+                                  type: string
+                                selftext:
+                                  type: string
+                                created_utc:
+                                  type: number
+                                is_self:
+                                  type: boolean
+                                over_18:
+                                  type: boolean
+                                stickied:
+                                  type: boolean
+                                thumbnail:
+                                  type: string
+                                domain:
+                                  type: string
+                                link_flair_text:
+                                  type: string
+                                  nullable: true
 
   /r/popular.json:
     get:
@@ -147,6 +183,42 @@ paths:
                               type: string
                             data:
                               type: object
+                              properties:
+                                id:
+                                  type: string
+                                name:
+                                  type: string
+                                title:
+                                  type: string
+                                author:
+                                  type: string
+                                subreddit:
+                                  type: string
+                                score:
+                                  type: integer
+                                num_comments:
+                                  type: integer
+                                url:
+                                  type: string
+                                permalink:
+                                  type: string
+                                selftext:
+                                  type: string
+                                created_utc:
+                                  type: number
+                                is_self:
+                                  type: boolean
+                                over_18:
+                                  type: boolean
+                                stickied:
+                                  type: boolean
+                                thumbnail:
+                                  type: string
+                                domain:
+                                  type: string
+                                link_flair_text:
+                                  type: string
+                                  nullable: true
 
   /search.json:
     get:
@@ -241,6 +313,37 @@ paths:
                               type: string
                             data:
                               type: object
+                              properties:
+                                id:
+                                  type: string
+                                name:
+                                  type: string
+                                title:
+                                  type: string
+                                author:
+                                  type: string
+                                subreddit:
+                                  type: string
+                                score:
+                                  type: integer
+                                num_comments:
+                                  type: integer
+                                url:
+                                  type: string
+                                permalink:
+                                  type: string
+                                selftext:
+                                  type: string
+                                created_utc:
+                                  type: number
+                                is_self:
+                                  type: boolean
+                                over_18:
+                                  type: boolean
+                                thumbnail:
+                                  type: string
+                                domain:
+                                  type: string
 
   /r/{subreddit}/comments/{post_id}.json:
     get:
@@ -317,6 +420,45 @@ paths:
                                 type: string
                               data:
                                 type: object
+                                description: >-
+                                  Post data (kind=t3) in listing[0], comment data (kind=t1) in listing[1].
+                                  Posts have title, selftext, author, score; comments have body, author, score, depth, replies.
+                                properties:
+                                  id:
+                                    type: string
+                                  name:
+                                    type: string
+                                  author:
+                                    type: string
+                                  score:
+                                    type: integer
+                                  created_utc:
+                                    type: number
+                                  permalink:
+                                    type: string
+                                  title:
+                                    type: string
+                                    description: Post title (t3 only)
+                                  selftext:
+                                    type: string
+                                    description: Post body text (t3 only)
+                                  body:
+                                    type: string
+                                    description: Comment body text (t1 only)
+                                  depth:
+                                    type: integer
+                                    description: Nesting depth (t1 only)
+                                  parent_id:
+                                    type: string
+                                    description: Parent fullname (t1 only)
+                                  is_submitter:
+                                    type: boolean
+                                    description: Whether commenter is OP (t1 only)
+                                  replies:
+                                    description: Nested comment listing (t1 only), empty string if no replies
+                                    oneOf:
+                                      - type: object
+                                      - type: string
 
   /user/{username}/about.json:
     get:
@@ -446,8 +588,42 @@ paths:
                           properties:
                             kind:
                               type: string
+                              description: "t3 for posts, t1 for comments"
                             data:
                               type: object
+                              description: >-
+                                Mixed posts and comments. Posts (t3) have title, url, num_comments;
+                                comments (t1) have body, parent_id.
+                              properties:
+                                id:
+                                  type: string
+                                name:
+                                  type: string
+                                author:
+                                  type: string
+                                subreddit:
+                                  type: string
+                                score:
+                                  type: integer
+                                created_utc:
+                                  type: number
+                                permalink:
+                                  type: string
+                                title:
+                                  type: string
+                                  description: Post title (t3 only)
+                                selftext:
+                                  type: string
+                                  description: Post body text (t3 only)
+                                body:
+                                  type: string
+                                  description: Comment body text (t1 only)
+                                url:
+                                  type: string
+                                  description: Link URL (t3 only)
+                                parent_id:
+                                  type: string
+                                  description: Parent fullname (t1 only)
 
   /r/{subreddit}/about.json:
     get:
