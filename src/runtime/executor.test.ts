@@ -91,7 +91,7 @@ describe('permission gate', () => {
 
   it('blocks write operations with permission_required on default config', async () => {
     await expect(
-      executeOperation('steam', 'addToWishlist', {}, {
+      executeOperation('target', 'addToCart', {}, {
         permissionsConfig: defaultPermissions,
       }),
     ).rejects.toMatchObject({
@@ -104,17 +104,17 @@ describe('permission gate', () => {
 
   it('allows write operations when site override permits', async () => {
     const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({ success: true, wishlistCount: 5 }), {
+      new Response(JSON.stringify({ cart_id: 'abc', total_cart_item_quantity: 1 }), {
         status: 201,
         headers: { 'content-type': 'application/json' },
       }),
     ) as unknown as typeof fetch
 
-    const result = await executeOperation('steam', 'addToWishlist', {}, {
+    const result = await executeOperation('target', 'addToCart', { cart_item: { tcin: '91252434' } }, {
       fetchImpl: fetchMock,
       permissionsConfig: {
         defaults: defaultPermissions.defaults,
-        sites: { 'steam': { write: 'allow' } },
+        sites: { 'target': { write: 'allow' } },
       },
     })
 

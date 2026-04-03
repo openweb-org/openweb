@@ -269,7 +269,7 @@ paths:
   /cart/api/v1/addToCart:
     post:
       operationId: addToCart
-      summary: Add a product to the shopping cart by SKU ID
+      summary: Add a product to the shopping cart by SKU ID — returns cartCount, subtotal, item price details
       x-openweb:
         permission: write
         safety: caution

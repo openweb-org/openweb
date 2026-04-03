@@ -29,16 +29,16 @@ Apple Podcasts content platform — search, browse, and get details for podcasts
 
 ```bash
 # Search podcasts
-openweb apple-podcasts exec searchPodcasts '{"term":"technology","platform":"web"}'
+openweb apple-podcasts exec searchPodcasts '{"term":"technology"}'
 
 # Get podcast details with episodes
-openweb apple-podcasts exec getPodcast '{"id":"917918570","extend":["editorialArtwork","feedUrl","userRating"],"include":["episodes"],"l":"en-US","limit[episodes]":10}'
+openweb apple-podcasts exec getPodcast '{"id":"917918570","extend":["editorialArtwork","feedUrl","userRating"],"include":["episodes"],"limit[episodes]":10}'
 
 # Autocomplete suggestions
-openweb apple-podcasts exec getSearchSuggestions '{"term":"tech","platform":"web"}'
+openweb apple-podcasts exec getSearchSuggestions '{"term":"tech"}'
 
 # Top charts
-openweb apple-podcasts exec getTopCharts '{"name":"search-landing","platform":"web"}'
+openweb apple-podcasts exec getTopCharts '{"name":"search-landing"}'
 ```
 
 ---

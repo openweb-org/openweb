@@ -8,7 +8,7 @@ import { renderOperation, renderSite, renderSiteJson, safeReadNotes } from './na
 describe('navigator', () => {
   it('renders site with readiness metadata', async () => {
     const output = await renderSite('steam')
-    expect(output).toContain('14 operations')
+    expect(output).toContain('11 operations')
     expect(output).toContain('Transport:        node')
     expect(output).toContain('Requires browser: no')
     expect(output).toContain('Requires login:   no')

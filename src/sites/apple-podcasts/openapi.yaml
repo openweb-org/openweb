@@ -51,7 +51,7 @@ paths:
             - feedUrl
       responses:
         "200":
-          description: Search results grouped by type (top, podcasts, episodes).
+          description: Search results grouped by type (top, shows, episodes).
           content:
             application/json:
               schema:
@@ -60,26 +60,26 @@ paths:
                   results:
                     type: object
                     properties:
-                      top:
-                        type: object
-                        properties:
-                          name:
-                            type: string
-                          data:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                type:
-                                  type: string
-                                attributes:
-                                  type: object
-                      podcasts:
-                        type: object
-                      podcast-episodes:
-                        type: object
+                      groups:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            groupId:
+                              type: string
+                            name:
+                              type: string
+                            data:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  type:
+                                    type: string
+                                  attributes:
+                                    type: object
   /v1/catalog/us/podcasts/{id}:
     get:
       operationId: getPodcast
@@ -162,15 +162,30 @@ paths:
                               type: string
                             description:
                               type: object
+                              properties:
+                                standard:
+                                  type: string
                             artwork:
                               type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
                             genreNames:
                               type: array
                               items:
                                 type: string
                             feedUrl:
                               type: string
-                              format: uri
+                            url:
+                              type: string
+                            contentRating:
+                              type: string
+                            trackCount:
+                              type: integer
                         relationships:
                           type: object
                   included:
@@ -219,6 +234,13 @@ paths:
                         type: array
                         items:
                           type: object
+                          properties:
+                            kind:
+                              type: string
+                            searchTerm:
+                              type: string
+                            displayTerm:
+                              type: string
   /v1/editorial/us/groupings:
     get:
       operationId: getTopCharts
@@ -265,5 +287,10 @@ paths:
                           type: string
                         attributes:
                           type: object
-                        relationships:
-                          type: object
+                          properties:
+                            name:
+                              type: string
+                            genreNames:
+                              type: array
+                              items:
+                                type: string
