@@ -40,8 +40,32 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
+                  home:
                     type: object
+                    properties:
+                      home_timeline_urt:
+                        type: object
+                        properties:
+                          instructions:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                type:
+                                  type: string
+                                entries:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      entryId:
+                                        type: string
+                                      sortIndex:
+                                        type: string
+                                      content:
+                                        type: object
+                          metadata:
+                            type: object
 
   /internal/getTweetDetail:
     get:
@@ -71,8 +95,29 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
+                  threaded_conversation_with_injections_v2:
                     type: object
+                    properties:
+                      instructions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            type:
+                              type: string
+                            entries:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  entryId:
+                                    type: string
+                                  sortIndex:
+                                    type: string
+                                  content:
+                                    type: object
+                      metadata:
+                        type: object
 
   /internal/getUserByScreenName:
     get:
@@ -103,8 +148,49 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
+                  user:
                     type: object
+                    properties:
+                      result:
+                        type: object
+                        properties:
+                          __typename:
+                            type: string
+                          rest_id:
+                            type: string
+                          is_blue_verified:
+                            type: boolean
+                          core:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              screen_name:
+                                type: string
+                              created_at:
+                                type: string
+                          legacy:
+                            type: object
+                            properties:
+                              description:
+                                type: string
+                              followers_count:
+                                type: integer
+                              friends_count:
+                                type: integer
+                              statuses_count:
+                                type: integer
+                              media_count:
+                                type: integer
+                              profile_banner_url:
+                                type: string
+                          verification:
+                            type: object
+                            properties:
+                              verified:
+                                type: boolean
+                              verified_type:
+                                type: string
 
   /internal/searchTweets:
     get:
@@ -150,8 +236,35 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
+                  search_by_raw_query:
                     type: object
+                    properties:
+                      search_timeline:
+                        type: object
+                        properties:
+                          timeline:
+                            type: object
+                            properties:
+                              instructions:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    type:
+                                      type: string
+                                    entries:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          entryId:
+                                            type: string
+                                          sortIndex:
+                                            type: string
+                                          content:
+                                            type: object
+                              responseObjects:
+                                type: object
 
   /internal/getUserFollowers:
     get:
@@ -188,8 +301,38 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
+                  user:
                     type: object
+                    properties:
+                      result:
+                        type: object
+                        properties:
+                          __typename:
+                            type: string
+                          timeline:
+                            type: object
+                            properties:
+                              timeline:
+                                type: object
+                                properties:
+                                  instructions:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        type:
+                                          type: string
+                                        entries:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              entryId:
+                                                type: string
+                                              sortIndex:
+                                                type: string
+                                              content:
+                                                type: object
 
   /internal/getUserFollowing:
     get:
@@ -226,8 +369,38 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
+                  user:
                     type: object
+                    properties:
+                      result:
+                        type: object
+                        properties:
+                          __typename:
+                            type: string
+                          timeline:
+                            type: object
+                            properties:
+                              timeline:
+                                type: object
+                                properties:
+                                  instructions:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        type:
+                                          type: string
+                                        entries:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              entryId:
+                                                type: string
+                                              sortIndex:
+                                                type: string
+                                              content:
+                                                type: object
 
   /internal/getUserTweets:
     get:
@@ -264,8 +437,38 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
+                  user:
                     type: object
+                    properties:
+                      result:
+                        type: object
+                        properties:
+                          __typename:
+                            type: string
+                          timeline:
+                            type: object
+                            properties:
+                              timeline:
+                                type: object
+                                properties:
+                                  instructions:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        type:
+                                          type: string
+                                        entries:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              entryId:
+                                                type: string
+                                              sortIndex:
+                                                type: string
+                                              content:
+                                                type: object
 
   /internal/getExplorePage:
     get:
@@ -295,8 +498,27 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
+                  explore_page:
                     type: object
+                    properties:
+                      id:
+                        type: string
+                      body:
+                        type: object
+                        properties:
+                          __typename:
+                            type: string
+                          timelines:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                labelText:
+                                  type: string
+                                timeline:
+                                  type: object
 
   /internal/likeTweet:
     post:
