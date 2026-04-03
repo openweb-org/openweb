@@ -29,7 +29,7 @@ Bluesky AT Protocol social network — decentralized microblogging. Public read 
 |-----------|--------|-----------|------------|-------|
 | getProfile | user profile | `actor` (handle or DID) | did, handle, displayName, bio, follower/following/post counts | entry point |
 | getAuthorFeed | user's posts | `actor` ← getProfile | feed[].post (uri, text, author, embeds, counts) | cursor pagination |
-| getPostThread | post with replies | `uri` ← getAuthorFeed/getFeed | thread.post, thread.replies[] | depth param controls reply depth |
+| getPostThread | post with replies | `uri` ← getAuthorFeed/getFeed | thread.post (text, author, embeds, like/repost/reply/quote/bookmark counts), thread.replies[] | depth param controls reply depth |
 | getFeed | custom feed | `feed` (AT URI of feed generator) | feed[].post | cursor pagination, use known feed URIs |
 | searchPosts | search posts | `q` | posts[], hitsTotal | auth via bsky.social (localStorage_jwt) |
 | searchActors | search users | `q` | actors[] with profile info | cursor pagination |
@@ -75,3 +75,4 @@ No auth required for most read operations on public.api.bsky.app. `searchPosts` 
 ## Known Issues
 - `getNotifications` not included — requires auth, not available on public API
 - Compiler path normalization merges all XRPC methods into `/xrpc/{param}` — manual curation required for AT Protocol sites
+- `searchPosts` verify DRIFT — search results contain heterogeneous embed types (images, quotes, external links), causing structural fingerprint to vary across runs

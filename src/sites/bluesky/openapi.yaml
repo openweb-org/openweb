@@ -55,6 +55,19 @@ paths:
                     type: integer
                   createdAt:
                     type: string
+                  associated:
+                    type: object
+                  labels:
+                    type: array
+                    items:
+                      type: object
+                  verification:
+                    type: object
+                  indexedAt:
+                    type: string
+                  pinnedPost:
+                    type: object
+                    nullable: true
 
   /xrpc/app.bsky.feed.getPostThread:
     get:
@@ -99,6 +112,34 @@ paths:
                     properties:
                       post:
                         type: object
+                        properties:
+                          uri:
+                            type: string
+                          cid:
+                            type: string
+                          author:
+                            type: object
+                          record:
+                            type: object
+                          embed:
+                            type: object
+                            nullable: true
+                          likeCount:
+                            type: integer
+                          repostCount:
+                            type: integer
+                          replyCount:
+                            type: integer
+                          quoteCount:
+                            type: integer
+                          bookmarkCount:
+                            type: integer
+                          indexedAt:
+                            type: string
+                          labels:
+                            type: array
+                            items:
+                              type: object
                       replies:
                         type: array
                         items:
@@ -152,6 +193,34 @@ paths:
                       properties:
                         post:
                           type: object
+                          properties:
+                            uri:
+                              type: string
+                            cid:
+                              type: string
+                            author:
+                              type: object
+                            record:
+                              type: object
+                            embed:
+                              type: object
+                              nullable: true
+                            likeCount:
+                              type: integer
+                            repostCount:
+                              type: integer
+                            replyCount:
+                              type: integer
+                            quoteCount:
+                              type: integer
+                            bookmarkCount:
+                              type: integer
+                            indexedAt:
+                              type: string
+                            labels:
+                              type: array
+                              items:
+                                type: object
                   cursor:
                     type: string
 
@@ -231,6 +300,34 @@ paths:
                     type: array
                     items:
                       type: object
+                      properties:
+                        uri:
+                          type: string
+                        cid:
+                          type: string
+                        author:
+                          type: object
+                        record:
+                          type: object
+                        embed:
+                          type: object
+                          nullable: true
+                        likeCount:
+                          type: integer
+                        repostCount:
+                          type: integer
+                        replyCount:
+                          type: integer
+                        quoteCount:
+                          type: integer
+                        bookmarkCount:
+                          type: integer
+                        indexedAt:
+                          type: string
+                        labels:
+                          type: array
+                          items:
+                            type: object
                   cursor:
                     type: string
                   hitsTotal:
@@ -291,6 +388,34 @@ paths:
                       properties:
                         post:
                           type: object
+                          properties:
+                            uri:
+                              type: string
+                            cid:
+                              type: string
+                            author:
+                              type: object
+                            record:
+                              type: object
+                            embed:
+                              type: object
+                              nullable: true
+                            likeCount:
+                              type: integer
+                            repostCount:
+                              type: integer
+                            replyCount:
+                              type: integer
+                            quoteCount:
+                              type: integer
+                            bookmarkCount:
+                              type: integer
+                            indexedAt:
+                              type: string
+                            labels:
+                              type: array
+                              items:
+                                type: object
                   cursor:
                     type: string
 
@@ -402,10 +527,37 @@ paths:
                 properties:
                   subject:
                     type: object
+                    properties:
+                      did:
+                        type: string
+                      handle:
+                        type: string
+                      displayName:
+                        type: string
+                      description:
+                        type: string
+                      avatar:
+                        type: string
                   followers:
                     type: array
                     items:
                       type: object
+                      properties:
+                        did:
+                          type: string
+                        handle:
+                          type: string
+                        displayName:
+                          type: string
+                        description:
+                          type: string
+                          nullable: true
+                        avatar:
+                          type: string
+                        createdAt:
+                          type: string
+                        indexedAt:
+                          type: string
                   cursor:
                     type: string
 
@@ -452,10 +604,37 @@ paths:
                 properties:
                   subject:
                     type: object
+                    properties:
+                      did:
+                        type: string
+                      handle:
+                        type: string
+                      displayName:
+                        type: string
+                      description:
+                        type: string
+                      avatar:
+                        type: string
                   follows:
                     type: array
                     items:
                       type: object
+                      properties:
+                        did:
+                          type: string
+                        handle:
+                          type: string
+                        displayName:
+                          type: string
+                        description:
+                          type: string
+                          nullable: true
+                        avatar:
+                          type: string
+                        createdAt:
+                          type: string
+                        indexedAt:
+                          type: string
                   cursor:
                     type: string
 
@@ -489,3 +668,31 @@ paths:
                     type: array
                     items:
                       type: object
+                      properties:
+                        uri:
+                          type: string
+                        cid:
+                          type: string
+                        author:
+                          type: object
+                        record:
+                          type: object
+                        embed:
+                          type: object
+                          nullable: true
+                        likeCount:
+                          type: integer
+                        repostCount:
+                          type: integer
+                        replyCount:
+                          type: integer
+                        quoteCount:
+                          type: integer
+                        bookmarkCount:
+                          type: integer
+                        indexedAt:
+                          type: string
+                        labels:
+                          type: array
+                          items:
+                            type: object
