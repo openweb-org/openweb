@@ -133,6 +133,13 @@ paths:
                     type: array
                     items:
                       type: object
+                      properties:
+                        skuId:
+                          type: string
+                          description: Variant SKU ID.
+                      additionalProperties:
+                        type: string
+                        description: Product-specific attribute (e.g. color, size). Key name varies by product.
                   reviewCount:
                     type: ['string', 'null']
                   inStock:
