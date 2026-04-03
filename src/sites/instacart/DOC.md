@@ -5,21 +5,24 @@ Grocery delivery marketplace. Archetype: Food Delivery.
 
 ## Workflows
 
-### Search and browse products
-1. `searchProducts(query)` → product names, prices, brands
-2. Pick a store from results → use `retailerSlug` with `getStoreProducts`
+### Search groceries
+1. `searchProducts(query)` → products with name, price, brand, availability
 
 ### Browse a store's catalog
-1. `getNearbyStores(postalCode)` → available stores with `retailerId`
-2. `getStoreProducts(retailerSlug, slug)` → products in a department
+1. `getStoreProducts(retailerSlug, slug)` → products in a department
+   - `retailerSlug` is a known store slug (e.g. "costco", "sprouts", "publix")
+   - `slug` is a category (e.g. "produce", "dairy", "snacks")
+
+### Check delivery availability
+1. `getNearbyStores(postalCode)` → stores with `retailerId`, delivery ETAs
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchProducts | search groceries by keyword | query | products (name, price, brand, availability) | entry point; also returns autocomplete suggestions |
-| getStoreProducts | browse products in a store department | retailerSlug ← store name, slug ← category | products (name, price, brand), collection info | auto-resolves shopId from retailerSlug |
-| getNearbyStores | find stores with delivery ETAs | postalCode | stores (retailerId, etaMinutes, etaDisplay) | entry point; location-dependent |
+| searchProducts | search groceries by keyword | query | products (name, price, brand, availability) | entry point; returns autocomplete suggestions too |
+| getStoreProducts | browse a store department | retailerSlug (known slug), slug (category) | products (name, price, brand), collection info | auto-resolves shopId; entry point |
+| getNearbyStores | find stores with delivery ETAs | postalCode | stores (retailerId, etaMinutes, etaDisplay) | entry point; results depend on IP geolocation |
 
 ## Quick Start
 
@@ -54,7 +57,12 @@ openweb instacart exec getNearbyStores '{"postalCode": "90210"}'
 - **page** (L3 adapter) — adapter uses `page.evaluate(fetch(..., { credentials: 'include' }))` for GraphQL queries
 - searchProducts uses page navigation + response interception for Items query
 - getStoreProducts navigates to store page to auto-resolve shopId, then uses direct GraphQL
-- Any Instacart page must be open (`instacart.com/*`)
+- getNearbyStores navigates to store directory for ETA interception, or calls GraphQL directly when shopIds provided
+
+## Extraction
+- All ops use adapter-based extraction (`adapters/instacart-graphql.ts`)
+- Product data normalized from deeply nested GraphQL responses (price at `item.price.viewSection.itemCard.priceString`)
+- Store ETAs extracted from `GetAccurateRetailerEtas` GraphQL response
 
 ## Known Issues
 - Persisted query hashes change with Instacart deployments — hashes may need periodic updates
