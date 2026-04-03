@@ -15,9 +15,9 @@
     "ws_count": 0
   },
   "quarantined": false,
-  "last_verified": "2026-03-23T23:18:00.000Z",
+  "last_verified": "2026-04-03T03:19:08.610Z",
   "fingerprint": {
-    "response_shape_hash": "searchRestaurants:verified,getEatsOrderHistory:verified",
-    "last_validated": "2026-03-23T23:18:00.000Z"
+    "response_shape_hash": "getEatsOrderHistory:72af7887d02de3a0,searchRestaurants:d518412d5bccbe8f",
+    "last_validated": "2026-04-03T03:19:08.612Z"
   }
 }
