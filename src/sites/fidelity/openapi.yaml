@@ -267,7 +267,7 @@ paths:
   /prgw/digital/research/api/sector-research/index-quote:
     post:
       operationId: getIndexQuotes
-      summary: Get quotes for global indices or currencies by symbol
+      summary: Get quotes for global indices or currencies — symbol, name, percent change, ask price
       x-openweb:
         permission: read
         build:
@@ -404,6 +404,23 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  logos:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        symbol:
+                          type: string
+                        images:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              size:
+                                type: string
+                              location:
+                                type: string
 
   /fund-screener/api/search/v1/funds:
     post:
@@ -578,7 +595,7 @@ paths:
   /mutual-funds/api/v1/investments/fundpicks:
     get:
       operationId: getFundPicks
-      summary: Get Fidelity fund picks (recommended funds) by asset class and category
+      summary: Get Fidelity fund picks — ticker, legal name, family, category, Morningstar rating
       x-openweb:
         permission: read
         build:
@@ -739,13 +756,80 @@ paths:
               schema:
                 type: object
                 properties:
+                  fundInformation:
+                    type: object
+                    properties:
+                      subjectAreaData:
+                        type: object
+                        properties:
+                          tradingSymbol:
+                            type: string
+                          cusip:
+                            type: string
+                          legalName:
+                            type: string
+                          inceptionDate:
+                            type: string
+                          mstarCategory:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              code:
+                                type: string
+                          fundFamily:
+                            type: string
+                  details:
+                    type: object
+                    properties:
+                      subjectAreaData:
+                        type: object
+                        properties:
+                          morningstarCategory:
+                            type: string
+                          grossExpenseRatio:
+                            type: object
+                          netExpenseRatio:
+                            type: object
+                          navData:
+                            type: object
+                          portfolioNetAssets:
+                            type: object
+                  top10Holdings:
+                    type: object
+                    properties:
+                      subjectAreaData:
+                        type: object
+                        properties:
+                          asOfDate:
+                            type: string
+                          totalNumberOfHoldings:
+                            type: string
+                          classBreakDown:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                subClassName:
+                                  type: string
+                                breakDownPercentage:
+                                  type: object
+                  quarterEndAverageAnnualReturns:
+                    type: object
+                    properties:
+                      subjectAreaData:
+                        type: object
+                        properties:
+                          asOfDate:
+                            type: string
+                          fund:
+                            type: object
+                          primary:
+                            type: object
                   compositionByInstrument:
                     type: object
-                  keyStatistics:
-                    type: object
-                  feeExpense:
-                    type: object
-                  mstarRating:
+                    nullable: true
+                  assetAllocation:
                     type: object
       servers:
         - url: https://fundresearch.fidelity.com

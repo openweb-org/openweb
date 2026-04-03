@@ -26,7 +26,7 @@ Financial services platform. Stock quotes, market indices, mutual fund research,
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | getQuote | real-time stock price | symbol | lastPrice, netChgToday, pctChgToday, volume, marketCap | adapter: fidelity-api |
-| getMarketSummary | major US indices | — | quotes[].label, lastPrice, netChgToday | adapter: fidelity-api |
+| getMarketSummary | major US indices | — | quotes[].label, lastPrice, netChgToday | adapter: fidelity-api, entry point |
 | getCompanyProfile | company details | symbols[] | companyName, sector, industry, employeeCount | adapter: fidelity-api |
 | getNewsHeadlines | stock/market news | symbol | headlines[].text, provider, resDate, impactRating | adapter: fidelity-api |
 | getIndexQuotes | global indices/forex | symbol (comma-separated) | quotes[].name, pctChgToday | adapter: fidelity-api |
@@ -34,10 +34,10 @@ Financial services platform. Stock quotes, market indices, mutual fund research,
 | getCompanyLogo | company logo URL | fvSymbols | logo URL | adapter: fidelity-api |
 | searchFunds | browse/filter mutual funds | searchFilter, pageNumber, noOfRowsPerPage | funds[].fundInformation, mstarOverallRating | entry point for fund research |
 | listAssetClasses | asset class/category codes | — | code, description, categories[] | entry point for screening |
-| listFundFamilies | fund family names | — | code, description | |
-| getFundPicks | recommended funds | mstarAssetClassCd, mstarCtgyCd | fundPicks.funds[].ticker, legalName, mstarOverallRating | |
+| listFundFamilies | fund family names | — | code, description | entry point |
+| getFundPicks | recommended funds | mstarAssetClassCd, mstarCtgyCd ← listAssetClasses | fundPicks.funds[].ticker, legalName, mstarOverallRating | |
 | getFundPerformance | fund annual returns | cusip ← searchFunds/getFundPicks | performanceAverageAnnualReturns | CUSIP from fund search |
-| getFundSummary | fund composition/fees | cusip ← searchFunds/getFundPicks | compositionByInstrument, feeExpense, mstarRating | CUSIP from fund search |
+| getFundSummary | fund composition/fees | cusip ← searchFunds/getFundPicks | fundInformation, details (expenseRatio, NAV), top10Holdings, quarterEndAverageAnnualReturns | CUSIP from fund search |
 
 ## Quick Start
 
