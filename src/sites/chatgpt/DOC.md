@@ -15,8 +15,9 @@ ChatGPT backend API — OpenAI's conversational AI interface. Content platform a
 
 ### Send a message
 1. `getModels` → pick model → `modelSlug`
-2. `listConversations` → pick conversation → `conversationId`, `currentNode`
-3. `sendMessage(conversationId, parentMessageId, model, text)` → SSE stream
+2. `listConversations` → pick conversation → `conversationId`
+3. `getConversation(conversationId)` → get `current_node` → `parentMessageId`
+4. `sendMessage(conversationId, parentMessageId, model, text)` → SSE stream
 
 ## Operations
 
@@ -24,14 +25,17 @@ ChatGPT backend API — OpenAI's conversational AI interface. Content platform a
 |-----------|--------|-----------|------------|-------|
 | getProfile | authenticated user info | — | id, name, email | entry point |
 | listConversations | recent conversations | limit?, cursor? | items[].id, title, cursor | paginated (cursor) |
-| getConversation | full conversation detail | conversationId <- listConversations | mapping (message tree), current_node | tree structure |
+| getConversation | full conversation detail | conversationId ← listConversations | mapping (message tree), current_node | tree structure |
 | searchConversations | search past conversations | query | items[].conversation_id, snippet | paginated (offset cursor) |
 | getModels | available models | — | models[].slug, title | entry point |
-| sendMessage | send message, get response | model <- getModels, parentMessageId, text | SSE delta stream | WRITE, SSE response |
+| sendMessage | send message, get response | model ← getModels, conversationId ← listConversations, parentMessageId ← getConversation | SSE delta stream | WRITE, SSE |
 
 ## Quick Start
 
 ```bash
+# Get user profile
+openweb chatgpt exec getProfile '{}'
+
 # List recent conversations
 openweb chatgpt exec listConversations '{"limit": 10}'
 
@@ -48,6 +52,9 @@ openweb chatgpt exec getModels '{}'
 ---
 
 ## Site Internals
+
+Everything below is for discover/compile operators and deep debugging.
+Not needed for basic site usage.
 
 ## API Architecture
 - Backend API at `chatgpt.com/backend-api/`
