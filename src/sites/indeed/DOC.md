@@ -85,8 +85,9 @@ No auth required. All 8 operations return public data.
 - Autocomplete: `page.evaluate(fetch)` to autocomplete subdomain
 
 ## Known Issues
+- **getCompanyReviews — empty reviews array** — DOM selectors (`[data-testid="reviewCard"]`, `[itemprop="review"]`) no longer match. `aggregateRating` from LD+JSON still works. Selectors need updating to match current Indeed frontend.
+- **getCompanySalaries — no salary data** — Table/card selectors (`[data-testid="salary-table-row"]`, `[data-testid="salaryCard"]`) no longer match. Returns only `companyName`. Selectors need updating.
 - **DOM selectors may drift** — Indeed updates frontend frequently. LD+JSON and `_initialData` are more stable than DOM selectors.
 - **Mosaic data timing** — `mosaic.providerData` loads asynchronously. The 3-second wait after navigation is required.
 - **Salary location format** — Must use Indeed's URL segment format (e.g. "San-Francisco--CA"). Use autocompleteLocation.
-- **Review DOM fragility** — Review card selectors may change across Indeed updates.
 - **Cloudflare challenges** — Rapid page navigation may trigger bot detection. Space out requests.

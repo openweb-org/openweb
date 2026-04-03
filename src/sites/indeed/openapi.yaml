@@ -81,6 +81,8 @@ paths:
                         remoteLocation:
                           type: boolean
                         salary:
+                          type: object
+                          nullable: true
                           description: Extracted salary info.
                         snippet:
                           type: string
@@ -150,7 +152,10 @@ paths:
                           unitText:
                             type: string
                   employmentType:
-                    description: Employment type (string or array).
+                    type: array
+                    items:
+                      type: string
+                    description: Employment types (e.g. "FULL_TIME").
                   hiringOrganization:
                     type: object
                     properties:
@@ -159,14 +164,21 @@ paths:
                       sameAs:
                         type: string
                   jobLocation:
-                    description: Location object or string.
+                    type: object
+                    description: Location object with address.
                   salaryInfoModel:
+                    type: object
                     description: Indeed-specific salary model from _initialData.
                   benefitsModel:
+                    type: object
+                    nullable: true
                     description: Benefits information.
                   hiringInsightsModel:
+                    type: object
                     description: Hiring insights (response rate, urgency).
                   companyInfo:
+                    type: object
+                    nullable: true
                     description: Company info from _initialData.
 
   /career/{title}/salaries:
@@ -211,6 +223,7 @@ paths:
                         type: string
                   locationInfo:
                     type: object
+                    description: Location metadata.
                   nationalSalaryAggregate:
                     type: object
                     description: "Salary data by period (HOURLY, YEARLY) with median, min, max."
@@ -220,6 +233,7 @@ paths:
                     nullable: true
                   topPaidCities:
                     type: object
+                    description: Highest-paying cities for this role.
                   topPayingCompanies:
                     type: array
                     items:
@@ -231,6 +245,7 @@ paths:
                           type: object
                   relatedTitlesResponse:
                     type: object
+                    description: Related job titles with salary data.
 
   /cmp/{company}:
     get:
@@ -262,24 +277,34 @@ paths:
                   companyName:
                     type: string
                   about:
+                    type: object
                     description: About section (description, industry, size, revenue).
                   ratings:
+                    type: object
                     description: Overall review rating breakdown.
                   salaries:
+                    type: object
                     description: Salary summary section.
                   jobs:
+                    type: object
                     description: Current job openings.
                   locations:
+                    type: object
                     description: Office locations.
                   interviews:
+                    type: object
                     description: Interview experience section.
                   faq:
+                    type: object
                     description: FAQ section.
                   similarCompanies:
+                    type: object
                     description: Similar companies.
                   header:
+                    type: object
                     description: Company page header.
                   ldJson:
+                    type: object
                     description: LD+JSON LocalBusiness data.
 
   /cmp/{company}/reviews:
@@ -341,6 +366,7 @@ paths:
                         location:
                           type: string
                   aggregateRating:
+                    type: object
                     description: Structured aggregate rating from LD+JSON.
 
   /cmp/{company}/salaries:
