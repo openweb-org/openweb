@@ -97,7 +97,7 @@ paths:
   /problems/list:
     get:
       operationId: getProblemList
-      summary: Browse paginated problem list with optional difficulty and topic filters
+      summary: Browse paginated problem list — title, titleSlug, difficulty, acRate, topicTags
       x-openweb:
         permission: read
         build:
@@ -187,7 +187,7 @@ paths:
   /daily-challenge:
     get:
       operationId: getDailyChallenge
-      summary: Get today's daily coding challenge problem
+      summary: Get today's daily coding challenge — date, question title, titleSlug, difficulty, acRate
       x-openweb:
         permission: read
         build:
@@ -398,7 +398,7 @@ paths:
   /problems/{questionSlug}/submissions:
     get:
       operationId: getSubmissions
-      summary: Get submission history for a problem (requires login)
+      summary: Get submission history for a problem — statusDisplay, lang, runtime, memory (requires login)
       x-openweb:
         permission: read
         build:
@@ -582,7 +582,7 @@ paths:
   /contests/upcoming:
     get:
       operationId: getUpcomingContests
-      summary: Get upcoming weekly and biweekly contests
+      summary: Get upcoming weekly and biweekly contests — title, titleSlug, startTime, duration
       x-openweb:
         permission: read
         build:
@@ -626,7 +626,7 @@ paths:
   /contests/history:
     get:
       operationId: getContestHistory
-      summary: Get past contest history with results
+      summary: Get past contest history — title, titleSlug, startTime, totalQuestions
       x-openweb:
         permission: read
         build:
@@ -684,7 +684,7 @@ paths:
   /contests/{contestSlug}/questions:
     get:
       operationId: getContestQuestions
-      summary: Get questions for a specific contest
+      summary: Get questions for a specific contest — credit, title, titleSlug, questionId
       x-openweb:
         permission: read
         build:
@@ -730,7 +730,7 @@ paths:
   /user/{username}/recent-submissions:
     get:
       operationId: getRecentSubmissions
-      summary: Get a user's recent accepted submissions
+      summary: Get a user's recent accepted submissions — title, titleSlug, timestamp
       x-openweb:
         permission: read
         build:

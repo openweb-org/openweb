@@ -76,8 +76,9 @@ openweb leetcode exec getContestRanking '{"contestSlug": "weekly-contest-438", "
 - Contest ranking REST endpoint is fully public
 
 ## Transport
-- `transport: page` — browser fetch for all operations
-- GraphQL requires `Content-Type: application/json` header
+- `transport: page` — all operations use the `leetcode-graphql` adapter (`adapters/leetcode-graphql.ts`)
+- Adapter executes named GraphQL queries via `page.evaluate` fetch to `/graphql/`
+- Contest ranking (`getContestRanking`) uses REST endpoint `/contest/api/ranking/{slug}/`
 - No PerimeterX or aggressive bot detection; browser context needed for cookie propagation
 
 ## Known Issues
