@@ -69,6 +69,7 @@ No auth required for public read operations. Paywalled posts return truncated
 live on different subdomains; node transport cannot dynamically switch origins.
 
 ## Known Issues
+- `searchPosts` returns empty results in headless browser context — likely bot detection on the search endpoint. Use `getArchive` with `search` param as a workaround for per-publication search.
 - `/api/v1/publication` returns 403 on some publications (not available for all pubs).
 - Custom domain publications (e.g., platformer.news) redirect from `*.substack.com`.
   The adapter uses `{subdomain}.substack.com` which follows redirects automatically.

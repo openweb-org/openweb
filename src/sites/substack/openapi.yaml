@@ -330,6 +330,21 @@ paths:
                           type: array
                           items:
                             type: object
+                            properties:
+                              id:
+                                type: integer
+                              body:
+                                type: string
+                              date:
+                                type: string
+                              name:
+                                type: string
+                              user_id:
+                                type: integer
+                              photo_url:
+                                type: [string, 'null']
+                              reaction_count:
+                                type: integer
   /trending:
     get:
       operationId: getTrending
