@@ -980,6 +980,7 @@ paths:
                           type: string
                         rating:
                           type: object
+                          nullable: true
                           properties:
                             count:
                               type: integer
