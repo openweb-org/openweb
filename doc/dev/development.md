@@ -219,7 +219,7 @@ When testing the installed binary, replace all `pnpm dev` with `openweb`. The bi
 | `pnpm dev` fails | Run `pnpm build` first |
 | CDP connection refused | Run `pnpm dev browser start` |
 | Auth fails on exec | Run `pnpm dev login <site>` then `pnpm dev browser restart` |
-| Permission denied | Update `$OPENWEB_HOME/permissions.yaml` or confirm the operation |
+| Permission denied | Update `permissions` in `$OPENWEB_HOME/config.json` or confirm the operation |
 | SSRF validation error | Target URL must be HTTPS + public IP |
 | "Site not found" | Check `src/sites/` or `$OPENWEB_HOME/sites/` |
 

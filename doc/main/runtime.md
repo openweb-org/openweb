@@ -8,7 +8,7 @@
 The runtime is the core of OpenWeb. Given a site name, operation ID, and parameters, it:
 1. Loads the OpenAPI spec and validates `x-openweb` extensions (AJV)
 2. Finds the operation
-3. **Permission gate** — checks `x-openweb.permission` (or derives from HTTP method) against `$OPENWEB_HOME/permissions.yaml`
+3. **Permission gate** — checks `x-openweb.permission` (or derives from HTTP method) against `$OPENWEB_HOME/config.json`
 4. **Token cache check** — for authenticated node transport, tries cached cookies/storage before browser
 5. Resolves the transport
 6. Dispatches to the correct executor
@@ -278,7 +278,7 @@ Every error carries a `failureClass` that tells the agent what to do next:
 | `needs_browser` | Operation requires a browser but none connected | Run `openweb browser start` |
 | `needs_login` | User is not authenticated on the target site | Run `openweb login <site>` then `openweb browser restart` |
 | `needs_page` | No browser tab matches the target origin | Open the suggested site URL |
-| `permission_denied` | Operation blocked by permissions.yaml | Update `$OPENWEB_HOME/permissions.yaml` |
+| `permission_denied` | Operation blocked by config | Update `permissions` in `$OPENWEB_HOME/config.json` |
 | `permission_required` | Operation needs user approval (write/delete) | Ask user for confirmation |
 | `retriable` | Transient failure (network, rate-limit) | Retry the request |
 | `fatal` | Unrecoverable error (bad spec, unknown op) | Stop and report |

@@ -157,7 +157,7 @@ openweb registry show <site>     # version history
 | `delete` | DELETE | **prompt** — returns structured error for relay |
 | `transact` | checkout/purchase/payment | **deny** — blocked by default |
 
-Users customize in `$OPENWEB_HOME/permissions.yaml` (default `~/.openweb/permissions.yaml`).
+Users customize in the `permissions` section of `$OPENWEB_HOME/config.json`.
 
 ## Transports
 

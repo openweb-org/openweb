@@ -207,6 +207,10 @@ const MAX_POLL_INTERVAL = 60_000         // 60 seconds
 
 /** Open a URL in the user's system browser (fire and forget). */
 function openInSystemBrowser(url: string): void {
+  const parsed = new URL(url)
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`Refusing to open non-HTTP URL: ${url}`)
+  }
   const os = platform()
   const cmd = os === 'darwin' ? 'open' : os === 'linux' ? 'xdg-open' : 'cmd'
   const args = os === 'win32' ? ['/c', 'start', '', url] : [url]

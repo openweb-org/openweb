@@ -59,15 +59,15 @@ function validateConfig(raw: unknown): OpenWebConfig {
     const b = obj.browser as Record<string, unknown>
     const browser: Record<string, unknown> = {}
     if (typeof b.headless === 'boolean') browser.headless = b.headless
-    if (typeof b.port === 'number' && Number.isFinite(b.port)) browser.port = b.port
+    if (typeof b.port === 'number' && Number.isFinite(b.port) && b.port > 0 && b.port <= 65535) browser.port = b.port
     if (typeof b.profile === 'string') browser.profile = b.profile
     if (Object.keys(browser).length > 0) result.browser = browser
   }
 
   // scalar fields
   if (typeof obj.userAgent === 'string') result.userAgent = obj.userAgent
-  if (typeof obj.timeout === 'number' && Number.isFinite(obj.timeout)) result.timeout = obj.timeout
-  if (typeof obj.recordingTimeout === 'number' && Number.isFinite(obj.recordingTimeout))
+  if (typeof obj.timeout === 'number' && Number.isFinite(obj.timeout) && obj.timeout > 0) result.timeout = obj.timeout
+  if (typeof obj.recordingTimeout === 'number' && Number.isFinite(obj.recordingTimeout) && obj.recordingTimeout > 0)
     result.recordingTimeout = obj.recordingTimeout
   if (typeof obj.debug === 'boolean') result.debug = obj.debug
 

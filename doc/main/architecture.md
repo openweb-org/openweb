@@ -170,7 +170,7 @@ Operations carry a `permission` category that gates execution:
 | `transact` | checkout/purchase/payment paths | `deny` |
 
 When `x-openweb.permission` is absent, the runtime derives permission from HTTP method + API path (fail-closed). Paths matching `/checkout|purchase|payment|order|subscribe/` are auto-escalated to `transact`.
-Policy is configurable per-site in `$OPENWEB_HOME/permissions.yaml` (defaults to `~/.openweb/permissions.yaml`).
+Policy is configurable per-site in the `permissions` section of `$OPENWEB_HOME/config.json`.
 `prompt` policy returns a structured error for the agent to relay to the user.
 
 -> See: `src/lib/permissions.ts`, `src/runtime/executor.ts`
