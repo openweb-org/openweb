@@ -103,7 +103,6 @@ paths:
                     type: string
                   image:
                     type: string
-                    format: uri
                   description:
                     type: string
                   features:
@@ -244,12 +243,82 @@ paths:
                           type: string
                         image:
                           type: object
+                          properties:
+                            altText:
+                              type: string
+                            hiRes:
+                              type: object
+                              properties:
+                                baseUrl:
+                                  type: string
+                                extension:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            lowRes:
+                              type: object
+                              properties:
+                                baseUrl:
+                                  type: string
+                                extension:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
                         price:
                           type: object
+                          properties:
+                            priceToPay:
+                              type: object
+                              properties:
+                                label:
+                                  type: string
+                                price:
+                                  type: string
+                                strikethrough:
+                                  type: boolean
+                            basisPrice:
+                              type: object
+                              properties:
+                                label:
+                                  type: string
+                                price:
+                                  type: string
+                                strikethrough:
+                                  type: boolean
                         dealBadge:
                           type: object
+                          properties:
+                            label:
+                              type: object
+                              properties:
+                                content:
+                                  type: object
+                                color:
+                                  type: string
+                                backgroundColor:
+                                  type: string
+                            messaging:
+                              type: object
+                              properties:
+                                content:
+                                  type: object
+                                color:
+                                  type: string
+                                backgroundColor:
+                                  type: string
                         dealDetails:
                           type: object
+                          properties:
+                            state:
+                              type: string
+                            type:
+                              type: string
+                            id:
+                              type: string
                   refinements:
                     type:
                       - object

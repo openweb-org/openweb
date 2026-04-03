@@ -143,16 +143,20 @@ async function getBestSellers(page: Page, _params: Record<string, unknown>) {
   await wait(3000)
   return page.evaluate(`
     (() => {
-      const items = document.querySelectorAll('#gridItemRoot .zg-grid-general-faceout, [data-testid="grid-asin"]');
+      const items = document.querySelectorAll('.p13n-sc-uncoverable-faceout');
       return {
-        items: [...items].map((el, i) => ({
-          rank: i + 1,
-          title: el.querySelector('.zg-truncate-text, ._cDEzb_p13n-sc-css-line-clamp-1_1Fn1y, [class*="truncate"]')?.textContent?.trim() || '',
-          price: el.querySelector('.a-color-price, ._cDEzb_p13n-sc-price_3mJ9Z, [class*="price"]')?.textContent?.trim() || '',
-          rating: el.querySelector('.a-icon-alt')?.textContent?.trim() || '',
-          link: el.querySelector('a.a-link-normal')?.getAttribute('href') || '',
-          image: el.querySelector('img')?.getAttribute('src') || '',
-        })).filter(p => p.title),
+        items: [...items].map((el, i) => {
+          const links = [...el.querySelectorAll('a')];
+          const titleLink = links.find(a => a.textContent?.trim() && !a.textContent.includes('out of 5') && !a.textContent.startsWith('$'));
+          return {
+            rank: i + 1,
+            title: titleLink?.textContent?.trim() || '',
+            price: el.querySelector('[class*="price"]')?.textContent?.trim() || '',
+            rating: el.querySelector('.a-icon-alt')?.textContent?.trim() || '',
+            link: titleLink?.getAttribute('href') || '',
+            image: el.querySelector('img')?.getAttribute('src') || '',
+          };
+        }).filter(p => p.title),
       };
     })()
   `)
