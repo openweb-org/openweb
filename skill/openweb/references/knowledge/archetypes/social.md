@@ -6,7 +6,7 @@
 
 User-facing sites focused on content consumption, social interaction, and communication.
 
-- **Social Media** — feed-based, user-generated content: Instagram, Reddit, Bluesky, X, TikTok
+- **Social Media** — feed-based, user-generated content: Instagram, Reddit, Bluesky, X
 - **Messaging** — real-time conversation, contacts, presence: Discord, Telegram, WhatsApp
 - **Content Platforms** — articles, videos, reference content: YouTube, Hacker News, Wikipedia, ChatGPT, Google Maps
 
@@ -48,7 +48,6 @@ User-facing sites focused on content consumption, social interaction, and commun
 **Notable patterns:**
 - X: CSRF on ALL methods including GET, page transport required (TLS fingerprint)
 - LinkedIn: Voyager REST + GraphQL hybrid API, CSRF on ALL methods (JSESSIONID → csrf-token), page transport required (node triggers redirect-loop rate limiting), PerimeterX detection, Rest.li tuple parameter encoding
-- TikTok: BLOCKED — VM-based anti-bot signing, SSR extraction only via adapter
 - Discord: webpack_module_walk for auth token extraction
 - WhatsApp: Metro-style `require('WAWeb*')` with string IDs (not webpack) — adapter reads Backbone-style collections directly, no HTTP API exists
 - Telegram: webpack_module_walk via `webpackChunktelegram-web`

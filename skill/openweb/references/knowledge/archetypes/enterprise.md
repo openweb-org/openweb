@@ -7,7 +7,7 @@
 Business tools, developer platforms, financial services, and productivity apps.
 
 - **Productivity / Enterprise** — dashboards, documents, project management: Stripe, Linear, Asana, Zendesk, YNAB, Webflow, MongoDB Atlas, Amplitude
-- **Developer Tools** — repos, issues, packages, monitoring: GitHub, npm, StackOverflow, Docker Hub, Grafana, PostHog, CockroachDB, CircleCI, GitLab
+- **Developer Tools** — repos, issues, packages, monitoring: GitHub, Docker Hub, Grafana, PostHog, CockroachDB, CircleCI, GitLab
 - **Finance / Banking** — trading, portfolio, market data: Fidelity, Robinhood, Bloomberg, Yahoo Finance
 - **Email** — inbox, messages, compose: Gmail, Outlook
 - **Cloud / Storage** — files, folders, sharing: Dropbox, OneDrive, Box

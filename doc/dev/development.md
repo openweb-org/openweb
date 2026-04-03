@@ -121,12 +121,12 @@ src/
 ├── runtime/                  # Operation execution (HTTP + WS modes)
 ├── types/                    # Meta-spec type system
 ├── compiler/                 # Site compilation pipeline
-│   ├── analyzer/             #   filter → cluster → differentiate → classify → schema
+│   ├── analyzer/             #   label → normalize → cluster → schema → auth
 │   ├── generator/            #   openapi.ts, asyncapi.ts, package.ts
 │   └── ws-analyzer/          #   WS capture → classify → cluster → schema
 ├── capture/                  # Browser CDP recording
 ├── lib/                      # Shared utilities (SSRF, errors, OpenAPI, AsyncAPI, permissions, logger)
-└── sites/                    # Site packages (68 sites)
+└── sites/                    # Site packages (55 sites)
 ```
 
 -> See: [doc/main/README.md](../main/README.md) -- full code structure with per-file annotations

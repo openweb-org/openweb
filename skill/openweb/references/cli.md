@@ -23,6 +23,7 @@ openweb <site> --json            # {name, operations: [{id, method, path, permis
 ```bash
 openweb <site> <op>              # text: method, path, params, response shape
 openweb <site> <op> --json       # {id, method, path, permission, parameters}
+openweb <site> <op> --full       # extended details (includes AsyncAPI info)
 openweb <site> <op> --example    # real example params from fixtures
 ```
 
@@ -41,16 +42,22 @@ openweb <site> exec <op> '{}' --output file
 - Exit 0 = success, 1 = failure
 - Auto-spill: responses over `--max-response` (default 4096 bytes) write to temp file; stdout returns `{status, output, size, truncated}`
 
+**Environment variables:**
+- `OPENWEB_DEBUG=1` — verbose debug output (request/response details)
+- `OPENWEB_TIMEOUT=<ms>` — operation timeout (default 30000ms)
+- `OPENWEB_CDP_PORT=<port>` — CDP port override
+- `OPENWEB_USER_AGENT=<string>` — custom User-Agent
+
 ## Browser Management
 
 ```bash
-openweb browser start [--headless] [--port 9222]
+openweb browser start [--headless] [--port 9222] [--profile <dir>]
 openweb browser stop
 openweb browser restart        # re-copy profile + clear token cache
 openweb browser status
 ```
 
-**How it works:** `browser start` copies auth-relevant files from your default Chrome profile to a temp directory, then launches Chrome with `--remote-debugging-port=9222`. When running, `exec` auto-detects it — no `--cdp-endpoint` needed.
+**How it works:** `browser start` copies auth-relevant files from your default Chrome profile (or `--profile <dir>`) to a temp directory, then launches Chrome with `--remote-debugging-port=9222`. When running, `exec` auto-detects it — no `--cdp-endpoint` needed.
 
 **Token caching:** Successful auth requests cache cookies in `$OPENWEB_HOME/tokens/<site>/` (default `~/.openweb/tokens/<site>/`). Cache auto-expires by TTL (1h default or JWT exp). `browser restart` clears the cache.
 

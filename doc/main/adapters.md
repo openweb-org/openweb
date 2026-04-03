@@ -19,18 +19,11 @@ L3 adapters are the escape hatch. When a site's internal API is too complex for 
 interface CodeAdapter {
   name: string
   description: string
-  provides: AdapterCapability[]
 
   init(page: Page): Promise<boolean>
   isAuthenticated(page: Page): Promise<boolean>
   execute(page: Page, operation: string, params: Record<string, unknown>): Promise<unknown>
 }
-
-type AdapterCapability =
-  | { type: 'signing'; description: string }
-  | { type: 'auth'; description: string }
-  | { type: 'protocol'; description: string }
-  | { type: 'extraction'; description: string }
 ```
 
 -> See: `src/types/adapter.ts`
@@ -98,30 +91,26 @@ The runtime loads `adapters/whatsapp.js` from the skill package directory.
 WhatsApp Web uses Meta's custom module system (`__d` / `__w` / `require`). The adapter walks this system to access internal data stores.
 
 ```
-adapters/whatsapp.ts
+adapters/whatsapp-modules.ts
   init()     → Verify WAWebBuildConstants exists
   isAuth()   → Check window.__debug?.phone?.info exists
   execute()  → require("WAWebChatCollection") → getModelsArray()
 ```
 
-**Provides:** `{ type: 'protocol', description: 'Meta require() module system' }`
-
--> See: `src/sites/whatsapp/adapters/whatsapp.ts`
+-> See: `src/sites/whatsapp/adapters/whatsapp-modules.ts`
 
 ### Telegram (teact global state)
 
 Telegram Web uses the teact framework with a global state store. The adapter discovers the state accessor via webpack module walking.
 
 ```
-adapters/telegram.ts
+adapters/telegram-protocol.ts
   init()     → Find getGlobal() via webpack chunk walk
   isAuth()   → getGlobal().authState === 'authorizationStateReady'
   execute()  → getGlobal().chats.byId → transform to output
 ```
 
-**Provides:** `{ type: 'extraction', description: 'teact getGlobal() state' }`
-
--> See: `src/sites/telegram/adapters/telegram.ts`
+-> See: `src/sites/telegram/adapters/telegram-protocol.ts`
 
 ---
 
@@ -157,13 +146,13 @@ src/runtime/
 └── adapter-executor.ts       # loadAdapter, executeAdapter, clearAdapterCache
 
 src/types/
-└── adapter.ts                # CodeAdapter interface, AdapterCapability type
+└── adapter.ts                # CodeAdapter interface
 
 src/sites/
 ├── whatsapp/
-│   └── adapters/whatsapp.ts  # Meta require() adapter
+│   └── adapters/whatsapp-modules.ts  # Meta require() adapter
 └── telegram/
-    └── adapters/telegram.ts  # teact global state adapter
+    └── adapters/telegram-protocol.ts  # teact global state adapter
 ```
 
 ---

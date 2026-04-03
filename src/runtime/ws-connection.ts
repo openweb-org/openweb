@@ -248,6 +248,10 @@ export class WsConnectionManager extends EventEmitter<WsConnectionEvents> {
   private attemptReconnect(): void {
     if (!this.transition('reconnect')) return
     this.stopHeartbeat()
+    // Close the old socket before nulling to prevent orphaned connections
+    if (this.ws) {
+      try { this.ws.close() } catch { /* already closing */ }
+    }
     this.ws = null
 
     const rc = this.config.reconnect

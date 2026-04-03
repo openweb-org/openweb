@@ -1,4 +1,4 @@
-import { type Browser, chromium } from 'playwright'
+import { type Browser, chromium } from 'playwright-core'
 
 import { OpenWebError } from '../lib/errors.js'
 

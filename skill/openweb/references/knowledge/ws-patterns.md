@@ -18,8 +18,7 @@ Client tells the server which channels to join. The server then pushes data on t
 - **Signal:** message contains `subscribe`, `channel`, `topic`, or `stream` field
 - **Examples:**
   - Discord: `{"op":14,"d":{"guild_id":"...","channels":{"...":[[0,99]]}}}`
-  - Coinbase: `{"type":"subscribe","channels":[{"name":"ticker","product_ids":["BTC-USD"]}]}`
-- **Action:** model as an operation when the subscription itself is the user intent (e.g., "watch BTC price")
+- **Action:** model as an operation when the subscription itself is the user intent
 
 ### Request-Reply
 
@@ -37,7 +36,6 @@ Server pushes data continuously after connection or subscription. No client requ
 
 - **Signal:** messages arrive without a preceding client message; often share a `channel` or `type` field
 - **Examples:**
-  - Coinbase: `{"type":"ticker","product_id":"BTC-USD","price":"43210.00",...}`
   - Discord: `{"t":"MESSAGE_CREATE","d":{"content":"hello","author":{...}}}`
 - **Action:** model as a stream operation. The "params" are the subscription; the "response" is the message shape.
 

@@ -1,15 +1,27 @@
-import { readFileSync } from 'node:fs'
-
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../../types/primitives.js'
 import type { AuthCandidate, AuthEvidence } from '../types-v2.js'
 import type { CaptureData } from './classify.js'
+import { MUTATION_METHODS, SKIP_HEADERS, isStandardSecHeader, stripQuotes } from './shared-constants.js'
 
 // ── Tracking cookies ────────────────────────────────────────────────────────
 // Prefixes/patterns that indicate tracking/analytics, NOT auth.
 // ct0 and twid are intentionally excluded — they are Twitter auth cookies.
-const TRACKING_COOKIE_PREFIXES: readonly string[] = JSON.parse(
-  readFileSync(new URL('../../lib/config/tracking-cookies.json', import.meta.url), 'utf8'),
-)
+const TRACKING_COOKIE_PREFIXES: readonly string[] = [
+  // Google
+  '_ga', '_gid', '_gat', '_gcl', '__utm', 'NID', '1P_JAR', 'APISID', 'HSID', 'SSID', 'SID',
+  'SAPISID', 'SIDCC', '__Secure-1P', '__Secure-3P',
+  // Facebook / Meta
+  '_fbp', '_fbc', 'fbm_', 'fbsr_', 'datr', 'sb',
+  // Cloudflare
+  '__cf_bm', '__cfruid', '__cfduid', 'cf_clearance',
+  // Analytics / tracking
+  'analytics', '_hjid', '_hjSession', 'mp_', 'ajs_', '_pk_', 'hubspot',
+  '_clck', '_clsk', 'posthog', 'ph_', '_dd_s',
+  // Consent
+  'consent', 'OptanonConsent', 'CookieConsent', 'eupubconsent', 'cookieyes',
+  // Social tracking (not auth)
+  'guest_id', 'personalization_id',
+]
 
 function isTrackingCookie(name: string): boolean {
   const lower = name.toLowerCase()
@@ -18,37 +30,6 @@ function isTrackingCookie(name: string): boolean {
 
 // ── Exchange chain URL pattern ──────────────────────────────────────────────
 const EXCHANGE_URL_PATTERN = /(token|oauth|auth|login|session|authenticate|sso)/i
-
-// ── Mutation methods for CSRF detection ─────────────────────────────────────
-const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
-
-/** Headers to skip during CSRF detection — standard HTTP headers that can never be CSRF targets */
-const SKIP_HEADERS = new Set([
-  'cookie',
-  'content-type',
-  'content-length',
-  'accept',
-  'host',
-  'user-agent',
-  'accept-encoding',
-  'accept-language',
-  'connection',
-  'origin',
-  'referer',
-  'dpr',
-  'screen-dpr',
-  'viewport-width',
-])
-
-/** Strip surrounding double quotes from cookie values (e.g. LinkedIn JSESSIONID) */
-function stripQuotes(value: string): string {
-  return value.replace(/^"|"$/g, '')
-}
-
-/** Check if a header is a standard non-CSRF header (sec-* prefix — never CSRF) */
-function isStandardSecHeader(headerName: string): boolean {
-  return headerName.toLowerCase().startsWith('sec-')
-}
 
 // ── Object traversal helpers ────────────────────────────────────────────────
 

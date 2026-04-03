@@ -4,6 +4,7 @@ import type { PermissionCategory } from '../types/extensions.js'
 import type { WsPattern } from '../types/ws-primitives.js'
 import { listAsyncApiOperations, loadAsyncApi } from './asyncapi.js'
 import type { AsyncApiOperationRef, AsyncApiSpec } from './asyncapi.js'
+import { OpenWebError } from './errors.js'
 import type { HttpMethod, OpenApiSpec, OperationRef } from './openapi.js'
 import { listOperations as listHttpOperations, loadOpenApi, pathExists, resolveSiteRoot } from './openapi.js'
 import { derivePermissionFromMethod } from './permission-derive.js'
@@ -111,7 +112,14 @@ export function findOperationEntry(
   const entry = pkg.operations.get(operationId)
   if (!entry) {
     const available = Array.from(pkg.operations.keys()).join(', ')
-    throw new Error(`Operation not found: ${operationId}. Available: ${available}`)
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'TOOL_NOT_FOUND',
+      message: `Operation not found: ${operationId}. Available: ${available}`,
+      action: 'Check the operation ID and try again.',
+      retriable: false,
+      failureClass: 'fatal',
+    })
   }
   return entry
 }

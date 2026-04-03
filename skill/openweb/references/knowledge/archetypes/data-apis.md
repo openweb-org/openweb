@@ -6,10 +6,10 @@
 
 Open APIs with no or minimal auth. Simplest to compile — often single-endpoint services.
 
-- **Weather / Data** — forecasts, geolocation, time: Open-Meteo, IP API, Exchange Rate, Sunrise Sunset, World Time
+- **Weather / Data** — forecasts, geolocation, time: IP API, Exchange Rate, Sunrise Sunset, World Time
 - **Prediction / Fun** — novelty single-endpoint services: Agify, Genderize, Cat Facts, Chuck Norris, Advice Slip, Kanye Rest, Official Joke, Useless Facts, Random Fox, Bored API, Affirmations
-- **Reference / Lookup** — structured databases with search: PokeAPI, REST Countries, Open Library, DuckDuckGo, Dog CEO, CocktailDB, Color API, Dictionary API, Public Holidays, Universities, Zippopotam, Random User
-- **Crypto / Finance (public)** — market data, exchange rates: CoinGecko, Exchange Rate
+- **Reference / Lookup** — structured databases with search: REST Countries, Open Library, DuckDuckGo, Dog CEO, CocktailDB, Color API, Dictionary API, Public Holidays, Universities, Zippopotam, Random User
+- **Crypto / Finance (public)** — market data, exchange rates: Exchange Rate
 - **News** — articles, headlines, feeds: BBC, AP News, The Guardian, NewsAPI.org
 
 ## Expected Operations
@@ -54,7 +54,6 @@ Open APIs with no or minimal auth. Simplest to compile — often single-endpoint
 - Fun/prediction APIs: single operation, no pagination, no auth — simplest possible site package
 - Reference APIs: richer schemas with path parameters and varied response shapes
 - News APIs: may use RSS or html_selector extraction if no JSON API
-- CoinGecko: no auth for basic endpoints, rate-limited for heavy use
 
 ## Curation Expectations
 

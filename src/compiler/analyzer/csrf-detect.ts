@@ -1,37 +1,8 @@
 import type { CaptureData } from './classify.js'
-
-const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
-
-/** Headers to skip during CSRF detection — standard HTTP headers that can never be CSRF targets */
-const SKIP_HEADERS = new Set([
-  'cookie',
-  'content-type',
-  'content-length',
-  'accept',
-  'host',
-  'user-agent',
-  'accept-encoding',
-  'accept-language',
-  'connection',
-  'origin',
-  'referer',
-  'dpr',
-  'screen-dpr',
-  'viewport-width',
-])
+import { MUTATION_METHODS, SKIP_HEADERS, isStandardSecHeader, stripQuotes } from './shared-constants.js'
 
 /** Well-known CSRF header names — prioritized over random header matches */
 const CSRF_HEADER_NAMES = new Set(['csrf-token', 'x-csrf-token', 'x-csrftoken', '_csrf'])
-
-/** Strip surrounding double quotes from cookie values (e.g. LinkedIn JSESSIONID) */
-function stripQuotes(value: string): string {
-  return value.replace(/^"|"$/g, '')
-}
-
-/** Check if a header is a standard non-CSRF header (sec-* prefix — never CSRF) */
-function isStandardSecHeader(headerName: string): boolean {
-  return headerName.toLowerCase().startsWith('sec-')
-}
 
 interface CookieHeaderMatch {
   cookie: string

@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import { readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
-import { chromium } from 'playwright'
+import { chromium } from 'playwright-core'
 
 import { createCaptureSession } from '../capture/session.js'
 import { OpenWebError } from '../lib/errors.js'
@@ -44,7 +44,7 @@ export async function captureStartCommand(opts: CaptureStartOptions): Promise<vo
   // Print session ID first (stdout) so callers can capture it: SESSION=$(openweb capture start ...)
   process.stdout.write(`${sessionId}\n`)
 
-  let isolatedPage: import('playwright').Page | undefined
+  let isolatedPage: import('playwright-core').Page | undefined
 
   if (opts.isolate) {
     const browser = await chromium.connectOverCDP(opts.cdpEndpoint)

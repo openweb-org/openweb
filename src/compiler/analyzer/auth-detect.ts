@@ -14,8 +14,8 @@ const TRACKING_COOKIE_PREFIXES = [
   '_clck', '_clsk', 'posthog', 'ph_', '_dd_s',
   // Consent
   'consent', 'OptanonConsent', 'CookieConsent', 'eupubconsent', 'cookieyes',
-  // Twitter / X
-  'twid', 'guest_id', 'personalization_id', 'ct0',
+  // Social tracking (not auth)
+  'guest_id', 'personalization_id',
 ]
 
 function isTrackingCookie(name: string): boolean {

@@ -28,7 +28,7 @@ export type ExchangeStep = ExchangeCookieStep | ExchangeHttpStep
 
 export type AuthPrimitive =
   | { readonly type: 'cookie_session' }
-  | { readonly type: 'localStorage_jwt'; readonly key: string; readonly path?: string; readonly inject: Inject }
+  | { readonly type: 'localStorage_jwt'; readonly key: string; readonly path?: string; readonly app_path?: string; readonly inject: Inject }
   | {
       readonly type: 'sessionStorage_msal'
       readonly key_pattern: string

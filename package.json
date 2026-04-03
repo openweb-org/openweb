@@ -20,6 +20,7 @@
     "scraping",
     "cdp"
   ],
+  "author": "openweb-org contributors",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -49,7 +50,7 @@
     "ajv": "^8.17.1",
     "playwright-core": "^1.52.0",
     "ws": "^8.20.0",
-    "yaml": "^2.8.1",
+    "yaml": "^2.8.3",
     "yargs": "^18.0.0"
   },
   "devDependencies": {

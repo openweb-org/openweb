@@ -35,17 +35,17 @@ openweb wikipedia getPageSummary --example   # example input from fixtures
 
 ```bash
 openweb wikipedia exec getPageSummary '{"title":"Claude_Shannon"}'
-openweb hackernews exec get_top_stories '{}'
+openweb hackernews exec getTopStories '{}'
 ```
 
 Successful output goes to stdout as JSON. Errors go to stderr as structured JSON with a `failureClass` field (see [Troubleshooting](#troubleshooting)).
 
 Responses over 4096 bytes automatically spill to a temp file; the path is printed to stdout.
 
-Add `--verbose` for request/response details:
+Enable debug output with `OPENWEB_DEBUG=1`:
 
 ```bash
-openweb wikipedia exec getPageSummary '{"title":"Claude_Shannon"}' --verbose
+OPENWEB_DEBUG=1 openweb wikipedia exec getPageSummary '{"title":"Claude_Shannon"}'
 ```
 
 ### Browser-required sites (login flow)

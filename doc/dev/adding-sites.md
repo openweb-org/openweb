@@ -270,7 +270,6 @@ pnpm --silent dev registry install <site>
 | github | L2 | cookie_session + meta_tag CSRF | SSR extraction |
 | reddit | L1 | — (public JSON) | .json suffix endpoints |
 | discord | L2 | webpack_module_walk | page transport, Webpack module cache |
-| microsoft-word | L2 | sessionStorage_msal | MSAL cache |
 | chatgpt | L2 | exchange_chain (GET) | Next-auth session |
 | whatsapp | L3 | adapter | Meta require() module |
 | telegram | L3 | adapter | teact global state |

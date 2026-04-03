@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-
 import type { LabeledSample, SampleCategory } from '../types-v2.js'
 import type { RecordedRequestSample } from '../types.js'
 
@@ -9,20 +7,52 @@ export interface LabelOptions {
 }
 
 // ---------------------------------------------------------------------------
-// Config — loaded once from shared JSON
+// Config — inlined for bundle compatibility (no readFileSync + import.meta.url)
 // ---------------------------------------------------------------------------
 
-const BLOCKED_HOST_PATTERNS: readonly string[] = JSON.parse(
-  readFileSync(new URL('../../lib/config/blocked-domains.json', import.meta.url), 'utf8'),
-)
+const BLOCKED_HOST_PATTERNS: readonly string[] = [
+  'google-analytics.com', 'googletagmanager.com', 'googlesyndication.com',
+  'googleadservices.com', 'doubleclick.net', 'facebook.com', 'facebook.net',
+  'fbcdn.net', 'twitter.com', 'analytics.twitter.com', 't.co', 'hotjar.com',
+  'mixpanel.com', 'segment.io', 'segment.com', 'amplitude.com', 'sentry.io',
+  'newrelic.com', 'nr-data.net', 'optimizely.com', 'intercom.io', 'intercomcdn.com',
+  'crisp.chat', 'drift.com', 'fullstory.com', 'clarity.ms', 'mouseflow.com',
+  'bugsnag.com', 'datadoghq.com', 'logrocket.com', 'posthog.com', 'plausible.io',
+  'matomo.cloud', 'fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net',
+  'unpkg.com', 'cdnjs.cloudflare.com',
+]
 
-const BLOCKED_PATH_PATTERNS: readonly RegExp[] = (
-  JSON.parse(
-    readFileSync(new URL('../../lib/config/blocked-paths.json', import.meta.url), 'utf8'),
-  ) as (string | [string, string])[]
-).map((entry) =>
-  typeof entry === 'string' ? new RegExp(entry) : new RegExp(entry[0], entry[1]),
-)
+const BLOCKED_PATH_PATTERNS: readonly RegExp[] = [
+  /\/manifest\.json$/,
+  /\/_next\//,
+  /\/\.well-known\//,
+  /\/favicon\./,
+  /\/robots\.txt$/,
+  /\/sitemap\.xml/,
+  /^\/_\/(trace|tracking|telemetry|beacon|collect|analytics|pixel)\b/,
+  /\/api\/v?\d*\/(trace|telemetry|beacon|collect)\b/i,
+  /\/events?\/(create|batch|track|report)\b/i,
+  /\/health(z|check)?$/,
+  /\/ping$/,
+  /\/cookie-settings\b/,
+  /\/_ajax\b/,
+  /\/sw\.js$/,
+  /\/service-worker/,
+  /\/workbox-/,
+  /\/csp-report\b/,
+  /\/collect\/?$/,
+  /\/trackObserve/,
+  /\/events?\/(ext-tag|tms)-/,
+  /\/security\/csp\b/,
+  /\/px\//,
+  /\/tscp\//,
+  /\/realtimeFrontendClientConnectivityTracking/,
+  /\/stats\/qoe\b/,
+  /\/log_event\b/,
+  /\/verify_session\b/,
+  /\/youtubei\/v1\/log_event\b/,
+  /\/collector\b/,
+]
 
 // ---------------------------------------------------------------------------
 // Domain helpers (copied from filter.ts — not exported there)
@@ -117,11 +147,13 @@ function isStaticContentType(contentType: string): boolean {
   return STATIC_CONTENT_TYPE_PREFIXES.some((prefix) => ct.startsWith(prefix))
 }
 
-const STATIC_EXTENSIONS: ReadonlySet<string> = new Set(
-  JSON.parse(
-    readFileSync(new URL('../../lib/config/static-extensions.json', import.meta.url), 'utf8'),
-  ) as string[],
-)
+const STATIC_EXTENSIONS: ReadonlySet<string> = new Set([
+  '.js', '.mjs', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg',
+  '.ico', '.webp', '.avif', '.bmp', '.tiff',
+  '.woff', '.woff2', '.ttf', '.eot', '.otf',
+  '.mp4', '.webm', '.ogg', '.mp3', '.wav', '.flac',
+  '.map', '.ts', '.tsx', '.jsx',
+])
 
 function getPathExtension(urlPath: string): string {
   // Strip query string and fragment

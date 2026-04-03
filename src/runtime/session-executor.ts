@@ -92,7 +92,13 @@ export async function autoNavigate(context: BrowserContext, serverUrl: string): 
   try {
     logger.debug(`auto-navigating to ${siteUrl}`)
     const newPage = await context.newPage()
-    await newPage.goto(siteUrl, { waitUntil: 'load', timeout: 15_000 })
+    try {
+      await newPage.goto(siteUrl, { waitUntil: 'load', timeout: 15_000 })
+    } catch (navErr) {
+      await newPage.close().catch(() => {})
+      logger.debug(`auto-navigation failed: ${navErr instanceof Error ? navErr.message : String(navErr)}`)
+      return undefined
+    }
     // Settle wait: SPAs redirect during load; need stable URL for findPageForOrigin
     await new Promise(r => setTimeout(r, 2000))
     const matched = await findPageForOrigin(context, serverUrl)

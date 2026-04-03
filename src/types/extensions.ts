@@ -35,9 +35,13 @@ export interface XOpenWebBuildMeta {
 // Operation-level x-openweb (on paths[].{method})
 export interface XOpenWebOperation {
   readonly permission?: PermissionCategory
+  readonly safety?: 'safe' | 'caution'
+  readonly requires_auth?: boolean
   readonly build?: XOpenWebBuildMeta
   readonly transport?: Transport
-  readonly csrf?: CsrfPrimitive & { readonly scope?: readonly string[] }
+  readonly auth?: AuthPrimitive | false
+  readonly csrf?: (CsrfPrimitive & { readonly scope?: readonly string[] }) | false
+  readonly signing?: SigningPrimitive | false
   readonly pagination?: PaginationPrimitive
   readonly extraction?: ExtractionPrimitive
   readonly adapter?: AdapterRef

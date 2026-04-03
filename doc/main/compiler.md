@@ -168,7 +168,7 @@ The script drives browser interactions while the capture module records.
 Child process is killed after 120s (`TIMEOUT.recording`, env-overridable via
 `OPENWEB_RECORDING_TIMEOUT`).
 
--> See: `src/compiler/recorder.ts`, `skill/openweb/references/capture-script-guide.md`
+-> See: `src/compiler/recorder.ts`, `skill/openweb/references/capture-guide.md`
 
 ---
 

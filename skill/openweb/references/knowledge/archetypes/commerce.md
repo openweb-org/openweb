@@ -6,7 +6,7 @@
 
 Transaction-oriented sites where users browse, compare, and purchase goods or services.
 
-- **E-commerce** — product search, detail, cart, checkout: Walmart, Best Buy, eBay, Yelp, Zillow
+- **E-commerce** — product search, detail, cart, checkout: Walmart, Best Buy, eBay
 - **Travel** — flights, hotels, listings, bookings: Airbnb, Booking.com, Expedia, Google Flights
 - **Food Delivery** — restaurants, menus, orders: DoorDash, Instacart, Starbucks
 
@@ -46,8 +46,6 @@ Transaction-oriented sites where users browse, compare, and purchase goods or se
 - Booking.com: LD+JSON Hotel schema on detail pages, data-testid DOM structure, flights on separate subdomain (flights.booking.com), no auth needed for public search
 - Walmart: ssr_next_data extraction, PerimeterX blocks CDP browser
 - Best Buy: Akamai blocks all direct HTTP — three internal APIs via same-origin fetch only
-- Zillow: BLOCKED — five-layer PerimeterX detection
-- Yelp: BLOCKED — DataDome blocks CDP and direct HTTP
 - Google Flights: adapter-only, protobuf-encoded search params, internal RPC calls
 - Instacart: GraphQL persisted queries
 

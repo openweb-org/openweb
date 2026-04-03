@@ -16,14 +16,14 @@ Quick-reference matrix for identifying a site's type before discovery. Each row 
 | **Food Delivery** | cookie_session | node or page | DoorDash, Instacart, Starbucks | [commerce.md](commerce.md) |
 | **Job Boards** | none or cookie_session | page (adapter) | Indeed, LinkedIn, Glassdoor | [commerce.md](commerce.md) |
 | **Productivity / Enterprise** | sessionStorage_msal, cookie_session | node | Stripe, Linear, Asana | [enterprise.md](enterprise.md) |
-| **Developer Tools** | cookie_session, none | node | GitHub, npm, StackOverflow | [enterprise.md](enterprise.md) |
+| **Developer Tools** | cookie_session, none | node | GitHub, GitLab, Docker Hub | [enterprise.md](enterprise.md) |
 | **Finance / Banking** | cookie_session, exchange_chain | node or page | Fidelity, Robinhood, Bloomberg | [enterprise.md](enterprise.md) |
 | **Email** | oauth2, sessionStorage_msal | node | Gmail, Outlook | [enterprise.md](enterprise.md) |
 | **Cloud / Storage** | bearer_token, sessionStorage_msal | node | Dropbox, OneDrive | [enterprise.md](enterprise.md) |
-| **Weather / Data** | none | node | Open-Meteo, IP API | [data-apis.md](data-apis.md) |
+| **Weather / Data** | none | node | IP API, Exchange Rate | [data-apis.md](data-apis.md) |
 | **Prediction / Fun** | none | node | Cat Facts, Chuck Norris | [data-apis.md](data-apis.md) |
-| **Reference / Lookup** | none | node | PokeAPI, REST Countries | [data-apis.md](data-apis.md) |
-| **Crypto / Finance (public)** | none | node | CoinGecko, Exchange Rate | [data-apis.md](data-apis.md) |
+| **Reference / Lookup** | none | node | REST Countries, Open Library | [data-apis.md](data-apis.md) |
+| **Crypto / Finance (public)** | none | node | Exchange Rate | [data-apis.md](data-apis.md) |
 | **News** | none | node | BBC, The Guardian | [data-apis.md](data-apis.md) |
 | **Chinese Web** | cookie_session, none | page (adapter) | Bilibili, Weibo, Zhihu | [chinese-web.md](chinese-web.md) |
 

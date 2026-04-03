@@ -23,13 +23,15 @@ export async function fetchWithRedirects(
   let currentUrl = url
   let currentMethod = method
   let currentBody = body
+  // Clone headers so cross-origin stripping doesn't mutate the caller's object
+  const currentHeaders = { ...headers }
 
   for (let attempt = 0; attempt <= MAX_REDIRECTS; attempt += 1) {
     await opts.ssrfValidator(currentUrl)
 
     const response = await opts.fetchImpl(currentUrl, {
       method: currentMethod,
-      headers,
+      headers: currentHeaders,
       body: currentMethod !== 'GET' && currentMethod !== 'HEAD' ? currentBody : undefined,
       redirect: 'manual',
     })
@@ -63,8 +65,8 @@ export async function fetchWithRedirects(
     // CR-01: Strip sensitive headers on cross-origin redirect
     if (nextUrl.origin !== originalOrigin) {
       for (const name of SENSITIVE_HEADERS) {
-        for (const key of Object.keys(headers)) {
-          if (key.toLowerCase() === name) delete headers[key]
+        for (const key of Object.keys(currentHeaders)) {
+          if (key.toLowerCase() === name) delete currentHeaders[key]
         }
       }
     }

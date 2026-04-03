@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 
 import type { AsyncApiOperationRef, AsyncApiSpec } from '../lib/asyncapi.js'
 import { listAsyncApiOperations } from '../lib/asyncapi.js'
+import { OpenWebError } from '../lib/errors.js'
 import type { XOpenWebWsServer } from '../types/ws-extensions.js'
 import { type WsAuthResult, resolveWsAuth } from './primitives/ws-registry.js'
 import type { WsConnectionConfig, WsConnectionManager } from './ws-connection.js'
@@ -34,9 +35,17 @@ function hash8(value: string): string {
 function extractServer(spec: AsyncApiSpec): { name: string; host: string; pathname: string; ext: XOpenWebWsServer } {
   const servers = spec.servers ?? {}
   const [name, server] = Object.entries(servers)[0] ?? []
-  if (!name || !server) throw new Error('AsyncAPI spec has no servers')
+  if (!name || !server) throw new OpenWebError({
+    error: 'execution_failed', code: 'EXECUTION_FAILED',
+    message: 'AsyncAPI spec has no servers', action: 'Check the site AsyncAPI spec.',
+    retriable: false, failureClass: 'fatal',
+  })
   const ext = server['x-openweb']
-  if (!ext) throw new Error(`Server ${name} missing x-openweb extension`)
+  if (!ext) throw new OpenWebError({
+    error: 'execution_failed', code: 'EXECUTION_FAILED',
+    message: `Server ${name} missing x-openweb extension`, action: 'Check the site AsyncAPI spec.',
+    retriable: false, failureClass: 'fatal',
+  })
   return { name, host: server.host, pathname: server.pathname ?? '/', ext }
 }
 
@@ -94,6 +103,11 @@ export async function openWsSession(
 ): Promise<WsSession> {
   const { host, pathname, ext: serverExt } = extractServer(asyncapi)
   const wsUrl = buildWsUrl(host, pathname)
+
+  // SSRF validation — convert wss:// → https:// for DNS check
+  if (deps?.ssrfValidator) {
+    await deps.ssrfValidator(wsUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://'))
+  }
 
   // Resolve auth
   const authResult = serverExt.auth

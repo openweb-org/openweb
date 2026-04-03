@@ -12,21 +12,6 @@ const outDir = path.join(process.cwd(), 'dist', 'sites')
 
 /** Sites excluded from build output (WIP / dropped — kept in src/ only). */
 const EXCLUDED_SITES = new Set([
-  'bitbucket',
-  'coinbase',
-  'coingecko',
-  'digital',
-  'finance',
-  'httpbin',
-  'jsonplaceholder',
-  'microsoft-word',
-  'npm',
-  'open-meteo',
-  'pokeapi',
-  'stackoverflow',
-  'tiktok',
-  'yelp',
-  'zillow',
 ])
 
 if (!existsSync(sitesDir)) {
@@ -48,7 +33,7 @@ for (const site of sites) {
   const dstSite = path.join(outDir, site.name)
 
   // Top-level files to copy
-  const topFiles = ['openapi.yaml', 'asyncapi.yaml', 'manifest.json', 'DOC.md', 'PROGRESS.md']
+  const topFiles = ['openapi.yaml', 'asyncapi.yaml', 'manifest.json', 'DOC.md']
   const filesToCopy = topFiles.filter((f) => existsSync(path.join(srcSite, f)))
 
   // Check for compiled .js adapters

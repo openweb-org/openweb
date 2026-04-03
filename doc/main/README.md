@@ -123,7 +123,7 @@ src/
 │   ├── cookies.ts              #   Cookie management
 │   └── config/                 #   Config files: blocked-domains, blocked-paths, tracking-cookies, static-extensions
 │
-└── sites/                      # Site packages (56 sites)
+└── sites/                      # Site packages (55 sites)
     ├── github/                 #   L1 (no x-openweb)
     ├── instagram/              #   L2 (cookie_session + cookie_to_header)
     ├── youtube/                #   L2 (page_global + sapisidhash)

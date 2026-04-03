@@ -7,7 +7,7 @@
 
 Let any agent access the web easily, fast, and cheap.
 
--> See: [doc/mission.md](../mission.md)
+-> See: [mission.md](mission.md)
 
 ## Three-Layer Model
 
@@ -88,7 +88,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 | **Capture** | CDP browser recording (HAR + WS + state + DOM), no content filtering, body-size-gate only | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17), unfiltered (v2) |
 | **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skill/openweb/references/` | 2 process docs + 2 deep refs + 7 knowledge files |
 | **CLI** | Progressive navigation + exec + browser + capture + compile + verify + registry | `src/cli.ts`, `src/commands/` | Complete — npm binary `openweb` (M33) |
-| **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `$OPENWEB_HOME/sites/` (installed) | 56 sites with DOC.md + PROGRESS.md |
+| **Skill packages** | Per-site instance specs (OpenAPI + AsyncAPI) | `src/sites/` (dev), `$OPENWEB_HOME/sites/` (installed) | 55 sites with DOC.md + PROGRESS.md |
 | **Agent skill** | CLI wrapper for Claude/Codex agents | `skill/openweb/SKILL.md` | 5-intent router (M38) |
 
 ---
@@ -99,7 +99,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 |-----------|-----------|---------------|-------------|
 | `node` | HTTP from Node.js. If auth/csrf/signing config present, uses browser cookies. | Only for auth | Public APIs, cookie auth, CSRF, token extraction |
 | `page` | HTTP via `page.evaluate(fetch(...))`. Always needs browser. | Yes (CDP) | Signing, native TLS, CORS-bound APIs |
-| `ws` | WebSocket connection with message routing. AsyncAPI-defined channels. | Only for auth | Real-time APIs (Discord gateway, Coinbase feed) |
+| `ws` | WebSocket connection with message routing. AsyncAPI-defined channels. | Only for auth | Real-time APIs (Discord gateway) |
 
 **Transport resolution**: operation-level `x-openweb.transport` → server-level `x-openweb.transport` → default `node`
 `x-openweb.extraction` short-circuits HTTP transport dispatch and runs directly against the matching page state.
@@ -191,7 +191,6 @@ Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessio
 
 | Site | Layer | Auth | CSRF | Signing | Extraction | Transport |
 |------|-------|------|------|---------|------------|-----------|
-| Open-Meteo | L1 | — | — | — | — | node |
 | Instagram | L2 | cookie_session | cookie_to_header | — | — | page |
 | Bluesky | L2 | localStorage_jwt | — | — | — | node |
 | YouTube | L2 | page_global | — | sapisidhash | — | node |
@@ -199,15 +198,13 @@ Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessio
 | Reddit | L1 | — | — | — | — | node |
 | Walmart | L2 | — | — | — | ssr_next_data | node |
 | Hacker News | L2 | — | — | — | html_selector | node |
-| Microsoft Word | L2 | sessionStorage_msal | — | — | — | node |
 | Discord | L2 | webpack_module_walk | — | — | — | page |
 | ChatGPT | L2 | exchange_chain | — | — | — | node |
-| Coinbase | WS | — | — | — | — | ws |
 | LinkedIn | L2 | cookie_session | cookie_to_header | — | — | node |
 | WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |
 | Telegram | L3 | adapter | — | — | adapter | adapter (L3) |
 
-68 total sites. Full list: `pnpm dev sites`
+55 total sites. Full list: `pnpm dev sites`
 
 **Note:** The GitHub public fixture also includes a `graphqlQuery` operation (POST `/graphql`, `permission: write`) demonstrating POST-based GraphQL on a public API.
 

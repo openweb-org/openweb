@@ -29,7 +29,7 @@ if (violations.length > 0) {
 }
 
 // Check size
-const sizeMatch = output.match(/Tarball Size:\s*([\d.]+)\s*([kMG]B)/)
+const sizeMatch = output.match(/(?:Tarball Size|package size):\s*([\d.]+)\s*([kMG]?B)/)
 if (sizeMatch) {
   const size = Number.parseFloat(sizeMatch[1])
   const unit = sizeMatch[2]
