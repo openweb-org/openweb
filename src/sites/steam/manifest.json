@@ -8,16 +8,16 @@
   "requires_auth": false,
   "dependencies": {},
   "stats": {
-    "operation_count": 14,
-    "l1_count": 14,
+    "operation_count": 11,
+    "l1_count": 11,
     "l2_count": 0,
     "l3_count": 0,
     "ws_count": 0
   },
-  "last_verified": "2026-03-24T18:51:49.532Z",
+  "last_verified": "2026-04-03T03:06:04.002Z",
   "quarantined": false,
   "fingerprint": {
-    "response_shape_hash": "getAppDetails:2c70cab222f18d7f,getAppNews:e542e15c01900ee5,getAppNewsV1:aada8e7e97f04bb1,getAppReviews:96a2757909ed3ba8,getCurrentPlayers:ec6f4c5ee1e868fc,getFeatured:cd0d2397dbf35774,getFeaturedCategories:08069164b0de03b7,getGlobalAchievements:b72759ccad86c53a,getPackageDetails:c50898eac027803e,searchGames:758dc8b0181c01aa",
-    "last_validated": "2026-03-24T18:51:49.533Z"
+    "response_shape_hash": "getAppDetails:2c70cab222f18d7f,getAppNews:e542e15c01900ee5,getAppReviews:96a2757909ed3ba8,getCurrentPlayers:ec6f4c5ee1e868fc,getFeatured:b20f87790a7efd13,getFeaturedCategories:e288eba9441b149c,getGlobalAchievements:b72759ccad86c53a,getPackageDetails:c50898eac027803e,searchGames:758dc8b0181c01aa",
+    "last_validated": "2026-04-03T03:06:04.015Z"
   }
 }

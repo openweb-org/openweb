@@ -381,6 +381,8 @@ paths:
                       properties:
                         id:
                           type: integer
+                        type:
+                          type: integer
                         name:
                           type: string
                         discounted:
@@ -397,9 +399,19 @@ paths:
                             - type: 'null'
                         currency:
                           type: string
+                        windows_available:
+                          type: boolean
+                        mac_available:
+                          type: boolean
+                        linux_available:
+                          type: boolean
+                        discount_expiration:
+                          type: integer
+                        header_image:
+                          type: string
                         large_capsule_image:
                           type: string
-                        header_image:
+                        small_capsule_image:
                           type: string
                   featured_win:
                     type: array
@@ -424,8 +436,12 @@ paths:
                             - type: 'null'
                         currency:
                           type: string
-                        large_capsule_image:
-                          type: string
+                        windows_available:
+                          type: boolean
+                        mac_available:
+                          type: boolean
+                        linux_available:
+                          type: boolean
                         header_image:
                           type: string
                   featured_mac:
@@ -451,6 +467,12 @@ paths:
                             - type: 'null'
                         currency:
                           type: string
+                        windows_available:
+                          type: boolean
+                        mac_available:
+                          type: boolean
+                        linux_available:
+                          type: boolean
                         header_image:
                           type: string
                   featured_linux:
@@ -476,8 +498,16 @@ paths:
                             - type: 'null'
                         currency:
                           type: string
+                        windows_available:
+                          type: boolean
+                        mac_available:
+                          type: boolean
+                        linux_available:
+                          type: boolean
                         header_image:
                           type: string
+                  layout:
+                    type: string
                   status:
                     type: integer
 
@@ -546,6 +576,12 @@ paths:
                                 - type: 'null'
                             currency:
                               type: string
+                            windows_available:
+                              type: boolean
+                            mac_available:
+                              type: boolean
+                            linux_available:
+                              type: boolean
                             header_image:
                               type: string
                   coming_soon:
@@ -578,6 +614,12 @@ paths:
                                 - type: 'null'
                             currency:
                               type: string
+                            windows_available:
+                              type: boolean
+                            mac_available:
+                              type: boolean
+                            linux_available:
+                              type: boolean
                             header_image:
                               type: string
                   top_sellers:
@@ -610,6 +652,12 @@ paths:
                                 - type: 'null'
                             currency:
                               type: string
+                            windows_available:
+                              type: boolean
+                            mac_available:
+                              type: boolean
+                            linux_available:
+                              type: boolean
                             header_image:
                               type: string
                   new_releases:
@@ -642,8 +690,16 @@ paths:
                                 - type: 'null'
                             currency:
                               type: string
+                            windows_available:
+                              type: boolean
+                            mac_available:
+                              type: boolean
+                            linux_available:
+                              type: boolean
                             header_image:
                               type: string
+                  status:
+                    type: integer
 
   /api/packagedetails:
     get:
@@ -724,7 +780,7 @@ paths:
   /ISteamNews/GetNewsForApp/v2/:
     get:
       operationId: getAppNews
-      summary: "Get news articles for a game — title, author, contents, date, url, feedname"
+      summary: "Get news articles for a game — title, author, contents, date, url, feedname, tags"
       servers:
         - url: https://api.steampowered.com
       x-openweb:
@@ -756,6 +812,12 @@ paths:
             type: integer
             default: 300
           description: Max length of each news item body (0 for full).
+        - name: feeds
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Comma-separated feed names to filter (e.g. "steam_community_announcements").
       responses:
         '200':
           description: Success.
@@ -790,6 +852,10 @@ paths:
                               type: integer
                             feedname:
                               type: string
+                            tags:
+                              type: array
+                              items:
+                                type: string
 
   /ISteamUserStats/GetNumberOfCurrentPlayers/v1/:
     get:
@@ -876,92 +942,6 @@ paths:
                               oneOf:
                                 - type: number
                                 - type: string
-
-  /ISteamNews/GetNewsForApp/v1/:
-    get:
-      operationId: getAppNewsV1
-      summary: Get news articles for a game (v1) — title, author, contents, date, tags, feed filtering
-      servers:
-        - url: https://api.steampowered.com
-      x-openweb:
-        transport: node
-        permission: read
-        build:
-          verified: true
-          stable_id: stm0010
-          signature_id: stm0010s
-          tool_version: 1
-      parameters:
-        - name: appid
-          in: query
-          required: true
-          schema:
-            type: integer
-          description: Steam app ID (e.g. 730).
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of news items to return.
-        - name: maxlength
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 300
-          description: Max length of each news item body (0 for full).
-        - name: feeds
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Comma-separated feed names to filter (e.g. "steam_community_announcements").
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [appnews]
-                properties:
-                  appnews:
-                    type: object
-                    required: [appid, newsitems]
-                    properties:
-                      appid:
-                        type: integer
-                      newsitems:
-                        type: object
-                        properties:
-                          newsitem:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                gid:
-                                  type: string
-                                title:
-                                  type: string
-                                url:
-                                  type: string
-                                author:
-                                  type: string
-                                contents:
-                                  type: string
-                                date:
-                                  type: integer
-                                feedname:
-                                  type: string
-                                tags:
-                                  type: object
-                                  properties:
-                                    tag:
-                                      type: array
-                                      items:
-                                        type: string
 
   /api/dlcforapp/:
     get:
@@ -1064,89 +1044,3 @@ paths:
                       type: integer
                     name:
                       type: string
-
-  /dynamicstore/userdata/:
-    get:
-      operationId: getUserStoreData
-      summary: Get logged-in user's store data — owned apps, wishlist IDs, followed apps, recommended tags, ignored apps
-      x-openweb:
-        permission: read
-        build:
-          verified: false
-          stable_id: stm0013
-          signature_id: stm0013s
-          tool_version: 1
-      parameters: []
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  rgOwnedApps:
-                    type: array
-                    items:
-                      type: integer
-                  rgWishlist:
-                    type: array
-                    items:
-                      type: integer
-                  rgFollowedApps:
-                    type: array
-                    items:
-                      type: integer
-                  rgRecommendedTags:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        tagid:
-                          type: integer
-                        name:
-                          type: string
-                  rgIgnoredApps:
-                    type: array
-                    items:
-                      type: integer
-                  rgOwnedPackages:
-                    type: array
-                    items:
-                      type: integer
-
-  /api/addtowishlist:
-    post:
-      operationId: addToWishlist
-      summary: Add a game to the logged-in user's wishlist — returns success status and wishlist count
-      x-openweb:
-        permission: write
-        build:
-          verified: false
-          stable_id: stm0014
-          signature_id: stm0014s
-          tool_version: 1
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              required: [appid]
-              properties:
-                appid:
-                  type: integer
-                  description: Steam app ID to add to wishlist.
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [success]
-                properties:
-                  success:
-                    type: boolean
-                  wishlistCount:
-                    type: integer
