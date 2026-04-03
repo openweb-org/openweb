@@ -73,3 +73,4 @@ No auth required. All APIs are public.
 ## Known Issues
 - Standings may return minimal data during off-season periods.
 - The `dates` parameter on getScoreboard uses YYYYMMDD format.
+- `searchPlayers` requires the `type` parameter (player or team) to return results — omitting it returns empty.

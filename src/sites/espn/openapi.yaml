@@ -65,6 +65,13 @@ paths:
                           type: string
                         season:
                           type: object
+                          properties:
+                            year:
+                              type: integer
+                            displayName:
+                              type: string
+                            type:
+                              type: object
                       required: [id, name, abbreviation]
                   season:
                     type: object
@@ -79,7 +86,6 @@ paths:
                     properties:
                       date:
                         type: string
-                        format: date
                   events:
                     type: array
                     items:
@@ -87,13 +93,16 @@ paths:
                       properties:
                         id:
                           type: string
+                        uid:
+                          type: string
                         date:
                           type: string
-                          format: date-time
                         name:
                           type: string
                         shortName:
                           type: string
+                        season:
+                          type: object
                         competitions:
                           type: array
                           items:
@@ -101,6 +110,8 @@ paths:
                             properties:
                               id:
                                 type: string
+                              venue:
+                                type: object
                               competitors:
                                 type: array
                                 items:
@@ -108,18 +119,70 @@ paths:
                                   properties:
                                     id:
                                       type: string
-                                    team:
-                                      type: object
-                                    score:
-                                      type: string
                                     homeAway:
                                       type: string
+                                    winner:
+                                      type: boolean
+                                    team:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: string
+                                        location:
+                                          type: string
+                                        name:
+                                          type: string
+                                        abbreviation:
+                                          type: string
+                                        displayName:
+                                          type: string
+                                        logo:
+                                          type: string
+                                      required: [id, displayName]
+                                    score:
+                                      type: string
+                                    linescores:
+                                      type: array
+                                      items:
+                                        type: object
+                                    records:
+                                      type: array
+                                      items:
+                                        type: object
                                   required: [id, team, score, homeAway]
                               status:
                                 type: object
+                                properties:
+                                  clock:
+                                    type: number
+                                  displayClock:
+                                    type: string
+                                  period:
+                                    type: integer
+                                  type:
+                                    type: object
+                                    properties:
+                                      completed:
+                                        type: boolean
+                                      description:
+                                        type: string
+                                      detail:
+                                        type: string
+                                      state:
+                                        type: string
+                              broadcasts:
+                                type: array
+                                items:
+                                  type: object
                         status:
                           type: object
                           properties:
+                            clock:
+                              type: number
+                            displayClock:
+                              type: string
+                            period:
+                              type: integer
                             type:
                               type: object
                               properties:
@@ -127,6 +190,14 @@ paths:
                                   type: boolean
                                 description:
                                   type: string
+                                detail:
+                                  type: string
+                                state:
+                                  type: string
+                        links:
+                          type: array
+                          items:
+                            type: object
                       required: [id, date, name]
                 required: [leagues, events]
 
@@ -182,12 +253,18 @@ paths:
                         type: string
                       name:
                         type: string
+                      nickname:
+                        type: string
                       abbreviation:
                         type: string
                       displayName:
                         type: string
+                      shortDisplayName:
+                        type: string
                       color:
                         type: string
+                      isActive:
+                        type: boolean
                       logos:
                         type: array
                         items:
@@ -199,9 +276,42 @@ paths:
                               type: integer
                             height:
                               type: integer
+                            alt:
+                              type: string
                       record:
                         type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                type:
+                                  type: string
+                                summary:
+                                  type: string
+                                stats:
+                                  type: array
+                                  items:
+                                    type: object
+                      standingSummary:
+                        type: string
+                      franchise:
+                        type: object
                       links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            href:
+                              type: string
+                            text:
+                              type: string
+                            rel:
+                              type: array
+                              items:
+                                type: string
+                      nextEvent:
                         type: array
                         items:
                           type: object
@@ -245,11 +355,23 @@ paths:
                     items:
                       type: object
                       properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        slug:
+                          type: string
                         leagues:
                           type: array
                           items:
                             type: object
                             properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                              abbreviation:
+                                type: string
                               teams:
                                 type: array
                                 items:
@@ -264,10 +386,27 @@ paths:
                                           type: string
                                         abbreviation:
                                           type: string
+                                        location:
+                                          type: string
+                                        name:
+                                          type: string
+                                        nickname:
+                                          type: string
+                                        color:
+                                          type: string
+                                        isActive:
+                                          type: boolean
                                         logos:
                                           type: array
                                           items:
                                             type: object
+                                            properties:
+                                              href:
+                                                type: string
+                                              width:
+                                                type: integer
+                                              height:
+                                                type: integer
                                       required: [id, displayName, abbreviation]
 
   /apis/v2/sports/{sport}/{league}/standings:
@@ -302,16 +441,34 @@ paths:
               schema:
                 type: object
                 properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  abbreviation:
+                    type: string
                   children:
                     type: array
                     items:
                       type: object
                       properties:
+                        id:
+                          type: string
                         name:
+                          type: string
+                        abbreviation:
                           type: string
                         standings:
                           type: object
                           properties:
+                            name:
+                              type: string
+                            displayName:
+                              type: string
+                            season:
+                              type: integer
+                            seasonDisplayName:
+                              type: string
                             entries:
                               type: array
                               items:
@@ -319,10 +476,33 @@ paths:
                                 properties:
                                   team:
                                     type: object
+                                    properties:
+                                      id:
+                                        type: string
+                                      displayName:
+                                        type: string
+                                      abbreviation:
+                                        type: string
+                                      logos:
+                                        type: array
+                                        items:
+                                          type: object
+                                    required: [id, displayName]
                                   stats:
                                     type: array
                                     items:
                                       type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                        displayName:
+                                          type: string
+                                        abbreviation:
+                                          type: string
+                                        value:
+                                          type: number
+                                        displayValue:
+                                          type: string
 
   /apis/site/v2/sports/{sport}/{league}/news:
     get:
@@ -369,8 +549,13 @@ paths:
                           type: string
                         published:
                           type: string
-                          format: date-time
+                        lastModified:
+                          type: string
                         type:
+                          type: string
+                        premium:
+                          type: boolean
+                        byline:
                           type: string
                         images:
                           type: array
@@ -381,10 +566,23 @@ paths:
                                 type: string
                               caption:
                                 type: string
+                              width:
+                                type: integer
+                              height:
+                                type: integer
+                        categories:
+                          type: array
+                          items:
+                            type: object
                         links:
                           type: object
                           properties:
                             web:
+                              type: object
+                              properties:
+                                href:
+                                  type: string
+                            mobile:
                               type: object
                               properties:
                                 href:
@@ -422,7 +620,7 @@ paths:
           schema:
             type: string
             enum: [player, team]
-          description: "Filter by result type (player or team)"
+          description: "Filter by result type — required to get results (player or team)"
           example: player
       responses:
         "200":
@@ -457,6 +655,10 @@ paths:
                           type: string
                         league:
                           type: string
+                        label:
+                          type: string
+                        isActive:
+                          type: boolean
                       required: [id, displayName, type]
                 required: [items]
       servers:

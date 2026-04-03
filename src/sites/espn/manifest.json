@@ -5,10 +5,10 @@
   "site_url": "https://www.espn.com",
   "compiled_at": "2026-04-01T22:30:47.588Z",
   "requires_auth": false,
-  "last_verified": "2026-04-01T22:38:41.137Z",
+  "last_verified": "2026-04-03T02:16:31.654Z",
   "quarantined": false,
   "fingerprint": {
-    "response_shape_hash": "getNews:0717e054bb5f8b96,getScoreboard:03ddcf6bbc637e3b,getStandings:3c3f5d877d17ca1d,getTeam:61779fcab304131d,getTeams:978c0046adede087,searchPlayers:aa998dcfeb83360b",
-    "last_validated": "2026-04-01T22:38:41.138Z"
+    "response_shape_hash": "getNews:714d06a6293b262b,getScoreboard:42af7a7c2375ea2e,getStandings:3c3f5d877d17ca1d,getTeam:1839b44f3d729a9d,getTeams:978c0046adede087,searchPlayers:aa998dcfeb83360b",
+    "last_validated": "2026-04-03T02:16:31.655Z"
   }
 }
