@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 
 import { TIMEOUT } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'

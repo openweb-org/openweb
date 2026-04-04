@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Zhihu L3 adapter — page-based API access with cookie session.

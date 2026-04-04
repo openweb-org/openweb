@@ -20,7 +20,7 @@ function mockBrowser(
   return {
     contexts: () => [context],
     close: vi.fn(async () => {}),
-  } as unknown as import('playwright').Browser
+  } as unknown as import('patchright').Browser
 }
 
 const baseSpec: OpenApiSpec = {
@@ -74,7 +74,7 @@ describe('executeBrowserFetch', () => {
     }
     const browser = {
       contexts: () => [context],
-    } as unknown as import('playwright').Browser
+    } as unknown as import('patchright').Browser
 
     await executeBrowserFetch(
       browser,
@@ -124,7 +124,7 @@ describe('executeBrowserFetch', () => {
     }
     const browser = {
       contexts: () => [context],
-    } as unknown as import('playwright').Browser
+    } as unknown as import('patchright').Browser
 
     await executeBrowserFetch(
       browser,
@@ -205,7 +205,7 @@ describe('executeBrowserFetch', () => {
   it('throws when no browser context available', async () => {
     const browser = {
       contexts: () => [],
-    } as unknown as import('playwright').Browser
+    } as unknown as import('patchright').Browser
 
     await expect(
       executeBrowserFetch(
@@ -240,7 +240,7 @@ describe('executeBrowserFetch', () => {
     }
     const browser = {
       contexts: () => [context],
-    } as unknown as import('playwright').Browser
+    } as unknown as import('patchright').Browser
 
     const specWithAuth: OpenApiSpec = {
       ...baseSpec,
@@ -278,7 +278,7 @@ describe('executeBrowserFetch', () => {
     }
     const browser = {
       contexts: () => [context],
-    } as unknown as import('playwright').Browser
+    } as unknown as import('patchright').Browser
 
     await expect(
       executeBrowserFetch(
@@ -314,7 +314,7 @@ describe('executeBrowserFetch', () => {
     }
     const browser = {
       contexts: () => [context],
-    } as unknown as import('playwright').Browser
+    } as unknown as import('patchright').Browser
     const spec: OpenApiSpec = {
       openapi: '3.1.0',
       info: { title: 'Discord', version: '1.0' },

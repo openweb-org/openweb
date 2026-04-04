@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Page } from 'playwright-core'
+import type { Browser, BrowserContext, Page } from 'patchright'
 
 import { formatCookieString } from '../lib/cookies.js'
 import { DEFAULT_USER_AGENT } from '../lib/config.js'

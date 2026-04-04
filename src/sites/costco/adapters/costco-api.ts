@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Costco L3 adapter — POST-based APIs via Playwright request context.

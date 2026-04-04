@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 
 export const GQL_URL = 'https://gql.twitch.tv/gql'
 export const CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'

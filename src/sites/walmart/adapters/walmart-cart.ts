@@ -1,4 +1,4 @@
-import type { Page } from "playwright-core";
+import type { Page } from "patchright";
 import { OpenWebError } from "../../../lib/errors.js";
 /**
  * Walmart L3 adapter — addToCart via persisted GraphQL mutations.

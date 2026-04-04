@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 
 /**
  * Polyfill esbuild's `__name` helper in the browser page context.

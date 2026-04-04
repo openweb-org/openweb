@@ -1,4 +1,4 @@
-import type { Page, Response as PwResponse } from 'playwright-core'
+import type { Page, Response as PwResponse } from 'patchright'
 import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Bilibili L3 adapter — page-based API access with Wbi signing.

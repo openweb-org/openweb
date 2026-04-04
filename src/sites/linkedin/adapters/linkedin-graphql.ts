@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 
 /**
  * LinkedIn L3 adapter — GraphQL API via browser fetch.

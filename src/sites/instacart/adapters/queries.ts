@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 
 export const GRAPHQL_URL = 'https://www.instacart.com/graphql'
 

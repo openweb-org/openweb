@@ -14,16 +14,16 @@
 interface CodeAdapter {
   readonly name: string
   readonly description: string
-  init(page: import('playwright-core').Page): Promise<boolean>
-  isAuthenticated(page: import('playwright-core').Page): Promise<boolean>
+  init(page: import('patchright').Page): Promise<boolean>
+  isAuthenticated(page: import('patchright').Page): Promise<boolean>
   execute(
-    page: import('playwright-core').Page,
+    page: import('patchright').Page,
     operation: string,
     params: Readonly<Record<string, unknown>>,
   ): Promise<unknown>
 }
 
-type Page = import('playwright-core').Page
+type Page = import('patchright').Page
 
 /**
  * Find teact/webk getGlobal by walking webpack modules.

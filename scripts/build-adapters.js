@@ -28,7 +28,7 @@ for (const site of sites) {
     const input = path.join(adapterDir, tsFile)
     const output = path.join(adapterDir, tsFile.replace(/\.ts$/, '.js'))
     try {
-      execSync(`npx esbuild "${input}" --bundle --outfile="${output}" --format=esm --platform=node --target=es2022 --external:playwright`, {
+      execSync(`npx esbuild "${input}" --bundle --outfile="${output}" --format=esm --platform=node --target=es2022 --external:patchright`, {
         stdio: 'pipe',
       })
       compiled++

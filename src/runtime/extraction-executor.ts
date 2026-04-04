@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Page } from 'playwright-core'
+import type { Browser, BrowserContext, Page } from 'patchright'
 
 import { CDP_PORT } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'

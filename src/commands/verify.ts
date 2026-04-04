@@ -1,4 +1,4 @@
-import type { Browser } from 'playwright-core'
+import type { Browser } from 'patchright'
 
 import { OpenWebError } from '../lib/errors.js'
 import {

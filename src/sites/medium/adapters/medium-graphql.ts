@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 import {
   CLAP_MUTATION,
   FOLLOW_USER_MUTATION,

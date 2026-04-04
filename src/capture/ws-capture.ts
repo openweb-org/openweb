@@ -1,4 +1,4 @@
-import type { CDPSession } from 'playwright'
+import type { CDPSession } from 'patchright'
 
 import type { WsFrame } from './types.js'
 

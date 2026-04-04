@@ -1,4 +1,4 @@
-import type { Page, Request, Response } from 'playwright'
+import type { Page, Request, Response } from 'patchright'
 
 import { logger } from '../lib/logger.js'
 import type { HarEntry, HarLog } from './types.js'

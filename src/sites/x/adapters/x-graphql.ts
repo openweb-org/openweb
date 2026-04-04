@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 
 /**
  * X (Twitter) L3 adapter — GraphQL API via browser fetch.

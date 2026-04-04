@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 import type { CodeAdapter } from '../types/adapter.js'
 import { clearAdapterCache, executeAdapter } from './adapter-executor.js'
 

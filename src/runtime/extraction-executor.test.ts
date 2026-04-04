@@ -5,7 +5,7 @@ import { executeExtraction } from './extraction-executor.js'
 
 function extractionBrowser(
   pages: Array<{ url: string; content?: string; evaluateResult?: unknown }>,
-): import('playwright').Browser {
+): import('patchright').Browser {
   return {
     contexts: () => [
       {
@@ -19,7 +19,7 @@ function extractionBrowser(
       },
     ],
     close: vi.fn(async () => {}),
-  } as unknown as import('playwright').Browser
+  } as unknown as import('patchright').Browser
 }
 
 function extractionSpec(serverUrl: string): OpenApiSpec {

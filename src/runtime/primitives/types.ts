@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from 'playwright-core'
+import type { BrowserContext, Page } from 'patchright'
 
 /** Result of resolving an L2 primitive — headers and/or cookie string to inject */
 export interface ResolvedInjections {

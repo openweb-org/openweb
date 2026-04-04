@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 import type { CodeAdapter } from '../../../types/adapter.js'
 
 const AMP_API = 'https://amp-api.podcasts.apple.com'

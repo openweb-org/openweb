@@ -5,7 +5,7 @@
  * Data lives in Backbone-style collections accessible via require('WAWeb*').
  * No REST/GraphQL API exists — all data goes through internal modules.
  */
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 import { OpenWebError } from '../../../lib/errors.js'
 import type { CodeAdapter } from '../../../types/adapter.js'
 

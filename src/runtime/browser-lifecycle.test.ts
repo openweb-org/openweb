@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { Browser } from 'playwright-core'
+import type { Browser } from 'patchright'
 
 // ── Mocks ────────────────────────────────────────
 

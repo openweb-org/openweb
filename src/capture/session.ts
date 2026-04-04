@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, CDPSession, Page } from 'playwright'
+import type { Browser, BrowserContext, CDPSession, Page } from 'patchright'
 
 import { logger } from '../lib/logger.js'
 import { ensureBrowser, touchLastUsed } from '../runtime/browser-lifecycle.js'

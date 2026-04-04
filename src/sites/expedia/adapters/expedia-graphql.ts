@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 /**
  * Expedia L3 adapter — GraphQL APQ via browser fetch.
  *

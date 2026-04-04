@@ -45,7 +45,7 @@ export async function captureStartCommand(opts: CaptureStartOptions): Promise<vo
   process.stdout.write(`${sessionId}\n`)
 
   // Resolve CDP endpoint: use explicit flag, or auto-start managed browser
-  let isolatedPage: import('playwright-core').Page | undefined
+  let isolatedPage: import('patchright').Page | undefined
   let isolateHandle: BrowserHandle | undefined
 
   if (opts.isolate) {

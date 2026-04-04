@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Xiaohongshu (小红书) L3 adapter — Vue SSR state extraction + comment API interception.

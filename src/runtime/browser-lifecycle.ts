@@ -3,7 +3,7 @@ import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises'
 import { platform } from 'node:os'
 import { join } from 'node:path'
 
-import type { Browser } from 'playwright-core'
+import type { Browser } from 'patchright'
 
 import { connectWithRetry } from '../capture/connection.js'
 import { browserStartCommand, browserStopCommand } from '../commands/browser.js'

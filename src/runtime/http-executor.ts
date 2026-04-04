@@ -1,5 +1,5 @@
 import Ajv from 'ajv'
-import type { Browser } from 'playwright-core'
+import type { Browser } from 'patchright'
 
 import { DEFAULT_USER_AGENT, loadConfig } from '../lib/config.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'

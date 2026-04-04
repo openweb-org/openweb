@@ -1,4 +1,4 @@
-import type { Page } from 'playwright-core'
+import type { Page } from 'patchright'
 
 // Self-contained types — avoid external imports so adapter works from compile cache
 interface CodeAdapter {

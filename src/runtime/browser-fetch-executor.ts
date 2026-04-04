@@ -1,4 +1,4 @@
-import type { Browser } from 'playwright-core'
+import type { Browser } from 'patchright'
 
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'

@@ -135,7 +135,7 @@ function mockBrowser(
       },
     ],
     close: vi.fn(async () => {}),
-  } as unknown as import('playwright').Browser
+  } as unknown as import('patchright').Browser
 }
 
 describe('findPageForOrigin', () => {
@@ -155,7 +155,7 @@ describe('findPageForOrigin', () => {
           content: vi.fn(async () => '<html><body>video</body></html>'),
         },
       ],
-    } as unknown as import('playwright').BrowserContext
+    } as unknown as import('patchright').BrowserContext
 
     const page = await findPageForOrigin(context, 'https://www.youtube.com/youtubei/v1')
 
@@ -174,7 +174,7 @@ describe('findPageForOrigin', () => {
           content: vi.fn(async () => '<html><body>other</body></html>'),
         },
       ],
-    } as unknown as import('playwright').BrowserContext
+    } as unknown as import('patchright').BrowserContext
 
     const page = await findPageForOrigin(context, 'https://www.youtube.com/youtubei/v1')
 
@@ -188,7 +188,7 @@ describe('findPageForOrigin', () => {
     }
     const context = {
       pages: () => [podcastsPage],
-    } as unknown as import('playwright').BrowserContext
+    } as unknown as import('patchright').BrowserContext
 
     const page = await findPageForOrigin(context, 'https://amp-api.podcasts.apple.com/v1/catalog')
 
@@ -314,7 +314,7 @@ describe('executeSessionHttp', () => {
     const browser = {
       contexts: () => [],
       close: vi.fn(async () => {}),
-    } as unknown as import('playwright').Browser
+    } as unknown as import('patchright').Browser
 
     const spec = instagramSpec()
     await expect(
@@ -1207,7 +1207,7 @@ describe('RC2: autoNavigate', () => {
         newPageCreated = true
         return newPageObj
       }),
-    } as unknown as import('playwright').BrowserContext
+    } as unknown as import('patchright').BrowserContext
 
     const result = await autoNavigate(context, 'https://www.instagram.com/api/v1')
     expect(result).toBeDefined()
@@ -1228,7 +1228,7 @@ describe('RC2: autoNavigate', () => {
         content: vi.fn(async () => ''),
         close: vi.fn(async () => {}),
       })),
-    } as unknown as import('playwright').BrowserContext
+    } as unknown as import('patchright').BrowserContext
 
     const result = await autoNavigate(context, 'https://unreachable.example.com/api')
     expect(result).toBeUndefined()
@@ -1249,7 +1249,7 @@ describe('RC2: autoNavigate', () => {
     const context = {
       pages: () => [existingPage, newPageObj],
       newPage: vi.fn(async () => newPageObj),
-    } as unknown as import('playwright').BrowserContext
+    } as unknown as import('patchright').BrowserContext
 
     const result = await autoNavigate(context, 'https://www.instagram.com/api/v1')
     expect(result).toBeDefined()

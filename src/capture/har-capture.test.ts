@@ -1,4 +1,4 @@
-import type { Page, Request, Response } from 'playwright'
+import type { Page, Request, Response } from 'patchright'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { attachHarCapture } from './har-capture.js'
 
