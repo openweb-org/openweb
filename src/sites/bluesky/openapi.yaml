@@ -229,14 +229,13 @@ paths:
       operationId: searchPosts
       summary: "Search posts by keyword — returns matching posts with author, content, embeds, engagement counts. Requires auth."
       servers:
-        - url: https://public.api.bsky.app
+        - url: https://bsky.app
           x-openweb:
-            transport: node
+            transport: page
             auth:
               type: localStorage_jwt
               key: BSKY_STORAGE
               path: session.currentAccount.accessJwt
-              app_path: https://bsky.app
               inject:
                 header: Authorization
                 prefix: "Bearer "
@@ -245,6 +244,9 @@ paths:
         build:
           stable_id: bsky_searchPosts_v2
           tool_version: 2
+        adapter:
+          name: bluesky-pds
+          operation: searchPosts
         pagination:
           type: cursor
           response_field: cursor
