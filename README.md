@@ -83,7 +83,7 @@ openweb <site> <operation>                 # operation detail + params
 openweb <site> <op> '{...}'                # execute
 ```
 
-Browser auto-starts when needed. Auth-required sites will open your browser for login automatically.
+A managed browser auto-starts when needed. Auth-required sites may open your default browser for login.
 
 Full CLI reference: [`skill/openweb/references/cli.md`](skill/openweb/references/cli.md)
 Troubleshooting: [`skill/openweb/references/troubleshooting.md`](skill/openweb/references/troubleshooting.md)
