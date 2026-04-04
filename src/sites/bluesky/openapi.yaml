@@ -229,7 +229,7 @@ paths:
       operationId: searchPosts
       summary: "Search posts by keyword — returns matching posts with author, content, embeds, engagement counts. Requires auth."
       servers:
-        - url: https://bsky.social
+        - url: https://public.api.bsky.app
           x-openweb:
             transport: node
             auth:

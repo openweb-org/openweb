@@ -31,7 +31,7 @@ Bluesky AT Protocol social network — decentralized microblogging. Public read 
 | getAuthorFeed | user's posts | `actor` ← getProfile | feed[].post (uri, text, author, embeds, counts) | cursor pagination |
 | getPostThread | post with replies | `uri` ← getAuthorFeed/getFeed | thread.post (text, author, embeds, like/repost/reply/quote/bookmark counts), thread.replies[] | depth param controls reply depth |
 | getFeed | custom feed | `feed` (AT URI of feed generator) | feed[].post | cursor pagination, use known feed URIs |
-| searchPosts | search posts | `q` | posts[], hitsTotal | auth via bsky.social (localStorage_jwt) |
+| searchPosts | search posts | `q` | posts[], hitsTotal | auth via bsky.app (localStorage_jwt) |
 | searchActors | search users | `q` | actors[] with profile info | cursor pagination |
 | getFollowers | user's followers | `actor` ← getProfile | followers[] profiles | cursor pagination |
 | getFollows | user follows | `actor` ← getProfile | follows[] profiles | cursor pagination |
@@ -67,7 +67,7 @@ openweb bluesky exec searchActors '{"q": "developer", "limit": 10}'
 - AT URIs format: `at://did:plc:<id>/app.bsky.feed.post/<rkey>`
 
 ## Auth
-No auth required for most read operations on public.api.bsky.app. `searchPosts` uses per-operation server override to `bsky.social/xrpc` with `localStorage_jwt` auth (key: `BSKY_STORAGE`, path: `session.currentAccount.accessJwt`). Requires browser sign-in to bsky.app.
+No auth required for most read operations on public.api.bsky.app. `searchPosts` uses per-operation server override to `public.api.bsky.app/xrpc` with `localStorage_jwt` auth (key: `BSKY_STORAGE`, path: `session.currentAccount.accessJwt`). Requires browser sign-in to bsky.app.
 
 ## Transport
 `node` — direct HTTP. No bot detection on the public API. `searchPosts` uses node+browser (browser for JWT extraction only).

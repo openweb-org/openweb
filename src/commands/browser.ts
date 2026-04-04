@@ -1,10 +1,10 @@
 import { execFile, spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { chmod, copyFile, mkdir, mkdtemp, readFile, readdir, rm, unlink, writeFile } from 'node:fs/promises'
+import { chmod, cp, copyFile, mkdir, mkdtemp, readFile, readdir, rm, unlink, writeFile } from 'node:fs/promises'
 import { homedir, platform, tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { TIMEOUT, getBrowserConfig, openwebHome } from '../lib/config.js'
+import { DEFAULT_USER_AGENT, TIMEOUT, getBrowserConfig, openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 
 const PID_FILE = () => join(openwebHome(), 'browser.pid')
@@ -71,16 +71,7 @@ export async function copyProfileSelective(src: string, dest: string): Promise<v
     if (!existsSync(srcDir)) continue
 
     const destDir = join(dest, dir)
-    await mkdir(destDir, { recursive: true, mode: 0o700 })
-
-    const entries = await readdir(srcDir, { withFileTypes: true })
-    for (const entry of entries) {
-      if (entry.isFile()) {
-        const destPath = join(destDir, entry.name)
-        await copyFile(join(srcDir, entry.name), destPath)
-        await chmod(destPath, 0o600)
-      }
-    }
+    await cp(srcDir, destDir, { recursive: true })
   }
 }
 
@@ -230,6 +221,8 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
     `--user-data-dir=${tempUserDataDir}`,
     '--no-first-run',
     '--no-default-browser-check',
+    `--user-agent=${DEFAULT_USER_AGENT}`,
+    '--disable-blink-features=AutomationControlled',
   ]
   if (headless) {
     args.push('--headless=new')

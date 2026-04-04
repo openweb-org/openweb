@@ -2,6 +2,7 @@
   "name": "bluesky",
   "display_name": "Bluesky",
   "domain": "public.api.bsky.app",
+  "site_url": "https://bsky.app",
   "description": "Bluesky AT Protocol social network — profiles, feeds, posts, search",
   "category": "social",
   "requires_browser": false,

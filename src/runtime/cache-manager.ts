@@ -146,8 +146,21 @@ export async function writeBrowserCookiesToCache(
     // Extract localStorage/sessionStorage from the matching page
     let localStorage: Record<string, string> = {}
     let sessionStorage: Record<string, string> = {}
-    const serverExt = getServerXOpenWeb(spec, Object.values(spec.paths ?? {})[0]?.get ?? Object.values(spec.paths ?? {})[0]?.post ?? {})
-    const authType = serverExt?.auth?.type
+    // Check ALL operations for auth type — some sites have auth only on certain endpoints
+    let authType: string | undefined
+    for (const pathItem of Object.values(spec.paths ?? {})) {
+      for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
+        const op = (pathItem as Record<string, OpenApiOperation | undefined>)[method]
+        if (!op) continue
+        const ext = getServerXOpenWeb(spec, op)
+        const t = ext?.auth?.type
+        if (t === 'localStorage_jwt' || t === 'sessionStorage_msal') {
+          authType = t
+          break
+        }
+      }
+      if (authType) break
+    }
 
     if (authType === 'localStorage_jwt' || authType === 'sessionStorage_msal') {
       const pages = context.pages()
