@@ -10,7 +10,7 @@ import {
   verifyAll,
   verifySite,
 } from '../lifecycle/verify.js'
-import { ensureBrowser } from '../runtime/browser-lifecycle.js'
+import { type BrowserHandle, ensureBrowser } from '../runtime/browser-lifecycle.js'
 
 function statusIcon(status: SiteOverallStatus): string {
   switch (status) {
@@ -30,9 +30,11 @@ export interface VerifyCommandOptions {
 }
 
 export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
+  let handle: BrowserHandle | undefined
   let browser: Browser | undefined
   if (opts.browser) {
-    browser = await ensureBrowser()
+    handle = await ensureBrowser()
+    browser = handle.browser
   }
 
   const deps = browser ? { browser } : undefined
@@ -115,8 +117,8 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
       retriable: false, failureClass: 'fatal',
     })
   } finally {
-    if (browser) {
-      await browser.close().catch(() => {})
+    if (handle) {
+      await handle.release()
     }
   }
 }

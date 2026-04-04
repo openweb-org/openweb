@@ -314,10 +314,6 @@ export async function browserRestartCommand(options: { headless?: boolean; port?
   }
   await cleanTempProfile()
 
-  // Clear token cache
-  const tokensDir = join(openwebHome(), 'tokens')
-  await rm(tokensDir, { recursive: true, force: true })
-
   await browserStartCommand(options)
 
   // Restore previously open tabs

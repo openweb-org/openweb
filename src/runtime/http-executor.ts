@@ -22,7 +22,7 @@ import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { AdapterRef, PermissionCategory, XOpenWebOperation } from '../types/extensions.js'
 import { executeAdapter, loadAdapter } from './adapter-executor.js'
-import { ensureBrowser, handleLoginRequired, refreshProfile } from './browser-lifecycle.js'
+import { type BrowserHandle, ensureBrowser, handleLoginRequired, refreshProfile } from './browser-lifecycle.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 import { clearTokenCache, executeCachedFetch, readTokenCache, writeBrowserCookiesToCache } from './cache-manager.js'
 import { executeExtraction } from './extraction-executor.js'
@@ -39,6 +39,16 @@ import {
   executeSessionHttp,
   findPageForOrigin,
 } from './session-executor.js'
+
+/** Check if a URL points to localhost (127.0.0.1, localhost, or ::1). */
+function isLocalhost(url: string): boolean {
+  try {
+    const host = new URL(url).hostname
+    return host === '127.0.0.1' || host === 'localhost' || host === '::1'
+  } catch {
+    return false
+  }
+}
 
 export interface ExecuteDependencies {
   readonly fetchImpl?: typeof fetch
@@ -105,7 +115,8 @@ export async function executeOperation(
   const adapterRef = opExt?.adapter as AdapterRef | undefined
   if (adapterRef) {
     const siteRoot = await resolveSiteRoot(site)
-    const browser = deps.browser ?? await ensureBrowser(deps.cdpEndpoint)
+    const handle = deps.browser ? undefined : await ensureBrowser(deps.cdpEndpoint)
+    const browser = deps.browser ?? handle!.browser
     try {
       const adapter = await loadAdapter(siteRoot, adapterRef.name)
       const context = browser.contexts()[0]
@@ -149,9 +160,7 @@ export async function executeOperation(
         if (ownedPage) await page.close().catch(() => {})
       }
     } finally {
-      if (!deps.browser) {
-        browser.close().catch(() => {}) // intentional: cleanup — browser may already be closed
-      }
+      if (handle) await handle.release()
     }
   } else if (opExt?.extraction) {
     const extraction = opExt.extraction as import('../types/primitives.js').ExtractionPrimitive
@@ -176,20 +185,20 @@ export async function executeOperation(
       body = result.body
       responseHeaders = { ...result.responseHeaders }
     } else {
-      const browser = deps.browser ?? await ensureBrowser(deps.cdpEndpoint)
+      const handle = deps.browser ? undefined : await ensureBrowser(deps.cdpEndpoint)
+      const browser = deps.browser ?? handle!.browser
       try {
         const result = await executeExtraction(browser, spec, operationRef.operation, operationRef.path, params)
         status = result.status
         body = result.body
         responseHeaders = { ...result.responseHeaders }
       } finally {
-        if (!deps.browser) {
-          browser.close().catch(() => {}) // intentional: cleanup — browser may already be closed
-        }
+        if (handle) await handle.release()
       }
     }
   } else if (transport === 'page') {
-    const browser = deps.browser ?? await ensureBrowser(deps.cdpEndpoint)
+    const handle = deps.browser ? undefined : await ensureBrowser(deps.cdpEndpoint)
+    const browser = deps.browser ?? handle!.browser
     try {
       const result = await executeBrowserFetch(
         browser,
@@ -204,9 +213,7 @@ export async function executeOperation(
       body = result.body
       responseHeaders = { ...result.responseHeaders }
     } finally {
-      if (!deps.browser) {
-        browser.close().catch(() => {}) // intentional: cleanup — browser may already be closed
-      }
+      if (handle) await handle.release()
     }
   } else if (transport === 'node') {
     // Check if server has auth/csrf/signing — if so, needs browser for cookie extraction
@@ -238,8 +245,9 @@ export async function executeOperation(
 
       if (!cacheHit) {
         // Helper: connect browser, execute, write cache on success
-        const browserSessionExec = async (): Promise<{ result: ExecutorResult; browser: Browser }> => {
-          const browser = deps.browser ?? await ensureBrowser(deps.cdpEndpoint)
+        const browserSessionExec = async (): Promise<{ result: ExecutorResult; handle: BrowserHandle | undefined; browser: Browser }> => {
+          const handle = deps.browser ? undefined : await ensureBrowser(deps.cdpEndpoint)
+          const browser = deps.browser ?? handle!.browser
           try {
             const result = await executeSessionHttp(
               browser, spec, operationRef.path, operationRef.method,
@@ -248,54 +256,75 @@ export async function executeOperation(
             )
             // Write cache (writeTokenCache inside writeBrowserCookiesToCache has its own lock)
             await writeBrowserCookiesToCache(browser, site, spec, deps.tokenCacheDir)
-            return { result, browser }
+            return { result, handle, browser }
           } catch (err) {
-            if (!deps.browser) browser.close().catch(() => {})
+            if (handle) await handle.release()
             throw err
           }
         }
 
         try {
           // Tier 2: Browser extract — ensureBrowser() → execute in browser context
-          const { result, browser } = await browserSessionExec()
-          if (!deps.browser) browser.close().catch(() => {})
+          const { result, handle } = await browserSessionExec()
+          if (handle) await handle.release()
           status = result.status
           body = result.body
           responseHeaders = { ...result.responseHeaders }
         } catch (err) {
           if (!(err instanceof OpenWebError && err.payload.failureClass === 'needs_login')) throw err
 
-          // Skip tiers 3-4 when using external CDP — can't restart someone else's browser
-          if (deps.cdpEndpoint || deps.browser) throw err
+          // External/pre-connected: skip tier 3 (can't restart their browser)
+          // Tier 4: only if localhost
+          if (deps.cdpEndpoint || deps.browser) {
+            if (!deps.cdpEndpoint || isLocalhost(deps.cdpEndpoint)) {
+              const loginUrl = manifest?.site_url ?? getServerUrl(spec, operationRef.operation)
+              await handleLoginRequired(loginUrl, async () => {
+                try {
+                  const { result, handle } = await browserSessionExec()
+                  if (handle) await handle.release()
+                  status = result.status
+                  body = result.body
+                  responseHeaders = { ...result.responseHeaders }
+                  return true
+                } catch (retryErr) {
+                  if (retryErr instanceof OpenWebError && retryErr.payload.failureClass === 'needs_login') return false
+                  throw retryErr
+                }
+              })
+            } else {
+              throw err
+            }
+          } else {
+            // Managed browser: full cascade (tiers 3 + 4)
+            try {
+              // Tier 3: Profile refresh — re-copy default Chrome profile, retry
+              await refreshProfile()
+              const { result, handle } = await browserSessionExec()
+              if (handle) await handle.release()
+              status = result.status
+              body = result.body
+              responseHeaders = { ...result.responseHeaders }
+            } catch (err2) {
+              if (!(err2 instanceof OpenWebError && err2.payload.failureClass === 'needs_login')) throw err2
 
-          try {
-            // Tier 3: Profile refresh — re-copy default Chrome profile, retry
-            await refreshProfile()
-            const { result, browser } = await browserSessionExec()
-            if (!deps.browser) browser.close().catch(() => {})
-            status = result.status
-            body = result.body
-            responseHeaders = { ...result.responseHeaders }
-          } catch (err2) {
-            if (!(err2 instanceof OpenWebError && err2.payload.failureClass === 'needs_login')) throw err2
-
-            // Tier 4: User login — open system browser, poll with backoff
-            // Use site_url from manifest (human login page), not API server URL
-            const loginUrl = manifest?.site_url ?? getServerUrl(spec, operationRef.operation)
-            await handleLoginRequired(loginUrl, async () => {
-              try {
-                const { result, browser } = await browserSessionExec()
-                if (!deps.browser) browser.close().catch(() => {})
-                status = result.status
-                body = result.body
-                responseHeaders = { ...result.responseHeaders }
-                return true
-              } catch (retryErr) {
-                if (retryErr instanceof OpenWebError && retryErr.payload.failureClass === 'needs_login') return false
-                throw retryErr
-              }
-            })
-            // If handleLoginRequired returns without throwing, status is set
+              // Tier 4: User login — open system browser, poll with backoff
+              // Use site_url from manifest (human login page), not API server URL
+              const loginUrl = manifest?.site_url ?? getServerUrl(spec, operationRef.operation)
+              await handleLoginRequired(loginUrl, async () => {
+                try {
+                  const { result, handle } = await browserSessionExec()
+                  if (handle) await handle.release()
+                  status = result.status
+                  body = result.body
+                  responseHeaders = { ...result.responseHeaders }
+                  return true
+                } catch (retryErr) {
+                  if (retryErr instanceof OpenWebError && retryErr.payload.failureClass === 'needs_login') return false
+                  throw retryErr
+                }
+              })
+              // If handleLoginRequired returns without throwing, status is set
+            }
           }
         }
       }

@@ -1,7 +1,8 @@
 import type { Browser, BrowserContext, CDPSession, Page } from 'playwright'
 
 import { logger } from '../lib/logger.js'
-import { ensureBrowser } from '../runtime/browser-lifecycle.js'
+import { ensureBrowser, touchLastUsed } from '../runtime/browser-lifecycle.js'
+import type { BrowserHandle } from '../runtime/browser-lifecycle.js'
 import { writeCaptureBundle } from './bundle.js'
 import { captureDomAndGlobals } from './dom-capture.js'
 import { type HarCapture, attachHarCapture, buildHarLog } from './har-capture.js'
@@ -51,6 +52,7 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
   let draining = false
 
   // Resource tracking for cleanup
+  let handleRef: BrowserHandle | undefined
   let browserRef: Browser | undefined
   let contextRef: BrowserContext | undefined
   let onNewPageHandler: ((page: Page) => void) | undefined
@@ -64,6 +66,9 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
   let navigationCount = 0
   let snapshotSeq = 0
   const startTime = new Date().toISOString()
+
+  // Keep-alive: touch last-used every 60s to prevent watchdog from killing Chrome
+  const keepAliveTimer = setInterval(() => touchLastUsed().catch(() => {}), 60_000)
 
   // Track in-flight async snapshot work so we can drain on stop
   const pendingSnapshots = new Set<Promise<void>>()
@@ -204,6 +209,7 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
 
   /** Leak #3: detach all CDP sessions and disconnect browser */
   async function cleanup(): Promise<void> {
+    clearInterval(keepAliveTimer)
     for (const session of cdpSessions) {
       try {
         await session.detach()
@@ -212,7 +218,8 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
       }
     }
     try {
-      browserRef?.disconnect()
+      if (handleRef) await handleRef.release()
+      else browserRef?.disconnect()
     } catch {
       // intentional: already disconnected — safe to ignore
     }
@@ -222,7 +229,9 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
   void (async () => {
     try {
       log(`connecting to ${opts.cdpEndpoint ?? 'managed browser'} ...`)
-      const browser = await ensureBrowser(opts.cdpEndpoint)
+      const handle = await ensureBrowser(opts.cdpEndpoint)
+      handleRef = handle
+      const browser = handle.browser
       browserRef = browser
       const context = browser.contexts()[0]
       if (!context) throw new Error('No browser context found. Open a page in Chrome first.')

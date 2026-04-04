@@ -44,9 +44,19 @@ export function parseRetryAfter(value: string | undefined): number | undefined {
   return undefined
 }
 
+/** Check if an error is a browser connection/disconnect error (retriable via reconnect). */
+function isConnectionError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  const msg = err.message.toLowerCase()
+  return msg.includes('disconnected') || msg.includes('connection refused')
+    || msg.includes('target closed') || msg.includes('browser has been closed')
+    || msg.includes('browser closed') || msg.includes('not connected')
+}
+
 /**
  * Wrap an HTTP operation with retry + exponential backoff.
  * - 429/5xx (failureClass=retriable): retry up to 2 times
+ * - Browser connection errors: retry once (browser may have restarted)
  * - Retry-After header honored when present
  * - Non-retriable errors (401/403/fatal) propagate immediately
  * - Per-origin 200ms minimum interval enforced before each attempt
@@ -60,6 +70,14 @@ export async function withHttpRetry(
     try {
       return await fn()
     } catch (err) {
+      // Connection errors from browser disconnect — retry once to reconnect
+      if (isConnectionError(err)) {
+        if (attempt >= 1) throw err
+        logger.debug(`Connection error for ${site}, retrying once after 1s`)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        continue
+      }
+
       if (!(err instanceof OpenWebError)) throw err
       if (NON_RETRIABLE.has(err.payload.failureClass)) throw err
       if (attempt >= MAX_RETRIES) throw err

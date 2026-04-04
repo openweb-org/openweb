@@ -5,7 +5,7 @@ import process from 'node:process'
 
 import { createCaptureSession } from '../capture/session.js'
 import { OpenWebError } from '../lib/errors.js'
-import { ensureBrowser } from '../runtime/browser-lifecycle.js'
+import { type BrowserHandle, ensureBrowser } from '../runtime/browser-lifecycle.js'
 
 const PID_PREFIX = '.openweb-capture-'
 const PID_SUFFIX = '.pid'
@@ -46,10 +46,11 @@ export async function captureStartCommand(opts: CaptureStartOptions): Promise<vo
 
   // Resolve CDP endpoint: use explicit flag, or auto-start managed browser
   let isolatedPage: import('playwright-core').Page | undefined
+  let isolateHandle: BrowserHandle | undefined
 
   if (opts.isolate) {
-    const browser = await ensureBrowser(opts.cdpEndpoint)
-    const context = browser.contexts()[0]
+    isolateHandle = await ensureBrowser(opts.cdpEndpoint)
+    const context = isolateHandle.browser.contexts()[0]
     if (!context) throw new Error('No browser context found')
     isolatedPage = await context.newPage()
     await isolatedPage.goto(opts.url as string, { waitUntil: 'load', timeout: 30_000 })
@@ -80,6 +81,7 @@ export async function captureStartCommand(opts: CaptureStartOptions): Promise<vo
     if (isolatedPage) {
       await Promise.race([isolatedPage.close().catch(() => {}), new Promise<void>((r) => setTimeout(r, 5_000))])
     }
+    if (isolateHandle) await isolateHandle.release()
     await rm(pidFile, { force: true })
   }
 }

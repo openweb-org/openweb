@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises'
 import { platform } from 'node:os'
 import { join } from 'node:path'
@@ -10,11 +10,21 @@ import { browserStartCommand, browserStopCommand } from '../commands/browser.js'
 import { getBrowserConfig, openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 
+// ── BrowserHandle ────────────────────────────────
+
+export interface BrowserHandle {
+  browser: Browser
+  /** Calls browser.disconnect(), never kills Chrome */
+  release(): Promise<void>
+}
+
 // ── State file paths ────────────────────────────
 
 const PID_FILE = () => join(openwebHome(), 'browser.pid')
 const PORT_FILE = () => join(openwebHome(), 'browser.port')
 const LOCK_FILE = () => join(openwebHome(), 'browser.start.lock')
+const LAST_USED_FILE = () => join(openwebHome(), 'browser.last-used')
+const WATCHDOG_FILE = () => join(openwebHome(), 'browser.watchdog')
 
 // ── Small helpers (mirrored from commands/browser.ts) ────
 
@@ -57,6 +67,63 @@ async function isCdpReady(port: number): Promise<boolean> {
   } catch {
     // intentional: connection refused means Chrome not ready
     return false
+  }
+}
+
+// ── Watchdog & last-used helpers ─────────────────
+
+/** Write current epoch seconds to browser.last-used. */
+export async function touchLastUsed(): Promise<void> {
+  await mkdir(openwebHome(), { recursive: true })
+  await writeFile(LAST_USED_FILE(), String(Math.floor(Date.now() / 1000)), { mode: 0o600 })
+}
+
+/** Check if the watchdog process is still alive. */
+async function isWatchdogAlive(): Promise<boolean> {
+  try {
+    const raw = await readFile(WATCHDOG_FILE(), 'utf8')
+    const pid = Number(raw.trim())
+    if (!Number.isInteger(pid) || pid <= 0) return false
+    return isProcessAlive(pid)
+  } catch {
+    // intentional: watchdog file missing
+    return false
+  }
+}
+
+/**
+ * Spawn a detached watchdog shell process that kills Chrome after 5 minutes idle.
+ * Writes watchdog PID to browser.watchdog.
+ */
+async function spawnWatchdog(): Promise<void> {
+  const pidFile = PID_FILE()
+  const portFile = PORT_FILE()
+  const lastUsedFile = LAST_USED_FILE()
+  const profileFile = join(openwebHome(), 'browser.profile')
+  const watchdogFile = WATCHDOG_FILE()
+
+  const script = [
+    '#!/bin/sh',
+    'while true; do',
+    '  sleep 60',
+    `  LAST=$(cat "${lastUsedFile}" 2>/dev/null || echo 0)`,
+    '  NOW=$(date +%s)',
+    '  if [ $((NOW - LAST)) -gt 300 ]; then',
+    `    kill $(cat "${pidFile}" 2>/dev/null) 2>/dev/null`,
+    `    rm -f "${pidFile}" "${portFile}" "${lastUsedFile}" "${profileFile}" "${watchdogFile}"`,
+    '    exit 0',
+    '  fi',
+    'done',
+  ].join('\n')
+
+  const child = spawn('sh', ['-c', script], {
+    detached: true,
+    stdio: 'ignore',
+  })
+  child.unref()
+
+  if (child.pid) {
+    await writeFile(watchdogFile, String(child.pid), { mode: 0o600 })
   }
 }
 
@@ -129,27 +196,32 @@ export async function isManagedBrowserRunning(): Promise<{ running: boolean; por
 }
 
 /**
- * Ensure a browser is available. Returns a new Playwright Browser handle
- * connected via CDP. Callers close it when done (disconnects from CDP,
- * does NOT kill the managed Chrome process).
+ * Ensure a browser is available. Returns a BrowserHandle with the
+ * connected Browser and a release() method that disconnects from CDP
+ * (never kills Chrome).
  *
  * 1. If `cdpEndpoint` provided (external CDP), connect directly.
- * 2. If managed browser running and CDP responds, connect to it.
- * 3. Otherwise, auto-start headless Chrome, then connect.
+ * 2. If managed browser running and CDP responds, connect, touch last-used,
+ *    ensure watchdog alive (spawn if missing).
+ * 3. Otherwise, auto-start headless Chrome, touch last-used, spawn watchdog.
  *
  * Concurrent calls are serialized via a filesystem lock so only one
  * Chrome process is ever started.
  */
-export async function ensureBrowser(cdpEndpoint?: string): Promise<Browser> {
+export async function ensureBrowser(cdpEndpoint?: string): Promise<BrowserHandle> {
   // External CDP — connect directly, no managed browser involved
   if (cdpEndpoint) {
-    return connectWithRetry(cdpEndpoint)
+    const browser = await connectWithRetry(cdpEndpoint)
+    return { browser, release: () => { browser.disconnect(); return Promise.resolve() } }
   }
 
   // Check for running managed browser
   const status = await isManagedBrowserRunning()
   if (status.running && status.port) {
-    return connectWithRetry(`http://127.0.0.1:${status.port}`)
+    const browser = await connectWithRetry(`http://127.0.0.1:${status.port}`)
+    await touchLastUsed()
+    if (!(await isWatchdogAlive())) await spawnWatchdog()
+    return { browser, release: () => { browser.disconnect(); return Promise.resolve() } }
   }
 
   // No managed browser — auto-start with filesystem lock
@@ -159,7 +231,10 @@ export async function ensureBrowser(cdpEndpoint?: string): Promise<Browser> {
     // Re-check after acquiring lock (another process may have started Chrome)
     const recheck = await isManagedBrowserRunning()
     if (recheck.running && recheck.port) {
-      return connectWithRetry(`http://127.0.0.1:${recheck.port}`)
+      const browser = await connectWithRetry(`http://127.0.0.1:${recheck.port}`)
+      await touchLastUsed()
+      if (!(await isWatchdogAlive())) await spawnWatchdog()
+      return { browser, release: () => { browser.disconnect(); return Promise.resolve() } }
     }
 
     // Start headless Chrome
@@ -179,7 +254,10 @@ export async function ensureBrowser(cdpEndpoint?: string): Promise<Browser> {
       })
     }
 
-    return connectWithRetry(`http://127.0.0.1:${port}`)
+    const browser = await connectWithRetry(`http://127.0.0.1:${port}`)
+    await touchLastUsed()
+    await spawnWatchdog()
+    return { browser, release: () => { browser.disconnect(); return Promise.resolve() } }
   } finally {
     await release()
   }
