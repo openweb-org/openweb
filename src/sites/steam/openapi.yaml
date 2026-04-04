@@ -405,6 +405,8 @@ paths:
                           type: boolean
                         linux_available:
                           type: boolean
+                        streamingvideo_available:
+                          type: boolean
                         discount_expiration:
                           type: integer
                         header_image:
@@ -442,6 +444,8 @@ paths:
                           type: boolean
                         linux_available:
                           type: boolean
+                        streamingvideo_available:
+                          type: boolean
                         header_image:
                           type: string
                   featured_mac:
@@ -473,6 +477,8 @@ paths:
                           type: boolean
                         linux_available:
                           type: boolean
+                        streamingvideo_available:
+                          type: boolean
                         header_image:
                           type: string
                   featured_linux:
@@ -503,6 +509,8 @@ paths:
                         mac_available:
                           type: boolean
                         linux_available:
+                          type: boolean
+                        streamingvideo_available:
                           type: boolean
                         header_image:
                           type: string
@@ -582,6 +590,10 @@ paths:
                               type: boolean
                             linux_available:
                               type: boolean
+                            streamingvideo_available:
+                              type: boolean
+                            controller_support:
+                              type: string
                             header_image:
                               type: string
                   coming_soon:
@@ -620,6 +632,10 @@ paths:
                               type: boolean
                             linux_available:
                               type: boolean
+                            streamingvideo_available:
+                              type: boolean
+                            controller_support:
+                              type: string
                             header_image:
                               type: string
                   top_sellers:
@@ -658,6 +674,10 @@ paths:
                               type: boolean
                             linux_available:
                               type: boolean
+                            streamingvideo_available:
+                              type: boolean
+                            controller_support:
+                              type: string
                             header_image:
                               type: string
                   new_releases:
@@ -696,8 +716,26 @@ paths:
                               type: boolean
                             linux_available:
                               type: boolean
+                            streamingvideo_available:
+                              type: boolean
+                            controller_support:
+                              type: string
                             header_image:
                               type: string
+                  genres:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                  trailerslideshow:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
                   status:
                     type: integer
 

@@ -538,11 +538,32 @@ paths:
                 properties:
                   header:
                     type: string
+                  link:
+                    type: object
+                    properties:
+                      href:
+                        type: string
+                      language:
+                        type: string
+                      rel:
+                        type: array
+                        items:
+                          type: string
+                      text:
+                        type: string
+                      shortText:
+                        type: string
+                      isExternal:
+                        type: boolean
+                      isPremium:
+                        type: boolean
                   articles:
                     type: array
                     items:
                       type: object
                       properties:
+                        id:
+                          type: integer
                         headline:
                           type: string
                         description:
@@ -557,23 +578,56 @@ paths:
                           type: boolean
                         byline:
                           type: string
+                        nowId:
+                          type: string
+                        contentKey:
+                          type: string
+                        dataSourceIdentifier:
+                          type: string
                         images:
                           type: array
                           items:
                             type: object
                             properties:
+                              id:
+                                type: integer
                               url:
                                 type: string
+                              name:
+                                type: string
+                              type:
+                                type: string
                               caption:
+                                type: string
+                              credit:
                                 type: string
                               width:
                                 type: integer
                               height:
                                 type: integer
+                              dataSourceIdentifier:
+                                type: string
                         categories:
                           type: array
                           items:
                             type: object
+                            properties:
+                              id:
+                                type: integer
+                              type:
+                                type: string
+                              uid:
+                                type: string
+                              guid:
+                                type: string
+                              description:
+                                type: string
+                              sportId:
+                                type: integer
+                              leagueId:
+                                type: integer
+                              teamId:
+                                type: integer
                         links:
                           type: object
                           properties:
@@ -587,6 +641,22 @@ paths:
                               properties:
                                 href:
                                   type: string
+                            api:
+                              type: object
+                              properties:
+                                self:
+                                  type: object
+                                  properties:
+                                    href:
+                                      type: string
+                            app:
+                              type: object
+                              properties:
+                                sportscenter:
+                                  type: object
+                                  properties:
+                                    href:
+                                      type: string
                       required: [headline, description, published]
                 required: [articles]
 
