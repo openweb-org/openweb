@@ -219,7 +219,7 @@ export function createCaptureSession(opts: CaptureSessionOptions): CaptureSessio
     }
     try {
       if (handleRef) await handleRef.release()
-      else browserRef?.disconnect()
+      else await browserRef?.close().catch(() => {})
     } catch {
       // intentional: already disconnected — safe to ignore
     }

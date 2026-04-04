@@ -14,7 +14,7 @@ import { OpenWebError } from '../lib/errors.js'
 
 export interface BrowserHandle {
   browser: Browser
-  /** Calls browser.disconnect(), never kills Chrome */
+  /** Calls browser.close() which disconnects CDP without killing Chrome (connectOverCDP behavior). */
   release(): Promise<void>
 }
 
@@ -215,7 +215,7 @@ export async function ensureBrowser(cdpEndpoint?: string): Promise<BrowserHandle
   // External CDP — connect directly, no managed browser involved
   if (cdpEndpoint) {
     const browser = await connectWithRetry(cdpEndpoint)
-    return { browser, release: () => { browser.disconnect(); return Promise.resolve() } }
+    return { browser, release: async () => { await browser.close().catch(() => {}) } }
   }
 
   // Check for running managed browser
@@ -224,7 +224,7 @@ export async function ensureBrowser(cdpEndpoint?: string): Promise<BrowserHandle
     const browser = await connectWithRetry(`http://127.0.0.1:${status.port}`)
     await touchLastUsed()
     if (!(await isWatchdogAlive())) await spawnWatchdog()
-    return { browser, release: () => { browser.disconnect(); return Promise.resolve() } }
+    return { browser, release: async () => { await browser.close().catch(() => {}) } }
   }
 
   // No managed browser — auto-start with filesystem lock
@@ -237,7 +237,7 @@ export async function ensureBrowser(cdpEndpoint?: string): Promise<BrowserHandle
       const browser = await connectWithRetry(`http://127.0.0.1:${recheck.port}`)
       await touchLastUsed()
       if (!(await isWatchdogAlive())) await spawnWatchdog()
-      return { browser, release: () => { browser.disconnect(); return Promise.resolve() } }
+      return { browser, release: async () => { await browser.close().catch(() => {}) } }
     }
 
     // Start headless Chrome
@@ -260,7 +260,7 @@ export async function ensureBrowser(cdpEndpoint?: string): Promise<BrowserHandle
     const browser = await connectWithRetry(`http://127.0.0.1:${port}`)
     await touchLastUsed()
     await spawnWatchdog()
-    return { browser, release: () => { browser.disconnect(); return Promise.resolve() } }
+    return { browser, release: async () => { await browser.close().catch(() => {}) } }
   } finally {
     await release()
   }

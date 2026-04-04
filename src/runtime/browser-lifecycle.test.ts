@@ -60,7 +60,7 @@ afterEach(() => {
 
 // ── Helpers ──────────────────────────────────────
 
-const fakeBrowser = { close: vi.fn(), disconnect: vi.fn() } as unknown as Browser
+const fakeBrowser = { close: vi.fn().mockResolvedValue(undefined), disconnect: vi.fn() } as unknown as Browser
 
 function writePidFile(pid: number): void {
   writeFileSync(join(tmpDir, 'browser.pid'), String(pid))
@@ -90,7 +90,7 @@ describe('ensureBrowser — external CDP', () => {
 })
 
 describe('ensureBrowser — returns BrowserHandle', () => {
-  it('returns handle with release() that calls disconnect()', async () => {
+  it('returns handle with release() that calls close()', async () => {
     mockConnectWithRetry.mockResolvedValue(fakeBrowser)
     const { ensureBrowser } = await import('./browser-lifecycle.js')
 
@@ -101,9 +101,7 @@ describe('ensureBrowser — returns BrowserHandle', () => {
     expect(typeof handle.release).toBe('function')
 
     await handle.release()
-    expect(fakeBrowser.disconnect).toHaveBeenCalled()
-    // close should NOT have been called
-    expect(fakeBrowser.close).not.toHaveBeenCalled()
+    expect(fakeBrowser.close).toHaveBeenCalled()
   })
 })
 
