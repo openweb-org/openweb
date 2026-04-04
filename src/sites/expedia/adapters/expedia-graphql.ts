@@ -7,6 +7,7 @@ import type { Page } from 'patchright'
  * Heavy Akamai bot detection → page transport required.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
+import { warmSession } from '../../../runtime/warm-session.js'
 
 const GRAPHQL_URL = 'https://www.expedia.com/graphql'
 
@@ -315,6 +316,7 @@ const adapter: CodeAdapter = {
       const err = Object.assign(new Error(`Unknown operation: ${operation}`), { failureClass: 'fatal' as const })
       throw err
     }
+    await warmSession(page, 'https://www.expedia.com/', { waitForCookie: '_abck' })
     return handler(page, { ...params })
   },
 }

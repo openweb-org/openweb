@@ -1,4 +1,5 @@
 import type { Page } from 'patchright'
+import { warmSession } from '../../../runtime/warm-session.js'
 
 interface CodeAdapter {
   readonly name: string
@@ -324,6 +325,7 @@ const adapter: CodeAdapter = {
     if (!handler) {
       throw new Error(`Unknown operation: ${operation}. Available: ${Object.keys(OPERATIONS).join(', ')}`)
     }
+    await warmSession(page, `${TA_ORIGIN}/`, { timeoutMs: 5_000 })
     return handler(page, params)
   },
 }
