@@ -35,8 +35,8 @@ How major bot detection systems work, their impact on openweb transport and capt
 - **How it works:** Server-side + client-side. Injects a JS tag that posts device/browser data to `api-js.datadome.co`. Sets `datadome` cookie.
 - **Detection signals:** IP reputation (aggressive), JS environment, device fingerprint, geographic anomalies
 - **Symptoms:** `403` with `datadome` in response headers, redirect to `geo.captcha-delivery.com` CAPTCHA
-- **Impact on transport:** Very aggressive — even `page` transport can fail if the browser profile looks automated. Best results with a real Chrome profile (`browser start` copies the user's profile).
-- **Capture strategy:** Use `openweb browser start` (copies real profile). Solve any CAPTCHA. Keep sessions short.
+- **Impact on transport:** Very aggressive — even `page` transport can fail if the browser profile looks automated. Best results with a real Chrome profile (the managed browser auto-copies the user's profile).
+- **Capture strategy:** Browser auto-starts with the real Chrome profile. For manual control (e.g., custom profile), use `openweb browser start --profile <dir>`. Solve any CAPTCHA. Keep sessions short.
 
 ## Site-Specific Detection
 
@@ -71,7 +71,7 @@ Can Node make the request without auth cookies?
 |----------------|-----------------|
 | None | Headless browser or node proxy — anything works |
 | Light (Cloudflare basic) | Headed browser, solve challenge once, capture |
-| Medium (Akamai, PerimeterX) | Real Chrome profile (`browser start`), short sessions, don't replay requests |
+| Medium (Akamai, PerimeterX) | Real Chrome profile (auto-copied by managed browser), short sessions, don't replay requests |
 | Heavy (DataDome, custom signing) | Real profile, manual browsing, record passively, extract patterns from traffic |
 
 ## General Principles
@@ -79,7 +79,7 @@ Can Node make the request without auth cookies?
 1. **Never fight the detection system** — work within the browser where detection is already solved
 2. **Prefer `page` transport** when in doubt — it inherits all browser state
 3. **Keep capture sessions short** — most tokens/sensors expire in 5–30 minutes
-4. **Use `openweb browser start`** — it copies the real Chrome profile, which has history/cookies that look legitimate
+4. **The managed browser copies your real Chrome profile** — it has history/cookies that look legitimate. Use `openweb browser start` only for manual control (custom profile or port)
 5. **Don't replay raw requests** — extract the pattern (URL, params, headers) and let the transport regenerate auth headers
 6. **Rate limit operations** — even with valid auth, high request rates trigger server-side blocking
 7. **Document detection in DOC.md** — if a site uses bot detection, note the system and its impact in the site package's Known Issues section

@@ -142,9 +142,11 @@ sharing, and troubleshooting.
 #### Start Capture
 
 ```bash
-openweb browser start
-openweb capture start --isolate --url https://<site-domain> --cdp-endpoint http://localhost:9222
+openweb capture start --isolate --url https://<site-domain>
 ```
+
+The browser auto-starts when needed — no manual `openweb browser start` required.
+`--cdp-endpoint` is optional (auto-detected from the managed browser).
 
 `--isolate` creates a dedicated tab and records only that tab's traffic.
 Without it, capture records all tabs — fine for single-site interactive use,

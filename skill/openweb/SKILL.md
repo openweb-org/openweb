@@ -44,7 +44,7 @@ Check if `src/sites/<site>/DOC.md` exists and read it before trying operations.
 ```bash
 openweb <site>                                     # transport, auth, operations
 ```
-- `Requires browser: yes` → run `openweb browser start` first
+- `Requires browser: yes` → browser auto-starts when needed; no manual setup required
 - `Requires login: yes` → user must be logged in
 - For details on how transport and auth work, see `references/knowledge/x-openweb-extensions.md`
 
@@ -67,7 +67,7 @@ Errors on stderr include `failureClass`:
 
 | failureClass | What to Do |
 |---|---|
-| `needs_browser` | Run `openweb browser start` |
+| `needs_browser` | Browser auto-starts; if it fails, check Chrome installation. Manual fallback: `openweb browser start` |
 | `needs_login` | `openweb login <site>` → `openweb browser restart` |
 | `needs_page` | Open a tab to the site URL |
 | `permission_denied` | Update `permissions` in `$OPENWEB_HOME/config.json` |
