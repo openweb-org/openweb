@@ -83,13 +83,7 @@ openweb <site> <operation>                 # operation detail + params
 openweb <site> <op> '{...}'                # execute
 ```
 
-For browser-required sites (auth-required sites may prompt for login):
-
-```bash
-openweb browser start                      # optional — auto-starts when needed
-openweb login <site>                       # authenticate
-openweb <site> <op> '{...}'                # execute with auth
-```
+Browser auto-starts when needed. Auth-required sites will open your browser for login automatically.
 
 Full CLI reference: [`skill/openweb/references/cli.md`](skill/openweb/references/cli.md)
 Troubleshooting: [`skill/openweb/references/troubleshooting.md`](skill/openweb/references/troubleshooting.md)
