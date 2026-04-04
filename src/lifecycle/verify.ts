@@ -165,7 +165,7 @@ export async function verifySite(
           }
         }
       } finally {
-        if (!deps?.browser) browser.disconnect()
+        if (!deps?.browser) await browser.close().catch(() => {})
       }
     } catch { /* warm-up is best-effort — don't fail verify */ }
   }
