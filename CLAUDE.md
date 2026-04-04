@@ -47,6 +47,7 @@ src/
   runtime/
     executor.ts     # Main dispatch (HTTP + WS)
     http-executor.ts, browser-fetch-executor.ts, node-ssr-executor.ts
+    browser-lifecycle.ts  # Auto browser management (ensureBrowser, auth cascade, watchdog)
     session-executor.ts, adapter-executor.ts, extraction-executor.ts
     ws-executor.ts, ws-connection.ts, ws-router.ts, ws-runtime.ts
     cache-manager.ts, token-cache.ts

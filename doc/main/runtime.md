@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-04-03 (pre-release review fixes)
+> Last updated: 2026-04-03 (unified config + auto browser lifecycle)
 
 ## Overview
 
@@ -109,6 +109,70 @@ Extraction-only operations read data from the live page instead of issuing an HT
 Extraction operations reuse the same strict page matching as node transport: worker-like pages are filtered out, there is no unrelated-tab fallback, and missing tabs surface `needs_page` with an actionable URL hint.
 
 -> See: `src/runtime/extraction-executor.ts`
+
+---
+
+## Browser Lifecycle
+
+The runtime auto-manages browser instances via `ensureBrowser()`. No manual `browser start` is needed.
+
+```
+ensureBrowser(cdpEndpoint?)
+       │
+       ├── External CDP endpoint provided?
+       │     └── Connect directly (no managed browser involved)
+       │
+       ├── Managed browser already running? (PID file + process alive + CDP responds)
+       │     └── Connect, touch last-used, ensure watchdog alive
+       │
+       └── No managed browser
+             ├── Acquire filesystem lock (atomic, PID-based, stale-safe)
+             ├── Double-check after lock (another process may have started Chrome)
+             ├── Start headless Chrome (config from ~/.openweb/config.json)
+             ├── Write PID/port files
+             ├── Connect via CDP with retry
+             ├── Touch last-used, spawn watchdog
+             └── Return BrowserHandle { browser, release() }
+```
+
+**BrowserHandle:** Every caller gets a handle with `release()` that disconnects from CDP without killing Chrome. Chrome is killed only by `browser stop` or the idle watchdog.
+
+**Shell watchdog:** A detached `sh` process polls `browser.last-used` every 60s. If Chrome has been idle for 5 minutes (no `exec` or `capture` activity), the watchdog kills Chrome, cleans up temp profile and state files, then exits. The watchdog is respawned on each `ensureBrowser()` call if not alive.
+
+**Concurrency:** A filesystem lock (`browser.start.lock`) serializes Chrome startup across concurrent CLI processes. Stale locks (dead PID) are auto-cleaned.
+
+-> See: `src/runtime/browser-lifecycle.ts`, `src/commands/browser.ts`
+
+---
+
+## Auth Cascade (4-Tier)
+
+For `node` transport operations that need auth (server has `x-openweb.auth`/`csrf`/`signing`), the runtime runs a 4-tier cascade:
+
+```
+Tier 1: Token cache       ─ Read cached cookies/localStorage
+        hit? → execute with cached tokens
+        401/403? → clear cache, fall to tier 2
+
+Tier 2: Browser extract   ─ ensureBrowser() → extract fresh tokens
+        success? → write cache, return result
+        401/403? → fall to tier 3
+
+Tier 3: Profile refresh   ─ Re-copy default Chrome profile (managed browser only)
+        success? → write cache, return result
+        401/403? → fall to tier 4
+
+Tier 4: User login        ─ Open site in system browser, poll with exponential backoff
+        Opens site_url from manifest (human login page, not API endpoint)
+        Poll: refreshProfile() → retry → check auth (5s→10s→20s→40s→60s cap)
+        Timeout: 5 minutes → throws needs_login
+```
+
+**External CDP:** When connecting to an external CDP endpoint (`--cdp-endpoint`), tiers 3 (profile refresh) is skipped since the runtime cannot restart an external browser. Tier 4 is only attempted if the endpoint is localhost.
+
+**Lock strategy:** Token cache reads/writes use brief per-site locks. Browser operations (connecting, extracting, refreshing) are never held under the cache lock.
+
+-> See: `src/runtime/http-executor.ts`, `src/runtime/browser-lifecycle.ts`, `src/runtime/cache-manager.ts`
 
 ---
 
@@ -275,7 +339,7 @@ Every error carries a `failureClass` that tells the agent what to do next:
 
 | Class | Meaning | Agent action |
 |-------|---------|-------------|
-| `needs_browser` | Operation requires a browser but none connected | Run `openweb browser start` |
+| `needs_browser` | Operation requires a browser but none connected | Browser auto-starts; if it fails, run `openweb browser start` manually |
 | `needs_login` | User is not authenticated on the target site | Run `openweb login <site>` then `openweb browser restart` |
 | `needs_page` | No browser tab matches the target origin | Open the suggested site URL |
 | `permission_denied` | Operation blocked by config | Update `permissions` in `$OPENWEB_HOME/config.json` |
@@ -299,6 +363,7 @@ src/runtime/
 ├── executor.ts               # Main dispatcher (transport routing, response handling)
 ├── http-executor.ts          # HTTP execution (direct + session, split from executor M36)
 ├── executor-result.ts        # Unified ExecutorResult types (M36)
+├── browser-lifecycle.ts      # Auto browser management (ensureBrowser, 4-tier auth cascade, watchdog)
 ├── request-builder.ts        # Shared request construction (path/query/header/body binding)
 ├── redirect.ts               # Redirect handling with SSRF validation
 ├── operation-context.ts      # Operation metadata resolution (transport, auth, extraction)

@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-03-29 (v1+v5 site merge)
+> Last updated: 2026-04-03 (unified config + auto browser lifecycle)
 
 ## Prerequisites
 
@@ -217,7 +217,7 @@ When testing the installed binary, replace all `pnpm dev` with `openweb`. The bi
 | Issue | Solution |
 |-------|----------|
 | `pnpm dev` fails | Run `pnpm build` first |
-| CDP connection refused | Run `pnpm dev browser start` |
+| CDP connection refused | Browser auto-starts; if it fails, run `pnpm dev browser start` |
 | Auth fails on exec | Run `pnpm dev login <site>` then `pnpm dev browser restart` |
 | Permission denied | Update `permissions` in `$OPENWEB_HOME/config.json` or confirm the operation |
 | SSRF validation error | Target URL must be HTTPS + public IP |

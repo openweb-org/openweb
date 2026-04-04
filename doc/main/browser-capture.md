@@ -81,28 +81,35 @@ These feed into the compiler's Phase 3 pattern matching (e.g., `__NEXT_DATA__` â
 ## CDP Connection
 
 ```typescript
-connectWithRetry(endpoint: string, options?: { maxRetries, delay }): Browser
+ensureBrowser(cdpEndpoint?: string): Promise<BrowserHandle>
 ```
 
-Connects to Chrome via CDP with exponential backoff. Default: 3 retries with 1s base delay.
+Auto-manages browser instances. If no `cdpEndpoint` is provided, checks for a running managed browser and starts one if needed. Returns a `BrowserHandle` with `release()` for cleanup. Internally uses `connectWithRetry()` for CDP connection with exponential backoff.
 
--> See: `src/capture/connection.ts`
+-> See: `src/runtime/browser-lifecycle.ts`, `src/capture/connection.ts`
 
 ---
 
 ## Usage
 
 ```bash
-# 1. Start Chrome with remote debugging
+# 1. Start capture (auto-starts managed browser if not running)
+pnpm dev capture start
+
+# 2. Browse to any site in the managed Chrome window (or use --cdp-endpoint for external)
+
+# 3. Stop capture
+pnpm dev capture stop
+```
+
+For an external Chrome instance:
+
+```bash
+# Start Chrome manually with remote debugging
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --remote-debugging-port=9222 --no-first-run --user-data-dir=/tmp/openweb-chrome
 
-# 2. Browse to any site in that Chrome window
-
-# 3. Start capture (runs in foreground, Ctrl+C to stop)
 pnpm dev capture start --cdp-endpoint http://localhost:9222
-
-# 4. Stop from another terminal (alternative to Ctrl+C)
 pnpm dev capture stop
 ```
 
@@ -112,12 +119,12 @@ Each worker gets its own page and session â€” no cross-contamination:
 
 ```bash
 # Worker A
-SESSION_A=$(openweb capture start --isolate --url https://discord.com --cdp-endpoint http://localhost:9222)
+SESSION_A=$(openweb capture start --isolate --url https://discord.com)
 openweb capture stop --session $SESSION_A
 # Bundle at ./capture-$SESSION_A/
 
 # Worker B (simultaneously)
-SESSION_B=$(openweb capture start --isolate --url https://reddit.com --cdp-endpoint http://localhost:9222)
+SESSION_B=$(openweb capture start --isolate --url https://reddit.com)
 openweb capture stop --session $SESSION_B
 ```
 

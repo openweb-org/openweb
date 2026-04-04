@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-03-29 (v1+v5 site merge)
+> Last updated: 2026-04-03 (unified config + auto browser lifecycle)
 
 ## Mission
 
@@ -146,7 +146,7 @@ openweb <site> test                            # run site test cases
 openweb browser start [--headless]             # managed Chrome lifecycle
 openweb browser stop / restart / status
 openweb login <site>                           # open site in default browser for auth
-openweb capture start --cdp-endpoint ...       # record browser session (--isolate for multi-worker)
+openweb capture start                         # record browser session (--isolate for multi-worker)
 openweb compile <url>                              # generate skill package
 openweb verify <site>                          # verify site and detect drift
 openweb verify --all                           # batch verify all sites
@@ -177,13 +177,17 @@ Policy is configurable per-site in the `permissions` section of `$OPENWEB_HOME/c
 
 ---
 
-## Browser Lifecycle (M14)
+## Browser Lifecycle (M14+)
 
-`openweb browser start` copies auth-relevant files from the default Chrome profile to a secure temp directory (`mkdtemp`, mode 0o700), launches Chrome with CDP, and saves PID/port to `$OPENWEB_HOME/`. All `exec` commands auto-detect the managed browser — no `--cdp-endpoint` needed.
+The runtime auto-manages browser instances. `ensureBrowser()` checks for a running managed browser, starts one if needed, and returns a `BrowserHandle` that disconnects (never kills Chrome) on release. A detached shell watchdog kills Chrome after 5 minutes of idle. All `exec` and `capture` commands auto-detect the managed browser -- no `--cdp-endpoint` needed. `openweb browser start` is optional, for manual control or custom options.
 
-Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessionStorage with AES-256-GCM encryption and PBKDF2 machine-binding. JWT-aware TTL. Cache hit → no browser connection needed. 401/403 → cache invalidated → browser fallback.
+**4-tier auth cascade** for authenticated operations: (1) token cache, (2) browser extract, (3) profile refresh, (4) user login with exponential backoff poll. See [runtime.md](runtime.md) for details.
 
--> See: `src/commands/browser.ts`, `src/runtime/token-cache.ts`
+**Configuration:** All settings in `$OPENWEB_HOME/config.json` (single file replaces env vars + permissions.yaml). Browser port, headless mode, profile path, timeout, user-agent, debug, permissions -- all in one place. `OPENWEB_HOME` env var is the sole environment variable (defaults to `~/.openweb`).
+
+Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessionStorage with AES-256-GCM encryption and PBKDF2 machine-binding. JWT-aware TTL. Cache hit -> no browser connection needed. 401/403 -> cache invalidated -> browser fallback.
+
+-> See: `src/runtime/browser-lifecycle.ts`, `src/commands/browser.ts`, `src/lib/config.ts`, `src/runtime/token-cache.ts`
 
 ---
 

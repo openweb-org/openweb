@@ -1,3 +1,50 @@
+## 2026-04-03: Auto browser lifecycle — ensureBrowser, BrowserHandle, watchdog, 4-tier auth cascade
+
+**What changed:**
+- `ensureBrowser()` auto-starts headless Chrome when needed — no manual `browser start` required
+- `BrowserHandle` with `release()` = disconnect (never kills Chrome); replaces all `browser.close()` calls
+- Shell watchdog: detached `sh` process kills Chrome after 5 minutes idle, cleans up temp profile
+- 4-tier auth cascade in `http-executor.ts`: (1) token cache, (2) browser extract, (3) profile refresh, (4) user login with exponential backoff poll
+- `refreshProfile()` re-copies Chrome profile without clearing token cache
+- `handleLoginRequired()` opens site in system browser, polls with backoff (5s->60s cap, 5min timeout)
+- Filesystem lock (`browser.start.lock`) prevents concurrent Chrome starts
+- Capture sessions touch `browser.last-used` every 60s to prevent watchdog kill during long captures
+- Connection error retry in `http-retry.ts` for auto-recovery from tier 3 browser restart
+- External CDP: skip tier 3 (can't restart external browser), allow tier 4 only for localhost
+
+**Why:**
+- Agents should never need to manually start a browser — the runtime should handle it
+- Auth failures should cascade through increasingly expensive recovery steps before giving up
+- Chrome should not persist forever — idle cleanup prevents resource leaks
+
+**Key files:** `src/runtime/browser-lifecycle.ts`, `src/runtime/http-executor.ts`, `src/runtime/http-retry.ts`, `src/commands/browser.ts`, `src/capture/session.ts`
+**Verification:** 828/828 tests pass (24 new browser lifecycle tests), lint clean, build passes
+**Commit:** ddbda1f..66c1ab0
+**Next:** npm publish
+**Blockers:** None
+
+## 2026-04-03: Unified config.json — replace env vars + permissions.yaml
+
+**What changed:**
+- Single `$OPENWEB_HOME/config.json` replaces all env var reads and `permissions.yaml`
+- Deleted env vars: `OPENWEB_CDP_PORT`, `OPENWEB_USER_AGENT`, `OPENWEB_TIMEOUT`, `OPENWEB_RECORDING_TIMEOUT`, `OPENWEB_DEBUG`
+- `permissions.yaml` merged into `config.json` `permissions` section; yaml loading removed
+- `loadConfig()` reads/validates/caches config with defaults; `OPENWEB_HOME` is the sole env var
+- `getBrowserConfig()` convenience function for browser settings (port, headless, profile)
+- Port range validation (1-65535), positive-only timeout validation, URL scheme validation
+- Updated all doc/skill references from env vars and permissions.yaml to config.json
+
+**Why:**
+- Single config file is simpler than scattered env vars + a separate permissions file
+- Config validation catches errors early (invalid port, negative timeout)
+- `OPENWEB_HOME` as sole env var reduces configuration surface
+
+**Key files:** `src/lib/config.ts`, `src/lib/config.test.ts`, `src/lib/permissions.ts`, `src/lib/permissions.test.ts`
+**Verification:** 828/828 tests pass (24 new config tests), lint clean, build passes
+**Commit:** ddbda1f..66c1ab0
+**Next:** npm publish
+**Blockers:** None
+
 ## 2026-04-03: Archive completed todo projects — clean slate for v0.2
 
 **What changed:**
