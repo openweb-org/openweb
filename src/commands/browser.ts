@@ -149,6 +149,8 @@ async function killManaged(): Promise<boolean> {
     // Already dead — clean up state files
     try { await unlink(PID_FILE()) } catch { /* already gone */ }
     try { await unlink(PORT_FILE()) } catch { /* already gone */ }
+    try { await unlink(join(openwebHome(), 'browser.watchdog')) } catch { /* already gone */ }
+    try { await unlink(join(openwebHome(), 'browser.last-used')) } catch { /* already gone */ }
     return true
   }
 
@@ -158,6 +160,13 @@ async function killManaged(): Promise<boolean> {
     await new Promise((r) => setTimeout(r, 500))
     try { await unlink(PID_FILE()) } catch { /* already gone */ }
     try { await unlink(PORT_FILE()) } catch { /* already gone */ }
+    // Kill watchdog if running
+    try {
+      const wdPid = Number((await readFile(join(openwebHome(), 'browser.watchdog'), 'utf8')).trim())
+      if (wdPid > 0) process.kill(wdPid, 'SIGTERM')
+    } catch { /* no watchdog */ }
+    try { await unlink(join(openwebHome(), 'browser.watchdog')) } catch { /* already gone */ }
+    try { await unlink(join(openwebHome(), 'browser.last-used')) } catch { /* already gone */ }
     return true
   }
 

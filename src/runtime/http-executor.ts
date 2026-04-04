@@ -44,7 +44,7 @@ import {
 function isLocalhost(url: string): boolean {
   try {
     const host = new URL(url).hostname
-    return host === '127.0.0.1' || host === 'localhost' || host === '::1'
+    return host === '127.0.0.1' || host === 'localhost' || host === '::1' || host === '[::1]'
   } catch {
     return false
   }

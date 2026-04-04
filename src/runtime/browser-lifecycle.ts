@@ -110,6 +110,8 @@ async function spawnWatchdog(): Promise<void> {
     '  NOW=$(date +%s)',
     '  if [ $((NOW - LAST)) -gt 300 ]; then',
     `    kill $(cat "${pidFile}" 2>/dev/null) 2>/dev/null`,
+    `    PROF=$(cat "${profileFile}" 2>/dev/null)`,
+    `    [ -n "$PROF" ] && rm -rf "$PROF"`,
     `    rm -f "${pidFile}" "${portFile}" "${lastUsedFile}" "${profileFile}" "${watchdogFile}"`,
     '    exit 0',
     '  fi',
@@ -120,6 +122,7 @@ async function spawnWatchdog(): Promise<void> {
     detached: true,
     stdio: 'ignore',
   })
+  child.on('error', () => { /* sh not available (Windows) — watchdog won't run, browser persists until manual stop */ })
   child.unref()
 
   if (child.pid) {

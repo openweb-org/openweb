@@ -50,6 +50,7 @@ beforeEach(() => {
   mockSpawn.mockReturnValue({
     pid: 99999,
     unref: vi.fn(),
+    on: vi.fn(),
   })
 })
 
