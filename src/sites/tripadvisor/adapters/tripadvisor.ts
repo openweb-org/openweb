@@ -10,21 +10,23 @@ interface CodeAdapter {
 
 const TA_ORIGIN = 'https://www.tripadvisor.com'
 
-async function navigateTo(page: Page, url: string): Promise<void> {
-  await page.goto(url, { waitUntil: 'load', timeout: 20_000 })
-  await page.waitForSelector('script[type="application/ld+json"]', { timeout: 10_000 }).catch(() => {})
+async function isDataDomeBlocked(page: Page): Promise<boolean> {
+  return page.evaluate(() =>
+    document.body?.innerHTML?.includes('captcha-delivery.com') ?? false,
+  )
 }
 
-function parseAddress(addr: Record<string, unknown> | null) {
-  if (!addr) return null
-  const country = addr.addressCountry
-  return {
-    street: (addr.streetAddress as string) ?? null,
-    city: (addr.addressLocality as string) ?? null,
-    region: (addr.addressRegion as string) ?? null,
-    country: typeof country === 'object' && country ? (country as Record<string, unknown>).name as string ?? null : (country as string) ?? null,
-    postalCode: (addr.postalCode as string) ?? null,
-  }
+function dataDomeError(): Error {
+  return new Error('DataDome captcha blocked this request. Solve the captcha in the browser, then retry.')
+}
+
+async function navigateTo(page: Page, url: string): Promise<void> {
+  await page.goto(url, { waitUntil: 'load', timeout: 20_000 })
+  await page.waitForSelector(
+    'script[type="application/ld+json"], h1, [data-test-target]',
+    { timeout: 10_000 },
+  ).catch(() => {})
+  if (await isDataDomeBlocked(page)) throw dataDomeError()
 }
 
 /* ---------- searchLocation ---------- */
@@ -33,60 +35,45 @@ async function searchLocation(page: Page, params: Readonly<Record<string, unknow
   const query = String(params.query ?? '')
   if (!query) throw new Error('query is required')
 
-  await page.goto(`${TA_ORIGIN}/`, { waitUntil: 'load', timeout: 20_000 })
-  await page.waitForTimeout(1_000)
-
-  const input = await page.waitForSelector(
-    'input[type="search"], input[placeholder*="search" i], input[placeholder*="where" i], input[aria-label*="search" i]',
-    { timeout: 5_000 },
-  )
-  await input.click()
-  await input.fill(query)
+  // Use /Search URL directly — avoids fragile homepage input selectors
+  await page.goto(`${TA_ORIGIN}/Search?q=${encodeURIComponent(query)}&ssrc=a&geo=1`, {
+    waitUntil: 'load', timeout: 20_000,
+  })
   await page.waitForTimeout(3_000)
+  if (await isDataDomeBlocked(page)) throw dataDomeError()
 
   return page.evaluate(() => {
-    const links = document.querySelectorAll('a[href*="-g"]')
     const results: Array<Record<string, unknown>> = []
     const seen = new Set<string>()
-
-    for (const link of links) {
+    const patterns: [string, string, RegExp | null][] = [
+      ['/Tourism-', 'location', /Tourism-g\d+-(.+?)-Vacations/],
+      ['/Hotels-', 'hotels', /Hotels-g\d+-(.+?)-Hotels/],
+      ['/Restaurants-', 'restaurants', /Restaurants-g\d+-(.+?)\.html/],
+      ['/Attractions-', 'attractions', /Attractions-g\d+-Activities-(.+?)\.html/],
+      ['/Hotel_Review-', 'hotels', null],
+      ['/Restaurant_Review-', 'restaurants', null],
+      ['/Attraction_Review-', 'attractions', null],
+    ]
+    for (const link of document.querySelectorAll('a[href*="-g"]')) {
       const href = (link as HTMLAnchorElement).href || ''
-      const geoMatch = href.match(/-g(\d+)-/)
-      if (!geoMatch) continue
-      const geoId = geoMatch[1]
+      const geoId = href.match(/-g(\d+)-/)?.[1]
+      if (!geoId) continue
       const text = link.textContent?.trim() || ''
-      if (!text || text.length < 3) continue
+      if (text.length < 3) continue
 
-      // Only keep Tourism (location) links as the primary result, plus Hotels/Restaurants/Attractions
-      let type = 'other'
-      let locationSlug: string | null = null
-      if (href.includes('/Tourism-')) {
-        type = 'location'
-        const m = href.match(/Tourism-g\d+-(.+?)-Vacations/)
-        locationSlug = m?.[1] ?? null
-      } else if (href.includes('/Hotels-')) {
-        type = 'hotels'
-        const m = href.match(/Hotels-g\d+-(.+?)-Hotels/)
-        locationSlug = m?.[1] ?? null
-      } else if (href.includes('/Restaurants-')) {
-        type = 'restaurants'
-        const m = href.match(/Restaurants-g\d+-(.+?)\.html/)
-        locationSlug = m?.[1] ?? null
-      } else if (href.includes('/Attractions-')) {
-        type = 'attractions'
-        const m = href.match(/Attractions-g\d+-Activities-(.+?)\.html/)
-        locationSlug = m?.[1] ?? null
-      } else {
-        continue // skip product/review links
+      let matched = false
+      for (const [frag, type, re] of patterns) {
+        if (!href.includes(frag)) continue
+        const key = `${geoId}:${type}`
+        if (seen.has(key)) { matched = true; break }
+        seen.add(key)
+        const slug = re ? href.match(re)?.[1] ?? null : null
+        results.push({ geoId, name: text.substring(0, 120), type, locationSlug: slug, url: href })
+        matched = true
+        break
       }
-
-      const key = `${geoId}:${type}`
-      if (seen.has(key)) continue
-      seen.add(key)
-
-      results.push({ geoId, name: text.substring(0, 120), type, locationSlug, url: href })
+      if (!matched) continue
     }
-
     return { count: results.length, results }
   })
 }
@@ -98,48 +85,66 @@ async function searchHotels(page: Page, params: Readonly<Record<string, unknown>
   const location = String(params.location ?? '')
   if (!geoId || !location) throw new Error('geoId and location are required')
 
-  const url = `${TA_ORIGIN}/Hotels-g${geoId}-${location}-Hotels.html`
-  await navigateTo(page, url)
+  await navigateTo(page, `${TA_ORIGIN}/Hotels-g${geoId}-${location}-Hotels.html`)
 
   return page.evaluate(() => {
+    function addr(a: Record<string, unknown> | null) {
+      if (!a) return null
+      const c = a.addressCountry
+      return {
+        street: (a.streetAddress as string) ?? null,
+        city: (a.addressLocality as string) ?? null,
+        region: (a.addressRegion as string) ?? null,
+        country: typeof c === 'object' && c ? (c as Record<string, unknown>).name ?? null : c ?? null,
+        postalCode: (a.postalCode as string) ?? null,
+      }
+    }
+    function hotelFrom(item: Record<string, unknown>) {
+      const agg = item.aggregateRating as Record<string, unknown> | null
+      return {
+        name: (item.name as string) ?? null, url: (item.url as string) ?? null,
+        rating: agg?.ratingValue ?? null, reviewCount: agg?.reviewCount ?? null,
+        priceRange: (item.priceRange as string) ?? null,
+        address: addr(item.address as Record<string, unknown> | null),
+        telephone: (item.telephone as string) ?? null, image: (item.image as string) ?? null,
+      }
+    }
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
+
+    // Strategy 1: LD+JSON ItemList
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] !== 'ItemList') continue
-
-        const items = (data.itemListElement ?? []) as Array<Record<string, unknown>>
-        const hotels = items.map((li) => {
-          const item = (li.item ?? {}) as Record<string, unknown>
-          const addr = item.address as Record<string, unknown> | null
-          const agg = item.aggregateRating as Record<string, unknown> | null
-          const addrCountry = addr?.addressCountry
-
-          return {
-            name: (item.name as string) ?? null,
-            url: (item.url as string) ?? null,
-            rating: agg?.ratingValue ?? null,
-            reviewCount: agg?.reviewCount ?? null,
-            priceRange: (item.priceRange as string) ?? null,
-            address: addr
-              ? {
-                  street: (addr.streetAddress as string) ?? null,
-                  city: (addr.addressLocality as string) ?? null,
-                  region: (addr.addressRegion as string) ?? null,
-                  country: typeof addrCountry === 'object' && addrCountry
-                    ? (addrCountry as Record<string, unknown>).name ?? null
-                    : addrCountry ?? null,
-                  postalCode: (addr.postalCode as string) ?? null,
-                }
-              : null,
-            telephone: (item.telephone as string) ?? null,
-            image: (item.image as string) ?? null,
-          }
-        })
-
+        const d = JSON.parse(s.textContent ?? '')
+        if (d['@type'] !== 'ItemList') continue
+        const hotels = ((d.itemListElement ?? []) as Array<Record<string, unknown>>)
+          .map(li => hotelFrom((li.item ?? li) as Record<string, unknown>))
         return { count: hotels.length, hotels }
-      } catch { /* skip malformed */ }
+      } catch { /* skip */ }
     }
+    // Strategy 2: Individual Hotel/LodgingBusiness LD+JSON blocks
+    const hotelTypes = new Set(['Hotel', 'LodgingBusiness', 'Hostel', 'Motel', 'BedAndBreakfast', 'Resort'])
+    const hotels: ReturnType<typeof hotelFrom>[] = []
+    for (const s of scripts) {
+      try {
+        const d = JSON.parse(s.textContent ?? '')
+        const t = d['@type']
+        const types: string[] = Array.isArray(t) ? t : [t]
+        if (types.some(x => hotelTypes.has(x))) hotels.push(hotelFrom(d))
+      } catch { /* skip */ }
+    }
+    if (hotels.length) return { count: hotels.length, hotels }
+
+    // Strategy 3: DOM fallback — hotel card links
+    const domHotels: { name: string; url: string | null }[] = []
+    for (const card of document.querySelectorAll(
+      'div[data-automation="hotel-card-title"], span.listItem, [data-testid*="hotel"]',
+    )) {
+      const a = card.querySelector('a[href*="Hotel_Review"]') ?? card.closest('a[href*="Hotel_Review"]')
+      if (!a) continue
+      const name = a.textContent?.trim() || card.textContent?.trim() || ''
+      if (name) domHotels.push({ name: name.substring(0, 120), url: (a as HTMLAnchorElement).href || null })
+    }
+    if (domHotels.length) return { count: domHotels.length, hotels: domHotels }
     return { count: 0, hotels: [] }
   })
 }
@@ -152,49 +157,50 @@ async function getRestaurant(page: Page, params: Readonly<Record<string, unknown
   const slug = String(params.slug ?? '')
   if (!geoId || !locationId || !slug) throw new Error('geoId, locationId, and slug are required')
 
-  const url = `${TA_ORIGIN}/Restaurant_Review-g${geoId}-d${locationId}-Reviews-${slug}.html`
-  await navigateTo(page, url)
+  await navigateTo(page, `${TA_ORIGIN}/Restaurant_Review-g${geoId}-d${locationId}-Reviews-${slug}.html`)
 
   return page.evaluate(() => {
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
+    const restTypes = new Set(['Restaurant', 'FoodEstablishment', 'BarOrPub', 'CafeOrCoffeeShop', 'FastFoodRestaurant', 'LocalBusiness'])
+
+    function parse(data: Record<string, unknown>) {
+      const a = data.address as Record<string, unknown> | null
+      const c = a?.addressCountry
+      const agg = data.aggregateRating as Record<string, unknown> | null
+      const hours = (data.openingHoursSpecification ?? []) as Array<Record<string, unknown>>
+      return {
+        name: data.name ?? null, url: data.url ?? null, cuisine: data.servesCuisine ?? [],
+        rating: agg?.ratingValue ?? null, reviewCount: agg?.reviewCount ?? null,
+        priceRange: data.priceRange ?? null, telephone: data.telephone ?? null,
+        menuUrl: data.hasMenu ?? data.menu ?? null,
+        address: a ? {
+          street: (a.streetAddress as string) ?? null, city: (a.addressLocality as string) ?? null,
+          region: (a.addressRegion as string) ?? null,
+          country: typeof c === 'object' && c ? (c as Record<string, unknown>).name ?? null : c ?? null,
+          postalCode: (a.postalCode as string) ?? null,
+        } : null,
+        openingHours: hours.map(h => ({
+          day: (h.dayOfWeek as string) ?? null, opens: (h.opens as string) ?? null, closes: (h.closes as string) ?? null,
+        })),
+        image: data.image ?? null,
+      }
+    }
+
+    // Match by @type
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] !== 'FoodEstablishment' && data['@type'] !== 'Restaurant') continue
-
-        const addr = data.address as Record<string, unknown> | null
-        const agg = data.aggregateRating as Record<string, unknown> | null
-        const hours = (data.openingHoursSpecification ?? []) as Array<Record<string, unknown>>
-        const addrCountry = addr?.addressCountry
-
-        return {
-          name: data.name ?? null,
-          url: data.url ?? null,
-          cuisine: data.servesCuisine ?? [],
-          rating: agg?.ratingValue ?? null,
-          reviewCount: agg?.reviewCount ?? null,
-          priceRange: data.priceRange ?? null,
-          telephone: data.telephone ?? null,
-          menuUrl: data.hasMenu ?? null,
-          address: addr
-            ? {
-                street: (addr.streetAddress as string) ?? null,
-                city: (addr.addressLocality as string) ?? null,
-                region: (addr.addressRegion as string) ?? null,
-                country: typeof addrCountry === 'object' && addrCountry
-                  ? (addrCountry as Record<string, unknown>).name ?? null
-                  : addrCountry ?? null,
-                postalCode: (addr.postalCode as string) ?? null,
-              }
-            : null,
-          openingHours: hours.map((h) => ({
-            day: (h.dayOfWeek as string) ?? null,
-            opens: (h.opens as string) ?? null,
-            closes: (h.closes as string) ?? null,
-          })),
-          image: data.image ?? null,
-        }
-      } catch { /* skip malformed */ }
+        const d = JSON.parse(s.textContent ?? '')
+        const t = d['@type']
+        const types: string[] = Array.isArray(t) ? t : [t]
+        if (types.some(x => restTypes.has(x))) return parse(d)
+      } catch { /* skip */ }
+    }
+    // Fallback: any LD+JSON with aggregateRating on this page
+    for (const s of scripts) {
+      try {
+        const d = JSON.parse(s.textContent ?? '')
+        if (d.aggregateRating && d.name) return parse(d)
+      } catch { /* skip */ }
     }
     return null
   })
@@ -208,69 +214,85 @@ async function getAttractionReviews(page: Page, params: Readonly<Record<string, 
   const slug = String(params.slug ?? '')
   if (!geoId || !locationId || !slug) throw new Error('geoId, locationId, and slug are required')
 
-  const url = `${TA_ORIGIN}/Attraction_Review-g${geoId}-d${locationId}-Reviews-${slug}.html`
-  await navigateTo(page, url)
-  // Wait for review cards to render
-  await page.waitForSelector('[data-automation="reviewCard"]', { timeout: 8_000 }).catch(() => {})
+  await navigateTo(page, `${TA_ORIGIN}/Attraction_Review-g${geoId}-d${locationId}-Reviews-${slug}.html`)
+  await page.waitForSelector(
+    '[data-test-target="review-title"], [data-automation="reviewCard"], [data-reviewid]',
+    { timeout: 8_000 },
+  ).catch(() => {})
 
   return page.evaluate(() => {
-    // Extract attraction info from LD+JSON
-    let attraction: Record<string, unknown> = {}
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
+    const attrTypes = new Set(['LocalBusiness', 'TouristAttraction', 'LandmarksOrHistoricalBuildings', 'Place', 'CivicStructure', 'Museum', 'Park'])
+
+    // Attraction info from LD+JSON
+    let attraction: Record<string, unknown> = {}
     for (const s of scripts) {
       try {
-        const data = JSON.parse(s.textContent ?? '')
-        if (data['@type'] === 'LocalBusiness' || data['@type'] === 'TouristAttraction') {
-          const addr = data.address as Record<string, unknown> | null
-          const agg = data.aggregateRating as Record<string, unknown> | null
-          attraction = {
-            name: data.name ?? null,
-            rating: agg?.ratingValue != null ? Number(agg.ratingValue) : null,
-            reviewCount: agg?.reviewCount != null ? Number(agg.reviewCount) : null,
-            address: addr
-              ? {
-                  street: addr.streetAddress ?? null,
-                  city: addr.addressLocality ?? null,
-                  region: addr.addressRegion ?? null,
-                  country: typeof addr.addressCountry === 'object' && addr.addressCountry
-                    ? (addr.addressCountry as Record<string, unknown>).name ?? null
-                    : addr.addressCountry ?? null,
-                  postalCode: addr.postalCode ?? null,
-                }
-              : null,
-            telephone: data.telephone ?? null,
-            image: data.image ?? null,
-          }
-          break
+        const d = JSON.parse(s.textContent ?? '')
+        const t = d['@type']
+        const types: string[] = Array.isArray(t) ? t : [t]
+        const isMatch = types.some(x => attrTypes.has(x)) || (!attraction.name && d.aggregateRating && d.name)
+        if (!isMatch) continue
+        const a = d.address as Record<string, unknown> | null
+        const c = a?.addressCountry
+        const agg = d.aggregateRating as Record<string, unknown> | null
+        attraction = {
+          name: d.name ?? null,
+          rating: agg?.ratingValue != null ? Number(agg.ratingValue) : null,
+          reviewCount: agg?.reviewCount != null ? Number(agg.reviewCount) : null,
+          address: a ? {
+            street: a.streetAddress ?? null, city: a.addressLocality ?? null,
+            region: a.addressRegion ?? null,
+            country: typeof c === 'object' && c ? (c as Record<string, unknown>).name ?? null : c ?? null,
+            postalCode: a.postalCode ?? null,
+          } : null,
+          telephone: d.telephone ?? null, image: d.image ?? null,
         }
-      } catch { /* skip malformed */ }
+        break
+      } catch { /* skip */ }
     }
 
-    // Extract reviews from DOM
-    const cards = document.querySelectorAll('[data-automation="reviewCard"]')
-    const reviews: Array<Record<string, unknown>> = []
-
-    for (const card of cards) {
-      const titleEl = card.querySelector('a[href*="Review"] span, [data-automation="reviewTitle"]')
-      const title = titleEl?.textContent?.trim() ?? null
-
-      // Find longest text span as review body
-      const spans = card.querySelectorAll('span')
-      let text: string | null = null
-      for (const span of spans) {
-        const t = span.textContent?.trim() ?? ''
-        if (t.length > 30 && (!text || t.length > text.length)) text = t
+    // Reviews from DOM — tiered selectors
+    function parseReview(el: Element) {
+      const titleEl = el.querySelector(
+        '[data-test-target="review-title"] span, a[href*="Review"] span, [data-automation="reviewTitle"]',
+      )
+      const textEl = el.querySelector('[data-automation*="reviewText"] span, [data-automation*="reviewText"]')
+      let text = textEl?.textContent?.trim() ?? null
+      if (!text) {
+        for (const span of el.querySelectorAll('span')) {
+          const t = span.textContent?.trim() ?? ''
+          if (t.length > 30 && (!text || t.length > text.length)) text = t
+        }
       }
-
-      const dateMatch = card.textContent?.match(/((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/)
-
-      reviews.push({
-        title,
+      const dateMatch = el.textContent?.match(/((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/)
+      const ratingEl = el.querySelector('[class*="ui_bubble_rating"], [data-test-target="review-rating"] span')
+      let rating: number | null = null
+      if (ratingEl) {
+        const m = (ratingEl.className || '').match(/bubble_(\d)/)
+        if (m) rating = Number(m[1])
+      }
+      return {
+        title: titleEl?.textContent?.trim() ?? null,
         text: text ? text.substring(0, 500) : null,
         date: dateMatch?.[1] ?? null,
-      })
+        ...(rating != null ? { rating } : {}),
+      }
     }
 
+    let reviewEls = document.querySelectorAll('[data-reviewid]')
+    if (!reviewEls.length) reviewEls = document.querySelectorAll('[data-automation="reviewCard"]')
+
+    const reviews: ReturnType<typeof parseReview>[] = []
+    if (reviewEls.length) {
+      for (const card of reviewEls) reviews.push(parseReview(card))
+    } else {
+      // Strategy 3: walk up from review-title elements
+      for (const titleEl of document.querySelectorAll('[data-test-target="review-title"]')) {
+        const container = titleEl.closest('[class*="review"]') ?? titleEl.parentElement?.parentElement?.parentElement
+        if (container) reviews.push(parseReview(container))
+      }
+    }
     return { ...attraction, reviews }
   })
 }
@@ -294,7 +316,7 @@ const adapter: CodeAdapter = {
   },
 
   async isAuthenticated(): Promise<boolean> {
-    return true // public data, no auth required
+    return true
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {

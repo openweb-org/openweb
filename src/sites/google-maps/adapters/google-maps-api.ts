@@ -11,7 +11,7 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  * Hours:        GET /maps/preview/place — operating schedule extraction
  * About:        GET /maps/preview/place — description, category, attributes
  * Nearby:       Navigate to /maps/search/{category}+near+{location}/, extract from DOM
- * Autocomplete: DOM interaction — type into search box, extract suggestions
+ * Autocomplete: Type into search box, intercept /s?suggest=p response
  * Geocode:      Navigate to /maps/search/{address}/, extract first result coords
  * RevGeocode:   Navigate to /@{lat},{lng},17z, extract address from DOM
  *
@@ -295,37 +295,59 @@ async function nearbySearch(page: Page, params: Record<string, unknown>): Promis
 
 /* ---------- getAutocompleteSuggestions ---------- */
 
+/** Parse the Maps suggest API response (protobuf-like nested arrays) into suggestion objects */
+function parseSuggestResponse(raw: string): Array<{ text: string | null; placeId: string | null; description: string | null }> {
+  const cleaned = raw.replace(/^\)\]\}'\n/, '')
+  const parsed = JSON.parse(cleaned)
+  const entries = dig(parsed, 0, 1) as unknown[][] | null
+  if (!Array.isArray(entries)) return []
+
+  const results: Array<{ text: string | null; placeId: string | null; description: string | null }> = []
+  for (const entry of entries) {
+    if (!Array.isArray(entry)) continue
+    const details = entry[22] as unknown[] | null
+    if (!Array.isArray(details)) continue
+
+    const mainText = (dig(details, 1, 0) as string | null) ?? (dig(details, 0, 0) as string | null)
+    const secondaryText = dig(details, 2, 0) as string | null
+
+    // Place ID at details[13][0][0]
+    const placeId = dig(details, 13, 0, 0) as string | null
+
+    if (mainText) {
+      results.push({
+        text: mainText,
+        placeId,
+        description: secondaryText,
+      })
+    }
+  }
+  return results
+}
+
 async function getAutocompleteSuggestions(page: Page, params: Record<string, unknown>): Promise<unknown> {
   const input = String(params.input ?? params.query ?? '')
   if (!input) throw OpenWebError.missingParam('input')
 
   await ensureMapsPage(page)
 
-  // Type into the Maps search box and extract suggestions from the dropdown
-  const searchBox = await page.waitForSelector('#searchboxinput, input[name="q"]', { timeout: 10_000 }).catch(() => null)
-  if (!searchBox) {
-    return { input, suggestions: [] }
-  }
+  // Intercept the suggest API response triggered by typing into the search box
+  const suggestPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/s?') && resp.url().includes('suggest=p') && resp.url().includes('tbm=map'),
+    { timeout: 10_000 },
+  ).catch(() => null)
 
-  // Clear existing text and type the query
-  await searchBox.click({ clickCount: 3 })
+  const searchBox = await page.waitForSelector('input[name="q"], #searchboxinput', { timeout: 10_000 }).catch(() => null)
+  if (!searchBox) return { input, suggestions: [] }
+
+  await searchBox.focus()
   await searchBox.fill(input)
-  await sleep(1500) // wait for suggestions to populate
 
-  // Extract suggestions from the autocomplete dropdown
-  const suggestions = await page.evaluate(() => {
-    const results: Array<{ text: string | null; placeId: string | null; description: string | null }> = []
-    const items = document.querySelectorAll('[role="listbox"] [role="option"], .sbsb_b li, .pac-item, .suggest-item')
-    for (const item of items) {
-      const text = item.textContent?.trim() || null
-      if (!text) continue
-      const placeId = item.getAttribute('data-place-id') || item.getAttribute('data-cid') || null
-      const secondary = item.querySelector('.pac-item-query + span, .sbsb_d, [class*="secondary"]')
-      const description = secondary?.textContent?.trim() || null
-      results.push({ text, placeId, description })
-    }
-    return results
-  })
+  const suggestResp = await suggestPromise
+  if (!suggestResp || !suggestResp.ok()) return { input, suggestions: [] }
+
+  const body = await suggestResp.text()
+  const suggestions = parseSuggestResponse(body)
 
   return { input, suggestions }
 }

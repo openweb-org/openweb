@@ -406,7 +406,7 @@ paths:
                             broadcast_url:
                               type: ['string', 'null']
                             replay_url:
-                              type: string
+                              type: ['string', 'null']
 
   /discovery/ratings/{instrument_id}/:
     get:

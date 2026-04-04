@@ -89,7 +89,8 @@ Not needed for basic site usage.
 - `/internal/*` paths are virtual — the adapter handles actual data extraction
 - Two extraction methods:
   - **SPA navigation + DOM**: searchPlaces, nearbySearch, getDirections (all modes), geocode, reverseGeocode — navigate to Maps URLs, extract from rendered DOM
-  - **Internal API via page fetch**: getPlaceDetails, getPlaceReviews, getPlacePhotos, getPlaceHours, getPlaceAbout — `/maps/preview/place` endpoint; getAutocompleteSuggestions — `/maps/suggest` endpoint
+  - **Internal API via page fetch**: getPlaceDetails, getPlaceReviews, getPlacePhotos, getPlaceHours, getPlaceAbout — `/maps/preview/place` endpoint
+  - **Network intercept**: getAutocompleteSuggestions — type into search box, capture `/s?suggest=p` API response
 - Place IDs are hex format (`0x...:0x...`), obtained from search results
 - Internal API responses use protobuf-like nested arrays, parsed with index-based `dig()` helper
 
@@ -108,7 +109,7 @@ No auth required — public pages. Transport uses `cookie_session` for session c
 
 - **DOM extraction** (searchPlaces, nearbySearch, directions, geocode, reverseGeocode): CSS selectors on rendered SPA (`a.hfpxzc`, `.MW4etd`, `div[role="feed"]`, etc.)
 - **Internal API** (getPlaceDetails, getPlaceReviews, getPlacePhotos, getPlaceHours, getPlaceAbout): `/maps/preview/place` returns nested arrays; data extracted by array index (e.g. `info[11]` = name, `info[4][7]` = rating, `info[203][1]` = hours)
-- **Suggest API** (getAutocompleteSuggestions): `/maps/suggest` returns JSON with suggestion entries
+- **Suggest API** (getAutocompleteSuggestions): types input into the search box, intercepts the `/s?suggest=p&tbm=map` network response, parses protobuf-like nested arrays for suggestion text, placeId, and description
 - Shared `fetchPlaceInfo()` helper reused across all preview API operations
 
 ## Known Issues

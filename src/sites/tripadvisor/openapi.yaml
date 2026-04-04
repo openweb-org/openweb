@@ -14,7 +14,7 @@ paths:
   /internal/searchLocation:
     get:
       operationId: searchLocation
-      summary: Search for a location by name — returns geoId, locationSlug, and category links needed by other operations
+      summary: Search for a location by name via /Search page — returns geoId, locationSlug, and category links
       x-openweb:
         permission: read
         build:
@@ -67,7 +67,7 @@ paths:
   /internal/searchHotels:
     get:
       operationId: searchHotels
-      summary: Search hotels by location — names, ratings, review counts, addresses, price ranges from LD+JSON ItemList
+      summary: Search hotels by location — names, ratings, review counts from LD+JSON and DOM fallback
       x-openweb:
         permission: read
         build:
@@ -141,7 +141,7 @@ paths:
   /internal/getRestaurant:
     get:
       operationId: getRestaurant
-      summary: Get restaurant detail — name, cuisine, rating, reviews, hours, address from LD+JSON FoodEstablishment
+      summary: Get restaurant detail — name, cuisine, rating, reviews, hours, address from LD+JSON
       x-openweb:
         permission: read
         build:
@@ -229,7 +229,7 @@ paths:
   /internal/getAttractionReviews:
     get:
       operationId: getAttractionReviews
-      summary: Get attraction info and reviews — name, rating, address plus review titles, text, and dates from DOM
+      summary: Get attraction info and reviews — name, rating, address plus review titles, text, and dates
       x-openweb:
         permission: read
         build:

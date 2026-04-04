@@ -24,11 +24,12 @@
 **Cause:** Three example files used a flat format (`operationId`/`parameters`/`expect`) instead of the expected v1 format (`operation_id`/`cases[].input`/`cases[].assertions`).
 **Fix:** Rewrote all three files to match the v1 example format used by the other 7 examples.
 
-#### 4. Autocomplete endpoint 502
+#### 4. Autocomplete selectors stale (twice)
 **Affected ops:** getAutocompleteSuggestions
-**Symptom:** HTTP 502 from `/maps/suggest` endpoint
-**Cause:** The `/maps/suggest` endpoint doesn't reliably serve responses from automated browser contexts.
-**Fix:** Switched to DOM interaction — type into the Maps search box (`#searchboxinput`), wait for the autocomplete dropdown, then extract suggestions from `[role="listbox"] [role="option"]` elements.
+**Symptom (first):** HTTP 502 from `/maps/suggest` endpoint
+**Fix (first):** Switched to DOM interaction — type into the Maps search box, extract from dropdown.
+**Symptom (second):** DOM selectors (`[role="listbox"] [role="option"]`, `.pac-item`) no longer match Google Maps' autocomplete dropdown; operation times out.
+**Fix (second):** Switched to network interception — type into search box via `focus()` + `fill()`, intercept the `/s?suggest=p&tbm=map` response that Maps fires, parse the protobuf-like nested-array response directly. Also changed `click()` to `focus()` to avoid an overlay element (`div.mYFZJb`) intercepting pointer events.
 
 ### Remaining Gaps
 
@@ -39,6 +40,6 @@
 | Preview API indices | Place data at `info[11]`, `info[4][7]`, `info[203][1]` etc. are position-dependent | Details/reviews/photos/hours/about return nulls on index shift |
 | Direction routes | Transit routes show duplicate entries (same route parsed twice) | `routes[]` may have 2x expected length |
 | Direction parsing | `via` regex only captures simple route names; complex transit descriptions may not parse | Route `name` falls back to "Route" |
-| Autocomplete | DOM-based approach depends on Google Maps rendering the suggestion dropdown | May return empty `suggestions[]` if dropdown doesn't render |
+| Autocomplete | Network intercept depends on Maps firing the suggest API when search box is filled | May return empty `suggestions[]` under heavy bot detection |
 | getTransitDirections | Intermittent "Target page closed" during sequential verification | Non-deterministic; passes on retry |
 | Geocode precision | Uses search results extraction — may return the search result rather than a precise geocode point | `lat`/`lng` from search listing URL, not from a geocoding API |

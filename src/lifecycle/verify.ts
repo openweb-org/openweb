@@ -275,6 +275,8 @@ export async function verifySite(
     const newFingerprints = new Map(storedFingerprints)
     for (const op of operations) {
       if (op.newFingerprint) {
+        // Preserve 'pending' — it signals an intentionally skipped fingerprint
+        if (storedFingerprints.get(op.operationId) === 'pending') continue
         newFingerprints.set(op.operationId, op.newFingerprint)
       }
     }

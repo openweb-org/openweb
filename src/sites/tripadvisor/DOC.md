@@ -21,10 +21,10 @@ Travel review and booking platform. Archetype: Travel. Adapter-only site — all
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchLocation | find geoId for a city/region | query | geoId, locationSlug, type | entry point; typeahead |
-| searchHotels | list hotels in a city | geoId ← searchLocation, location ← locationSlug | name, rating, reviewCount, priceRange, address | LD+JSON `ItemList` |
-| getRestaurant | restaurant detail | geoId ← searchLocation, locationId, slug | name, cuisine, rating, reviewCount, hours, menuUrl | LD+JSON `FoodEstablishment` |
-| getAttractionReviews | attraction info + reviews | geoId ← searchLocation, locationId, slug | name, rating, reviewCount, reviews[] | LD+JSON `LocalBusiness` + DOM |
+| searchLocation | find geoId for a city/region | query | geoId, locationSlug, type | entry point; uses /Search URL |
+| searchHotels | list hotels in a city | geoId ← searchLocation, location ← locationSlug | name, rating, reviewCount, priceRange, address | LD+JSON `ItemList`/`Hotel`/`LodgingBusiness` + DOM fallback |
+| getRestaurant | restaurant detail | geoId ← searchLocation, locationId, slug | name, cuisine, rating, reviewCount, hours, menuUrl | LD+JSON `Restaurant`/`FoodEstablishment`/`LocalBusiness` |
+| getAttractionReviews | attraction info + reviews | geoId ← searchLocation, locationId, slug | name, rating, reviewCount, reviews[] | LD+JSON + DOM `[data-reviewid]`/`[data-test-target]` |
 
 **Parameter format:**
 - `geoId` — TripAdvisor numeric geo ID (e.g. `60763` = New York City, `187147` = Paris)
@@ -65,11 +65,12 @@ No auth required. All operations read public data.
 Page transport (real Chrome via CDP). DataDome blocks node transport entirely.
 
 ## Extraction
-- **searchLocation**: DOM typeahead links from homepage search bar → parse geoId and slug from URLs
-- **searchHotels**: LD+JSON `ItemList` → `itemListElement[].item` (type `Hotel`)
-- **getRestaurant**: LD+JSON `FoodEstablishment` from `<script type="application/ld+json">`
-- **getAttractionReviews**: LD+JSON `LocalBusiness` for attraction info + DOM `[data-automation="reviewCard"]` for reviews
+- **searchLocation**: `/Search?q=...` page → parse geoId and slug from result links
+- **searchHotels**: LD+JSON `ItemList` → `itemListElement[].item` (type `Hotel`/`LodgingBusiness`), DOM `[data-automation="hotel-card-title"]` fallback
+- **getRestaurant**: LD+JSON `Restaurant`/`FoodEstablishment`/`LocalBusiness` from `<script type="application/ld+json">`
+- **getAttractionReviews**: LD+JSON for attraction info + DOM reviews via `[data-reviewid]`, `[data-test-target="review-title"]`, `[data-automation*="reviewText"]`
 
 ## Known Issues
-- **DataDome:** Aggressive bot detection on all endpoints. Must use page transport with real Chrome profile.
-- **Review ratings:** Individual review bubble ratings are not reliably extractable from DOM (SVG-based, no aria-label).
+- **DataDome:** Aggressive bot detection on all endpoints. Must use page transport with real Chrome profile. If captcha appears, solve it manually in the headed browser, then retry.
+- **Review ratings:** Bubble ratings extracted from CSS class `ui_bubble_rating bubble_N` when available.
+- **Selector fragility:** TripAdvisor frequently changes DOM structure. Adapter uses tiered fallbacks (LD+JSON → specific data attributes → generic DOM) to reduce breakage.
