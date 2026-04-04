@@ -19,5 +19,8 @@
   "fingerprint": {
     "response_shape_hash": "getCalendarEvents:78c6de6ee1825276,getChart:447ee6dcda6587c5,getInsights:2a7ecfac429c9463,getQuoteType:9b089cdc062fb19c,getRatings:5596778821db5a10,getScreener:658b43a6b703b938,getSparkline:eb9db571568c417b,getTimeSeries:e43b20d274899a2c,searchTickers:0894729283ef1241",
     "last_validated": "2026-04-03T03:39:10.477Z"
+  },
+  "fingerprints": {
+    "searchTickers": "pending"
   }
 }

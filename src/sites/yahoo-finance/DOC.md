@@ -98,4 +98,4 @@ All operations return JSON directly — no SSR extraction needed.
 - **Nullable rating fields** — some analyst ratings have null rating_current, pt_current, etc. when the analyst doesn't have an active rating. Schema uses nullable types.
 - **Calendar events structure** — result is an object with event type keys (ipoEvents, earnings, splits), not an array.
 - **Screener results cause DRIFT** — different stocks returned each call as market movers change. Expected for dynamic endpoints.
-- **429 rate limiting** — Yahoo aggressively rate-limits the `Chrome/134` User-Agent string used by the default executor. If verify returns all-429, set `OPENWEB_USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"` to use a shorter UA.
+- **429 rate limiting** — Yahoo aggressively rate-limits long User-Agent strings. Set `"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"` in `$OPENWEB_HOME/config.json` to use a shorter UA.
