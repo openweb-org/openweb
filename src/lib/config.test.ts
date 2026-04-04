@@ -88,7 +88,7 @@ describe('loadConfig — missing file', () => {
     const cfg = await freshLoadConfig()
     expect(cfg.browser?.headless).toBe(true)
     expect(cfg.browser?.port).toBe(9222)
-    expect(cfg.userAgent).toContain('Chrome/134')
+    expect(cfg.userAgent).toMatch(/Chrome\/\d+/)
     expect(cfg.timeout).toBe(30000)
     expect(cfg.recordingTimeout).toBe(120000)
     expect(cfg.debug).toBe(false)
@@ -134,7 +134,7 @@ describe('loadConfig — partial config', () => {
     expect(cfg.browser?.headless).toBe(true)
     // other fields should be default
     expect(cfg.timeout).toBe(30000)
-    expect(cfg.userAgent).toContain('Chrome/134')
+    expect(cfg.userAgent).toMatch(/Chrome\/\d+/)
   })
 
   it('merges partial top-level fields with defaults', async () => {
@@ -197,7 +197,7 @@ describe('loadConfig — invalid field types', () => {
     writeConfig({ userAgent: 42 })
 
     const cfg = await freshLoadConfig()
-    expect(cfg.userAgent).toContain('Chrome/134')
+    expect(cfg.userAgent).toMatch(/Chrome\/\d+/)
   })
 
   it('ignores NaN and Infinity for numeric fields', async () => {
@@ -335,5 +335,41 @@ describe('caching', () => {
     const first = mod.loadConfig()
     const second = mod.loadConfig()
     expect(first).toBe(second) // same reference (cached)
+  })
+})
+
+// ── Chrome version detection ─────────────────────
+
+describe('detectChromeVersion', () => {
+  it('returns a version string or null (platform-dependent)', async () => {
+    const mod = await import('./config.js')
+    const result = mod.detectChromeVersion()
+    // On CI or machines without Chrome, null is valid
+    if (result !== null) {
+      expect(result).toMatch(/^\d+\.\d+\.\d+\.\d+$/)
+    }
+  })
+})
+
+// ── DEFAULT_USER_AGENT ───────────────────────────
+
+describe('DEFAULT_USER_AGENT', () => {
+  it('contains a Chrome version string (detected or fallback)', async () => {
+    const mod = await import('./config.js')
+    expect(mod.DEFAULT_USER_AGENT).toMatch(/Chrome\/\d+/)
+    expect(mod.DEFAULT_USER_AGENT).toContain('AppleWebKit/537.36')
+  })
+
+  it('uses config.json userAgent when set', async () => {
+    writeConfig({ userAgent: 'CustomAgent/1.0' })
+    const mod = await import('./config.js')
+    expect(mod.DEFAULT_USER_AGENT).toBe('CustomAgent/1.0')
+  })
+
+  it('uses auto-detected UA when config.json has no userAgent', async () => {
+    writeConfig({})
+    const mod = await import('./config.js')
+    // Should be a valid Chrome UA (either detected or fallback)
+    expect(mod.DEFAULT_USER_AGENT).toMatch(/Mozilla\/5\.0 .+ Chrome\/\d+/)
   })
 })

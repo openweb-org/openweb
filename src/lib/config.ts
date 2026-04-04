@@ -4,6 +4,7 @@
  * OPENWEB_HOME is the sole env var — everything else comes from config.json or defaults.
  */
 
+import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -37,10 +38,51 @@ export interface OpenWebConfig {
   }
 }
 
+// ── Chrome version detection ────────────────────
+
+const FALLBACK_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
+
+/** Detect installed Chrome version without launching the browser. */
+export function detectChromeVersion(): string | null {
+  const osName = os.platform()
+  try {
+    if (osName === 'darwin') {
+      const version = execSync(
+        '/usr/libexec/PlistBuddy -c "Print :KSVersion" "/Applications/Google Chrome.app/Contents/Info.plist"',
+        { encoding: 'utf8', timeout: 1000 },
+      ).trim()
+      return version || null
+    }
+    if (osName === 'linux') {
+      const output = execSync('google-chrome --version', { encoding: 'utf8', timeout: 2000 }).trim()
+      const match = output.match(/(\d+\.\d+\.\d+\.\d+)/)
+      return match?.[1] ?? null
+    }
+  } catch {
+    // Chrome not installed or detection failed — use fallback
+  }
+  return null
+}
+
+/** Build a User-Agent string from a Chrome version. */
+function buildUserAgent(chromeVersion: string): string {
+  const osName = os.platform()
+  const osString =
+    osName === 'darwin'
+      ? 'Macintosh; Intel Mac OS X 10_15_7'
+      : osName === 'win32'
+        ? 'Windows NT 10.0; Win64; x64'
+        : 'X11; Linux x86_64'
+  return `Mozilla/5.0 (${osString}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`
+}
+
+const _detectedVersion = detectChromeVersion()
+const _autoUA = _detectedVersion ? buildUserAgent(_detectedVersion) : FALLBACK_UA
+
 const DEFAULT_CONFIG: OpenWebConfig = {
   browser: { headless: true, port: 9222 },
-  userAgent:
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+  userAgent: _autoUA,
   timeout: 30_000,
   recordingTimeout: 120_000,
   debug: false,
@@ -153,9 +195,7 @@ const _cfg = loadConfig()
 export const CDP_PORT = String(_cfg.browser?.port ?? 9222)
 export const CDP_ENDPOINT = `http://127.0.0.1:${CDP_PORT}`
 
-export const DEFAULT_USER_AGENT =
-  _cfg.userAgent ??
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
+export const DEFAULT_USER_AGENT = _cfg.userAgent ?? _autoUA
 
 export const TIMEOUT = {
   /** CDP readiness polling timeout */
