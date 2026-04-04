@@ -6,8 +6,8 @@
     {
       "input": {
         "includeWebMetadata": "true",
-        "queryId": "voyagerOrganizationDashCompanies.2fce873504d824e22294f312f718b4c7",
-        "variables": "(count:6,viewerPermissions:(canReadOrganizationUpdateAnalytics:true))"
+        "queryId": "voyagerOrganizationDashCompanies.148b1aebfadd0a455f32806df656c3c1",
+        "variables": "(universalName:google)"
       },
       "assertions": {
         "status": 200,

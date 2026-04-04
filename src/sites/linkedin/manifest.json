@@ -6,9 +6,9 @@
   "compiled_at": "2026-04-01T17:00:00.000Z",
   "requires_auth": true,
   "quarantined": false,
-  "last_verified": "2026-04-01T17:29:15.561Z",
+  "last_verified": "2026-04-04T15:25:06.139Z",
   "fingerprint": {
-    "response_shape_hash": "getCompany:ecb34271cd543c80,getConnectionsSummary:18aaa66b3d69bbf7,getFeed:c6e8d082bd5e2015,getInvitations:474007ae67a09da0,getMe:fd445abb3090631e,getMyNetworkNotifications:91ec9dd145b25109,getNewsStorylines:7bdd64d5b6fd1533,getNotificationCards:116f00f0cb31ed78,getProfile:0f7eabbf82eedb36,getProfileByUrn:7720117469411834",
-    "last_validated": "2026-04-01T17:29:15.562Z"
+    "response_shape_hash": "getCompany:3afeb76a128a9c89,getConnectionsSummary:18aaa66b3d69bbf7,getFeed:cef8b5069247bbf6,getInvitations:474007ae67a09da0,getMe:fd445abb3090631e,getMyNetworkNotifications:91ec9dd145b25109,getNewsStorylines:7bdd64d5b6fd1533,getNotificationCards:116f00f0cb31ed78,getProfile:0f7eabbf82eedb36,getProfileByUrn:7720117469411834",
+    "last_validated": "2026-04-04T15:25:06.140Z"
   }
 }

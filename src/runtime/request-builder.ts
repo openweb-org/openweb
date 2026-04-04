@@ -150,20 +150,27 @@ export function resolveAllParameters(spec: OpenApiSpec, operation: OpenApiOperat
 }
 
 /**
- * Encode query parameter values using standard encodeURIComponent.
- * Any existing percent-encoding in the value is preserved (not double-encoded).
+ * Minimal query-param encoder: encodes characters that break URL structure
+ * (&, =, #, space, +) and JSON structural characters ({, }, ") while
+ * preserving sub-delimiters ( ) : , that APIs like LinkedIn's Rest.li expect
+ * unencoded. Any existing percent-encoding in the value is preserved.
  */
 function encodeQueryValue(value: string): string {
   // Temporarily protect existing %XX sequences
   const protected_ = value.replace(/%([0-9A-Fa-f]{2})/g, '\0$1')
-  // Encode all special characters using standard encodeURIComponent,
-  // but first restore any bare % that wasn't part of a %XX sequence
-  const withBarePercent = protected_.replace(/%/g, '%25')
-  // Apply full encoding: this ensures JSON characters ({, }, ", :, ,) are encoded
-  const encoded = encodeURIComponent(withBarePercent.replace(/\0([0-9A-Fa-f]{2})/g, '%$1'))
-  // encodeURIComponent encodes % as %25, but our already-encoded sequences
-  // would be double-encoded. Restore them.
-  return encoded.replace(/%25([0-9A-Fa-f]{2})/g, '%$1')
+  const encoded = protected_
+    .replace(/%/g, '%25')   // encode bare % signs
+    .replace(/ /g, '%20')
+    .replace(/\t/g, '%09')
+    .replace(/&/g, '%26')
+    .replace(/=/g, '%3D')
+    .replace(/#/g, '%23')
+    .replace(/\+/g, '%2B')
+    .replace(/\{/g, '%7B')
+    .replace(/\}/g, '%7D')
+    .replace(/"/g, '%22')
+  // Restore protected %XX sequences
+  return encoded.replace(/\0([0-9A-Fa-f]{2})/g, '%$1')
 }
 
 /** Build a URL from server base, resolved path, and query parameters.

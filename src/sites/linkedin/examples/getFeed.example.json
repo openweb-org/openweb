@@ -7,7 +7,7 @@
       "input": {
         "includeWebMetadata": "true",
         "queryId": "voyagerFeedDashMainFeed.923020905727c01516495a0ac90bb475",
-        "variables": "(start:3,count:7,paginationToken:116277883-1775062195884-7aac90d1d67ee161eed57dc246b8f5ce,sortOrder:RELEVANCE)"
+        "variables": "(count:10,sortOrder:RELEVANCE)"
       },
       "assertions": {
         "status": 200,
