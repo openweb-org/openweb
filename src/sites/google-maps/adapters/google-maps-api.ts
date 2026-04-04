@@ -1,21 +1,21 @@
 import type { Page } from 'playwright-core'
 import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
- * Google Maps L3 adapter — page.goto() navigation + DOM extraction / internal preview API.
+ * Google Maps L3 adapter — network interception + internal preview API.
  *
- * Search:       Navigate to /maps/search/{query}/, extract from DOM
+ * Search:       Navigate to /maps/search/, intercept /search?tbm=map response
  * Place:        GET /maps/preview/place via page.evaluate(fetch()) with pb param
- * Directions:   Navigate to /maps/dir/{origin}/{dest}/, mode via data= param
+ * Directions:   Navigate to /maps/dir/, intercept /maps/preview/directions response
  * Reviews:      GET /maps/preview/place — detailed review extraction
  * Photos:       GET /maps/preview/place — photo URL extraction
  * Hours:        GET /maps/preview/place — operating schedule extraction
  * About:        GET /maps/preview/place — description, category, attributes
- * Nearby:       Navigate to /maps/search/{category}+near+{location}/, extract from DOM
+ * Nearby:       Navigate to /maps/search/, intercept /search?tbm=map response
  * Autocomplete: Type into search box, intercept /s?suggest=p response
- * Geocode:      Navigate to /maps/search/{address}/, extract first result coords
+ * Geocode:      Navigate to /maps/search/, intercept /search?tbm=map response
  * RevGeocode:   Navigate to /@{lat},{lng},17z, extract address from DOM
  *
- * Search, directions, nearby, geocode, and reverse geocode use page.goto() navigation.
+ * All search/directions/nearby/geocode use network interception (no DOM scraping).
  * Place details, reviews, photos, hours, and about work via fetch inside page context.
  */
 import type { CodeAdapter } from '../../../types/adapter.js'
@@ -23,8 +23,6 @@ import type { CodeAdapter } from '../../../types/adapter.js'
 const MAPS_BASE = 'https://www.google.com/maps'
 
 /* ---------- helpers ---------- */
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 function dig(arr: unknown, ...indices: number[]): unknown {
   let cur = arr
@@ -35,18 +33,6 @@ function dig(arr: unknown, ...indices: number[]): unknown {
   return cur
 }
 
-/** Re-inject esbuild __name polyfill after navigation destroys browser context */
-async function injectPolyfill(page: Page): Promise<void> {
-  await page.evaluate(`
-    if (typeof globalThis.__name === 'undefined') {
-      Object.defineProperty(globalThis, '__name', {
-        value: (target, value) => Object.defineProperty(target, 'name', { value, configurable: true }),
-        configurable: true, writable: true,
-      });
-    }
-  `)
-}
-
 async function ensureMapsPage(page: Page): Promise<void> {
   if (!page.url().includes('google.com/maps')) {
     await page.goto('https://www.google.com/maps', { waitUntil: 'domcontentloaded', timeout: 15_000 })
@@ -54,67 +40,69 @@ async function ensureMapsPage(page: Page): Promise<void> {
   }
 }
 
-/** Navigate to a Maps search URL and extract place listings from DOM */
+/** Parse the /search?tbm=map response into place objects.
+ *  Organic results live at data[64][i][1] with stable field indices. */
+function parseSearchResponse(raw: string): Array<Record<string, unknown>> {
+  const cleaned = raw.replace(/^\)\]\}'\n/, '')
+  const data = JSON.parse(cleaned)
+  const entries = data[64] as unknown[][] | null
+  if (!Array.isArray(entries)) return []
+
+  const results: Array<Record<string, unknown>> = []
+  for (const wrapper of entries) {
+    if (!Array.isArray(wrapper)) continue
+    const p = wrapper[1] as unknown[] | null
+    if (!Array.isArray(p)) continue
+
+    const placeId = (p[10] as string | null) ?? null
+    const name = (p[11] as string | null) ?? null
+    if (!name) continue
+
+    const coords = p[9] as number[] | null
+    const lat = coords?.[2] ?? null
+    const lng = coords?.[3] ?? null
+
+    const ratingArr = p[4] as unknown[] | null
+    const rating = (Array.isArray(ratingArr) && typeof ratingArr[7] === 'number') ? ratingArr[7] : null
+
+    const types = Array.isArray(p[13]) ? (p[13] as string[]) : []
+
+    // Address: prefer [18] (full formatted), fall back to joining [2] parts
+    const fullAddr = p[18] as string | null
+    const addrParts = Array.isArray(p[2]) ? (p[2] as string[]).join(', ') : null
+    // [18] includes the place name prefix ("Name, Addr") — strip it for cleaner output
+    let address = fullAddr ?? addrParts
+    if (address && name && address.startsWith(`${name}, `)) {
+      address = address.slice(name.length + 2)
+    }
+
+    const website = dig(p, 7, 0) as string | null
+    const phone = dig(p, 178, 0, 0) as string | null
+    const priceMatch = (typeof fullAddr === 'string' ? fullAddr : '').match(/\$[\d]+-[\d]+|\$+/)
+    const priceLevel = priceMatch ? priceMatch[0] : null
+
+    results.push({ placeId, name, address, rating, reviewCount: null, priceLevel, types, lat, lng })
+  }
+  return results
+}
+
+/** Navigate to a Maps search URL and intercept the /search?tbm=map API response */
 async function navigateAndExtractPlaces(page: Page, searchUrl: string): Promise<Array<Record<string, unknown>>> {
   await ensureMapsPage(page)
 
+  // Set up response interception before navigating
+  const searchPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/search?') && resp.url().includes('tbm=map') && resp.status() === 200,
+    { timeout: 15_000 },
+  ).catch(() => null)
+
   await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 })
-  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {}) // intentional: best-effort wait
-  await page.waitForSelector('a.hfpxzc', { timeout: 10_000 }).catch(() => {}) // intentional: best-effort wait
 
-  return page.evaluate(() => {
-    const items = document.querySelectorAll('div[role="feed"] > div')
-    const results: Array<Record<string, unknown>> = []
-    for (const item of items) {
-      const link = item.querySelector('a.hfpxzc') as HTMLAnchorElement | null
-      if (!link) continue
+  const searchResp = await searchPromise
+  if (!searchResp) return []
 
-      const name = link.getAttribute('aria-label')
-      const href = link.getAttribute('href') || ''
-
-      const placeIdMatch = href.match(/0x[0-9a-f]+:0x[0-9a-f]+/)
-      const placeId = placeIdMatch ? placeIdMatch[0] : null
-
-      const latLngMatch = href.match(/!3d([-\d.]+)!4d([-\d.]+)/)
-      const lat = latLngMatch ? Number.parseFloat(latLngMatch[1]) : null
-      const lng = latLngMatch ? Number.parseFloat(latLngMatch[2]) : null
-
-      const ratingEl = item.querySelector('.MW4etd')
-      const rating = ratingEl ? Number.parseFloat(ratingEl.textContent || '') : null
-
-      const reviewEl = item.querySelector('.UY7F9')
-      const reviewText = reviewEl?.textContent || ''
-      const reviewCount = Number.parseInt(reviewText.replace(/[^0-9]/g, '')) || null
-
-      let address: string | null = null
-      for (const el of item.querySelectorAll('.W4Efsd span')) {
-        const t = el.textContent || ''
-        if (t.length > 10 && !t.includes('·') && !t.startsWith('Open') && !t.startsWith('Closed')) {
-          address = t
-        }
-      }
-
-      const text = item.textContent || ''
-      const priceMatch = text.match(/\$[\d]+-[\d]+|\$+/)
-      const priceLevel = priceMatch ? priceMatch[0] : null
-
-      const typeEl = item.querySelector('.W4Efsd .W4Efsd:first-child span:first-child')
-      const placeType = typeEl?.textContent || null
-
-      results.push({
-        placeId,
-        name,
-        address,
-        rating: Number.isNaN(rating as number) ? null : rating,
-        reviewCount,
-        priceLevel,
-        types: placeType ? [placeType] : [],
-        lat,
-        lng,
-      })
-    }
-    return results
-  })
+  const body = await searchResp.text()
+  return parseSearchResponse(body)
 }
 
 /* ---------- searchPlaces ---------- */
@@ -354,6 +342,42 @@ async function getAutocompleteSuggestions(page: Page, params: Record<string, unk
 
 /* ---------- directions (shared helper) ---------- */
 
+/** Parse the /maps/preview/directions response into route objects.
+ *  Routes live at data[0][1][i][0] with structure [mode, name, [meters, text], [seconds, text]]. */
+function parseDirectionsResponse(raw: string, requestedMode: number): Array<Record<string, unknown>> {
+  const cleaned = raw.replace(/^\)\]\}'\n/, '')
+  const data = JSON.parse(cleaned)
+  const routeContainer = dig(data, 0, 1) as unknown[][] | null
+  if (!Array.isArray(routeContainer)) return []
+
+  const results: Array<Record<string, unknown>> = []
+  for (const route of routeContainer) {
+    if (!Array.isArray(route)) continue
+    const summary = route[0] as unknown[] | null
+    if (!Array.isArray(summary)) continue
+
+    const mode = summary[0]
+    const name = summary[1]
+    const distArr = summary[2] as unknown[] | null
+    const durArr = summary[3] as unknown[] | null
+
+    if (typeof mode !== 'number' || typeof name !== 'string') continue
+    if (!Array.isArray(distArr) || !Array.isArray(durArr)) continue
+    if (typeof distArr[0] !== 'number' || typeof durArr[0] !== 'number') continue
+
+    // Filter to only the requested mode (driving=0, bicycling=1, walking=2, transit=3)
+    if (mode !== requestedMode) continue
+
+    results.push({
+      name: name || 'Route',
+      distanceText: (distArr[1] as string) || '',
+      durationText: (durArr[1] as string) || '',
+      summary: results.length === 0 ? 'Fastest route' : null,
+    })
+  }
+  return results
+}
+
 /** Travel modes: 0=driving, 1=bicycling, 2=walking, 3=transit */
 async function getDirectionsForMode(page: Page, params: Record<string, unknown>, mode: number): Promise<unknown> {
   const origin = String(params.origin ?? '')
@@ -362,45 +386,21 @@ async function getDirectionsForMode(page: Page, params: Record<string, unknown>,
 
   await ensureMapsPage(page)
 
+  // Set up response interception before navigating
+  const dirPromise = page.waitForResponse(
+    (resp) => resp.url().includes('/maps/preview/directions') && resp.status() === 200,
+    { timeout: 15_000 },
+  ).catch(() => null)
+
   const modeParam = mode > 0 ? `data=!3m1!4b1!4m2!4m1!3e${mode}` : ''
   const dirUrl = `${MAPS_BASE}/dir/${encodeURIComponent(origin)}/${encodeURIComponent(destination)}/${modeParam}`
   await page.goto(dirUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 })
-  await page.waitForLoadState('networkidle', { timeout: 12_000 }).catch(() => {}) // intentional: best-effort wait
 
-  // Re-inject polyfill after page.goto() navigation
-  await injectPolyfill(page)
+  const dirResp = await dirPromise
+  if (!dirResp) return { origin, destination, routes: [] }
 
-  const routes = await page.evaluate(() => {
-    const parseRoute = (text: string) => {
-      const duration = text.match(/(\d+\s*hr\s*\d*\s*min|\d+\s*min)(?!\w)/)
-      const distance = text.match(/([\d,.]+)\s*(miles|mi(?!n))/)
-      const via = text.match(/via\s+([\w\s\d-]+?)(?:\s*(?:Fastest|Details|$))/)
-      if (!duration) return null
-      return {
-        name: via?.[1]?.trim() || 'Route',
-        distanceText: distance ? `${distance[1]} ${distance[2]}` : '',
-        durationText: duration[0].trim(),
-        summary: /[Ff]astest/.test(text) ? 'Fastest route' : null,
-      }
-    }
-
-    const results: Array<Record<string, unknown>> = []
-    for (const s of document.querySelectorAll('[data-trip-index], .MespJc')) {
-      const r = parseRoute(s.textContent || '')
-      if (r) results.push(r)
-    }
-
-    if (results.length === 0) {
-      const panel = document.querySelector('#section-directions-trip-0, [role="main"]')
-      if (panel) {
-        for (const block of (panel.textContent || '').split(/(?=via\s)/)) {
-          const r = parseRoute(block)
-          if (r) results.push(r)
-        }
-      }
-    }
-    return results
-  })
+  const body = await dirResp.text()
+  const routes = parseDirectionsResponse(body, mode)
 
   return { origin, destination, routes }
 }
