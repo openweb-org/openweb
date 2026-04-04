@@ -5,8 +5,6 @@
   "cases": [
     {
       "input": {
-        "includeWebMetadata": "true",
-        "queryId": "voyagerNewsDashStorylines.c042ce89aeaa19a94ba27cf715164f46",
         "variables": "()"
       },
       "assertions": {

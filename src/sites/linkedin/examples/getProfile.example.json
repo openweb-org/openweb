@@ -5,8 +5,6 @@
   "cases": [
     {
       "input": {
-        "includeWebMetadata": "true",
-        "queryId": "voyagerIdentityDashProfiles.34ead06db82a2cc9a778fac97f69ad6a",
         "variables": "(vanityName:qi-guo)"
       },
       "assertions": {

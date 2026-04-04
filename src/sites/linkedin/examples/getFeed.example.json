@@ -5,8 +5,6 @@
   "cases": [
     {
       "input": {
-        "includeWebMetadata": "true",
-        "queryId": "voyagerFeedDashMainFeed.923020905727c01516495a0ac90bb475",
         "variables": "(count:10,sortOrder:RELEVANCE)"
       },
       "assertions": {

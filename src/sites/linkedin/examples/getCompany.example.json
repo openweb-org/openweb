@@ -5,8 +5,6 @@
   "cases": [
     {
       "input": {
-        "includeWebMetadata": "true",
-        "queryId": "voyagerOrganizationDashCompanies.148b1aebfadd0a455f32806df656c3c1",
         "variables": "(universalName:google)"
       },
       "assertions": {

@@ -60,7 +60,7 @@ paths:
                   premiumSubscriber:
                     type: boolean
 
-  /voyager/api/graphql~getProfile:
+  /internal/getProfile:
     get:
       operationId: getProfile
       summary: "Get a user profile by vanity name (URL slug) — name, headline, location, industry, connections"
@@ -69,22 +69,11 @@ paths:
         build:
           stable_id: aeb9887866a5beda
           tool_version: 2
-        actual_path: /voyager/api/graphql
+          signals: [adapter-verified]
+        adapter:
+          name: linkedin-graphql
+          operation: getProfile
       parameters:
-        - name: includeWebMetadata
-          in: query
-          required: false
-          schema:
-            type: string
-          example: "true"
-          description: Include web metadata in response
-        - name: queryId
-          in: query
-          required: true
-          schema:
-            type: string
-          example: "voyagerIdentityDashProfiles.34ead06db82a2cc9a778fac97f69ad6a"
-          description: "GraphQL query ID for profile by vanity name"
         - name: variables
           in: query
           required: true
@@ -101,6 +90,8 @@ paths:
                 type: object
                 properties:
                   data:
+                    type: object
+                  meta:
                     type: object
                   included:
                     type: array
@@ -164,7 +155,7 @@ paths:
                   premium:
                     type: boolean
 
-  /voyager/api/graphql~getFeed:
+  /internal/getFeed:
     get:
       operationId: getFeed
       summary: "Get main feed — posts, articles, shares with author info, engagement counts, comments preview"
@@ -173,24 +164,14 @@ paths:
         build:
           stable_id: d9ca7024f34babc3
           tool_version: 2
-        actual_path: /voyager/api/graphql
+          signals: [adapter-verified]
+        adapter:
+          name: linkedin-graphql
+          operation: getFeed
       parameters:
-        - name: includeWebMetadata
-          in: query
-          required: false
-          schema:
-            type: string
-          example: "true"
-        - name: queryId
-          in: query
-          required: true
-          schema:
-            type: string
-          example: "voyagerFeedDashMainFeed.923020905727c01516495a0ac90bb475"
-          description: "GraphQL query ID for main feed"
         - name: variables
           in: query
-          required: true
+          required: false
           schema:
             type: string
           example: "(count:10,sortOrder:RELEVANCE)"
@@ -204,6 +185,8 @@ paths:
                 type: object
                 properties:
                   data:
+                    type: object
+                  meta:
                     type: object
                   included:
                     type: array
@@ -410,7 +393,7 @@ paths:
                       start:
                         type: integer
 
-  /voyager/api/graphql~getNewsStorylines:
+  /internal/getNewsStorylines:
     get:
       operationId: getNewsStorylines
       summary: "Get LinkedIn news storylines — trending topics, curated news articles, industry updates"
@@ -419,24 +402,14 @@ paths:
         build:
           stable_id: "0480efd17380ac76"
           tool_version: 2
-        actual_path: /voyager/api/graphql
+          signals: [adapter-verified]
+        adapter:
+          name: linkedin-graphql
+          operation: getNewsStorylines
       parameters:
-        - name: includeWebMetadata
-          in: query
-          required: false
-          schema:
-            type: string
-          example: "true"
-        - name: queryId
-          in: query
-          required: true
-          schema:
-            type: string
-          example: "voyagerNewsDashStorylines.c042ce89aeaa19a94ba27cf715164f46"
-          description: "GraphQL query ID for news storylines"
         - name: variables
           in: query
-          required: true
+          required: false
           schema:
             type: string
           example: "()"
@@ -451,36 +424,14 @@ paths:
                 properties:
                   data:
                     type: object
-                    properties:
-                      newsDashStorylinesByBreakingNews:
-                        type: object
-                        properties:
-                          elements:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                entityUrn:
-                                  type: string
-                                headline:
-                                  type: object
-                                  properties:
-                                    text:
-                                      type: string
-                                summary:
-                                  type: object
-                                  properties:
-                                    text:
-                                      type: string
-                                readerCount:
-                                  type: integer
-                                storylineTag:
-                                  type: string
-                                  nullable: true
-                                lastUpdatedAt:
-                                  type: integer
+                  meta:
+                    type: object
+                  included:
+                    type: array
+                    items:
+                      type: object
 
-  /voyager/api/graphql~getCompany:
+  /internal/getCompany:
     get:
       operationId: getCompany
       summary: "Get company/organization page — name, industry, size, description, follower count"
@@ -489,21 +440,11 @@ paths:
         build:
           stable_id: f002a6bde64bf160
           tool_version: 2
-        actual_path: /voyager/api/graphql
+          signals: [adapter-verified]
+        adapter:
+          name: linkedin-graphql
+          operation: getCompany
       parameters:
-        - name: includeWebMetadata
-          in: query
-          required: false
-          schema:
-            type: string
-          example: "true"
-        - name: queryId
-          in: query
-          required: true
-          schema:
-            type: string
-          example: "voyagerOrganizationDashCompanies.148b1aebfadd0a455f32806df656c3c1"
-          description: "GraphQL query ID for company/org info"
         - name: variables
           in: query
           required: true
@@ -520,6 +461,8 @@ paths:
                 type: object
                 properties:
                   data:
+                    type: object
+                  meta:
                     type: object
                   included:
                     type: array
