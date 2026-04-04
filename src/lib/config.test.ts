@@ -88,7 +88,7 @@ describe('loadConfig — missing file', () => {
     const cfg = await freshLoadConfig()
     expect(cfg.browser?.headless).toBe(true)
     expect(cfg.browser?.port).toBe(9222)
-    expect(cfg.userAgent).toContain('Chrome/133')
+    expect(cfg.userAgent).toContain('Chrome/134')
     expect(cfg.timeout).toBe(30000)
     expect(cfg.recordingTimeout).toBe(120000)
     expect(cfg.debug).toBe(false)
@@ -134,7 +134,7 @@ describe('loadConfig — partial config', () => {
     expect(cfg.browser?.headless).toBe(true)
     // other fields should be default
     expect(cfg.timeout).toBe(30000)
-    expect(cfg.userAgent).toContain('Chrome/133')
+    expect(cfg.userAgent).toContain('Chrome/134')
   })
 
   it('merges partial top-level fields with defaults', async () => {
@@ -197,7 +197,7 @@ describe('loadConfig — invalid field types', () => {
     writeConfig({ userAgent: 42 })
 
     const cfg = await freshLoadConfig()
-    expect(cfg.userAgent).toContain('Chrome/133')
+    expect(cfg.userAgent).toContain('Chrome/134')
   })
 
   it('ignores NaN and Infinity for numeric fields', async () => {
