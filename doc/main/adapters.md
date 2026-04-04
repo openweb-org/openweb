@@ -5,7 +5,7 @@
 
 ## Overview
 
-L3 adapters are the escape hatch. When a site's internal API is too complex for L2 primitives — proprietary module systems, custom serialization, non-HTTP protocols — you write a CodeAdapter: arbitrary JS that runs in the browser via Playwright.
+L3 adapters are the escape hatch. When a site's internal API is too complex for L2 primitives — proprietary module systems, custom serialization, non-HTTP protocols — you write a CodeAdapter: arbitrary JS that runs in the browser via Patchright (Playwright fork with CDP detection bypass).
 
 ~7% of sites need L3 (validated against 103 OpenTabs plugins).
 

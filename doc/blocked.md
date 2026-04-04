@@ -10,7 +10,7 @@ These cannot be unblocked by login alone.
 | zillow | https://www.zillow.com | PerimeterX CAPTCHA. All endpoints return 403. Blocks CDP browser, direct HTTP, and even default browser profiles. |
 | yelp | https://www.yelp.com | DataDome CAPTCHA. All pages and `/gql/batch` return 403. SSR data in `window.yelp.react_root_props` inaccessible. |
 | cloudflare | https://dash.cloudflare.com | Cloudflare challenge loop. Stuck on "Just a moment..." — CF challenge never resolves in managed Chrome. |
-| google-maps | https://www.google.com/maps | Google consent screen / CAPTCHA blocks headless Playwright. |
+| google-maps | https://www.google.com/maps | Google consent screen / CAPTCHA blocks headless browser. |
 | cockroachdb | https://cockroachlabs.cloud | gRPC-Web protocol over session cookies; no public endpoints. |
 | ebay | https://www.ebay.com | SSR-only + JSONP. No JSON APIs for search/items; needs HTML extraction or login for user features. |
 | notion | https://www.notion.so | All API endpoints are POST with request bodies; compiler skips POST mutations (no body inference yet). |

@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-04-03 (unified config + auto browser lifecycle)
+> Last updated: 2026-04-04 (patchright, warmSession, headless stealth)
 
 ## Overview
 
@@ -142,6 +142,46 @@ ensureBrowser(cdpEndpoint?)
 **Concurrency:** A filesystem lock (`browser.start.lock`) serializes Chrome startup across concurrent CLI processes. Stale locks (dead PID) are auto-cleaned.
 
 -> See: `src/runtime/browser-lifecycle.ts`, `src/commands/browser.ts`
+
+---
+
+## Headless Stealth
+
+The managed browser applies stealth measures to avoid bot detection:
+
+1. **Patchright** — Playwright fork that patches CDP detection signals (`navigator.webdriver`, `Runtime.enable` leak, etc.). Drop-in API-compatible replacement.
+2. **User-Agent override** — `--user-agent` flag sets a common Windows Chrome UA (Chrome/133) instead of the default headless UA string. Configurable via `user_agent` in `config.json`.
+3. **Blink feature disable** — `--disable-blink-features=AutomationControlled` removes the `navigator.webdriver = true` flag.
+
+These are applied automatically on managed browser startup. External CDP connections inherit whatever stealth the external browser has.
+
+-> See: `src/runtime/browser-lifecycle.ts` (launch args), `src/lib/config.ts` (default UA)
+
+---
+
+## Session Warm-Up
+
+`warmSession()` prepares a browser page for bot-protected sites by letting anti-bot sensor scripts (Akamai, DataDome, etc.) run and generate valid session cookies before the runtime issues API requests.
+
+```
+warmSession(page, url, opts?)
+       │
+       ├── Already warmed? (WeakSet cache per Page instance)
+       │     └── No-op
+       │
+       ├── Navigate to URL (if not already on same origin)
+       │     └── waitUntil: 'domcontentloaded' + 2s SPA settle
+       │
+       ├── waitForCookie specified?
+       │     └── Poll context.cookies() until cookie appears (500ms interval)
+       │
+       └── No cookie specified
+             └── Fixed 3s delay (sensor scripts typically complete in 1-2s)
+```
+
+Warm state is cached per `Page` — calling twice on the same page is a no-op. Adapters that need sensor warm-up (e.g., TripAdvisor, Expedia) call `warmSession()` in their `execute()` method.
+
+-> See: `src/runtime/warm-session.ts`
 
 ---
 
@@ -364,6 +404,7 @@ src/runtime/
 ├── http-executor.ts          # HTTP execution (direct + session, split from executor M36)
 ├── executor-result.ts        # Unified ExecutorResult types (M36)
 ├── browser-lifecycle.ts      # Auto browser management (ensureBrowser, 4-tier auth cascade, watchdog)
+├── warm-session.ts           # Anti-bot sensor warm-up (navigate + wait for session cookies)
 ├── request-builder.ts        # Shared request construction (path/query/header/body binding)
 ├── redirect.ts               # Redirect handling with SSRF validation
 ├── operation-context.ts      # Operation metadata resolution (transport, auth, extraction)

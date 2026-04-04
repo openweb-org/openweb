@@ -1,3 +1,46 @@
+## 2026-04-04: Patchright, headless stealth, warmSession, site fixes
+
+**What changed:**
+- Replaced `playwright-core` with `patchright` (Playwright fork) — patches CDP detection signals (`navigator.webdriver`, `Runtime.enable` leak) that bot-detection frameworks use
+- Headless stealth: `--user-agent` override (Windows Chrome/133, most common scraping UA was being blocked) + `--disable-blink-features=AutomationControlled`
+- `warmSession()` utility in `src/runtime/warm-session.ts` — navigates to site, waits for anti-bot sensor scripts (Akamai, DataDome) to generate valid session cookies before API requests; WeakSet cache prevents double-warm
+- Google Maps: replaced all DOM scraping with network interception (intercepts XHR responses directly)
+- LinkedIn: L3 adapter with runtime queryId extraction from JS bundles (queryIds change on deploy)
+- Bluesky: adapter for dynamic PDS URL resolution in `searchPosts`
+- Yahoo Finance: `searchTickers` pending fingerprint, UA workaround docs updated
+- TripAdvisor: adapter rewrite using warmSession for Akamai bypass
+- Schema drift fixes for google-search, espn, steam
+- Default UA changed from Mac Chrome/134 to Windows Chrome/133
+
+**Why:**
+- Bot detection was blocking headless Chrome on multiple sites — patchright + stealth flags fix the root cause
+- Anti-bot sensor scripts (Akamai `_abck` cookie, DataDome) need time to run before API requests succeed — warmSession provides a shared pattern
+- Site-specific fixes unblock sites that broke due to upstream changes (LinkedIn queryId rotation, Bluesky PDS federation, schema drift)
+
+**Key files:** `src/runtime/warm-session.ts`, `src/runtime/browser-lifecycle.ts`, `src/lib/config.ts`, `src/sites/google-maps/`, `src/sites/linkedin/`, `src/sites/bluesky/`, `src/sites/tripadvisor/`
+**Verification:** All tests pass, lint clean, build passes
+**Commit:** (this session)
+**Next:** npm publish
+**Blockers:** None
+
+## 2026-04-04: README rewrite + install-skill.sh
+
+**What changed:**
+- Complete README rewrite for public release — world-class open source README with clear value prop, install instructions, quickstart, and architecture overview
+- `install-skill.sh` — one-line skill installer that auto-detects Claude Code, Codex, OpenCode, OpenClaw and installs the skill to the right directory
+- Simplified browser section in README — browser auto-starts, no manual setup required
+- Updated skill docs to reflect auto browser lifecycle
+
+**Why:**
+- First impressions matter — the README is the entry point for all new users and contributors
+- One-line install reduces friction from "clone repo + configure" to a single curl command
+
+**Key files:** `README.md`, `install-skill.sh`, `skill/openweb/SKILL.md`
+**Verification:** README renders correctly, install-skill.sh tested
+**Commit:** (this session)
+**Next:** npm publish
+**Blockers:** None
+
 ## 2026-04-03: Auto browser lifecycle — ensureBrowser, BrowserHandle, watchdog, 4-tier auth cascade
 
 **What changed:**

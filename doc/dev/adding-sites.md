@@ -168,7 +168,7 @@ paths:
   "description": "<what the site exposes>",
   "requires_auth": true,
   "dependencies": {
-    "playwright": "^1.52.0"
+    "patchright": "^1.59.1"
   },
   "stats": {
     "operation_count": 1,

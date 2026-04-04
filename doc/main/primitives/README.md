@@ -25,7 +25,7 @@ resolveSigning(handle, signing, serverUrl) ->  signing headers (per-request)
 
 All results are **merged into a single headers dict** passed to the HTTP request.
 
-The `BrowserHandle` provides access to the Playwright `Page` and `BrowserContext` for browser-side extraction.
+The `BrowserHandle` provides access to the Patchright `Page` and `BrowserContext` for browser-side extraction.
 
 ```typescript
 interface BrowserHandle {

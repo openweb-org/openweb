@@ -1,7 +1,7 @@
 # OpenWeb — Architecture Overview
 
 > System overview, 3-layer model, transport model, and component map.
-> Last updated: 2026-04-03 (unified config + auto browser lifecycle)
+> Last updated: 2026-04-04 (patchright, warmSession, headless stealth, site fixes)
 
 ## Mission
 
@@ -70,7 +70,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 
         ┌──────────┐
         │   L3     │  adapter.init() → isAuthenticated() → execute()
-        │ adapter  │  Full Playwright access, arbitrary JS
+        │ adapter  │  Full Patchright access, arbitrary JS
         └──────────┘
 ```
 
@@ -84,6 +84,7 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 |-----------|-------------|-----------|--------|
 | **Meta-spec** | x-openweb schema: L2 types + L3 interface + package format | `src/types/` | Formalized (M1) |
 | **Runtime** | Reads skill packages, resolves primitives, executes requests (HTTP + WS) | `src/runtime/` | L1 + L2 + L3 + extraction + WS + token cache (M35) |
+| **Browser** | Patchright (Playwright fork) for CDP stealth; headless with UA + blink-features override | `src/runtime/browser-lifecycle.ts` | Auto-managed, patchright (session) |
 | **Compiler** | Captures behavior, analyzes patterns, curates plan, emits skill packages (OpenAPI + AsyncAPI), verifies | `src/compiler/` | Pipeline v2: 5-phase (capture → analyze → curate → generate → verify) |
 | **Capture** | CDP browser recording (HAR + WS + state + DOM), no content filtering, body-size-gate only | `src/capture/` | Complete (M0), page isolation (M11), dynamic globals (M17), unfiltered (v2) |
 | **Knowledge** | Agent reference docs for archetypes and site-specific notes | `skill/openweb/references/` | 2 process docs + 2 deep refs + 7 knowledge files |
@@ -181,9 +182,13 @@ Policy is configurable per-site in the `permissions` section of `$OPENWEB_HOME/c
 
 The runtime auto-manages browser instances. `ensureBrowser()` checks for a running managed browser, starts one if needed, and returns a `BrowserHandle` that disconnects (never kills Chrome) on release. A detached shell watchdog kills Chrome after 5 minutes of idle. All `exec` and `capture` commands auto-detect the managed browser -- no `--cdp-endpoint` needed. `openweb browser start` is optional, for manual control or custom options.
 
+**Patchright:** The managed browser uses Patchright (Playwright fork) instead of Playwright, which patches CDP detection signals (`navigator.webdriver`, `Runtime.enable` leak). Combined with `--user-agent` (Windows Chrome/133) and `--disable-blink-features=AutomationControlled`, this defeats most bot detection that targets headless Chrome.
+
+**warmSession():** For sites with anti-bot sensor scripts (Akamai, DataDome), `warmSession()` navigates to the site and waits for session cookies to stabilize before issuing API requests. Called by adapters that need sensor warm-up.
+
 **4-tier auth cascade** for authenticated operations: (1) token cache, (2) browser extract, (3) profile refresh, (4) user login with exponential backoff poll. See [runtime.md](runtime.md) for details.
 
-**Configuration:** All settings in `$OPENWEB_HOME/config.json` (single file replaces env vars + permissions.yaml). Browser port, headless mode, profile path, timeout, user-agent, debug, permissions -- all in one place. `OPENWEB_HOME` env var is the sole environment variable (defaults to `~/.openweb`).
+**Configuration:** All settings in `$OPENWEB_HOME/config.json` (single file, replaces former env vars). Browser port, headless mode, profile path, timeout, user-agent, debug, permissions -- all in one place. `OPENWEB_HOME` env var is the sole environment variable (defaults to `~/.openweb`).
 
 Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessionStorage with AES-256-GCM encryption and PBKDF2 machine-binding. JWT-aware TTL. Cache hit -> no browser connection needed. 401/403 -> cache invalidated -> browser fallback.
 

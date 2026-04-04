@@ -48,6 +48,7 @@ src/
     executor.ts     # Main dispatch (HTTP + WS)
     http-executor.ts, browser-fetch-executor.ts, node-ssr-executor.ts
     browser-lifecycle.ts  # Auto browser management (ensureBrowser, auth cascade, watchdog)
+    warm-session.ts       # Anti-bot sensor warm-up (Akamai, DataDome cookie wait)
     session-executor.ts, adapter-executor.ts, extraction-executor.ts
     ws-executor.ts, ws-connection.ts, ws-router.ts, ws-runtime.ts
     cache-manager.ts, token-cache.ts
@@ -67,4 +68,5 @@ src/
     manifest.ts, url-builder.ts, response-parser.ts, csrf-scope.ts
     config/             # Config files: blocked-domains, blocked-paths, tracking-cookies, static-extensions
 skill/openweb/      # The shipped skill (references, knowledge)
+install-skill.sh    # Skill installer for Claude Code, Codex, OpenCode, OpenClaw
 ```

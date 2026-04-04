@@ -1,7 +1,7 @@
 # Development Guide
 
 > Build, test, run, and debug OpenWeb.
-> Last updated: 2026-04-03 (unified config + auto browser lifecycle)
+> Last updated: 2026-04-04 (patchright replaces playwright)
 
 ## Prerequisites
 
@@ -28,7 +28,7 @@ pnpm lint           # Biome lint check
 | Test | Vitest | 3.x |
 | Lint | Biome | 1.x |
 | CLI | yargs | 18.x |
-| Browser | Playwright | 1.52+ |
+| Browser | Patchright (Playwright fork, CDP stealth) | 1.59+ |
 | Schema | AJV | 8.x |
 | Package mgr | pnpm | -- |
 
