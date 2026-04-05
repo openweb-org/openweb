@@ -37,7 +37,17 @@ doc/main/
 ├── browser-capture.md     # CDP capture module: HAR + WS + state + DOM recording
 │
 └── security.md            # SSRF protection, redirect safety, error model
+
+skill/openweb/                     # Agent-facing operator guide (separate deliverable)
+├── SKILL.md               # Router: exec flow, intent routing, load discipline
+├── add-site/              # Contributor workflow (8-step: frame → document)
+├── references/            # Lookup: CLI, x-openweb schema, troubleshooting
+└── knowledge/             # Pattern library: archetypes, auth, bot-detection, etc.
 ```
+
+The project ships two deliverables: **code** (`src/`) and **skill** (`skill/openweb/`). The skill is the agent-facing interface — it defines how agents discover, use, and extend OpenWeb. These docs (`doc/main/`) describe the internals; the skill docs describe the operator workflow. Both derive from source code and must stay accurate with it.
+
+-> See [Skill Documentation](#skill-documentation) for the boundary between these two doc sets.
 
 ---
 
@@ -178,9 +188,11 @@ src/
 
 ## Skill Documentation
 
-`skill/openweb/` is the **user-facing operator guide** — it tells agents how to use OpenWeb, add sites, and troubleshoot. `doc/main/` is the **developer-facing architecture docs** — it explains how the system works internally.
+`skill/openweb/` is the **agent-facing operator guide** — a shipped deliverable like `src/`. It tells agents how to use OpenWeb, add sites, and troubleshoot. `doc/main/` is the **developer-facing architecture docs** — it explains how the system works internally.
 
-Both are **self-contained** and derive from source code as the single source of truth. Neither references the other's files directly. They stay aligned indirectly: both accurate with code means both consistent with each other.
+**Design boundary:** The skill defines *what* agents should do (workflow, decisions, patterns). The code + doc/main define *how* the system works (runtime, types, security). When an agent needs exact runtime semantics (e.g., how the executor dispatches, how SSRF validation works), those details live here in doc/main. When an agent needs to know which auth pattern to choose or how to curate a spec, that lives in skill/. The skill may reference concepts explained here (e.g., "transport", "primitive"), but the skill docs are self-contained — they do not load doc/main files.
+
+Both derive from source code as the single source of truth. They stay aligned indirectly: both accurate with code means both consistent with each other.
 
 **Sync rule:** when updating `doc/main/` in a way that changes operator-facing behavior (e.g., new auth primitive, changed transport semantics, new CLI flag), check whether `skill/openweb/` needs a corresponding update.
 
