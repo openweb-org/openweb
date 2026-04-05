@@ -1,6 +1,6 @@
 # Site Archetypes
 
-Quick-reference matrix for identifying a site's type before discovery. Each row links to a thin profile with expected operations and curation expectations.
+Quick-reference matrix for identifying a site's type before discovery. Each row links to a profile with expected operations and curation expectations.
 
 > Archetypes are heuristic starting points, not limiting checklists. Define targets based on user needs and actual site capabilities.
 
@@ -29,22 +29,23 @@ Quick-reference matrix for identifying a site's type before discovery. Each row 
 
 ## How to Use
 
-1. **Before discovery:** identify the archetype → read the profile for expected operations
+1. **Before discovery:** identify the archetype -> read the profile for expected operations
 2. **During compile:** check curation expectations in the profile
 3. **When stuck:** check if the profile mentions known blockers or anti-bot notes
 
 ## Profile Structure
 
 Each profile contains:
-- **Classification** — what sites belong here and why
 - **Expected Operations** — typical operations to target during discovery
-- **Typical Profile** — quick pointers to auth, transport, extraction (not full details — see knowledge files)
-- **Curation Expectations** — what to verify during compile review
+- **Typical Profile** — auth, transport, extraction, bot detection
+- **Notable Patterns** — site-specific quirks that affect curation
+- **Curation Checklist** — what to verify during compile review
 
 ## Related Knowledge
 
-- [auth-patterns.md](../auth-patterns.md) — full auth primitive reference
-- [bot-detection-patterns.md](../bot-detection-patterns.md) — detection systems and transport impact
-- [extraction-patterns.md](../extraction-patterns.md) — SSR, DOM, adapter extraction
-- [ws-patterns.md](../ws-patterns.md) — WebSocket message and connection patterns
-- [graphql-patterns.md](../graphql-patterns.md) — persisted queries, batching
+- [auth-routing.md](../auth-routing.md) — signal -> auth family routing table
+- [auth-primitives.md](../auth-primitives.md) — per-primitive detection, config, gotchas
+- [bot-detection.md](../bot-detection.md) — detection systems and transport impact
+- [extraction.md](../extraction.md) — SSR, DOM, adapter extraction
+- [ws.md](../ws.md) — WebSocket message and connection patterns
+- [graphql.md](../graphql.md) — persisted queries, batching

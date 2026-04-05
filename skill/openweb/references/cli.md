@@ -7,100 +7,93 @@ Full command reference for the openweb CLI.
 ### `sites` — List available sites
 
 ```bash
-openweb sites                    # text table
+openweb sites                    # one site per line (quarantined sites marked)
 openweb sites --json             # [{name, transport, operationCount, permission}]
 ```
 
 ### `<site>` — Show site info
 
 ```bash
-openweb <site>                   # text: transport, auth, operations
-openweb <site> --json            # {name, operations: [{id, method, path, permission}]}
+openweb <site>                   # text: site details and operations
+openweb <site> --json            # JSON site summary with operations
 ```
 
 ### `<site> <operation>` — Show operation details
 
 ```bash
 openweb <site> <op>              # text: method, path, params, response shape
-openweb <site> <op> --json       # {id, method, path, permission, parameters}
-openweb <site> <op> --full       # extended details (includes AsyncAPI info)
-openweb <site> <op> --example    # real example params from fixtures
+openweb <site> <op> --json       # JSON operation detail
+openweb <site> <op> --full       # extended details (includes WS/AsyncAPI info)
+openweb <site> <op> -f           # alias for --full
+openweb <site> <op> --example    # example params from fixtures
 ```
 
 ### `<site> exec <operation> '<params>'` — Execute
 
 ```bash
 openweb <site> exec <op> '{"key":"value"}'
-openweb <site> exec <op> '{}' --cdp-endpoint http://localhost:9222
+openweb <site> exec <op> '{}' --cdp-endpoint http://127.0.0.1:9222
 openweb <site> exec <op> '{}' --output file
+openweb <site> exec <op> '{}' --max-response 8192
 ```
 
-**Shorthand:** `openweb <site> <op> '{"key":"value"}'` (passing a JSON argument as the third positional arg triggers exec automatically).
+**Auto-exec shorthand:** `openweb <site> <op> '{"key":"value"}'` triggers exec when the third positional arg is a JSON object and no show-mode flags (`--json`, `--full`, `-f`, `--example`) are present.
 
-- **stdout**: JSON result (success)
-- **stderr**: JSON error with `failureClass` (failure)
-- Exit 0 = success, 1 = failure
-- Auto-spill: responses over `--max-response` (default 4096 bytes) write to temp file; stdout returns `{status, output, size, truncated}`
+**Output contract:**
 
-**Configuration (`~/.openweb/config.json`):**
-```json
-{
-  "debug": true,                // verbose debug output (request/response details)
-  "timeout": 30000,             // operation timeout in ms (default 30000)
-  "recordingTimeout": 120000,   // compile --script timeout in ms (default 120000)
-  "userAgent": "...",           // custom User-Agent
-  "browser": {
-    "port": 9222,               // CDP port (default 9222)
-    "headless": true,           // headless mode (default true)
-    "profile": "/path/to/dir"   // Chrome profile directory
-  }
-}
-```
+- **stdout**: JSON result body on success
+- **stderr**: JSON error with `failureClass` on failure
+- **Exit code**: 0 = success, 1 = failure
+
+**Auto-spill:** Responses over `--max-response` bytes (default 4096) write to a temp file. stdout returns `{status, output, size, truncated}` pointing to the file. `--output file` forces all responses to a temp file (stdout returns `{status, output, size}`).
 
 ## Browser Management
 
-The CLI auto-starts a managed headless browser when an operation requires one. No manual setup needed — `exec` launches Chrome on demand and connects automatically.
+The CLI auto-starts a managed headless Chrome when an operation requires browser access. No manual setup needed — `exec`, `verify --browser`, and `capture start` all launch Chrome on demand and connect automatically.
 
-For manual control, these commands are available as optional overrides:
+Auto-start copies auth-relevant files (Cookies, Local Storage, Session Storage, Web Data, Preferences) from the user's default Chrome profile to a temp directory, then launches Chrome with `--remote-debugging-port`. Concurrent auto-start calls are serialized via a filesystem lock. A background watchdog kills idle browsers after 5 minutes.
+
+For manual control:
 
 ```bash
 openweb browser start [--headless] [--port 9222] [--profile <dir>]
 openweb browser stop
-openweb browser restart        # re-copy profile + clear token cache
+openweb browser restart
 openweb browser status
 ```
 
-**How it works:** When a browser is needed, the CLI copies auth-relevant files from your default Chrome profile (or `--profile <dir>`) to a temp directory, then launches Chrome with `--remote-debugging-port=9222`. `exec` auto-detects the running instance — no `--cdp-endpoint` needed. `browser start` is only needed if you want to pre-launch with specific options (e.g., a custom profile or port).
+- **`start`** — Pre-launch with specific options. Reports existing instance if already running
+- **`stop`** — Kill managed Chrome, clean up temp profile and watchdog
+- **`restart`** — Saves open tabs, stops, re-copies profile, starts, restores tabs. Use after `openweb login <site>` to pick up fresh cookies
+- **`status`** — Report whether managed Chrome is running and CDP is responding
 
-**Token caching:** Successful auth requests cache cookies in `$OPENWEB_HOME/tokens/<site>/` (default `~/.openweb/tokens/<site>/`). Cache auto-expires by TTL (1h default or JWT exp). `browser restart` clears the cache.
-
-**Limitation:** Browser/capture orchestration is singleton. One managed browser instance at a time.
+Override profile source with `--profile <dir>` or `browser.profile` in config. Default port: 9222. One managed browser at a time.
 
 ## Login
 
 ```bash
-openweb login <site>             # open site in default browser for login
+openweb login <site>
 ```
 
-After login: `openweb verify <site>` to confirm auth works.
+Opens the site URL in the managed browser (via CDP new-tab) if running, otherwise falls back to the system default browser. After logging in, run `openweb browser restart` to re-copy auth cookies.
 
 ## Capture
 
 ```bash
-openweb capture start                       # auto-starts browser if not running
-openweb capture start --cdp-endpoint http://localhost:9222  # explicit CDP endpoint
-openweb capture start --isolate --url https://example.com   # isolated tab capture
+openweb capture start
+openweb capture start --cdp-endpoint http://127.0.0.1:9222
+openweb capture start --isolate --url https://example.com
 openweb capture stop
 openweb capture stop --session <id>
 ```
 
-Records browser traffic for later compilation. Prints a session ID to stdout.
+Records browser traffic via CDP for later compilation. Prints a session ID to stdout. Auto-starts managed browser if no `--cdp-endpoint` is provided. Runs until `Ctrl+C` or `capture stop`.
 
 | Flag | Purpose |
 |------|---------|
-| `--cdp-endpoint <url>` | Chrome DevTools Protocol endpoint (optional — auto-detected from managed browser) |
-| `--output <dir>` | Output directory (default: `./capture/` or `./capture-<session>/` with `--isolate`) |
-| `--isolate` | Isolate capture to a single new tab (for multi-worker) |
+| `--cdp-endpoint <url>` | Explicit CDP endpoint (auto-starts managed browser if omitted) |
+| `--output <dir>` | Output directory (default: `./capture/`, or `./capture-<session>/` with `--isolate`) |
+| `--isolate` | Isolate capture to a single new tab |
 | `--url <url>` | URL to navigate (required with `--isolate`) |
 | `--session <id>` | Stop a specific session (required if multiple active) |
 
@@ -112,69 +105,96 @@ openweb compile <site-url> --script ./record.ts
 openweb compile <site-url> --capture-dir <dir> --curation <file>
 ```
 
-Transforms captured traffic into a site package. Requires `--capture-dir` (manual capture) or `--script` (scripted recording).
+Transforms captured traffic into a site package. Requires either `--capture-dir` or `--script`. Analysis artifacts written to `$OPENWEB_HOME/compile/<site>/`.
 
 | Flag | Purpose |
 |------|---------|
 | `--capture-dir <dir>` | Load from an existing capture bundle |
-| `--script <file>` | Scripted recording — child process killed after 120s. See `references/capture-guide.md` for templates |
-| `--curation <file>` | Apply manual curation overrides (CSRF type, excluded ops, etc.) |
+| `--script <file>` | Scripted recording (killed after recording timeout, default 120s) |
+| `--curation <file>` | Apply curation decisions JSON |
 
 ## Verify
 
 ```bash
 openweb verify <site>                        # single site (node-transport, read ops only)
 openweb verify <site> --browser              # include page-transport ops (auto-starts browser)
-openweb verify <site> --write                # include write/delete ops (transact excluded)
+openweb verify <site> --write                # include write/delete ops (transact always excluded)
 openweb verify <site> --browser --write      # full verify: all transports + write ops
-openweb verify --all                         # all sites sequentially
-openweb verify --all --browser               # all sites with browser support
+openweb verify --all                         # all sites
 openweb verify --all --report json           # machine-readable drift report
 openweb verify --all --report markdown       # reviewable markdown report
 ```
 
-Site-level status vocabulary: `PASS` | `DRIFT` | `FAIL` | `auth_expired`
+**Status vocabulary:** `PASS` | `DRIFT` | `FAIL` | `auth_expired`
 
-`--browser` auto-starts the managed browser if not already running.
-`--write` replays write/delete operations (use with caution — transact ops always excluded).
-`--report` is only valid with `--all`.
+- `--write` replays write/delete operations (transact always excluded, warning printed to stderr)
+- `--report` only valid with `--all`
+- Exit code 1 if any site has non-PASS status
 
 ## Registry
 
 ```bash
-openweb registry list            # registered sites with versions
-openweb registry install <site>  # archive site package to registry
-openweb registry rollback <site> # revert to previous version
-openweb registry show <site>     # version history
+openweb registry list              # registered sites with current versions
+openweb registry install <site>    # archive site package to registry
+openweb registry rollback <site>   # revert to previous version
+openweb registry show <site>       # version history
 ```
 
 ## Permission System
 
-| Permission | HTTP Methods | Default Policy |
+| Permission | Derived From | Default Policy |
 |---|---|---|
-| `read` | GET, HEAD | **allow** — executes without prompt |
+| `read` | GET, HEAD, and any unlisted method | **allow** — executes without prompt |
 | `write` | POST, PUT, PATCH | **prompt** — returns structured error for relay |
 | `delete` | DELETE | **prompt** — returns structured error for relay |
-| `transact` | checkout/purchase/payment | **deny** — blocked by default |
+| `transact` | paths matching `/checkout\|purchase\|payment\|order\|subscribe/` | **deny** — blocked |
 
-Users customize in the `permissions` section of `$OPENWEB_HOME/config.json`.
+Transact is path-based and takes precedence over HTTP method. Customizable via config:
+
+```json
+{
+  "permissions": {
+    "defaults": { "write": "allow" },
+    "sites": { "github": { "write": "allow", "delete": "prompt" } }
+  }
+}
+```
+
+Site-specific overrides take precedence over defaults.
+
+## Configuration
+
+All config from `$OPENWEB_HOME/config.json` (`OPENWEB_HOME` defaults to `~/.openweb`):
+
+```json
+{
+  "debug": false,                 // verbose debug output
+  "timeout": 30000,               // operation timeout (ms)
+  "recordingTimeout": 120000,     // compile --script timeout (ms)
+  "userAgent": "...",             // auto-detected from local Chrome; fallback Mac Chrome/134
+  "browser": {
+    "port": 9222,                 // CDP port
+    "headless": true,             // headless mode
+    "profile": "/path/to/dir"     // source Chrome profile for auth file copy
+  },
+  "permissions": { "..." }        // see Permission System above
+}
+```
 
 ## Transports
 
-Configured per-site, not chosen by the agent:
+Configured per-site in the OpenAPI spec, not chosen at runtime:
 
-- **node**: HTTP from Node.js — with or without browser auth
-- **page**: HTTP via `page.evaluate()` in the browser
-- **adapter**: Arbitrary JS in the browser page via page.evaluate (Telegram, WhatsApp)
+- **node** — HTTP from Node.js (with or without browser-extracted auth)
+- **page** — HTTP via `page.evaluate()` in the browser context
+- **adapter** — Arbitrary JS in the browser page via `page.evaluate()`
 
 ---
 
 ## Related References
 
-- [site-doc.md](site-doc.md) — Per-site documentation standards (DOC.md, PROGRESS.md)
-- [discover.md](discover.md) — Discovery workflow
-- [compile.md](compile.md) — Compilation workflow
-- [troubleshooting.md](troubleshooting.md) — Debugging site issues
+- [troubleshooting.md](troubleshooting.md) — Debugging failures
+- [x-openweb.md](x-openweb.md) — Extension field reference
 
 ---
 

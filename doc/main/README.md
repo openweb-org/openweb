@@ -176,6 +176,18 @@ src/
 
 ---
 
+## Skill Documentation
+
+`skill/openweb/` is the **user-facing operator guide** — it tells agents how to use OpenWeb, add sites, and troubleshoot. `doc/main/` is the **developer-facing architecture docs** — it explains how the system works internally.
+
+Both are **self-contained** and derive from source code as the single source of truth. Neither references the other's files directly. They stay aligned indirectly: both accurate with code means both consistent with each other.
+
+**Sync rule:** when updating `doc/main/` in a way that changes operator-facing behavior (e.g., new auth primitive, changed transport semantics, new CLI flag), check whether `skill/openweb/` needs a corresponding update.
+
+-> See: [skill/openweb/SKILL.md](../../skill/openweb/SKILL.md) for the skill entry point.
+
+---
+
 ## Development Workflow
 
 -> See: [doc/dev/development.md](../dev/development.md)

@@ -1,0 +1,184 @@
+# Reviewing the Analysis Report
+
+How to read `analysis.json` and decide: continue to curation, re-capture, or stop.
+
+## What to Read and What to Skip
+
+**Do NOT read the entire file.** Use offset/limit to read specific sections.
+
+| Section | Action |
+|---|---|
+| `summary` | **Read first** — health check (~10 lines) |
+| `authCandidates` | **Read** — auth review (~10-30 lines) |
+| `clusters` | **Read** — coverage mapping (~20-100 lines/cluster) |
+| `extractionSignals` | **Read if SSR suspected** (~5-20 lines) |
+| `ws` | **Read if WS expected** |
+| `samples` | **Skip** — every labeled request, huge |
+| `navigation` | **Skip** — page-level groups, debugging only |
+
+## Review Order
+
+1. Summary signals
+2. Auth candidates
+3. Clusters
+4. Extraction signals
+5. WebSocket analysis (if expected)
+6. Coverage decision
+
+---
+
+## 1. Summary Signals
+
+Read the first ~30 lines (covers `version` through `summary`):
+
+- **`summary.byCategory.api`** — API request count. Zero or very low = capture
+  missed target traffic.
+- **`summary.byCategory.off_domain`** — if high, the API lives on a different
+  domain. Re-compile using the API domain as the site URL.
+- **`summary.clusterCount`** — candidate operations found.
+
+## 2. Auth Candidates
+
+> Before reading: check `knowledge/auth-routing.md` for expected auth type.
+
+Search for `"authCandidates"` in `analysis.json`. For the rank-1 candidate:
+
+- **`auth.type`** — matches expectation from `knowledge/auth-routing.md`?
+- **`confidence`** — >0.7 reliable; 0.3-0.7 suspect (cross-check with routing
+  table); <0.3 no meaningful auth (expected for public APIs, investigate if
+  login required).
+- **`evidence.matchedCookies`** — real auth cookies or tracking cookies?
+  Tracking cookies (`__cf_bm`, `_ga`, `__gads`, `datadome`) should NOT appear.
+  If they're the only matched cookies, the candidate is a false positive —
+  check lower-ranked candidates or confirm the site is public.
+- **`csrf`** — social sites with write ops usually need it. Check `csrf.type`
+  (`cookie_to_header` or `meta_tag`) and cookie/header names.
+- **`evidence.notes`** — human-readable detection rationale.
+
+Empty or all-zero-confidence = no auth detected. Expected for public APIs;
+red flag for sites requiring login.
+
+### CSRF Verification
+
+Auto-detected CSRF may be wrong. Check `authCandidates[0].csrfOptions` for
+all cookie-to-header matches ranked by confidence.
+
+**False positives:** locale cookies (`lc-main=en_US` -> `x-li-lang`), preference
+cookies — short values, not tokens.
+
+**Real CSRF signals:** headers named `csrf-token`, `x-csrf-token`; cookies
+named `csrftoken`, `_csrf`; values are long random strings (>10 chars).
+
+**Override:** curation file + re-compile, or edit `openapi.yaml` directly:
+```bash
+echo '{"csrfType": "cookie_to_header"}' > curation.json
+openweb compile <url> --capture-dir <dir> --curation curation.json
+```
+
+> Full auth/CSRF primitive details: `knowledge/auth-primitives.md`
+
+## 3. Clusters
+
+Search for `"clusters"` in `analysis.json`.
+
+### Mapping Target Intents
+
+Map each target intent to a cluster. Missing cluster = not captured, return
+to capture. Per cluster check:
+
+- **`suggestedOperationId` / `suggestedSummary`** — detected operation
+- **`method` + `pathTemplate`** — HTTP shape
+- **`sampleCount`** — request count
+
+### Path Normalization
+
+`/users/123` and `/users/456` should normalize to `/users/{id}`. If paths
+got incorrectly merged, `normalization.originalPaths` shows what was collapsed.
+
+### GraphQL Clusters
+
+> For details: `knowledge/graphql.md` (persisted queries, batching)
+
+- `graphql.operationName` — each query should get its own cluster
+- `graphql.discriminator` — split method (`operationName`, `queryId`,
+  `persistedQueryHash`, or `queryShape`)
+- High `sampleCount` (100+) on `/graphql` with NO sub-cluster metadata =
+  all operations collapsed. Fix: capture with more varied UI interactions.
+
+### Cluster Red Flags
+
+- **4xx-only clusters** — auth-required endpoints or stale URLs; cross-ref
+  with `authCandidates`
+- **Very high `sampleCount`** (100+) — GraphQL collapse, polling endpoint,
+  or unfiltered analytics (exclude during curation)
+- **`parameters`** — check required flags and example values
+- **`responseVariants`** — observed status codes and content types
+
+Note clusters to exclude and names to change — applied during curation.
+
+## 4. Extraction Signals
+
+> Decision flow and pattern details: `knowledge/extraction.md`
+
+Search for `"extractionSignals"`. Auto-detected types:
+
+- **`ssr_next_data`** — Next.js `__NEXT_DATA__`. `estimatedSize` shows if
+  real data or skeleton.
+- **`script_json`** — `<script type="application/json">` blocks. `selector`
+  and `id` locate the element.
+
+Not auto-detected (check manually if suspected):
+- `page_global` (`window.__INITIAL_STATE__`), `__NUXT__`, `html_selector`
+
+**Extraction vs API replay:** weak API clusters + rich SSR data = prefer
+extraction. Note for curation.
+
+## 5. WebSocket Analysis
+
+> Message types and curation signals: `knowledge/ws.md`
+
+Search for `"ws"` at top level:
+
+- `connections[].url` — data channel or telemetry?
+- `connections[].executableOperationCount` — meaningful operations?
+- `connections[].heartbeatCandidates` — interval and payload
+- `connections[].operations[]` — patterns (`subscribe`, `stream`,
+  `request_reply`, `publish`)
+
+Heartbeat-only and presence/typing channels = noise, exclude.
+
+## 6. Coverage Decision
+
+### Gap Diagnosis
+
+If target operations are missing:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| No API calls for feature | SSR data | Check page source for `__NEXT_DATA__`, `window.__INITIAL_STATE__` |
+| High `off_domain` count | Cross-origin API | Re-compile with API domain |
+| All endpoints 401/403 | Not logged in | Log in via managed browser, re-capture |
+| GraphQL mega-cluster | Ops collapsed | More varied queries during capture |
+| Content after scroll only | Lazy loading | Scroll, click "load more" |
+| Auth `confidence: 0`, `rejectedSignals` mentions no overlap | Capture was unauthenticated | Re-capture with login |
+| CSRF missing | Token in JS, not cookie/meta | Find manually in dev tools, add to spec |
+
+### Stop-Iterating Rules
+
+- **2 capture iterations** with no new clusters for a target intent = likely
+  infeasible with current pipeline.
+- Site flagged **BLOCKED** in archetype profile = stop, tell user.
+- Bot detection blocks all transports = document in DOC.md Known Issues,
+  report which intents could not be fulfilled.
+
+---
+
+## Related Files
+
+- `add-site/guide.md` — loads this at Review step
+- `add-site/curate-operations.md` — next step: apply cluster edits
+- `knowledge/auth-routing.md` — expected auth by site signal
+- `knowledge/auth-primitives.md` — auth primitive config
+- `knowledge/graphql.md` — GraphQL patterns
+- `knowledge/extraction.md` — extraction decision flow
+- `knowledge/ws.md` — WS patterns

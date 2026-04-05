@@ -3,112 +3,139 @@ name: openweb
 description: "Access web services through the openweb CLI. Run `openweb sites` to see available sites. Use this skill whenever the user wants to fetch data from, interact with, or query websites. This skill is the ONLY way to access these sites' APIs — do not attempt to use curl, fetch, or browser automation directly."
 ---
 
-# OpenWeb — Web Service Access via CLI
+# OpenWeb
 
-Execute operations against websites using the user's real browser session. Handles auth, CSRF, signing, and protocol (HTTP/WS) automatically.
+Agent-native way to access any website. Bridging agent CLI and web GUI through API.
 
-## Route by Intent
+## Load Discipline
 
-```
-User wants to...
-├── Use a site that may already exist
-│   ├── Check `openweb sites`
-│   ├── Site exists → Exec flow below
-│   └── Site does not exist → Read references/discover.md
-├── Add or expand site coverage (new site OR more ops)
-│   └── Read references/discover.md
-├── Turn a capture into a working site package
-│   └── Read references/compile.md
-├── Diagnose failures
-│   └── Read references/troubleshooting.md
-└── Update durable docs/knowledge
-    ├── Site-specific → references/site-doc.md
-    └── Cross-site patterns → references/update-knowledge.md
-```
+- Do not read every file in this folder.
+- Start with SKILL.md. Follow one route at a time.
 
-If a site has no package, do NOT say "unsupported." Route to the discover flow.
-
-## Exec Flow (hot path)
+## Use Existing Site
 
 ### 1. Find the site
+
 ```bash
-openweb sites                                      # list available sites
+openweb sites                        # list all available sites
 ```
 
-### 2. Read site notes
-Check if `src/sites/<site>/DOC.md` exists and read it before trying operations.
-- DOC.md has: workflows, cross-operation data flow, intent mapping, known issues
-- If DOC.md exists, read it BEFORE trying operations — it tells you which ops to chain and where params come from
+If the site has no package, do NOT say "unsupported." Route to add-site/guide.md.
 
-### 3. Check readiness
+### 2. Check readiness
+
 ```bash
-openweb <site>                                     # transport, auth, operations
+openweb <site>                       # transport, auth, operations list
 ```
-- `Requires browser: yes` → browser auto-starts when needed; no manual setup required
-- `Requires login: yes` → user must be logged in
-- For details on how transport and auth work, see `references/knowledge/x-openweb-extensions.md`
+
+- `Requires browser: yes` — browser auto-starts when needed; no manual setup required
+- `Requires login: yes` — user must be logged in via their browser session
+
+### 3. Read site notes
+
+If `src/sites/<site>/DOC.md` exists, read it BEFORE executing operations.
+DOC.md contains: workflows, cross-operation data flow, intent mapping, known issues.
 
 ### 4. Inspect the operation
+
 ```bash
-openweb <site> <op>                                # params, response shape
-openweb <site> <op> --example                      # real example params from fixtures
+openweb <site> <op>                  # params, response shape, permission tier
+openweb <site> <op> --example        # real example params from fixtures
 ```
-Operations may be HTTP or WS. Inspect to see the type, parameters, and response shape.
+
+Check the operation's permission tier before executing:
+
+| Tier | Default | Behavior |
+|---|---|---|
+| `read` | allow | GET-like operations — execute freely |
+| `write` | prompt | Creates/updates — ask user before executing |
+| `delete` | prompt | Destructive — ask user before executing |
+| `transact` | deny | Financial/irreversible — always skip |
 
 ### 5. Execute
-```bash
-openweb <site> exec <op> '{"key":"value"}'         # stdout=JSON result, stderr=JSON error
-```
-Auto-spill: responses over 4096 bytes write to temp file.
 
-## Error Handling
+```bash
+openweb <site> exec <op> '{"key":"value"}'    # stdout=JSON, stderr=JSON error
+```
+
+Auto-spill: responses over 4096 bytes write to a temp file.
+
+**Shorthand:** `openweb <site> <op> '{"..."}'` auto-executes when the third positional argument is a JSON object/array and no show-mode flags are present. `exec` remains the explicit form.
+
+### 6. On failure
 
 Errors on stderr include `failureClass`:
 
-| failureClass | What to Do |
+| failureClass | Action |
 |---|---|
-| `needs_browser` | Browser auto-starts; if it fails, check Chrome installation. Manual fallback: `openweb browser start` |
-| `needs_login` | `openweb login <site>` → `openweb browser restart` |
+| `needs_browser` | Browser auto-starts; if it fails, check Chrome installation. Fallback: `openweb browser start` |
+| `needs_login` | `openweb login <site>` then `openweb browser restart` |
 | `needs_page` | Open a tab to the site URL |
 | `permission_denied` | Update `permissions` in `$OPENWEB_HOME/config.json` |
 | `permission_required` | Ask user for confirmation, then retry |
 | `retriable` | Wait a few seconds, retry (max 2) |
 | `fatal` | Don't retry — fix params or check site name |
 
-## References (load on demand)
+If the table above doesn't resolve it, read references/troubleshooting.md.
 
-### Process docs (load the one matching your task)
+### 7. Missing site or coverage
 
-| File | When |
+Site doesn't exist or lacks needed operations? Read add-site/guide.md.
+
+## Add or Expand a Site
+
+Read add-site/guide.md
+
+## Fix a Problem
+
+Read references/troubleshooting.md
+
+## CLI Reference
+
+Read references/cli.md
+
+## x-openweb Field Reference
+
+Read references/x-openweb.md
+
+## File Map
+
+All paths relative to `skill/openweb/`.
+
+### add-site/ (workflow — load in sequence)
+
+| File | Load when |
 |---|---|
-| `references/discover.md` | Adding or expanding a site; framing intents; navigating; capturing |
-| `references/compile.md` | Turning a capture into a working site package |
-| `references/site-doc.md` | Writing DOC.md / PROGRESS.md |
-| `references/cli.md` | CLI reference, browser mgmt |
-| `references/troubleshooting.md` | Debugging errors |
-| `references/update-knowledge.md` | After learning something new |
+| `add-site/guide.md` | Entry point for add/expand workflow |
+| `add-site/capture.md` | Capture step: recording browser traffic |
+| `add-site/review.md` | Review step: reading analysis.json |
+| `add-site/curate-operations.md` | Curate: naming, noise, params, permissions |
+| `add-site/curate-runtime.md` | Curate: auth, transport, extraction |
+| `add-site/curate-schemas.md` | Curate: response schemas, examples, PII |
+| `add-site/verify.md` | Verify: runtime + spec + doc loop |
+| `add-site/document.md` | Document: DOC.md template, knowledge updates |
 
-### Deep reference docs (load when the process doc tells you to)
+### references/ (lookup — load independently)
 
-| File | Loaded by | What it covers |
-|---|---|---|
-| `references/analysis-review.md` | `compile.md` Review step | How to read `analysis.json` and decide whether traffic is good enough |
-| `references/spec-curation.md` | `compile.md` Curate step | How to clean, name, configure, merge, and harden generated specs |
-| `references/verify.md` | `compile.md` Verify step | Multi-dimensional verification: runtime, spec standards, doc standards |
-| `references/capture-guide.md` | `discover.md` Capture step | Capture techniques, scripted capture, timeout discipline, multi-worker, troubleshooting |
+| File | Load when |
+|---|---|
+| `references/cli.md` | CLI command syntax, flags, stdout/stderr |
+| `references/x-openweb.md` | Full x-openweb field schema |
+| `references/troubleshooting.md` | Something broke — classify, diagnose, fix |
 
-### Knowledge files (load when the process doc tells you to)
+### knowledge/ (patterns — load at decision points)
 
-Do NOT preload all knowledge files. The process docs (`discover.md`, `compile.md`)
-specify exactly which knowledge file to read at each step and what to look for.
-
-| File | Loaded by | What to extract |
-|---|---|---|
-| `references/knowledge/archetypes/index.md` | discover "Before You Start" | Site archetype, expected ops, auth/transport |
-| `references/knowledge/auth-patterns.md` | discover "Before You Start"; analysis-review "Auth candidates"; spec-curation "Fix auth" | Expected auth type and exact auth primitive structure |
-| `references/knowledge/bot-detection-patterns.md` | discover "Before You Start"; spec-curation "Transport selection" | Whether to prefer real Chrome profile or page transport |
-| `references/knowledge/extraction-patterns.md` | analysis-review "Extraction signals"; spec-curation "Extraction rule" | When extraction beats API replay |
-| `references/knowledge/graphql-patterns.md` | analysis-review "Clusters" on GraphQL sites | Persisted queries, batching, sub-cluster patterns |
-| `references/knowledge/ws-patterns.md` | analysis-review "WebSocket analysis" | Operation vs noise signal classification |
-| `references/knowledge/troubleshooting-patterns.md` | troubleshooting Step 2 | Known failure cause/fix patterns |
-| `references/knowledge/x-openweb-extensions.md` | spec-curation "Fix auth/transport"; verify "Spec verify" | `x-openweb` field schema (server-level auth/transport/csrf, operation-level permission/extraction). Read when editing or reviewing specs. |
+| File | Load when |
+|---|---|
+| `knowledge/archetypes/index.md` | Identify site type, then load one profile |
+| `knowledge/archetypes/social.md` | Social/messaging/content sites |
+| `knowledge/archetypes/commerce.md` | E-commerce/travel/food sites |
+| `knowledge/archetypes/enterprise.md` | Enterprise/dev-tools/finance sites |
+| `knowledge/archetypes/data-apis.md` | Public data APIs |
+| `knowledge/archetypes/chinese-web.md` | Chinese web (cross-cutting patterns) |
+| `knowledge/auth-routing.md` | Auth type unknown — signal-to-family lookup |
+| `knowledge/auth-primitives.md` | Configuring auth — config and gotchas |
+| `knowledge/bot-detection.md` | Transport/capture decisions |
+| `knowledge/extraction.md` | Extraction signals — SSR/DOM patterns |
+| `knowledge/graphql.md` | GraphQL — persisted queries, batching |
+| `knowledge/ws.md` | WebSocket — message/connection patterns |

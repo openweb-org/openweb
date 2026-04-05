@@ -2,8 +2,6 @@
 
 > Archetypes are heuristic starting points, not limiting checklists.
 
-## Classification
-
 Business tools, developer platforms, financial services, and productivity apps.
 
 - **Productivity / Enterprise** — dashboards, documents, project management: Stripe, Linear, Asana, Zendesk, YNAB, Webflow, MongoDB Atlas, Amplitude
@@ -14,35 +12,13 @@ Business tools, developer platforms, financial services, and productivity apps.
 
 ## Expected Operations
 
-### Productivity / Enterprise
-- List documents / items (read, paginated)
-- Document / item detail (read, by ID)
-- Create document / item (write)
-- Update document / item (write)
-- Search (read)
-- Dashboard / overview (read)
+**Productivity / Enterprise:** List documents/items (read, paginated), document/item detail (read), create (write), update (write), search (read), dashboard/overview (read)
 
-### Developer Tools
-- List repos / projects (read, paginated)
-- Repo / project detail (read, by ID or name)
-- List issues / items (read, paginated)
-- Create issue / item (write)
-- Search (read)
-- User / org profile (read)
+**Developer Tools:** List repos/projects (read, paginated), repo detail (read), list issues (read, paginated), create issue (write), search (read), user/org profile (read)
 
-### Finance / Banking
-- Account overview / portfolio (read)
-- Stock / asset quote (read, by symbol)
-- Market data / indices (read)
-- Transaction history (read, paginated)
-- Search securities (read)
-- Place order (transact — deny by default)
+**Finance / Banking:** Account/portfolio overview (read), stock/asset quote (read, by symbol), market data (read), transaction history (read, paginated), search securities (read), place order (transact -- deny by default)
 
-### Email & Cloud / Storage
-- List inbox / files (read, paginated)
-- Read message / file metadata (read, by ID)
-- Send message / upload file (write)
-- Search (read)
+**Email & Cloud / Storage:** List inbox/files (read, paginated), read message/file metadata (read), send message/upload file (write), search (read)
 
 ## Typical Profile
 
@@ -53,32 +29,31 @@ Business tools, developer platforms, financial services, and productivity apps.
 | GraphQL | common (Linear, New Relic, Amplitude) | rare | moderate | rare | rare |
 | CSRF | meta_tag or cookie_to_header | meta_tag | varies | n/a | n/a |
 
-**Notable patterns:**
-- Stripe: page_global auth (PRELOADED object), heavy compile noise (~80 internal ops per ~20 useful)
-- Linear: GraphQL at client-api.linear.app, SPA renders login without redirect
-- Twilio: fetches credentials from API → HTTP Basic Auth
-- YNAB: dual API (Catalog RPC + REST), server_knowledge sync for writes
-- CockroachDB: gRPC-Web with binary protobuf encoding
-- GitHub: link_header pagination, meta_tag CSRF, also has unauthenticated public API
-- Finance sites: real-money operations require strict `transact` gating
+## Notable Patterns
 
-> For auth details see [auth-patterns.md](../auth-patterns.md). For GraphQL see [graphql-patterns.md](../graphql-patterns.md).
+- **Stripe:** page_global auth (PRELOADED object). Heavy compile noise (~80 internal ops per ~20 useful).
+- **Linear:** GraphQL at client-api.linear.app. SPA renders login without redirect.
+- **Twilio:** fetches credentials from API -> HTTP Basic Auth.
+- **YNAB:** dual API (Catalog RPC + REST), server_knowledge sync for writes.
+- **CockroachDB:** gRPC-Web with binary protobuf encoding.
+- **GitHub:** link_header pagination, meta_tag CSRF, also has unauthenticated public API.
+- **Finance sites:** real-money operations require strict `transact` gating.
 
-## Curation Expectations
+## Curation Checklist
 
-### Productivity / Enterprise
+**Productivity / Enterprise:**
 - [ ] Dashboard/list operations return structured data (not rendered HTML)
 - [ ] GraphQL operations have correct operationName and variables
 - [ ] CSRF token source identified and configured
 - [ ] Context IDs (org, team, project) documented in DOC.md
 - [ ] Write ops gated with `write` permission
 
-### Developer Tools
+**Developer Tools:**
 - [ ] Pagination type documented (link_header, cursor, offset)
 - [ ] Public vs authenticated endpoints distinguished
 - [ ] Rate limits documented (GitHub: 60/h unauth, 5000/h auth)
 
-### Finance / Banking
+**Finance / Banking:**
 - [ ] Read-only market data separated from account operations
 - [ ] Order/trade operations gated with `transact` permission
 - [ ] Session tokens documented (short expiry common)
