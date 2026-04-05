@@ -6,7 +6,7 @@
 ## Overview
 
 The meta-spec is the type system that drives everything in OpenWeb. It defines:
-1. **L2 primitive types** — 17 discriminated union types for auth/CSRF/signing/pagination/extraction
+1. **L2 primitive types** — 16 discriminated union types for auth/CSRF/signing/pagination/extraction
 2. **x-openweb extensions** — Server-level and operation-level OpenAPI extensions
 3. **JSON Schema** — Machine-readable schema for validation
 4. **Validation** — AJV-based validation of specs and manifests
@@ -25,12 +25,14 @@ OpenWeb extends OpenAPI 3.1 with `x-openweb` at two levels:
 
 ```typescript
 interface XOpenWebServer {
-  transport: 'node' | 'page' | 'ws'
+  transport: 'node' | 'page'
   auth?: AuthPrimitive
   csrf?: CsrfPrimitive & { scope?: string[] }
   signing?: SigningPrimitive
 }
 ```
+
+> **Note:** WebSocket dispatch is not a `transport` value. WS operations are triggered by the presence of an AsyncAPI spec, not the transport field.
 
 Applied to the **server** object — shared across all operations:
 
@@ -52,6 +54,8 @@ servers:
 ```typescript
 interface XOpenWebOperation {
   permission?: 'read' | 'write' | 'delete' | 'transact'
+  safety?: 'safe' | 'caution'
+  requires_auth?: boolean
   build?: {
     stable_id?: string
     signature_id?: string
@@ -60,10 +64,13 @@ interface XOpenWebOperation {
     signals?: string[]
   }
   transport?: Transport             // Override server transport
-  csrf?: CsrfPrimitive             // Override server CSRF
+  auth?: AuthPrimitive | false      // Override server auth (false to disable)
+  csrf?: CsrfPrimitive | false     // Override server CSRF (false to disable)
+  signing?: SigningPrimitive | false // Override server signing (false to disable)
   pagination?: PaginationPrimitive
   extraction?: ExtractionPrimitive
   adapter?: AdapterRef
+  actual_path?: string              // Real URL path when spec key is virtual (e.g. GraphQL dedup)
 }
 ```
 
@@ -90,9 +97,9 @@ paths:
 
 ## L2 Primitive Type Catalog
 
-17 types organized into 5 categories. Each is a **discriminated union** on the `type` field.
+16 types organized into 5 categories. Each is a **discriminated union** on the `type` field.
 
-### Auth (7 types)
+### Auth (6 types)
 
 | Type | Description | Key config |
 |------|-------------|------------|
@@ -102,7 +109,6 @@ paths:
 | `page_global` | Window global expression | `expression`, `inject`, `values[]` |
 | `webpack_module_walk` | Webpack module cache walk | `chunk_global`, `module_test`, `call`, `app_path?`, `inject` |
 | `exchange_chain` | Multi-step token exchange | `steps[]`, `inject` |
-| `fallback` | Ordered auth strategy list (TS type only — not in JSON schema, no runtime resolver) | `strategies[]` |
 
 ### CSRF (3 types)
 
@@ -244,7 +250,7 @@ sites/<site>/
 
 ```
 src/types/
-├── primitives.ts          # 17 L2 primitive discriminated unions
+├── primitives.ts          # 16 L2 primitive discriminated unions
 ├── primitive-schemas.ts   # JSON Schema mirrors for AJV
 ├── extensions.ts          # XOpenWebServer, XOpenWebOperation, Transport, RequestEncoding, XOpenWebBuildMeta, RiskTier
 ├── adapter.ts             # CodeAdapter interface

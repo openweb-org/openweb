@@ -9,7 +9,7 @@ L2 primitives are **declarative config units** stored in the `x-openweb` extensi
 
 Each primitive has a `type` discriminator and type-specific config fields.
 
--> See: `src/types/primitives.ts` — all 17 primitive type definitions
+-> See: `src/types/primitives.ts` — all 16 primitive type definitions
 
 ---
 
@@ -49,7 +49,7 @@ Extraction-only operations skip this auth/CSRF/signing pipeline and call the ext
 
 | Category | Types | Resolved when |
 |----------|-------|---------------|
-| Auth | cookie_session, localStorage_jwt, sessionStorage_msal, page_global, webpack_module_walk, exchange_chain, fallback | Every request |
+| Auth | cookie_session, localStorage_jwt, sessionStorage_msal, page_global, webpack_module_walk, exchange_chain | Every request |
 | CSRF | cookie_to_header, meta_tag, api_response | Mutations only (POST, PUT, PATCH, DELETE) |
 | Signing | sapisidhash | Every request |
 | Pagination | cursor, link_header | Multi-page fetches |
@@ -221,6 +221,6 @@ src/runtime/primitives/
 
 - [architecture.md](../architecture.md) — System overview and 3-layer model
 - [runtime.md](../runtime.md) — Execution pipeline that invokes primitives
-- [meta-spec.md](../meta-spec.md) — Type definitions for all 17 primitives
+- [meta-spec.md](../meta-spec.md) — Type definitions for all 16 primitives
 - [adapters.md](../adapters.md) — L3 escape hatch when primitives aren't enough
 - `src/types/primitives.ts` — Full type definitions

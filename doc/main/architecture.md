@@ -16,7 +16,7 @@ Let any agent access the web easily, fast, and cheap.
 │  L1: Structural Spec (OpenAPI 3.1 + AsyncAPI)                 │  ~40% of sites
 │  Pure HTTP — no browser needed                                │
 ├───────────────────────────────────────────────────────────────┤
-│  L2: Interaction Primitives (17-type DSL)                     │  ~50% of sites
+│  L2: Interaction Primitives (16-type DSL)                     │  ~50% of sites
 │  Declarative auth/CSRF/signing/pagination/extraction config   │
 ├───────────────────────────────────────────────────────────────┤
 │  L3: Code Adapters (arbitrary JS in browser)                  │  ~10% of sites
@@ -100,7 +100,8 @@ M22 coverage sweep validated against 144 sites across 15 archetypes.
 |-----------|-----------|---------------|-------------|
 | `node` | HTTP from Node.js. If auth/csrf/signing config present, uses browser cookies. | Only for auth | Public APIs, cookie auth, CSRF, token extraction |
 | `page` | HTTP via `page.evaluate(fetch(...))`. Always needs browser. | Yes (CDP) | Signing, native TLS, CORS-bound APIs |
-| `ws` | WebSocket connection with message routing. AsyncAPI-defined channels. | Only for auth | Real-time APIs (Discord gateway) |
+
+> **Note:** WebSocket dispatch is not a `transport` field value. WS operations (e.g., Discord gateway) are triggered by the presence of an AsyncAPI spec in the site package, not by setting `transport: 'ws'`.
 
 **Transport resolution**: operation-level `x-openweb.transport` → server-level `x-openweb.transport` → default `node`
 `x-openweb.extraction` short-circuits HTTP transport dispatch and runs directly against the matching page state.
@@ -129,7 +130,7 @@ Auth, CSRF, and signing are resolved as a pipeline on every L2 request:
 └────────────────────────────────────────────────────────┘
 ```
 
--> See: [primitives/](primitives/README.md) — all 17 primitive types
+-> See: [primitives/](primitives/README.md) — all 16 primitive types
 
 ---
 
