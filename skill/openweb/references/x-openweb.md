@@ -11,8 +11,8 @@ Applied to the server object. Every field here affects ALL operations.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `transport` | `node` \| `page` | Yes | How the runtime executes HTTP requests |
-| `auth` | AuthPrimitive | No | Authentication strategy — site-wide, applies to every operation |
-| `csrf` | CsrfPrimitive + `scope` | No | CSRF token resolution. `scope` lists methods requiring CSRF |
+| `auth` | AuthPrimitive | No | Authentication — site-wide |
+| `csrf` | CsrfPrimitive + `scope` | No | CSRF token resolution |
 | `signing` | SigningPrimitive | No | Custom request signing |
 
 ### Transport
@@ -22,8 +22,7 @@ Applied to the server object. Every field here affects ALL operations.
 - **`page`** — Requests via `page.evaluate(fetch(...))` in browser tab. Required
   when bot detection blocks Node.js HTTP. Slower but bypasses client-side checks.
 
-Mixed transport: set server-level to `page`, override node-friendly ops at
-operation level.
+Mixed transport: set server-level to `page`, override node-friendly ops at operation level.
 
 ### Auth Primitives
 
@@ -37,12 +36,9 @@ operation level.
 | `exchange_chain` | `steps[]`, `inject` |
 
 `inject` places the resolved token: `header`, `prefix`, `query`, or `json_body_path`.
-
-`app_path` (on `localStorage_jwt`, `webpack_module_walk`): absolute URL when the
+`app_path` (on `localStorage_jwt`, `webpack_module_walk`): absolute URL when
 token lives on a different domain than the API.
-
-Auth is **site-level** — to disable for a public op, set `auth: false` at
-operation level. Never remove site-wide auth.
+Auth is **site-level** — disable per-op with `auth: false`. Never remove site-wide auth.
 
 See `knowledge/auth-primitives.md` for detailed config per type.
 
@@ -110,28 +106,26 @@ See `knowledge/extraction.md` for decision flow and usage guidance.
 
 ### Adapter
 
-Fields: `name` (required), `operation` (required), `params?`. When set, the
-runtime bypasses URL construction — the OpenAPI path is a logical namespace.
-The adapter must use `params` to navigate and extract data.
+Fields: `name` (required), `operation` (required), `params?`. Runtime bypasses
+URL construction — OpenAPI path is a logical namespace. Adapter navigates and
+extracts via `params`.
 
 ### Build Meta
 
-Fields: `stable_id`, `signature_id`, `tool_version`, `verified`, `signals`.
+`stable_id`, `signature_id`, `tool_version`, `verified`, `signals`.
 **Compiler-managed — do not edit.**
 
 ## WebSocket Extensions (AsyncAPI)
 
 WS sites use AsyncAPI 3.0 with `x-openweb` on server and operation objects.
 
-### WS Server-Level
-
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `transport` | `node` \| `page` | Yes | Connection transport |
-| `discriminator` | `{ sent, received }` | Yes | Message routing — field paths for sent/received messages |
-| `auth` | WsAuthConfig | No | WS authentication strategy |
-| `heartbeat` | WsHeartbeat | No | Keep-alive message config |
-| `reconnect` | `{ max_retries, backoff_ms, resume_field? }` | No | Reconnection behavior |
+| `discriminator` | `{ sent, received }` | Yes | Message routing field paths |
+| `auth` | WsAuthConfig | No | WS auth strategy |
+| `heartbeat` | WsHeartbeat | No | Keep-alive config |
+| `reconnect` | `{ max_retries, backoff_ms, resume_field? }` | No | Reconnection config |
 
 **WS Auth types:** `ws_first_message`, `ws_upgrade_header`, `ws_url_token`, `ws_http_handshake`
 
@@ -139,13 +133,13 @@ WS sites use AsyncAPI 3.0 with `x-openweb` on server and operation objects.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `permission` | `read` \| `write` \| `delete` \| `transact` | Yes | Same as HTTP permission |
-| `pattern` | `heartbeat` \| `request_reply` \| `subscribe` \| `publish` \| `stream` | Yes | Message exchange pattern |
-| `subscribe_message` | WsMessageTemplate | No | Template for subscribe messages |
-| `unsubscribe_message` | WsMessageTemplate | No | Template for unsubscribe messages |
-| `correlation` | `{ field, source }` | No | Request-reply correlation. Source: `echo` \| `sequence` \| `uuid` |
-| `event_match` | object | No | Discriminator values for matching inbound events |
-| `build` | BuildMeta | No | Compiler metadata — do not edit |
+| `permission` | `read` \| `write` \| `delete` \| `transact` | Yes | Same as HTTP |
+| `pattern` | `heartbeat` \| `request_reply` \| `subscribe` \| `publish` \| `stream` | Yes | Exchange pattern |
+| `subscribe_message` | WsMessageTemplate | No | Subscribe message template |
+| `unsubscribe_message` | WsMessageTemplate | No | Unsubscribe message template |
+| `correlation` | `{ field, source }` | No | Request-reply correlation (`echo` \| `sequence` \| `uuid`) |
+| `event_match` | object | No | Discriminator values for inbound events |
+| `build` | BuildMeta | No | Compiler metadata -- do not edit |
 
 ## Complete YAML Example
 
@@ -194,3 +188,7 @@ paths:
 2. **Setting write ops to `permission: read`.** Use `openweb verify --write` instead.
 3. **Editing `build` fields.** Compiler-managed — do not touch.
 4. **Adapter ignoring params.** The runtime only opens the server origin, not the spec path.
+5. **DOC.md says "write ops require a logged-in browser session."** Wrong. With
+   `node` + `cookie_session`, the runtime extracts cookies from the browser once
+   and caches them. DOC.md should say "cookies are extracted from the browser
+   automatically" — the user does not interact with the browser per request.

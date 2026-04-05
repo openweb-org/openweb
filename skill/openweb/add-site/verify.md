@@ -11,6 +11,25 @@ Verify a site package across runtime, spec, and documentation before install.
 **Independent verifier:** Verification should be performed by a separate agent
 from the one that curated the spec. This separation catches blind spots.
 
+## Example File Format
+
+Example fixtures at `examples/*.example.json` are used by verify and runtime exec:
+
+```json
+{
+  "operation_id": "searchProducts",
+  "cases": [{
+    "input": { "k": "laptop" },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}
+```
+
+Files without a `cases` array are silently skipped by verify. For adapter-only
+packages where compile doesn't generate examples, create them manually.
+
+---
+
 ## Three Dimensions
 
 All three must pass before install.

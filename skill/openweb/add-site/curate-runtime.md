@@ -213,6 +213,23 @@ must use `params` to navigate.
 2. Use `params` to build URLs — never write `_params` (unused)
 3. Path naming is free — choose names clear to API consumers
 
+#### Adapter init() / execute() Patterns
+
+**init() should be permissive** — only check hostname. Do NOT navigate:
+```typescript
+async init(page) {
+  return new URL(page.url()).hostname.includes('example.com')
+}
+```
+
+**execute() must navigate.** Catch `ERR_ABORTED` — SPA routers intercept
+navigation and abort the initial load, but the page still renders correctly.
+Use `waitForSelector` over fixed delays (`.catch(() => {})` to tolerate slow loads):
+```typescript
+await page.goto(url, { waitUntil: 'load', timeout: 15000 }).catch(() => {})
+await page.waitForSelector('.content', { timeout: 10000 }).catch(() => {})
+```
+
 ---
 
 ## Common Mistakes

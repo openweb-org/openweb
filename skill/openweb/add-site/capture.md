@@ -30,9 +30,8 @@ API calls only fire during SPA client-side routing. For programmatic browsing:
 
 #### Login
 
-If the site requires login, authenticate in the managed browser. For net-new
-sites, `openweb login <site>` won't work — use the target URL directly.
-Existing Chrome profile logins may carry over.
+If login required, authenticate in the managed browser. For net-new sites,
+use the target URL directly (`openweb login <site>` won't work).
 
 **Auth-dependent capture requirements:**
 
@@ -52,7 +51,7 @@ After each write, trigger the reverse (like/unlike, follow/unfollow).
 
 ### Direct API Calls via `page.evaluate(fetch)`
 
-Often more reliable than hoping UI clicks trigger the right requests:
+More reliable than hoping UI clicks trigger the right requests:
 
 ```javascript
 await page.evaluate(() => fetch('/api/endpoint?q=value', {
@@ -60,13 +59,10 @@ await page.evaluate(() => fetch('/api/endpoint?q=value', {
 }))
 ```
 
-**When to prefer direct fetch:**
-- POST-based APIs (Innertube, GraphQL) — clicks may not send the right body
-- You know the API pattern but can't find the UI button
-- You want multiple varied-parameter samples for schema inference
-
-**Same-origin only.** Blocked by CORS for cross-origin URLs. Navigate to the
-target subdomain first, then use relative paths.
+**Prefer direct fetch for:** POST-based APIs (Innertube, GraphQL), known API
+patterns without UI buttons, varied-parameter samples for schema inference.
+**Same-origin only** — blocked by CORS cross-origin. Navigate to the target
+subdomain first.
 
 ---
 
@@ -88,27 +84,20 @@ await page.evaluate((t) => fetch('/api/endpoint', {
 }), token)
 ```
 
-Check the site's `openapi.yaml` auth config for extraction method and header.
+Check the site's `openapi.yaml` for extraction method and header.
 
 ---
 
 ## Capture Target Binding
 
-Capture is **browser-wide** by default — attaches to `pages()[0]` on start,
-auto-attaches to new tabs via `context.on('page')`.
+Capture attaches to `pages()[0]` on start, auto-attaches to new tabs.
 
-**Rules:**
-1. Start capture FIRST, then open new tabs — they auto-attach.
-2. Pre-existing tabs (opened before capture) are blind spots.
-3. `page.evaluate(fetch(...))` works on any monitored page.
-4. A separate `chromium.connectOverCDP()` connection creates pages that
-   capture does NOT monitor. Use the existing connection's context.
+**Rules:** (1) Start capture FIRST, then open new tabs. (2) Pre-existing
+tabs are blind spots. (3) A separate `connectOverCDP()` creates unmonitored
+pages — use the existing connection's context.
 
-**Verification:** After capture, check `summary.byCategory.api`. If 0 despite
-browsing, traffic came from a pre-existing tab or separate connection.
-
-**Isolated capture** (`--isolate`): Scopes to a single new tab. Use for
-multi-worker scenarios.
+**Verification:** Check `summary.byCategory.api` — if 0 despite browsing,
+traffic came from a pre-existing tab or separate connection.
 
 ---
 
@@ -150,13 +139,35 @@ process.exit(0)
 
 ### `compile --script` Alternative
 
-`openweb compile <url> --script ./record.ts` — script receives `--out <dir>`
-and manages its own capture session via `createCaptureSession()`. Killed after
-120s. See real adapters for examples:
-- `src/sites/hackernews/adapters/hackernews.ts` — simple REST
-- `src/sites/leetcode/adapters/leetcode-graphql.ts` — GraphQL
-- `src/sites/redfin/adapters/redfin-dom.ts` — DOM extraction
-- `src/sites/booking/adapters/booking-web.ts` — browser-fetch with bot detection
+`openweb compile <url> --script ./record.ts` — manages its own capture
+session via `createCaptureSession()`. Killed after 120s.
+
+```typescript
+import { parseArgs } from 'node:util'
+import { chromium } from 'playwright'
+import { createCaptureSession } from '../src/capture/session.js'
+
+const { values } = parseArgs({ options: { out: { type: 'string' } }, strict: false })
+const outputDir = values.out!
+
+const browser = await chromium.connectOverCDP('http://localhost:9222')
+const page = await browser.contexts()[0]!.newPage()
+
+const session = createCaptureSession({
+  cdpEndpoint: 'http://localhost:9222',
+  outputDir, targetPage: page, isolateToTargetPage: true,
+  onLog: (msg) => process.stderr.write(`${msg}\n`),
+})
+await session.ready
+
+// ... navigate, call APIs ...
+session.stop(); await session.done
+await Promise.race([page.close().catch(()=>{}), new Promise<void>(r=>setTimeout(r,5000))])
+process.exit(0)
+```
+
+See real adapters for examples (e.g., `src/sites/hackernews/adapters/`,
+`src/sites/leetcode/adapters/`).
 
 ### Multi-Worker Browser Sharing
 

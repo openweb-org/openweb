@@ -17,13 +17,10 @@ flowchart TD
 
 ### Incremental Mode (Existing Site)
 
-Read the site's `DOC.md` and `openapi.yaml` from `src/sites/<site>/`,
-`$OPENWEB_HOME/sites/<site>/`, or `git show HEAD:src/sites/<site>/DOC.md`.
-Focus on auth config, write endpoints, adapter/transport needs, known issues.
-
-Identify gaps, then enter at **Step 2** for targeted capture. Use DOC.md
-**Workflows** for chain dependencies (e.g., `listGuilds -> guildId ->
-getGuildInfo`). Do not hardcode IDs — execute a list op for fresh ones.
+Read `DOC.md` + `openapi.yaml` from `src/sites/<site>/` or
+`$OPENWEB_HOME/sites/<site>/`. Focus on auth, write endpoints, adapter needs.
+Identify gaps, enter at **Step 2**. Use DOC.md **Workflows** for chain
+dependencies. Do not hardcode IDs — execute a list op for fresh ones.
 
 ### Net-New Mode
 
@@ -47,10 +44,16 @@ Read these knowledge files in order. Each produces a concrete decision.
 
 ### Adapter-Only Sites
 
-When the standard capture-compile flow produces no usable operations
-(0 `api` samples, all SSR/LD+JSON/DOM, or proprietary protocol): Frame
-intents (Step 1) -> write adapter (`src/sites/<site>/adapters/`) -> write
-openapi.yaml manually -> verify. See `add-site/capture.md`.
+When capture-compile produces 0 usable operations (all SSR/LD+JSON/DOM
+or proprietary protocol): write adapter directly. See `add-site/capture.md`.
+
+**Probing checklist before committing to adapter-only:**
+1. Open DevTools Network/XHR — if zero JSON responses appear, it's SSR/DOM-only.
+2. Check `view-source:` for `__NEXT_DATA__`, `__INITIAL_STATE__`, LD+JSON — these
+   are extraction targets (use `x-openweb.extraction`), not adapter-only signals.
+3. Try the on-page search box — some sites serve SSR for direct nav but use JSON
+   APIs for in-app search/pagination.
+4. Check if the mobile app calls a hidden public API the web version doesn't use.
 
 ## Critical Rules
 
@@ -80,9 +83,8 @@ Create or update `src/sites/<site>/DOC.md` with initial overview and
 target-intent checklist. Read `add-site/document.md` for the template.
 
 **Write intents** — add writes for core interactions (social: like/follow/
-bookmark/repost; commerce: add-to-cart/wishlist; messaging: send to self;
-content: post then delete). Perform ALL safe writes during capture — missing
-one means missing that operation.
+bookmark/repost; commerce: add-to-cart/wishlist). Perform ALL safe writes
+during capture — missing one means missing that operation.
 
 **Exit criteria:** Target intents defined. DOC.md has initial overview.
 ---
@@ -127,23 +129,22 @@ suggested camelCase operation names.
 
 ## Step 4: Review
 
-Check `summary.txt` (one-line status), then `verify-report.json`:
+Check `summary.txt`, then `verify-report.json`:
 
-| `driftType` | What to check |
-|-------------|---------------|
+| `driftType` | Action |
+|-------------|--------|
 | `auth_drift` | Auth expired or no browser for cookies |
-| `schema_drift` | Response shape changed from fingerprint |
+| `schema_drift` | Response shape changed |
 | `endpoint_removed` | Wrong path, network error, or site down |
-| `error` | Check `detail` (e.g., "no browser tab open" = page transport) |
+| `error` | Check `detail` (e.g., "no browser tab open") |
 
 Read `add-site/review.md` for detailed `analysis.json` reading.
 
-**Adapter escalation** — stop compile iteration, write an adapter when:
-per-request headers change every call (signing), same op returns different
-hashes across captures (query rotation), or op works in browser but 404s
-from `page.evaluate(fetch)` (server-validated header).
+**Adapter escalation** — write an adapter when: per-request headers change
+every call (signing), same op returns different hashes (query rotation),
+or op works in browser but 404s from `page.evaluate(fetch)`.
 
-**SSR-heavy:** Many noise ops, zero data ops = HTML-delivered data. Write
+**SSR-heavy:** Many noise ops, zero data ops = SSR-delivered data. Write
 an adapter. **GraphQL persisted queries:** Deployment-scoped hashes; on
 "PersistedQueryNotFound", re-capture or adapter. See `knowledge/graphql.md`.
 
@@ -164,17 +165,13 @@ escalation. Verify results understood.
 ## Step 5: Curate
 
 Edit the generated spec and docs. Artifacts stay in
-`$OPENWEB_HOME/sites/<site>/` so Step 7 is a single folder copy.
+`$OPENWEB_HOME/sites/<site>/`.
 
-1. **Merge** (if existing package) — read `add-site/curate-operations.md`
-2. **Operations** — read `add-site/curate-operations.md` for noise removal,
-   naming, params, permissions
-3. **Runtime** — read `add-site/curate-runtime.md` for auth/CSRF/signing,
-   transport, extraction, x-openweb fields
-4. **Schemas** — read `add-site/curate-schemas.md` for response schemas,
-   examples/PII, replay safety
-5. **DOC.md** — if you can't write a clear workflow, the naming or grouping
-   needs revision
+1. **Merge** (if existing) — read `add-site/curate-operations.md`
+2. **Operations** — `add-site/curate-operations.md` (noise, naming, params)
+3. **Runtime** — `add-site/curate-runtime.md` (auth/CSRF, transport, extraction)
+4. **Schemas** — `add-site/curate-schemas.md` (schemas, examples/PII)
+5. **DOC.md** — if you can't write a clear workflow, revisit naming/grouping
 6. **PROGRESS.md** — append entry
 
 **Auth preservation:** Auth is site-level. Even if read ops pass without it,
@@ -212,9 +209,10 @@ pnpm build && pnpm test
 
 Verify: `ls src/sites/<site>/openapi.yaml`, `openweb sites`, `openweb <site>`.
 
-Three paths: `$OPENWEB_HOME/sites/<site>/` (compile cache),
-`src/sites/<site>/` (source — edit here), `dist/sites/<site>/` (build).
-Do not overwrite `adapters/`. Run `pnpm build` after source edits.
+Three paths: `$OPENWEB_HOME/sites/` (compile cache),
+`src/sites/` (source — edit here), `dist/sites/` (build).
+Do not overwrite `adapters/`. Run `pnpm build` after source edits —
+it syncs FROM `src/sites/` TO cache/dist, overwriting cache edits.
 
 **Exit criteria:** Build and tests pass. Source-tree files confirmed.
 

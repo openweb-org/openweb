@@ -77,6 +77,32 @@ REST maps HTTP method to permission (GET->read, POST->write). GraphQL uses POST 
 - `mutation` operations -> `write` (or `delete`/`transact` based on intent)
 - `subscription` operations -> `read` (stream)
 
+## Site Package Modeling
+
+GraphQL operations map to openapi.yaml with a single path and operation-level discrimination:
+
+```yaml
+/graphql:
+  post:
+    x-graphql: true
+    x-operations:
+      - operationId: searchProducts
+        operationName: SearchProducts
+        type: query
+        persistedQueryHash: "abc123..."  # if persisted
+        variables:
+          query: { type: string, required: true }
+          limit: { type: integer }
+        permission: read
+      - operationId: addToCart
+        operationName: AddToCart
+        type: mutation
+        variables:
+          productId: { type: string, required: true }
+          quantity: { type: integer }
+        permission: write
+```
+
 ## Common Pitfalls
 
 1. **Assuming one POST = one operation** -- check for batched queries
