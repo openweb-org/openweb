@@ -133,11 +133,12 @@ src/
 
 ## Site Resolution
 
-1. `$OPENWEB_HOME/sites/<site>/openapi.yaml` -- User-installed (primary, seeded by `openweb init`)
-2. `./src/sites/<site>/openapi.yaml` -- Development fixtures (dev fallback)
-3. `$OPENWEB_HOME/registry/<site>/current` -> versioned -- Registry
+1. `$OPENWEB_HOME/sites/<site>/openapi.yaml` -- User-installed (primary, populated by `compile`)
+2. `dist/sites/<site>/openapi.yaml` -- Bundled sites (npm package fallback)
+3. `./src/sites/<site>/openapi.yaml` -- Development fixtures (dev fallback)
+4. `$OPENWEB_HOME/registry/<site>/current` -> versioned -- Registry
 
-`openweb init` copies bundled sites to `$OPENWEB_HOME/sites/` (idempotent). Site names: `/^[a-z0-9][a-z0-9_-]*$/`.
+Site names: `/^[a-z0-9][a-z0-9_-]*$/`.
 
 ## Fixture Layout
 

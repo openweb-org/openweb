@@ -143,7 +143,6 @@ Auth, CSRF, and signing are resolved as a pipeline on every L2 request:
 ## CLI Interface
 
 ```bash
-openweb init                                   # seed default sites to $OPENWEB_HOME/sites/
 openweb sites [--json]                         # list compiled sites
 openweb <site> [--json]                        # list operations (tools)
 openweb <site> <op> [--json] [--example]       # show params + response schema

@@ -1,10 +1,6 @@
 import type { LabeledSample, SampleCategory } from '../types-v2.js'
 import type { RecordedRequestSample } from '../types.js'
 
-export interface LabelOptions {
-  readonly allowMutations?: boolean
-}
-
 // ---------------------------------------------------------------------------
 // Config — inlined for bundle compatibility (no readFileSync + import.meta.url)
 // ---------------------------------------------------------------------------
@@ -173,7 +169,6 @@ function isStaticExtension(urlPath: string): boolean {
 export function labelSamples(
   samples: RecordedRequestSample[],
   targetUrl: string,
-  _options?: LabelOptions,
 ): LabeledSample[] {
   return samples.map((sample, i): LabeledSample => {
     const { category, reasons } = categorize(sample, targetUrl)
