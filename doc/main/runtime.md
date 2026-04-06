@@ -1,7 +1,7 @@
 # Runtime Execution Pipeline
 
 > Transport dispatch, parameter binding, redirect handling, and the full request lifecycle.
-> Last updated: 2026-04-04 (patchright, warmSession, headless stealth)
+> Last updated: 2026-04-06 (centralized warmSession, bot_blocked failureClass, auth cascade)
 
 ## Overview
 
@@ -179,7 +179,7 @@ warmSession(page, url, opts?)
              └── Fixed 3s delay (sensor scripts typically complete in 1-2s)
 ```
 
-Warm state is cached per `Page` — calling twice on the same page is a no-op. Adapters that need sensor warm-up (e.g., TripAdvisor, Expedia) call `warmSession()` in their `execute()` method.
+Warm state is cached per `Page` — calling twice on the same page is a no-op. `warmSession()` is called centrally by `adapter-executor.ts` before every `adapter.execute()` call and by `browser-fetch-executor.ts` before every browser-fetch request. Adapters do not call `warmSession()` themselves.
 
 -> See: `src/runtime/warm-session.ts`
 
@@ -386,6 +386,7 @@ Every error carries a `failureClass` that tells the agent what to do next:
 | `permission_denied` | Operation blocked by config | Update `permissions` in `$OPENWEB_HOME/config.json` |
 | `permission_required` | Operation needs user approval (write/delete) | Ask user for confirmation |
 | `retriable` | Transient failure (network, rate-limit) | Retry the request |
+| `bot_blocked` | Bot detection triggered (CAPTCHA, challenge page) | `openweb browser restart --no-headless`, solve CAPTCHA, retry |
 | `fatal` | Unrecoverable error (bad spec, unknown op) | Stop and report |
 
 -> See: `src/lib/errors.ts`

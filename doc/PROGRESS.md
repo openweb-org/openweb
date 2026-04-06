@@ -1,3 +1,28 @@
+## 2026-04-06: Skill doc rewrite + 6 new sites + runtime improvements
+
+**What changed:**
+- Complete rewrite of `skill/openweb/` — 3 peer folders (add-site/, references/, knowledge/) organized by loading pattern. 24 files, 177K → 144K. Self-contained: zero doc/main cross-references.
+- Double-design process (Claude + Codex): independent designs, cross-review, 3-round /align, user discussion, resolved all open questions.
+- 6 new sites: airbnb (2 ops), spotify (4), tiktok (1), notion (3), yelp (2), zillow (1). All verified with DOC.md + PROGRESS.md.
+- doc/main alignment audit: fixed 3 discrepancies (phantom `fallback` auth type, `ws` transport value, incomplete XOpenWebOperation fields).
+- Centralized `warmSession()` in adapter-executor.ts — adapters no longer import it (self-contained rule).
+- New `bot_blocked` failureClass — verify.ts checks class instead of fragile string matching.
+- Auth cascade in http-executor: adapter init failure with requiresAuth triggers needs_login flow.
+- CAPTCHA headed-mode guidance in SKILL.md, troubleshooting.md, cli.md.
+- verify.md now requires PROGRESS.md in Doc Verify checklist.
+- Site fixes: bluesky (AT Protocol 400), costco (JSON-LD extraction), reuters (DataDome), telegram (conflict detection), tripadvisor (safeEvaluate), twitch (null safety), leetcode (auth change).
+
+**Why:**
+- Skill docs were 177K across 24 flat files — agents burned tokens loading irrelevant content. Progressive disclosure + workflow-driven structure cuts token cost ~45% for the common path.
+- warmSession in adapters violated self-contained rule and caused double-warming. Centralization fixes both.
+- String-matching for bot detection was fragile coupling. Dedicated failureClass is the right abstraction.
+
+**Key files:** `skill/openweb/` (all 24 files), `src/runtime/adapter-executor.ts`, `src/runtime/browser-fetch-executor.ts`, `src/runtime/http-executor.ts`, `src/lifecycle/verify.ts`, `src/lib/errors.ts`, `doc/main/README.md`, `doc/main/runtime.md`
+**Verification:** 843 tests pass, lint clean (site files), 55/63 sites verify PASS, 0 regressions introduced
+**Commit:** 8035901..040284e (12 commits)
+**Next:** reuters DataDome fix, yahoo-finance 429 recovery, npm publish
+**Blockers:** None
+
 ## 2026-04-04: Patchright, headless stealth, warmSession, site fixes
 
 **What changed:**
