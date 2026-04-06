@@ -7,7 +7,13 @@
 
 Let any agent access the web easily, fast, and cheap.
 
--> See: [mission.md](mission.md)
+The goal is to make any agent (Claude Code, OpenClaw, or any agent) access the web easily and smoothly:
+- Easy to use for agent, and also human
+- Fast, accurate, elegant, and cheap
+
+目标是能一句话就让全天下的agent能用最小的token数，最准的api干browser里能干的所有事情。
+
+Agent-native way to access any website. Bridging agent CLI and human GUI through API.
 
 ## Three-Layer Model
 
@@ -171,9 +177,7 @@ Operations carry a `permission` category that gates execution:
 | `delete` | DELETE | `prompt` |
 | `transact` | checkout/purchase/payment paths | `deny` |
 
-When `x-openweb.permission` is absent, the runtime derives permission from HTTP method + API path (fail-closed). Paths matching `/checkout|purchase|payment|order|subscribe/` are auto-escalated to `transact`.
-Policy is configurable per-site in the `permissions` section of `$OPENWEB_HOME/config.json`.
-`prompt` policy returns a structured error for the agent to relay to the user.
+When absent, the runtime derives permission from HTTP method + API path (fail-closed). Paths matching `/checkout|purchase|payment|order|subscribe/` are auto-escalated to `transact`. Policy is configurable per-site in `$OPENWEB_HOME/config.json`.
 
 -> See: `src/lib/permissions.ts`, `src/runtime/executor.ts`
 
@@ -181,19 +185,15 @@ Policy is configurable per-site in the `permissions` section of `$OPENWEB_HOME/c
 
 ## Browser Lifecycle (M14+)
 
-The runtime auto-manages browser instances. `ensureBrowser()` checks for a running managed browser, starts one if needed, and returns a `BrowserHandle` that disconnects (never kills Chrome) on release. A detached shell watchdog kills Chrome after 5 minutes of idle. All `exec` and `capture` commands auto-detect the managed browser -- no `--cdp-endpoint` needed. `openweb browser start` is optional, for manual control or custom options.
+The runtime auto-manages browser instances via `ensureBrowser()`. A detached shell watchdog kills Chrome after 5 minutes of idle. **Patchright** (Playwright fork) patches CDP detection signals for headless stealth. `warmSession()` prepares pages for bot-protected sites. A **4-tier auth cascade** (token cache → browser extract → profile refresh → user login) handles authenticated operations.
 
-**Patchright:** The managed browser uses Patchright (Playwright fork) instead of Playwright, which patches CDP detection signals (`navigator.webdriver`, `Runtime.enable` leak). Combined with `--user-agent` (Windows Chrome/133) and `--disable-blink-features=AutomationControlled`, this defeats most bot detection that targets headless Chrome.
+-> See: [runtime.md](runtime.md) — full browser lifecycle, auth cascade, headless stealth details
 
-**warmSession():** For sites with anti-bot sensor scripts (Akamai, DataDome), `warmSession()` navigates to the site and waits for session cookies to stabilize before issuing API requests. Called by adapters that need sensor warm-up.
+**Configuration:** All settings in `$OPENWEB_HOME/config.json` (single file). `OPENWEB_HOME` env var is the sole environment variable (defaults to `~/.openweb`).
 
-**4-tier auth cascade** for authenticated operations: (1) token cache, (2) browser extract, (3) profile refresh, (4) user login with exponential backoff poll. See [runtime.md](runtime.md) for details.
+Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessionStorage with AES-256-GCM encryption and PBKDF2 machine-binding.
 
-**Configuration:** All settings in `$OPENWEB_HOME/config.json` (single file, replaces former env vars). Browser port, headless mode, profile path, timeout, user-agent, debug, permissions -- all in one place. `OPENWEB_HOME` env var is the sole environment variable (defaults to `~/.openweb`).
-
-Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessionStorage with AES-256-GCM encryption and PBKDF2 machine-binding. JWT-aware TTL. Cache hit -> no browser connection needed. 401/403 -> cache invalidated -> browser fallback.
-
--> See: `src/runtime/browser-lifecycle.ts`, `src/commands/browser.ts`, `src/lib/config.ts`, `src/runtime/token-cache.ts`
+-> See: `src/runtime/browser-lifecycle.ts`, `src/lib/config.ts`, `src/runtime/token-cache.ts`
 
 ---
 
@@ -203,8 +203,8 @@ Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessio
 |------|-------|------|------|---------|------------|-----------|
 | Instagram | L2 | cookie_session | cookie_to_header | — | — | page |
 | Bluesky | L2 | localStorage_jwt | — | — | — | node |
-| YouTube | L2 | page_global | — | sapisidhash | — | node |
-| GitHub | L2 | cookie_session | meta_tag | — | script_json | node |
+| YouTube | L2 | — | — | — | — | node |
+| GitHub | L2 | cookie_session | meta_tag | — | — | node |
 | Reddit | L1 | — | — | — | — | node |
 | Walmart | L2 | — | — | — | ssr_next_data | node |
 | Hacker News | L2 | — | — | — | html_selector | node |

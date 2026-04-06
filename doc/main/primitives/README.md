@@ -207,6 +207,11 @@ src/runtime/primitives/
 ├── html-selector.ts        # html_selector extraction
 ├── page-global-data.ts     # page_global_data extraction
 ├── webpack-module-walk.ts  # webpack_module_walk auth
+├── ws-upgrade-header.ts    # ws_upgrade_header WS auth
+├── ws-first-message.ts     # ws_first_message WS auth
+├── ws-url-token.ts         # ws_url_token WS auth
+├── ws-http-handshake.ts    # ws_http_handshake WS auth
+├── ws-registry.ts          # WS primitive resolver registry
 └── primitives.test.ts      # Unit tests
 ```
 

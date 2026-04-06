@@ -226,11 +226,18 @@ src/compiler/
 |   +-- auth-detect.ts      # Auth primitive detection helpers
 |   +-- csrf-detect.ts      # CSRF primitive detection helpers
 |   +-- signing-detect.ts   # Signing primitive detection helpers
+|   +-- constant-headers.ts # Detect constant non-standard headers across cluster
+|   +-- shared-constants.ts # Shared constants (MUTATION_METHODS, SKIP_HEADERS, etc.)
+|   +-- schema.ts           # Legacy schema inference (used by ws-analyzer)
 +-- curation/               # Phase 3: Curate
 |   +-- apply-curation.ts   # AnalysisReport + decisions -> CuratedCompilePlan
 |   +-- scrub.ts            # PII scrubbing for example values
 +-- generator/              # Phase 4: Generate
 |   +-- generate-v2.ts      # CuratedCompilePlan -> skill package (OpenAPI + AsyncAPI)
+|   +-- openapi.ts          # OpenAPI spec generation
+|   +-- asyncapi.ts         # AsyncAPI spec generation
+|   +-- package.ts          # Skill package assembly
+|   +-- index.ts            # Module exports
 +-- ws-analyzer/            # WebSocket analysis (integrated into Phase 2)
     +-- ws-load.ts          # Load WS frames from capture
     +-- ws-cluster.ts       # Cluster frames by channel/topic

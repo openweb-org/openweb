@@ -99,11 +99,13 @@ All errors are wrapped in `OpenWebError` with a structured payload:
 
 ```typescript
 interface OpenWebErrorPayload {
-  error: 'execution_failed' | 'auth'
-  code: OpenWebErrorCode
-  message: string
-  action: string        // Which operation failed
-  retriable: boolean
+  readonly error: 'execution_failed' | 'auth'
+  readonly code: OpenWebErrorCode
+  readonly message: string
+  readonly action: string        // Which operation failed
+  readonly retriable: boolean
+  readonly failureClass: FailureClass
+  readonly retryAfter?: string
 }
 
 type OpenWebErrorCode =
@@ -128,28 +130,7 @@ Runtime error
 - `retriable` flag — agents can decide whether to retry
 - No stack traces in payload — security (prevents information leakage)
 
--> See: `src/lib/errors.ts`
-
----
-
-## Risk Tiers
-
-Operations are classified by risk tier in `x-openweb`:
-
-| Tier | HTTP Methods | Description |
-|------|-------------|-------------|
-| `safe` | GET, HEAD, OPTIONS | Read-only, no side effects |
-| `low` | — | Low-risk mutations |
-| `medium` | POST, PUT, PATCH | Standard mutations |
-| `high` | DELETE | Destructive operations |
-| `critical` | — | Irreversible or high-impact |
-
-Risk tiers are automatically derived by the compiler based on HTTP method, but can be overridden in the spec.
-
-Agents can use risk tiers to:
-- Auto-approve safe operations
-- Require confirmation for high/critical operations
-- Rate-limit medium operations
+-> See: `src/lib/errors.ts`, [runtime.md](runtime.md) — failure classification and status mapping
 
 ---
 

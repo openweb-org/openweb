@@ -296,8 +296,9 @@ For sites with AsyncAPI specs (real-time channels), the WS executor manages pers
 │  1. Load AsyncAPI spec (asyncapi.yaml)              │
 │  2. Find channel by operationId                     │
 │  3. Connect via ws-connection (7-state machine)     │
-│     idle → connecting → connected → subscribing     │
-│     → active → draining → closed                    │
+│     DISCONNECTED → CONNECTING → AUTHENTICATING      │
+│     → READY → CLOSING → CLOSED                      │
+│     (+ RECONNECTING for retry loops)                 │
 │  4. Route messages via ws-router (pattern matching)  │
 │  5. Return structured result                        │
 └─────────────────────────────────────────────────────┘
@@ -321,7 +322,7 @@ All transports (except page, which delegates to browser) follow redirects manual
 | 301 / 302 / 303 | Rewrite method to GET, drop request body (matches native `fetch` behavior) |
 | 307 / 308 | Preserve original method and body |
 | Missing `Location` | A 3xx without `Location` raises a retriable execution error |
-| `opaqueredirect` | Respected — stops redirect chain, returns as-is |
+| `opaqueredirect` | Browser-side behavior — `browser_fetch` with `redirect: 'manual'` returns opaque response (status 0). Not handled by Node-side redirect logic. |
 
 -> See: [security.md](security.md) — SSRF protection details
 
@@ -400,8 +401,8 @@ The CLI catches errors and writes structured JSON to stderr.
 
 ```
 src/runtime/
-├── executor.ts               # Main dispatcher (transport routing, response handling)
-├── http-executor.ts          # HTTP execution (direct + session, split from executor M36)
+├── executor.ts               # Re-exports from http-executor (public API surface)
+├── http-executor.ts          # Main dispatcher (transport routing, auth cascade, response handling)
 ├── executor-result.ts        # Unified ExecutorResult types (M36)
 ├── browser-lifecycle.ts      # Auto browser management (ensureBrowser, 4-tier auth cascade, watchdog)
 ├── warm-session.ts           # Anti-bot sensor warm-up (navigate + wait for session cookies)
@@ -409,9 +410,12 @@ src/runtime/
 ├── redirect.ts               # Redirect handling with SSRF validation
 ├── operation-context.ts      # Operation metadata resolution (transport, auth, extraction)
 ├── browser-fetch-executor.ts # Page transport (page.evaluate)
-├── node-ssr-executor.ts      # Node SSR execution
+├── session-executor.ts      # Node authenticated transport (browser-derived auth/CSRF/signing)
+├── node-ssr-executor.ts     # Node SSR execution
 ├── extraction-executor.ts    # Extraction-only operations
 ├── adapter-executor.ts       # L3 adapter loading + execution
+├── http-retry.ts             # HTTP retry logic
+├── page-polyfill.ts          # Browser page utilities
 ├── paginator.ts              # Pagination executor (cursor + link_header)
 ├── value-path.ts             # Shared dot-path helper for nested payloads
 ├── navigator.ts              # CLI navigation helper (render site/operation info)

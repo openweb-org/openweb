@@ -128,7 +128,7 @@ paths:
 
 | Type | Description | Key config |
 |------|-------------|------------|
-| `cursor` | Cursor-based | `response_field`, `request_param`, `has_more_field` |
+| `cursor` | Cursor-based | `response_field`, `request_param`, `has_more_field`, `items_path` |
 | `link_header` | HTTP Link header | `rel` |
 
 `response_field` and `request_param` accept **dotted paths** for nested JSON structures (e.g., `data.actor.entitySearch.results.nextCursor` for reading, `variables.cursor` for writing into GraphQL request bodies).
@@ -140,7 +140,7 @@ paths:
 | `ssr_next_data` | Next.js SSR data | `page_url`, `path` |
 | `html_selector` | CSS selector | `page_url`, `selectors`, `attribute`, `multiple` |
 | `script_json` | Script tag JSON | `selector`, `path` |
-| `page_global_data` | Window global | `page_url`, `expression`, `path` |
+| `page_global_data` | Window global | `page_url`, `expression`, `path`, `adapter`, `method` |
 
 -> See: `src/types/primitives.ts` — full TypeScript definitions
 

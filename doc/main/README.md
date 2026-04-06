@@ -62,11 +62,15 @@ src/
 │   ├── compile.ts              #   compile site → skill package
 │   ├── capture.ts              #   CDP browser capture
 │   ├── test.ts                 #   run site tests
-│   └── sites.ts                #   list available sites
+│   ├── sites.ts                #   list available sites
+│   ├── verify.ts               #   verify site and detect drift
+│   ├── registry.ts             #   site registry (archive, install, rollback)
+│   ├── browser.ts              #   managed browser lifecycle
+│   └── init.ts                 #   seed default sites
 │
 ├── runtime/                    # Operation execution (HTTP + WS)
-│   ├── executor.ts             #   Main dispatcher (mode routing)
-│   ├── http-executor.ts        #   HTTP execution (direct + session)
+│   ├── executor.ts             #   Re-exports from http-executor (public API)
+│   ├── http-executor.ts        #   Main dispatcher (transport routing, auth cascade)
 │   ├── browser-fetch-executor.ts # browser_fetch mode (page.evaluate)
 │   ├── node-ssr-executor.ts    #   Node SSR execution
 │   ├── ws-executor.ts          #   WebSocket operation execution
@@ -136,7 +140,7 @@ src/
 └── sites/                      # Site packages (55 sites)
     ├── github/                 #   L1 (no x-openweb)
     ├── instagram/              #   L2 (cookie_session + cookie_to_header)
-    ├── youtube/                #   L2 (page_global + sapisidhash)
+    ├── youtube/                #   L2 (innertube API)
     ├── discord/                #   L2 (webpack_module_walk, page transport)
     ├── whatsapp/               #   L3 adapter (Meta require() module system)
     ├── telegram/               #   L3 adapter (teact global state)

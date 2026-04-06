@@ -17,12 +17,12 @@ L3 adapters are the escape hatch. When a site's internal API is too complex for 
 
 ```typescript
 interface CodeAdapter {
-  name: string
-  description: string
+  readonly name: string
+  readonly description: string
 
   init(page: Page): Promise<boolean>
   isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Record<string, unknown>): Promise<unknown>
+  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
 }
 ```
 
