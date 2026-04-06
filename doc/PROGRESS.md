@@ -1,3 +1,23 @@
+## 2026-04-06: KISS cleanup — remove dead CLI abstractions
+
+**What changed:**
+- Removed `CurationDecisionSet` interface + `--curation` flag + `applyCuration()` decisions param. Renamed to `buildCompilePlan(report)` with hardcoded sensible defaults.
+- Removed `--interactive` flag (was placeholder throwing "not implemented").
+- Removed `--allow-hosts` (implemented in labeler but never exposed in CLI).
+- Removed `openweb init` command (redundant — site-resolver fallback chain covers it).
+- Removed vestigial `LabelOptions` interface from labeler.
+- Updated skill `review.md` to use `analysis-summary.json` as primary review artifact.
+- Updated `architecture.md`, `development.md`, `compiler.md`, `cli.md` to reflect removals.
+
+**Why:**
+- CLI vs skill audit revealed 7 mechanisms that existed in code but were never used in the agent workflow. Agent works like a developer (edits openapi.yaml directly), not a programmatic consumer (passes structured JSON input). Code now matches reality.
+
+**Key files:** `src/compiler/types-v2.ts`, `src/compiler/curation/apply-curation.ts`, `src/commands/compile.ts`, `src/cli.ts`, `src/commands/init.ts` (deleted), `src/compiler/analyzer/labeler.ts`
+**Verification:** pnpm build OK, 836/836 tests pass, code review clean (no critical/high findings)
+**Commit:** `1d1e64c`, `f6d556e`
+**Next:** None — cleanup complete
+**Blockers:** None
+
 ## 2026-04-06: Skill doc rewrite + 6 new sites + runtime improvements
 
 **What changed:**
