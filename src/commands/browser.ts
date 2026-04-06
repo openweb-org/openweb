@@ -53,8 +53,8 @@ function getChromePath(): string {
 export async function copyProfileSelective(src: string, dest: string): Promise<void> {
   await mkdir(dest, { recursive: true, mode: 0o700 })
 
-  // Only copy files needed for auth: Cookies, Local Storage, Session Storage, Web Data
-  const relevantDirs = ['Local Storage', 'Session Storage', 'IndexedDB']
+  // Only copy files needed for auth: Cookies, Local Storage (leveldb only), Session Storage, IndexedDB, Web Data
+  const relevantDirs = ['Session Storage', 'IndexedDB']
   const relevantFiles = ['Cookies', 'Cookies-journal', 'Web Data', 'Web Data-journal', 'Preferences', 'Secure Preferences']
 
   for (const file of relevantFiles) {
@@ -72,6 +72,14 @@ export async function copyProfileSelective(src: string, dest: string): Promise<v
 
     const destDir = join(dest, dir)
     await cp(srcDir, destDir, { recursive: true })
+  }
+
+  // Local Storage: copy only leveldb/ (skip 16k legacy .localstorage files from pre-2017 Chrome)
+  const lsLevelDb = join(src, 'Local Storage', 'leveldb')
+  if (existsSync(lsLevelDb)) {
+    const destLs = join(dest, 'Local Storage', 'leveldb')
+    await mkdir(destLs, { recursive: true })
+    await cp(lsLevelDb, destLs, { recursive: true })
   }
 }
 
