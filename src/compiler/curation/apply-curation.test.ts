@@ -4,9 +4,8 @@ import type {
   AnalysisReport,
   AuthCandidate,
   ClusteredEndpoint,
-  CurationDecisionSet,
 } from '../types-v2.js'
-import { applyCuration } from './apply-curation.js'
+import { buildCompilePlan } from './apply-curation.js'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -67,10 +66,10 @@ function makeReport(overrides: Partial<AnalysisReport> = {}): AnalysisReport {
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-describe('applyCuration', () => {
+describe('buildCompilePlan', () => {
   it('produces a valid CuratedCompilePlan with defaults', () => {
     const report = makeReport()
-    const plan = applyCuration(report, {})
+    const plan = buildCompilePlan(report)
 
     expect(plan.site).toBe('example')
     expect(plan.sourceUrl).toBe('https://example.com')
@@ -80,18 +79,6 @@ describe('applyCuration', () => {
     expect(plan.operations[0].replaySafety).toBe('safe_read')
   })
 
-  it('selects auth candidate by ID', () => {
-    const report = makeReport({
-      authCandidates: [
-        makeAuthCandidate({ id: 'auth-1', rank: 1, transport: 'node' }),
-        makeAuthCandidate({ id: 'auth-2', rank: 2, transport: 'page' }),
-      ],
-    })
-    const plan = applyCuration(report, { selectedAuthCandidateId: 'auth-2' })
-    expect(plan.context.transport).toBe('page')
-    expect(plan.context.selectedAuthCandidateId).toBe('auth-2')
-  })
-
   it('defaults to highest-ranked auth candidate', () => {
     const report = makeReport({
       authCandidates: [
@@ -99,47 +86,16 @@ describe('applyCuration', () => {
         makeAuthCandidate({ id: 'auth-1', rank: 1, transport: 'node' }),
       ],
     })
-    const plan = applyCuration(report, {})
+    const plan = buildCompilePlan(report)
     expect(plan.context.transport).toBe('node')
     expect(plan.context.selectedAuthCandidateId).toBe('auth-1')
   })
 
   it('handles no auth candidates', () => {
     const report = makeReport({ authCandidates: [] })
-    const plan = applyCuration(report, {})
+    const plan = buildCompilePlan(report)
     expect(plan.context.transport).toBe('node')
     expect(plan.context.auth).toBeUndefined()
-  })
-
-  it('excludes clusters by ID', () => {
-    const report = makeReport({
-      clusters: [
-        makeCluster({ id: 'c1' }),
-        makeCluster({ id: 'c2', pathTemplate: '/v1/other' }),
-      ],
-    })
-    const plan = applyCuration(report, { excludedClusterIds: ['c1'] })
-    expect(plan.operations).toHaveLength(1)
-    expect(plan.operations[0].id).toBe('c2')
-  })
-
-  it('applies operation overrides', () => {
-    const report = makeReport()
-    const plan = applyCuration(report, {
-      operationOverrides: [
-        {
-          clusterId: 'c1',
-          operationId: 'listItems',
-          summary: 'List all items',
-          permission: 'write',
-          replaySafety: 'unsafe_mutation',
-        },
-      ],
-    })
-    expect(plan.operations[0].operationId).toBe('listItems')
-    expect(plan.operations[0].summary).toBe('List all items')
-    expect(plan.operations[0].permission).toBe('write')
-    expect(plan.operations[0].replaySafety).toBe('unsafe_mutation')
   })
 
   // G-4 fix: GraphQL queries default to read
@@ -157,7 +113,7 @@ describe('applyCuration', () => {
         }),
       ],
     })
-    const plan = applyCuration(report, {})
+    const plan = buildCompilePlan(report)
     expect(plan.operations[0].permission).toBe('read')
     expect(plan.operations[0].replaySafety).toBe('safe_read')
   })
@@ -176,7 +132,7 @@ describe('applyCuration', () => {
         }),
       ],
     })
-    const plan = applyCuration(report, {})
+    const plan = buildCompilePlan(report)
     expect(plan.operations[0].permission).toBe('write')
     expect(plan.operations[0].replaySafety).toBe('unsafe_mutation')
   })
@@ -185,7 +141,7 @@ describe('applyCuration', () => {
     const report = makeReport({
       clusters: [makeCluster({ method: 'DELETE' })],
     })
-    const plan = applyCuration(report, {})
+    const plan = buildCompilePlan(report)
     expect(plan.operations[0].permission).toBe('delete')
   })
 
@@ -193,7 +149,7 @@ describe('applyCuration', () => {
     const report = makeReport({
       clusters: [makeCluster({ method: 'POST' })],
     })
-    const plan = applyCuration(report, {})
+    const plan = buildCompilePlan(report)
     expect(plan.operations[0].permission).toBe('write')
     expect(plan.operations[0].replaySafety).toBe('unsafe_mutation')
   })
@@ -214,33 +170,14 @@ describe('applyCuration', () => {
         }),
       ],
     })
-    const plan = applyCuration(report, {})
+    const plan = buildCompilePlan(report)
     expect(plan.operations[0].exampleInput.email).toBe('user@example.com')
-  })
-
-  it('scrubs PII from override exampleRequestBody', () => {
-    const report = makeReport()
-    const plan = applyCuration(report, {
-      operationOverrides: [
-        {
-          clusterId: 'c1',
-          exampleRequestBody: {
-            password: 'secret123',
-            query: 'cats',
-          },
-        },
-      ],
-    })
-    const body = plan.operations[0].exampleRequestBody as Record<string, unknown>
-    expect(body.password).toBe('<REDACTED>')
-    expect(body.query).toBe('cats')
   })
 
   it('is a pure function (same inputs → same output)', () => {
     const report = makeReport()
-    const decisions: CurationDecisionSet = {}
-    const plan1 = applyCuration(report, decisions)
-    const plan2 = applyCuration(report, decisions)
+    const plan1 = buildCompilePlan(report)
+    const plan2 = buildCompilePlan(report)
     expect(plan1).toEqual(plan2)
   })
 
@@ -265,7 +202,7 @@ describe('applyCuration', () => {
         ],
       },
     })
-    const plan = applyCuration(report, {})
+    const plan = buildCompilePlan(report)
     expect(plan.ws).toBeDefined()
     expect(plan.ws?.serverUrl).toBe('wss://example.com/ws')
     expect(plan.ws?.heartbeat).toEqual({ direction: 'send', intervalMs: 30000, payload: 'ping' })
@@ -283,53 +220,7 @@ describe('applyCuration', () => {
   })
 
   it('omits WS plan when not present in report', () => {
-    const plan = applyCuration(makeReport(), {})
+    const plan = buildCompilePlan(makeReport())
     expect(plan.ws).toBeUndefined()
-  })
-
-  it('uses csrfOverride to pick specific CSRF option by cookie+header', () => {
-    const report = makeReport({
-      authCandidates: [
-        makeAuthCandidate({
-          csrf: { type: 'cookie_to_header', cookie: 'lc-main', header: 'x-li-lang' },
-        }),
-      ],
-      csrfOptions: [
-        { type: 'cookie_to_header', cookie: 'JSESSIONID', header: 'csrf-token' },
-        { type: 'cookie_to_header', cookie: 'lc-main', header: 'x-li-lang' },
-      ],
-    })
-    const plan = applyCuration(report, {
-      csrfOverride: { cookie: 'JSESSIONID', header: 'csrf-token' },
-    })
-    expect(plan.context.csrf).toEqual({
-      type: 'cookie_to_header',
-      cookie: 'JSESSIONID',
-      header: 'csrf-token',
-    })
-  })
-
-  it('csrfOverride takes precedence over csrfType', () => {
-    const report = makeReport({
-      authCandidates: [
-        makeAuthCandidate({
-          csrf: { type: 'cookie_to_header', cookie: 'wrong', header: 'wrong-header' },
-        }),
-      ],
-      csrfOptions: [
-        { type: 'cookie_to_header', cookie: 'correct', header: 'x-csrf-token' },
-        { type: 'meta_tag', name: 'csrf', header: 'X-CSRF' },
-      ],
-    })
-    const plan = applyCuration(report, {
-      csrfType: 'meta_tag',
-      csrfOverride: { cookie: 'correct', header: 'x-csrf-token' },
-    })
-    // csrfOverride wins over csrfType
-    expect(plan.context.csrf).toEqual({
-      type: 'cookie_to_header',
-      cookie: 'correct',
-      header: 'x-csrf-token',
-    })
   })
 })

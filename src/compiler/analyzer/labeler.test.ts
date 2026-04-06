@@ -269,22 +269,6 @@ describe('labelSamples', () => {
   })
 
   // -----------------------------------------------------------------------
-  // allowHosts option
-  // -----------------------------------------------------------------------
-  it('respects allowHosts to include extra domains', () => {
-    const input = [
-      makeSample({ host: 'custom-api.io' }),
-      makeSample({ host: 'api.example.com' }),
-      makeSample({ host: 'random.org' }),
-    ]
-
-    const result = labelSamples(input, TARGET, { allowHosts: ['custom-api.io'] })
-    expect(byCategory(result, 'api')).toHaveLength(2)
-    expect(byCategory(result, 'off_domain')).toHaveLength(1)
-    expect(byCategory(result, 'off_domain')[0].sample.host).toBe('random.org')
-  })
-
-  // -----------------------------------------------------------------------
   // Does not false-positive real API paths
   // -----------------------------------------------------------------------
   it('does not false-positive on real API paths with similar words', () => {

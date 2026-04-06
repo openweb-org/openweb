@@ -3,10 +3,10 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { analyzeCapture } from '../compiler/analyzer/analyze.js'
-import { applyCuration } from '../compiler/curation/apply-curation.js'
+import { buildCompilePlan } from '../compiler/curation/apply-curation.js'
 import { generateFromPlan } from '../compiler/generator/generate-v2.js'
 import { cleanupRecordingDir, runScriptedRecording } from '../compiler/recorder.js'
-import type { AnalysisReport, CuratedCompilePlan, CurationDecisionSet } from '../compiler/types-v2.js'
+import type { AnalysisReport, CuratedCompilePlan } from '../compiler/types-v2.js'
 import { openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import { type SiteVerifyResult, verifySite } from '../lifecycle/verify.js'
@@ -15,9 +15,6 @@ interface CompileArgs {
   readonly url: string
   readonly script?: string
   readonly captureDir?: string
-  readonly interactive?: boolean
-  readonly curation?: string
-  readonly allowHosts?: readonly string[]
 }
 
 interface CompileSiteOptions {
@@ -53,17 +50,6 @@ export async function compileSite(
   // Clean up stale recording directories from crashed compiles
   await cleanupStaleRecordings()
 
-  if (args.interactive) {
-    throw new OpenWebError({
-      error: 'execution_failed',
-      code: 'EXECUTION_FAILED',
-      message: 'Interactive recording is not implemented yet.',
-      action: 'Use scripted mode or provide --capture-dir.',
-      retriable: false,
-      failureClass: 'fatal',
-    })
-  }
-
   const site = siteSlugFromUrl(args.url)
   const userProvidedDir = args.captureDir
 
@@ -94,7 +80,6 @@ export async function compileSite(
       sourceUrl: args.url,
       captureDir: recordingDir,
       harPath: path.join(recordingDir, 'traffic.har'),
-      allowHosts: args.allowHosts,
     })
   } finally {
     if (!userProvidedDir) {
@@ -141,12 +126,7 @@ export async function compileSite(
   }
 
   // Phase 3: Curate (auto-curation — accept all, top auth candidate, suggested names)
-  let curationDecisions: CurationDecisionSet = {}
-  if (args.curation) {
-    const raw = await fs.readFile(args.curation, 'utf-8')
-    curationDecisions = JSON.parse(raw) as CurationDecisionSet
-  }
-  const plan = applyCuration(report, curationDecisions)
+  const plan = buildCompilePlan(report)
 
   // Phase 4: Generate
   const pkg = await generateFromPlan(plan, options.outputBaseDir)

@@ -104,7 +104,6 @@ Records browser traffic via CDP for later compilation. Prints a session ID to st
 ```bash
 openweb compile <site-url> --capture-dir <dir>
 openweb compile <site-url> --script ./record.ts
-openweb compile <site-url> --capture-dir <dir> --curation <file>
 ```
 
 Transforms captured traffic into a site package. Requires either `--capture-dir` or `--script`. Analysis artifacts written to `$OPENWEB_HOME/compile/<site>/`.
@@ -113,7 +112,6 @@ Transforms captured traffic into a site package. Requires either `--capture-dir`
 |------|---------|
 | `--capture-dir <dir>` | Load from an existing capture bundle |
 | `--script <file>` | Scripted recording (killed after recording timeout, default 120s) |
-| `--curation <file>` | Apply curation decisions JSON |
 
 ## Verify
 

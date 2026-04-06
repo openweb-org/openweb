@@ -1,20 +1,29 @@
 # Reviewing the Analysis Report
 
-How to read `analysis.json` and decide: continue to curation, re-capture, or stop.
+How to review the analysis output and decide: continue to curation, re-capture, or stop.
+
+## Which File to Read
+
+**Read `analysis-summary.json` first.** It is a compact (<100 KB) subset of the
+full report containing `summary`, `clusters`, `authCandidates`, and
+`extractionSignals` — everything needed for the review steps below. It omits
+`samples` and `navigation` arrays, which are large and rarely needed.
+
+Only fall back to `analysis.json` (the full stripped report) when you need
+per-sample detail — e.g., inspecting individual request/response bodies,
+debugging a specific cluster's member requests, or verifying raw header values.
 
 ## What to Read and What to Skip
 
-**Do NOT read the entire file.** Use offset/limit to read specific sections.
-
-| Section | Action |
-|---|---|
-| `summary` | **Read first** — health check (~10 lines) |
-| `authCandidates` | **Read** — auth review (~10-30 lines) |
-| `clusters` | **Read** — coverage mapping (~20-100 lines/cluster) |
-| `extractionSignals` | **Read if SSR suspected** (~5-20 lines) |
-| `ws` | **Read if WS expected** |
-| `samples` | **Skip** — every labeled request, huge |
-| `navigation` | **Skip** — page-level groups, debugging only |
+| Section | Where | Action |
+|---|---|---|
+| `summary` | `analysis-summary.json` | **Read first** — health check (~10 lines) |
+| `authCandidates` | `analysis-summary.json` | **Read** — auth review (~10-30 lines) |
+| `clusters` | `analysis-summary.json` | **Read** — coverage mapping (~20-100 lines/cluster) |
+| `extractionSignals` | `analysis-summary.json` | **Read if SSR suspected** (~5-20 lines) |
+| `ws` | `analysis-summary.json` | **Read if WS expected** |
+| `samples` | `analysis.json` only | **Skip unless needed** — every labeled request, huge |
+| `navigation` | `analysis.json` only | **Skip** — page-level groups, debugging only |
 
 ## Review Order
 
@@ -41,7 +50,7 @@ Read the first ~30 lines (covers `version` through `summary`):
 
 > Before reading: check `knowledge/auth-routing.md` for expected auth type.
 
-Search for `"authCandidates"` in `analysis.json`. For the rank-1 candidate:
+Search for `"authCandidates"` in `analysis-summary.json`. For the rank-1 candidate:
 
 - **`auth.type`** — matches expectation from `knowledge/auth-routing.md`?
 - **`confidence`** — >0.7 reliable; 0.3-0.7 suspect (cross-check with routing
@@ -69,17 +78,14 @@ cookies — short values, not tokens.
 **Real CSRF signals:** headers named `csrf-token`, `x-csrf-token`; cookies
 named `csrftoken`, `_csrf`; values are long random strings (>10 chars).
 
-**Override:** curation file + re-compile, or edit `openapi.yaml` directly:
-```bash
-echo '{"csrfType": "cookie_to_header"}' > curation.json
-openweb compile <url> --capture-dir <dir> --curation curation.json
-```
+**Override:** edit `openapi.yaml` directly after compile:
+- Set `x-openweb-csrf` with the correct type, cookie, and header values
 
 > Full auth/CSRF primitive details: `knowledge/auth-primitives.md`
 
 ## 3. Clusters
 
-Search for `"clusters"` in `analysis.json`.
+Search for `"clusters"` in `analysis-summary.json`.
 
 ### Mapping Target Intents
 

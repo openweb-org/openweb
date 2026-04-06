@@ -474,7 +474,7 @@ export async function analyzeCapture(bundle: CaptureBundle): Promise<AnalysisRep
   const { samples, malformedCount } = extractSamples(har)
 
   // 3. Label samples
-  const labeled = labelSamples(samples, bundle.sourceUrl, { allowHosts: bundle.allowHosts })
+  const labeled = labelSamples(samples, bundle.sourceUrl)
 
   // 4. Filter for api-labeled samples
   const apiSamples = labeled.filter((s) => s.category === 'api').map((s) => s.sample)

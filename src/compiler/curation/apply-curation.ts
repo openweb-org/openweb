@@ -1,7 +1,7 @@
 /**
- * Curation: transforms AnalysisReport + CurationDecisionSet into CuratedCompilePlan.
+ * Curation: transforms AnalysisReport into CuratedCompilePlan with sensible defaults.
  *
- * Pure function — same inputs always produce the same output.
+ * Pure function — same input always produces the same output.
  */
 
 import type { PermissionCategory } from '../../types/extensions.js'
@@ -15,47 +15,26 @@ import type {
   CuratedSiteContext,
   CuratedWsOperation,
   CuratedWsPlan,
-  CurationDecisionSet,
 } from '../types-v2.js'
 import { scrubExamples, scrubRequestBody } from './scrub.js'
 
 function selectAuthCandidate(
   candidates: readonly AuthCandidate[],
-  selectedId?: string,
 ): AuthCandidate | undefined {
   if (candidates.length === 0) return undefined
-  if (selectedId) return candidates.find((c) => c.id === selectedId)
   // Highest rank = lowest rank number (rank 1 is best)
   return [...candidates].sort((a, b) => a.rank - b.rank)[0]
 }
 
-function buildSiteContext(
-  candidate: AuthCandidate | undefined,
-  report: AnalysisReport,
-  decisions: CurationDecisionSet,
-): CuratedSiteContext {
+function buildSiteContext(candidate: AuthCandidate | undefined): CuratedSiteContext {
   if (!candidate) return { transport: 'node' }
-
-  // Priority: explicit csrfOverride > csrfType filter > auto-picked from candidate
-  let csrf = candidate.csrf
-  if (decisions.csrfOverride) {
-    const match = report.csrfOptions.find(
-      (o) =>
-        o.type === 'cookie_to_header' &&
-        o.cookie === decisions.csrfOverride?.cookie &&
-        o.header === decisions.csrfOverride?.header,
-    )
-    if (match) csrf = match
-  } else if (decisions.csrfType) {
-    csrf = report.csrfOptions.find((o) => o.type === decisions.csrfType) ?? candidate.csrf
-  }
 
   return {
     transport: candidate.transport,
     auth: candidate.auth,
-    csrf,
+    csrf: candidate.csrf,
     signing: candidate.signing,
-    selectedAuthCandidateId: decisions.selectedAuthCandidateId ?? candidate.id,
+    selectedAuthCandidateId: candidate.id,
   }
 }
 
@@ -86,16 +65,8 @@ function buildExampleInput(cluster: ClusteredEndpoint): Record<string, unknown> 
   return input
 }
 
-function curateOperation(
-  cluster: ClusteredEndpoint,
-  overrides: CurationDecisionSet['operationOverrides'] extends ReadonlyArray<infer T>
-    ? T | undefined
-    : never,
-): CuratedOperation {
-  const exampleInput = scrubExamples(overrides?.exampleInput ?? buildExampleInput(cluster))
-  const exampleRequestBody = overrides?.exampleRequestBody
-    ? scrubRequestBody(overrides.exampleRequestBody)
-    : undefined
+function curateOperation(cluster: ClusteredEndpoint): CuratedOperation {
+  const exampleInput = scrubExamples(buildExampleInput(cluster))
 
   return {
     id: cluster.id,
@@ -103,15 +74,14 @@ function curateOperation(
     method: cluster.method,
     host: cluster.host,
     pathTemplate: cluster.pathTemplate,
-    operationId: overrides?.operationId ?? cluster.suggestedOperationId,
-    summary: overrides?.summary ?? cluster.suggestedSummary,
-    permission: overrides?.permission ?? defaultPermission(cluster),
-    replaySafety: overrides?.replaySafety ?? defaultReplaySafety(cluster),
+    operationId: cluster.suggestedOperationId,
+    summary: cluster.suggestedSummary,
+    permission: defaultPermission(cluster),
+    replaySafety: defaultReplaySafety(cluster),
     parameters: cluster.parameters,
     responseVariants: cluster.responseVariants,
     requestBodySchema: cluster.requestBodySchema,
     exampleInput,
-    exampleRequestBody,
   }
 }
 
@@ -148,25 +118,12 @@ function buildWsPlan(ws: NonNullable<AnalysisReport['ws']>): CuratedWsPlan {
   }
 }
 
-/** Transform an AnalysisReport + curation decisions into a CuratedCompilePlan. */
-export function applyCuration(
-  report: AnalysisReport,
-  decisions: CurationDecisionSet,
-): CuratedCompilePlan {
-  const excluded = new Set(decisions.excludedClusterIds ?? [])
-  const overridesMap = new Map(
-    (decisions.operationOverrides ?? []).map((o) => [o.clusterId, o]),
-  )
+/** Transform an AnalysisReport into a CuratedCompilePlan with sensible defaults. */
+export function buildCompilePlan(report: AnalysisReport): CuratedCompilePlan {
+  const candidate = selectAuthCandidate(report.authCandidates)
+  const context = buildSiteContext(candidate)
 
-  const candidate = selectAuthCandidate(
-    report.authCandidates,
-    decisions.selectedAuthCandidateId,
-  )
-  const context = buildSiteContext(candidate, report, decisions)
-
-  const operations = report.clusters
-    .filter((c) => !excluded.has(c.id))
-    .map((c) => curateOperation(c, overridesMap.get(c.id)))
+  const operations = report.clusters.map((c) => curateOperation(c))
 
   const ws = report.ws ? buildWsPlan(report.ws) : undefined
 

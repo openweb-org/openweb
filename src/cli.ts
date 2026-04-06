@@ -8,7 +8,6 @@ import { browserRestartCommand, browserStartCommand, browserStatusCommand, brows
 import { type CaptureStopOptions, captureStartCommand, captureStopCommand } from './commands/capture.js'
 import { compileCommand } from './commands/compile.js'
 import { execCommand } from './commands/exec.js'
-import { initCommand } from './commands/init.js'
 import { type RegistryAction, registryCommand } from './commands/registry.js'
 import { showCommand } from './commands/show.js'
 import { sitesCommand } from './commands/sites.js'
@@ -169,17 +168,13 @@ await yargs(argv)
       cmd
         .positional('url', { type: 'string', demandOption: true })
         .option('script', { type: 'string', describe: 'Playwright script file path' })
-        .option('capture-dir', { type: 'string', describe: 'Use existing capture bundle instead of recording' })
-        .option('interactive', { type: 'boolean', default: false, describe: 'Use interactive recording mode' })
-        .option('curation', { type: 'string', describe: 'Path to a curation decisions JSON file' }),
+        .option('capture-dir', { type: 'string', describe: 'Use existing capture bundle instead of recording' }),
     async (args) => {
       await withErrorHandling(async () => {
         await compileCommand({
           url: String(args.url),
           script: args.script ? String(args.script) : undefined,
           captureDir: args['capture-dir'] ? String(args['capture-dir']) : undefined,
-          interactive: Boolean(args.interactive),
-          curation: args.curation ? String(args.curation) : undefined,
         })
       })
     },
@@ -319,11 +314,6 @@ await yargs(argv)
       })
     },
   )
-  .command('init', `Initialize ${openwebHome()}/sites/ with default site packages`, {}, async () => {
-    await withErrorHandling(async () => {
-      await initCommand()
-    })
-  })
   .demandCommand(1)
   .help()
   .parseAsync()

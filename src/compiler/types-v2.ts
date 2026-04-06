@@ -25,7 +25,6 @@ export interface CaptureBundle {
   readonly wsFramesPath?: string
   readonly stateSnapshotDir?: string
   readonly domHtmlPath?: string
-  readonly allowHosts?: readonly string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -206,27 +205,6 @@ export interface AnalysisReport {
 // ---------------------------------------------------------------------------
 // Phase 3: Curate
 // ---------------------------------------------------------------------------
-
-/** Agent decisions applied to an AnalysisReport to produce a compile plan. */
-export interface CurationDecisionSet {
-  readonly selectedAuthCandidateId?: string
-  readonly excludedClusterIds?: readonly string[]
-  readonly csrfType?: 'cookie_to_header' | 'meta_tag'
-  /** Explicit CSRF override — pick by cookie+header name from csrfOptions */
-  readonly csrfOverride?: { readonly cookie: string; readonly header: string }
-  readonly operationOverrides?: ReadonlyArray<{
-    readonly clusterId: string
-    readonly operationId?: string
-    readonly summary?: string
-    readonly permission?: PermissionCategory
-    // TODO: Add 'safe_mutation' for idempotent/reversible writes (like, follow, bookmark)
-    // that are safe to replay during verify. Currently all non-read ops are unsafe_mutation.
-    // See doc/todo/verify-unify/design.md "Future: safe_mutation and --write flag"
-    readonly replaySafety?: 'safe_read' | 'unsafe_mutation'
-    readonly exampleInput?: Record<string, unknown>
-    readonly exampleRequestBody?: unknown
-  }>
-}
 
 /** Resolved site-level auth and transport context. */
 export interface CuratedSiteContext {

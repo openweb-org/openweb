@@ -1,7 +1,7 @@
 /**
  * PII scrubbing for example values.
  *
- * Executes within applyCuration() so that:
+ * Executes within buildCompilePlan() so that:
  * - Analyze can still inspect raw captured values
  * - Generate receives already-scrubbed data
  */

@@ -2,7 +2,6 @@ import type { LabeledSample, SampleCategory } from '../types-v2.js'
 import type { RecordedRequestSample } from '../types.js'
 
 export interface LabelOptions {
-  readonly allowHosts?: readonly string[]
   readonly allowMutations?: boolean
 }
 
@@ -113,25 +112,20 @@ function isBlockedHost(host: string): boolean {
   return BLOCKED_HOST_PATTERNS.some((b) => host === b || host.endsWith(`.${b}`))
 }
 
-function isOffDomain(host: string, targetUrl: string, allowHosts: readonly string[]): boolean {
-  const allowedDomains = buildAllowedDomains(targetUrl, allowHosts)
+function isOffDomain(host: string, targetUrl: string): boolean {
+  const allowedDomains = buildAllowedDomains(targetUrl)
   if (allowedDomains.length === 0) return false
   return !allowedDomains.some((d) => host === d || host.endsWith(`.${d}`))
 }
 
-function buildAllowedDomains(targetUrl: string, allowHosts: readonly string[]): string[] {
-  const domains: string[] = []
+function buildAllowedDomains(targetUrl: string): string[] {
   try {
     const hostname = new URL(targetUrl).hostname
     const baseDomain = extractBaseDomain(hostname)
-    domains.push(isHostingPlatform(baseDomain) ? hostname : baseDomain)
+    return [isHostingPlatform(baseDomain) ? hostname : baseDomain]
   } catch {
-    // invalid targetUrl — skip
+    return []
   }
-  for (const host of allowHosts) {
-    domains.push(host)
-  }
-  return domains
 }
 
 function isBlockedPath(urlPath: string): boolean {
@@ -179,12 +173,10 @@ function isStaticExtension(urlPath: string): boolean {
 export function labelSamples(
   samples: RecordedRequestSample[],
   targetUrl: string,
-  options?: LabelOptions,
+  _options?: LabelOptions,
 ): LabeledSample[] {
-  const allowHosts = options?.allowHosts ?? []
-
   return samples.map((sample, i): LabeledSample => {
-    const { category, reasons } = categorize(sample, targetUrl, allowHosts)
+    const { category, reasons } = categorize(sample, targetUrl)
     return {
       id: `s-${i}`,
       sample,
@@ -198,7 +190,6 @@ export function labelSamples(
 function categorize(
   sample: RecordedRequestSample,
   targetUrl: string,
-  allowHosts: readonly string[],
 ): { category: SampleCategory; reasons: string[] } {
   // Rule 1: blocked domain → tracking
   if (isBlockedHost(sample.host)) {
@@ -209,7 +200,7 @@ function categorize(
   }
 
   // Rule 2: off-domain
-  if (isOffDomain(sample.host, targetUrl, allowHosts)) {
+  if (isOffDomain(sample.host, targetUrl)) {
     return {
       category: 'off_domain',
       reasons: [`host ${sample.host} is not within target domain or allow-list`],

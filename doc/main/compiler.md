@@ -79,15 +79,13 @@ HAR entries
 
 ## Phase 3: Curate
 
-Transforms `AnalysisReport` + `CurationDecisionSet` into a `CuratedCompilePlan`.
+Transforms `AnalysisReport` into a `CuratedCompilePlan` with sensible defaults.
 
 **What it does:**
-1. Selects auth candidate (top-ranked by default, or agent-specified)
-2. Selects CSRF mechanism (top-ranked by default, or agent-specified via `csrfType`)
-3. Excludes unwanted clusters
-3. Applies operation overrides (operationId, summary, permission, replaySafety)
-4. Scrubs PII from example values (tokens, emails, phone numbers, cookies)
-5. Derives permission and replaySafety defaults per operation
+1. Selects auth candidate (top-ranked automatically)
+2. Uses candidate's CSRF mechanism
+3. Scrubs PII from example values (tokens, emails, phone numbers, cookies)
+4. Derives permission and replaySafety defaults per operation
 
 **PII scrubbing** (`src/compiler/curation/scrub.ts`):
 - Sensitive keys (password, secret, token, apikey) -> `<REDACTED>`
