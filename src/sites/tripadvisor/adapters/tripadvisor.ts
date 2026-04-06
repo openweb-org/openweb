@@ -10,24 +10,56 @@ interface CodeAdapter {
 }
 
 const TA_ORIGIN = 'https://www.tripadvisor.com'
+const CAPTCHA_POLL_MS = 2_000
+const CAPTCHA_WAIT_MS = 30_000
+const POLYFILL_SCRIPT = 'globalThis.__name||(globalThis.__name=(t,v)=>(Object.defineProperty(t,"name",{value:v,configurable:true}),t))'
+
+/** Ensure __name polyfill persists across all navigations in this browser context. */
+async function ensureInitScript(page: Page): Promise<void> {
+  const hasPolyfill = await page.evaluate('typeof globalThis.__name === "function"')
+  if (hasPolyfill) return
+  await page.context().addInitScript(POLYFILL_SCRIPT)
+  await page.evaluate(POLYFILL_SCRIPT)
+}
 
 async function isDataDomeBlocked(page: Page): Promise<boolean> {
-  return page.evaluate(() =>
-    document.body?.innerHTML?.includes('captcha-delivery.com') ?? false,
+  try {
+    const url = page.url()
+    if (url.includes('captcha-delivery.com') || url.includes('datadome')) return true
+    return page.evaluate(() =>
+      document.body?.innerHTML?.includes('captcha-delivery.com') ?? false,
+    )
+  } catch {
+    return false
+  }
+}
+
+async function waitForCaptchaResolution(page: Page, timeoutMs = CAPTCHA_WAIT_MS): Promise<void> {
+  const start = Date.now()
+  process.stderr.write(
+    'DataDome CAPTCHA detected. Waiting for resolution (solve in browser if visible)...\n',
+  )
+  while (Date.now() - start < timeoutMs) {
+    await page.waitForTimeout(CAPTCHA_POLL_MS)
+    if (!(await isDataDomeBlocked(page))) {
+      process.stderr.write('DataDome CAPTCHA resolved.\n')
+      return
+    }
+  }
+  throw new Error(
+    'DataDome CAPTCHA not resolved. Run `openweb browser restart --no-headless`, solve the CAPTCHA, then retry.',
   )
 }
 
-function dataDomeError(): Error {
-  return new Error('DataDome captcha blocked this request. Solve the captcha in the browser, then retry.')
-}
-
 async function navigateTo(page: Page, url: string): Promise<void> {
-  await page.goto(url, { waitUntil: 'load', timeout: 20_000 })
+  await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
   await page.waitForSelector(
     'script[type="application/ld+json"], h1, [data-test-target]',
     { timeout: 10_000 },
   ).catch(() => {})
-  if (await isDataDomeBlocked(page)) throw dataDomeError()
+  if (await isDataDomeBlocked(page)) {
+    await waitForCaptchaResolution(page, 15_000)
+  }
 }
 
 /* ---------- searchLocation ---------- */
@@ -38,10 +70,12 @@ async function searchLocation(page: Page, params: Readonly<Record<string, unknow
 
   // Use /Search URL directly — avoids fragile homepage input selectors
   await page.goto(`${TA_ORIGIN}/Search?q=${encodeURIComponent(query)}&ssrc=a&geo=1`, {
-    waitUntil: 'load', timeout: 20_000,
+    waitUntil: 'load', timeout: 30_000,
   })
   await page.waitForTimeout(3_000)
-  if (await isDataDomeBlocked(page)) throw dataDomeError()
+  if (await isDataDomeBlocked(page)) {
+    await waitForCaptchaResolution(page, 15_000)
+  }
 
   return page.evaluate(() => {
     const results: Array<Record<string, unknown>> = []
@@ -89,7 +123,7 @@ async function searchHotels(page: Page, params: Readonly<Record<string, unknown>
   await navigateTo(page, `${TA_ORIGIN}/Hotels-g${geoId}-${location}-Hotels.html`)
 
   return page.evaluate(() => {
-    function addr(a: Record<string, unknown> | null) {
+    const addr = (a: Record<string, unknown> | null) => {
       if (!a) return null
       const c = a.addressCountry
       return {
@@ -100,7 +134,7 @@ async function searchHotels(page: Page, params: Readonly<Record<string, unknown>
         postalCode: (a.postalCode as string) ?? null,
       }
     }
-    function hotelFrom(item: Record<string, unknown>) {
+    const hotelFrom = (item: Record<string, unknown>) => {
       const agg = item.aggregateRating as Record<string, unknown> | null
       return {
         name: (item.name as string) ?? null, url: (item.url as string) ?? null,
@@ -164,7 +198,7 @@ async function getRestaurant(page: Page, params: Readonly<Record<string, unknown
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     const restTypes = new Set(['Restaurant', 'FoodEstablishment', 'BarOrPub', 'CafeOrCoffeeShop', 'FastFoodRestaurant', 'LocalBusiness'])
 
-    function parse(data: Record<string, unknown>) {
+    const parse = (data: Record<string, unknown>) => {
       const a = data.address as Record<string, unknown> | null
       const c = a?.addressCountry
       const agg = data.aggregateRating as Record<string, unknown> | null
@@ -254,7 +288,7 @@ async function getAttractionReviews(page: Page, params: Readonly<Record<string, 
     }
 
     // Reviews from DOM — tiered selectors
-    function parseReview(el: Element) {
+    const parseReview = (el: Element) => {
       const titleEl = el.querySelector(
         '[data-test-target="review-title"] span, a[href*="Review"] span, [data-automation="reviewTitle"]',
       )
@@ -325,7 +359,14 @@ const adapter: CodeAdapter = {
     if (!handler) {
       throw new Error(`Unknown operation: ${operation}. Available: ${Object.keys(OPERATIONS).join(', ')}`)
     }
-    await warmSession(page, `${TA_ORIGIN}/`, { timeoutMs: 5_000 })
+    await ensureInitScript(page)
+    await warmSession(page, `${TA_ORIGIN}/`, {
+      timeoutMs: 15_000,
+      waitForCookie: 'datadome',
+    })
+    if (await isDataDomeBlocked(page)) {
+      await waitForCaptchaResolution(page)
+    }
     return handler(page, params)
   },
 }
