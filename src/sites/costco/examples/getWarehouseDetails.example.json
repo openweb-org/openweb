@@ -1,0 +1,12 @@
+{
+  "operation_id": "getWarehouseDetails",
+  "cases": [
+    {
+      "input": { "warehouseId": "129" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

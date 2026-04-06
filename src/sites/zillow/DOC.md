@@ -47,7 +47,8 @@ openweb zillow exec searchProperties '{"searchQueryState":{"pagination":{},"isMa
 - GraphQL endpoint at `/zg-graph` (used for user profile, not search)
 
 ## Auth
-- `cookie_session` — search works without login but returns user-specific data when logged in
+- `cookie_session` — PerimeterX requires a valid browser session; search API returns 403 without one
+- Login via `openweb login zillow`, then `openweb browser restart`
 - No CSRF required for search
 
 ## Transport
@@ -55,6 +56,6 @@ openweb zillow exec searchProperties '{"searchQueryState":{"pagination":{},"isMa
 - Must use headed browser with real Chrome profile
 
 ## Known Issues
-- **PerimeterX**: "Press & Hold" CAPTCHA appears on headless browsers. Use headed mode (`openweb browser restart --no-headless`)
+- **PerimeterX**: CAPTCHA challenge on headless browsers. Use `openweb browser restart --no-headless`, solve the CAPTCHA, then retry
 - Response is ~200KB+ per search — auto-spills to temp file
 - `regionId` is required but not easily discoverable — use known IDs or the autocomplete API

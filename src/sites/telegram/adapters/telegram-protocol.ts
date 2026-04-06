@@ -269,6 +269,12 @@ const adapter: CodeAdapter = {
     // Never navigate — just check if the current page has Telegram state
     if (!page.url().includes('web.telegram.org')) return false
 
+    // Detect conflict state ("Many logins") — not recoverable via adapter
+    const conflict = await page.evaluate(() => {
+      return document.body?.innerText?.includes('Many logins') ?? false
+    })
+    if (conflict) return false
+
     // Quick check — state is usually available immediately on a loaded page
     const ready = await page.evaluate(() => {
       const w = window as Record<string, unknown>

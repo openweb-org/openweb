@@ -18,7 +18,7 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 import type { CodeAdapter } from '../../../types/adapter.js'
 
 const SEARCH_URL = 'https://gdx-api.costco.com/catalog/search/api/v1/search'
-const SUGGEST_URL = 'https://gdx-api.costco.com/catalog/search/api/v1/suggest'
+const SEARCH_TYPEAHEAD_URL = 'https://gdx-api.costco.com/catalog/search/api/v1/search?searchType=typeahead'
 const PRODUCT_GRAPHQL_URL = 'https://ecom-api.costco.com/ebusiness/product/v1/products/graphql'
 const WAREHOUSE_LOCATOR_URL = 'https://ecom-api.costco.com/core/warehouse-locator/v1/salesLocations.json'
 const DELIVERY_OPTIONS_URL = 'https://ecom-api.costco.com/ebusiness/order/v1/delivery/options'
@@ -387,29 +387,41 @@ async function searchSuggestions(page: Page, params: Record<string, unknown>): P
   const limit = Number(params.limit ?? 10)
 
   const body = {
+    visitorId: '0',
     query,
-    limit,
+    pageSize: limit,
+    offset: 0,
+    searchMode: 'page',
+    personalizationEnabled: false,
     warehouseId: '249-wh',
     shipToPostal: '95050',
     shipToState: 'CA',
+    deliveryLocations: ['653-bd', '848-bd', '249-wh', '847_0-wm'],
+    filterBy: [],
+    pageCategories: [],
+    userInfo: { userId: '0' },
   }
 
-  const resp = (await postJson(page, SUGGEST_URL, body, {
+  const resp = (await postJson(page, SEARCH_TYPEAHEAD_URL, body, {
     'client-identifier': SEARCH_CLIENT_ID,
     client_id: 'USBC',
     locale: 'en-US',
     searchresultprovider: 'GRS',
   })) as Record<string, unknown>
 
-  const suggestions = (resp.suggestions ?? resp.results ?? []) as Array<Record<string, unknown>>
+  const searchResult = resp.searchResult as Record<string, unknown>
+  const results = (searchResult?.results ?? []) as Array<Record<string, unknown>>
 
-  return {
-    query,
-    suggestions: suggestions.map((s) => ({
-      term: s.term ?? s.query ?? s.text ?? s.suggestion,
-      type: s.type ?? 'keyword',
-    })),
-  }
+  const suggestions = results.map((r) => {
+    const product = r.product as Record<string, unknown>
+    const categories = (product?.categories as string[]) ?? []
+    return {
+      term: product?.title ?? '',
+      type: categories[0] ?? 'product',
+    }
+  })
+
+  return { query, suggestions }
 }
 
 /* ---------- multiple products ---------- */
@@ -622,73 +634,83 @@ async function getWarehouseDetails(page: Page, params: Record<string, unknown>):
   const warehouseId = params.warehouseId != null ? String(params.warehouseId) : null
   if (!warehouseId) throw OpenWebError.missingParam('warehouseId')
 
-  const url = `${WAREHOUSE_LOCATOR_URL}?salesLocationId=${warehouseId}`
-  const resp = (await getJson(page, url, {
-    'client-identifier': WAREHOUSE_CLIENT_ID,
-    'Accept-Language': 'en-us',
-  })) as Record<string, unknown>
+  // Navigate to warehouse detail page (JSON-LD has structured data)
+  const warehouseUrl = `https://www.costco.com/w/-/${warehouseId}`
+  await page.goto(warehouseUrl, { waitUntil: 'domcontentloaded' })
 
-  const salesLocations = (resp.salesLocations ?? []) as Array<Record<string, unknown>>
+  const jsonLd = await page.evaluate(() => {
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
+    for (const s of scripts) {
+      try {
+        const data = JSON.parse(s.textContent ?? '')
+        if (data['@type'] === 'LocalBusiness') return data
+      } catch { /* skip invalid JSON-LD */ }
+    }
+    return null
+  })
 
-  if (salesLocations.length === 0) {
+  if (!jsonLd) {
     return { warehouse: null }
   }
 
-  const w = salesLocations[0]
-  const address = (w.address as Record<string, unknown>) ?? {}
-  const names = (w.name as Array<Record<string, string>>) ?? []
-  const name = names.find((n) => n.localeCode === 'en-US')?.value ?? names[0]?.value ?? null
+  const address = jsonLd.address ?? {}
+  const geo = jsonLd.geo ?? {}
+  const departments = (jsonLd.department ?? []) as Array<Record<string, unknown>>
 
-  const formatHours = (entries: Array<Record<string, unknown>>): string | null => {
-    if (!entries?.length) return null
-    return entries
-      .filter((h) => {
-        const type = (h.hoursType as Record<string, unknown>)?.code
-        return type === 'open'
+  // Format opening hours from schema.org format
+  const formatSchemaHours = (specs: Array<Record<string, unknown>>): string | null => {
+    if (!specs?.length) return null
+    return specs
+      .filter((s: Record<string, unknown>) => s.opens && s.closes && s['@type'] === 'OpeningHoursSpecification')
+      .map((s: Record<string, unknown>) => {
+        const days = (s.dayOfWeek as string[]) ?? []
+        const label = days.join(', ')
+        return `${label}: ${s.opens} - ${s.closes}`
       })
-      .map((h) => {
-        const titles = (h.title as Array<Record<string, string>>) ?? []
-        const label = titles.find((t) => t.localeCode === 'en-US')?.value ?? ''
-        return `${label}: ${h.open} - ${h.close}`
-      }).join('; ') || null
+      .join('; ') || null
   }
 
-  const warehouseHours = formatHours((w.hours as Array<Record<string, unknown>>) ?? [])
+  const warehouseHours = formatSchemaHours(
+    (jsonLd.openingHoursSpecification ?? []).filter((s: Record<string, unknown>) => s['@type']),
+  )
 
-  const svcs = (w.services as Array<Record<string, unknown>>) ?? []
-  const services: Array<Record<string, unknown>> = []
-  for (const svc of svcs) {
-    const svcNames = (svc.name as Array<Record<string, string>>) ?? []
-    const svcName = svcNames.find((n) => n.localeCode === 'en-US')?.value ?? ''
-    const svcHours = formatHours((svc.hours as Array<Record<string, unknown>>) ?? [])
-    services.push({
-      name: svcName,
-      code: svc.code,
-      hours: svcHours,
-      phone: svc.phone ?? null,
-    })
-  }
+  const services: Array<Record<string, unknown>> = departments.map((dept) => {
+    const deptType = String(dept['@type'] ?? '')
+    const code = deptType === 'GasStation' ? 'gas'
+      : deptType === 'Pharmacy' ? 'pharmacy'
+      : deptType === 'AutomotiveBusiness' ? 'auto'
+      : deptType === 'FastFoodRestaurant' ? 'food-court'
+      : deptType === 'Optician' ? 'optical'
+      : deptType === 'MedicalBusiness' ? 'hearing-aids'
+      : String(dept.name ?? '').toLowerCase().replace(/\s+/g, '-')
+    return {
+      name: dept.name ?? null,
+      code,
+      hours: formatSchemaHours((dept.openingHoursSpecification as Array<Record<string, unknown>>) ?? []),
+      phone: dept.telephone ?? null,
+    }
+  })
 
   return {
     warehouse: {
-      warehouseId: w.salesLocationId ?? null,
-      name,
-      phone: w.phone ?? null,
+      warehouseId,
+      name: String(jsonLd.name ?? '').replace(/ \| Costco$/, '').replace(/, [A-Z]{2} Warehouse$/, ''),
+      phone: jsonLd.telephone ?? null,
       address: {
-        street: address.line1 ?? null,
-        city: address.city ?? null,
-        state: address.territory ?? null,
+        street: address.streetAddress ?? null,
+        city: address.addressLocality ?? null,
+        state: address.addressRegion ?? null,
         zipCode: address.postalCode ?? null,
-        country: address.countryName ?? null,
+        country: address.addressCountry ?? null,
       },
-      latitude: address.latitude ?? null,
-      longitude: address.longitude ?? null,
+      latitude: geo.latitude != null ? Number(geo.latitude) : null,
+      longitude: geo.longitude != null ? Number(geo.longitude) : null,
       hours: warehouseHours,
       services,
-      hasGasStation: svcs.some((s) => s.code === 'gas'),
-      hasPharmacy: svcs.some((s) => s.code === 'pharmacy'),
-      hasTireCenter: svcs.some((s) => s.code === 'auto'),
-      hasFoodCourt: svcs.some((s) => s.code === 'food-court'),
+      hasGasStation: departments.some((d) => d['@type'] === 'GasStation'),
+      hasPharmacy: departments.some((d) => d['@type'] === 'Pharmacy'),
+      hasTireCenter: departments.some((d) => d['@type'] === 'AutomotiveBusiness'),
+      hasFoodCourt: departments.some((d) => d['@type'] === 'FastFoodRestaurant'),
     },
   }
 }

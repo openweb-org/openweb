@@ -96,6 +96,8 @@ openweb costco exec compareProducts '{"itemNumbers": ["100978861", "4000373324"]
 - **page** transport with `page.request.fetch()` — bypasses PerimeterX client-side fetch interception while inheriting browser cookies
 - Must have browser on `costco.com` for the adapter to initialize
 - **Reviews exception**: uses `page.goto()` + `page.evaluate` to navigate to product page and extract BV widget data from `window.BV` global
+- **Warehouse details exception**: uses `page.goto()` to navigate to `costco.com/w/-/{warehouseId}` and extracts JSON-LD `LocalBusiness` structured data
+- **Search suggestions**: uses typeahead search (`POST /search?searchType=typeahead`) — the original `/suggest` endpoint is blocked by Apigee X (403)
 
 ## Extraction
 - Direct JSON responses for search, product, warehouse — no SSR extraction needed
@@ -112,5 +114,7 @@ openweb costco exec compareProducts '{"itemNumbers": ["100978861", "4000373324"]
 - **BazaarVoice auth**: BV BFD API returns 401 from `page.request.fetch()`. Reviews extracted from BV widget's cached state instead.
 - **Reviews limited to summary**: full review text not available — only aggregates (count, average, distribution, recommendation %).
 - **getProductReviews navigates**: uses `page.goto()` — changes current page URL, may affect subsequent operations.
+- **getWarehouseDetails navigates**: uses `page.goto()` to warehouse detail page — same navigation caveat as reviews.
+- **Suggest API blocked**: `gdx-api.costco.com/catalog/search/api/v1/suggest` returns 403 from Apigee X gateway. `searchSuggestions` uses the typeahead search endpoint instead, returning product titles as suggestions.
 - **Price $0**: some items return `price: 0` — these are "display price in cart only" items, not actually free.
 - **Compiler limitation**: search and product APIs are POST with request bodies → compiler auto-skips them. Manual fixture + L3 adapter required.

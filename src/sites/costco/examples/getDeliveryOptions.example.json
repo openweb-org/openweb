@@ -1,0 +1,12 @@
+{
+  "operation_id": "getDeliveryOptions",
+  "cases": [
+    {
+      "input": { "itemNumber": "100978861", "zipCode": "95050" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

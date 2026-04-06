@@ -62,7 +62,7 @@ async function getChannel(page: Page, params: Record<string, unknown>): Promise<
     isAffiliate: roles?.isAffiliate,
     socialMedias: socials.map((s) => ({ name: s.name, title: s.title, url: s.url })),
     nextScheduleSegment: nextSeg
-      ? { startAt: nextSeg.startAt, title: nextSeg.title, hasReminder: nextSeg.hasReminder }
+      ? { startAt: nextSeg.startAt, title: nextSeg.title ?? null, hasReminder: nextSeg.hasReminder }
       : null,
   }
 }

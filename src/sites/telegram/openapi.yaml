@@ -269,7 +269,8 @@ paths:
                     type: string
                   isPremium:
                     type: boolean
-
+                required:
+                  - id
 
   /internal/messages/send:
     post:

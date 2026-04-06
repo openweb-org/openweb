@@ -50,9 +50,17 @@ async function pdsFetch(page: Page, endpoint: string, qs: string, jwt: string): 
   )
 
   if (result.status >= 400) {
+    // AT Protocol returns 400 with ExpiredToken/InvalidToken for bad JWTs (not 401)
+    let isTokenError = result.status === 401 || result.status === 403
+    if (result.status === 400) {
+      try {
+        const body = JSON.parse(result.text)
+        if (body.error === 'ExpiredToken' || body.error === 'InvalidToken') isTokenError = true
+      } catch { /* not JSON — treat as generic bad request */ }
+    }
     throw Object.assign(
       new Error(`HTTP ${result.status}`),
-      { failureClass: result.status === 401 || result.status === 403 ? 'needs_login' : 'fatal' },
+      { failureClass: isTokenError ? 'needs_login' : 'fatal' },
     )
   }
 

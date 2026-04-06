@@ -1,0 +1,12 @@
+{
+  "operation_id": "compareProducts",
+  "cases": [
+    {
+      "input": { "itemNumbers": ["100978861", "4000373324"] },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

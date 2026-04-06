@@ -107,7 +107,7 @@ paths:
         build:
           stable_id: co0006
           tool_version: 1
-          verified: false
+          verified: true
           signals:
             - adapter-verified
         adapter:
@@ -247,7 +247,7 @@ paths:
         build:
           stable_id: co0007
           tool_version: 1
-          verified: false
+          verified: true
           signals:
             - adapter-verified
         adapter:
@@ -313,7 +313,7 @@ paths:
         build:
           stable_id: co0014
           tool_version: 1
-          verified: false
+          verified: true
           signals:
             - adapter-verified
         adapter:
@@ -455,7 +455,7 @@ paths:
         build:
           stable_id: co0008
           tool_version: 1
-          verified: false
+          verified: true
           signals:
             - adapter-verified
         adapter:
@@ -531,7 +531,7 @@ paths:
         build:
           stable_id: co0009
           tool_version: 1
-          verified: false
+          verified: true
           signals:
             - adapter-verified
         adapter:
@@ -727,7 +727,7 @@ paths:
         build:
           stable_id: co0010
           tool_version: 1
-          verified: false
+          verified: true
           signals:
             - adapter-verified
         adapter:
@@ -817,7 +817,7 @@ paths:
         build:
           stable_id: co0011
           tool_version: 1
-          verified: false
+          verified: true
           signals:
             - adapter-verified
         adapter:

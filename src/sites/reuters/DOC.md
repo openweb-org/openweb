@@ -11,16 +11,12 @@ International news agency. News archetype — articles, topic feeds, search, fin
 ### Browse a topic
 1. `getTopicArticles(section_id)` → article list for `/world/`, `/business/`, `/technology/`, `/markets/`, `/science/`
 
-### Check market data
-1. `getMarketQuotes(rics)` → price and percent change for indices, currencies, commodities
-
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | searchArticles | search news by keyword | keyword | title, description, canonical_url, published_time | paginated (offset, size); entry point |
 | getTopicArticles | browse section feed | section_id (e.g., /world/) | title, description, canonical_url, published_time | paginated (offset, size); entry point |
-| getMarketQuotes | get market prices | rics (e.g., .SPX,.DJI) | ric, name, last, percent_change | entry point; RIC codes |
 
 ## Quick Start
 
@@ -30,12 +26,6 @@ openweb reuters exec searchArticles '{"keyword":"technology","size":5}'
 
 # Browse world news
 openweb reuters exec getTopicArticles '{"section_id":"/world/","size":10}'
-
-# Get market quotes for major US indices
-openweb reuters exec getMarketQuotes '{"rics":".SPX,.DJI,.IXIC"}'
-
-# Get currency exchange rates
-openweb reuters exec getMarketQuotes '{"rics":"EUR=,GBP=,JPY="}'
 ```
 
 ---
@@ -47,9 +37,7 @@ Reuters uses Arc Publishing's PageBuilder Fusion API at `/pf/api/v3/content/fetc
 
 Key fetchers:
 - `articles-by-search-v2` — keyword search
-- `article-by-id-or-url-v1` — article detail by URL path
 - `articles-by-section-alias-or-id-v1` — section/topic feed
-- `quote-by-rics-v2` — market data by RIC codes
 
 ## Auth
 No user authentication required. The API requires browser session cookies (set by initial page load) to authorize requests — direct Node.js HTTP calls return 401. The adapter uses `page.evaluate(fetch)` from the browser context.
@@ -58,6 +46,7 @@ No user authentication required. The API requires browser session cookies (set b
 `page` — required because Reuters returns 401 for direct Node.js requests. The adapter makes API calls from within the browser tab using `page.evaluate(fetch(..., {credentials: 'same-origin'}))`.
 
 ## Known Issues
-- **DataDome bot detection**: Reuters uses DataDome. The managed browser's real Chrome profile handles this, but the page/tab can crash after ~6-8 rapid API calls. Space out requests if making many sequential calls.
+- **DataDome CAPTCHA required**: Reuters uses DataDome bot detection which now presents an interactive CAPTCHA for automated browsers. Headless Chrome cannot solve this. **Workaround**: set `{"browser":{"headless":false}}` in `$OPENWEB_HOME/config.json`, restart the browser (`openweb browser restart`), and solve the CAPTCHA in the visible Chrome window. Once solved, subsequent requests work until the browser restarts.
+- **DataDome session lifetime**: DataDome cookies are tied to the browser fingerprint and session. If the managed browser restarts, you may need to solve the CAPTCHA again.
+- **Tab stability**: The browser tab can crash after ~6-8 rapid API calls under DataDome pressure. Space out requests if making many sequential calls.
 - **getTopicArticles verify flaky**: Occasionally fails with "page closed" during verify — the browser tab crashes under DataDome pressure. The operation works when called individually.
-- **Market quotes RIC codes**: Common codes — indices: `.SPX`, `.DJI`, `.IXIC`, `.STOXX`, `.FTSE`, `.N225`; currencies: `EUR=`, `GBP=`, `JPY=`; commodities: `CLc1`, `GCv1`, `SIv1`.
