@@ -119,9 +119,8 @@ async function searchBusinesses(page: Page, params: Record<string, unknown>) {
         const reviewMatch = allText.match(/\\((\\d[\\d,]*)\\s+reviews?\\)/);
         const reviewCount = reviewMatch ? parseInt(reviewMatch[1].replace(/,/g, '')) : null;
 
-        // Price range — regex built to avoid biome comma-operator false positive
-        const priceRe = /(?:^|\n|\s)(\${1,4})(?:\n|$|Closed|Open)/m // biome-ignore lint/style/noCommaOperator: regex quantifier
-        const priceMatch = allText.match(priceRe);
+        // Price range (match 1-4 dollar signs)
+        const priceMatch = allText.match(/(?:^|\\n|\\s)(\\$\\$?\\$?\\$?)(?:\\n|$|Closed|Open)/m);
         const priceRange = priceMatch ? priceMatch[1] : null;
 
         // Categories
