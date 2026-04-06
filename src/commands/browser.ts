@@ -54,7 +54,7 @@ export async function copyProfileSelective(src: string, dest: string): Promise<v
   await mkdir(dest, { recursive: true, mode: 0o700 })
 
   // Only copy files needed for auth: Cookies, Local Storage, Session Storage, Web Data
-  const relevantDirs = ['Local Storage', 'Session Storage']
+  const relevantDirs = ['Local Storage', 'Session Storage', 'IndexedDB']
   const relevantFiles = ['Cookies', 'Cookies-journal', 'Web Data', 'Web Data-journal', 'Preferences', 'Secure Preferences']
 
   for (const file of relevantFiles) {
