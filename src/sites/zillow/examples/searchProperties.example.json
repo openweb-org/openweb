@@ -1,0 +1,32 @@
+{
+  "operation_id": "searchProperties",
+  "cases": [
+    {
+      "input": {
+        "searchQueryState": {
+          "pagination": {},
+          "isMapVisible": true,
+          "mapBounds": {
+            "north": 37.82,
+            "south": 37.70,
+            "east": -122.35,
+            "west": -122.52
+          },
+          "filterState": {
+            "sortSelection": { "value": "globalrelevanceex" },
+            "isAllHomes": { "value": true }
+          },
+          "isListVisible": true,
+          "regionSelection": [{ "regionId": 20330, "regionType": 6 }],
+          "category": "cat1"
+        },
+        "wants": { "cat1": ["listResults"] },
+        "requestId": 1
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

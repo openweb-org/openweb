@@ -1,0 +1,15 @@
+{
+  "name": "yelp",
+  "display_name": "Yelp",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.yelp.com",
+  "compiled_at": "2026-04-06T01:00:00.000Z",
+  "requires_auth": false,
+  "last_verified": "2026-04-06T03:29:48.077Z",
+  "quarantined": false,
+  "fingerprint": {
+    "response_shape_hash": "autocompleteBusinesses:02735d145216079a,searchBusinesses:3aa1b5f91f0b4d61",
+    "last_validated": "2026-04-06T03:29:48.083Z"
+  }
+}

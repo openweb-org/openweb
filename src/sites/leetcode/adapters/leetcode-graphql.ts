@@ -24,6 +24,17 @@ const PROBLEM_LIST_QUERY = `query problemsetQuestionListV2($filters: QuestionFil
   }
 }`
 
+const PROBLEM_SEARCH_QUERY = `query problemsetQuestionList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) {
+  problemsetQuestionList: questionList(categorySlug: $categorySlug, limit: $limit, skip: $skip, filters: $filters) {
+    total: totalNum
+    questions: data {
+      titleSlug title questionFrontendId paidOnly: isPaidOnly difficulty
+      topicTags { name slug }
+      acRate
+    }
+  }
+}`
+
 const DAILY_CHALLENGE_QUERY = `query questionOfTodayV2 {
   activeDailyCodingChallengeQuestion {
     date link
@@ -130,17 +141,26 @@ async function graphqlFetch(
 ): Promise<unknown> {
   const body = JSON.stringify({ operationName, variables, query })
 
+  // LeetCode requires x-csrftoken header for certain queries
+  const cookies = await page.context().cookies('https://leetcode.com')
+  const csrfToken = cookies.find((c) => c.name === 'csrftoken')?.value ?? ''
+
   const result = await page.evaluate(
-    async (args: { url: string; body: string }) => {
+    async (args: { url: string; body: string; csrf: string }) => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Referer: 'https://leetcode.com/problemset/',
+      }
+      if (args.csrf) headers['x-csrftoken'] = args.csrf
       const resp = await fetch(args.url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: args.body,
         credentials: 'include',
       })
       return { status: resp.status, text: await resp.text() }
     },
-    { url: GRAPHQL_URL, body },
+    { url: GRAPHQL_URL, body, csrf: csrfToken },
   )
 
   if (result.status >= 400) {
@@ -183,19 +203,21 @@ async function searchProblems(page: Page, params: Record<string, unknown>): Prom
   const keyword = String(params.keyword ?? params.search ?? '')
   const skip = Number(params.skip ?? 0)
   const limit = Number(params.limit ?? 50)
-  const filters = defaultFilters()
 
-  const data = (await graphqlFetch(page, 'problemsetQuestionListV2', PROBLEM_LIST_QUERY, {
+  // Use v1 questionList API — v2 requires login for keyword search
+  const data = (await graphqlFetch(page, 'problemsetQuestionList', PROBLEM_SEARCH_QUERY, {
+    categorySlug: 'all-code-essentials',
     skip,
     limit,
-    searchKeyword: keyword,
-    categorySlug: 'all-code-essentials',
-    filters,
-    sortBy: { sortField: 'CUSTOM', sortOrder: 'ASCENDING' },
-    filtersV2: filters,
+    filters: { searchKeywords: keyword },
   })) as Record<string, unknown>
 
-  return data.problemsetQuestionListV2
+  const result = data.problemsetQuestionList as Record<string, unknown>
+  return {
+    questions: result?.questions,
+    totalLength: result?.total,
+    hasMore: skip + limit < Number(result?.total ?? 0),
+  }
 }
 
 async function getProblemList(page: Page, params: Record<string, unknown>): Promise<unknown> {
@@ -376,7 +398,13 @@ const adapter: CodeAdapter = {
   description: 'LeetCode GraphQL API — problems, contests, profiles, solutions',
 
   async init(page: Page): Promise<boolean> {
-    return page.url().includes('leetcode.com')
+    if (!page.url().includes('leetcode.com')) return false
+    // Navigate to problemset page to ensure csrftoken cookie is set
+    const cookies = await page.context().cookies('https://leetcode.com')
+    if (!cookies.some((c) => c.name === 'csrftoken')) {
+      await page.goto('https://leetcode.com/problemset/', { waitUntil: 'domcontentloaded', timeout: 15_000 })
+    }
+    return true
   },
 
   async isAuthenticated(page: Page): Promise<boolean> {

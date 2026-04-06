@@ -1,0 +1,11 @@
+{
+  "operation_id": "autocompleteBusinesses",
+  "cases": [
+    {
+      "input": { "prefix": "piz", "loc": "San Francisco, CA" },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

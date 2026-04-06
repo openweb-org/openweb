@@ -18,12 +18,12 @@ paths:
       x-openweb:
         permission: read
         build:
-          verified: false
+          verified: true
           stable_id: lc0001
           signature_id: lc0001s
           tool_version: 1
           signals:
-            - auth-required
+            - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: searchProblems

@@ -1,0 +1,160 @@
+openapi: 3.1.0
+info:
+  title: yelp
+  version: 1.0.0
+  x-openweb:
+    spec_version: "2.0"
+    compiled_at: 2026-04-06T01:00:00.000Z
+    requires_auth: false
+servers:
+  - url: https://www.yelp.com
+    x-openweb:
+      transport: node
+paths:
+  /search_suggest/v2/prefetch:
+    get:
+      operationId: autocompleteBusinesses
+      summary: Autocomplete businesses and categories by prefix and location
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: 63a017c451fa4a34
+          signature_id: 056612ff7b984329
+          tool_version: 1
+          signals:
+            - status-match
+      parameters:
+        - name: loc
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Location to search near (e.g. "San Francisco", "New York").
+        - name: prefix
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search prefix text (e.g. "piz" for pizza, "coff" for coffee).
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unique_request_id:
+                    type: string
+                  response:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        prefix:
+                          type: string
+                        suggestions:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              title:
+                                type: string
+                              query:
+                                type: string
+                              subtitle:
+                                type: string
+                                nullable: true
+                              type:
+                                type: string
+                  should_not_cache:
+                    type: boolean
+  /search/businesses:
+    get:
+      operationId: searchBusinesses
+      summary: Search for businesses by keyword and location
+      x-openweb:
+        permission: read
+        adapter:
+          name: yelp-web
+          operation: searchBusinesses
+      parameters:
+        - name: find_desc
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search term (e.g. "pizza", "restaurants", "plumber").
+        - name: find_loc
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Location to search in (e.g. "San Francisco, CA", "New York, NY").
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset (results per page is 10).
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  businesses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        bizId:
+                          type: string
+                        name:
+                          type: string
+                        alias:
+                          type: string
+                        url:
+                          type: string
+                          nullable: true
+                        rating:
+                          type: number
+                          nullable: true
+                        reviewCount:
+                          type: integer
+                          nullable: true
+                        priceRange:
+                          type: string
+                          nullable: true
+                        phone:
+                          type: string
+                          nullable: true
+                        categories:
+                          type: array
+                          items:
+                            type: string
+                        neighborhoods:
+                          type: array
+                          items:
+                            type: string
+                        address:
+                          type: string
+                          nullable: true
+                        isAd:
+                          type: boolean
+                        snippet:
+                          type: string
+                          nullable: true
+                  totalResults:
+                    type: integer
+                    nullable: true
+                  resultsPerPage:
+                    type: integer
+                    nullable: true
+                  startResult:
+                    type: integer
+                    nullable: true

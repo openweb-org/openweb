@@ -72,7 +72,7 @@ openweb leetcode exec getContestRanking '{"contestSlug": "weekly-contest-438", "
 ## Auth
 - Most operations work without auth (`requires_auth: false`)
 - `getSubmissions` returns null data without login (LEETCODE_SESSION cookie)
-- No CSRF token required for GraphQL queries
+- CSRF token (`x-csrftoken` header from `csrftoken` cookie) sent with GraphQL queries
 - Contest ranking REST endpoint is fully public
 
 ## Transport
@@ -82,7 +82,7 @@ openweb leetcode exec getContestRanking '{"contestSlug": "weekly-contest-438", "
 - No PerimeterX or aggressive bot detection; browser context needed for cookie propagation
 
 ## Known Issues
-- **Search requires login**: `searchProblems` now requires auth (LEETCODE_SESSION cookie) — use `getProblemList` for unauthenticated browsing
+- **Search uses v1 API**: `searchProblems` uses the older `questionList` query because the v2 `problemsetQuestionListV2` query now requires login for keyword search
 - **Submissions require login**: `getSubmissions` returns `null` submissions array when not authenticated
 - **Rate limiting**: LeetCode may rate-limit heavy GraphQL usage; no explicit headers documented
 - **Premium problems**: `paidOnly: true` problems have restricted content

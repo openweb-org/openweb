@@ -54,7 +54,7 @@ const OPERATIONS: Record<string, OperationConfig> = {
 async function extractToken(page: Page): Promise<{ accessToken: string; clientToken: string }> {
   // Use Playwright request interception — more reliable than monkey-patching fetch
   const requestPromise = page.waitForRequest(
-    (req) => req.url().includes('pathfinder') && !!req.headers()['authorization'],
+    (req) => req.url().includes('pathfinder') && !!req.headers().authorization,
     { timeout: 15_000 },
   )
 
@@ -63,7 +63,7 @@ async function extractToken(page: Page): Promise<{ accessToken: string; clientTo
 
   const request = await requestPromise
   const headers = request.headers()
-  const accessToken = (headers['authorization'] ?? '').replace('Bearer ', '')
+  const accessToken = (headers.authorization ?? '').replace('Bearer ', '')
   const clientToken = headers['client-token'] ?? ''
 
   if (!accessToken) {
