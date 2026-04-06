@@ -1,0 +1,8 @@
+{
+  "operation_id": "searchVideos",
+  "replay_safety": "safe_read",
+  "cases": [{
+    "input": { "keyword": "cooking", "count": 5 },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

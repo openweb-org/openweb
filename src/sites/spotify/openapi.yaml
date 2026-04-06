@@ -1,0 +1,442 @@
+openapi: "3.1.0"
+info:
+  title: Spotify
+  version: "1.0.0"
+  x-openweb:
+    spec_version: "2.0"
+    compiled_at: "2026-04-06T00:00:00Z"
+    requires_auth: true
+servers:
+  - url: https://open.spotify.com
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+paths:
+  /internal/searchMusic:
+    post:
+      operationId: searchMusic
+      summary: "Search music — artists, tracks, albums, playlists with cover art, URIs, popularity"
+      x-openweb:
+        permission: read
+        adapter:
+          name: spotify-pathfinder
+          operation: searchMusic
+        build:
+          stable_id: spotify_search_v1
+          tool_version: 2
+      parameters:
+        - name: searchTerm
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Search query (artist, track, album name)"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: "Max results per category"
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: "Pagination offset"
+      responses:
+        "200":
+          description: Search results across content types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  searchV2:
+                    type: object
+                    properties:
+                      artists:
+                        type: object
+                        properties:
+                          totalCount:
+                            type: integer
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                data:
+                                  type: object
+                                  properties:
+                                    profile:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                    uri:
+                                      type: string
+                                      description: "spotify:artist:ID"
+                      tracksV2:
+                        type: object
+                        properties:
+                          totalCount:
+                            type: integer
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                item:
+                                  type: object
+                                  properties:
+                                    data:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                        uri:
+                                          type: string
+                                        duration:
+                                          type: object
+                                          properties:
+                                            totalMilliseconds:
+                                              type: integer
+                                        albumOfTrack:
+                                          type: object
+                                          properties:
+                                            name:
+                                              type: string
+                                        artists:
+                                          type: object
+                                          properties:
+                                            items:
+                                              type: array
+                                              items:
+                                                type: object
+                                                properties:
+                                                  profile:
+                                                    type: object
+                                                    properties:
+                                                      name:
+                                                        type: string
+                      albumsV2:
+                        type: object
+                        properties:
+                          totalCount:
+                            type: integer
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                data:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                    uri:
+                                      type: string
+                                    date:
+                                      type: object
+                                      properties:
+                                        year:
+                                          type: integer
+                                    artists:
+                                      type: object
+                                      properties:
+                                        items:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              profile:
+                                                type: object
+                                                properties:
+                                                  name:
+                                                    type: string
+
+  /internal/getArtist:
+    post:
+      operationId: getArtist
+      summary: "Get artist — name, bio, followers, monthly listeners, world rank, top tracks, albums, related artists"
+      x-openweb:
+        permission: read
+        adapter:
+          name: spotify-pathfinder
+          operation: getArtist
+        build:
+          stable_id: spotify_artist_v1
+          tool_version: 2
+      parameters:
+        - name: uri
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Spotify URI (spotify:artist:ID) — get from searchMusic"
+      responses:
+        "200":
+          description: Artist profile with stats, discography, related content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  artistUnion:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      uri:
+                        type: string
+                      profile:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          biography:
+                            type: object
+                            properties:
+                              text:
+                                type: string
+                          verified:
+                            type: boolean
+                      stats:
+                        type: object
+                        properties:
+                          followers:
+                            type: integer
+                          monthlyListeners:
+                            type: integer
+                          worldRank:
+                            type: integer
+                          topCities:
+                            type: object
+                            properties:
+                              items:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    city:
+                                      type: string
+                                    country:
+                                      type: string
+                                    numberOfListeners:
+                                      type: integer
+                      discography:
+                        type: object
+                        properties:
+                          topTracks:
+                            type: object
+                            properties:
+                              items:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    track:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                        uri:
+                                          type: string
+                                        playcount:
+                                          type: string
+                                        duration:
+                                          type: object
+                                          properties:
+                                            totalMilliseconds:
+                                              type: integer
+                          albums:
+                            type: object
+                            properties:
+                              totalCount:
+                                type: integer
+                          singles:
+                            type: object
+                            properties:
+                              totalCount:
+                                type: integer
+                      relatedContent:
+                        type: object
+                        properties:
+                          relatedArtists:
+                            type: object
+                            properties:
+                              items:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    uri:
+                                      type: string
+                                    profile:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+
+  /internal/getArtistDiscography:
+    post:
+      operationId: getArtistDiscography
+      summary: "Get artist discography — albums, singles, compilations with release dates and track counts"
+      x-openweb:
+        permission: read
+        adapter:
+          name: spotify-pathfinder
+          operation: getArtistDiscography
+        build:
+          stable_id: spotify_discography_v1
+          tool_version: 2
+      parameters:
+        - name: uri
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Spotify URI (spotify:artist:ID) — get from searchMusic"
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Paginated artist discography
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  artistUnion:
+                    type: object
+                    properties:
+                      discography:
+                        type: object
+                        properties:
+                          all:
+                            type: object
+                            properties:
+                              totalCount:
+                                type: integer
+                              items:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    releases:
+                                      type: object
+                                      properties:
+                                        items:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              id:
+                                                type: string
+                                              uri:
+                                                type: string
+                                              name:
+                                                type: string
+                                              type:
+                                                type: string
+                                              date:
+                                                type: object
+                                                properties:
+                                                  year:
+                                                    type: integer
+
+  /internal/getAlbumTracks:
+    post:
+      operationId: getAlbumTracks
+      summary: "Get album tracks — track name, artists, duration, play count, disc number"
+      x-openweb:
+        permission: read
+        adapter:
+          name: spotify-pathfinder
+          operation: getAlbumTracks
+        build:
+          stable_id: spotify_album_tracks_v1
+          tool_version: 2
+      parameters:
+        - name: uri
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Spotify URI (spotify:album:ID) — get from getArtist or getArtistDiscography"
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 300
+      responses:
+        "200":
+          description: Album track listing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  albumUnion:
+                    type: object
+                    properties:
+                      tracksV2:
+                        type: object
+                        properties:
+                          totalCount:
+                            type: integer
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                track:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                    uri:
+                                      type: string
+                                    playcount:
+                                      type: string
+                                    discNumber:
+                                      type: integer
+                                    duration:
+                                      type: object
+                                      properties:
+                                        totalMilliseconds:
+                                          type: integer
+                                    artists:
+                                      type: object
+                                      properties:
+                                        items:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              uri:
+                                                type: string
+                                              profile:
+                                                type: object
+                                                properties:
+                                                  name:
+                                                    type: string

@@ -1,0 +1,11 @@
+# Notion — Progress
+
+## 2026-04-05
+
+- Created site package: openapi.yaml (3 operations), manifest.json, DOC.md
+- Operations: getSpaces, searchPages, queryDatabase
+- Transport: page (Cloudflare-protected, browser-based)
+- Auth: cookie_session with CSRF (cookie_to_header: notion_user_id -> x-notion-active-user-header)
+- Spec written manually — compiler cannot handle Notion's RPC-style API (all endpoints collapse into one parameterized cluster)
+- Added example fixtures for all 3 operations
+- Verify: PASS (all 3 operations pass runtime verify with --browser)

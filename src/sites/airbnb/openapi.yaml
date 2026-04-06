@@ -1,0 +1,248 @@
+openapi: '3.1.0'
+info:
+  title: Airbnb
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-04-06T01:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.airbnb.com
+    x-openweb:
+      transport: page
+paths:
+  /s/homes:
+    get:
+      operationId: searchListings
+      summary: Search accommodation listings by destination, dates, and guests
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ab0001
+          signature_id: ab0001s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: airbnb-web
+          operation: searchListings
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Destination search query (e.g. "Tokyo", "Paris", "New York").
+        - name: checkin
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-in date in YYYY-MM-DD format.
+        - name: checkout
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-out date in YYYY-MM-DD format.
+        - name: adults
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Number of adult guests.
+        - name: children
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Number of children.
+        - name: infants
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Number of infants.
+        - name: minPrice
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Minimum price filter.
+        - name: maxPrice
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum price filter.
+        - name: roomType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Entire home/apt, Private room, Shared room]
+          description: Room type filter.
+      responses:
+        '200':
+          description: List of accommodation listings matching the search.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, listings]
+                properties:
+                  count:
+                    type: integer
+                  hasNextPage:
+                    type: boolean
+                  listings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: [string, 'null']
+                          description: Listing ID for use with getListingDetail.
+                        title:
+                          type: [string, 'null']
+                          description: Property type and location (e.g. "Apartment in Shinjuku").
+                        name:
+                          type: [string, 'null']
+                          description: Full listing name set by host.
+                        rating:
+                          type: [string, 'null']
+                          description: Average rating with review count (e.g. "4.98 (283)").
+                        price:
+                          type: [string, 'null']
+                          description: Display price (e.g. "$191").
+                        priceQualifier:
+                          type: [string, 'null']
+                          description: Price context (e.g. "for 2 nights").
+                        roomInfo:
+                          type: array
+                          items:
+                            type: string
+                          description: Room details (e.g. "1 bedroom", "1 queen bed").
+                        badges:
+                          type: array
+                          items:
+                            type: string
+                          description: Listing badges (e.g. "Guest favorite", "Superhost").
+                        latitude:
+                          type: [number, 'null']
+                        longitude:
+                          type: [number, 'null']
+                        photos:
+                          type: array
+                          items:
+                            type: string
+                          description: Photo URLs (up to 3).
+
+  /rooms/{id}:
+    get:
+      operationId: getListingDetail
+      summary: Get full listing details — description, ratings, amenities, host info, policies
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: ab0002
+          signature_id: ab0002s
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: airbnb-web
+          operation: getListingDetail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Listing ID from searchListings results.
+        - name: checkin
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-in date in YYYY-MM-DD format.
+        - name: checkout
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-out date in YYYY-MM-DD format.
+        - name: adults
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Number of adult guests.
+      responses:
+        '200':
+          description: Full listing details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: [string, 'null']
+                    description: Formatted title (e.g. "Rental unit in Sumida-ku . 4.98 . 1 bedroom . 1 bed . 1 bath").
+                  description:
+                    type: [string, 'null']
+                    description: Host-provided listing description.
+                  overallRating:
+                    type: [number, 'null']
+                    description: Overall rating out of 5.
+                  reviewCount:
+                    type: [integer, 'null']
+                  ratings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        category:
+                          type: string
+                          description: Rating category (e.g. "Cleanliness", "Accuracy").
+                        score:
+                          type: string
+                  location:
+                    type: [object, 'null']
+                    properties:
+                      title:
+                        type: [string, 'null']
+                      latitude:
+                        type: [number, 'null']
+                      longitude:
+                        type: [number, 'null']
+                  host:
+                    type: [object, 'null']
+                    properties:
+                      name:
+                        type: [string, 'null']
+                      isSuperhost:
+                        type: [boolean, 'null']
+                      ratingAverage:
+                        type: [number, 'null']
+                      ratingCount:
+                        type: [integer, 'null']
+                  maxGuests:
+                    type: [integer, 'null']
+                  highlights:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        subtitle:
+                          type: [string, 'null']
+                  amenities:
+                    description: Amenity groups or flat amenity list.
+                  cancellationPolicy:
+                    type: [string, 'null']

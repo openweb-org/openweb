@@ -177,6 +177,7 @@ checks completeness and accuracy, not style.
 | **Quick Start** | Copy-paste commands for common intents |
 | **No spec duplication** | No full param lists or response schemas repeated from openapi.yaml |
 | **Known Issues** | Verify failures, bot detection, rate limits documented |
+| **PROGRESS.md** | File exists with at least one dated entry recording the session |
 
 ### Cross-Check with Spec
 
@@ -193,7 +194,8 @@ All three dimensions must pass:
 1. **Runtime** — Every target intent has at least one operation returning real
    data. Non-target failures documented in Known Issues.
 2. **Spec** — Checklist passes. No noise, correct auth/transport/permissions.
-3. **Doc** — DOC.md covers all operations, has workflows with data flow
+3. **Doc** — DOC.md covers all operations, has workflows with data flow.
+   PROGRESS.md exists with at least one dated entry.
    annotations, cross-checks clean against spec.
 
 When all pass → proceed to install (guide.md Install step).

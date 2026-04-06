@@ -1,0 +1,14 @@
+{
+  "operation_id": "searchListings",
+  "cases": [
+    {
+      "input": {
+        "query": "Tokyo"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

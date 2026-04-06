@@ -1,0 +1,211 @@
+openapi: 3.1.0
+info:
+  title: tiktok
+  version: 1.0.0
+  x-openweb:
+    spec_version: "2.0"
+    compiled_at: 2026-04-06T02:00:08.706Z
+    requires_auth: true
+servers:
+  - url: https://www.tiktok.com
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+paths:
+  /api/search/general/full/:
+    get:
+      operationId: searchVideos
+      summary: "Search videos by keyword — title, description, author, play count, likes, shares, video URLs, music info"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: f04932b312a0b4fe
+          tool_version: 2
+      parameters:
+        - name: keyword
+          in: query
+          required: true
+          description: Search query string
+          schema:
+            type: string
+          example: cooking
+        - name: count
+          in: query
+          required: false
+          description: "Number of results per page (default: 12)"
+          schema:
+            type: integer
+            default: 12
+          example: 12
+        - name: offset
+          in: query
+          required: false
+          description: "Result offset for pagination (default: 0)"
+          schema:
+            type: integer
+            default: 0
+          example: 0
+        - name: search_source
+          in: query
+          required: false
+          description: "Search source context"
+          schema:
+            type: string
+            default: normal_search
+          example: normal_search
+        - name: from_page
+          in: query
+          required: false
+          description: "Page context for the search"
+          schema:
+            type: string
+            default: search
+          example: search
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+                properties:
+                  status_code:
+                    type: integer
+                    description: "0 = success"
+                  data:
+                    type: array
+                    description: Search result items
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: integer
+                          description: "Result type (1 = video)"
+                        item:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: Video ID
+                            desc:
+                              type: string
+                              description: Video description/caption
+                            createTime:
+                              type: integer
+                              description: Unix timestamp of creation
+                            video:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                height:
+                                  type: integer
+                                width:
+                                  type: integer
+                                duration:
+                                  type: integer
+                                  description: Duration in seconds
+                                ratio:
+                                  type: string
+                                cover:
+                                  type: string
+                                  format: uri
+                                  description: Thumbnail URL
+                                originCover:
+                                  type: string
+                                  format: uri
+                                playAddr:
+                                  type: string
+                                  format: uri
+                                  description: Video playback URL
+                                downloadAddr:
+                                  type: string
+                                  format: uri
+                                format:
+                                  type: string
+                                size:
+                                  type: integer
+                            author:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                uniqueId:
+                                  type: string
+                                  description: "@username handle"
+                                nickname:
+                                  type: string
+                                  description: Display name
+                                avatarThumb:
+                                  type: string
+                                  format: uri
+                                signature:
+                                  type: string
+                                  description: Author bio
+                                verified:
+                                  type: boolean
+                                secUid:
+                                  type: string
+                            music:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                title:
+                                  type: string
+                                playUrl:
+                                  type: string
+                                  format: uri
+                                authorName:
+                                  type: string
+                                original:
+                                  type: boolean
+                                duration:
+                                  type: integer
+                                album:
+                                  type: string
+                            challenges:
+                              type: array
+                              description: Hashtags/challenges used
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  title:
+                                    type: string
+                                  desc:
+                                    type: string
+                            stats:
+                              type: object
+                              properties:
+                                diggCount:
+                                  type: integer
+                                  description: Number of likes
+                                shareCount:
+                                  type: integer
+                                commentCount:
+                                  type: integer
+                                playCount:
+                                  type: integer
+                                collectCount:
+                                  type: integer
+                                  description: Number of bookmarks
+                              required:
+                                - diggCount
+                                - shareCount
+                                - commentCount
+                                - playCount
+                                - collectCount
+                  cursor:
+                    type: integer
+                    description: Cursor for next page (use as offset)
+                  has_more:
+                    type: integer
+                    description: "1 = more results available, 0 = end"
+                required:
+                  - status_code
+                  - data
+                  - cursor
+                  - has_more

@@ -1,0 +1,9 @@
+{
+  "operation_id": "getAlbumTracks",
+  "cases": [
+    {
+      "input": { "uri": "spotify:album:6dVIqQ8qmQ5GBnJ9shOYGE" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

@@ -1,0 +1,391 @@
+openapi: 3.1.0
+info:
+  title: notion
+  version: 1.0.0
+  x-openweb:
+    spec_version: "2.0"
+    compiled_at: 2026-04-06T02:30:00.000Z
+    requires_auth: true
+servers:
+  - url: https://www.notion.so
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+      csrf:
+        type: cookie_to_header
+        cookie: notion_user_id
+        header: x-notion-active-user-header
+paths:
+  /api/v3/search:
+    post:
+      operationId: searchPages
+      summary: Search pages and databases in workspace
+      x-openweb:
+        permission: read
+        build:
+          stable_id: notion_search_pages
+          tool_version: 2
+      parameters:
+        - name: x-notion-space-id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Workspace space ID (same as spaceId in body)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - query
+                - spaceId
+                - limit
+                - source
+                - filters
+                - sort
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - BlocksInSpace
+                  description: Search scope type
+                query:
+                  type: string
+                  description: Search query text (empty string for recent items)
+                spaceId:
+                  type: string
+                  format: uuid
+                  description: Workspace space ID
+                limit:
+                  type: integer
+                  default: 20
+                  description: Max results to return
+                source:
+                  type: string
+                  enum:
+                    - quick_find
+                  description: Search source context
+                filters:
+                  type: object
+                  properties:
+                    isDeletedOnly:
+                      type: boolean
+                      default: false
+                    excludeTemplates:
+                      type: boolean
+                      default: false
+                    navigableBlockContentOnly:
+                      type: boolean
+                      default: false
+                    requireEditPermissions:
+                      type: boolean
+                      default: false
+                    includePublicPagesWithoutExplicitAccess:
+                      type: boolean
+                      default: false
+                    ancestors:
+                      type: array
+                      items:
+                        type: string
+                    createdBy:
+                      type: array
+                      items:
+                        type: string
+                    editedBy:
+                      type: array
+                      items:
+                        type: string
+                    lastEditedTime:
+                      type: object
+                    createdTime:
+                      type: object
+                    inTeams:
+                      type: array
+                      items:
+                        type: string
+                    excludeSurrogateCollections:
+                      type: boolean
+                      default: false
+                    excludedParentCollectionIds:
+                      type: array
+                      items:
+                        type: string
+                sort:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                      enum:
+                        - relevance
+                        - lastEdited
+                        - created
+                    direction:
+                      type: string
+                      enum:
+                        - asc
+                        - desc
+                peopleBlocksToInclude:
+                  type: string
+                  default: all
+            example:
+              type: BlocksInSpace
+              query: meeting notes
+              spaceId: "{spaceId}"
+              limit: 20
+              source: quick_find
+              filters:
+                isDeletedOnly: false
+                excludeTemplates: false
+                navigableBlockContentOnly: false
+                requireEditPermissions: false
+                includePublicPagesWithoutExplicitAccess: false
+                ancestors: []
+                createdBy: []
+                editedBy: []
+                lastEditedTime: {}
+                createdTime: {}
+                inTeams: []
+                excludeSurrogateCollections: false
+                excludedParentCollectionIds: []
+              sort:
+                field: relevance
+              peopleBlocksToInclude: all
+      responses:
+        "200":
+          description: Search results with matching blocks and record map
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          description: Block ID of matching page/database
+                        highlight:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                              description: Highlighted text snippet
+                        highlightBlockId:
+                          type: string
+                          format: uuid
+                        score:
+                          type: number
+                          description: Relevance score
+                        spaceId:
+                          type: string
+                          format: uuid
+                        isSurrogateCollection:
+                          type: boolean
+                        badges:
+                          type: array
+                          items:
+                            type: object
+                  total:
+                    type: integer
+                    description: Total matching results count
+                  recordMap:
+                    type: object
+                    description: Associated records (blocks, collections, spaces)
+                    properties:
+                      block:
+                        type: object
+                        additionalProperties:
+                          type: object
+                      collection:
+                        type: object
+                        additionalProperties:
+                          type: object
+                      space:
+                        type: object
+                        additionalProperties:
+                          type: object
+  /api/v3/queryCollection:
+    post:
+      operationId: queryDatabase
+      summary: Query a database (collection) with optional search and filters
+      x-openweb:
+        permission: read
+        build:
+          stable_id: notion_query_database
+          tool_version: 2
+      parameters:
+        - name: x-notion-space-id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Workspace space ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - collection
+                - collectionView
+                - loader
+              properties:
+                collection:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      description: Collection (database) ID
+                collectionView:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      description: View ID for the database
+                loader:
+                  type: object
+                  required:
+                    - type
+                    - reducers
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - reducer
+                    reducers:
+                      type: object
+                      properties:
+                        collection_group_results:
+                          type: object
+                          properties:
+                            type:
+                              type: string
+                              enum:
+                                - results
+                            limit:
+                              type: integer
+                              default: 50
+                    searchQuery:
+                      type: string
+                      description: Optional text search within the database
+                      default: ""
+                    userTimeZone:
+                      type: string
+                      description: User timezone for date calculations
+                    filter:
+                      type: object
+                      description: Optional filter object
+                      properties:
+                        operator:
+                          type: string
+                          enum:
+                            - and
+                            - or
+                        filters:
+                          type: array
+                          items:
+                            type: object
+            example:
+              collection:
+                id: 20615b89-eae6-800b-8cc4-000bcb6574a0
+              collectionView:
+                id: 20615b89-eae6-80a9-8c04-000cdbd80f0c
+              loader:
+                type: reducer
+                reducers:
+                  collection_group_results:
+                    type: results
+                    limit: 50
+                searchQuery: ""
+                userTimeZone: America/Los_Angeles
+      responses:
+        "200":
+          description: Database rows with record map
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      reducerResults:
+                        type: object
+                        properties:
+                          collection_group_results:
+                            type: object
+                            properties:
+                              type:
+                                type: string
+                              blockIds:
+                                type: array
+                                items:
+                                  type: string
+                                  format: uuid
+                                description: IDs of row blocks in the database
+                      sizeHint:
+                        type: integer
+                  recordMap:
+                    type: object
+                    description: Associated records (blocks with row data, collection schema)
+                    properties:
+                      block:
+                        type: object
+                        additionalProperties:
+                          type: object
+                      collection:
+                        type: object
+                        additionalProperties:
+                          type: object
+  /api/v3/getSpaces:
+    post:
+      operationId: getSpaces
+      summary: Get all workspaces for the current user
+      x-openweb:
+        permission: read
+        build:
+          stable_id: notion_get_spaces
+          tool_version: 2
+      parameters:
+        - name: x-notion-space-id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Workspace space ID (optional for this endpoint)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+            example: {}
+      responses:
+        "200":
+          description: User workspaces with space details
+          content:
+            application/json:
+              schema:
+                type: object
+                description: "Map of userId -> { space: { spaceId: { value: ... } } }"
+                additionalProperties:
+                  type: object

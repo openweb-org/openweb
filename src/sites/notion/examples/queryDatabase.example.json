@@ -1,0 +1,31 @@
+{
+  "operation_id": "queryDatabase",
+  "cases": [
+    {
+      "input": {
+        "x-notion-space-id": "fba8f373-0afa-439e-b6d5-f69d38f144fb",
+        "collection": {
+          "id": "20615b89-eae6-800b-8cc4-000bcb6574a0"
+        },
+        "collectionView": {
+          "id": "20615b89-eae6-80a9-8c04-000cdbd80f0c"
+        },
+        "loader": {
+          "type": "reducer",
+          "reducers": {
+            "collection_group_results": {
+              "type": "results",
+              "limit": 5
+            }
+          },
+          "searchQuery": "",
+          "userTimeZone": "America/Los_Angeles"
+        }
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "operation_id": "searchPages",
+  "cases": [
+    {
+      "input": {
+        "x-notion-space-id": "fba8f373-0afa-439e-b6d5-f69d38f144fb",
+        "type": "BlocksInSpace",
+        "query": "test",
+        "spaceId": "fba8f373-0afa-439e-b6d5-f69d38f144fb",
+        "limit": 5,
+        "source": "quick_find",
+        "filters": {
+          "isDeletedOnly": false,
+          "excludeTemplates": false,
+          "navigableBlockContentOnly": false,
+          "requireEditPermissions": false,
+          "includePublicPagesWithoutExplicitAccess": false,
+          "ancestors": [],
+          "createdBy": [],
+          "editedBy": [],
+          "lastEditedTime": {},
+          "createdTime": {},
+          "inTeams": [],
+          "excludeSurrogateCollections": false,
+          "excludedParentCollectionIds": []
+        },
+        "sort": {
+          "field": "relevance"
+        },
+        "peopleBlocksToInclude": "all"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

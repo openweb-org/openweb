@@ -1,0 +1,9 @@
+{
+  "operation_id": "getArtist",
+  "cases": [
+    {
+      "input": { "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}
