@@ -8,12 +8,26 @@ interface CodeAdapter {
   execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
 }
 
+const REUTERS_ORIGIN = 'https://www.reuters.com'
+
 function validationError(msg: string): Error {
   return Object.assign(new Error(msg), { failureClass: 'fatal' })
 }
 
 function unknownOpError(op: string): Error {
   return Object.assign(new Error(`Unknown operation: ${op}`), { failureClass: 'fatal' })
+}
+
+async function isDataDomeBlocked(page: Page): Promise<boolean> {
+  try {
+    const url = page.url()
+    if (url.includes('captcha-delivery.com') || url.includes('datadome')) return true
+    return page.evaluate(() =>
+      document.body?.innerHTML?.includes('captcha-delivery.com') ?? false,
+    )
+  } catch {
+    return false
+  }
 }
 
 function pfUrl(fetcher: string, query: Record<string, unknown>): string {
@@ -28,16 +42,28 @@ async function pfFetch(page: Page, fetcher: string, query: Record<string, unknow
     const timer = setTimeout(() => ctrl.abort(), 15_000)
     try {
       const r = await fetch(u, { credentials: 'same-origin', signal: ctrl.signal })
-      if (!r.ok) return { __error: true, status: r.status }
+      if (!r.ok) {
+        const body = await r.text().catch(() => '')
+        const isDD = body.includes('captcha-delivery.com') || body.includes('datadome')
+        return { __error: true, status: r.status, isDataDome: isDD }
+      }
       return JSON.parse(await r.text())
     } finally {
       clearTimeout(timer)
     }
   }, url)
   if (result && typeof result === 'object' && '__error' in result) {
-    const err = result as { status: number }
+    const err = result as { status: number; isDataDome?: boolean }
+    if (err.isDataDome || err.status === 401) {
+      throw Object.assign(
+        new Error(
+          `Reuters API blocked by DataDome (HTTP ${err.status}). Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run \`openweb browser restart\`, solve the CAPTCHA, then retry.`,
+        ),
+        { failureClass: 'retriable' },
+      )
+    }
     throw Object.assign(new Error(`Reuters API returned ${err.status}`), {
-      failureClass: err.status === 401 ? 'needs_login' : 'fatal',
+      failureClass: 'fatal',
     })
   }
   return result
@@ -63,25 +89,14 @@ async function getTopicArticles(page: Page, params: Record<string, unknown>) {
   })
 }
 
-async function getMarketQuotes(page: Page, params: Record<string, unknown>) {
-  const rics = String(params.rics ?? '')
-  if (!rics) throw validationError('rics is required (comma-separated RIC codes, e.g., .SPX,.DJI,.IXIC)')
-  return pfFetch(page, 'quote-by-rics-v2', {
-    fields: 'ric,type:ricType,name,currency,localName{long{name,lang},short{name,lang}}last,percent_change:pctChange',
-    retries: 0,
-    rics,
-  })
-}
-
 const operations: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
   searchArticles,
   getTopicArticles,
-  getMarketQuotes,
 }
 
 const adapter: CodeAdapter = {
   name: 'reuters-api',
-  description: 'Reuters — search articles, read article content, browse topics, get market quotes',
+  description: 'Reuters — search articles, browse topics by section',
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()
@@ -89,12 +104,25 @@ const adapter: CodeAdapter = {
   },
 
   async isAuthenticated(): Promise<boolean> {
-    return true // Public API, no auth needed (uses browser session cookies for API access)
+    return true
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
     const handler = operations[operation]
     if (!handler) throw unknownOpError(operation)
+    if (await isDataDomeBlocked(page)) {
+      // Brief wait for auto-resolution (non-headless browsers may resolve quickly)
+      await page.waitForTimeout(5_000)
+      if (await isDataDomeBlocked(page)) {
+        throw Object.assign(
+          new Error(
+            'Reuters blocked by DataDome CAPTCHA. Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run `openweb browser restart`, solve the CAPTCHA in the visible Chrome window, then retry.',
+          ),
+          { failureClass: 'retriable' },
+        )
+      }
+      process.stderr.write('DataDome CAPTCHA resolved.\n')
+    }
     return handler(page, { ...params })
   },
 }

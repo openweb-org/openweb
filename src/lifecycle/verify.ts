@@ -1,12 +1,11 @@
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 
-import { connectWithRetry } from '../capture/connection.js'
 import { type AsyncApiSpec, loadAsyncApi } from '../lib/asyncapi.js'
-import { CDP_ENDPOINT } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import { loadManifest, saveManifest } from '../lib/manifest.js'
 import { listOperations, listSites, loadOpenApi, pathExists, resolveSiteRoot } from '../lib/openapi.js'
+import { ensureBrowser } from '../runtime/browser-lifecycle.js'
 import { type ExecuteDependencies, executeOperation } from '../runtime/executor.js'
 import { resolveTransport } from '../runtime/operation-context.js'
 import { autoNavigate, findPageForOrigin } from '../runtime/session-executor.js'
@@ -17,12 +16,12 @@ import type { Manifest } from '../types/manifest.js'
 import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
 import { computeResponseFingerprint } from './fingerprint.js'
 
-export type DriftType = 'schema_drift' | 'auth_drift' | 'endpoint_removed' | 'error'
+export type DriftType = 'schema_drift' | 'auth_drift' | 'bot_detection' | 'endpoint_removed' | 'error'
 
 export type OperationStatus = 'PASS' | 'DRIFT' | 'FAIL'
 
-/** Site-level overall status — includes 'auth_expired' for auth-only failures. */
-export type SiteOverallStatus = OperationStatus | 'auth_expired'
+/** Site-level overall status — includes 'auth_expired' and 'bot_blocked' for non-quarantine failures. */
+export type SiteOverallStatus = OperationStatus | 'auth_expired' | 'bot_blocked'
 
 export interface VerifyOptions {
   readonly includeWrite?: boolean
@@ -93,6 +92,11 @@ function isRetriable(error: unknown): boolean {
   return error instanceof OpenWebError && error.payload.failureClass === 'retriable'
 }
 
+function isBotDetection(error: unknown): boolean {
+  return error instanceof OpenWebError
+    && error.payload.failureClass === 'bot_blocked'
+}
+
 function formatErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message
   if (typeof err === 'string') return err
@@ -155,7 +159,9 @@ export async function verifySite(
   // Warm-up: navigate to site base URL so page/adapter ops find a matching tab
   if (needsBrowser && siteBaseUrl) {
     try {
-      const browser = deps?.browser ?? await connectWithRetry(deps?.cdpEndpoint ?? CDP_ENDPOINT)
+      const handle = deps?.browser ? undefined : await ensureBrowser(deps?.cdpEndpoint)
+      const browser = deps?.browser ?? handle?.browser
+      if (!browser) throw new Error('no browser')
       try {
         const context = browser.contexts()[0]
         if (context) {
@@ -165,7 +171,7 @@ export async function verifySite(
           }
         }
       } finally {
-        if (!deps?.browser) await browser.close().catch(() => {})
+        if (handle) await handle.release()
       }
     } catch { /* warm-up is best-effort — don't fail verify */ }
   }
@@ -249,8 +255,9 @@ export async function verifySite(
 
   // Determine overall status
   const hasDrift = operations.some((o) => o.status === 'DRIFT')
-  const hasRealFail = operations.some((o) => o.status === 'FAIL' && o.driftType !== 'auth_drift')
+  const hasRealFail = operations.some((o) => o.status === 'FAIL' && o.driftType !== 'auth_drift' && o.driftType !== 'bot_detection')
   const hasAuthDrift = operations.some((o) => o.driftType === 'auth_drift')
+  const hasBotBlock = operations.some((o) => o.driftType === 'bot_detection')
   const hasPass = operations.some((o) => o.status === 'PASS')
 
   let overallStatus: SiteOverallStatus
@@ -261,13 +268,15 @@ export async function verifySite(
   } else if (hasAuthDrift) {
     // ANY auth_drift taints the result — even if some ops passed
     overallStatus = 'auth_expired'
+  } else if (hasBotBlock) {
+    overallStatus = 'bot_blocked'
   } else if (hasPass) {
     overallStatus = 'PASS'
   } else {
     overallStatus = 'FAIL'
   }
 
-  // Quarantine on real failures — NOT on auth_expired, NOT on PASS
+  // Quarantine on real failures — NOT on auth_expired, bot_blocked, or PASS
   const shouldQuarantine = hasRealFail
 
   // Update manifest with verification results
@@ -275,9 +284,15 @@ export async function verifySite(
     const newFingerprints = new Map(storedFingerprints)
     for (const op of operations) {
       if (op.newFingerprint) {
+        const existing = newFingerprints.get(op.operationId)
         // Preserve 'pending' — it signals an intentionally skipped fingerprint
-        if (storedFingerprints.get(op.operationId) === 'pending') continue
-        newFingerprints.set(op.operationId, op.newFingerprint)
+        if (existing === 'pending') continue
+        // Accumulate multiple shapes (different test cases may produce different valid shapes)
+        const shapes = existing ? existing.split('|') : []
+        if (!shapes.includes(op.newFingerprint)) {
+          shapes.push(op.newFingerprint)
+        }
+        newFingerprints.set(op.operationId, shapes.slice(-4).join('|'))
       }
     }
 
@@ -327,7 +342,8 @@ async function verifyOperation(
     // Compute and compare fingerprint
     const newFingerprint = computeResponseFingerprint(result.body)
 
-    if (storedFingerprint && storedFingerprint !== 'pending' && storedFingerprint !== newFingerprint) {
+    const knownShapes = parseShapeSet(storedFingerprint)
+    if (knownShapes.length > 0 && !knownShapes.includes(newFingerprint)) {
       return {
         operationId,
         status: 'DRIFT',
@@ -346,6 +362,14 @@ async function verifyOperation(
         status: 'FAIL',
         driftType: 'auth_drift',
         detail: 'authentication expired (401/403)',
+      }
+    }
+    if (isBotDetection(error)) {
+      return {
+        operationId,
+        status: 'FAIL',
+        driftType: 'bot_detection',
+        detail: 'bot detection blocked (CAPTCHA challenge)',
       }
     }
     if (isPageMissing(error)) {
@@ -450,7 +474,8 @@ async function verifyWsOperation(
 
     // Fingerprint comparison
     const newFingerprint = computeResponseFingerprint(body)
-    if (storedFingerprint && storedFingerprint !== 'pending' && storedFingerprint !== newFingerprint) {
+    const knownShapes = parseShapeSet(storedFingerprint)
+    if (knownShapes.length > 0 && !knownShapes.includes(newFingerprint)) {
       return {
         operationId,
         status: 'DRIFT',
@@ -515,6 +540,7 @@ export function generateDriftReport(results: SiteVerifyResult[]): object {
     passed: results.filter((r) => r.overallStatus === 'PASS').length,
     drifted: results.filter((r) => r.overallStatus === 'DRIFT').length,
     auth_expired: results.filter((r) => r.overallStatus === 'auth_expired').length,
+    bot_blocked: results.filter((r) => r.overallStatus === 'bot_blocked').length,
     failed: results.filter((r) => r.overallStatus === 'FAIL').length,
     sites: nonPassSites.map((r) => ({
       site: r.site,
@@ -541,15 +567,16 @@ export function generateDriftReportMarkdown(results: SiteVerifyResult[]): string
   const passed = results.filter((r) => r.overallStatus === 'PASS').length
   const drifted = results.filter((r) => r.overallStatus === 'DRIFT').length
   const authExpired = results.filter((r) => r.overallStatus === 'auth_expired').length
+  const botBlocked = results.filter((r) => r.overallStatus === 'bot_blocked').length
   const failed = results.filter((r) => r.overallStatus === 'FAIL').length
 
   lines.push(`**Date:** ${ts}`)
-  lines.push(`**Sites:** ${results.length} total | ${passed} passed | ${drifted} drifted | ${authExpired} auth_expired | ${failed} failed`)
+  lines.push(`**Sites:** ${results.length} total | ${passed} passed | ${drifted} drifted | ${authExpired} auth_expired | ${botBlocked} bot_blocked | ${failed} failed`)
   lines.push('')
 
   for (const r of results) {
     if (r.overallStatus === 'PASS') continue
-    const icon = r.overallStatus === 'DRIFT' ? '⚠️' : r.overallStatus === 'auth_expired' ? '🔒' : '❌'
+    const icon = r.overallStatus === 'DRIFT' ? '⚠️' : r.overallStatus === 'auth_expired' ? '🔒' : r.overallStatus === 'bot_blocked' ? '🤖' : '❌'
     lines.push(`## ${icon} ${r.site} — ${r.overallStatus}`)
     if (r.shouldQuarantine) lines.push('**Quarantined**')
     lines.push('')
@@ -583,4 +610,10 @@ function serializeFingerprints(map: Map<string, string>): string {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([opId, hash]) => `${opId}:${hash}`)
     .join(',')
+}
+
+/** Split a stored fingerprint value into its known shapes (pipe-separated). */
+function parseShapeSet(stored: string | undefined): string[] {
+  if (!stored || stored === 'pending') return []
+  return stored.split('|')
 }

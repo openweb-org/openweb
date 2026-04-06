@@ -8,6 +8,7 @@ import { TIMEOUT } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import type { CodeAdapter } from '../types/adapter.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
+import { warmSession } from './warm-session.js'
 
 const adapterCache = new Map<string, CodeAdapter>()
 
@@ -123,6 +124,19 @@ export async function executeAdapter(
   }
 
   if (!ready) {
+    // If the site requires auth and the adapter can't init, likely the user
+    // isn't logged in (no global state bootstrapped). Classify as needs_login
+    // so the auth cascade can trigger profile refresh / login flow.
+    if (options?.requiresAuth !== false) {
+      throw new OpenWebError({
+        error: 'auth',
+        code: 'AUTH_FAILED',
+        message: `Adapter "${adapter.name}" failed to initialize — site may require login.`,
+        action: 'Log in to the site and try again.',
+        retriable: true,
+        failureClass: 'needs_login',
+      })
+    }
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',
@@ -146,6 +160,10 @@ export async function executeAdapter(
       })
     }
   }
+
+  // Warm the session before executing — lets bot-detection sensors generate
+  // valid cookies. Per-page WeakSet cache makes repeat calls a no-op.
+  await warmSession(page, page.url())
 
   return adapter.execute(page, operation, params)
 }

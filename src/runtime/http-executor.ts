@@ -115,53 +115,92 @@ export async function executeOperation(
   const adapterRef = opExt?.adapter as AdapterRef | undefined
   if (adapterRef) {
     const siteRoot = await resolveSiteRoot(site)
-    const handle = deps.browser ? undefined : await ensureBrowser(deps.cdpEndpoint)
-    const browser = deps.browser ?? handle!.browser
-    try {
-      const adapter = await loadAdapter(siteRoot, adapterRef.name)
-      const context = browser.contexts()[0]
-      if (!context) {
-        throw new OpenWebError({
-          error: 'execution_failed',
-          code: 'EXECUTION_FAILED',
-          message: 'No browser context available.',
-          action: 'Run: openweb browser start',
-          retriable: true,
-          failureClass: 'needs_browser',
-        })
-      }
-      const serverUrl = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
-      let page = await findPageForOrigin(context, serverUrl)
-      let ownedPage = false
-      if (!page) {
-        const nav = await autoNavigate(context, serverUrl)
-        if (nav) { page = nav.page; ownedPage = nav.owned }
-      }
-      if (!page) {
-        // Adapter handles its own navigation — give it a fresh page
-        page = await context.newPage()
-        ownedPage = true
-      }
+
+    // Shared: prepare params once (they don't change across retries)
+    const mergedParams = { ...params, ...adapterRef.params }
+    const allParams = resolveAllParameters(spec, operationRef.operation)
+    const adapterParams = validateParams(
+      [...allParams, ...getRequestBodyParameters(operationRef.operation)],
+      mergedParams,
+    )
+    const serverExt = getServerXOpenWeb(spec, operationRef.operation)
+    const requiresAuth = !!(serverExt?.auth) || !!manifest?.requires_auth
+
+    /** Single adapter attempt: acquire browser → find/create page → execute */
+    const adapterAttempt = async (): Promise<unknown> => {
+      const handle = deps.browser ? undefined : await ensureBrowser(deps.cdpEndpoint)
+      const browser = deps.browser ?? handle?.browser
+      if (!browser) throw new Error('No browser available — ensureBrowser returned an invalid handle')
       try {
-        const mergedParams = { ...params, ...adapterRef.params }
-
-        // Validate params: required checks, unknown rejection, type validation, defaults
-        const allParams = resolveAllParameters(spec, operationRef.operation)
-        const adapterParams = validateParams(
-          [...allParams, ...getRequestBodyParameters(operationRef.operation)],
-          mergedParams,
-        )
-
-        const serverExt = getServerXOpenWeb(spec, operationRef.operation)
-        const requiresAuth = !!(serverExt?.auth)
-        body = await executeAdapter(page, adapter, adapterRef.operation, adapterParams, { requiresAuth })
-        status = 200
+        const adapter = await loadAdapter(siteRoot, adapterRef.name)
+        const context = browser.contexts()[0]
+        if (!context) {
+          throw new OpenWebError({
+            error: 'execution_failed',
+            code: 'EXECUTION_FAILED',
+            message: 'No browser context available.',
+            action: 'Run: openweb browser start',
+            retriable: true,
+            failureClass: 'needs_browser',
+          })
+        }
+        const serverUrl = operationRef.operation.servers?.[0]?.url ?? spec.servers?.[0]?.url ?? ''
+        let page = await findPageForOrigin(context, serverUrl)
+        let ownedPage = false
+        if (!page) {
+          const nav = await autoNavigate(context, serverUrl)
+          if (nav) { page = nav.page; ownedPage = nav.owned }
+        }
+        if (!page) {
+          page = await context.newPage()
+          ownedPage = true
+        }
+        try {
+          return await executeAdapter(page, adapter, adapterRef.operation, adapterParams, { requiresAuth })
+        } finally {
+          if (ownedPage) await page.close().catch(() => {})
+        }
       } finally {
-        if (ownedPage) await page.close().catch(() => {})
+        if (handle) await handle.release()
       }
-    } finally {
-      if (handle) await handle.release()
     }
+
+    try {
+      body = await adapterAttempt()
+    } catch (err) {
+      if (!(err instanceof OpenWebError && err.payload.failureClass === 'needs_login')) throw err
+
+      if (deps.cdpEndpoint || deps.browser) {
+        // External browser — skip profile refresh, try login cascade directly
+        if (!deps.cdpEndpoint || isLocalhost(deps.cdpEndpoint)) {
+          const loginUrl = manifest?.site_url ?? spec.servers?.[0]?.url ?? ''
+          await handleLoginRequired(loginUrl, async () => {
+            try { body = await adapterAttempt(); return true } catch (e) {
+              if (e instanceof OpenWebError && e.payload.failureClass === 'needs_login') return false
+              throw e
+            }
+          })
+        } else {
+          throw err
+        }
+      } else {
+        // Managed browser: tier 3 (profile refresh) → tier 4 (user login)
+        try {
+          await refreshProfile()
+          body = await adapterAttempt()
+        } catch (err2) {
+          if (!(err2 instanceof OpenWebError && err2.payload.failureClass === 'needs_login')) throw err2
+          const loginUrl = manifest?.site_url ?? spec.servers?.[0]?.url ?? ''
+          await handleLoginRequired(loginUrl, async () => {
+            try { body = await adapterAttempt(); return true } catch (e) {
+              if (e instanceof OpenWebError && e.payload.failureClass === 'needs_login') return false
+              throw e
+            }
+          })
+        }
+      }
+    }
+    status = 200
   } else if (opExt?.extraction) {
     const extraction = opExt.extraction as import('../types/primitives.js').ExtractionPrimitive
     const serverExt = getServerXOpenWeb(spec, operationRef.operation)
@@ -186,7 +225,8 @@ export async function executeOperation(
       responseHeaders = { ...result.responseHeaders }
     } else {
       const handle = deps.browser ? undefined : await ensureBrowser(deps.cdpEndpoint)
-      const browser = deps.browser ?? handle!.browser
+      const browser = deps.browser ?? handle?.browser
+      if (!browser) throw new Error('No browser available — ensureBrowser returned an invalid handle')
       try {
         const result = await executeExtraction(browser, spec, operationRef.operation, operationRef.path, params)
         status = result.status
@@ -198,7 +238,8 @@ export async function executeOperation(
     }
   } else if (transport === 'page') {
     const handle = deps.browser ? undefined : await ensureBrowser(deps.cdpEndpoint)
-    const browser = deps.browser ?? handle!.browser
+    const browser = deps.browser ?? handle?.browser
+    if (!browser) throw new Error('No browser available — ensureBrowser returned an invalid handle')
     try {
       const result = await executeBrowserFetch(
         browser,
@@ -247,7 +288,8 @@ export async function executeOperation(
         // Helper: connect browser, execute, write cache on success
         const browserSessionExec = async (): Promise<{ result: ExecutorResult; handle: BrowserHandle | undefined; browser: Browser }> => {
           const handle = deps.browser ? undefined : await ensureBrowser(deps.cdpEndpoint)
-          const browser = deps.browser ?? handle!.browser
+          const browser = deps.browser ?? handle?.browser
+      if (!browser) throw new Error('No browser available — ensureBrowser returned an invalid handle')
           try {
             const result = await executeSessionHttp(
               browser, spec, operationRef.path, operationRef.method,

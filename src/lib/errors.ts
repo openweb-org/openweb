@@ -10,6 +10,7 @@ export type FailureClass =
   | 'needs_browser'
   | 'needs_login'
   | 'needs_page'
+  | 'bot_blocked'
   | 'permission_denied'
   | 'permission_required'
   | 'retriable'

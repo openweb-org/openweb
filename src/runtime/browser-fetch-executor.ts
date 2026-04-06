@@ -2,11 +2,13 @@ import type { Browser } from 'patchright'
 
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
+import { logger } from '../lib/logger.js'
 import { type OpenApiOperation, type OpenApiSpec, getRequestBodyParameters, validateParams } from '../lib/openapi.js'
 import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { ExecutorResult } from './executor-result.js'
 import { getServerXOpenWeb } from './operation-context.js'
+import { ensurePagePolyfills } from './page-polyfill.js'
 import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 import type { BrowserHandle } from './primitives/types.js'
 import { buildHeaderParams, buildJsonRequestBody, buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
@@ -17,7 +19,27 @@ import {
   createNeedsPageError,
   findPageForOrigin,
 } from './session-executor.js'
-import { ensurePagePolyfills } from './page-polyfill.js'
+import { warmSession } from './warm-session.js'
+
+// ── Bot-detection block detection ───────────────
+
+/** Known bot-detection vendors and their response body markers. */
+const BOT_DETECTION_MARKERS = [
+  'blockScript',    // PerimeterX
+  'captcha.js',     // PerimeterX CAPTCHA
+  'geo.captcha-delivery.com', // DataDome
+  'intr-page',      // Akamai Bot Manager
+  'challenge-platform', // Cloudflare
+] as const
+
+/**
+ * Check if a 403 response body is a bot-detection challenge,
+ * not a genuine authentication/authorization failure.
+ */
+function isBotDetectionBlock(responseText: string): boolean {
+  if (!responseText) return false
+  return BOT_DETECTION_MARKERS.some(marker => responseText.includes(marker))
+}
 
 export type { ExecutorResult }
 
@@ -73,6 +95,11 @@ export async function executeBrowserFetch(
 
   try {
     await ensurePagePolyfills(page)
+
+    // Warm session: let bot-detection sensors (PerimeterX, Akamai, DataDome)
+    // generate valid cookies before issuing the API request.
+    await warmSession(page, serverUrl)
+
     const ssrfValidator = deps.ssrfValidator ?? validateSSRF
     const handle: BrowserHandle = { page, context }
     const authResult = serverExt?.auth
@@ -177,6 +204,18 @@ export async function executeBrowserFetch(
     }
 
     if (fetchResult.status >= 400) {
+      // Distinguish bot-detection 403 from genuine auth failure
+      if (fetchResult.status === 403 && isBotDetectionBlock(fetchResult.text)) {
+        logger.debug('browser_fetch: bot-detection block detected (not auth failure)')
+        throw new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: 'Bot detection blocked the request (CAPTCHA challenge)',
+          action: 'Run: openweb browser restart --no-headless, solve the CAPTCHA, then retry.',
+          retriable: true,
+          failureClass: 'bot_blocked',
+        })
+      }
       const httpFailure = getHttpFailure(fetchResult.status)
       throw new OpenWebError({
         error: httpFailure.failureClass === 'needs_login' ? 'auth' : 'execution_failed',

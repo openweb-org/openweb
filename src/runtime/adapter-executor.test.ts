@@ -42,7 +42,7 @@ describe('executeAdapter', () => {
     expect(result).toEqual({ result: 'ok' })
   })
 
-  it('throws when init fails', async () => {
+  it('throws needs_login when init fails and auth is required', async () => {
     const page = mockPage()
     const adapter = mockAdapter({
       init: vi.fn(async () => false),
@@ -51,7 +51,21 @@ describe('executeAdapter', () => {
     await expect(
       executeAdapter(page, adapter, 'getChats', {}),
     ).rejects.toMatchObject({
-      payload: { code: 'EXECUTION_FAILED' },
+      payload: { code: 'AUTH_FAILED', failureClass: 'needs_login' },
+    })
+    expect(adapter.execute).not.toHaveBeenCalled()
+  })
+
+  it('throws retriable when init fails and auth is not required', async () => {
+    const page = mockPage()
+    const adapter = mockAdapter({
+      init: vi.fn(async () => false),
+    })
+
+    await expect(
+      executeAdapter(page, adapter, 'getChats', {}, { requiresAuth: false }),
+    ).rejects.toMatchObject({
+      payload: { code: 'EXECUTION_FAILED', failureClass: 'retriable' },
     })
     expect(adapter.execute).not.toHaveBeenCalled()
   })
@@ -67,7 +81,7 @@ describe('executeAdapter', () => {
     await expect(
       executeAdapter(page, adapter, 'getChats', {}),
     ).rejects.toMatchObject({
-      payload: { failureClass: 'retriable' },
+      payload: { failureClass: 'needs_login' },
     })
 
     expect(page.reload).toHaveBeenCalledTimes(1)

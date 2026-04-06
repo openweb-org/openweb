@@ -1,5 +1,4 @@
 import type { Page } from 'patchright'
-import { warmSession } from '../../../runtime/warm-session.js'
 
 interface CodeAdapter {
   readonly name: string
@@ -12,14 +11,17 @@ interface CodeAdapter {
 const TA_ORIGIN = 'https://www.tripadvisor.com'
 const CAPTCHA_POLL_MS = 2_000
 const CAPTCHA_WAIT_MS = 30_000
-const POLYFILL_SCRIPT = 'globalThis.__name||(globalThis.__name=(t,v)=>(Object.defineProperty(t,"name",{value:v,configurable:true}),t))'
+const POLYFILL = 'globalThis.__name||(globalThis.__name=(t,v)=>(Object.defineProperty(t,"name",{value:v,configurable:true}),t));'
 
-/** Ensure __name polyfill persists across all navigations in this browser context. */
-async function ensureInitScript(page: Page): Promise<void> {
-  const hasPolyfill = await page.evaluate('typeof globalThis.__name === "function"')
-  if (hasPolyfill) return
-  await page.context().addInitScript(POLYFILL_SCRIPT)
-  await page.evaluate(POLYFILL_SCRIPT)
+/**
+ * Evaluate a function in the page with __name polyfill prepended (immune to tsx __name injection).
+ *
+ * WARNING: `fn` is serialized via `.toString()` and executed in the browser context.
+ * It must NOT capture closure variables — any references to outer-scope variables
+ * will be undefined at runtime. Only use inline arrow functions with self-contained logic.
+ */
+async function safeEvaluate<T>(page: Page, fn: () => T): Promise<T> {
+  return page.evaluate(`${POLYFILL}(${fn.toString()})()`) as Promise<T>
 }
 
 async function isDataDomeBlocked(page: Page): Promise<boolean> {
@@ -122,7 +124,7 @@ async function searchHotels(page: Page, params: Readonly<Record<string, unknown>
 
   await navigateTo(page, `${TA_ORIGIN}/Hotels-g${geoId}-${location}-Hotels.html`)
 
-  return page.evaluate(() => {
+  return safeEvaluate(page, () => {
     const addr = (a: Record<string, unknown> | null) => {
       if (!a) return null
       const c = a.addressCountry
@@ -194,7 +196,7 @@ async function getRestaurant(page: Page, params: Readonly<Record<string, unknown
 
   await navigateTo(page, `${TA_ORIGIN}/Restaurant_Review-g${geoId}-d${locationId}-Reviews-${slug}.html`)
 
-  return page.evaluate(() => {
+  return safeEvaluate(page, () => {
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     const restTypes = new Set(['Restaurant', 'FoodEstablishment', 'BarOrPub', 'CafeOrCoffeeShop', 'FastFoodRestaurant', 'LocalBusiness'])
 
@@ -255,7 +257,7 @@ async function getAttractionReviews(page: Page, params: Readonly<Record<string, 
     { timeout: 8_000 },
   ).catch(() => {})
 
-  return page.evaluate(() => {
+  return safeEvaluate(page, () => {
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     const attrTypes = new Set(['LocalBusiness', 'TouristAttraction', 'LandmarksOrHistoricalBuildings', 'Place', 'CivicStructure', 'Museum', 'Park'])
 
@@ -359,11 +361,6 @@ const adapter: CodeAdapter = {
     if (!handler) {
       throw new Error(`Unknown operation: ${operation}. Available: ${Object.keys(OPERATIONS).join(', ')}`)
     }
-    await ensureInitScript(page)
-    await warmSession(page, `${TA_ORIGIN}/`, {
-      timeoutMs: 15_000,
-      waitForCookie: 'datadome',
-    })
     if (await isDataDomeBlocked(page)) {
       await waitForCaptchaResolution(page)
     }

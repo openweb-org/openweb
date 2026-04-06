@@ -18,6 +18,7 @@ function statusIcon(status: SiteOverallStatus): string {
     case 'DRIFT': return '△'
     case 'FAIL': return '✗'
     case 'auth_expired': return '🔒'
+    case 'bot_blocked': return '🤖'
   }
 }
 
@@ -63,8 +64,9 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
       const passed = results.filter((r) => r.overallStatus === 'PASS').length
       const drifted = results.filter((r) => r.overallStatus === 'DRIFT').length
       const authExpired = results.filter((r) => r.overallStatus === 'auth_expired').length
+      const botBlocked = results.filter((r) => r.overallStatus === 'bot_blocked').length
       const failed = results.filter((r) => r.overallStatus === 'FAIL').length
-      process.stdout.write(`\n${passed} passed, ${drifted} drifted, ${authExpired} auth_expired, ${failed} failed (${results.length} total)\n`)
+      process.stdout.write(`\n${passed} passed, ${drifted} drifted, ${authExpired} auth_expired, ${botBlocked} bot_blocked, ${failed} failed (${results.length} total)\n`)
 
       if (opts.report) {
         const format = typeof opts.report === 'string' ? opts.report : 'json'
