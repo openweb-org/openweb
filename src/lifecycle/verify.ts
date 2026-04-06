@@ -1,7 +1,8 @@
-import { readFile, readdir } from 'node:fs/promises'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import { type AsyncApiSpec, loadAsyncApi } from '../lib/asyncapi.js'
+import { openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import { loadManifest, saveManifest } from '../lib/manifest.js'
 import { listOperations, listSites, loadOpenApi, pathExists, resolveSiteRoot } from '../lib/openapi.js'
@@ -25,7 +26,12 @@ export type SiteOverallStatus = OperationStatus | 'auth_expired' | 'bot_blocked'
 
 export interface VerifyOptions {
   readonly includeWrite?: boolean
+  /** Per-operation timeout in milliseconds. Default: 45_000 */
+  readonly operationTimeoutMs?: number
 }
+
+/** Default per-operation timeout (45 seconds). Prevents hangs from login prompts or slow endpoints. */
+const DEFAULT_OP_TIMEOUT_MS = 45_000
 
 export interface OperationVerifyResult {
   readonly operationId: string
@@ -185,6 +191,11 @@ export async function verifySite(
   }
 
   const operations: OperationVerifyResult[] = []
+  const opTimeoutMs = options?.operationTimeoutMs ?? DEFAULT_OP_TIMEOUT_MS
+
+  // Track login attempts per site — after the first needs_login failure,
+  // skip the login cascade for remaining ops to avoid infinite login loops.
+  let loginAttempted = false
 
   // Load asyncapi for WS verification
   const hasAsyncApi = await pathExists(path.join(siteRoot, 'asyncapi.yaml'))
@@ -223,29 +234,40 @@ export async function verifySite(
 
     if (testFile.protocol === 'ws') {
       for (const testCase of testFile.cases) {
-        const result = await verifyWsOperation(
-          site,
+        const result = await withOpTimeout(
+          verifyWsOperation(
+            site,
+            testFile.operation_id,
+            testFile.mode,
+            testCase,
+            asyncapi,
+            wsPool,
+            storedFingerprints.get(testFile.operation_id),
+            deps,
+          ),
           testFile.operation_id,
-          testFile.mode,
-          testCase,
-          asyncapi,
-          wsPool,
-          storedFingerprints.get(testFile.operation_id),
-          deps,
+          opTimeoutMs,
         )
+        if (result.driftType === 'auth_drift') loginAttempted = true
         operations.push(result)
       }
       continue
     }
 
     for (const testCase of testFile.cases) {
-      const result = await verifyOperation(
-        site,
+      const effectiveDeps = loginAttempted ? { ...deps, skipLoginCascade: true } : deps
+      const result = await withOpTimeout(
+        verifyOperation(
+          site,
+          testFile.operation_id,
+          testCase,
+          storedFingerprints.get(testFile.operation_id),
+          effectiveDeps,
+        ),
         testFile.operation_id,
-        testCase,
-        storedFingerprints.get(testFile.operation_id),
-        deps,
+        opTimeoutMs,
       )
+      if (result.driftType === 'auth_drift') loginAttempted = true
       operations.push(result)
     }
   }
@@ -503,6 +525,29 @@ function raceTimeout<T>(promise: Promise<T>, ms: number): Promise<T | undefined>
 }
 
 /**
+ * Wrap a verify operation promise with a timeout. If the operation takes
+ * longer than `ms`, returns a FAIL result instead of hanging indefinitely.
+ */
+function withOpTimeout(
+  promise: Promise<OperationVerifyResult>,
+  operationId: string,
+  ms: number,
+): Promise<OperationVerifyResult> {
+  let timer: ReturnType<typeof setTimeout>
+  return Promise.race([
+    promise,
+    new Promise<OperationVerifyResult>((resolve) => {
+      timer = setTimeout(() => resolve({
+        operationId,
+        status: 'FAIL',
+        driftType: 'error',
+        detail: `operation timed out after ${Math.round(ms / 1000)}s`,
+      }), ms)
+    }),
+  ]).finally(() => clearTimeout(timer))
+}
+
+/**
  * Verify all sites sequentially with rate limiting.
  */
 export async function verifyAll(deps?: ExecuteDependencies, options?: VerifyOptions): Promise<SiteVerifyResult[]> {
@@ -590,6 +635,66 @@ export function generateDriftReportMarkdown(results: SiteVerifyResult[]): string
   }
 
   return lines.join('\n')
+}
+
+// ── Verify report persistence ──────────────────────
+
+export interface VerifyReport {
+  readonly timestamp: string
+  readonly summary: {
+    readonly total: number
+    readonly passed: number
+    readonly drifted: number
+    readonly auth_expired: number
+    readonly bot_blocked: number
+    readonly failed: number
+  }
+  readonly sites: readonly {
+    readonly site: string
+    readonly status: SiteOverallStatus
+    readonly quarantined: boolean
+    readonly duration_ms?: number
+    readonly operations: readonly {
+      readonly operation: string
+      readonly status: OperationStatus
+      readonly drift_type?: DriftType
+      readonly detail?: string
+    }[]
+  }[]
+}
+
+export function generateVerifyReport(results: SiteVerifyResult[], durations?: Map<string, number>): VerifyReport {
+  return {
+    timestamp: new Date().toISOString(),
+    summary: {
+      total: results.length,
+      passed: results.filter((r) => r.overallStatus === 'PASS').length,
+      drifted: results.filter((r) => r.overallStatus === 'DRIFT').length,
+      auth_expired: results.filter((r) => r.overallStatus === 'auth_expired').length,
+      bot_blocked: results.filter((r) => r.overallStatus === 'bot_blocked').length,
+      failed: results.filter((r) => r.overallStatus === 'FAIL').length,
+    },
+    sites: results.map((r) => ({
+      site: r.site,
+      status: r.overallStatus,
+      quarantined: r.shouldQuarantine,
+      ...(durations?.get(r.site) != null ? { duration_ms: durations.get(r.site) } : {}),
+      operations: r.operations.map((o) => ({
+        operation: o.operationId,
+        status: o.status,
+        ...(o.driftType ? { drift_type: o.driftType } : {}),
+        ...(o.detail ? { detail: o.detail } : {}),
+      })),
+    })),
+  }
+}
+
+export async function writeVerifyReport(report: VerifyReport): Promise<string> {
+  const dir = openwebHome()
+  await mkdir(dir, { recursive: true })
+  const filePath = path.join(dir, 'verify-report.json')
+  await writeFile(filePath, JSON.stringify(report, null, 2), 'utf8')
+  return filePath
 }
 
 // ── Fingerprint serialization ──────────────────────

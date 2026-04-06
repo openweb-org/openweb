@@ -48,8 +48,11 @@ async function waitForCaptchaResolution(page: Page, timeoutMs = CAPTCHA_WAIT_MS)
       return
     }
   }
-  throw new Error(
-    'DataDome CAPTCHA not resolved. Run `openweb browser restart --no-headless`, solve the CAPTCHA, then retry.',
+  throw Object.assign(
+    new Error(
+      'DataDome CAPTCHA not resolved. Run `openweb browser restart --no-headless`, solve the CAPTCHA, then retry.',
+    ),
+    { failureClass: 'bot_blocked' },
   )
 }
 

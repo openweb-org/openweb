@@ -12,13 +12,25 @@ import type { CodeAdapter } from '../../../types/adapter.js'
 const SITE = 'https://www.zhipin.com'
 
 async function navigateTo(page: Page, url: string, waitSelector?: string): Promise<void> {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 }).catch(() => {})
+  await page.goto(url, { waitUntil: 'load', timeout: 15_000 }).catch(() => {})
   const selector = waitSelector ?? '.inner-wrap, [class*="job-"], [class*="company-"]'
   await page.waitForSelector(selector, { timeout: 10_000 }).catch(() => {})
 }
 
+/** Retry page.evaluate once if execution context is destroyed (navigation race). */
+async function safeEvaluate<T>(page: Page, fn: (() => T) | string, arg?: unknown): Promise<T> {
+  try {
+    return await (arg !== undefined ? page.evaluate(fn as never, arg) : page.evaluate(fn as never)) as T
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : ''
+    if (!msg.includes('Execution context was destroyed')) throw err
+    await page.waitForLoadState('load', { timeout: 10_000 }).catch(() => {})
+    return (arg !== undefined ? page.evaluate(fn as never, arg) : page.evaluate(fn as never)) as T
+  }
+}
+
 async function fetchJson(page: Page, url: string): Promise<unknown> {
-  return page.evaluate(async (apiUrl) => {
+  return safeEvaluate(page, async (apiUrl: string) => {
     const resp = await fetch(apiUrl, { credentials: 'include' })
     return resp.json()
   }, url)
@@ -39,7 +51,7 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
 
   await navigateTo(page, url.toString(), '.job-card-wrap, .job-card-wrapper')
 
-  return page.evaluate(() => {
+  return safeEvaluate(page, () => {
     const result: Record<string, unknown> = {}
     const jobs: Record<string, unknown>[] = []
 
@@ -89,7 +101,7 @@ async function getJobDetail(page: Page, params: Record<string, unknown>): Promis
 
   await navigateTo(page, url, '.job-sec-text, .job-detail-section, .job-banner')
 
-  return page.evaluate(() => {
+  return safeEvaluate(page, () => {
     const result: Record<string, unknown> = {}
 
     // Job title and salary from banner
@@ -157,7 +169,7 @@ async function getCompanyProfile(page: Page, params: Record<string, unknown>): P
 
   await navigateTo(page, url, '.company-banner, [class*="company-banner"]')
 
-  return page.evaluate(() => {
+  return safeEvaluate(page, () => {
     const result: Record<string, unknown> = {}
 
     // Company name from banner h1 (extract first text node, exclude "收藏" button)
@@ -223,7 +235,7 @@ async function getSalary(page: Page, params: Record<string, unknown>): Promise<u
 
   await navigateTo(page, url.toString(), '.job-card-wrap, .job-card-wrapper')
 
-  return page.evaluate(() => {
+  return safeEvaluate(page, () => {
     const salaries: Array<{ min: number; max: number; unit: string; name: string }> = []
 
     const cards = document.querySelectorAll('.job-card-wrap, .job-card-wrapper')

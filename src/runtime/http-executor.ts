@@ -65,6 +65,9 @@ export interface ExecuteDependencies {
   readonly wsCount?: number
   /** WS timeout in ms (CLI only). Default: TIMEOUT.ws */
   readonly wsTimeoutMs?: number
+  /** Skip the login cascade (tiers 3+4) and re-throw needs_login immediately.
+   *  Used by verify to avoid repeated login prompts for the same site. */
+  readonly skipLoginCascade?: boolean
 }
 
 export interface ExecuteResult {
@@ -169,6 +172,7 @@ export async function executeOperation(
       body = await adapterAttempt()
     } catch (err) {
       if (!(err instanceof OpenWebError && err.payload.failureClass === 'needs_login')) throw err
+      if (deps.skipLoginCascade) throw err
 
       if (deps.cdpEndpoint || deps.browser) {
         // External browser — skip profile refresh, try login cascade directly
@@ -314,6 +318,7 @@ export async function executeOperation(
           responseHeaders = { ...result.responseHeaders }
         } catch (err) {
           if (!(err instanceof OpenWebError && err.payload.failureClass === 'needs_login')) throw err
+          if (deps.skipLoginCascade) throw err
 
           // External/pre-connected: skip tier 3 (can't restart their browser)
           // Tier 4: only if localhost

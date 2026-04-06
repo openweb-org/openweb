@@ -59,11 +59,12 @@ async function pfFetch(page: Page, fetcher: string, query: Record<string, unknow
         new Error(
           `Reuters API blocked by DataDome (HTTP ${err.status}). Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run \`openweb browser restart\`, solve the CAPTCHA, then retry.`,
         ),
-        { failureClass: 'retriable' },
+        { failureClass: 'bot_blocked' },
       )
     }
+    const isTransient = err.status === 404 || err.status >= 500
     throw Object.assign(new Error(`Reuters API returned ${err.status}`), {
-      failureClass: 'fatal',
+      failureClass: isTransient ? 'retriable' : 'fatal',
     })
   }
   return result
@@ -118,7 +119,7 @@ const adapter: CodeAdapter = {
           new Error(
             'Reuters blocked by DataDome CAPTCHA. Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run `openweb browser restart`, solve the CAPTCHA in the visible Chrome window, then retry.',
           ),
-          { failureClass: 'retriable' },
+          { failureClass: 'bot_blocked' },
         )
       }
       process.stderr.write('DataDome CAPTCHA resolved.\n')

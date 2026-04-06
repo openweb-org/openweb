@@ -56,7 +56,7 @@ paths:
                         displayName:
                           type: string
                         description:
-                          type: string
+                          type: [string, 'null']
                         profileImageURL:
                           type: string
                         followers:

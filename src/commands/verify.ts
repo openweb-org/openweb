@@ -6,9 +6,11 @@ import {
   type VerifyOptions,
   generateDriftReport,
   generateDriftReportMarkdown,
+  generateVerifyReport,
   hasNonPassResults,
   verifyAll,
   verifySite,
+  writeVerifyReport,
 } from '../lifecycle/verify.js'
 import { type BrowserHandle, ensureBrowser, touchLastUsed } from '../runtime/browser-lifecycle.js'
 
