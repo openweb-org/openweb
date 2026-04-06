@@ -69,6 +69,8 @@ openweb browser status
 
 Override profile source with `--profile <dir>` or `browser.profile` in config. Default port: 9222. One managed browser at a time.
 
+**Headed mode:** The managed browser is headless by default. Use `--no-headless` when the user needs to interact with it (CAPTCHA solving, debugging). Set `"browser": {"headless": false}` in config for persistent headed mode. Example: `openweb browser restart --no-headless`.
+
 ## Login
 
 ```bash
