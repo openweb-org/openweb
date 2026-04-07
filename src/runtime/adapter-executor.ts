@@ -166,7 +166,53 @@ export async function executeAdapter(
   // valid cookies. Per-page WeakSet cache makes repeat calls a no-op.
   await warmSession(page, page.url())
 
-  return adapter.execute(page, operation, params, { pageFetch, graphqlFetch, errors: adapterErrors })
+  const result = await adapter.execute(page, operation, params, { pageFetch, graphqlFetch, errors: adapterErrors })
+
+  // Post-execution bot detection: catch adapters that silently scrape CAPTCHA pages
+  const botSignal = await detectPageBotBlock(page)
+  if (botSignal) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `Bot detection on page: ${botSignal}`,
+      action: 'Solve CAPTCHA in visible browser, then retry.',
+      retriable: true,
+      failureClass: 'bot_blocked',
+    })
+  }
+
+  return result
+}
+
+/** Check the current page for common bot-detection / CAPTCHA signals. */
+async function detectPageBotBlock(page: Page): Promise<string | undefined> {
+  try {
+    const url = page.url()
+
+    // DataDome challenge redirect (seen on reuters, tripadvisor)
+    if (url.includes('captcha-delivery.com')) return `DataDome challenge: ${url}`
+    // Cloudflare challenge redirect (seen in CDP tabs)
+    if (url.includes('challenges.cloudflare.com')) return `Cloudflare challenge: ${url}`
+
+    return await page.evaluate(`
+      (() => {
+        const t = document.title.toLowerCase();
+        // PerimeterX "Access Denied" (confirmed on goodrx)
+        if (t.includes('access denied')) return 'PerimeterX: ' + document.title;
+        // Cloudflare challenge pages
+        if (t.includes('attention required') || t.includes('just a moment')) return 'Cloudflare: ' + document.title;
+
+        // PerimeterX press-and-hold CAPTCHA container
+        if (document.querySelector('#px-captcha')) return 'PerimeterX CAPTCHA';
+        // DataDome CAPTCHA iframe
+        if (document.querySelector('iframe[src*="captcha-delivery.com"]')) return 'DataDome CAPTCHA';
+
+        return null;
+      })()
+    `) ?? undefined
+  } catch {
+    return undefined // page detached or navigation in progress
+  }
 }
 
 const adapterErrors: AdapterErrorHelpers = {
