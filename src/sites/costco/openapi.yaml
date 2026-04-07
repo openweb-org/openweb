@@ -608,7 +608,7 @@ paths:
                       type: object
                       properties:
                         name:
-                          type: string
+                          type: [string, 'null']
                           description: Filter category name (e.g. "Brand", "Price").
                         count:
                           type: integer
