@@ -117,6 +117,7 @@ Transforms captured traffic into a site package. Requires either `--capture-dir`
 
 ```bash
 openweb verify <site>                        # single site (node-transport, read ops only)
+openweb verify <site> --ops op1,op2          # only verify specific operations
 openweb verify <site> --browser              # include page-transport ops (auto-starts browser)
 openweb verify <site> --write                # include write/delete ops (transact always excluded)
 openweb verify <site> --browser --write      # full verify: all transports + write ops

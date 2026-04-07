@@ -88,9 +88,9 @@ Can Node make the request without auth cookies?
 
 Two layers detect bot blocks at runtime, preventing adapters from silently returning garbage data:
 
-### Generic layer: `detectPageBotBlock()` in `adapter-executor.ts`
+### Generic layer: `detectPageBotBlock()` in `bot-detect.ts`
 
-Runs **after every `adapter.execute()`** — checks the page for well-known vendor signals:
+Runs **after every `adapter.execute()`** and **after every extraction operation** — checks the page for well-known vendor signals:
 
 | Check | Pattern | Vendor |
 |-------|---------|--------|
@@ -120,4 +120,4 @@ Use this for patterns that are **unique to a site** and not covered by the gener
 - **Generic layer:** Only add patterns that are (a) from a well-known vendor, or (b) confirmed on a real page during testing. Never guess selectors or title strings.
 - **Site layer:** Preferred for site-specific patterns. Check page URL or title inside the adapter's operation handler or `navigateTo()`.
 
--> See: `src/runtime/adapter-executor.ts` (generic), `src/sites/redfin/adapters/redfin-dom.ts` (site-specific example)
+-> See: `src/runtime/bot-detect.ts` (generic), `src/sites/redfin/adapters/redfin-dom.ts` (site-specific example)

@@ -1,3 +1,22 @@
+## 2026-04-07: Shape-diff nullable, verify --ops, costco fix, extraction bot detection
+
+**What changed:**
+- `shape-diff.ts`: nullable schema support — `type: [string, 'null']` no longer causes false `type_change` drift. Records null/undefined as type `'null'`, stores nullable schemas as `'string|null'`, diffShape matches any allowed type.
+- `verify --ops op1,op2`: filter to specific operations without running full suite.
+- `bot-detect.ts`: extracted `detectPageBotBlock` to shared module, now used by both adapter-executor and extraction-executor (covers bloomberg extraction-based ops).
+- costco: `browseCategory` schema fix (nullable filter name) + confirmed 10/10 PASS with real data.
+
+**Why:**
+- Shape-diff was generating false drift on every nullable field across all sites (costco was the first to surface it, but the bug affected all `[type, 'null']` schemas)
+- Debugging individual ops required running full verify suite (10+ ops, 45s timeout each)
+- Bloomberg extraction ops returned empty `{items:[]}` from PerimeterX block page — extraction-executor had no bot detection
+
+**Key files:** `src/lifecycle/shape-diff.ts`, `src/lifecycle/verify.ts`, `src/runtime/bot-detect.ts`, `src/runtime/extraction-executor.ts`, `src/cli.ts`
+**Verification:** 835 tests pass. costco browseCategory PASS. bloomberg correctly reports bot_blocked.
+**Commit:** `4af314a`, `04acb4f`, `926d67d`, `44a5442`
+**Next:** Re-verify fidelity, leetcode, medium, bestbuy (post page-leak fix). Discord warm-up path. Telegram/discord schema updates.
+**Blockers:** Bloomberg PerimeterX CAPTCHA currently unsolvable (keeps rejecting).
+
 ## 2026-04-07: Post-execution bot detection + redfin adapter fix
 
 **What changed:**

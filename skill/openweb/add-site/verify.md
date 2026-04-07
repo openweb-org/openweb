@@ -49,11 +49,14 @@ Verify
 
 ```bash
 openweb verify <site>
-openweb verify <site> --browser   # include page-transport ops
+openweb verify <site> --browser              # include page-transport ops
+openweb verify <site> --ops op1,op2          # only verify specific operations
+openweb verify <site> --ops op1 --browser    # combine filters
 ```
 
 Use `--browser` for sites with `transport: page` — it auto-starts the managed
 browser and verifies page-transport ops that would otherwise fail.
+Use `--ops` to debug individual operations without running the full suite.
 
 #### Status Interpretation
 
