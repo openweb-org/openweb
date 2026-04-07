@@ -414,7 +414,7 @@ src/runtime/
 ├── session-executor.ts      # Node authenticated transport (browser-derived auth/CSRF/signing)
 ├── node-ssr-executor.ts     # Node SSR execution
 ├── extraction-executor.ts    # Extraction-only operations
-├── adapter-executor.ts       # L3 adapter loading + execution
+├── adapter-executor.ts       # L3 adapter loading + execution + post-exec bot detection
 ├── http-retry.ts             # HTTP retry logic
 ├── page-polyfill.ts          # Browser page utilities
 ├── paginator.ts              # Pagination executor (cursor + link_header)

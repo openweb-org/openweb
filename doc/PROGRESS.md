@@ -1,3 +1,21 @@
+## 2026-04-07: Post-execution bot detection + redfin adapter fix
+
+**What changed:**
+- Added generic `detectPageBotBlock()` in `adapter-executor.ts` — runs after every adapter.execute(), checks page for PerimeterX/DataDome/Cloudflare signals (URL, title, DOM selectors). Prevents adapters from silently returning garbage data scraped from CAPTCHA pages.
+- Fixed redfin adapter: detects `ratelimited.redfin.com` redirect as bot_blocked (was returning `name: "Are You a Robot?"` as fake PASS).
+- Reverted false schema fixes for ctrip (API error, not nullable fields) and homedepot (bot detection, not product ID issue).
+- Verified all "PASS" sites return real data (airbnb, amazon, apple-podcasts, booking, discord, telegram confirmed valid; redfin was fake PASS, now fixed).
+
+**Why:**
+- Adapters scraping CAPTCHA pages returned structurally valid but meaningless data (e.g., goodrx `drugName: "Access"` from PerimeterX block page title). Verify reported PASS instead of bot_blocked.
+- Schema relaxations (removing required fields, making types nullable) masked API errors and bot detection as "fixes".
+
+**Key files:** `src/runtime/adapter-executor.ts`, `src/sites/redfin/adapters/redfin-dom.ts`
+**Verification:** 835 tests pass. goodrx: fake PASS → correct bot_blocked. redfin: fake PASS → bot_blocked when rate-limited, real PASS (3bd/3.5ba $897k) when not.
+**Commit:** `85c2084`, `73810fc`, `23235ab`, `f709640`
+**Next:** Extend bot detection to extraction-executor (bloomberg). Re-verify costco/fidelity/leetcode/medium/bestbuy after page leak fix. Discord warm-up path fix. Indeed adapter rewrite.
+**Blockers:** None
+
 ## 2026-04-07: Page lifecycle leaks + browser stop bug
 
 **What changed:**

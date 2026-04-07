@@ -83,3 +83,41 @@ Can Node make the request without auth cookies?
 5. **Don't replay raw requests** -- extract the pattern (URL, params, headers) and let the transport regenerate auth headers
 6. **Rate limit operations** -- even with valid auth, high request rates trigger server-side blocking
 7. **Document detection in DOC.md** -- note the system and its impact in Known Issues
+
+## Runtime Bot Detection
+
+Two layers detect bot blocks at runtime, preventing adapters from silently returning garbage data:
+
+### Generic layer: `detectPageBotBlock()` in `adapter-executor.ts`
+
+Runs **after every `adapter.execute()`** — checks the page for well-known vendor signals:
+
+| Check | Pattern | Vendor |
+|-------|---------|--------|
+| URL | `captcha-delivery.com` | DataDome |
+| URL | `challenges.cloudflare.com` | Cloudflare |
+| Title | `access denied` | PerimeterX |
+| Title | `attention required` | Cloudflare |
+| Title | `just a moment` | Cloudflare |
+| Selector | `#px-captcha` | PerimeterX |
+| Selector | `iframe[src*="captcha-delivery.com"]` | DataDome |
+
+If any signal matches, `adapter.execute()` result is discarded and `bot_blocked` error is thrown.
+
+### Site-specific layer: inside individual adapters
+
+Adapters can detect site-specific bot patterns using the `errors.botBlocked(msg)` helper:
+
+```ts
+// Example: Redfin rate-limit redirect
+if (page.url().includes('ratelimited.')) throw errors.botBlocked('Rate limited by Redfin')
+```
+
+Use this for patterns that are **unique to a site** and not covered by the generic layer (e.g., custom rate-limit subdomains, site-specific block pages).
+
+### Adding new patterns
+
+- **Generic layer:** Only add patterns that are (a) from a well-known vendor, or (b) confirmed on a real page during testing. Never guess selectors or title strings.
+- **Site layer:** Preferred for site-specific patterns. Check page URL or title inside the adapter's operation handler or `navigateTo()`.
+
+-> See: `src/runtime/adapter-executor.ts` (generic), `src/sites/redfin/adapters/redfin-dom.ts` (site-specific example)

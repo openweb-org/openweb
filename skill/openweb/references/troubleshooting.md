@@ -122,7 +122,7 @@ If fix revealed something novel → read `add-site/document.md` for knowledge up
 
 ### CAPTCHA or Challenge Page
 
-**Symptom:** `403` with CAPTCHA/challenge page — DataDome redirect to `geo.captcha-delivery.com`, PerimeterX "Press & Hold", Cloudflare challenge.
+**Symptom:** `bot_blocked` error — DataDome redirect to `geo.captcha-delivery.com`, PerimeterX "Access Denied" / "Press & Hold", Cloudflare challenge.
 
 **Key insight:** The managed browser is **headless by default** — the user cannot see or interact with it. You must make it visible first.
 
@@ -135,6 +135,22 @@ If fix revealed something novel → read `add-site/document.md` for knowledge up
 For sites that consistently trigger CAPTCHAs, set `"browser": {"headless": false}` in `~/.openweb/config.json` for persistent headed mode.
 
 **Note:** This is different from `needs_login` — login happens in the user's default browser (cookies get copied to managed browser). CAPTCHAs must be solved in the managed browser itself because the challenge cookie/state must stay in that session.
+
+### Adapter Returns Garbage Data (fake PASS)
+
+**Symptom:** Operation returns `200` with structurally valid but meaningless data — e.g., `name: "Access Denied"`, `drugName: "Access"`, `description: ""`. Verify reports PASS or DRIFT instead of `bot_blocked`.
+
+**Root cause:** Adapter scraped a CAPTCHA/block page and extracted DOM elements as if they were real data. The generic `detectPageBotBlock()` check in `adapter-executor.ts` catches known vendor patterns (PerimeterX, DataDome, Cloudflare), but site-specific block pages may slip through.
+
+**Fix:** Add site-specific bot detection in the adapter — check `page.url()` or page content after navigation. Use `errors.botBlocked(msg)` to throw the correct error. Example: Redfin's adapter checks for redirect to `ratelimited.redfin.com`.
+
+-> See: `knowledge/bot-detection.md` § Runtime Bot Detection
+
+### Site-Specific Rate Limiting
+
+**Symptom:** `bot_blocked` with site-specific message (e.g., "Rate limited by Redfin"). Not a CAPTCHA — site redirected to a custom block page.
+
+**Fix:** Same as CAPTCHA — wait, then retry. Rate limits typically clear after a few minutes without the headed browser workaround.
 
 ---
 
