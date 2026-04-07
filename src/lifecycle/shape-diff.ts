@@ -162,11 +162,15 @@ export function diffShape(
   }
 
   // Phase 3: zero-overlap check — schema has fields but none appear in response
-  const schemaKeys = Object.keys(schemaFields)
-  if (schemaKeys.length > 0) {
-    const overlap = schemaKeys.filter((k) => k in responseFields).length
+  // Exclude array-item paths when response has no array items (empty arrays are valid)
+  const responseHasArrayItems = Object.keys(responseFields).some((k) => k.includes('[]'))
+  const effectiveSchemaKeys = responseHasArrayItems
+    ? Object.keys(schemaFields)
+    : Object.keys(schemaFields).filter((k) => !k.includes('[]'))
+  if (effectiveSchemaKeys.length > 0) {
+    const overlap = effectiveSchemaKeys.filter((k) => k in responseFields).length
     if (overlap === 0) {
-      drifts.push({ kind: 'schema_mismatch', path: '', expected: `${schemaKeys.length} schema fields`, actual: '0 matched' })
+      drifts.push({ kind: 'schema_mismatch', path: '', expected: `${effectiveSchemaKeys.length} schema fields`, actual: '0 matched' })
     }
   }
 

@@ -153,7 +153,10 @@ export async function verifySite(
         const transport = resolveTransport(openapi, ref.operation)
         if (hasAdapter || transport === 'page') {
           needsBrowser = true
-          siteBaseUrl = ref.operation.servers?.[0]?.url ?? openapi.servers?.[0]?.url ?? ''
+          const serverUrl = ref.operation.servers?.[0]?.url ?? openapi.servers?.[0]?.url ?? ''
+          const serverExt = (ref.operation.servers?.[0]?.['x-openweb'] ?? openapi.servers?.[0]?.['x-openweb']) as Record<string, unknown> | undefined
+          const warmupPath = serverExt?.warmup_path as string | undefined
+          siteBaseUrl = warmupPath ? `${serverUrl.replace(/\/$/, '')}${warmupPath}` : serverUrl
         }
       }
     }

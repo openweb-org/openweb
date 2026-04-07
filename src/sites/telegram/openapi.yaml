@@ -113,9 +113,9 @@ paths:
                     text:
                       type: string
                     senderId:
-                      type: string
+                      type: [string, 'null']
                     senderName:
-                      type: string
+                      type: [string, 'null']
                     isOutgoing:
                       type: boolean
                   required:
@@ -177,9 +177,9 @@ paths:
                     text:
                       type: string
                     senderId:
-                      type: string
+                      type: [string, 'null']
                     senderName:
-                      type: string
+                      type: [string, 'null']
                   required:
                     - id
                     - chatId
@@ -222,15 +222,15 @@ paths:
                   firstName:
                     type: string
                   lastName:
-                    type: string
+                    type: [string, 'null']
                   username:
-                    type: string
+                    type: [string, 'null']
                   phoneNumber:
                     type: string
                   type:
                     type: string
                   status:
-                    type: string
+                    type: [string, 'null']
                   isPremium:
                     type: boolean
                 required:
