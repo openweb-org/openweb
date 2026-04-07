@@ -1,21 +1,11 @@
 import type { Page } from 'patchright'
 
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
-}
-
-const REUTERS_ORIGIN = 'https://www.reuters.com'
-
-function validationError(msg: string): Error {
-  return Object.assign(new Error(msg), { failureClass: 'fatal' })
-}
-
-function unknownOpError(op: string): Error {
-  return Object.assign(new Error(`Unknown operation: ${op}`), { failureClass: 'fatal' })
+type Errors = {
+  unknownOp(op: string): Error
+  missingParam(name: string): Error
+  botBlocked(msg: string): Error
+  fatal(msg: string): Error
+  retriable(msg: string): Error
 }
 
 async function isDataDomeBlocked(page: Page): Promise<boolean> {
@@ -35,7 +25,12 @@ function pfUrl(fetcher: string, query: Record<string, unknown>): string {
   return `/pf/api/v3/content/fetch/${fetcher}?query=${q}&_website=reuters`
 }
 
-async function pfFetch(page: Page, fetcher: string, query: Record<string, unknown>): Promise<unknown> {
+async function pfFetch(
+  page: Page,
+  fetcher: string,
+  query: Record<string, unknown>,
+  errors: Errors,
+): Promise<unknown> {
   const url = pfUrl(fetcher, query)
   const result = await page.evaluate(async (u: string) => {
     const ctrl = new AbortController()
@@ -55,47 +50,43 @@ async function pfFetch(page: Page, fetcher: string, query: Record<string, unknow
   if (result && typeof result === 'object' && '__error' in result) {
     const err = result as { status: number; isDataDome?: boolean }
     if (err.isDataDome || err.status === 401) {
-      throw Object.assign(
-        new Error(
-          `Reuters API blocked by DataDome (HTTP ${err.status}). Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run \`openweb browser restart\`, solve the CAPTCHA, then retry.`,
-        ),
-        { failureClass: 'bot_blocked' },
+      throw errors.botBlocked(
+        `Reuters API blocked by DataDome (HTTP ${err.status}). Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run \`openweb browser restart\`, solve the CAPTCHA, then retry.`,
       )
     }
     const isTransient = err.status === 404 || err.status >= 500
-    throw Object.assign(new Error(`Reuters API returned ${err.status}`), {
-      failureClass: isTransient ? 'retriable' : 'fatal',
-    })
+    if (isTransient) throw errors.retriable(`Reuters API returned ${err.status}`)
+    throw errors.fatal(`Reuters API returned ${err.status}`)
   }
   return result
 }
 
-async function searchArticles(page: Page, params: Record<string, unknown>) {
+async function searchArticles(page: Page, params: Record<string, unknown>, errors: AdapterErrorHelpers) {
   const keyword = String(params.keyword ?? '')
-  if (!keyword) throw validationError('keyword is required')
+  if (!keyword) throw errors.missingParam('keyword')
   const offset = Number(params.offset ?? 0)
   const size = Number(params.size ?? 10)
   return pfFetch(page, 'articles-by-search-v2', {
     keyword, offset, orderby: 'display_date:desc', size, website: 'reuters',
-  })
+  }, errors)
 }
 
-async function getTopicArticles(page: Page, params: Record<string, unknown>) {
+async function getTopicArticles(page: Page, params: Record<string, unknown>, errors: AdapterErrorHelpers) {
   const sectionId = String(params.section_id ?? '')
-  if (!sectionId) throw validationError('section_id is required (e.g., /world/, /business/, /technology/)')
+  if (!sectionId) throw errors.missingParam('section_id')
   const offset = Number(params.offset ?? 0)
   const size = Number(params.size ?? 10)
   return pfFetch(page, 'articles-by-section-alias-or-id-v1', {
     section_id: sectionId, offset, size, website: 'reuters',
-  })
+  }, errors)
 }
 
-const operations: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const operations: Record<string, (page: Page, params: Record<string, unknown>, errors: AdapterErrorHelpers) => Promise<unknown>> = {
   searchArticles,
   getTopicArticles,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'reuters-api',
   description: 'Reuters — search articles, browse topics by section',
 
@@ -108,23 +99,21 @@ const adapter: CodeAdapter = {
     return true
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors }): Promise<unknown> {
+    const { errors } = helpers
     const handler = operations[operation]
-    if (!handler) throw unknownOpError(operation)
+    if (!handler) throw errors.unknownOp(operation)
     if (await isDataDomeBlocked(page)) {
       // Brief wait for auto-resolution (non-headless browsers may resolve quickly)
       await page.waitForTimeout(5_000)
       if (await isDataDomeBlocked(page)) {
-        throw Object.assign(
-          new Error(
-            'Reuters blocked by DataDome CAPTCHA. Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run `openweb browser restart`, solve the CAPTCHA in the visible Chrome window, then retry.',
-          ),
-          { failureClass: 'bot_blocked' },
+        throw errors.botBlocked(
+          'Reuters blocked by DataDome CAPTCHA. Set {"browser":{"headless":false}} in $OPENWEB_HOME/config.json, run `openweb browser restart`, solve the CAPTCHA in the visible Chrome window, then retry.',
         )
       }
       process.stderr.write('DataDome CAPTCHA resolved.\n')
     }
-    return handler(page, { ...params })
+    return handler(page, { ...params }, errors)
   },
 }
 

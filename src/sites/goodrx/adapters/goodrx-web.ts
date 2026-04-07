@@ -1,25 +1,10 @@
 import type { Page } from 'patchright'
 
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
-}
-
-function validationError(msg: string): Error {
-  return Object.assign(new Error(msg), { failureClass: 'fatal' })
-}
-function unknownOpError(op: string): Error {
-  return Object.assign(new Error(`Unknown operation: ${op}`), { failureClass: 'fatal' })
-}
-
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-async function searchDrugs(page: Page, params: Record<string, unknown>) {
+async function searchDrugs(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const query = String(params.query || '')
-  if (!query) throw validationError('query (drug name) is required')
+  if (!query) throw errors.missingParam('query')
 
   // Navigate to GoodRx and use internal search API via page context
   await page.goto('https://www.goodrx.com', { waitUntil: 'load', timeout: 30_000 })
@@ -80,9 +65,9 @@ async function searchDrugs(page: Page, params: Record<string, unknown>) {
   `)
 }
 
-async function getDrugPrices(page: Page, params: Record<string, unknown>) {
+async function getDrugPrices(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const slug = String(params.slug || '')
-  if (!slug) throw validationError('slug (drug name slug, e.g. "metformin") is required')
+  if (!slug) throw errors.missingParam('slug')
 
   // Homepage warm-up for PerimeterX, then navigate to drug page
   await page.goto('https://www.goodrx.com', { waitUntil: 'load', timeout: 30_000 })
@@ -170,7 +155,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getPharmacies,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'goodrx-web',
   description: 'GoodRx drug pricing — DOM extraction via browser',
 
@@ -182,10 +167,14 @@ const adapter: CodeAdapter = {
     return true // No auth required
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    const handler = OPERATIONS[operation]
-    if (!handler) throw unknownOpError(operation)
-    return handler(page, { ...params })
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
+    const { errors } = helpers as { errors: { unknownOp(op: string): Error; missingParam(name: string): Error } }
+    switch (operation) {
+      case 'searchDrugs': return searchDrugs(page, { ...params }, errors)
+      case 'getDrugPrices': return getDrugPrices(page, { ...params }, errors)
+      case 'getPharmacies': return getPharmacies(page, { ...params })
+      default: throw errors.unknownOp(operation)
+    }
   },
 }
 

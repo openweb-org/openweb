@@ -1,5 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * LeetCode L3 adapter — GraphQL API via browser fetch.
  *
@@ -7,7 +6,6 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  * No auth required for public data (problems, profiles, contests).
  * Submissions require login (cookie_session).
  */
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 const GRAPHQL_URL = 'https://leetcode.com/graphql/'
 
@@ -133,11 +131,19 @@ const TOP_RANKINGS_QUERY = `query contestV2TopGlobalRankings {
 
 /* ---------- adapter implementation ---------- */
 
+type Errors = {
+  unknownOp(op: string): Error
+  httpError(status: number): Error
+  apiError(label: string, msg: string): Error
+  wrap(err: unknown): Error
+}
+
 async function graphqlFetch(
   page: Page,
   operationName: string,
   query: string,
   variables: Record<string, unknown>,
+  errors: Errors,
 ): Promise<unknown> {
   const body = JSON.stringify({ operationName, variables, query })
 
@@ -164,13 +170,13 @@ async function graphqlFetch(
   )
 
   if (result.status >= 400) {
-    throw OpenWebError.httpError(result.status)
+    throw errors.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
   if (json.errors) {
     const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Unknown GraphQL error'
-    throw OpenWebError.apiError(`GraphQL ${operationName}`, msg)
+    throw errors.apiError(`GraphQL ${operationName}`, msg)
   }
 
   return json.data
@@ -199,7 +205,7 @@ function defaultFilters(overrides: Record<string, unknown> = {}): Record<string,
   }
 }
 
-async function searchProblems(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchProblems(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const keyword = String(params.keyword ?? params.search ?? '')
   const skip = Number(params.skip ?? 0)
   const limit = Number(params.limit ?? 50)
@@ -210,7 +216,7 @@ async function searchProblems(page: Page, params: Record<string, unknown>): Prom
     skip,
     limit,
     filters: { searchKeywords: keyword },
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const result = data.problemsetQuestionList as Record<string, unknown>
   return {
@@ -220,7 +226,7 @@ async function searchProblems(page: Page, params: Record<string, unknown>): Prom
   }
 }
 
-async function getProblemList(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getProblemList(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const skip = Number(params.skip ?? 0)
   const limit = Number(params.limit ?? 50)
   const difficulty = params.difficulty ? String(params.difficulty).toUpperCase() : undefined
@@ -243,34 +249,34 @@ async function getProblemList(page: Page, params: Record<string, unknown>): Prom
     filters,
     sortBy: { sortField: 'CUSTOM', sortOrder: 'ASCENDING' },
     filtersV2: filters,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   return data.problemsetQuestionListV2
 }
 
-async function getDailyChallenge(page: Page): Promise<unknown> {
-  const data = (await graphqlFetch(page, 'questionOfTodayV2', DAILY_CHALLENGE_QUERY, {})) as Record<string, unknown>
+async function getDailyChallenge(page: Page, _params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const data = (await graphqlFetch(page, 'questionOfTodayV2', DAILY_CHALLENGE_QUERY, {}, errors)) as Record<string, unknown>
   return data.activeDailyCodingChallengeQuestion
 }
 
-async function getUserProfile(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserProfile(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const username = String(params.username)
-  const data = (await graphqlFetch(page, 'userPublicProfile', USER_PROFILE_QUERY, { username })) as Record<
+  const data = (await graphqlFetch(page, 'userPublicProfile', USER_PROFILE_QUERY, { username }, errors)) as Record<
     string,
     unknown
   >
   return data.matchedUser
 }
 
-async function getUserContestRanking(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserContestRanking(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const username = String(params.username)
   const data = (await graphqlFetch(page, 'userContestRankingInfo', USER_CONTEST_RANKING_QUERY, {
     username,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
   return data
 }
 
-async function getSubmissions(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getSubmissions(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const questionSlug = String(params.questionSlug ?? params.slug)
   const offset = Number(params.offset ?? 0)
   const limit = Number(params.limit ?? 20)
@@ -280,12 +286,12 @@ async function getSubmissions(page: Page, params: Record<string, unknown>): Prom
     offset,
     limit,
     lastKey: null,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   return data.questionSubmissionList
 }
 
-async function getSolutionArticles(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getSolutionArticles(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const questionSlug = String(params.questionSlug ?? params.slug)
   const skip = Number(params.skip ?? 0)
   const first = Number(params.first ?? 15)
@@ -298,7 +304,7 @@ async function getSolutionArticles(page: Page, params: Record<string, unknown>):
     orderBy,
     userInput: '',
     tagSlugs: [],
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const result = data.ugcArticleSolutionArticles as Record<string, unknown>
   const edges = (result?.edges ?? []) as Array<Record<string, unknown>>
@@ -308,45 +314,45 @@ async function getSolutionArticles(page: Page, params: Record<string, unknown>):
   }
 }
 
-async function getUpcomingContests(page: Page): Promise<unknown> {
-  const data = (await graphqlFetch(page, 'contestV2UpcomingContests', UPCOMING_CONTESTS_QUERY, {})) as Record<
+async function getUpcomingContests(page: Page, _params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const data = (await graphqlFetch(page, 'contestV2UpcomingContests', UPCOMING_CONTESTS_QUERY, {}, errors)) as Record<
     string,
     unknown
   >
   return { contests: data.contestV2UpcomingContests }
 }
 
-async function getContestHistory(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getContestHistory(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const skip = Number(params.skip ?? 0)
   const limit = Number(params.limit ?? 10)
   const data = (await graphqlFetch(page, 'contestV2HistoryContests', HISTORY_CONTESTS_QUERY, {
     skip,
     limit,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
   return data.contestV2HistoryContests
 }
 
-async function getContestQuestions(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getContestQuestions(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const contestSlug = String(params.contestSlug ?? params.slug)
   const data = (await graphqlFetch(page, 'contestQuestionList', CONTEST_QUESTIONS_QUERY, {
     contestSlug,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
   return { questions: data.contestQuestionList }
 }
 
-async function getRecentSubmissions(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getRecentSubmissions(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const username = String(params.username)
   const limit = Number(params.limit ?? 15)
   const data = (await graphqlFetch(page, 'recentAcSubmissions', RECENT_AC_SUBMISSIONS_QUERY, {
     username,
     limit,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
   return { submissions: data.recentAcSubmissionList }
 }
 
 /* ---------- contest ranking (REST) ---------- */
 
-async function getContestRanking(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getContestRanking(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const contestSlug = String(params.contestSlug ?? params.slug)
   const pageNum = Number(params.page ?? 1)
   const url = `https://leetcode.com/contest/api/ranking/${contestSlug}/?pagination=${pageNum}&region=global_v2`
@@ -357,7 +363,7 @@ async function getContestRanking(page: Page, params: Record<string, unknown>): P
   }, url)
 
   if (result.status >= 400) {
-    throw OpenWebError.httpError(result.status)
+    throw errors.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as Record<string, unknown>
@@ -378,7 +384,7 @@ async function getContestRanking(page: Page, params: Record<string, unknown>): P
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
   searchProblems,
   getProblemList,
   getDailyChallenge,
@@ -393,7 +399,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getContestRanking,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'leetcode-graphql',
   description: 'LeetCode GraphQL API — problems, contests, profiles, solutions',
 
@@ -412,15 +418,16 @@ const adapter: CodeAdapter = {
     return cookies.some((c) => c.name === 'LEETCODE_SESSION' || c.name === 'csrftoken')
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers): Promise<unknown> {
+    const { errors } = helpers
     try {
       const handler = OPERATIONS[operation]
       if (!handler) {
-        throw OpenWebError.unknownOp(operation)
+        throw errors.unknownOp(operation)
       }
-      return await handler(page, { ...params })
+      return await handler(page, { ...params }, errors)
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
 }

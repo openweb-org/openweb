@@ -1,18 +1,10 @@
 import type { Page } from 'patchright'
 
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
-}
-
-function validationError(msg: string): Error {
-  return Object.assign(new Error(msg), { failureClass: 'fatal' })
-}
-function unknownOpError(op: string): Error {
-  return Object.assign(new Error(`Unknown operation: ${op}`), { failureClass: 'fatal' })
+type Errors = {
+  unknownOp(op: string): Error
+  missingParam(name: string): Error
+  fatal(msg: string): Error
+  retriable(msg: string): Error
 }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -59,6 +51,7 @@ async function graphqlFetch(
   operationName: string,
   query: string,
   variables: Record<string, unknown>,
+  errors: Errors,
 ): Promise<unknown> {
   const url = `${GRAPHQL_URL}?opname=${operationName}`
   const body = JSON.stringify({ operationName, variables, query })
@@ -93,14 +86,14 @@ async function graphqlFetch(
 
   if (result && typeof result === 'object' && '__error' in result) {
     const msg = (result as any).message || `HTTP ${(result as any).status}`
-    throw Object.assign(new Error(`GraphQL ${operationName} failed: ${msg}`), { failureClass: 'retriable' })
+    throw errors.retriable(`GraphQL ${operationName} failed: ${msg}`)
   }
   return result
 }
 
-async function searchProducts(page: Page, params: Record<string, unknown>) {
+async function searchProducts(page: Page, params: Record<string, unknown>, errors: Errors) {
   const keyword = String(params.keyword || params.query || params.q || '')
-  if (!keyword) throw validationError('keyword is required')
+  if (!keyword) throw errors.missingParam('keyword')
   const pageSize = Number(params.pageSize) || 24
   const startIndex = Number(params.startIndex) || 0
 
@@ -118,7 +111,7 @@ async function searchProducts(page: Page, params: Record<string, unknown>) {
     pageSize,
   }
 
-  const result = await graphqlFetch(page, 'searchModel', SEARCH_QUERY, variables) as any
+  const result = await graphqlFetch(page, 'searchModel', SEARCH_QUERY, variables, errors) as any
   const searchModel = result?.data?.searchModel
   if (!searchModel) return { totalProducts: 0, keyword, products: [] }
 
@@ -148,9 +141,9 @@ async function searchProducts(page: Page, params: Record<string, unknown>) {
   }
 }
 
-async function getProductDetail(page: Page, params: Record<string, unknown>) {
+async function getProductDetail(page: Page, params: Record<string, unknown>, errors: Errors) {
   const itemId = String(params.itemId || params.id || '')
-  if (!itemId) throw validationError('itemId is required (e.g. "306283873")')
+  if (!itemId) throw errors.missingParam('itemId')
 
   if (!page.url().includes('homedepot.com')) {
     await page.goto('https://www.homedepot.com', { waitUntil: 'load', timeout: 30_000 })
@@ -161,9 +154,9 @@ async function getProductDetail(page: Page, params: Record<string, unknown>) {
   if (params.storeId) variables.storeId = String(params.storeId)
   if (params.zipCode) variables.zipCode = String(params.zipCode)
 
-  const result = await graphqlFetch(page, 'productClientOnlyProduct', PRODUCT_QUERY, variables) as any
+  const result = await graphqlFetch(page, 'productClientOnlyProduct', PRODUCT_QUERY, variables, errors) as any
   const product = result?.data?.product
-  if (!product) throw Object.assign(new Error(`Product ${itemId} not found`), { failureClass: 'fatal' })
+  if (!product) throw errors.fatal(`Product ${itemId} not found`)
 
   const ids = product.identifiers || {}
   const det = product.details || {}
@@ -195,9 +188,9 @@ async function getProductDetail(page: Page, params: Record<string, unknown>) {
   }
 }
 
-async function getStoreLocator(page: Page, params: Record<string, unknown>) {
+async function getStoreLocator(page: Page, params: Record<string, unknown>, errors: Errors) {
   const zipCode = String(params.zipCode || params.zip || '')
-  if (!zipCode) throw validationError('zipCode is required (e.g. "10001")')
+  if (!zipCode) throw errors.missingParam('zipCode')
 
   // Navigate to store locator results page
   await page.goto(`https://www.homedepot.com/l/search/${encodeURIComponent(zipCode)}`, {
@@ -279,13 +272,13 @@ async function getStoreLocator(page: Page, params: Record<string, unknown>) {
   `)
 }
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
   searchProducts,
   getProductDetail,
   getStoreLocator,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'homedepot-web',
   description: 'Home Depot — product search, detail, store locator via GraphQL API and DOM extraction',
 
@@ -297,10 +290,11 @@ const adapter: CodeAdapter = {
     return true // No login required for public data
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors }): Promise<unknown> {
+    const { errors } = helpers
     const handler = OPERATIONS[operation]
-    if (!handler) throw unknownOpError(operation)
-    return handler(page, { ...params })
+    if (!handler) throw errors.unknownOp(operation)
+    return handler(page, { ...params }, errors)
   },
 }
 

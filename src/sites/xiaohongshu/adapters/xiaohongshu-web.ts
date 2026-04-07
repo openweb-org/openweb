@@ -1,5 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Xiaohongshu (小红书) L3 adapter — Vue SSR state extraction + comment API interception.
  *
@@ -9,7 +8,8 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  *
  * Comments are loaded async by the page's own JS — we intercept the API response.
  */
-import type { CodeAdapter } from '../../../types/adapter.js'
+
+type Errors = { missingParam(name: string): Error; unknownOp(op: string): Error; needsLogin(): Error; wrap(error: unknown): Error }
 
 const BASE = 'https://www.xiaohongshu.com'
 
@@ -19,77 +19,42 @@ function asRecord(val: unknown): Record<string, unknown> {
   return (val && typeof val === 'object' ? val : {}) as Record<string, unknown>
 }
 
-function loginRequired(detail: string): OpenWebError {
-  return new OpenWebError({
-    error: 'auth',
-    code: 'AUTH_FAILED',
-    message: `Xiaohongshu: ${detail}`,
-    action: 'Log in to xiaohongshu.com in the browser and retry.',
-    retriable: true,
-    failureClass: 'needs_login',
-  })
-}
-
 /* ---------- operation handlers ---------- */
 
-async function searchNotes(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchNotes(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const keyword = String(params.keyword ?? params.query ?? '')
-  if (!keyword) throw OpenWebError.missingParam('keyword')
-
-  // Intercept the search API response (fires when user is logged in)
+  if (!keyword) throw errors.missingParam('keyword')
   const searchApiPromise = page.waitForResponse(
     (resp) => resp.url().includes('/api/sns/web/v1/search/notes') && resp.status() === 200,
     { timeout: 15000 },
   ).catch(() => null)
-
   await page.goto(
     `${BASE}/search_result?keyword=${encodeURIComponent(keyword)}&source=web_search_result_notes`,
     { waitUntil: 'domcontentloaded', timeout: 30000 },
   )
   await page.waitForTimeout(4000)
-
-  // Detect login gate — XHS now requires login for search
-  const needsLogin = await page.evaluate(() => {
-    return document.body.innerText.includes('登录后查看搜索结果')
-  })
-  if (needsLogin) {
-    throw loginRequired('Login required for search')
-  }
-
-  // Try SSR state first
+  const needsLogin = await page.evaluate(() => document.body.innerText.includes('登录后查看搜索结果'))
+  if (needsLogin) throw errors.needsLogin()
   const ssrResult = await page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     if (!state?.search) return null
-
     const feedsRef = state.search.feeds
     const feeds: any[] = feedsRef?._rawValue ?? feedsRef ?? []
     if (!Array.isArray(feeds) || feeds.length === 0) return null
-
     const notes = feeds
       .filter((f: any) => f.modelType === 'note' && f.noteCard)
       .map((f: any) => {
         const card = f.noteCard
         return {
-          noteId: f.id,
-          xsecToken: f.xsecToken,
-          type: card.type,
-          displayTitle: card.displayTitle,
-          user: card.user
-            ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar }
-            : null,
+          noteId: f.id, xsecToken: f.xsecToken, type: card.type, displayTitle: card.displayTitle,
+          user: card.user ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar } : null,
           likedCount: card.interactInfo?.likedCount ?? null,
-          cover: card.cover
-            ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height }
-            : null,
+          cover: card.cover ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height } : null,
         }
       })
-
     return notes.length > 0 ? { notes, count: notes.length } : null
   })
-
   if (ssrResult) return ssrResult
-
-  // Fallback: try search API interception
   const searchResp = await searchApiPromise
   if (searchResp) {
     try {
@@ -102,95 +67,57 @@ async function searchNotes(page: Page, params: Record<string, unknown>): Promise
           .map((item: any) => {
             const card = item.note_card
             return {
-              noteId: item.id,
-              xsecToken: item.xsec_token,
-              type: card.type,
-              displayTitle: card.display_title,
-              user: card.user
-                ? { userId: card.user.user_id, nickname: card.user.nickname, avatar: card.user.avatar }
-                : null,
+              noteId: item.id, xsecToken: item.xsec_token, type: card.type, displayTitle: card.display_title,
+              user: card.user ? { userId: card.user.user_id, nickname: card.user.nickname, avatar: card.user.avatar } : null,
               likedCount: card.interact_info?.liked_count ?? null,
-              cover: card.cover
-                ? { url: card.cover.url_default ?? card.cover.url, width: card.cover.width, height: card.cover.height }
-                : null,
+              cover: card.cover ? { url: card.cover.url_default ?? card.cover.url, width: card.cover.width, height: card.cover.height } : null,
             }
           })
         return { notes, count: notes.length }
       }
-    } catch { /* intentional: API parse failed — fall through */ }
+    } catch { /* intentional: API parse failed */ }
   }
-
   return { notes: [], count: 0 }
 }
 
-async function getNoteDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getNoteDetail(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const noteId = String(params.noteId ?? params.note_id ?? '')
-  if (!noteId) throw OpenWebError.missingParam('noteId')
+  if (!noteId) throw errors.missingParam('noteId')
   const xsecToken = String(params.xsecToken ?? params.xsec_token ?? '')
-
-  // Intercept comment API response
   const commentPromise = page.waitForResponse(
     (resp) => resp.url().includes('/api/sns/web/v2/comment/page') && resp.status() === 200,
     { timeout: 15000 },
-  ).catch(() => null) // intentional: comment API may not fire within timeout
-
+  ).catch(() => null)
   const tokenParam = xsecToken ? `&xsec_token=${encodeURIComponent(xsecToken)}` : ''
-  await page.goto(
-    `${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`,
-    { waitUntil: 'domcontentloaded', timeout: 30000 },
-  )
-
-  // Wait for SSR state to be populated — poll until noteDetailMap has our entry
+  await page.goto(`${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForFunction(
     (id: string) => {
       const state = (window as any).__INITIAL_STATE__
       if (!state?.note?.noteDetailMap) return false
       const map = state.note.noteDetailMap._rawValue ?? state.note.noteDetailMap
       return !!(map && typeof map === 'object' && map[id])
-    },
-    noteId,
-    { timeout: 10000 },
-  ).catch(() => null) // intentional: fall through to extraction attempt
-
-  // Extract note from SSR state — map entry is { note, comments, currentTime }
+    }, noteId, { timeout: 10000 },
+  ).catch(() => null)
   const noteData = await page.evaluate((id: string) => {
     const state = (window as any).__INITIAL_STATE__
     if (!state?.note) return null
-
     const mapRef = state.note.noteDetailMap
     const map: Record<string, any> = mapRef?._rawValue ?? mapRef ?? {}
     const entry = map[id]
     if (!entry) return null
-
-    // Data is nested under .note when SSR-hydrated directly
     const detail = entry.note ?? entry
-
     return {
-      noteId: detail.noteId,
-      title: detail.title,
-      desc: detail.desc,
-      type: detail.type,
-      time: detail.time,
-      lastUpdateTime: detail.lastUpdateTime,
-      user: detail.user
-        ? { userId: detail.user.userId, nickname: detail.user.nickname, avatar: detail.user.avatar }
-        : null,
-      interactInfo: detail.interactInfo
-        ? {
-            likedCount: detail.interactInfo.likedCount,
-            collectedCount: detail.interactInfo.collectedCount,
-            commentCount: detail.interactInfo.commentCount,
-            shareCount: detail.interactInfo.shareCount,
-          }
-        : null,
-      tagList: Array.isArray(detail.tagList)
-        ? detail.tagList.map((t: any) => ({ id: t.id, name: t.name, type: t.type }))
-        : [],
+      noteId: detail.noteId, title: detail.title, desc: detail.desc, type: detail.type,
+      time: detail.time, lastUpdateTime: detail.lastUpdateTime,
+      user: detail.user ? { userId: detail.user.userId, nickname: detail.user.nickname, avatar: detail.user.avatar } : null,
+      interactInfo: detail.interactInfo ? {
+        likedCount: detail.interactInfo.likedCount, collectedCount: detail.interactInfo.collectedCount,
+        commentCount: detail.interactInfo.commentCount, shareCount: detail.interactInfo.shareCount,
+      } : null,
+      tagList: Array.isArray(detail.tagList) ? detail.tagList.map((t: any) => ({ id: t.id, name: t.name, type: t.type })) : [],
       imageCount: detail.imageList?.length ?? 0,
     }
   }, noteId)
-
-  // Parse comment response
   let comments: unknown[] = []
   const commentResp = await commentPromise
   if (commentResp) {
@@ -200,96 +127,58 @@ async function getNoteDetail(page: Page, params: Record<string, unknown>): Promi
       const rawComments = data.comments as Array<Record<string, unknown>> | undefined
       if (Array.isArray(rawComments)) {
         comments = rawComments.slice(0, 20).map((c) => ({
-          id: c.id,
-          content: c.content,
-          likeCount: c.like_count,
-          createTime: c.create_time,
-          ipLocation: c.ip_location,
-          subCommentCount: c.sub_comment_count,
-          user: c.user_info
-            ? {
-                userId: (c.user_info as Record<string, unknown>).user_id,
-                nickname: (c.user_info as Record<string, unknown>).nickname,
-                avatar: (c.user_info as Record<string, unknown>).image,
-              }
-            : null,
+          id: c.id, content: c.content, likeCount: c.like_count, createTime: c.create_time,
+          ipLocation: c.ip_location, subCommentCount: c.sub_comment_count,
+          user: c.user_info ? {
+            userId: (c.user_info as Record<string, unknown>).user_id,
+            nickname: (c.user_info as Record<string, unknown>).nickname,
+            avatar: (c.user_info as Record<string, unknown>).image,
+          } : null,
         }))
       }
-    } catch { /* intentional: comment parse failed — return note without comments */ }
+    } catch { /* intentional */ }
   }
-
   return { note: noteData, comments }
 }
 
-async function getUserProfile(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserProfile(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const userId = String(params.userId ?? params.user_id ?? '')
-  if (!userId) throw OpenWebError.missingParam('userId')
-
+  if (!userId) throw errors.missingParam('userId')
   await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
-
-  // Check for login redirect or CAPTCHA
-  if (page.url().includes('login')) {
-    throw loginRequired('Login required for user profiles')
-  }
-  if (page.url().includes('captcha')) {
-    throw loginRequired('CAPTCHA triggered — solve it in the browser and retry')
-  }
-
+  if (page.url().includes('login')) throw errors.needsLogin()
+  if (page.url().includes('captcha')) throw errors.needsLogin()
   await page.waitForTimeout(4000)
-
   return page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     if (!state?.user) return null
-
     const pageDataRef = state.user.userPageData
     const pageData: Record<string, any> = pageDataRef?._rawValue ?? pageDataRef ?? {}
-
     const basicInfo = pageData.basicInfo?._rawValue ?? pageData.basicInfo ?? {}
     const interactions = pageData.interactions?._rawValue ?? pageData.interactions ?? []
     const tags = pageData.tags?._rawValue ?? pageData.tags ?? []
-
     return {
-      userId: basicInfo.redId ?? null,
-      nickname: basicInfo.nickname ?? null,
-      desc: basicInfo.desc ?? null,
-      gender: basicInfo.gender ?? null,
-      avatar: basicInfo.images ?? null,
-      avatarLarge: basicInfo.imageb ?? null,
+      userId: basicInfo.redId ?? null, nickname: basicInfo.nickname ?? null, desc: basicInfo.desc ?? null,
+      gender: basicInfo.gender ?? null, avatar: basicInfo.images ?? null, avatarLarge: basicInfo.imageb ?? null,
       ipLocation: basicInfo.ipLocation ?? null,
-      interactions: Array.isArray(interactions)
-        ? interactions.map((i: any) => ({ type: i.type, name: i.name, count: i.count }))
-        : [],
-      tags: Array.isArray(tags)
-        ? tags.map((t: any) => ({ name: t.name, tagType: t.tagType }))
-        : [],
+      interactions: Array.isArray(interactions) ? interactions.map((i: any) => ({ type: i.type, name: i.name, count: i.count })) : [],
+      tags: Array.isArray(tags) ? tags.map((t: any) => ({ name: t.name, tagType: t.tagType })) : [],
     }
   })
 }
 
-async function getUserNotes(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserNotes(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const userId = String(params.userId ?? params.user_id ?? '')
-  if (!userId) throw OpenWebError.missingParam('userId')
-
+  if (!userId) throw errors.missingParam('userId')
   await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
-
-  if (page.url().includes('login')) {
-    throw loginRequired('Login required for user profiles')
-  }
-  if (page.url().includes('captcha')) {
-    throw loginRequired('CAPTCHA triggered — solve it in the browser and retry')
-  }
-
+  if (page.url().includes('login')) throw errors.needsLogin()
+  if (page.url().includes('captcha')) throw errors.needsLogin()
   await page.waitForTimeout(4000)
-
   return page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     if (!state?.user) return { notes: [], count: 0 }
-
     const notesRef = state.user.notes
     const notePages: any[] = notesRef?._rawValue ?? notesRef ?? []
     if (!Array.isArray(notePages) || notePages.length === 0) return { notes: [], count: 0 }
-
-    // Flatten all pages of notes
     const allNotes: any[] = []
     for (const page of notePages) {
       const items: any[] = page?._rawValue ?? page ?? []
@@ -298,90 +187,62 @@ async function getUserNotes(page: Page, params: Record<string, unknown>): Promis
           if (item?.noteCard) {
             const card = item.noteCard
             allNotes.push({
-              noteId: item.id,
-              xsecToken: item.xsecToken,
-              type: card.type,
-              displayTitle: card.displayTitle,
-              user: card.user
-                ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar }
-                : null,
+              noteId: item.id, xsecToken: item.xsecToken, type: card.type, displayTitle: card.displayTitle,
+              user: card.user ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar } : null,
               likedCount: card.interactInfo?.likedCount ?? null,
-              cover: card.cover
-                ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height }
-                : null,
+              cover: card.cover ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height } : null,
             })
           }
         }
       }
     }
-
     return { notes: allNotes, count: allNotes.length }
   })
 }
 
-async function getExploreFeed(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getExploreFeed(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   await page.goto(`${BASE}/explore`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForTimeout(4000)
-
   return page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     if (!state?.feed) return { notes: [], count: 0 }
-
     const feedsRef = state.feed.feeds
     const feeds: any[] = feedsRef?._rawValue ?? feedsRef ?? []
     if (!Array.isArray(feeds)) return { notes: [], count: 0 }
-
     const notes = feeds
       .filter((f: any) => f.modelType === 'note' && f.noteCard)
       .map((f: any) => {
         const card = f.noteCard
         return {
-          noteId: f.id,
-          xsecToken: f.xsecToken,
-          type: card.type,
-          displayTitle: card.displayTitle,
-          user: card.user
-            ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar }
-            : null,
+          noteId: f.id, xsecToken: f.xsecToken, type: card.type, displayTitle: card.displayTitle,
+          user: card.user ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar } : null,
           likedCount: card.interactInfo?.likedCount ?? null,
-          cover: card.cover
-            ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height }
-            : null,
+          cover: card.cover ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height } : null,
         }
       })
-
     return { notes, count: notes.length }
   })
 }
 
-async function navigateToNote(page: Page, params: Record<string, unknown>): Promise<string> {
+async function navigateToNote(page: Page, params: Record<string, unknown>, errors: Errors): Promise<string> {
   const noteId = String(params.noteId ?? params.note_id ?? '')
-  if (!noteId) throw OpenWebError.missingParam('noteId')
+  if (!noteId) throw errors.missingParam('noteId')
   const xsecToken = String(params.xsecToken ?? params.xsec_token ?? '')
-
   const tokenParam = xsecToken ? `&xsec_token=${encodeURIComponent(xsecToken)}` : ''
-  await page.goto(
-    `${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`,
-    { waitUntil: 'domcontentloaded', timeout: 30000 },
-  )
-  // Wait for SSR state to populate
+  await page.goto(`${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForFunction(
     (id: string) => {
       const state = (window as any).__INITIAL_STATE__
       if (!state?.note?.noteDetailMap) return false
       const map = state.note.noteDetailMap._rawValue ?? state.note.noteDetailMap
       return !!(map && typeof map === 'object' && map[id])
-    },
-    noteId,
-    { timeout: 10000 },
+    }, noteId, { timeout: 10000 },
   ).catch(() => null)
   return noteId
 }
 
-async function likeNote(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const noteId = await navigateToNote(page, params)
-
-  // Check current liked state
+async function likeNote(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const noteId = await navigateToNote(page, params, errors)
   const wasLiked = await page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     const mapRef = state?.note?.noteDetailMap
@@ -389,26 +250,19 @@ async function likeNote(page: Page, params: Record<string, unknown>): Promise<un
     const entry = Object.values(map)[0] as any
     return (entry?.note ?? entry)?.interactInfo?.liked ?? false
   })
-
   if (wasLiked) return { noteId, liked: true, action: 'already_liked' }
-
-  // Intercept the like API response
   const likePromise = page.waitForResponse(
     (resp) => resp.url().includes('/api/sns/web/v1/note/like') && resp.status() === 200,
     { timeout: 10000 },
   ).catch(() => null)
-
   await page.click('.engage-bar-style .like-wrapper', { timeout: 5000 })
   const likeResp = await likePromise
-
   const success = !!likeResp
   return { noteId, liked: success, action: success ? 'liked' : 'failed' }
 }
 
-async function bookmarkNote(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  const noteId = await navigateToNote(page, params)
-
-  // Check current collected state
+async function bookmarkNote(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const noteId = await navigateToNote(page, params, errors)
   const wasCollected = await page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     const mapRef = state?.note?.noteDetailMap
@@ -416,131 +270,86 @@ async function bookmarkNote(page: Page, params: Record<string, unknown>): Promis
     const entry = Object.values(map)[0] as any
     return (entry?.note ?? entry)?.interactInfo?.collected ?? false
   })
-
   if (wasCollected) return { noteId, bookmarked: true, action: 'already_bookmarked' }
-
-  // Intercept the collect API response
   const collectPromise = page.waitForResponse(
     (resp) => resp.url().includes('/api/sns/web/v1/note/collect') && resp.status() === 200,
     { timeout: 10000 },
   ).catch(() => null)
-
   await page.click('.engage-bar-style .collect-wrapper', { timeout: 5000 })
   const collectResp = await collectPromise
-
   const success = !!collectResp
   return { noteId, bookmarked: success, action: success ? 'bookmarked' : 'failed' }
 }
 
-async function getHotSearch(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getHotSearch(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   await page.goto(`${BASE}/explore`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForTimeout(3000)
-
-  // Try multiple SSR state paths — XHS moves hot search data between keys
   return page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     if (!state?.search) return { items: [], count: 0 }
-
-    // Try: hotSearch (legacy) → searchHotSpots → searchCardHotSpots
     for (const key of ['hotSearch', 'searchHotSpots', 'searchCardHotSpots']) {
       const ref = (state.search as Record<string, any>)[key]
       const arr: any[] = ref?._rawValue ?? ref ?? []
       if (Array.isArray(arr) && arr.length > 0) {
         const items = arr.map((h: any, i: number) => ({
-          keyword: h.name ?? h.word ?? h.keyword ?? '',
-          score: h.score ?? null,
-          rank: h.rank ?? i + 1,
+          keyword: h.name ?? h.word ?? h.keyword ?? '', score: h.score ?? null, rank: h.rank ?? i + 1,
         }))
         return { items, count: items.length }
       }
     }
-
     return { items: [], count: 0 }
   })
 }
 
-async function getNoteComments(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getNoteComments(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const noteId = String(params.noteId ?? params.note_id ?? '')
-  if (!noteId) throw OpenWebError.missingParam('noteId')
+  if (!noteId) throw errors.missingParam('noteId')
   const xsecToken = String(params.xsecToken ?? params.xsec_token ?? '')
-
-  // Intercept comment API response
   const commentPromise = page.waitForResponse(
     (resp) => resp.url().includes('/api/sns/web/v2/comment/page') && resp.status() === 200,
     { timeout: 15000 },
   ).catch(() => null)
-
   const tokenParam = xsecToken ? `&xsec_token=${encodeURIComponent(xsecToken)}` : ''
-  await page.goto(
-    `${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`,
-    { waitUntil: 'domcontentloaded', timeout: 30000 },
-  )
-  // Wait for page to settle
-  await page.waitForFunction(
-    () => !!(window as any).__INITIAL_STATE__?.note,
-    { timeout: 10000 },
-  ).catch(() => null)
-
+  await page.goto(`${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.waitForFunction(() => !!(window as any).__INITIAL_STATE__?.note, { timeout: 10000 }).catch(() => null)
   const commentResp = await commentPromise
   if (!commentResp) return { comments: [], count: 0, hasMore: false }
-
   try {
     const json = (await commentResp.json()) as Record<string, unknown>
     const data = asRecord(json.data)
     const rawComments = data.comments as Array<Record<string, unknown>> | undefined
     const hasMore = Boolean(data.has_more)
     const cursor = String(data.cursor ?? '')
-
     const comments = Array.isArray(rawComments)
       ? rawComments.slice(0, 20).map((c) => ({
-          id: c.id,
-          content: c.content,
-          likeCount: c.like_count,
-          createTime: c.create_time,
-          ipLocation: c.ip_location,
-          subCommentCount: c.sub_comment_count,
-          user: c.user_info
-            ? {
-                userId: (c.user_info as Record<string, unknown>).user_id,
-                nickname: (c.user_info as Record<string, unknown>).nickname,
-                avatar: (c.user_info as Record<string, unknown>).image,
-              }
-            : null,
+          id: c.id, content: c.content, likeCount: c.like_count, createTime: c.create_time,
+          ipLocation: c.ip_location, subCommentCount: c.sub_comment_count,
+          user: c.user_info ? {
+            userId: (c.user_info as Record<string, unknown>).user_id,
+            nickname: (c.user_info as Record<string, unknown>).nickname,
+            avatar: (c.user_info as Record<string, unknown>).image,
+          } : null,
         }))
       : []
-
     return { comments, count: comments.length, hasMore, cursor }
-  } catch {
-    return { comments: [], count: 0, hasMore: false }
-  }
+  } catch { return { comments: [], count: 0, hasMore: false } }
 }
 
-async function getUserCollections(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserCollections(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const userId = String(params.userId ?? params.user_id ?? '')
-  if (!userId) throw OpenWebError.missingParam('userId')
-
+  if (!userId) throw errors.missingParam('userId')
   await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
-
-  if (page.url().includes('login')) {
-    throw loginRequired('Login required for user profiles')
-  }
-  if (page.url().includes('captcha')) {
-    throw loginRequired('CAPTCHA triggered — solve it in the browser and retry')
-  }
-
-  // Click the "收藏" (collections) tab
+  if (page.url().includes('login')) throw errors.needsLogin()
+  if (page.url().includes('captcha')) throw errors.needsLogin()
   await page.waitForTimeout(3000)
   await page.click('[class*="tab"]:has-text("收藏")', { timeout: 5000 }).catch(() => null)
   await page.waitForTimeout(2000)
-
   return page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     if (!state?.user) return { notes: [], count: 0 }
-
     const collectRef = state.user.collect
     const collectPages: any[] = collectRef?._rawValue ?? collectRef ?? []
     if (!Array.isArray(collectPages) || collectPages.length === 0) return { notes: [], count: 0 }
-
     const allNotes: any[] = []
     for (const pg of collectPages) {
       const items: any[] = pg?._rawValue ?? pg ?? []
@@ -549,53 +358,34 @@ async function getUserCollections(page: Page, params: Record<string, unknown>): 
           if (item?.noteCard) {
             const card = item.noteCard
             allNotes.push({
-              noteId: item.id,
-              xsecToken: item.xsecToken,
-              type: card.type,
-              displayTitle: card.displayTitle,
-              user: card.user
-                ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar }
-                : null,
+              noteId: item.id, xsecToken: item.xsecToken, type: card.type, displayTitle: card.displayTitle,
+              user: card.user ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar } : null,
               likedCount: card.interactInfo?.likedCount ?? null,
-              cover: card.cover
-                ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height }
-                : null,
+              cover: card.cover ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height } : null,
             })
           }
         }
       }
     }
-
     return { notes: allNotes, count: allNotes.length }
   })
 }
 
-async function getUserLiked(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserLiked(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const userId = String(params.userId ?? params.user_id ?? '')
-  if (!userId) throw OpenWebError.missingParam('userId')
-
+  if (!userId) throw errors.missingParam('userId')
   await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
-
-  if (page.url().includes('login')) {
-    throw loginRequired('Login required for user profiles')
-  }
-  if (page.url().includes('captcha')) {
-    throw loginRequired('CAPTCHA triggered — solve it in the browser and retry')
-  }
-
-  // Click the "赞过" (liked) tab
+  if (page.url().includes('login')) throw errors.needsLogin()
+  if (page.url().includes('captcha')) throw errors.needsLogin()
   await page.waitForTimeout(3000)
   await page.click('[class*="tab"]:has-text("赞过")', { timeout: 5000 }).catch(() => null)
   await page.waitForTimeout(2000)
-
   return page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     if (!state?.user) return { notes: [], count: 0 }
-
     const likedRef = state.user.liked
     const likedPages: any[] = likedRef?._rawValue ?? likedRef ?? []
     if (!Array.isArray(likedPages) || likedPages.length === 0) return { notes: [], count: 0 }
-
     const allNotes: any[] = []
     for (const pg of likedPages) {
       const items: any[] = pg?._rawValue ?? pg ?? []
@@ -604,56 +394,37 @@ async function getUserLiked(page: Page, params: Record<string, unknown>): Promis
           if (item?.noteCard) {
             const card = item.noteCard
             allNotes.push({
-              noteId: item.id,
-              xsecToken: item.xsecToken,
-              type: card.type,
-              displayTitle: card.displayTitle,
-              user: card.user
-                ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar }
-                : null,
+              noteId: item.id, xsecToken: item.xsecToken, type: card.type, displayTitle: card.displayTitle,
+              user: card.user ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar } : null,
               likedCount: card.interactInfo?.likedCount ?? null,
-              cover: card.cover
-                ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height }
-                : null,
+              cover: card.cover ? { url: card.cover.urlDefault, width: card.cover.width, height: card.cover.height } : null,
             })
           }
         }
       }
     }
-
     return { notes: allNotes, count: allNotes.length }
   })
 }
 
-async function getRelatedNotes(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getRelatedNotes(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const noteId = String(params.noteId ?? params.note_id ?? '')
-  if (!noteId) throw OpenWebError.missingParam('noteId')
+  if (!noteId) throw errors.missingParam('noteId')
   const xsecToken = String(params.xsecToken ?? params.xsec_token ?? '')
-
-  // Intercept recommend API response
   const recommendPromise = page.waitForResponse(
     (resp) => resp.url().includes('/api/sns/web/v1/note/recommend') && resp.status() === 200,
     { timeout: 15000 },
   ).catch(() => null)
-
   const tokenParam = xsecToken ? `&xsec_token=${encodeURIComponent(xsecToken)}` : ''
-  await page.goto(
-    `${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`,
-    { waitUntil: 'domcontentloaded', timeout: 30000 },
-  )
-  // Wait for SSR state to populate
+  await page.goto(`${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForFunction(
     (id: string) => {
       const state = (window as any).__INITIAL_STATE__
       if (!state?.note?.noteDetailMap) return false
       const map = state.note.noteDetailMap._rawValue ?? state.note.noteDetailMap
       return !!(map && typeof map === 'object' && map[id])
-    },
-    noteId,
-    { timeout: 10000 },
+    }, noteId, { timeout: 10000 },
   ).catch(() => null)
-
-  // Try intercept first
   const recommendResp = await recommendPromise
   if (recommendResp) {
     try {
@@ -662,69 +433,43 @@ async function getRelatedNotes(page: Page, params: Record<string, unknown>): Pro
       const rawNotes = data.items as Array<Record<string, unknown>> | undefined
       if (Array.isArray(rawNotes) && rawNotes.length > 0) {
         const notes = rawNotes.map((item: any) => ({
-          noteId: item.id ?? item.note_id,
-          xsecToken: item.xsec_token ?? null,
-          type: item.note_card?.type ?? item.type,
-          displayTitle: item.note_card?.display_title ?? item.title ?? '',
-          user: item.note_card?.user
-            ? { userId: item.note_card.user.user_id, nickname: item.note_card.user.nickname, avatar: item.note_card.user.avatar }
-            : null,
+          noteId: item.id ?? item.note_id, xsecToken: item.xsec_token ?? null,
+          type: item.note_card?.type ?? item.type, displayTitle: item.note_card?.display_title ?? item.title ?? '',
+          user: item.note_card?.user ? { userId: item.note_card.user.user_id, nickname: item.note_card.user.nickname, avatar: item.note_card.user.avatar } : null,
           likedCount: item.note_card?.interact_info?.liked_count ?? null,
-          cover: item.note_card?.cover
-            ? { url: item.note_card.cover.url, width: item.note_card.cover.width, height: item.note_card.cover.height }
-            : null,
+          cover: item.note_card?.cover ? { url: item.note_card.cover.url, width: item.note_card.cover.width, height: item.note_card.cover.height } : null,
         }))
         return { notes, count: notes.length }
       }
     } catch { /* fall through to SSR state */ }
   }
-
-  // Fallback: read from SSR state
   return page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     if (!state?.note) return { notes: [], count: 0 }
-
     const relatedRef = state.note.relatedNotes ?? state.note.recommendNotes
     const related: any[] = relatedRef?._rawValue ?? relatedRef ?? []
     if (!Array.isArray(related) || related.length === 0) return { notes: [], count: 0 }
-
     const notes = related.map((f: any) => {
       const card = f.noteCard ?? f
       return {
-        noteId: f.id ?? card.noteId,
-        xsecToken: f.xsecToken ?? null,
-        type: card.type,
+        noteId: f.id ?? card.noteId, xsecToken: f.xsecToken ?? null, type: card.type,
         displayTitle: card.displayTitle ?? card.title ?? '',
-        user: card.user
-          ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar }
-          : null,
+        user: card.user ? { userId: card.user.userId, nickname: card.user.nickname, avatar: card.user.avatar } : null,
         likedCount: card.interactInfo?.likedCount ?? null,
-        cover: card.cover
-          ? { url: card.cover.urlDefault ?? card.cover.url, width: card.cover.width, height: card.cover.height }
-          : null,
+        cover: card.cover ? { url: card.cover.urlDefault ?? card.cover.url, width: card.cover.width, height: card.cover.height } : null,
       }
     })
-
     return { notes, count: notes.length }
   })
 }
 
-async function followUser(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function followUser(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const userId = String(params.userId ?? params.user_id ?? '')
-  if (!userId) throw OpenWebError.missingParam('userId')
-
+  if (!userId) throw errors.missingParam('userId')
   await page.goto(`${BASE}/user/profile/${userId}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
-
-  if (page.url().includes('login')) {
-    throw loginRequired('Login required for user profiles')
-  }
-  if (page.url().includes('captcha')) {
-    throw loginRequired('CAPTCHA triggered — solve it in the browser and retry')
-  }
-
+  if (page.url().includes('login')) throw errors.needsLogin()
+  if (page.url().includes('captcha')) throw errors.needsLogin()
   await page.waitForTimeout(3000)
-
-  // Check current follow state from SSR
   const wasFollowing = await page.evaluate(() => {
     const state = (window as any).__INITIAL_STATE__
     const pageDataRef = state?.user?.userPageData
@@ -732,90 +477,60 @@ async function followUser(page: Page, params: Record<string, unknown>): Promise<
     const basicInfo = pageData.basicInfo?._rawValue ?? pageData.basicInfo ?? {}
     return basicInfo.isFollowed ?? false
   })
-
   if (wasFollowing) return { userId, followed: true, action: 'already_following' }
-
-  // Intercept follow API response
   const followPromise = page.waitForResponse(
     (resp) => resp.url().includes('/api/sns/web/v1/user/follow') && resp.status() === 200,
     { timeout: 10000 },
   ).catch(() => null)
-
-  // Click the follow button
   await page.click('.user-actions button:has-text("关注"), .info-part button:has-text("关注"), [class*="follow"]:not([class*="fans"])', { timeout: 5000 })
   const followResp = await followPromise
-
   const success = !!followResp
   return { userId, followed: success, action: success ? 'followed' : 'failed' }
 }
 
-async function commentNote(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function commentNote(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const noteId = String(params.noteId ?? params.note_id ?? '')
-  if (!noteId) throw OpenWebError.missingParam('noteId')
+  if (!noteId) throw errors.missingParam('noteId')
   const content = String(params.content ?? '')
-  if (!content) throw OpenWebError.missingParam('content')
+  if (!content) throw errors.missingParam('content')
   const xsecToken = String(params.xsecToken ?? params.xsec_token ?? '')
-
-  await navigateToNote(page, { noteId, xsecToken })
-
-  // Intercept comment API response
+  await navigateToNote(page, { noteId, xsecToken }, errors)
   const commentPromise = page.waitForResponse(
     (resp) => resp.url().includes('/api/sns/web/v1/comment/post') && resp.status() === 200,
     { timeout: 10000 },
   ).catch(() => null)
-
-  // Focus comment input and type
   const commentInput = page.locator('#content-textarea, [class*="comment"] textarea, [placeholder*="评论"]')
   await commentInput.click({ timeout: 5000 })
   await commentInput.fill(content)
   await page.waitForTimeout(500)
-
-  // Click submit
   await page.click('[class*="comment"] button:has-text("发送"), [class*="submit"]:has-text("发送"), button.submit', { timeout: 5000 })
   const commentResp = await commentPromise
-
   if (commentResp) {
     try {
       const json = (await commentResp.json()) as Record<string, unknown>
       const data = asRecord(json.data)
-      return {
-        noteId,
-        commentId: data.comment?.id ?? data.id ?? null,
-        content,
-        action: 'commented',
-      }
+      return { noteId, commentId: data.comment?.id ?? data.id ?? null, content, action: 'commented' }
     } catch { /* fall through */ }
   }
-
   return { noteId, commentId: null, content, action: 'failed' }
 }
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
-  searchNotes,
-  getNoteDetail,
-  getUserProfile,
-  getUserNotes,
-  getExploreFeed,
-  likeNote,
-  bookmarkNote,
-  getHotSearch,
-  getNoteComments,
-  getUserCollections,
-  getUserLiked,
-  getRelatedNotes,
-  followUser,
-  commentNote,
+type OpHandler = (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>
+
+const OPERATIONS: Record<string, OpHandler> = {
+  searchNotes, getNoteDetail, getUserProfile, getUserNotes, getExploreFeed,
+  likeNote, bookmarkNote, getHotSearch, getNoteComments, getUserCollections,
+  getUserLiked, getRelatedNotes, followUser, commentNote,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'xiaohongshu-web',
   description: 'Xiaohongshu (小红书) — search, detail, profile, notes, explore, comments, collections, likes, related notes, follow, like, bookmark, comment via Vue SSR + API interception',
 
   async init(page: Page): Promise<boolean> {
-    const url = page.url()
-    return url.includes('xiaohongshu.com')
+    return page.url().includes('xiaohongshu.com')
   },
 
   async isAuthenticated(page: Page): Promise<boolean> {
@@ -823,13 +538,14 @@ const adapter: CodeAdapter = {
     return cookies.some((c) => c.name === 'web_session')
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
+    const { errors } = helpers as { errors: Errors }
     try {
       const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
-      return handler(page, { ...params })
+      if (!handler) throw errors.unknownOp(operation)
+      return handler(page, { ...params }, errors)
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
 }

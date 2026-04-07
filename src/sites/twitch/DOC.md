@@ -59,9 +59,10 @@ No auth required for public data. Write operations (follow, etc.) would require 
 
 ## Transport
 
-`page` transport — requests made via `page.evaluate(fetch)` in the browser context. Required because Twitch's GQL endpoint checks request origin and the adapter needs to run from a Twitch page.
+`node` transport — direct HTTP POST to `gql.twitch.tv/gql`. No browser needed; all operations are public GraphQL persisted queries expressed as spec-native virtual paths.
 
 ## Known Issues
 
-- **Persisted query hashes** are tied to Twitch's frontend version and may break on deploys. Hashes in `queries.ts` need periodic updates.
+- **Persisted query hashes** are tied to Twitch's frontend version and may break on deploys. Hashes in `openapi.yaml` need periodic updates.
 - **No viewer count on getStream** — the StreamMetadata GQL query doesn't return viewer count (that's in a separate query). Use getChannel or searchChannels for follower counts.
+- **Response shape change** — responses now return raw GraphQL `data` payload (unwrapped), not the adapter-shaped output. Field paths differ from pre-migration (e.g. `data.searchFor.channels.edges[].item` instead of flat `channels[]`).

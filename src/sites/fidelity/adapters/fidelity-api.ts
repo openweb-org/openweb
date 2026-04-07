@@ -1,6 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 /**
  * Fidelity adapter — browser-context API calls to digital.fidelity.com.
@@ -115,7 +113,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getCompanyLogo,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'fidelity-api',
   description: 'Fidelity — browser-context API calls with CSRF for quotes, market data, company info, news, research',
 
@@ -136,13 +134,14 @@ const adapter: CodeAdapter = {
     return true // no auth required for research APIs
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: { unknownOp(op: string): Error; wrap(error: unknown): Error } }): Promise<unknown> {
+    const { errors } = helpers
     try {
       const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
+      if (!handler) throw errors.unknownOp(operation)
       return await handler(page, { ...params })
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
 }

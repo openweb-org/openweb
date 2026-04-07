@@ -1,5 +1,4 @@
 import type { Page } from "patchright";
-import { OpenWebError } from "../../../lib/errors.js";
 /**
  * Walmart L3 adapter — addToCart via persisted GraphQL mutations.
  *
@@ -10,7 +9,6 @@ import { OpenWebError } from "../../../lib/errors.js";
  * Operations:
  *   addToCart — add a product to the shopping cart by usItemId
  */
-import type { CodeAdapter } from "../../../types/adapter.js";
 
 /** Persisted query hashes — derived from GraphQL query text, stable across deploys. */
 const HASHES = {
@@ -36,9 +34,10 @@ interface AddToCartResult {
 async function addToCart(
 	page: Page,
 	params: Record<string, unknown>,
+	errors: { missingParam(name: string): Error },
 ): Promise<AddToCartResult> {
 	const usItemId = String(params.usItemId || "");
-	if (!usItemId) throw OpenWebError.validation("usItemId is required");
+	if (!usItemId) throw errors.missingParam("usItemId");
 	const quantity = Number(params.quantity) || 1;
 
 	return page.evaluate(
@@ -194,7 +193,7 @@ async function addToCart(
 	);
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
 	name: "walmart-cart",
 	description: "Walmart — add to cart via persisted GraphQL mutations",
 
@@ -212,11 +211,12 @@ const adapter: CodeAdapter = {
 		page: Page,
 		operation: string,
 		params: Readonly<Record<string, unknown>>,
+		helpers: { errors: { unknownOp(op: string): Error; missingParam(name: string): Error } },
 	): Promise<unknown> {
 		if (operation === "addToCart") {
-			return addToCart(page, { ...params });
+			return addToCart(page, { ...params }, helpers.errors);
 		}
-		throw OpenWebError.unknownOp(operation);
+		throw helpers.errors.unknownOp(operation);
 	},
 };
 

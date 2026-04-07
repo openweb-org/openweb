@@ -13,18 +13,6 @@ import type { Page } from 'patchright'
  * Bearer token and CSRF are handled inline — no constant_headers needed.
  */
 
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
-}
-
-function fatalError(message: string): Error {
-  return Object.assign(new Error(message), { failureClass: 'fatal' })
-}
-
 // ── Operation name mapping ────────────────────────
 // Maps our operationId → Twitter's internal GraphQL operation name.
 
@@ -169,16 +157,24 @@ async function graphqlPost(
   )
 }
 
+type Errors = {
+  unknownOp(op: string): Error
+  missingParam(name: string): Error
+  httpError(status: number): Error
+  apiError(label: string, msg: string): Error
+  fatal(msg: string): Error
+}
+
 // ── Query-Id cache ────────────────────────────────
 
 let cachedQueryIds: Record<string, string> | null = null
 
-async function getQueryId(page: Page, twitterOpName: string): Promise<string> {
+async function getQueryId(page: Page, twitterOpName: string, errors: { fatal(msg: string): Error }): Promise<string> {
   if (!cachedQueryIds) {
     cachedQueryIds = await loadQueryIds(page)
   }
   const id = cachedQueryIds[twitterOpName]
-  if (!id) throw fatalError(`QueryId not found for ${twitterOpName}. Twitter may have renamed the operation.`)
+  if (!id) throw errors.fatal(`QueryId not found for ${twitterOpName}. Twitter may have renamed the operation.`)
   return id
 }
 
@@ -188,10 +184,11 @@ async function executeGraphqlGet(
   page: Page,
   twitterOpName: string,
   variables: Record<string, unknown>,
-  features: Record<string, unknown> = {},
-  fieldToggles?: Record<string, unknown>,
+  features: Record<string, unknown>,
+  fieldToggles: Record<string, unknown> | undefined,
+  errors: Errors,
 ): Promise<unknown> {
-  const queryId = await getQueryId(page, twitterOpName)
+  const queryId = await getQueryId(page, twitterOpName, errors)
   const path = `/i/api/graphql/${queryId}/${twitterOpName}`
   const queryParams: Record<string, string> = {
     variables: JSON.stringify(variables),
@@ -202,14 +199,12 @@ async function executeGraphqlGet(
   const result = await graphqlGet(page, path, queryParams) as { status: number; text: string }
 
   if (result.status >= 400) {
-    throw Object.assign(new Error(`HTTP ${result.status}`), {
-      failureClass: result.status === 401 || result.status === 403 ? 'needs_login' : 'fatal',
-    })
+    throw errors.httpError(result.status)
   }
 
   const json = JSON.parse(result.text)
   if (json.errors?.length) {
-    throw fatalError(`GraphQL ${twitterOpName}: ${json.errors[0]?.message ?? 'Unknown error'}`)
+    throw errors.apiError(twitterOpName, json.errors[0]?.message ?? 'Unknown error')
   }
   return json.data
 }
@@ -218,23 +213,22 @@ async function executeGraphqlPost(
   page: Page,
   twitterOpName: string,
   variables: Record<string, unknown>,
-  features: Record<string, unknown> = {},
+  features: Record<string, unknown>,
+  errors: Errors,
 ): Promise<unknown> {
-  const queryId = await getQueryId(page, twitterOpName)
+  const queryId = await getQueryId(page, twitterOpName, errors)
   const path = `/i/api/graphql/${queryId}/${twitterOpName}`
   const body = { variables, features, queryId }
 
   const result = await graphqlPost(page, path, body) as { status: number; text: string }
 
   if (result.status >= 400) {
-    throw Object.assign(new Error(`HTTP ${result.status}`), {
-      failureClass: result.status === 401 || result.status === 403 ? 'needs_login' : 'fatal',
-    })
+    throw errors.httpError(result.status)
   }
 
   const json = JSON.parse(result.text)
   if (json.errors?.length) {
-    throw fatalError(`GraphQL ${twitterOpName}: ${json.errors[0]?.message ?? 'Unknown error'}`)
+    throw errors.apiError(twitterOpName, json.errors[0]?.message ?? 'Unknown error')
   }
   return json.data
 }
@@ -269,18 +263,18 @@ const DEFAULT_FEATURES: Record<string, boolean> = {
 
 // ── Per-operation dispatch ────────────────────────
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
-  getHomeTimeline: async (page, params) =>
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
+  getHomeTimeline: async (page, params, errors) =>
     executeGraphqlGet(page, 'HomeTimeline', {
       count: Number(params.count) || 20,
       includePromotedContent: true,
       requestContext: 'launch',
       withCommunity: true,
-    }, DEFAULT_FEATURES),
+    }, DEFAULT_FEATURES, undefined, errors),
 
-  getTweetDetail: async (page, params) => {
+  getTweetDetail: async (page, params, errors) => {
     const focalTweetId = String(params.focalTweetId ?? '')
-    if (!focalTweetId) throw fatalError('Missing required parameter: focalTweetId')
+    if (!focalTweetId) throw errors.missingParam('focalTweetId')
     return executeGraphqlGet(page, 'TweetDetail', {
       focalTweetId,
       referrer: 'profile',
@@ -298,12 +292,12 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
       withArticleVoiceOver: true,
       withGrokAnalyze: false,
       withDisallowedReplyControls: false,
-    })
+    }, errors)
   },
 
-  getUserByScreenName: async (page, params) => {
+  getUserByScreenName: async (page, params, errors) => {
     const screen_name = String(params.screen_name ?? '')
-    if (!screen_name) throw fatalError('Missing required parameter: screen_name')
+    if (!screen_name) throw errors.missingParam('screen_name')
     return executeGraphqlGet(page, 'UserByScreenName', {
       screen_name,
       withGrokTranslatedBio: true,
@@ -324,100 +318,100 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
     }, {
       withPayments: false,
       withAuxiliaryUserLabels: true,
-    })
+    }, errors)
   },
 
-  searchTweets: async (page, params) => {
+  searchTweets: async (page, params, errors) => {
     const rawQuery = String(params.rawQuery ?? '')
-    if (!rawQuery) throw fatalError('Missing required parameter: rawQuery')
+    if (!rawQuery) throw errors.missingParam('rawQuery')
     return executeGraphqlGet(page, 'SearchTimeline', {
       rawQuery,
       count: Number(params.count) || 20,
       querySource: String(params.querySource ?? 'typed_query'),
       product: String(params.product ?? 'Top'),
       withGrokTranslatedBio: false,
-    }, DEFAULT_FEATURES)
+    }, DEFAULT_FEATURES, undefined, errors)
   },
 
-  getUserFollowers: async (page, params) => {
+  getUserFollowers: async (page, params, errors) => {
     const userId = String(params.userId ?? '')
-    if (!userId) throw fatalError('Missing required parameter: userId')
+    if (!userId) throw errors.missingParam('userId')
     return executeGraphqlGet(page, 'Followers', {
       userId,
       count: Number(params.count) || 20,
       includePromotedContent: false,
       withGrokTranslatedBio: false,
-    }, DEFAULT_FEATURES)
+    }, DEFAULT_FEATURES, undefined, errors)
   },
 
-  getUserFollowing: async (page, params) => {
+  getUserFollowing: async (page, params, errors) => {
     const userId = String(params.userId ?? '')
-    if (!userId) throw fatalError('Missing required parameter: userId')
+    if (!userId) throw errors.missingParam('userId')
     return executeGraphqlGet(page, 'Following', {
       userId,
       count: Number(params.count) || 20,
       includePromotedContent: false,
       withGrokTranslatedBio: false,
-    }, DEFAULT_FEATURES)
+    }, DEFAULT_FEATURES, undefined, errors)
   },
 
-  getUserTweets: async (page, params) => {
+  getUserTweets: async (page, params, errors) => {
     const userId = String(params.userId ?? '')
-    if (!userId) throw fatalError('Missing required parameter: userId')
+    if (!userId) throw errors.missingParam('userId')
     return executeGraphqlGet(page, 'UserTweets', {
       userId,
       count: Number(params.count) || 20,
       includePromotedContent: true,
       withQuickPromoteEligibilityTweetFields: true,
       withVoice: true,
-    }, DEFAULT_FEATURES)
+    }, DEFAULT_FEATURES, undefined, errors)
   },
 
-  getExplorePage: async (page, params) =>
+  getExplorePage: async (page, params, errors) =>
     executeGraphqlGet(page, 'ExplorePage', {
       cursor: String(params.cursor ?? ''),
-    }, DEFAULT_FEATURES),
+    }, DEFAULT_FEATURES, undefined, errors),
 
-  likeTweet: async (page, params) => {
+  likeTweet: async (page, params, errors) => {
     const tweet_id = String(params.tweet_id ?? '')
-    if (!tweet_id) throw fatalError('Missing required parameter: tweet_id')
-    return executeGraphqlPost(page, 'FavoriteTweet', { tweet_id })
+    if (!tweet_id) throw errors.missingParam('tweet_id')
+    return executeGraphqlPost(page, 'FavoriteTweet', { tweet_id }, {}, errors)
   },
 
-  unlikeTweet: async (page, params) => {
+  unlikeTweet: async (page, params, errors) => {
     const tweet_id = String(params.tweet_id ?? '')
-    if (!tweet_id) throw fatalError('Missing required parameter: tweet_id')
-    return executeGraphqlPost(page, 'UnfavoriteTweet', { tweet_id })
+    if (!tweet_id) throw errors.missingParam('tweet_id')
+    return executeGraphqlPost(page, 'UnfavoriteTweet', { tweet_id }, {}, errors)
   },
 
-  createBookmark: async (page, params) => {
+  createBookmark: async (page, params, errors) => {
     const tweet_id = String(params.tweet_id ?? '')
-    if (!tweet_id) throw fatalError('Missing required parameter: tweet_id')
-    return executeGraphqlPost(page, 'CreateBookmark', { tweet_id })
+    if (!tweet_id) throw errors.missingParam('tweet_id')
+    return executeGraphqlPost(page, 'CreateBookmark', { tweet_id }, {}, errors)
   },
 
-  deleteBookmark: async (page, params) => {
+  deleteBookmark: async (page, params, errors) => {
     const tweet_id = String(params.tweet_id ?? '')
-    if (!tweet_id) throw fatalError('Missing required parameter: tweet_id')
-    return executeGraphqlPost(page, 'DeleteBookmark', { tweet_id })
+    if (!tweet_id) throw errors.missingParam('tweet_id')
+    return executeGraphqlPost(page, 'DeleteBookmark', { tweet_id }, {}, errors)
   },
 
-  createRetweet: async (page, params) => {
+  createRetweet: async (page, params, errors) => {
     const tweet_id = String(params.tweet_id ?? '')
-    if (!tweet_id) throw fatalError('Missing required parameter: tweet_id')
-    return executeGraphqlPost(page, 'CreateRetweet', { tweet_id })
+    if (!tweet_id) throw errors.missingParam('tweet_id')
+    return executeGraphqlPost(page, 'CreateRetweet', { tweet_id }, {}, errors)
   },
 
-  deleteRetweet: async (page, params) => {
+  deleteRetweet: async (page, params, errors) => {
     const source_tweet_id = String(params.source_tweet_id ?? '')
-    if (!source_tweet_id) throw fatalError('Missing required parameter: source_tweet_id')
-    return executeGraphqlPost(page, 'DeleteRetweet', { source_tweet_id })
+    if (!source_tweet_id) throw errors.missingParam('source_tweet_id')
+    return executeGraphqlPost(page, 'DeleteRetweet', { source_tweet_id }, {}, errors)
   },
 }
 
 // ── Adapter export ────────────────────────────────
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'x-graphql',
   description: 'X (Twitter) GraphQL adapter with dynamic hash resolution and request signing',
 
@@ -430,10 +424,11 @@ const adapter: CodeAdapter = {
     return cookies.some(c => c.name === 'auth_token' || c.name === 'twid')
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors }): Promise<unknown> {
+    const { errors } = helpers
     const handler = OPERATIONS[operation]
-    if (!handler) throw fatalError(`Unknown operation: ${operation}`)
-    return handler(page, { ...params })
+    if (!handler) throw errors.unknownOp(operation)
+    return handler(page, { ...params }, errors)
   },
 }
 

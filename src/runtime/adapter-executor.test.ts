@@ -38,7 +38,7 @@ describe('executeAdapter', () => {
 
     expect(adapter.init).toHaveBeenCalledWith(page)
     expect(adapter.isAuthenticated).toHaveBeenCalledWith(page)
-    expect(adapter.execute).toHaveBeenCalledWith(page, 'getChats', { limit: 10 })
+    expect(adapter.execute).toHaveBeenCalledWith(page, 'getChats', { limit: 10 }, expect.objectContaining({ pageFetch: expect.any(Function), graphqlFetch: expect.any(Function), errors: expect.any(Object) }))
     expect(result).toEqual({ result: 'ok' })
   })
 
@@ -130,7 +130,7 @@ describe('executeAdapter', () => {
 
     expect(adapter.init).toHaveBeenCalledWith(page)
     expect(adapter.isAuthenticated).not.toHaveBeenCalled()
-    expect(adapter.execute).toHaveBeenCalledWith(page, 'getJobs', { query: 'test' })
+    expect(adapter.execute).toHaveBeenCalledWith(page, 'getJobs', { query: 'test' }, expect.objectContaining({ pageFetch: expect.any(Function), graphqlFetch: expect.any(Function), errors: expect.any(Object) }))
     expect(result).toEqual({ result: 'ok' })
   })
 

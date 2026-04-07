@@ -1,26 +1,10 @@
 import type { Page } from 'patchright'
 
-// Self-contained types — avoid external imports so adapter works from compile cache
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
-}
-
-function validationError(msg: string): Error {
-  return Object.assign(new Error(msg), { failureClass: 'fatal' })
-}
-function unknownOpError(op: string): Error {
-  return Object.assign(new Error(`Unknown operation: ${op}`), { failureClass: 'fatal' })
-}
-
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-async function searchProducts(page: Page, params: Record<string, unknown>) {
+async function searchProducts(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const k = String(params.k || '')
-  if (!k) throw validationError('k (search keyword) is required')
+  if (!k) throw errors.missingParam('k')
   const pg = Number(params.page) || 1
   const url = `https://www.amazon.com/s?k=${encodeURIComponent(k)}${pg > 1 ? `&page=${pg}` : ''}`
   await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
@@ -43,9 +27,9 @@ async function searchProducts(page: Page, params: Record<string, unknown>) {
   `)
 }
 
-async function getProductDetail(page: Page, params: Record<string, unknown>) {
+async function getProductDetail(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const asin = String(params.asin || '')
-  if (!asin) throw validationError('asin is required')
+  if (!asin) throw errors.missingParam('asin')
   await page.goto(`https://www.amazon.com/dp/${asin}`, { waitUntil: 'load', timeout: 30_000 })
   await wait(3000)
   return page.evaluate(`
@@ -68,9 +52,9 @@ async function getProductDetail(page: Page, params: Record<string, unknown>) {
   `)
 }
 
-async function getProductReviews(page: Page, params: Record<string, unknown>) {
+async function getProductReviews(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const asin = String(params.asin || '')
-  if (!asin) throw validationError('asin is required')
+  if (!asin) throw errors.missingParam('asin')
   const pageNum = Number(params.pageNumber) || 1
   const sortBy = String(params.sortBy || 'helpful')
   let url = `https://www.amazon.com/product-reviews/${asin}?sortBy=${sortBy}`
@@ -162,7 +146,7 @@ async function getBestSellers(page: Page, _params: Record<string, unknown>) {
   `)
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'amazon',
   description: 'Amazon — search products, view details, read reviews, browse deals',
 
@@ -179,14 +163,16 @@ const adapter: CodeAdapter = {
     page: Page,
     operation: string,
     params: Readonly<Record<string, unknown>>,
+    helpers: Record<string, unknown>,
   ): Promise<unknown> {
+    const { errors } = helpers as { errors: { unknownOp(op: string): Error; missingParam(name: string): Error } }
     switch (operation) {
-      case 'searchProducts': return searchProducts(page, { ...params })
-      case 'getProductDetail': return getProductDetail(page, { ...params })
-      case 'getProductReviews': return getProductReviews(page, { ...params })
+      case 'searchProducts': return searchProducts(page, { ...params }, errors)
+      case 'getProductDetail': return getProductDetail(page, { ...params }, errors)
+      case 'getProductReviews': return getProductReviews(page, { ...params }, errors)
       case 'searchDeals': return searchDeals(page, { ...params })
       case 'getBestSellers': return getBestSellers(page, { ...params })
-      default: throw unknownOpError(operation)
+      default: throw errors.unknownOp(operation)
     }
   },
 }

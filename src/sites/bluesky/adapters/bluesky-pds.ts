@@ -1,5 +1,4 @@
 import type { Page } from 'patchright'
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 const APP_URL = 'https://bsky.app'
 const STORAGE_KEY = 'BSKY_STORAGE'
@@ -31,7 +30,7 @@ function getPdsUrl(session: BskySession): string {
   return url.replace(/\/$/, '')
 }
 
-async function pdsFetch(page: Page, endpoint: string, qs: string, jwt: string): Promise<unknown> {
+async function pdsFetch(page: Page, endpoint: string, qs: string, jwt: string, errors: { needsLogin(): Error; httpError(status: number): Error }): Promise<unknown> {
   const result = await page.evaluate(
     async (args: { url: string; jwt: string }) => {
       const ctrl = new AbortController()
@@ -58,10 +57,8 @@ async function pdsFetch(page: Page, endpoint: string, qs: string, jwt: string): 
         if (body.error === 'ExpiredToken' || body.error === 'InvalidToken') isTokenError = true
       } catch { /* not JSON — treat as generic bad request */ }
     }
-    throw Object.assign(
-      new Error(`HTTP ${result.status}`),
-      { failureClass: isTokenError ? 'needs_login' : 'fatal' },
-    )
+    if (isTokenError) throw errors.needsLogin()
+    throw errors.httpError(result.status)
   }
 
   return JSON.parse(result.text)
@@ -77,19 +74,19 @@ function toQueryString(params: Readonly<Record<string, unknown>>): string {
 
 /* --- operations --- */
 
-async function searchPosts(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function searchPosts(page: Page, params: Readonly<Record<string, unknown>>, errors: { needsLogin(): Error; httpError(status: number): Error }): Promise<unknown> {
   const session = await readSession(page)
-  if (!session) throw Object.assign(new Error('Not logged in to bsky.app'), { failureClass: 'needs_login' })
+  if (!session) throw errors.needsLogin()
   const pds = getPdsUrl(session)
   const jwt = session.session.currentAccount.accessJwt
-  return pdsFetch(page, `${pds}/xrpc/app.bsky.feed.searchPosts`, toQueryString(params), jwt)
+  return pdsFetch(page, `${pds}/xrpc/app.bsky.feed.searchPosts`, toQueryString(params), jwt, errors)
 }
 
-const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, unknown>>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, unknown>>, errors: { needsLogin(): Error; httpError(status: number): Error }) => Promise<unknown>> = {
   searchPosts,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'bluesky-pds',
   description: 'Bluesky operations via user PDS (dynamic server URL from localStorage)',
 
@@ -106,10 +103,11 @@ const adapter: CodeAdapter = {
     return !!session?.session?.currentAccount?.accessJwt
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: { unknownOp(op: string): Error; needsLogin(): Error; httpError(status: number): Error } }): Promise<unknown> {
+    const { errors } = helpers
     const handler = OPERATIONS[operation]
-    if (!handler) throw new Error(`Unknown operation: ${operation}. Available: ${Object.keys(OPERATIONS).join(', ')}`)
-    return handler(page, params)
+    if (!handler) throw errors.unknownOp(operation)
+    return handler(page, params, errors)
   },
 }
 

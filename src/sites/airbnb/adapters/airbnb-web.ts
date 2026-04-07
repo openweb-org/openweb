@@ -1,18 +1,5 @@
 import type { Page } from 'patchright'
 
-// Self-contained types — avoid external imports so adapter works from compile cache
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
-}
-
-function unknownOpError(op: string): Error {
-  return Object.assign(new Error(`Unknown operation: ${op}`), { failureClass: 'fatal' })
-}
-
 /**
  * Airbnb adapter — SSR extraction from data-deferred-state-0 script tag.
  *
@@ -233,7 +220,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getListingDetail,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'airbnb-web',
   description: 'Airbnb — SSR extraction for accommodation search and listing details',
 
@@ -249,9 +236,11 @@ const adapter: CodeAdapter = {
     page: Page,
     operation: string,
     params: Readonly<Record<string, unknown>>,
+    helpers: Record<string, unknown>,
   ): Promise<unknown> {
+    const { errors } = helpers as { errors: { unknownOp(op: string): Error } }
     const handler = OPERATIONS[operation]
-    if (!handler) throw unknownOpError(operation)
+    if (!handler) throw errors.unknownOp(operation)
     return handler(page, { ...params })
   },
 }

@@ -1,5 +1,4 @@
 import type { Page, Response as PwResponse } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Bilibili L3 adapter — page-based API access with Wbi signing.
  *
@@ -10,16 +9,17 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  * For search, we navigate to search.bilibili.com which calls the search API internally.
  * For other endpoints, we navigate to the relevant page and intercept the API calls.
  */
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 const API_BASE = 'https://api.bilibili.com'
 
+type Errors = { missingParam(name: string): Error; unknownOp(op: string): Error; needsLogin(): Error; wrap(error: unknown): Error }
+
 /* ---------- helpers ---------- */
 
-async function getCSRFToken(page: Page): Promise<string> {
+async function getCSRFToken(page: Page, errors: Errors): Promise<string> {
   const cookies = await page.context().cookies('https://www.bilibili.com')
   const biliJct = cookies.find((c) => c.name === 'bili_jct')
-  if (!biliJct?.value) throw OpenWebError.needsLogin()
+  if (!biliJct?.value) throw errors.needsLogin()
   return biliJct.value
 }
 
@@ -94,9 +94,9 @@ async function fetchApiViaPage(
 
 /* ---------- operation handlers ---------- */
 
-async function searchVideos(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchVideos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const keyword = String(params.keyword ?? '')
-  if (!keyword) throw OpenWebError.missingParam('keyword')
+  if (!keyword) throw errors.missingParam('keyword')
   const pg = Number(params.page ?? 1)
 
   // Navigate to search page — triggers the search API internally
@@ -118,15 +118,15 @@ async function searchVideos(page: Page, params: Record<string, unknown>): Promis
   })
 }
 
-async function getVideoDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getVideoDetail(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const bvid = String(params.bvid ?? '')
-  if (!bvid) throw OpenWebError.missingParam('bvid')
+  if (!bvid) throw errors.missingParam('bvid')
 
   // Use direct page.evaluate fetch — more reliable than intercepting
   return fetchApiViaPage(page, '/x/web-interface/view', { bvid })
 }
 
-async function getPopularVideos(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getPopularVideos(page: Page, params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   const pn = Number(params.pn ?? 1)
   const ps = Number(params.ps ?? 20)
 
@@ -139,9 +139,9 @@ async function getPopularVideos(page: Page, params: Record<string, unknown>): Pr
   })
 }
 
-async function getVideoComments(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getVideoComments(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const oid = Number(params.oid)
-  if (!oid) throw OpenWebError.missingParam('oid')
+  if (!oid) throw errors.missingParam('oid')
   const type = Number(params.type ?? 1)
   const mode = Number(params.mode ?? 3)
 
@@ -166,9 +166,9 @@ async function getVideoComments(page: Page, params: Record<string, unknown>): Pr
   return result
 }
 
-async function getUserInfo(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserInfo(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const mid = Number(params.mid)
-  if (!mid) throw OpenWebError.missingParam('mid')
+  if (!mid) throw errors.missingParam('mid')
 
   // Try non-wbi endpoint first
   const result = await fetchApiViaPage(page, '/x/space/acc/info', { mid })
@@ -182,9 +182,9 @@ async function getUserInfo(page: Page, params: Record<string, unknown>): Promise
   ).catch(() => result)
 }
 
-async function getUserVideos(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserVideos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const mid = Number(params.mid)
-  if (!mid) throw OpenWebError.missingParam('mid')
+  if (!mid) throw errors.missingParam('mid')
   const pn = Number(params.pn ?? 1)
   const ps = Number(params.ps ?? 30)
   const order = String(params.order ?? 'pubdate')
@@ -201,7 +201,7 @@ async function getUserVideos(page: Page, params: Record<string, unknown>): Promi
   ).catch(() => result)
 }
 
-async function getRecommendedFeed(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getRecommendedFeed(page: Page, params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   const ps = Number(params.ps ?? 12)
 
   return interceptApiResponse(
@@ -327,9 +327,9 @@ async function fetchProtobufDanmaku(
   )
 }
 
-async function getDanmaku(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getDanmaku(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const oid = Number(params.oid)
-  if (!oid) throw OpenWebError.missingParam('oid')
+  if (!oid) throw errors.missingParam('oid')
   const segmentIndex = Number(params.segment_index ?? 1)
   const type = Number(params.type ?? 1)
 
@@ -342,14 +342,14 @@ async function getDanmaku(page: Page, params: Record<string, unknown>): Promise<
 
 /* ---------- nav / relation / online ---------- */
 
-async function getNavInfo(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getNavInfo(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   return fetchApiViaPage(page, '/x/web-interface/nav', {})
 }
 
-async function getVideoOnlineCount(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getVideoOnlineCount(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const bvid = String(params.bvid ?? '')
   const aid = params.aid != null ? Number(params.aid) : undefined
-  if (!bvid && !aid) throw OpenWebError.missingParam('bvid')
+  if (!bvid && !aid) throw errors.missingParam('bvid')
   const qs: Record<string, unknown> = {}
   if (bvid) qs.bvid = bvid
   if (aid) qs.aid = aid
@@ -358,10 +358,10 @@ async function getVideoOnlineCount(page: Page, params: Record<string, unknown>):
   return fetchApiViaPage(page, '/x/player/online/total', qs)
 }
 
-async function getVideoUserRelation(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getVideoUserRelation(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const bvid = String(params.bvid ?? '')
   const aid = params.aid != null ? Number(params.aid) : undefined
-  if (!bvid && !aid) throw OpenWebError.missingParam('bvid')
+  if (!bvid && !aid) throw errors.missingParam('bvid')
   const qs: Record<string, unknown> = {}
   if (bvid) qs.bvid = bvid
   if (aid) qs.aid = aid
@@ -370,20 +370,20 @@ async function getVideoUserRelation(page: Page, params: Record<string, unknown>)
 
 /* ---------- write operations ---------- */
 
-async function likeVideo(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function likeVideo(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const aid = Number(params.aid)
-  if (!aid) throw OpenWebError.missingParam('aid')
+  if (!aid) throw errors.missingParam('aid')
   const like = Number(params.like ?? 1)
-  const csrf = await getCSRFToken(page)
+  const csrf = await getCSRFToken(page, errors)
   return postApiViaPage(page, '/x/web-interface/archive/like', { aid, like, csrf })
 }
 
-async function addToFavorites(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function addToFavorites(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const rid = Number(params.rid)
-  if (!rid) throw OpenWebError.missingParam('rid')
+  if (!rid) throw errors.missingParam('rid')
   const addMediaIds = String(params.add_media_ids ?? '')
-  if (!addMediaIds) throw OpenWebError.missingParam('add_media_ids')
-  const csrf = await getCSRFToken(page)
+  if (!addMediaIds) throw errors.missingParam('add_media_ids')
+  const csrf = await getCSRFToken(page, errors)
   return postApiViaPage(page, '/x/v3/fav/resource/deal', {
     rid,
     type: 2,
@@ -393,17 +393,19 @@ async function addToFavorites(page: Page, params: Record<string, unknown>): Prom
   })
 }
 
-async function followUploader(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function followUploader(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const fid = Number(params.fid)
-  if (!fid) throw OpenWebError.missingParam('fid')
+  if (!fid) throw errors.missingParam('fid')
   const act = Number(params.act ?? 1)
-  const csrf = await getCSRFToken(page)
+  const csrf = await getCSRFToken(page, errors)
   return postApiViaPage(page, '/x/relation/modify', { fid, act, re_src: 11, csrf })
 }
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+type OpHandler = (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>
+
+const OPERATIONS: Record<string, OpHandler> = {
   searchVideos,
   getVideoDetail,
   getPopularVideos,
@@ -420,7 +422,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   searchUserVideos: getUserVideos,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'bilibili-web',
   description: 'Bilibili (哔哩哔哩) — video search, detail, trending, comments, user profiles via page API interception',
 
@@ -434,13 +436,14 @@ const adapter: CodeAdapter = {
     return cookies.some((c) => c.name === 'SESSDATA')
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
+    const { errors } = helpers as { errors: Errors }
     try {
       const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
-      return handler(page, { ...params })
+      if (!handler) throw errors.unknownOp(operation)
+      return handler(page, { ...params }, errors)
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
 }

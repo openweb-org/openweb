@@ -1,6 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError } from '../../../lib/errors.js'
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 /**
  * Spotify adapter — GraphQL pathfinder API via browser fetch.
@@ -12,6 +10,8 @@ import type { CodeAdapter } from '../../../types/adapter.js'
  */
 
 const API_URL = 'https://api-partner.spotify.com/pathfinder/v2/query'
+
+type ErrorHelpers = { httpError(status: number): Error; apiError(label: string, msg: string): Error; unknownOp(op: string): Error }
 
 interface OperationConfig {
   operationName: string
@@ -51,7 +51,7 @@ const OPERATIONS: Record<string, OperationConfig> = {
   },
 }
 
-async function extractToken(page: Page): Promise<{ accessToken: string; clientToken: string }> {
+async function extractToken(page: Page, errors: ErrorHelpers): Promise<{ accessToken: string; clientToken: string }> {
   // Use Playwright request interception — more reliable than monkey-patching fetch
   const requestPromise = page.waitForRequest(
     (req) => req.url().includes('pathfinder') && !!req.headers().authorization,
@@ -67,7 +67,7 @@ async function extractToken(page: Page): Promise<{ accessToken: string; clientTo
   const clientToken = headers['client-token'] ?? ''
 
   if (!accessToken) {
-    throw OpenWebError.apiError('Spotify', 'Could not extract access token from web player')
+    throw errors.apiError('Spotify', 'Could not extract access token from web player')
   }
 
   return { accessToken, clientToken }
@@ -79,6 +79,7 @@ async function pathfinderFetch(
   variables: Record<string, unknown>,
   accessToken: string,
   clientToken: string,
+  errors: ErrorHelpers,
 ): Promise<unknown> {
   const body = JSON.stringify({
     variables,
@@ -114,13 +115,13 @@ async function pathfinderFetch(
   )
 
   if (result.status >= 400) {
-    throw OpenWebError.httpError(result.status)
+    throw errors.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
   if (json.errors && !json.data) {
     const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Spotify GraphQL error'
-    throw OpenWebError.apiError('Spotify', msg)
+    throw errors.apiError('Spotify', msg)
   }
 
   return json.data
@@ -129,7 +130,7 @@ async function pathfinderFetch(
 // Cached tokens per page
 let cachedTokens: { accessToken: string; clientToken: string } | null = null
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'spotify-pathfinder',
   description: 'Spotify GraphQL pathfinder API — search, artist, discography, album tracks',
 
@@ -146,27 +147,34 @@ const adapter: CodeAdapter = {
     return url.includes('open.spotify.com')
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(
+    page: Page,
+    operation: string,
+    params: Readonly<Record<string, unknown>>,
+    helpers: Record<string, unknown>,
+  ): Promise<unknown> {
+    const { errors } = helpers as { errors: ErrorHelpers }
     const config = OPERATIONS[operation]
     if (!config) {
-      throw OpenWebError.apiError('Spotify', `Unknown operation: ${operation}`)
+      throw errors.unknownOp(operation)
     }
 
     // Extract tokens if not cached
     if (!cachedTokens) {
-      cachedTokens = await extractToken(page)
+      cachedTokens = await extractToken(page, errors)
     }
 
     // Merge default variables with user params
     const variables = { ...config.defaultVariables, ...params }
 
     try {
-      return await pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken)
+      return await pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
     } catch (err) {
-      // If auth expired, retry with fresh token
-      if (err instanceof OpenWebError && err.payload.failureClass === 'needs_login') {
-        cachedTokens = await extractToken(page)
-        return pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken)
+      // If auth expired (401/403), retry with fresh token
+      const failureClass = (err as { payload?: { failureClass?: string } }).payload?.failureClass
+      if (failureClass === 'needs_login') {
+        cachedTokens = await extractToken(page, errors)
+        return pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
       }
       throw err
     }

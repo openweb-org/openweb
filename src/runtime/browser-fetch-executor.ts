@@ -12,6 +12,7 @@ import { ensurePagePolyfills } from './page-polyfill.js'
 import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 import type { BrowserHandle } from './primitives/types.js'
 import { buildHeaderParams, buildJsonRequestBody, buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
+import { applyResponseUnwrap } from './response-unwrap.js'
 import {
   type AutoNavigateResult,
   type SessionHttpDependencies,
@@ -130,7 +131,7 @@ export async function executeBrowserFetch(
       Accept: 'application/json',
       ...headerParams,
     }
-    if (jsonBody) {
+    if (jsonBody && !headers['Content-Type']) {
       headers['Content-Type'] = 'application/json'
     }
 
@@ -229,7 +230,8 @@ export async function executeBrowserFetch(
       })
     }
 
-    const body = parseResponseBody(fetchResult.text, fetchResult.headers['content-type'] ?? null, fetchResult.status)
+    const rawBody = parseResponseBody(fetchResult.text, fetchResult.headers['content-type'] ?? null, fetchResult.status)
+    const body = applyResponseUnwrap(rawBody, operation)
 
     return { status: fetchResult.status, body, responseHeaders: fetchResult.headers }
   } finally {

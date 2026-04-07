@@ -20,6 +20,7 @@ import type { ExecuteDependencies } from './http-executor.js'
 import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 import { fetchWithRedirects } from './redirect.js'
 import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
+import { applyResponseUnwrap } from './response-unwrap.js'
 import { type CachedTokens, DEFAULT_TTL_SECONDS, clearTokenCache, extractJwtExp, readTokenCache, writeTokenCache } from './token-cache.js'
 
 /** Execute a request using cached cookies instead of browser extraction */
@@ -84,7 +85,7 @@ export async function executeCachedFetch(
   const jsonBody = upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH'
     ? buildJsonRequestBody(operationRef.operation, inputParams)
     : undefined
-  if (jsonBody) requestHeaders['Content-Type'] = 'application/json'
+  if (jsonBody && !requestHeaders['Content-Type']) requestHeaders['Content-Type'] = 'application/json'
 
   const response = await fetchWithRedirects(url, upperMethod, { 'Accept': 'application/json', 'User-Agent': DEFAULT_USER_AGENT, ...requestHeaders }, jsonBody, {
     fetchImpl: deps.fetchImpl ?? fetch,
@@ -107,7 +108,8 @@ export async function executeCachedFetch(
   response.headers.forEach((value, key) => { responseHeaders[key] = value })
 
   const text = await response.text()
-  const body = parseResponseBody(text, response.headers.get('content-type'), response.status)
+  const rawBody = parseResponseBody(text, response.headers.get('content-type'), response.status)
+  const body = applyResponseUnwrap(rawBody, operationRef.operation)
 
   return { status: response.status, body, responseHeaders }
 }

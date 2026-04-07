@@ -1,8 +1,9 @@
 import type { Page } from 'patchright'
-import type { CodeAdapter } from '../../../types/adapter.js'
 import { graphqlGet, normalizeItem } from './queries.js'
 
-async function searchProducts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+type ErrorHelpers = { fatal(msg: string): Error; httpError(status: number): Error; apiError(label: string, msg: string): Error; unknownOp(op: string): Error }
+
+async function searchProducts(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
   const query = String(params.query ?? '')
   const limit = Number(params.limit ?? 10)
 
@@ -14,7 +15,7 @@ async function searchProducts(page: Page, params: Record<string, unknown>): Prom
       retailerIds: [],
       zoneId: '',
       autosuggestionSessionId: crypto.randomUUID(),
-    })) as Record<string, unknown>
+    }, errors)) as Record<string, unknown>
     suggestions = (data.crossRetailerSearchAutosuggestions ?? []) as Array<Record<string, unknown>>
   } catch { /* autosuggestions optional — proceed to page-based product search */ }
 
@@ -52,7 +53,7 @@ async function searchProducts(page: Page, params: Record<string, unknown>): Prom
   }
 }
 
-async function getStoreProducts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getStoreProducts(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
   const retailerSlug = String(params.retailerSlug ?? '')
   const slug = String(params.slug ?? '')
   const first = Number(params.first ?? 20)
@@ -122,7 +123,7 @@ async function getStoreProducts(page: Page, params: Record<string, unknown>): Pr
     pageSource: 'collections',
     postalCode,
     zoneId,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const coll = data.collectionProducts as Record<string, unknown> | undefined
   const collection = coll?.collection as Record<string, unknown> | undefined
@@ -135,7 +136,7 @@ async function getStoreProducts(page: Page, params: Record<string, unknown>): Pr
       shopId,
       zoneId,
       postalCode,
-    })) as Record<string, unknown>
+    }, errors)) as Record<string, unknown>
 
     const items = (itemsData.items ?? []) as Array<Record<string, unknown>>
     products = items.map(normalizeItem)
@@ -149,7 +150,7 @@ async function getStoreProducts(page: Page, params: Record<string, unknown>): Pr
   }
 }
 
-async function getNearbyStores(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getNearbyStores(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
   const postalCode = String(params.postalCode ?? '')
   const shopIds = (params.shopIds ?? []) as string[]
 
@@ -162,7 +163,7 @@ async function getNearbyStores(page: Page, params: Record<string, unknown>): Pro
       retailerIds: [],
       serviceType: 'DELIVERY',
       shopIds,
-    })) as Record<string, unknown>
+    }, errors)) as Record<string, unknown>
 
     const etas = (data.getAccurateRetailerEtas ?? []) as Array<Record<string, unknown>>
     return formatEtas(etas)
@@ -216,13 +217,13 @@ function formatEtas(etas: Array<Record<string, unknown>>) {
   }
 }
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: ErrorHelpers) => Promise<unknown>> = {
   searchProducts,
   getStoreProducts,
   getNearbyStores,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'instacart-graphql',
   description: 'Instacart GraphQL API — grocery search, store products, nearby stores with delivery ETAs',
 
@@ -234,12 +235,13 @@ const adapter: CodeAdapter = {
     return true // guest access — read ops work without login
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
+    const { errors } = helpers as { errors: ErrorHelpers }
     const handler = OPERATIONS[operation]
     if (!handler) {
-      throw Object.assign(new Error(`Unknown operation: ${operation}`), { failureClass: 'fatal' })
+      throw errors.unknownOp(operation)
     }
-    return handler(page, { ...params })
+    return handler(page, { ...params }, errors)
   },
 }
 

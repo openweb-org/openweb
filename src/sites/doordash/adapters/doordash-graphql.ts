@@ -1,5 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * DoorDash L3 adapter — GraphQL API via browser fetch.
  *
@@ -7,7 +6,6 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  * All requests are POST with JSON body { operationName, variables, query }.
  * Auth is via cookie_session (credentials: 'include' in browser fetch).
  */
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 const GRAPHQL_URL = 'https://www.doordash.com/graphql'
 
@@ -106,11 +104,20 @@ const ORDER_HISTORY_QUERY = `query getConsumerOrdersWithDetails($offset: Int!, $
 
 /* ---------- adapter implementation ---------- */
 
+type Errors = {
+  unknownOp(op: string): Error
+  missingParam(name: string): Error
+  httpError(status: number): Error
+  apiError(label: string, msg: string): Error
+  wrap(err: unknown): Error
+}
+
 async function graphqlFetch(
   page: Page,
   operationName: string,
   query: string,
   variables: Record<string, unknown>,
+  errors: Errors,
 ): Promise<unknown> {
   const url = `${GRAPHQL_URL}/${operationName}?operation=${operationName}`
   const body = JSON.stringify({ operationName, variables, query })
@@ -129,13 +136,13 @@ async function graphqlFetch(
   )
 
   if (result.status >= 400) {
-    throw OpenWebError.httpError(result.status)
+    throw errors.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
   if (json.errors) {
     const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Unknown GraphQL error'
-    throw OpenWebError.apiError('DoorDash GraphQL', msg)
+    throw errors.apiError('DoorDash GraphQL', msg)
   }
 
   return json.data
@@ -143,9 +150,9 @@ async function graphqlFetch(
 
 /* ---------- operation handlers ---------- */
 
-async function searchRestaurants(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchRestaurants(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const query = String(params.query ?? '')
-  const data = (await graphqlFetch(page, 'autocompleteFacetFeed', SEARCH_QUERY, { query })) as Record<string, unknown>
+  const data = (await graphqlFetch(page, 'autocompleteFacetFeed', SEARCH_QUERY, { query }, errors)) as Record<string, unknown>
   const feed = data.autocompleteFacetFeed as Record<string, unknown>
 
   // Extract restaurant cards from the nested facet structure
@@ -178,7 +185,7 @@ async function searchRestaurants(page: Page, params: Record<string, unknown>): P
   return { restaurants, count: restaurants.length }
 }
 
-async function getRestaurantMenu(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getRestaurantMenu(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const storeId = String(params.storeId ?? params.store_id)
   const menuId = params.menuId ?? params.menu_id
   const fulfillmentType = String(params.fulfillmentType ?? params.fulfillment_type ?? 'Delivery')
@@ -186,11 +193,11 @@ async function getRestaurantMenu(page: Page, params: Record<string, unknown>): P
   const variables: Record<string, unknown> = { storeId, fulfillmentType }
   if (menuId) variables.menuId = String(menuId)
 
-  const data = (await graphqlFetch(page, 'storepageFeed', STORE_MENU_QUERY, variables)) as Record<string, unknown>
+  const data = (await graphqlFetch(page, 'storepageFeed', STORE_MENU_QUERY, variables, errors)) as Record<string, unknown>
   return data.storepageFeed
 }
 
-async function getOrderHistory(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getOrderHistory(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const offset = Number(params.offset ?? 0)
   const limit = Number(params.limit ?? 10)
   const includeCancelled = params.includeCancelled !== false
@@ -200,16 +207,17 @@ async function getOrderHistory(page: Page, params: Record<string, unknown>): Pro
     'getConsumerOrdersWithDetails',
     ORDER_HISTORY_QUERY,
     { offset, limit, includeCancelled },
+    errors,
   )) as Record<string, unknown>
 
   return { orders: data.getConsumerOrdersWithDetails }
 }
 
-async function addToCart(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function addToCart(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const storeId = String(params.storeId ?? params.store_id ?? '')
   const itemId = String(params.itemId ?? params.item_id ?? '')
-  if (!storeId) throw OpenWebError.missingParam('storeId')
-  if (!itemId) throw OpenWebError.missingParam('itemId')
+  if (!storeId) throw errors.missingParam('storeId')
+  if (!itemId) throw errors.missingParam('itemId')
 
   const quantity = Number(params.quantity ?? 1)
   const specialInstructions = String(params.specialInstructions ?? '')
@@ -233,7 +241,7 @@ async function addToCart(page: Page, params: Record<string, unknown>): Promise<u
     returnCartFromOrderService: false,
   }
 
-  const data = (await graphqlFetch(page, 'addCartItem', ADD_CART_ITEM_MUTATION, variables)) as Record<string, unknown>
+  const data = (await graphqlFetch(page, 'addCartItem', ADD_CART_ITEM_MUTATION, variables, errors)) as Record<string, unknown>
   const cart = data.addCartItemV2 as Record<string, unknown> | undefined
 
   // Extract cart items from response
@@ -265,14 +273,14 @@ async function addToCart(page: Page, params: Record<string, unknown>): Promise<u
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
   searchRestaurants,
   getRestaurantMenu,
   getOrderHistory,
   addToCart,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'doordash-graphql',
   description: 'DoorDash GraphQL API — restaurant search, menus, order history, cart',
 
@@ -286,15 +294,16 @@ const adapter: CodeAdapter = {
     return cookies.some((c) => c.name === 'dd_session_id' || c.name === 'ddweb_token')
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers): Promise<unknown> {
+    const { errors } = helpers
     try {
       const handler = OPERATIONS[operation]
       if (!handler) {
-        throw OpenWebError.unknownOp(operation)
+        throw errors.unknownOp(operation)
       }
-      return handler(page, { ...params })
+      return handler(page, { ...params }, errors)
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
 }

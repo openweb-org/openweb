@@ -7,33 +7,73 @@ info:
     compiled_at: '2026-04-01T00:00:00Z'
     requires_auth: false
 servers:
-  - url: https://www.twitch.tv
+  - url: https://gql.twitch.tv
     x-openweb:
-      transport: page
+      transport: node
 paths:
-  /search:
-    get:
+  /gql~searchChannels:
+    post:
       operationId: searchChannels
       summary: Search channels and streams by keyword — returns channel names, follower counts, descriptions, broadcast titles
       x-openweb:
         permission: read
+        actual_path: /gql
+        unwrap: data
         build:
           verified: true
           stable_id: tw0001
           signature_id: tw0001s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: twitch-graphql
-          operation: searchChannels
+          tool_version: 2
       parameters:
-        - name: query
-          in: query
+        - name: Client-Id
+          in: header
           required: true
           schema:
             type: string
-          description: Search keyword (e.g. "valorant", "minecraft", a streamer name).
+            const: kimne78kx3ncx6brgo4mv6wki5h1ko
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            const: text/plain;charset=UTF-8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - variables
+              properties:
+                operationName:
+                  type: string
+                  const: SearchResultsPage_SearchResults
+                variables:
+                  type: object
+                  required:
+                    - query
+                  properties:
+                    platform:
+                      type: string
+                      default: web
+                    query:
+                      type: string
+                      description: Search keyword (e.g. "valorant", "minecraft", a streamer name).
+                    options:
+                      type: object
+                      default:
+                        targets: null
+                        shouldSkipDiscoveryControl: false
+                    requestID:
+                      type: string
+                      default: ''
+                extensions:
+                  type: object
+                  const:
+                    persistedQuery:
+                      version: 1
+                      sha256Hash: a7c600111acc4d1b294eafa364600556227939e2ff88505faa73035b57a83b22
       responses:
         '200':
           description: Search results with matching channels.
@@ -42,50 +82,98 @@ paths:
               schema:
                 type: object
                 properties:
-                  cursor:
-                    type: [string, 'null']
-                  channels:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        login:
-                          type: string
-                        displayName:
-                          type: string
-                        description:
-                          type: [string, 'null']
-                        profileImageURL:
-                          type: string
-                        followers:
-                          type: integer
-                        broadcastTitle:
-                          type: [string, 'null']
-  /channel/{channelLogin}:
-    get:
+                  searchFor:
+                    type: object
+                    properties:
+                      channels:
+                        type: object
+                        properties:
+                          cursor:
+                            type: [string, 'null']
+                          edges:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                item:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: string
+                                    login:
+                                      type: string
+                                    displayName:
+                                      type: string
+                                    description:
+                                      type: [string, 'null']
+                                    profileImageURL:
+                                      type: string
+                                    followers:
+                                      type: object
+                                      properties:
+                                        totalCount:
+                                          type: integer
+                                    broadcastSettings:
+                                      type: object
+                                      properties:
+                                        title:
+                                          type: [string, 'null']
+
+  /gql~getChannel:
+    post:
       operationId: getChannel
       summary: Get channel profile — description, follower count, social links, partner/affiliate status, next schedule segment
       x-openweb:
         permission: read
+        actual_path: /gql
+        unwrap: data
         build:
           verified: true
           stable_id: tw0002
           signature_id: tw0002s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: twitch-graphql
-          operation: getChannel
+          tool_version: 2
       parameters:
-        - name: channelLogin
-          in: path
+        - name: Client-Id
+          in: header
           required: true
           schema:
             type: string
-          description: Channel login name (e.g. "shroud", "pokimane").
+            const: kimne78kx3ncx6brgo4mv6wki5h1ko
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            const: text/plain;charset=UTF-8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - variables
+              properties:
+                operationName:
+                  type: string
+                  const: ChannelRoot_AboutPanel
+                variables:
+                  type: object
+                  required:
+                    - channelLogin
+                  properties:
+                    channelLogin:
+                      type: string
+                      description: Channel login name (e.g. "shroud", "pokimane").
+                    skipSchedule:
+                      type: boolean
+                      default: false
+                extensions:
+                  type: object
+                  const:
+                    persistedQuery:
+                      version: 1
+                      sha256Hash: 3b9cd4edd28e8e6f7ba6152a56157bc2b1c1a8f6e81d70808ad1b85250e5288f
       responses:
         '200':
           description: Channel profile information.
@@ -94,133 +182,225 @@ paths:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: string
-                  displayName:
-                    type: string
-                  description:
-                    type: string
-                  profileImageURL:
-                    type: string
-                  primaryColorHex:
-                    type: string
-                  followers:
-                    type: integer
-                  isPartner:
-                    type: boolean
-                  isAffiliate:
-                    type: boolean
-                  socialMedias:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        name:
-                          type: string
-                        title:
-                          type: string
-                        url:
-                          type: string
-                  nextScheduleSegment:
+                  user:
                     type: [object, 'null']
                     properties:
-                      startAt:
+                      id:
                         type: string
-                      title:
-                        type: [string, 'null']
-                      hasReminder:
-                        type: boolean
-  /channel/{channelLogin}/stream:
-    get:
+                      displayName:
+                        type: string
+                      description:
+                        type: string
+                      profileImageURL:
+                        type: string
+                      primaryColorHex:
+                        type: string
+                      followers:
+                        type: object
+                        properties:
+                          totalCount:
+                            type: integer
+                      roles:
+                        type: object
+                        properties:
+                          isPartner:
+                            type: boolean
+                          isAffiliate:
+                            type: boolean
+                      channel:
+                        type: object
+                        properties:
+                          socialMedias:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                title:
+                                  type: string
+                                url:
+                                  type: string
+                          schedule:
+                            type: [object, 'null']
+                            properties:
+                              nextSegment:
+                                type: [object, 'null']
+                                properties:
+                                  startAt:
+                                    type: string
+                                  title:
+                                    type: [string, 'null']
+                                  hasReminder:
+                                    type: boolean
+
+  /gql~getStream:
+    post:
       operationId: getStream
       summary: Get current stream status — live/offline, game name, stream type, last broadcast title
       x-openweb:
         permission: read
+        actual_path: /gql
+        unwrap: data
         build:
           verified: true
           stable_id: tw0003
           signature_id: tw0003s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: twitch-graphql
-          operation: getStream
+          tool_version: 2
       parameters:
-        - name: channelLogin
-          in: path
+        - name: Client-Id
+          in: header
           required: true
           schema:
             type: string
-          description: Channel login name (e.g. "shroud", "xqc").
+            const: kimne78kx3ncx6brgo4mv6wki5h1ko
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            const: text/plain;charset=UTF-8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - variables
+              properties:
+                operationName:
+                  type: string
+                  const: StreamMetadata
+                variables:
+                  type: object
+                  required:
+                    - channelLogin
+                  properties:
+                    channelLogin:
+                      type: string
+                      description: Channel login name (e.g. "shroud", "xqc").
+                extensions:
+                  type: object
+                  const:
+                    persistedQuery:
+                      version: 1
+                      sha256Hash: ad022ca32220d5523d03a23cbcb5beaa1e0999889c1f8f78f9f2520dafb5cae6
       responses:
         '200':
-          description: Stream status (null stream means offline).
+          description: Stream status (null user means channel not found, null stream means offline).
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: string
-                  profileImageURL:
-                    type: string
-                  primaryColorHex:
-                    type: string
-                  isPartner:
-                    type: boolean
-                  lastBroadcastTitle:
-                    type: [string, 'null']
-                  stream:
+                  user:
                     type: [object, 'null']
                     properties:
                       id:
                         type: string
-                      type:
+                      profileImageURL:
                         type: string
-                      createdAt:
+                      primaryColorHex:
                         type: string
-                      game:
+                      roles:
+                        type: object
+                        properties:
+                          isPartner:
+                            type: boolean
+                      lastBroadcast:
+                        type: [object, 'null']
+                        properties:
+                          title:
+                            type: [string, 'null']
+                      stream:
                         type: [object, 'null']
                         properties:
                           id:
                             type: string
-                          slug:
+                          type:
                             type: string
-                          name:
+                          createdAt:
                             type: string
-  /directory/all:
-    get:
+                          game:
+                            type: [object, 'null']
+                            properties:
+                              id:
+                                type: string
+                              slug:
+                                type: string
+                              name:
+                                type: string
+
+  /gql~getTopGames:
+    post:
       operationId: getTopGames
       summary: Browse top categories/games by viewer count — game names, viewer/broadcaster counts, tags
       x-openweb:
         permission: read
+        actual_path: /gql
+        unwrap: data
         build:
           verified: true
           stable_id: tw0004
           signature_id: tw0004s
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: twitch-graphql
-          operation: getTopGames
+          tool_version: 2
       parameters:
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 30
-          description: Number of categories to return (default 30).
-        - name: sort
-          in: query
-          required: false
+        - name: Client-Id
+          in: header
+          required: true
           schema:
             type: string
-            enum: [VIEWER_COUNT, RELEVANCE]
-            default: VIEWER_COUNT
-          description: Sort order (VIEWER_COUNT or RELEVANCE).
+            const: kimne78kx3ncx6brgo4mv6wki5h1ko
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            const: text/plain;charset=UTF-8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - variables
+              properties:
+                operationName:
+                  type: string
+                  const: BrowsePage_AllDirectories
+                variables:
+                  type: object
+                  properties:
+                    limit:
+                      type: integer
+                      default: 30
+                      description: Number of categories to return (default 30).
+                    options:
+                      type: object
+                      properties:
+                        recommendationsContext:
+                          type: object
+                          default:
+                            platform: web
+                        requestID:
+                          type: string
+                          default: ''
+                        sort:
+                          type: string
+                          enum: [VIEWER_COUNT, RELEVANCE]
+                          default: VIEWER_COUNT
+                          description: Sort order (VIEWER_COUNT or RELEVANCE).
+                        tags:
+                          type: array
+                          default: []
+                extensions:
+                  type: object
+                  const:
+                    persistedQuery:
+                      version: 1
+                      sha256Hash: 2f67f71ba89f3c0ed26a141ec00da1defecb2303595f5cda4298169549783d9e
       responses:
         '200':
           description: Top categories/games.
@@ -229,24 +409,33 @@ paths:
               schema:
                 type: object
                 properties:
-                  categories:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        slug:
-                          type: string
-                        displayName:
-                          type: string
-                        viewersCount:
-                          type: integer
-                        broadcastersCount:
-                          type: integer
-                        avatarURL:
-                          type: string
-                        tags:
-                          type: array
-                          items:
-                            type: string
+                  directoriesWithTags:
+                    type: object
+                    properties:
+                      edges:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            node:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                slug:
+                                  type: string
+                                displayName:
+                                  type: string
+                                viewersCount:
+                                  type: integer
+                                broadcastersCount:
+                                  type: integer
+                                avatarURL:
+                                  type: string
+                                tags:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      localizedName:
+                                        type: string

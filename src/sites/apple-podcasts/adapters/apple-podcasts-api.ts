@@ -1,9 +1,10 @@
 import type { Page } from 'patchright'
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 const AMP_API = 'https://amp-api.podcasts.apple.com'
 
-async function getDeveloperToken(page: Page): Promise<string> {
+type Errors = { needsLogin(): Error; httpError(status: number): Error; unknownOp(op: string): Error }
+
+async function getDeveloperToken(page: Page, errors: Errors): Promise<string> {
   const token = await page.evaluate(() => {
     try {
       return (window as any).MusicKit?.getInstance()?.developerToken as string | undefined
@@ -12,8 +13,7 @@ async function getDeveloperToken(page: Page): Promise<string> {
     }
   })
   if (!token) {
-    const err = Object.assign(new Error('MusicKit developer token not found. Ensure podcasts.apple.com is fully loaded.'), { failureClass: 'needs_login' as const })
-    throw err
+    throw errors.needsLogin()
   }
   return token
 }
@@ -22,8 +22,9 @@ async function apiGet(
   page: Page,
   path: string,
   params: Record<string, unknown> = {},
+  errors: Errors,
 ): Promise<unknown> {
-  const token = await getDeveloperToken(page)
+  const token = await getDeveloperToken(page, errors)
   const url = new URL(`${AMP_API}${path}`)
 
   for (const [key, value] of Object.entries(params)) {
@@ -46,12 +47,7 @@ async function apiGet(
   })
 
   if (!resp.ok()) {
-    const body = await resp.text().catch(() => '')
-    const err = Object.assign(
-      new Error(`API ${resp.status()}: ${body.slice(0, 200)}`),
-      { failureClass: resp.status() === 401 || resp.status() === 403 ? 'needs_login' as const : 'fatal' as const },
-    )
-    throw err
+    throw errors.httpError(resp.status())
   }
 
   return resp.json()
@@ -61,7 +57,7 @@ const DEFAULT_TYPES = 'podcasts,podcast-channels,podcast-episodes,categories,edi
 
 /* ---------- operations ---------- */
 
-async function searchPodcasts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchPodcasts(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   return apiGet(page, '/v1/catalog/us/search/groups', {
     term: params.term,
     platform: 'web',
@@ -70,10 +66,10 @@ async function searchPodcasts(page: Page, params: Record<string, unknown>): Prom
     l: params.l ?? 'en-US',
     limit: params.limit ?? '25',
     extend: params.extend,
-  })
+  }, errors)
 }
 
-async function getPodcast(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getPodcast(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const id = params.id
   const queryParams: Record<string, unknown> = {
     l: params.l ?? 'en-US',
@@ -82,36 +78,36 @@ async function getPodcast(page: Page, params: Record<string, unknown>): Promise<
   if (params.include) queryParams.include = params.include
   if (params['limit[episodes]']) queryParams['limit[episodes]'] = params['limit[episodes]']
 
-  return apiGet(page, `/v1/catalog/us/podcasts/${id}`, queryParams)
+  return apiGet(page, `/v1/catalog/us/podcasts/${id}`, queryParams, errors)
 }
 
-async function getSearchSuggestions(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getSearchSuggestions(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   return apiGet(page, '/v1/catalog/us/search/suggestions', {
     term: params.term,
     platform: 'web',
     kinds: params.kinds ?? 'terms,topResults',
     types: params.types ?? DEFAULT_TYPES,
     l: params.l ?? 'en-US',
-  })
+  }, errors)
 }
 
-async function getTopCharts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getTopCharts(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   return apiGet(page, '/v1/editorial/us/groupings', {
     name: params.name ?? 'search-landing',
     platform: 'web',
     l: params.l ?? 'en-US',
     with: params.with,
-  })
+  }, errors)
 }
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
   searchPodcasts,
   getPodcast,
   getSearchSuggestions,
   getTopCharts,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'apple-podcasts-api',
   description: 'Apple Podcasts AMP API — search, detail, suggestions, charts via MusicKit bearer token',
 
@@ -130,13 +126,13 @@ const adapter: CodeAdapter = {
     return token
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors }): Promise<unknown> {
+    const { errors } = helpers
     const handler = OPERATIONS[operation]
     if (!handler) {
-      const err = Object.assign(new Error(`Unknown operation: ${operation}`), { failureClass: 'fatal' as const })
-      throw err
+      throw errors.unknownOp(operation)
     }
-    return handler(page, { ...params })
+    return handler(page, { ...params }, errors)
   },
 }
 

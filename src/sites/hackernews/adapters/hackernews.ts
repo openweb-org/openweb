@@ -1,5 +1,4 @@
 import type { Page } from 'patchright'
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 const HN_ORIGIN = 'https://news.ycombinator.com'
 const INDENT_UNIT = 40 // HN uses 40px per nesting level
@@ -230,7 +229,7 @@ const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, un
   getUserComments,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'hackernews',
   description: 'Hacker News DOM extraction — stories, comments, and user profiles',
 
@@ -243,10 +242,10 @@ const adapter: CodeAdapter = {
     return true // HN public data requires no auth
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: { unknownOp(op: string): Error } }): Promise<unknown> {
     const handler = OPERATIONS[operation]
     if (!handler) {
-      throw new Error(`Unknown operation: ${operation}. Available: ${Object.keys(OPERATIONS).join(', ')}`)
+      throw helpers.errors.unknownOp(operation)
     }
     return handler(page, params)
   },

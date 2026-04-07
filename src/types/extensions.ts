@@ -47,4 +47,6 @@ export interface XOpenWebOperation {
   readonly adapter?: AdapterRef
   /** Real URL path when the spec key is a virtual path (e.g. GraphQL dedup) */
   readonly actual_path?: string
+  /** Dot-path into the parsed response body to extract before returning (e.g. 'data', '0.data') */
+  readonly unwrap?: string
 }

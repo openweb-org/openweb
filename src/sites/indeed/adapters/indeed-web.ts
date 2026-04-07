@@ -1,21 +1,5 @@
 import type { Page } from 'patchright'
 
-// Self-contained types — avoid external imports so adapter works from compile cache
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
-}
-
-function validationError(msg: string): Error {
-  return Object.assign(new Error(msg), { failureClass: 'fatal' })
-}
-function unknownOpError(op: string): Error {
-  return Object.assign(new Error(`Unknown operation: ${op}`), { failureClass: 'fatal' })
-}
-
 const SITE = 'https://www.indeed.com'
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -26,9 +10,9 @@ async function navigateAndWait(page: Page, url: string): Promise<void> {
 
 /* ---------- operations ---------- */
 
-async function searchJobs(page: Page, params: Record<string, unknown>) {
+async function searchJobs(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const q = String(params.q || '')
-  if (!q) throw validationError('q (search query) is required')
+  if (!q) throw errors.missingParam('q')
   const l = params.l ? String(params.l) : ''
   const start = Number(params.start) || 0
   const url = new URL('/jobs', SITE)
@@ -71,9 +55,9 @@ async function searchJobs(page: Page, params: Record<string, unknown>) {
   `)
 }
 
-async function getJobDetail(page: Page, params: Record<string, unknown>) {
+async function getJobDetail(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const jk = String(params.jk || '')
-  if (!jk) throw validationError('jk (job key) is required')
+  if (!jk) throw errors.missingParam('jk')
   await navigateAndWait(page, `${SITE}/viewjob?jk=${encodeURIComponent(jk)}`)
   return page.evaluate(`
     (() => {
@@ -109,9 +93,9 @@ async function getJobDetail(page: Page, params: Record<string, unknown>) {
   `)
 }
 
-async function getSalary(page: Page, params: Record<string, unknown>) {
+async function getSalary(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const title = String(params.title || '')
-  if (!title) throw validationError('title (job title) is required')
+  if (!title) throw errors.missingParam('title')
   const location = params.location ? String(params.location) : ''
   const slug = title.toLowerCase().replace(/\\s+/g, '-')
   const url = location
@@ -140,9 +124,9 @@ async function getSalary(page: Page, params: Record<string, unknown>) {
   `)
 }
 
-async function getCompanyOverview(page: Page, params: Record<string, unknown>) {
+async function getCompanyOverview(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const company = String(params.company || '')
-  if (!company) throw validationError('company (company slug) is required')
+  if (!company) throw errors.missingParam('company')
   await navigateAndWait(page, `${SITE}/cmp/${encodeURIComponent(company)}`)
   return page.evaluate(`
     (() => {
@@ -172,9 +156,9 @@ async function getCompanyOverview(page: Page, params: Record<string, unknown>) {
   `)
 }
 
-async function getCompanyReviews(page: Page, params: Record<string, unknown>) {
+async function getCompanyReviews(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const company = String(params.company || '')
-  if (!company) throw validationError('company (company slug) is required')
+  if (!company) throw errors.missingParam('company')
   const filter = params.filter ? String(params.filter) : ''
   const url = filter
     ? `${SITE}/cmp/${encodeURIComponent(company)}/reviews?${filter}`
@@ -219,9 +203,9 @@ async function getCompanyReviews(page: Page, params: Record<string, unknown>) {
   `)
 }
 
-async function getCompanySalaries(page: Page, params: Record<string, unknown>) {
+async function getCompanySalaries(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const company = String(params.company || '')
-  if (!company) throw validationError('company (company slug) is required')
+  if (!company) throw errors.missingParam('company')
   await navigateAndWait(page, `${SITE}/cmp/${encodeURIComponent(company)}/salaries`)
   return page.evaluate(`
     (() => {
@@ -252,9 +236,9 @@ async function getCompanySalaries(page: Page, params: Record<string, unknown>) {
   `)
 }
 
-async function autocompleteJobTitle(page: Page, params: Record<string, unknown>) {
+async function autocompleteJobTitle(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const q = String(params.q || '')
-  if (!q) throw validationError('q (partial query) is required')
+  if (!q) throw errors.missingParam('q')
   const country = String(params.country || 'US')
   return page.evaluate(async ([query, ctry]: string[]) => {
     const ctrl = new AbortController()
@@ -269,9 +253,9 @@ async function autocompleteJobTitle(page: Page, params: Record<string, unknown>)
   }, [q, country])
 }
 
-async function autocompleteLocation(page: Page, params: Record<string, unknown>) {
+async function autocompleteLocation(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const q = String(params.q || '')
-  if (!q) throw validationError('q (partial query) is required')
+  if (!q) throw errors.missingParam('q')
   const country = String(params.country || 'US')
   return page.evaluate(async ([query, ctry]: string[]) => {
     const ctrl = new AbortController()
@@ -288,7 +272,7 @@ async function autocompleteLocation(page: Page, params: Record<string, unknown>)
 
 /* ---------- adapter export ---------- */
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'indeed-web',
   description: 'Indeed — job search, details, salary, company info via page extraction',
 
@@ -304,17 +288,19 @@ const adapter: CodeAdapter = {
     page: Page,
     operation: string,
     params: Readonly<Record<string, unknown>>,
+    helpers: Record<string, unknown>,
   ): Promise<unknown> {
+    const { errors } = helpers as { errors: { unknownOp(op: string): Error; missingParam(name: string): Error } }
     switch (operation) {
-      case 'searchJobs': return searchJobs(page, { ...params })
-      case 'getJobDetail': return getJobDetail(page, { ...params })
-      case 'getSalary': return getSalary(page, { ...params })
-      case 'getCompanyOverview': return getCompanyOverview(page, { ...params })
-      case 'getCompanyReviews': return getCompanyReviews(page, { ...params })
-      case 'getCompanySalaries': return getCompanySalaries(page, { ...params })
-      case 'autocompleteJobTitle': return autocompleteJobTitle(page, { ...params })
-      case 'autocompleteLocation': return autocompleteLocation(page, { ...params })
-      default: throw unknownOpError(operation)
+      case 'searchJobs': return searchJobs(page, { ...params }, errors)
+      case 'getJobDetail': return getJobDetail(page, { ...params }, errors)
+      case 'getSalary': return getSalary(page, { ...params }, errors)
+      case 'getCompanyOverview': return getCompanyOverview(page, { ...params }, errors)
+      case 'getCompanyReviews': return getCompanyReviews(page, { ...params }, errors)
+      case 'getCompanySalaries': return getCompanySalaries(page, { ...params }, errors)
+      case 'autocompleteJobTitle': return autocompleteJobTitle(page, { ...params }, errors)
+      case 'autocompleteLocation': return autocompleteLocation(page, { ...params }, errors)
+      default: throw errors.unknownOp(operation)
     }
   },
 }

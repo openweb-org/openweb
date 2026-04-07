@@ -1,5 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Google Maps L3 adapter — network interception + internal preview API.
  *
@@ -18,7 +17,11 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  * All search/directions/nearby/geocode use network interception (no DOM scraping).
  * Place details, reviews, photos, hours, and about work via fetch inside page context.
  */
-import type { CodeAdapter } from '../../../types/adapter.js'
+
+type Errors = {
+  missingParam(name: string): Error
+  apiError(label: string, message: string): Error
+}
 
 const MAPS_BASE = 'https://www.google.com/maps'
 
@@ -107,9 +110,9 @@ async function navigateAndExtractPlaces(page: Page, searchUrl: string): Promise<
 
 /* ---------- searchPlaces ---------- */
 
-async function searchPlaces(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchPlaces(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const query = String(params.query ?? '')
-  if (!query) throw OpenWebError.missingParam('query')
+  if (!query) throw errors.missingParam('query')
 
   const searchUrl = `${MAPS_BASE}/search/${encodeURIComponent(query)}/`
   const places = await navigateAndExtractPlaces(page, searchUrl)
@@ -118,7 +121,7 @@ async function searchPlaces(page: Page, params: Record<string, unknown>): Promis
 
 /* ---------- shared: fetchPlaceInfo ---------- */
 
-async function fetchPlaceInfo(page: Page, placeId: string, query: string): Promise<unknown[]> {
+async function fetchPlaceInfo(page: Page, placeId: string, query: string, errors: Errors): Promise<unknown[]> {
   await ensureMapsPage(page)
 
   const pb = `!1m3!1s${placeId}!3m1!1d50000!4m2!3d37.8!4d-122.4!12m4!2m3!1i360!2i120!4i8!13m1!2m0`
@@ -135,18 +138,18 @@ async function fetchPlaceInfo(page: Page, placeId: string, query: string): Promi
 
   const data = JSON.parse(result.replace(/^\)\]\}'\n/, '')) as unknown[]
   const info = data[6] as unknown[]
-  if (!Array.isArray(info)) throw OpenWebError.apiError('place', 'No place data found')
+  if (!Array.isArray(info)) throw errors.apiError('place', 'No place data found')
   return info
 }
 
 /* ---------- getPlaceDetails ---------- */
 
-async function getPlaceDetails(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getPlaceDetails(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
-  if (!placeId) throw OpenWebError.missingParam('placeId')
+  if (!placeId) throw errors.missingParam('placeId')
 
-  const info = await fetchPlaceInfo(page, placeId, query)
+  const info = await fetchPlaceInfo(page, placeId, query, errors)
 
   const name = dig(info, 11) as string | null
   const address = (dig(info, 18) as string | null) ?? (dig(info, 39) as string | null)
@@ -194,12 +197,12 @@ async function getPlaceDetails(page: Page, params: Record<string, unknown>): Pro
 
 /* ---------- getPlaceReviews ---------- */
 
-async function getPlaceReviews(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getPlaceReviews(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
-  if (!placeId) throw OpenWebError.missingParam('placeId')
+  if (!placeId) throw errors.missingParam('placeId')
 
-  const info = await fetchPlaceInfo(page, placeId, query)
+  const info = await fetchPlaceInfo(page, placeId, query, errors)
 
   const placeName = dig(info, 11) as string | null
   const rating = dig(info, 4, 7) as number | null
@@ -238,12 +241,12 @@ async function getPlaceReviews(page: Page, params: Record<string, unknown>): Pro
 
 /* ---------- getPlacePhotos ---------- */
 
-async function getPlacePhotos(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getPlacePhotos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
-  if (!placeId) throw OpenWebError.missingParam('placeId')
+  if (!placeId) throw errors.missingParam('placeId')
 
-  const info = await fetchPlaceInfo(page, placeId, query)
+  const info = await fetchPlaceInfo(page, placeId, query, errors)
   const placeName = dig(info, 11) as string | null
 
   // Try [6][37][0] then [6][171][0] for photo arrays
@@ -270,11 +273,11 @@ async function getPlacePhotos(page: Page, params: Record<string, unknown>): Prom
 
 /* ---------- nearbySearch ---------- */
 
-async function nearbySearch(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function nearbySearch(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const category = String(params.category ?? params.type ?? '')
   const location = String(params.location ?? params.near ?? '')
-  if (!category) throw OpenWebError.missingParam('category')
-  if (!location) throw OpenWebError.missingParam('location')
+  if (!category) throw errors.missingParam('category')
+  if (!location) throw errors.missingParam('location')
 
   const searchUrl = `${MAPS_BASE}/search/${encodeURIComponent(`${category} near ${location}`)}/`
   const places = await navigateAndExtractPlaces(page, searchUrl)
@@ -313,9 +316,9 @@ function parseSuggestResponse(raw: string): Array<{ text: string | null; placeId
   return results
 }
 
-async function getAutocompleteSuggestions(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getAutocompleteSuggestions(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const input = String(params.input ?? params.query ?? '')
-  if (!input) throw OpenWebError.missingParam('input')
+  if (!input) throw errors.missingParam('input')
 
   await ensureMapsPage(page)
 
@@ -379,10 +382,10 @@ function parseDirectionsResponse(raw: string, requestedMode: number): Array<Reco
 }
 
 /** Travel modes: 0=driving, 1=bicycling, 2=walking, 3=transit */
-async function getDirectionsForMode(page: Page, params: Record<string, unknown>, mode: number): Promise<unknown> {
+async function getDirectionsForMode(page: Page, params: Record<string, unknown>, mode: number, errors: Errors): Promise<unknown> {
   const origin = String(params.origin ?? '')
   const destination = String(params.destination ?? '')
-  if (!origin || !destination) throw OpenWebError.missingParam('origin and destination')
+  if (!origin || !destination) throw errors.missingParam('origin and destination')
 
   await ensureMapsPage(page)
 
@@ -405,19 +408,19 @@ async function getDirectionsForMode(page: Page, params: Record<string, unknown>,
   return { origin, destination, routes }
 }
 
-const getDirections = (p: Page, params: Record<string, unknown>) => getDirectionsForMode(p, params, 0)
-const getTransitDirections = (p: Page, params: Record<string, unknown>) => getDirectionsForMode(p, params, 3)
-const getWalkingDirections = (p: Page, params: Record<string, unknown>) => getDirectionsForMode(p, params, 2)
-const getBicyclingDirections = (p: Page, params: Record<string, unknown>) => getDirectionsForMode(p, params, 1)
+const getDirections = (p: Page, params: Record<string, unknown>, errors: Errors) => getDirectionsForMode(p, params, 0, errors)
+const getTransitDirections = (p: Page, params: Record<string, unknown>, errors: Errors) => getDirectionsForMode(p, params, 3, errors)
+const getWalkingDirections = (p: Page, params: Record<string, unknown>, errors: Errors) => getDirectionsForMode(p, params, 2, errors)
+const getBicyclingDirections = (p: Page, params: Record<string, unknown>, errors: Errors) => getDirectionsForMode(p, params, 1, errors)
 
 /* ---------- getPlaceHours ---------- */
 
-async function getPlaceHours(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getPlaceHours(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
-  if (!placeId) throw OpenWebError.missingParam('placeId')
+  if (!placeId) throw errors.missingParam('placeId')
 
-  const info = await fetchPlaceInfo(page, placeId, query)
+  const info = await fetchPlaceInfo(page, placeId, query, errors)
   const placeName = dig(info, 11) as string | null
   const statusText = dig(info, 203, 1, 4, 0) as string | null
   const hoursArr = dig(info, 203, 1, 0) as unknown[][] | null
@@ -438,9 +441,9 @@ async function getPlaceHours(page: Page, params: Record<string, unknown>): Promi
 
 /* ---------- geocode ---------- */
 
-async function geocode(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function geocode(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const address = String(params.address ?? '')
-  if (!address) throw OpenWebError.missingParam('address')
+  if (!address) throw errors.missingParam('address')
   const places = await navigateAndExtractPlaces(page, `${MAPS_BASE}/search/${encodeURIComponent(address)}/`)
   const first = places[0]
   if (!first) return { address, lat: null, lng: null, placeId: null, formattedAddress: null }
@@ -449,10 +452,10 @@ async function geocode(page: Page, params: Record<string, unknown>): Promise<unk
 
 /* ---------- reverseGeocode ---------- */
 
-async function reverseGeocode(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function reverseGeocode(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const lat = Number(params.lat)
   const lng = Number(params.lng)
-  if (Number.isNaN(lat) || Number.isNaN(lng)) throw OpenWebError.missingParam('lat and lng')
+  if (Number.isNaN(lat) || Number.isNaN(lng)) throw errors.missingParam('lat and lng')
 
   await page.goto(`${MAPS_BASE}/@${lat},${lng},17z`, { waitUntil: 'domcontentloaded', timeout: 15_000 })
   await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {}) // intentional: best-effort wait
@@ -471,12 +474,12 @@ async function reverseGeocode(page: Page, params: Record<string, unknown>): Prom
 
 /* ---------- getPlaceAbout ---------- */
 
-async function getPlaceAbout(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getPlaceAbout(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const placeId = String(params.placeId ?? params.place_id ?? '')
   const query = String(params.query ?? params.name ?? '')
-  if (!placeId) throw OpenWebError.missingParam('placeId')
+  if (!placeId) throw errors.missingParam('placeId')
 
-  const info = await fetchPlaceInfo(page, placeId, query)
+  const info = await fetchPlaceInfo(page, placeId, query, errors)
   return {
     placeName: dig(info, 11) as string | null,
     placeId: (dig(info, 10) as string | null) ?? placeId,
@@ -493,7 +496,7 @@ async function getPlaceAbout(page: Page, params: Record<string, unknown>): Promi
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
   searchPlaces,
   getPlaceDetails,
   getPlaceReviews,
@@ -510,7 +513,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getPlaceAbout,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'google-maps-api',
   description: 'Google Maps — search, details, reviews, photos, directions (driving/transit/walking/cycling), nearby, autocomplete, hours, geocode via SPA + internal APIs',
 
@@ -522,13 +525,14 @@ const adapter: CodeAdapter = {
     return true
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors & { unknownOp(op: string): Error; wrap(error: unknown): Error } }): Promise<unknown> {
+    const { errors } = helpers
     try {
       const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
-      return handler(page, { ...params })
+      if (!handler) throw errors.unknownOp(operation)
+      return handler(page, { ...params }, errors)
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
 }

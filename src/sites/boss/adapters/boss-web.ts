@@ -1,6 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 /**
  * Boss直聘 L3 adapter — page-based job search, detail, company, and salary data.
@@ -10,6 +8,8 @@ import type { CodeAdapter } from '../../../types/adapter.js'
  */
 
 const SITE = 'https://www.zhipin.com'
+
+type Errors = { missingParam(name: string): Error; unknownOp(op: string): Error; wrap(error: unknown): Error }
 
 async function navigateTo(page: Page, url: string, waitSelector?: string): Promise<void> {
   await page.goto(url, { waitUntil: 'load', timeout: 15_000 }).catch(() => {})
@@ -38,11 +38,11 @@ async function fetchJson(page: Page, url: string): Promise<unknown> {
 
 /* ---------- searchJobs ---------- */
 
-async function searchJobs(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchJobs(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const query = String(params.query ?? '')
   const city = String(params.city ?? '101010100')
   const pageNum = Number(params.page ?? 1)
-  if (!query) throw OpenWebError.missingParam('query')
+  if (!query) throw errors.missingParam('query')
 
   const url = new URL('/web/geek/job', SITE)
   url.searchParams.set('query', query)
@@ -91,9 +91,9 @@ async function searchJobs(page: Page, params: Record<string, unknown>): Promise<
 
 /* ---------- getJobDetail ---------- */
 
-async function getJobDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getJobDetail(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const jobId = String(params.jobId ?? '')
-  if (!jobId) throw OpenWebError.missingParam('jobId')
+  if (!jobId) throw errors.missingParam('jobId')
 
   const url = jobId.startsWith('http') ? jobId
     : jobId.startsWith('/') ? `${SITE}${jobId}`
@@ -159,9 +159,9 @@ async function getJobDetail(page: Page, params: Record<string, unknown>): Promis
 
 /* ---------- getCompanyProfile ---------- */
 
-async function getCompanyProfile(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getCompanyProfile(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const companyId = String(params.companyId ?? '')
-  if (!companyId) throw OpenWebError.missingParam('companyId')
+  if (!companyId) throw errors.missingParam('companyId')
 
   const url = companyId.startsWith('http') ? companyId
     : companyId.startsWith('/') ? `${SITE}${companyId}`
@@ -224,10 +224,10 @@ async function getCompanyProfile(page: Page, params: Record<string, unknown>): P
 
 /* ---------- getSalary ---------- */
 
-async function getSalary(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getSalary(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const query = String(params.query ?? '')
   const city = String(params.city ?? '101010100')
-  if (!query) throw OpenWebError.missingParam('query')
+  if (!query) throw errors.missingParam('query')
 
   const url = new URL('/web/geek/job', SITE)
   url.searchParams.set('query', query)
@@ -286,21 +286,23 @@ async function getSalary(page: Page, params: Record<string, unknown>): Promise<u
 
 /* ---------- reference data (page.evaluate(fetch), no navigation) ---------- */
 
-async function getCities(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getCities(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   return fetchJson(page, `${SITE}/wapi/zpCommon/data/city.json`)
 }
 
-async function getIndustries(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getIndustries(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   return fetchJson(page, `${SITE}/wapi/zpCommon/data/industry.json`)
 }
 
-async function getFilterConditions(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getFilterConditions(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   return fetchJson(page, `${SITE}/wapi/zpgeek/pc/all/filter/conditions.json`)
 }
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+type OpHandler = (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>
+
+const OPERATIONS: Record<string, OpHandler> = {
   searchJobs,
   getJobDetail,
   getCompanyProfile,
@@ -310,7 +312,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getFilterConditions,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'boss-web',
   description: 'Boss直聘 — job search, detail, company profiles, salary data via page DOM extraction',
 
@@ -323,13 +325,14 @@ const adapter: CodeAdapter = {
     return true
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
+    const { errors } = helpers as { errors: Errors }
     try {
       const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
-      return handler(page, { ...params })
+      if (!handler) throw errors.unknownOp(operation)
+      return handler(page, { ...params }, errors)
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
 }

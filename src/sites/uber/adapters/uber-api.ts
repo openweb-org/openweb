@@ -1,12 +1,14 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
+
 /**
  * Uber L3 adapter — Eats REST API via browser fetch.
  *
  * Uber Eats: REST at ubereats.com/_p/api/* (POST JSON, x-csrf-token: x)
  * Auth is via cookie_session (credentials: 'include' in browser fetch).
+ *
+ * NOTE: Adapters must be self-contained — no imports from src/.
+ * Helpers (pageFetch, graphqlFetch) are injected by the runtime via execute()'s 4th parameter.
  */
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 /* ---------- Eats REST ---------- */
 
@@ -14,23 +16,25 @@ const EATS_API_BASE = 'https://www.ubereats.com/_p/api'
 
 /* ---------- helpers ---------- */
 
-async function eatsPost(page: Page, endpoint: string, body: Record<string, unknown>): Promise<unknown> {
+type PageFetch = (page: Page, options: {
+  url: string; method?: string; body?: string
+  headers?: Record<string, string>; credentials?: 'same-origin' | 'include'
+}) => Promise<{ status: number; text: string }>
+
+type Errors = { unknownOp(op: string): Error; httpError(status: number): Error }
+
+async function eatsPost(page: Page, pageFetch: PageFetch, endpoint: string, body: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const url = `${EATS_API_BASE}/${endpoint}`
-  const result = await page.evaluate(
-    async (args: { url: string; body: string }) => {
-      const resp = await fetch(args.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-csrf-token': 'x' },
-        body: args.body,
-        credentials: 'include',
-      })
-      return { status: resp.status, text: await resp.text() }
-    },
-    { url, body: JSON.stringify(body) },
-  )
+  const result = await pageFetch(page, {
+    url,
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json', 'x-csrf-token': 'x' },
+    credentials: 'include',
+  })
 
   if (result.status >= 400) {
-    throw OpenWebError.httpError(result.status)
+    throw errors.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as { status?: string; data?: unknown }
@@ -39,10 +43,10 @@ async function eatsPost(page: Page, endpoint: string, body: Record<string, unkno
 
 /* ---------- operation handlers ---------- */
 
-async function searchRestaurants(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchRestaurants(page: Page, pageFetch: PageFetch, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const query = String(params.query ?? '')
 
-  const data = (await eatsPost(page, 'getSearchFeedV1', {
+  const data = (await eatsPost(page, pageFetch, 'getSearchFeedV1', {
     userQuery: query,
     date: '',
     startTime: 0,
@@ -55,7 +59,7 @@ async function searchRestaurants(page: Page, params: Record<string, unknown>): P
     keyName: '',
     cacheKey: '',
     recaptchaToken: '',
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const feedItems = (data.feedItems ?? []) as Array<Record<string, unknown>>
   const restaurants: unknown[] = []
@@ -94,12 +98,12 @@ async function searchRestaurants(page: Page, params: Record<string, unknown>): P
   }
 }
 
-async function getEatsOrderHistory(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getEatsOrderHistory(page: Page, pageFetch: PageFetch, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const lastWorkflowUUID = (params.lastWorkflowUUID as string) ?? ''
 
-  const data = (await eatsPost(page, 'getPastOrdersV1', {
+  const data = (await eatsPost(page, pageFetch, 'getPastOrdersV1', {
     lastWorkflowUUID,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const ordersMap = (data.ordersMap ?? {}) as Record<string, Record<string, unknown>>
   const orderUuids = (data.orderUuids ?? []) as string[]
@@ -141,12 +145,12 @@ async function getEatsOrderHistory(page: Page, params: Record<string, unknown>):
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, pageFetch: PageFetch, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
   searchRestaurants,
   getEatsOrderHistory,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'uber-api',
   description: 'Uber — Eats restaurant search, Eats order history',
 
@@ -160,16 +164,13 @@ const adapter: CodeAdapter = {
     return uberCookies.some((c) => c.name === 'sid' || c.name === 'csid' || c.name === 'jwt-session')
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
-    try {
-      const handler = OPERATIONS[operation]
-      if (!handler) {
-        throw OpenWebError.unknownOp(operation)
-      }
-      return await handler(page, { ...params })
-    } catch (error) {
-      throw toOpenWebError(error)
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { pageFetch: PageFetch; errors: Errors }): Promise<unknown> {
+    const { pageFetch, errors } = helpers
+    const handler = OPERATIONS[operation]
+    if (!handler) {
+      throw errors.unknownOp(operation)
     }
+    return handler(page, pageFetch, { ...params }, errors)
   },
 }
 

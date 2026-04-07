@@ -15,6 +15,7 @@ import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 import type { BrowserHandle } from './primitives/types.js'
 import { fetchWithRedirects } from './redirect.js'
 import { buildHeaderParams, buildJsonRequestBody, buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
+import { applyResponseUnwrap } from './response-unwrap.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
 
 function getPageHintUrl(serverUrl: string): string {
@@ -202,7 +203,7 @@ export async function executeSessionHttp(
       Referer: `${serverOrigin}/`,
       ...buildHeaderParams(allParams, inputParams),
     }
-    if (jsonBody) headers['Content-Type'] = 'application/json'
+    if (jsonBody && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
 
     let cookieString: string | undefined
     if (authResult) {
@@ -250,7 +251,8 @@ export async function executeSessionHttp(
 
     // 6. Parse response
     const text = await response.text()
-    const body = parseResponseBody(text, response.headers.get('content-type'), response.status)
+    const rawBody = parseResponseBody(text, response.headers.get('content-type'), response.status)
+    const body = applyResponseUnwrap(rawBody, operation)
     const responseHeaders: Record<string, string> = {}
     response.headers.forEach((value, key) => { responseHeaders[key] = value })
     return { status: response.status, body, responseHeaders }

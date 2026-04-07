@@ -1,5 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Google Search adapter — DOM extraction for search results.
  *
@@ -10,7 +9,6 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  * searchShopping:       Extract shopping results from /search?udm=28 page
  * getKnowledgePanel:    Extract knowledge panel from /search page
  */
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 /** Navigate to a Google search URL and wait for results to load. */
 async function navigateToSearch(page: Page, q: string, extra?: Record<string, string>): Promise<void> {
@@ -287,7 +285,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   searchLocal,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'google-search',
   description: 'Google Search — web, image, news, video, shopping, local, knowledge panel, PAA, related searches via DOM extraction',
 
@@ -299,13 +297,14 @@ const adapter: CodeAdapter = {
     return true // no auth required
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: { unknownOp(op: string): Error; wrap(error: unknown): Error } }): Promise<unknown> {
+    const { errors } = helpers
     try {
       const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
+      if (!handler) throw errors.unknownOp(operation)
       return await handler(page, { ...params })
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
 }

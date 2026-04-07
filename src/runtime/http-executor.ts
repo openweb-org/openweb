@@ -32,6 +32,7 @@ import { executeNodeSsr } from './node-ssr-executor.js'
 import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 import { fetchWithRedirects } from './redirect.js'
 import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
+import { applyResponseUnwrap } from './response-unwrap.js'
 import {
   type AutoNavigateResult,
   autoNavigate,
@@ -389,7 +390,7 @@ export async function executeOperation(
       const jsonBody = upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH'
         ? buildJsonRequestBody(operationRef.operation, inputParams)
         : undefined
-      if (jsonBody) {
+      if (jsonBody && !requestHeaders['Content-Type']) {
         requestHeaders['Content-Type'] = 'application/json'
       }
       const response = await fetchWithRedirects(url, upperMethod, { 'Accept': 'application/json', 'User-Agent': DEFAULT_USER_AGENT, ...requestHeaders }, jsonBody, {
@@ -418,6 +419,7 @@ export async function executeOperation(
       })
       const text = await response.text()
       body = parseResponseBody(text, response.headers.get('content-type'), response.status)
+      body = applyResponseUnwrap(body, operationRef.operation)
     }
   }
 

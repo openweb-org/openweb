@@ -88,7 +88,10 @@ function applySchemaDefaults(schema: Record<string, unknown> | undefined): Recor
   const result: Record<string, unknown> = {}
   let hasValue = false
   for (const [key, propSchema] of Object.entries(props)) {
-    if (propSchema.default !== undefined) {
+    if (propSchema.const !== undefined) {
+      result[key] = structuredClone(propSchema.const)
+      hasValue = true
+    } else if (propSchema.default !== undefined) {
       result[key] = propSchema.default
       hasValue = true
     } else if (propSchema.type === 'object') {
@@ -114,7 +117,12 @@ export function buildJsonRequestBody(operation: OpenApiOperation, params: Record
   for (const param of bodyParams) {
     const value = params[param.name]
     if (value !== undefined) {
-      body[param.name] = value
+      if (param.schema?.type === 'object' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const defaults = applySchemaDefaults(param.schema as Record<string, unknown>)
+        body[param.name] = defaults ? { ...defaults, ...(value as Record<string, unknown>) } : value
+      } else {
+        body[param.name] = value
+      }
     } else if (param.schema?.type === 'object') {
       body[param.name] = applySchemaDefaults(param.schema as Record<string, unknown>) ?? {}
     }

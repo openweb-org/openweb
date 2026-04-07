@@ -16,10 +16,11 @@ export async function graphqlGet(
   page: Page,
   operationName: string,
   variables: Record<string, unknown>,
+  errors: { fatal(msg: string): Error; httpError(status: number): Error; apiError(label: string, msg: string): Error },
 ): Promise<unknown> {
   const hash = HASHES[operationName]
   if (!hash) {
-    throw Object.assign(new Error(`No persisted query hash for ${operationName}`), { failureClass: 'fatal' })
+    throw errors.fatal(`No persisted query hash for ${operationName}`)
   }
 
   const params = new URLSearchParams({
@@ -45,13 +46,13 @@ export async function graphqlGet(
   )
 
   if (result.status >= 400) {
-    throw Object.assign(new Error(`HTTP ${result.status}`), { failureClass: 'retriable' })
+    throw errors.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as { data?: unknown; errors?: unknown[] }
   if (json.errors?.length) {
     const msg = (json.errors[0] as Record<string, string>)?.message ?? 'Unknown GraphQL error'
-    throw Object.assign(new Error(`GraphQL ${operationName}: ${msg}`), { failureClass: 'fatal' })
+    throw errors.apiError(operationName, msg)
   }
 
   return json.data

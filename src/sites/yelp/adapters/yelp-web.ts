@@ -1,20 +1,5 @@
 import type { Page } from 'patchright'
 
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
-}
-
-function validationError(msg: string): Error {
-  return Object.assign(new Error(msg), { failureClass: 'fatal' })
-}
-function unknownOpError(op: string): Error {
-  return Object.assign(new Error(`Unknown operation: ${op}`), { failureClass: 'fatal' })
-}
-
 const SITE = 'https://www.yelp.com'
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -25,11 +10,11 @@ async function navigateAndWait(page: Page, url: string): Promise<void> {
 
 /* ---------- operations ---------- */
 
-async function searchBusinesses(page: Page, params: Record<string, unknown>) {
+async function searchBusinesses(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const find_desc = String(params.find_desc || '')
-  if (!find_desc) throw validationError('find_desc (search term, e.g. "pizza") is required')
+  if (!find_desc) throw errors.missingParam('find_desc')
   const find_loc = String(params.find_loc || '')
-  if (!find_loc) throw validationError('find_loc (location, e.g. "San Francisco, CA") is required')
+  if (!find_loc) throw errors.missingParam('find_loc')
   const start = Number(params.start) || 0
 
   const url = new URL('/search', SITE)
@@ -197,7 +182,7 @@ async function searchBusinesses(page: Page, params: Record<string, unknown>) {
 
 /* ---------- adapter export ---------- */
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'yelp-web',
   description: 'Yelp — business search via page extraction (SSR + DOM)',
 
@@ -213,10 +198,12 @@ const adapter: CodeAdapter = {
     page: Page,
     operation: string,
     params: Readonly<Record<string, unknown>>,
+    helpers: Record<string, unknown>,
   ): Promise<unknown> {
+    const { errors } = helpers as { errors: { unknownOp(op: string): Error; missingParam(name: string): Error } }
     switch (operation) {
-      case 'searchBusinesses': return searchBusinesses(page, { ...params })
-      default: throw unknownOpError(operation)
+      case 'searchBusinesses': return searchBusinesses(page, { ...params }, errors)
+      default: throw errors.unknownOp(operation)
     }
   },
 }

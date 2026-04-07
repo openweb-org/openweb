@@ -6,7 +6,6 @@ import type { Page } from 'patchright'
  * Automatic Persisted Queries (APQ): only sha256 hashes, no query text.
  * Heavy Akamai bot detection → page transport required.
  */
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 const GRAPHQL_URL = 'https://www.expedia.com/graphql'
 
@@ -46,6 +45,10 @@ function parseDate(dateStr: string): DateInput {
   return { year: y, month: m, day: d }
 }
 
+/* ---------- error helpers ---------- */
+
+type ErrorHelpers = { unknownOp(op: string): Error; httpError(status: number): Error; apiError(label: string, msg: string): Error }
+
 /* ---------- GraphQL fetch ---------- */
 
 async function apqFetch(
@@ -53,11 +56,11 @@ async function apqFetch(
   operationName: string,
   variables: Record<string, unknown>,
   clientInfo: string,
+  errors: ErrorHelpers,
 ): Promise<unknown> {
   const hash = HASHES[operationName as keyof typeof HASHES]
   if (!hash) {
-    const err = Object.assign(new Error(`Unknown operation: ${operationName}`), { failureClass: 'fatal' as const })
-    throw err
+    throw errors.unknownOp(operationName)
   }
 
   const body = JSON.stringify({
@@ -91,8 +94,7 @@ async function apqFetch(
   )
 
   if (result.status >= 400) {
-    const err = Object.assign(new Error(`HTTP ${result.status}`), { failureClass: 'retriable' as const })
-    throw err
+    throw errors.httpError(result.status)
   }
 
   const json = JSON.parse(result.text)
@@ -100,8 +102,7 @@ async function apqFetch(
   const data = Array.isArray(json) ? json[0] : json
   if (data?.errors?.length) {
     const msg = data.errors[0]?.message ?? 'GraphQL error'
-    const err = Object.assign(new Error(`GraphQL ${operationName}: ${msg}`), { failureClass: 'fatal' as const })
-    throw err
+    throw errors.apiError(operationName, msg)
   }
 
   return data?.data
@@ -109,7 +110,7 @@ async function apqFetch(
 
 /* ---------- operation handlers ---------- */
 
-async function searchHotels(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchHotels(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
   const destination = String(params.destination ?? params.query ?? 'New York')
   const checkIn = String(params.checkInDate ?? params.checkIn ?? '2026-05-01')
   const checkOut = String(params.checkOutDate ?? params.checkOut ?? '2026-05-03')
@@ -161,11 +162,12 @@ async function searchHotels(page: Page, params: Record<string, unknown>): Promis
     'PropertyListingQuery',
     variables,
     'shopping-pwa,unknown,us-east-1',
+    errors,
   )) as Record<string, unknown>
   return data?.propertySearch
 }
 
-async function getHotelDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getHotelDetail(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
   const propertyId = String(params.propertyId ?? params.id)
   const checkIn = String(params.checkInDate ?? params.checkIn ?? '2026-05-01')
   const checkOut = String(params.checkOutDate ?? params.checkOut ?? '2026-05-03')
@@ -198,14 +200,14 @@ async function getHotelDetail(page: Page, params: Record<string, unknown>): Prom
     },
   }
 
-  const data = (await apqFetch(page, 'PropertyDetailsBasicQuery', variables, 'shopping-pwa,unknown,us-east-1')) as Record<
+  const data = (await apqFetch(page, 'PropertyDetailsBasicQuery', variables, 'shopping-pwa,unknown,us-east-1', errors)) as Record<
     string,
     unknown
   >
   return data?.propertyInfo
 }
 
-async function searchFlights(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchFlights(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
   const origin = String(params.origin ?? params.from ?? 'New York (NYC-All Airports)')
   const destination = String(params.destination ?? params.to ?? 'Los Angeles (LAX-Los Angeles Intl.)')
   const departureDate = String(params.departureDate ?? params.departure ?? '2026-05-10')
@@ -266,15 +268,16 @@ async function searchFlights(page: Page, params: Record<string, unknown>): Promi
     'FlightsSearchResultsLoadedQuery',
     variables,
     'flights-shopping-pwa,unknown,us-east-1',
+    errors,
   )) as Record<string, unknown>
   return data?.flightsSearch
 }
 
-async function getFlightDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getFlightDetail(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
   // Flight detail uses the same search query with specific filters
   // In Expedia's model, flight "detail" = search results with filter refinement
   // The detailed info (fares, segments) is in the search response itself
-  return searchFlights(page, params)
+  return searchFlights(page, params, errors)
 }
 
 /* ---------- helpers ---------- */
@@ -289,14 +292,14 @@ async function getDuaid(page: Page): Promise<string> {
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: ErrorHelpers) => Promise<unknown>> = {
   searchHotels,
   getHotelDetail,
   searchFlights,
   getFlightDetail,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'expedia-graphql',
   description: 'Expedia GraphQL API — hotels, flights via APQ',
 
@@ -309,13 +312,13 @@ const adapter: CodeAdapter = {
     return cookies.some((c) => c.name === 'EG_SESSIONTOKEN')
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
+    const { errors } = helpers as { errors: ErrorHelpers }
     const handler = OPERATIONS[operation]
     if (!handler) {
-      const err = Object.assign(new Error(`Unknown operation: ${operation}`), { failureClass: 'fatal' as const })
-      throw err
+      throw errors.unknownOp(operation)
     }
-    return handler(page, { ...params })
+    return handler(page, { ...params }, errors)
   },
 }
 

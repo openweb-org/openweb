@@ -1,6 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 /** Navigate to a Redfin URL and wait for content to load. */
 async function navigateTo(page: Page, path: string): Promise<void> {
@@ -192,7 +190,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   getMarketData,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'redfin-dom',
   description: 'Redfin — home search, property details, market data via JSON-LD and DOM extraction',
 
@@ -204,13 +202,14 @@ const adapter: CodeAdapter = {
     return true
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
+    const { errors } = helpers as { errors: { unknownOp(op: string): Error; wrap(error: unknown): Error } }
     try {
       const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
+      if (!handler) throw errors.unknownOp(operation)
       return await handler(page, { ...params })
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
 }

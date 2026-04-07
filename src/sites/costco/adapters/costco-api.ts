@@ -1,5 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Costco L3 adapter — POST-based APIs via Playwright request context.
  *
@@ -15,7 +14,13 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  * Playwright's page.request API which bypasses page JS interception
  * while inheriting browser cookies.
  */
-import type { CodeAdapter } from '../../../types/adapter.js'
+
+type Errors = {
+  unknownOp(op: string): Error
+  missingParam(name: string): Error
+  httpError(status: number): Error
+  wrap(err: unknown): Error
+}
 
 const SEARCH_URL = 'https://gdx-api.costco.com/catalog/search/api/v1/search'
 const SEARCH_TYPEAHEAD_URL = 'https://gdx-api.costco.com/catalog/search/api/v1/search?searchType=typeahead'
@@ -68,6 +73,7 @@ async function getJson(
   page: Page,
   url: string,
   extraHeaders: Record<string, string> = {},
+  errors: Errors,
 ): Promise<unknown> {
   const resp = await page.request.fetch(url, {
     method: 'GET',
@@ -80,7 +86,7 @@ async function getJson(
   })
 
   if (!resp.ok()) {
-    throw OpenWebError.httpError(resp.status())
+    throw errors.httpError(resp.status())
   }
 
   return resp.json()
@@ -91,6 +97,7 @@ async function postJson(
   url: string,
   body: unknown,
   extraHeaders: Record<string, string> = {},
+  errors: Errors,
 ): Promise<unknown> {
   const resp = await page.request.fetch(url, {
     method: 'POST',
@@ -105,7 +112,7 @@ async function postJson(
   })
 
   if (!resp.ok()) {
-    throw OpenWebError.httpError(resp.status())
+    throw errors.httpError(resp.status())
   }
 
   return resp.json()
@@ -113,7 +120,7 @@ async function postJson(
 
 /* ---------- operation handlers ---------- */
 
-async function searchProducts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchProducts(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const query = String(params.query ?? '')
   const pageSize = Number(params.pageSize ?? 24)
   const offset = Number(params.offset ?? 0)
@@ -142,7 +149,7 @@ async function searchProducts(page: Page, params: Record<string, unknown>): Prom
     client_id: 'USBC',
     locale: 'en-US',
     searchresultprovider: 'GRS',
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const searchResult = resp.searchResult as Record<string, unknown>
   const results = (searchResult?.results ?? []) as Array<Record<string, unknown>>
@@ -172,16 +179,16 @@ async function searchProducts(page: Page, params: Record<string, unknown>): Prom
   }
 }
 
-async function getProductDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getProductDetail(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const itemNumber = String(params.itemNumber ?? params.item_number ?? '')
-  if (!itemNumber) throw OpenWebError.missingParam('itemNumber')
+  if (!itemNumber) throw errors.missingParam('itemNumber')
 
   const query = PRODUCT_QUERY.replace('ITEM_NUMBERS', `"${itemNumber}"`)
   const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query }, {
     'client-identifier': PRODUCT_CLIENT_ID,
     'costco.env': 'ecom',
     'costco.service': 'restProduct',
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const data = resp.data as Record<string, unknown>
   const products = data?.products as Record<string, unknown>
@@ -228,9 +235,9 @@ async function getProductDetail(page: Page, params: Record<string, unknown>): Pr
 
 /* ---------- reviews ---------- */
 
-async function getProductReviews(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getProductReviews(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const productId = String(params.productId ?? params.itemNumber ?? '')
-  if (!productId) throw OpenWebError.missingParam('productId')
+  if (!productId) throw errors.missingParam('productId')
 
   // Navigate to product page to trigger BV widget initialization
   const productUrl = `https://www.costco.com/p/-/${productId}?langId=-1`
@@ -262,7 +269,7 @@ async function getProductReviews(page: Page, params: Record<string, unknown>): P
       'client-identifier': PRODUCT_CLIENT_ID,
       'costco.env': 'ecom',
       'costco.service': 'restProduct',
-    })) as Record<string, unknown>
+    }, errors)) as Record<string, unknown>
     const data = resp.data as Record<string, unknown>
     const products = data?.products as Record<string, unknown>
     const catalogData = (products?.catalogData as Array<Record<string, unknown>>) ?? []
@@ -299,12 +306,12 @@ async function getProductReviews(page: Page, params: Record<string, unknown>): P
 
 /* ---------- warehouse locator ---------- */
 
-async function findWarehouses(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function findWarehouses(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const latitude = params.latitude != null ? Number(params.latitude) : null
   const longitude = params.longitude != null ? Number(params.longitude) : null
 
   if (latitude == null || longitude == null) {
-    throw OpenWebError.missingParam('latitude and longitude')
+    throw errors.missingParam('latitude and longitude')
   }
 
   const limit = Number(params.limit ?? 10)
@@ -313,7 +320,7 @@ async function findWarehouses(page: Page, params: Record<string, unknown>): Prom
   const resp = (await getJson(page, url, {
     'client-identifier': WAREHOUSE_CLIENT_ID,
     'Accept-Language': 'en-us',
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const salesLocations = (resp.salesLocations ?? []) as Array<Record<string, unknown>>
 
@@ -381,9 +388,9 @@ async function findWarehouses(page: Page, params: Record<string, unknown>): Prom
 
 /* ---------- search suggestions ---------- */
 
-async function searchSuggestions(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchSuggestions(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const query = String(params.query ?? '')
-  if (!query) throw OpenWebError.missingParam('query')
+  if (!query) throw errors.missingParam('query')
   const limit = Number(params.limit ?? 10)
 
   const body = {
@@ -407,7 +414,7 @@ async function searchSuggestions(page: Page, params: Record<string, unknown>): P
     client_id: 'USBC',
     locale: 'en-US',
     searchresultprovider: 'GRS',
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const searchResult = resp.searchResult as Record<string, unknown>
   const results = (searchResult?.results ?? []) as Array<Record<string, unknown>>
@@ -426,9 +433,9 @@ async function searchSuggestions(page: Page, params: Record<string, unknown>): P
 
 /* ---------- multiple products ---------- */
 
-async function getMultipleProducts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getMultipleProducts(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const itemNumbers = params.itemNumbers as string[] | undefined
-  if (!itemNumbers?.length) throw OpenWebError.missingParam('itemNumbers')
+  if (!itemNumbers?.length) throw errors.missingParam('itemNumbers')
 
   const quotedItems = itemNumbers.map((n) => `"${n}"`).join(', ')
   const query = PRODUCT_QUERY.replace('ITEM_NUMBERS', quotedItems)
@@ -436,7 +443,7 @@ async function getMultipleProducts(page: Page, params: Record<string, unknown>):
     'client-identifier': PRODUCT_CLIENT_ID,
     'costco.env': 'ecom',
     'costco.service': 'restProduct',
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const data = resp.data as Record<string, unknown>
   const products = data?.products as Record<string, unknown>
@@ -476,9 +483,9 @@ async function getMultipleProducts(page: Page, params: Record<string, unknown>):
 
 /* ---------- browse category ---------- */
 
-async function browseCategory(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function browseCategory(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const category = String(params.category ?? '')
-  if (!category) throw OpenWebError.missingParam('category')
+  if (!category) throw errors.missingParam('category')
   const pageSize = Number(params.pageSize ?? 24)
   const offset = Number(params.offset ?? 0)
 
@@ -504,7 +511,7 @@ async function browseCategory(page: Page, params: Record<string, unknown>): Prom
     client_id: 'USBC',
     locale: 'en-US',
     searchresultprovider: 'GRS',
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const searchResult = resp.searchResult as Record<string, unknown>
   const results = (searchResult?.results ?? []) as Array<Record<string, unknown>>
@@ -544,9 +551,9 @@ async function browseCategory(page: Page, params: Record<string, unknown>): Prom
 
 /* ---------- delivery options ---------- */
 
-async function getDeliveryOptions(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getDeliveryOptions(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const itemNumber = String(params.itemNumber ?? '')
-  if (!itemNumber) throw OpenWebError.missingParam('itemNumber')
+  if (!itemNumber) throw errors.missingParam('itemNumber')
   const zipCode = String(params.zipCode ?? '95050')
 
   // Use the product GraphQL with delivery fields
@@ -575,7 +582,7 @@ async function getDeliveryOptions(page: Page, params: Record<string, unknown>): 
     'client-identifier': PRODUCT_CLIENT_ID,
     'costco.env': 'ecom',
     'costco.service': 'restProduct',
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const data = resp.data as Record<string, unknown>
   const products = data?.products as Record<string, unknown>
@@ -630,9 +637,9 @@ async function getDeliveryOptions(page: Page, params: Record<string, unknown>): 
 
 /* ---------- warehouse details ---------- */
 
-async function getWarehouseDetails(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getWarehouseDetails(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const warehouseId = params.warehouseId != null ? String(params.warehouseId) : null
-  if (!warehouseId) throw OpenWebError.missingParam('warehouseId')
+  if (!warehouseId) throw errors.missingParam('warehouseId')
 
   // Navigate to warehouse detail page (JSON-LD has structured data)
   const warehouseUrl = `https://www.costco.com/w/-/${warehouseId}`
@@ -717,9 +724,9 @@ async function getWarehouseDetails(page: Page, params: Record<string, unknown>):
 
 /* ---------- check warehouse stock ---------- */
 
-async function checkWarehouseStock(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function checkWarehouseStock(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const itemNumber = String(params.itemNumber ?? '')
-  if (!itemNumber) throw OpenWebError.missingParam('itemNumber')
+  if (!itemNumber) throw errors.missingParam('itemNumber')
   const warehouseNumber = String(params.warehouseNumber ?? '847')
 
   const stockQuery = `query {
@@ -747,7 +754,7 @@ async function checkWarehouseStock(page: Page, params: Record<string, unknown>):
     'client-identifier': PRODUCT_CLIENT_ID,
     'costco.env': 'ecom',
     'costco.service': 'restProduct',
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const data = resp.data as Record<string, unknown>
   const products = data?.products as Record<string, unknown>
@@ -780,10 +787,10 @@ async function checkWarehouseStock(page: Page, params: Record<string, unknown>):
 
 /* ---------- compare products ---------- */
 
-async function compareProducts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function compareProducts(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const itemNumbers = params.itemNumbers as string[] | undefined
   if (!itemNumbers?.length || itemNumbers.length < 2) {
-    throw OpenWebError.missingParam('itemNumbers (at least 2)')
+    throw errors.missingParam('itemNumbers (at least 2)')
   }
 
   const quotedItems = itemNumbers.map((n) => `"${n}"`).join(', ')
@@ -792,7 +799,7 @@ async function compareProducts(page: Page, params: Record<string, unknown>): Pro
     'client-identifier': PRODUCT_CLIENT_ID,
     'costco.env': 'ecom',
     'costco.service': 'restProduct',
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const data = resp.data as Record<string, unknown>
   const products = data?.products as Record<string, unknown>
@@ -834,7 +841,7 @@ async function compareProducts(page: Page, params: Record<string, unknown>): Pro
 
 /* ---------- cart operations ---------- */
 
-async function cartRequest(page: Page, queryParams: Record<string, string>): Promise<unknown> {
+async function cartRequest(page: Page, queryParams: Record<string, string>, errors: Errors): Promise<unknown> {
   const qs = new URLSearchParams({
     ajaxFlag: 'true',
     ...queryParams,
@@ -852,7 +859,7 @@ async function cartRequest(page: Page, queryParams: Record<string, string>): Pro
   })
 
   if (!resp.ok()) {
-    throw OpenWebError.httpError(resp.status())
+    throw errors.httpError(resp.status())
   }
 
   const text = await resp.text()
@@ -863,9 +870,9 @@ async function cartRequest(page: Page, queryParams: Record<string, string>): Pro
   }
 }
 
-async function addToCart(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function addToCart(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const itemNumber = String(params.itemNumber ?? params.partNumber ?? '')
-  if (!itemNumber) throw OpenWebError.missingParam('itemNumber')
+  if (!itemNumber) throw errors.missingParam('itemNumber')
   const quantity = Number(params.quantity ?? 1)
 
   return cartRequest(page, {
@@ -878,35 +885,35 @@ async function addToCart(page: Page, params: Record<string, unknown>): Promise<u
     isShipRestrictionStore: 'true',
     productPartnumber: itemNumber,
     isFsaChdItem: 'false',
-  })
+  }, errors)
 }
 
-async function removeFromCart(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function removeFromCart(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const orderItemId = String(params.orderItemId ?? '')
-  if (!orderItemId) throw OpenWebError.missingParam('orderItemId')
+  if (!orderItemId) throw errors.missingParam('orderItemId')
 
   return cartRequest(page, {
     orderItemId,
     actionType: 'remove',
     quantity: '0',
-  })
+  }, errors)
 }
 
-async function updateCartQuantity(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function updateCartQuantity(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const orderItemId = String(params.orderItemId ?? '')
-  if (!orderItemId) throw OpenWebError.missingParam('orderItemId')
+  if (!orderItemId) throw errors.missingParam('orderItemId')
   const quantity = Number(params.quantity ?? 1)
 
   return cartRequest(page, {
     orderItemId,
     actionType: 'update',
     quantity: String(quantity),
-  })
+  }, errors)
 }
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
   searchProducts,
   searchSuggestions,
   getProductDetail,
@@ -923,7 +930,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   updateCartQuantity,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'costco-api',
   description: 'Costco product search, detail, reviews, warehouses, delivery, and cart — via Playwright request',
 
@@ -936,15 +943,21 @@ const adapter: CodeAdapter = {
     return true
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(
+    page: Page,
+    operation: string,
+    params: Readonly<Record<string, unknown>>,
+    helpers: Record<string, unknown>,
+  ): Promise<unknown> {
+    const { errors } = helpers as { errors: Errors }
     try {
       const handler = OPERATIONS[operation]
       if (!handler) {
-        throw OpenWebError.unknownOp(operation)
+        throw errors.unknownOp(operation)
       }
-      return await handler(page, { ...params })
+      return await handler(page, { ...params }, errors)
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
 }

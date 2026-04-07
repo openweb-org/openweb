@@ -1,6 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
-import type { CodeAdapter } from '../../../types/adapter.js'
 
 /** Map operationId → Google Flights page path for navigation */
 const OP_PATHS: Record<string, string> = {
@@ -256,7 +254,7 @@ const OPERATIONS: Record<string, (page: Page) => Promise<unknown>> = {
 	getPriceInsights,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
 	name: 'google-flights',
 	description: 'Google Flights — search, overview, booking, explore destinations, price insights via DOM extraction',
 
@@ -268,10 +266,11 @@ const adapter: CodeAdapter = {
 		return true
 	},
 
-	async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+	async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: { unknownOp(op: string): Error; wrap(error: unknown): Error } }): Promise<unknown> {
+		const { errors } = helpers
 		try {
 			const handler = OPERATIONS[operation]
-			if (!handler) throw OpenWebError.unknownOp(operation)
+			if (!handler) throw errors.unknownOp(operation)
 
 			const basePath = OP_PATHS[operation]
 			if (basePath) {
@@ -284,7 +283,7 @@ const adapter: CodeAdapter = {
 
 			return await handler(page)
 		} catch (error) {
-			throw toOpenWebError(error)
+			throw errors.wrap(error)
 		}
 	},
 }

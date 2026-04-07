@@ -5,8 +5,9 @@ import { pathToFileURL } from 'node:url'
 import type { Page } from 'patchright'
 
 import { TIMEOUT } from '../lib/config.js'
-import { OpenWebError } from '../lib/errors.js'
-import type { CodeAdapter } from '../types/adapter.js'
+import { OpenWebError, toOpenWebError } from '../lib/errors.js'
+import { pageFetch, graphqlFetch } from '../lib/adapter-helpers.js'
+import type { AdapterErrorHelpers, CodeAdapter } from '../types/adapter.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
 import { warmSession } from './warm-session.js'
 
@@ -165,7 +166,28 @@ export async function executeAdapter(
   // valid cookies. Per-page WeakSet cache makes repeat calls a no-op.
   await warmSession(page, page.url())
 
-  return adapter.execute(page, operation, params)
+  return adapter.execute(page, operation, params, { pageFetch, graphqlFetch, errors: adapterErrors })
+}
+
+const adapterErrors: AdapterErrorHelpers = {
+  unknownOp: (op) => OpenWebError.unknownOp(op),
+  missingParam: (name) => OpenWebError.missingParam(name),
+  httpError: (status) => OpenWebError.httpError(status),
+  apiError: (label, msg) => OpenWebError.apiError(label, msg),
+  needsLogin: () => OpenWebError.needsLogin(),
+  botBlocked: (msg) => new OpenWebError({
+    error: 'execution_failed', code: 'EXECUTION_FAILED', message: msg,
+    action: 'Solve CAPTCHA in visible browser, then retry.', retriable: true, failureClass: 'bot_blocked',
+  }),
+  fatal: (msg) => new OpenWebError({
+    error: 'execution_failed', code: 'EXECUTION_FAILED', message: msg,
+    action: 'Check the operation parameters.', retriable: false, failureClass: 'fatal',
+  }),
+  retriable: (msg) => new OpenWebError({
+    error: 'execution_failed', code: 'EXECUTION_FAILED', message: msg,
+    action: 'Retry the command.', retriable: true, failureClass: 'retriable',
+  }),
+  wrap: (err) => toOpenWebError(err),
 }
 
 /** Clear the adapter cache (useful for tests) */

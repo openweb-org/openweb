@@ -1,5 +1,4 @@
 import type { Page } from 'patchright'
-import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
 /**
  * Weibo L3 adapter — page-based access to Weibo (China Twitter) data.
  *
@@ -10,7 +9,8 @@ import { OpenWebError, toOpenWebError } from '../../../lib/errors.js'
  * The adapter handles: write operations (CSRF + body encoding),
  * cross-domain requests (s.weibo.com), and all read operations.
  */
-import type { CodeAdapter } from '../../../types/adapter.js'
+
+type Errors = { unknownOp(op: string): Error; missingParam(name: string): Error; needsLogin(): Error; wrap(err: unknown): Error }
 
 const SITE = 'https://weibo.com'
 
@@ -66,11 +66,11 @@ function buildUrl(base: string, path: string, params: Record<string, unknown>): 
 
 /* ---------- read operations ---------- */
 
-async function getHotSearch(page: Page, _params: Record<string, unknown>): Promise<unknown> {
+async function getHotSearch(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   return fetchJson(page, `${SITE}/ajax/side/hotSearch`)
 }
 
-async function getHotFeed(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getHotFeed(page: Page, params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   const url = buildUrl(SITE, '/ajax/feed/hottimeline', {
     since_id: params.since_id,
     refresh: params.refresh ?? 4,
@@ -83,7 +83,7 @@ async function getHotFeed(page: Page, params: Record<string, unknown>): Promise<
   return fetchJson(page, url)
 }
 
-async function getFriendsFeed(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getFriendsFeed(page: Page, params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   const url = buildUrl(SITE, '/ajax/feed/friendstimeline', {
     list_id: params.list_id,
     refresh: params.refresh ?? 4,
@@ -93,9 +93,9 @@ async function getFriendsFeed(page: Page, params: Record<string, unknown>): Prom
   return fetchJson(page, url)
 }
 
-async function getPost(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getPost(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const id = String(params.id ?? '')
-  if (!id) throw OpenWebError.missingParam('id')
+  if (!id) throw errors.missingParam('id')
   const url = buildUrl(SITE, '/ajax/statuses/show', {
     id,
     locale: params.locale ?? 'zh-CN',
@@ -104,15 +104,15 @@ async function getPost(page: Page, params: Record<string, unknown>): Promise<unk
   return fetchJson(page, url)
 }
 
-async function getLongtext(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getLongtext(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const id = String(params.id ?? '')
-  if (!id) throw OpenWebError.missingParam('id')
+  if (!id) throw errors.missingParam('id')
   return fetchJson(page, buildUrl(SITE, '/ajax/statuses/longtext', { id }))
 }
 
-async function listComments(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function listComments(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const id = String(params.id ?? '')
-  if (!id) throw OpenWebError.missingParam('id')
+  if (!id) throw errors.missingParam('id')
   const url = buildUrl(SITE, '/ajax/statuses/buildComments', {
     id,
     is_reload: params.is_reload ?? 1,
@@ -127,9 +127,9 @@ async function listComments(page: Page, params: Record<string, unknown>): Promis
   return fetchJson(page, url)
 }
 
-async function listReposts(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function listReposts(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const id = String(params.id ?? '')
-  if (!id) throw OpenWebError.missingParam('id')
+  if (!id) throw errors.missingParam('id')
   const url = buildUrl(SITE, '/ajax/statuses/repostTimeline', {
     id,
     page: params.page ?? 1,
@@ -138,21 +138,21 @@ async function listReposts(page: Page, params: Record<string, unknown>): Promise
   return fetchJson(page, url)
 }
 
-async function getUserProfile(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserProfile(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const uid = String(params.uid ?? '')
-  if (!uid) throw OpenWebError.missingParam('uid')
+  if (!uid) throw errors.missingParam('uid')
   return fetchJson(page, buildUrl(SITE, '/ajax/profile/info', { uid, scene: params.scene }))
 }
 
-async function getUserDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserDetail(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const uid = String(params.uid ?? '')
-  if (!uid) throw OpenWebError.missingParam('uid')
+  if (!uid) throw errors.missingParam('uid')
   return fetchJson(page, buildUrl(SITE, '/ajax/profile/detail', { uid }))
 }
 
-async function getUserStatuses(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserStatuses(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const uid = String(params.uid ?? '')
-  if (!uid) throw OpenWebError.missingParam('uid')
+  if (!uid) throw errors.missingParam('uid')
   const url = buildUrl(SITE, '/ajax/statuses/mymblog', {
     uid,
     page: params.page ?? 1,
@@ -164,34 +164,36 @@ async function getUserStatuses(page: Page, params: Record<string, unknown>): Pro
 
 /* ---------- write operations ---------- */
 
-async function likePost(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function likePost(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const id = String(params.id ?? '')
-  if (!id) throw OpenWebError.missingParam('id')
+  if (!id) throw errors.missingParam('id')
   return postForm(page, `${SITE}/ajax/statuses/setLike`, `id=${id}`)
 }
 
-async function repost(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function repost(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const id = String(params.id ?? '')
-  if (!id) throw OpenWebError.missingParam('id')
+  if (!id) throw errors.missingParam('id')
   const reason = String(params.reason ?? '转发微博')
   return postJson(page, `${SITE}/ajax/statuses/repost`, { id, reason })
 }
 
-async function followUser(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function followUser(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const uid = String(params.friend_uid ?? params.uid ?? '')
-  if (!uid) throw OpenWebError.missingParam('friend_uid')
+  if (!uid) throw errors.missingParam('friend_uid')
   return postForm(page, `${SITE}/ajax/friendships/create`, `friend_uid=${uid}`)
 }
 
-async function bookmarkPost(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function bookmarkPost(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const id = String(params.id ?? '')
-  if (!id) throw OpenWebError.missingParam('id')
+  if (!id) throw errors.missingParam('id')
   return postForm(page, `${SITE}/ajax/statuses/createFavorites`, `id=${id}`)
 }
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+type OpHandler = (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>
+
+const OPERATIONS: Record<string, OpHandler> = {
   // Feeds
   getFriendsFeed,
   getHotFeed,
@@ -213,7 +215,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   bookmarkPost,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'weibo-web',
   description: 'Weibo — trending topics, feeds, posts, comments, user profiles, search, write ops via AJAX APIs',
 
@@ -227,13 +229,14 @@ const adapter: CodeAdapter = {
     return cookies.some((c) => c.name === 'SUB' || c.name === 'XSRF-TOKEN')
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
+    const { errors } = helpers as { errors: Errors }
     try {
       const handler = OPERATIONS[operation]
-      if (!handler) throw OpenWebError.unknownOp(operation)
-      return handler(page, { ...params })
+      if (!handler) throw errors.unknownOp(operation)
+      return handler(page, { ...params }, errors)
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
 }

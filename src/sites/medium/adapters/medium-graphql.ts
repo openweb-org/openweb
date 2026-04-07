@@ -23,24 +23,15 @@ import {
  * rendered DOM (SSR content).
  */
 
-// Self-contained types — avoid external imports so adapter works from compile cache
-interface CodeAdapter {
-  readonly name: string
-  readonly description: string
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
-}
-
-function fatalError(message: string): Error {
-  return Object.assign(new Error(message), { failureClass: 'fatal' })
-}
-
-function missingParamError(param: string): Error {
-  return fatalError(`Missing required parameter: ${param}`)
-}
-
 const GRAPHQL_URL = 'https://medium.com/_/graphql'
+
+type Errors = {
+  unknownOp(op: string): Error
+  missingParam(name: string): Error
+  httpError(status: number): Error
+  apiError(label: string, msg: string): Error
+  needsLogin(): Error
+}
 
 /* ---------- helpers ---------- */
 
@@ -49,6 +40,7 @@ async function graphqlFetch(
   operationName: string,
   query: string,
   variables: Record<string, unknown>,
+  errors: { httpError(status: number): Error; apiError(label: string, msg: string): Error },
 ): Promise<unknown> {
   const payload = JSON.stringify([{ operationName, variables, query }])
 
@@ -69,14 +61,14 @@ async function graphqlFetch(
   )
 
   if (result.status >= 400) {
-    throw fatalError(`HTTP ${result.status}`)
+    throw errors.httpError(result.status)
   }
 
   const json = JSON.parse(result.text) as Array<{ data?: unknown; errors?: unknown[] }>
   const first = json[0]
   if (first?.errors) {
     const msg = (first.errors[0] as Record<string, string>)?.message ?? 'Unknown GraphQL error'
-    throw fatalError(`GraphQL ${operationName}: ${msg}`)
+    throw errors.apiError(operationName, msg)
   }
 
   return first?.data
@@ -84,7 +76,7 @@ async function graphqlFetch(
 
 /* ---------- operation handlers ---------- */
 
-async function searchArticles(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchArticles(page: Page, params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   const query = String(params.query ?? params.q ?? '')
   const url = `https://medium.com/search?q=${encodeURIComponent(query)}`
 
@@ -117,22 +109,22 @@ async function searchArticles(page: Page, params: Record<string, unknown>): Prom
   return { query, articles, totalResults: articles.length }
 }
 
-async function getArticle(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getArticle(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const postId = String(params.postId ?? params.id ?? '')
-  if (!postId) throw missingParamError('postId')
+  if (!postId) throw errors.missingParam('postId')
 
   const data = (await graphqlFetch(page, 'PostDetailQuery', POST_DETAIL_QUERY, {
     postId,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   return data.postResult ?? null
 }
 
-async function getTagFeed(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getTagFeed(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const tagSlug = String(params.tagSlug ?? params.tag ?? '')
   const data = (await graphqlFetch(page, 'TopicLatestStorieQuery', TOPIC_LATEST_STORIES_QUERY, {
     tagSlug,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const tagData = data.tagFromSlug as Record<string, unknown>
   const posts = tagData?.posts as Record<string, unknown>
@@ -145,11 +137,11 @@ async function getTagFeed(page: Page, params: Record<string, unknown>): Promise<
   }
 }
 
-async function getTagCuratedLists(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getTagCuratedLists(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const tagSlug = String(params.tagSlug ?? params.tag ?? '')
   const data = (await graphqlFetch(page, 'TopicCuratedListQuery', TOPIC_CURATED_LISTS_QUERY, {
     tagSlug,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const tagData = data.tagFromSlug as Record<string, unknown>
   const curatedLists = tagData?.curatedLists as Record<string, unknown>
@@ -161,7 +153,7 @@ async function getTagCuratedLists(page: Page, params: Record<string, unknown>): 
   }
 }
 
-async function getTagWriters(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getTagWriters(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const tagSlug = String(params.tagSlug ?? params.tag ?? '')
   const first = Number(params.first ?? 10)
   const after = params.after ? String(params.after) : ''
@@ -171,7 +163,7 @@ async function getTagWriters(page: Page, params: Record<string, unknown>): Promi
     after,
     mode: 'ALL',
     tagSlug,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const publishers = data.recommendedPublishers as Record<string, unknown>
   const edges = (publishers?.edges ?? []) as Array<Record<string, unknown>>
@@ -183,13 +175,13 @@ async function getTagWriters(page: Page, params: Record<string, unknown>): Promi
   }
 }
 
-async function getRecommendedFeed(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getRecommendedFeed(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const limit = Number(params.limit ?? 10)
 
   const data = (await graphqlFetch(page, 'WebInlineRecommendedFeedQuery', RECOMMENDED_FEED_QUERY, {
     forceRank: false,
     paging: { limit },
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const feed = data.webRecommendedFeed as Record<string, unknown>
   const items = (feed?.items ?? []) as Array<Record<string, unknown>>
@@ -204,8 +196,8 @@ async function getRecommendedFeed(page: Page, params: Record<string, unknown>): 
   }
 }
 
-async function getRecommendedTags(page: Page): Promise<unknown> {
-  const data = (await graphqlFetch(page, 'RightSidebarQuery', RECOMMENDED_TAGS_QUERY, {})) as Record<string, unknown>
+async function getRecommendedTags(page: Page, _params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const data = (await graphqlFetch(page, 'RightSidebarQuery', RECOMMENDED_TAGS_QUERY, {}, errors)) as Record<string, unknown>
 
   const tags = data.recommendedTags as Record<string, unknown>
   const edges = (tags?.edges ?? []) as Array<Record<string, unknown>>
@@ -222,18 +214,18 @@ async function getRecommendedTags(page: Page): Promise<unknown> {
   }
 }
 
-async function getPostClaps(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getPostClaps(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const postId = String(params.postId ?? params.id ?? '')
   const data = (await graphqlFetch(page, 'ClapCountQuery', POST_CLAPS_QUERY, {
     postId,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const result = data.postResult as Record<string, unknown>
   return { postId: result?.id, clapCount: result?.clapCount }
 }
 
-async function getRecommendedWriters(page: Page): Promise<unknown> {
-  const data = (await graphqlFetch(page, 'WhoToFollowModuleQuery', RECOMMENDED_WRITERS_QUERY, {})) as Record<
+async function getRecommendedWriters(page: Page, _params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const data = (await graphqlFetch(page, 'WhoToFollowModuleQuery', RECOMMENDED_WRITERS_QUERY, {}, errors)) as Record<
     string,
     unknown
   >
@@ -246,7 +238,7 @@ async function getRecommendedWriters(page: Page): Promise<unknown> {
   }
 }
 
-async function getUserProfile(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getUserProfile(page: Page, params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
   const username = String(params.username ?? '')
   const url = `https://medium.com/@${username}`
 
@@ -275,24 +267,24 @@ async function getUserProfile(page: Page, params: Record<string, unknown>): Prom
 
 /* ---------- write operation handlers ---------- */
 
-async function getViewerId(page: Page): Promise<string> {
-  const data = (await graphqlFetch(page, 'ViewerQuery', VIEWER_QUERY, {})) as Record<string, unknown>
+async function getViewerId(page: Page, errors: Errors): Promise<string> {
+  const data = (await graphqlFetch(page, 'ViewerQuery', VIEWER_QUERY, {}, errors)) as Record<string, unknown>
   const viewer = data.viewer as Record<string, unknown> | undefined
-  if (!viewer?.id) throw fatalError('Not authenticated — login required for write operations')
+  if (!viewer?.id) throw errors.needsLogin()
   return String(viewer.id)
 }
 
-async function clapArticle(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function clapArticle(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const postId = String(params.postId ?? params.id ?? '')
-  if (!postId) throw missingParamError('postId')
+  if (!postId) throw errors.missingParam('postId')
   const numClaps = Number(params.numClaps ?? 1)
 
-  const userId = await getViewerId(page)
+  const userId = await getViewerId(page, errors)
   const data = (await graphqlFetch(page, 'ClapMutation', CLAP_MUTATION, {
     targetPostId: postId,
     userId,
     numClaps,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const result = data.clap as Record<string, unknown>
   return {
@@ -302,13 +294,13 @@ async function clapArticle(page: Page, params: Record<string, unknown>): Promise
   }
 }
 
-async function followWriter(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function followWriter(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const userId = String(params.userId ?? params.id ?? '')
-  if (!userId) throw missingParamError('userId')
+  if (!userId) throw errors.missingParam('userId')
 
   const data = (await graphqlFetch(page, 'FollowUserMutation', FOLLOW_USER_MUTATION, {
     userId,
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const result = data.followUser as Record<string, unknown>
   const viewerEdge = result?.viewerEdge as Record<string, unknown> | undefined
@@ -320,14 +312,14 @@ async function followWriter(page: Page, params: Record<string, unknown>): Promis
   }
 }
 
-async function saveArticle(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function saveArticle(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const postId = String(params.postId ?? params.id ?? '')
-  if (!postId) throw missingParamError('postId')
+  if (!postId) throw errors.missingParam('postId')
 
   const data = (await graphqlFetch(page, 'AddToPredefinedCatalog', SAVE_ARTICLE_MUTATION, {
     type: 'READING_LIST',
     operation: { preprend: { type: 'POST', id: postId } },
-  })) as Record<string, unknown>
+  }, errors)) as Record<string, unknown>
 
   const result = data.addToPredefinedCatalog as Record<string, unknown>
   const item = result?.insertedItem as Record<string, unknown> | undefined
@@ -340,7 +332,7 @@ async function saveArticle(page: Page, params: Record<string, unknown>): Promise
 
 /* ---------- adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
   searchArticles,
   getArticle,
   getTagFeed,
@@ -356,7 +348,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
   saveArticle,
 }
 
-const adapter: CodeAdapter = {
+const adapter = {
   name: 'medium-graphql',
   description: 'Medium GraphQL API — articles, tags, publications, profiles',
 
@@ -369,12 +361,13 @@ const adapter: CodeAdapter = {
     return cookies.some((c) => c.name === 'sid' || c.name === 'uid')
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: { errors: Errors }): Promise<unknown> {
+    const { errors } = helpers
     const handler = OPERATIONS[operation]
     if (!handler) {
-      throw fatalError(`Unknown operation: ${operation}`)
+      throw errors.unknownOp(operation)
     }
-    return handler(page, { ...params })
+    return handler(page, { ...params }, errors)
   },
 }
 

@@ -6,34 +6,6 @@
  * No REST/GraphQL API exists — all data goes through internal modules.
  */
 import type { Page } from 'patchright'
-import { OpenWebError } from '../../../lib/errors.js'
-import type { CodeAdapter } from '../../../types/adapter.js'
-
-function fatal(message: string): OpenWebError {
-  return new OpenWebError({
-    error: 'execution_failed',
-    code: 'EXECUTION_FAILED',
-    message,
-    action: 'Check the operation name or input parameters.',
-    retriable: false,
-    failureClass: 'fatal',
-  })
-}
-
-function toOpenWebError(error: unknown): OpenWebError {
-  if (error instanceof OpenWebError) return error
-  const msg = error instanceof Error ? error.message : String(error)
-  if (msg.startsWith('Unknown operation:') || msg.startsWith('Chat not found:'))
-    return fatal(msg)
-  return new OpenWebError({
-    error: 'execution_failed',
-    code: 'EXECUTION_FAILED',
-    message: msg,
-    action: 'Retry after WhatsApp Web finishes loading.',
-    retriable: true,
-    failureClass: 'retriable',
-  })
-}
 
 export default {
   name: 'whatsapp-modules',
@@ -62,7 +34,8 @@ export default {
     })
   },
 
-  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers): Promise<unknown> {
+    const { errors } = helpers
     try {
       switch (operation) {
         case 'getChats':
@@ -200,13 +173,13 @@ export default {
           )
 
         default:
-          throw fatal(`Unknown operation: ${operation}`)
+          throw errors.unknownOp(operation)
       }
     } catch (error) {
-      throw toOpenWebError(error)
+      throw errors.wrap(error)
     }
   },
-} satisfies CodeAdapter
+}
 
 // ── sendMessage ─────────────────────────────────────────────────
 // Uses Playwright keyboard to type into the compose box and press Enter.

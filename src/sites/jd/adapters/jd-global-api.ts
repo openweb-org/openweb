@@ -1,6 +1,4 @@
 import type { Page } from "patchright";
-import { OpenWebError, toOpenWebError } from "../../../lib/errors.js";
-import type { CodeAdapter } from "../../../types/adapter.js";
 
 /**
  * JD L3 adapter — DOM extraction + page.evaluate(fetch) for product data.
@@ -12,14 +10,17 @@ import type { CodeAdapter } from "../../../types/adapter.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+type Errors = { missingParam(name: string): Error; unknownOp(op: string): Error; wrap(error: unknown): Error };
+
 /* ---------- searchProducts ---------- */
 
 async function searchProducts(
 	page: Page,
 	params: Record<string, unknown>,
+	errors: Errors,
 ): Promise<unknown> {
 	const keyword = String(params.keyword || "");
-	if (!keyword) throw OpenWebError.validation("keyword is required");
+	if (!keyword) throw errors.missingParam("keyword");
 	const pageNum = Number(params.page) || 1;
 
 	const url = `https://search.jd.com/Search?keyword=${encodeURIComponent(keyword)}&enc=utf-8&page=${2 * pageNum - 1}`;
@@ -118,9 +119,10 @@ async function searchProducts(
 async function getProductDetail(
 	page: Page,
 	params: Record<string, unknown>,
+	errors: Errors,
 ): Promise<unknown> {
 	const skuId = String(params.skuId || "");
-	if (!skuId) throw OpenWebError.validation("skuId is required");
+	if (!skuId) throw errors.missingParam("skuId");
 
 	await page.goto(`https://item.jd.com/${skuId}.html`, {
 		waitUntil: "load",
@@ -184,9 +186,10 @@ async function getProductDetail(
 async function getProductReviews(
 	page: Page,
 	params: Record<string, unknown>,
+	errors: Errors,
 ): Promise<unknown> {
 	const skuId = String(params.skuId || "");
-	if (!skuId) throw OpenWebError.validation("skuId is required");
+	if (!skuId) throw errors.missingParam("skuId");
 
 	await page.goto(`https://item.jd.com/${skuId}.html`, {
 		waitUntil: "load",
@@ -275,9 +278,10 @@ async function getProductReviews(
 async function getProductPrice(
 	page: Page,
 	params: Record<string, unknown>,
+	errors: Errors,
 ): Promise<unknown> {
 	const skuId = String(params.skuId || "");
-	if (!skuId) throw OpenWebError.validation("skuId is required");
+	if (!skuId) throw errors.missingParam("skuId");
 
 	await page.goto(`https://item.jd.com/${skuId}.html`, {
 		waitUntil: "load",
@@ -334,7 +338,7 @@ async function getProductPrice(
 
 const OPERATIONS: Record<
 	string,
-	(page: Page, params: Record<string, unknown>) => Promise<unknown>
+	(page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>
 > = {
 	searchProducts,
 	getProductDetail,
@@ -342,7 +346,7 @@ const OPERATIONS: Record<
 	getProductPrice,
 };
 
-const adapter: CodeAdapter = {
+const adapter = {
 	name: "jd-global-api",
 	description:
 		"JD — product search, detail, reviews, and pricing via DOM extraction",
@@ -364,13 +368,15 @@ const adapter: CodeAdapter = {
 		page: Page,
 		operation: string,
 		params: Readonly<Record<string, unknown>>,
+		helpers: { errors: Errors },
 	): Promise<unknown> {
+		const { errors } = helpers;
 		try {
 			const handler = OPERATIONS[operation];
-			if (!handler) throw OpenWebError.unknownOp(operation);
-			return handler(page, { ...params });
+			if (!handler) throw errors.unknownOp(operation);
+			return handler(page, { ...params }, errors);
 		} catch (error) {
-			throw toOpenWebError(error);
+			throw errors.wrap(error);
 		}
 	},
 };
