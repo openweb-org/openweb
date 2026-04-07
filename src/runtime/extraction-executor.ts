@@ -12,7 +12,7 @@ import { resolveScriptJson } from './primitives/script-json.js'
 import { resolveSsrNextData } from './primitives/ssr-next-data.js'
 import type { BrowserHandle } from './primitives/types.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
-import { resolveAllParameters, substitutePath } from './request-builder.js'
+import { buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
 import { type AutoNavigateResult, autoNavigate, findPageForOrigin } from './session-executor.js'
 
 export type { ExecutorResult }
@@ -77,12 +77,8 @@ function resolvePageUrl(
   const allParams = resolveAllParameters(spec, operation)
   const resolvedPath = substitutePath(rawPath, allParams, params)
 
-  try {
-    return new URL(resolvedPath, serverUrl).toString()
-  } catch {
-    // intentional: relative URL resolution failed — use resolvedPath as-is
-    return resolvedPath
-  }
+  // Build full URL including query parameters
+  return buildTargetUrl(serverUrl, resolvedPath, allParams, params)
 }
 
 function getExtraction(operation: OpenApiOperation): ExtractionPrimitive {
@@ -137,8 +133,17 @@ export async function executeExtraction(
   let page = await findPageForTarget(context, targetPageUrl, 'page_url' in extraction && !!extraction.page_url)
   let ownedPage = false
   if (!page) {
-    const nav = await autoNavigate(context, serverUrl)
-    if (nav) { page = nav.page; ownedPage = nav.owned }
+    // Navigate directly to the target URL (includes path + query params)
+    try {
+      const newPage = await context.newPage()
+      await newPage.goto(targetPageUrl, { waitUntil: 'load', timeout: 30_000 })
+      page = newPage
+      ownedPage = true
+    } catch {
+      // Fallback: auto-navigate to server homepage
+      const nav = await autoNavigate(context, serverUrl)
+      if (nav) { page = nav.page; ownedPage = nav.owned }
+    }
   }
   if (!page) {
     throw createExtractionNeedsPageError(targetPageUrl)

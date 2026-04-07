@@ -246,6 +246,7 @@ export const extractionPrimitiveSchema = {
       required: ['type', 'selector'],
       properties: {
         type: { const: 'script_json' },
+        page_url: { type: 'string' },
         selector: { type: 'string' },
         path: { type: 'string' },
       },

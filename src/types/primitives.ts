@@ -93,5 +93,10 @@ export type ExtractionPrimitive =
       readonly attribute?: string
       readonly multiple?: boolean
     }
-  | { readonly type: 'script_json'; readonly selector: string; readonly path?: string }
+  | {
+      readonly type: 'script_json'
+      readonly page_url?: string
+      readonly selector: string
+      readonly path?: string
+    }
   | { readonly type: 'page_global_data'; readonly page_url?: string; readonly expression?: string; readonly path?: string; readonly adapter?: string; readonly method?: string }
