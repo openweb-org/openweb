@@ -73,6 +73,9 @@ Applied to individual operations under `paths[].{method}.x-openweb`.
 | `extraction` | ExtractionPrimitive | SSR/DOM data extraction config |
 | `adapter` | AdapterRef | Delegates execution to a TypeScript adapter |
 | `actual_path` | string | Real URL path when spec key is a virtual path (e.g. GraphQL dedup) |
+| `unwrap` | string | Dot-path into parsed response body to extract before returning (e.g. `data`, `0.data`) |
+| `wrap` | string | Wrap non-const request body params under this key (e.g. `variables` for GraphQL) |
+| `graphql_query` | string | GraphQL query string injected at body root when `wrap` is active and the schema property name would conflict with a user-facing param |
 | `build` | BuildMeta | Compiler metadata — **do not edit manually** |
 | `safety` | `safe` \| `caution` | Compiler hint for state-modifying ops |
 | `requires_auth` | boolean | Compiler hint — not enforced at runtime |
@@ -109,6 +112,38 @@ See `knowledge/extraction.md` for decision flow and usage guidance.
 Fields: `name` (required), `operation` (required), `params?`. Runtime bypasses
 URL construction — OpenAPI path is a logical namespace. Adapter navigates and
 extracts via `params`.
+
+Adapters must be **self-contained** — no imports from outside the adapter file.
+The runtime injects shared helpers (`pageFetch`, `graphqlFetch`, error factories)
+via the `execute()` 4th parameter.
+
+### Response Unwrap
+
+Extracts a sub-path from the parsed response before returning to the caller.
+Uses `getValueAtPath()` which supports dot-paths and array indices.
+
+- `unwrap: "data"` — standard GraphQL or REST envelope
+- `unwrap: "0.data"` — batched GraphQL (array response)
+- `unwrap: "data.searchFor"` — nested extraction
+
+When `unwrap` is set and the response has a non-empty `errors` array with null/absent
+unwrap target, the runtime throws `OpenWebError.apiError()` (GraphQL error detection).
+
+### Request Wrap
+
+Used with GraphQL to keep user-facing params flat while wrapping them into
+`variables` on the wire. Non-const body params go under the `wrap` key;
+`const`/`default` fields stay at root.
+
+```yaml
+x-openweb:
+  wrap: variables
+  graphql_query: "query SearchProducts($query: String!) { ... }"
+  unwrap: data
+```
+
+`graphql_query` injects a literal query string at `body.query` — needed when
+both the GraphQL query field and a user param are named `query`.
 
 ### Build Meta
 

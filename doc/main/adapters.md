@@ -1,13 +1,13 @@
 # L3 Adapter Framework
 
 > CodeAdapter interface, loading, and execution lifecycle for sites that defy declarative modeling.
-> Last updated: 2026-03-26 (M38)
+> Last updated: 2026-04-06 (adapter normalization — helpers injection, self-contained constraint)
 
 ## Overview
 
 L3 adapters are the escape hatch. When a site's internal API is too complex for L2 primitives — proprietary module systems, custom serialization, non-HTTP protocols — you write a CodeAdapter: arbitrary JS that runs in the browser via Patchright (Playwright fork with CDP detection bypass).
 
-~7% of sites need L3 (validated against 103 OpenTabs plugins).
+Adapters must be **self-contained** — they cannot import from `src/`. After packaging, adapters load from the compile cache (`$OPENWEB_HOME/sites/<site>/adapters/`), where relative imports break. Shared utilities (`pageFetch`, `graphqlFetch`, error factories) are injected by the runtime via the `execute()` 4th parameter.
 
 -> See: `src/runtime/adapter-executor.ts`
 
@@ -16,17 +16,23 @@ L3 adapters are the escape hatch. When a site's internal API is too complex for 
 ## CodeAdapter Interface
 
 ```typescript
+interface AdapterHelpers {
+  pageFetch(page: Page, options: PageFetchOptions): Promise<PageFetchResult>
+  graphqlFetch(page: Page, options: GraphqlFetchOptions): Promise<unknown>
+  errors: AdapterErrorHelpers  // unknownOp, missingParam, httpError, apiError, fatal, retriable, etc.
+}
+
 interface CodeAdapter {
   readonly name: string
   readonly description: string
 
   init(page: Page): Promise<boolean>
   isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>): Promise<unknown>
+  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown>
 }
 ```
 
--> See: `src/types/adapter.ts`
+-> See: `src/types/adapter.ts`, `src/lib/adapter-helpers.ts`
 
 ---
 
@@ -143,10 +149,14 @@ If the site has a normal REST/GraphQL API with standard auth, L2 primitives shou
 
 ```
 src/runtime/
-└── adapter-executor.ts       # loadAdapter, executeAdapter, clearAdapterCache
+├── adapter-executor.ts       # loadAdapter, executeAdapter, clearAdapterCache
+└── response-unwrap.ts        # applyResponseUnwrap (used by all HTTP executors)
+
+src/lib/
+└── adapter-helpers.ts        # pageFetch, graphqlFetch (injected into adapters)
 
 src/types/
-└── adapter.ts                # CodeAdapter interface
+└── adapter.ts                # CodeAdapter, AdapterHelpers, AdapterErrorHelpers
 
 src/sites/
 ├── whatsapp/

@@ -79,29 +79,64 @@ REST maps HTTP method to permission (GET->read, POST->write). GraphQL uses POST 
 
 ## Site Package Modeling
 
-GraphQL operations map to openapi.yaml with a single path and operation-level discrimination:
+GraphQL operations are modeled as standard OpenAPI operations using virtual paths
+and `actual_path` to multiplex onto a single `/graphql` endpoint:
 
 ```yaml
-/graphql:
-  post:
-    x-graphql: true
-    x-operations:
-      - operationId: searchProducts
-        operationName: SearchProducts
-        type: query
-        persistedQueryHash: "abc123..."  # if persisted
-        variables:
-          query: { type: string, required: true }
-          limit: { type: integer }
+servers:
+  - url: https://gql.example.com
+    x-openweb:
+      transport: node
+
+paths:
+  /gql~searchProducts:
+    post:
+      operationId: searchProducts
+      x-openweb:
         permission: read
-      - operationId: addToCart
-        operationName: AddToCart
-        type: mutation
-        variables:
-          productId: { type: string, required: true }
-          quantity: { type: integer }
-        permission: write
+        actual_path: /gql
+        wrap: variables           # user params go under variables
+        unwrap: data              # extract data from response
+      parameters:
+        - name: Client-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: my-client-id   # fixed protocol header
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: Search keyword
+                limit:
+                  type: integer
+                  default: 20
+                operationName:
+                  type: string
+                  const: SearchProducts
+                extensions:
+                  type: object
+                  const:
+                    persistedQuery:
+                      version: 1
+                      sha256Hash: "abc123..."
 ```
+
+**Key patterns:**
+- **Virtual path**: `/gql~searchProducts` is the spec key (unique per operation)
+- **`actual_path: /gql`**: the real wire endpoint
+- **`wrap: variables`**: user-supplied params (`query`, `limit`) are wrapped under `variables` on the wire; `const` fields (`operationName`, `extensions`) stay at root
+- **`unwrap: data`**: response `{ data: { ... }, errors: [] }` → extracts `data`
+- **`schema.const`**: fixed headers (Client-Id) and body fields (operationName, hash) are invisible to callers
+- **Path-differentiated GraphQL** (e.g. DoorDash `/graphql/{operationName}`): use real paths, no `actual_path` needed
 
 ## Common Pitfalls
 

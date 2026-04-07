@@ -188,10 +188,17 @@ Use when extraction isn't enough:
 
 ```yaml
 x-openweb:
-  adapter: ./adapters/<site>.ts
+  adapter:
+    name: site-name
+    operation: operationName
 ```
 
-Adapters must be **self-contained** — no imports from outside the adapter directory.
+Adapters must be **self-contained** — no external imports. The runtime injects
+shared helpers via the 4th `execute()` parameter:
+
+- `helpers.pageFetch(page, { url, method?, body?, headers?, timeout? })` — browser-context fetch, returns `{ status, text }`
+- `helpers.graphqlFetch(page, { url, operationName, variables, hash?, query?, batched? })` — GraphQL fetch, returns unwrapped `data`
+- `helpers.errors` — error factories: `unknownOp`, `missingParam`, `httpError`, `apiError`, `needsLogin`, `botBlocked`, `fatal`, `retriable`, `wrap`
 
 ### Adapter Path Semantics
 

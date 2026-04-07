@@ -1,3 +1,29 @@
+## 2026-04-06: Adapter normalization — shared helpers, error unification, spec-native migrations
+
+**What changed:**
+- Created `src/lib/adapter-helpers.ts` with `pageFetch()` and `graphqlFetch()` shared helpers
+- Extended `CodeAdapter` interface with 4th `helpers` parameter — runtime injects helpers, adapters never import from `src/`
+- All adapters now self-contained (0 imports from `src/lib/` or `src/types/`)
+- Replaced all 39 `Object.assign(new Error, {failureClass})` with `OpenWebError` factory calls across 19 adapter files
+- Added generic response unwrap (`x-openweb.unwrap`) across all 4 HTTP executors via `response-unwrap.ts`
+- Added request body wrapping (`x-openweb.wrap`, `x-openweb.graphql_query`) for spec-native GraphQL
+- Fixed Content-Type header precedence bug in `browser-fetch-executor.ts` (and verified in all executors)
+- Migrated 4 sites from L3 adapter to spec-native node transport: Twitch (4 ops), DoorDash (4 ops), Uber (2 ops), Zhihu (14 ops)
+- All 4 migrated sites pass verify
+
+**Why:**
+- ~50% of operations were in adapters, many doing the same page.evaluate(fetch()) pattern
+- Ad-hoc error handling caused silent misclassification in retry/auth cascade (toOpenWebError bug)
+- Adapter imports from src/ broke in compile cache — self-contained constraint now enforced
+- Node transport is ~10x faster for repeat calls vs browser (no tab overhead)
+
+**Key files:** `src/lib/adapter-helpers.ts`, `src/types/adapter.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/response-unwrap.ts`, `src/types/extensions.ts`, `src/types/schema.ts`, `src/runtime/request-builder.ts`
+**Verification:** pnpm build + pnpm test (832 tests pass), verify PASS on all 4 migrated sites
+**Commit:** cbb39d0, e549517, 9cea6fc
+**Design:** doc/todo/normalize_adapters/final/design.md
+**Next:** Deferred migrations (Substack, Bluesky, Medium, Spotify) blocked on open questions (dynamic wire URL, batched body, token extraction primitives)
+**Blockers:** None for completed work. Deferred sites have individual blockers documented in design OQs.
+
 ## 2026-04-06: Drift detection redesign — structural diff replaces fingerprinting
 
 **What changed:**
