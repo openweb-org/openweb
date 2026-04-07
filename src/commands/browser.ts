@@ -139,42 +139,70 @@ async function readPort(): Promise<number | null> {
   }
 }
 
+/** Kill a PID and its entire process tree (children, grandchildren). */
+function killProcessTree(pid: number): void {
+  // Kill process group first (covers children spawned with same PGID)
+  try { process.kill(-pid, 'SIGTERM') } catch { /* not a group leader or already dead */ }
+  // Also kill the process directly in case group kill missed it
+  try { process.kill(pid, 'SIGTERM') } catch { /* already dead */ }
+}
+
+/** Discover the PID that owns a listening TCP port via lsof. */
+function discoverPidFromPort(port: number): Promise<number | null> {
+  return new Promise((resolve) => {
+    execFile('lsof', ['-ti', `TCP:${port}`, '-sTCP:LISTEN'], (err, stdout) => {
+      if (err || !stdout) return resolve(null)
+      const pids = stdout.trim().split('\n').map(Number).filter((n) => n > 0)
+      resolve(pids[0] ?? null)
+    })
+  })
+}
+
 /** Attempt to stop the managed Chrome. Returns true if stopped or already dead, false if unverified. */
 async function killManaged(): Promise<boolean> {
   const pid = await readPid()
   const port = await readPort()
 
-  if (!pid || !isProcessAlive(pid)) {
-    // Already dead — clean up state files
+  const cleanup = async () => {
     try { await unlink(PID_FILE()) } catch { /* already gone */ }
     try { await unlink(PORT_FILE()) } catch { /* already gone */ }
-    try { await unlink(join(openwebHome(), 'browser.watchdog')) } catch { /* already gone */ }
-    try { await unlink(join(openwebHome(), 'browser.last-used')) } catch { /* already gone */ }
-    return true
-  }
-
-  // Verify this PID is actually our managed Chrome by checking CDP on the stored port
-  if (port && await isCdpReady(port)) {
-    process.kill(pid, 'SIGTERM')
-    await new Promise((r) => setTimeout(r, 500))
-    try { await unlink(PID_FILE()) } catch { /* already gone */ }
-    try { await unlink(PORT_FILE()) } catch { /* already gone */ }
-    // Kill watchdog if running
     try {
       const wdPid = Number((await readFile(join(openwebHome(), 'browser.watchdog'), 'utf8')).trim())
       if (wdPid > 0) process.kill(wdPid, 'SIGTERM')
     } catch { /* no watchdog */ }
     try { await unlink(join(openwebHome(), 'browser.watchdog')) } catch { /* already gone */ }
     try { await unlink(join(openwebHome(), 'browser.last-used')) } catch { /* already gone */ }
+  }
+
+  // If stored PID is dead, check if Chrome is still on the port (macOS re-exec case)
+  if (!pid || !isProcessAlive(pid)) {
+    if (port && await isCdpReady(port)) {
+      const actualPid = await discoverPidFromPort(port)
+      if (actualPid) {
+        killProcessTree(actualPid)
+        await new Promise((r) => setTimeout(r, 500))
+      }
+    }
+    await cleanup()
     return true
   }
 
-  // PID alive but CDP unreachable — cannot verify identity. Don't kill, don't clean up.
-  process.stderr.write(
-    `warning: Chrome process (PID ${pid}) may still be running but CDP is unreachable on port ${port ?? getBrowserConfig().port}. ` +
-    `Use \`kill -TERM ${pid}\` manually if needed.\n`,
-  )
-  return false
+  // Verify this PID is actually our managed Chrome by checking CDP on the stored port
+  if (port && await isCdpReady(port)) {
+    killProcessTree(pid)
+    // Also kill whatever is actually on the port (in case PID diverged)
+    const actualPid = await discoverPidFromPort(port)
+    if (actualPid && actualPid !== pid) killProcessTree(actualPid)
+    await new Promise((r) => setTimeout(r, 500))
+    await cleanup()
+    return true
+  }
+
+  // PID alive but CDP unreachable — kill it anyway (it's our managed process)
+  killProcessTree(pid)
+  await new Promise((r) => setTimeout(r, 500))
+  await cleanup()
+  return true
 }
 
 async function cleanTempProfile(): Promise<void> {
@@ -264,6 +292,18 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
 
   // Wait for CDP
   await waitForCdp(port)
+
+  // macOS: headed Chrome may re-exec, causing the original PID to die.
+  // Discover the real PID from the port and update the PID file.
+  if (!isProcessAlive(child.pid!)) {
+    const actualPid = await discoverPidFromPort(port)
+    if (actualPid) {
+      await writeFile(PID_FILE(), String(actualPid), { mode: 0o600 })
+      log(`Chrome started (PID ${actualPid}) at http://localhost:${port}\n`)
+      return
+    }
+  }
+
   log(`Chrome started (PID ${child.pid}) at http://localhost:${port}\n`)
 }
 
