@@ -289,11 +289,11 @@ paths:
                         price:
                           type: number
                   currency:
-                    type: [string, 'null']
+                    type: string
                   lowestCurrencyPrice:
-                    type: [number, 'null']
+                    type: number
                   hasDirectFlight:
-                    type: [boolean, 'null']
+                    type: boolean
   /restapi/soa2/14427/BatchGetFlightComfort:
     post:
       operationId: getFlightComfort
