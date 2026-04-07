@@ -8,6 +8,7 @@ import { TIMEOUT } from '../lib/config.js'
 import { OpenWebError, toOpenWebError } from '../lib/errors.js'
 import { pageFetch, graphqlFetch } from '../lib/adapter-helpers.js'
 import type { AdapterErrorHelpers, CodeAdapter } from '../types/adapter.js'
+import { detectPageBotBlock } from './bot-detect.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
 import { warmSession } from './warm-session.js'
 
@@ -182,37 +183,6 @@ export async function executeAdapter(
   }
 
   return result
-}
-
-/** Check the current page for common bot-detection / CAPTCHA signals. */
-async function detectPageBotBlock(page: Page): Promise<string | undefined> {
-  try {
-    const url = page.url()
-
-    // DataDome challenge redirect (seen on reuters, tripadvisor)
-    if (url.includes('captcha-delivery.com')) return `DataDome challenge: ${url}`
-    // Cloudflare challenge redirect (seen in CDP tabs)
-    if (url.includes('challenges.cloudflare.com')) return `Cloudflare challenge: ${url}`
-
-    return await page.evaluate(`
-      (() => {
-        const t = document.title.toLowerCase();
-        // PerimeterX "Access Denied" (confirmed on goodrx)
-        if (t.includes('access denied')) return 'PerimeterX: ' + document.title;
-        // Cloudflare challenge pages
-        if (t.includes('attention required') || t.includes('just a moment')) return 'Cloudflare: ' + document.title;
-
-        // PerimeterX press-and-hold CAPTCHA container
-        if (document.querySelector('#px-captcha')) return 'PerimeterX CAPTCHA';
-        // DataDome CAPTCHA iframe
-        if (document.querySelector('iframe[src*="captcha-delivery.com"]')) return 'DataDome CAPTCHA';
-
-        return null;
-      })()
-    `) ?? undefined
-  } catch {
-    return undefined // page detached or navigation in progress
-  }
 }
 
 const adapterErrors: AdapterErrorHelpers = {

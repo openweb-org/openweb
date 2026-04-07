@@ -5,6 +5,7 @@ import { OpenWebError } from '../lib/errors.js'
 import type { OpenApiOperation, OpenApiSpec } from '../lib/openapi.js'
 import type { ExtractionPrimitive } from '../types/primitives.js'
 import type { ExecutorResult } from './executor-result.js'
+import { detectPageBotBlock } from './bot-detect.js'
 import { listCandidatePages } from './page-candidates.js'
 import { resolveHtmlSelector } from './primitives/html-selector.js'
 import { resolvePageGlobalData } from './primitives/page-global-data.js'
@@ -178,6 +179,19 @@ export async function executeExtraction(
           retriable: false,
           failureClass: 'fatal',
         })
+    }
+
+    // Post-extraction bot detection: catch extraction from CAPTCHA/block pages
+    const botSignal = await detectPageBotBlock(page)
+    if (botSignal) {
+      throw new OpenWebError({
+        error: 'execution_failed',
+        code: 'EXECUTION_FAILED',
+        message: `Bot detection on page: ${botSignal}`,
+        action: 'Solve CAPTCHA in visible browser, then retry.',
+        retriable: true,
+        failureClass: 'bot_blocked',
+      })
     }
 
     return {
