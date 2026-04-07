@@ -117,7 +117,7 @@ Runs: analyze -> auto-curate -> generate -> verify.
 
 | Output | Location |
 |--------|----------|
-| `analysis.json`, `verify-report.json`, `summary.txt` | `$OPENWEB_HOME/compile/<site>/` |
+| `analysis-summary.json`, `analysis.json`, `verify-report.json`, `summary.txt` | `$OPENWEB_HOME/compile/<site>/` |
 | `openapi.yaml`, `asyncapi.yaml`, `manifest.json`, `examples/` | `$OPENWEB_HOME/sites/<site>/` |
 
 Auto-curation accepts all clusters, picks top auth candidate, uses
@@ -138,7 +138,7 @@ Check `summary.txt`, then `verify-report.json`:
 | `endpoint_removed` | Wrong path, network error, or site down |
 | `error` | Check `detail` (e.g., "no browser tab open") |
 
-Read `add-site/review.md` for detailed `analysis.json` reading.
+Read `add-site/review.md` for detailed analysis reading (start with `analysis-summary.json`).
 
 **Adapter escalation** — write an adapter when: per-request headers change
 every call (signing), same op returns different hashes (query rotation),

@@ -108,7 +108,7 @@ All paths relative to `skill/openweb/`.
 |---|---|
 | `add-site/guide.md` | Entry point for add/expand workflow |
 | `add-site/capture.md` | Capture step: recording browser traffic |
-| `add-site/review.md` | Review step: reading analysis.json |
+| `add-site/review.md` | Review step: reading analysis-summary.json |
 | `add-site/curate-operations.md` | Curate: naming, noise, params, permissions |
 | `add-site/curate-runtime.md` | Curate: auth, transport, extraction |
 | `add-site/curate-schemas.md` | Curate: response schemas, examples, PII |
