@@ -134,12 +134,15 @@ export async function executeExtraction(
   let ownedPage = false
   if (!page) {
     // Navigate directly to the target URL (includes path + query params)
+    let directPage: Page | undefined
     try {
-      const newPage = await context.newPage()
-      await newPage.goto(targetPageUrl, { waitUntil: 'load', timeout: 30_000 })
-      page = newPage
+      directPage = await context.newPage()
+      await directPage.goto(targetPageUrl, { waitUntil: 'load', timeout: 30_000 })
+      page = directPage
       ownedPage = true
     } catch {
+      // Close the failed page to prevent leak
+      if (directPage) await directPage.close().catch(() => {})
       // Fallback: auto-navigate to server homepage
       const nav = await autoNavigate(context, serverUrl)
       if (nav) { page = nav.page; ownedPage = nav.owned }

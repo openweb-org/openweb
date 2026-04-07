@@ -268,6 +268,27 @@ export async function verifySite(
     }
   }
 
+  // Close pages opened for this site's origin (warm-up + any leaked by timeouts)
+  if (needsBrowser && siteBaseUrl) {
+    try {
+      const handle = deps?.browser ? undefined : await ensureBrowser(deps?.cdpEndpoint)
+      const browser = deps?.browser ?? handle?.browser
+      try {
+        const context = browser?.contexts()[0]
+        if (context) {
+          const origin = new URL(siteBaseUrl).origin
+          for (const p of context.pages()) {
+            try {
+              if (new URL(p.url()).origin === origin) await p.close().catch(() => {})
+            } catch { /* detached page */ }
+          }
+        }
+      } finally {
+        if (handle) await handle.release()
+      }
+    } catch { /* cleanup is best-effort */ }
+  }
+
   // Clean up WS pool
   wsPool?.destroyAll()
 
