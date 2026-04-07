@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { chmod, cp, copyFile, mkdir, mkdtemp, readFile, readdir, rm, unlink, writeFile } from 'node:fs/promises'
 import { homedir, platform, tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -229,9 +229,14 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
     `--user-data-dir=${tempUserDataDir}`,
     '--no-first-run',
     '--no-default-browser-check',
-    `--user-agent=${DEFAULT_USER_AGENT}`,
     '--disable-blink-features=AutomationControlled',
   ]
+  // Only override UA when user explicitly sets userAgent in config.json
+  // Default: let Chrome use its native UA (stealthier, no --user-agent flag detectable)
+  try {
+    const raw = JSON.parse(readFileSync(join(openwebHome(), 'config.json'), 'utf8'))
+    if (typeof raw?.userAgent === 'string') args.push(`--user-agent=${raw.userAgent}`)
+  } catch { /* no config or parse error — use native UA */ }
   if (headless) {
     args.push('--headless=new')
   }
