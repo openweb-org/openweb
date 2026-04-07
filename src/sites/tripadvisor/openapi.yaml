@@ -57,7 +57,7 @@ paths:
                           type: string
                         type:
                           type: string
-                          enum: [location, hotels, restaurants, attractions]
+                          description: 'Location type from TypeAheadJson API.'
                         locationSlug:
                           type: [string, 'null']
                           description: 'URL slug for the location (use as "location" param in searchHotels).'

@@ -73,49 +73,39 @@ async function searchLocation(page: Page, params: Readonly<Record<string, unknow
   const query = String(params.query ?? '')
   if (!query) throw new Error('query is required')
 
-  // Use /Search URL directly — avoids fragile homepage input selectors
-  await page.goto(`${TA_ORIGIN}/Search?q=${encodeURIComponent(query)}&ssrc=a&geo=1`, {
-    waitUntil: 'load', timeout: 30_000,
-  })
-  await page.waitForTimeout(3_000)
-  if (await isDataDomeBlocked(page)) {
-    await waitForCaptchaResolution(page, 15_000)
-  }
-
-  return page.evaluate(() => {
-    const results: Array<Record<string, unknown>> = []
-    const seen = new Set<string>()
-    const patterns: [string, string, RegExp | null][] = [
-      ['/Tourism-', 'location', /Tourism-g\d+-(.+?)-Vacations/],
-      ['/Hotels-', 'hotels', /Hotels-g\d+-(.+?)-Hotels/],
-      ['/Restaurants-', 'restaurants', /Restaurants-g\d+-(.+?)\.html/],
-      ['/Attractions-', 'attractions', /Attractions-g\d+-Activities-(.+?)\.html/],
-      ['/Hotel_Review-', 'hotels', null],
-      ['/Restaurant_Review-', 'restaurants', null],
-      ['/Attraction_Review-', 'attractions', null],
-    ]
-    for (const link of document.querySelectorAll('a[href*="-g"]')) {
-      const href = (link as HTMLAnchorElement).href || ''
-      const geoId = href.match(/-g(\d+)-/)?.[1]
-      if (!geoId) continue
-      const text = link.textContent?.trim() || ''
-      if (text.length < 3) continue
-
-      let matched = false
-      for (const [frag, type, re] of patterns) {
-        if (!href.includes(frag)) continue
-        const key = `${geoId}:${type}`
-        if (seen.has(key)) { matched = true; break }
-        seen.add(key)
-        const slug = re ? href.match(re)?.[1] ?? null : null
-        results.push({ geoId, name: text.substring(0, 120), type, locationSlug: slug, url: href })
-        matched = true
-        break
-      }
-      if (!matched) continue
-    }
-    return { count: results.length, results }
-  })
+  // Use TypeAheadJson API directly — the /Search page is now fully client-rendered
+  // and DOM scraping no longer works
+  return page.evaluate(`
+    (async () => {
+      const q = ${JSON.stringify(query)};
+      try {
+        const r = await fetch(
+          'https://www.tripadvisor.com/TypeAheadJson?action=API&query=' + encodeURIComponent(q) + '&types=geo,hotel,restaurant,attraction',
+          { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
+        );
+        if (!r.ok) return { count: 0, results: [] };
+        const data = await r.json();
+        const items = (data.results || []);
+        const seen = new Set();
+        const results = [];
+        for (const item of items) {
+          const geoMatch = (item.url || item.urls?.[0]?.url || '').match(/-g(\\d+)-/);
+          const geoId = geoMatch ? geoMatch[1] : (item.document_id || '');
+          if (!geoId || seen.has(geoId)) continue;
+          seen.add(geoId);
+          const slugMatch = (item.url || item.urls?.[0]?.url || '').match(/-g\\d+-(.+?)(?:\\.html|-)/);
+          results.push({
+            geoId,
+            name: item.name || '',
+            type: (item.type || item.data_type || '').toLowerCase(),
+            locationSlug: slugMatch ? slugMatch[1] : null,
+            url: item.url || item.urls?.[0]?.url || null,
+          });
+        }
+        return { count: results.length, results };
+      } catch { return { count: 0, results: [] }; }
+    })()
+  `)
 }
 
 /* ---------- searchHotels ---------- */
