@@ -27,6 +27,7 @@ function statusIcon(status: SiteOverallStatus): string {
 export interface VerifyCommandOptions {
   readonly site?: string
   readonly all?: boolean
+  readonly ops?: string[]
   readonly browser?: boolean
   readonly report?: boolean | string
   readonly write?: boolean
@@ -43,7 +44,9 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
   }
 
   const deps = browser ? { browser } : undefined
-  const verifyOpts: VerifyOptions | undefined = opts.write ? { includeWrite: true } : undefined
+  const verifyOpts: VerifyOptions | undefined = (opts.write || opts.ops)
+    ? { includeWrite: opts.write, ops: opts.ops }
+    : undefined
 
   if (opts.write) {
     process.stderr.write('⚠ --write enabled: replaying write/delete operations (transact excluded)\n')

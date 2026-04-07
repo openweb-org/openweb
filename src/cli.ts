@@ -229,6 +229,7 @@ await yargs(argv)
       cmd
         .positional('site', { type: 'string', describe: 'Site to verify (omit with --all for all sites)' })
         .option('all', { type: 'boolean', default: false, describe: 'Verify all sites' })
+        .option('ops', { type: 'string', describe: 'Comma-separated operation IDs to verify (e.g., --ops getProduct,search)' })
         .option('browser', { type: 'boolean', default: false, describe: 'Include page-transport ops (auto-starts browser if needed)' })
         .option('write', { type: 'boolean', default: false, describe: 'Include write/delete ops (use with caution — replays mutations)' })
         .option('report', {
@@ -246,6 +247,7 @@ await yargs(argv)
         await verifyCommand({
           site: args.site ? String(args.site) : undefined,
           all: Boolean(args.all),
+          ops: args.ops ? String(args.ops).split(',').map(s => s.trim()) : undefined,
           browser: Boolean(args.browser),
           write: Boolean(args.write),
           report: args.report as boolean | string | undefined,

@@ -28,6 +28,8 @@ export interface VerifyOptions {
   readonly includeWrite?: boolean
   /** Per-operation timeout in milliseconds. Default: 45_000 */
   readonly operationTimeoutMs?: number
+  /** Only verify these operation IDs (skip all others) */
+  readonly ops?: string[]
 }
 
 /** Default per-operation timeout (45 seconds). Prevents hangs from login prompts or slow endpoints. */
@@ -208,6 +210,9 @@ export async function verifySite(
   for (const fileName of exampleFiles) {
     const raw = await readFile(path.join(examplesDir, fileName), 'utf8')
     const testFile = JSON.parse(raw) as TestFile
+
+    // Filter by --ops if specified
+    if (options?.ops && !options.ops.includes(testFile.operation_id)) continue
 
     // Skip files with incompatible structure (legacy format without cases array)
     if (!Array.isArray(testFile.cases)) {
