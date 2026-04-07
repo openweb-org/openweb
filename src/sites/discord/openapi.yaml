@@ -10,7 +10,6 @@ servers:
   - url: https://discord.com
     x-openweb:
       transport: page
-      warmup_path: /channels/@me
       auth:
         type: webpack_module_walk
         chunk_global: webpackChunkdiscord_app
