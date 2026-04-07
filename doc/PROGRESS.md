@@ -1,3 +1,22 @@
+## 2026-04-07: Telegram/discord schema fixes, shape-diff empty array, page-leak sites restored
+
+**What changed:**
+- telegram: 5 fields made nullable (senderId, senderName, lastName, username, status) — system account 777000 returns undefined for these. 5/5 PASS.
+- discord: getPinnedMessages false schema_mismatch fixed — shape-diff now skips array-item paths in zero-overlap check when response has empty arrays. 10/10 PASS.
+- shape-diff: nullable schema support (`[type, 'null']`), undefined/null recorded as `'null'`, empty array no longer triggers schema_mismatch.
+- fidelity (9/9), leetcode (9/9), medium (9/9), bestbuy (3/3), costco (10/10) all restored to PASS after P0 page leak fix.
+- Attempted `warmup_path` for discord, reverted — `app_path` on `webpack_module_walk` already handles SPA navigation.
+
+**Why:**
+- Shape-diff false positives on nullable fields and empty arrays were causing DRIFT on valid responses across multiple sites
+- 5 sites were stuck at timeout from session 1's page leak — all now PASS
+
+**Key files:** `src/lifecycle/shape-diff.ts`, `src/sites/telegram/openapi.yaml`, `src/sites/discord/openapi.yaml`, `src/sites/costco/openapi.yaml`
+**Verification:** 835 tests pass. All 7 sites verified with real data in headed browser.
+**Commit:** `0547c23`, `587a480`, `4af314a`, `44a5442`
+**Next:** indeed adapter rewrite (page globals changed), ctrip param fix, homedepot empty data investigation.
+**Blockers:** bloomberg PerimeterX CAPTCHA unsolvable.
+
 ## 2026-04-07: Shape-diff nullable, verify --ops, costco fix, extraction bot detection
 
 **What changed:**
