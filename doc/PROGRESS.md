@@ -1,3 +1,23 @@
+## 2026-04-07: Page lifecycle leaks + browser stop bug
+
+**What changed:**
+- Fixed verify page leak: added per-site origin cleanup after all ops complete in `verifySite()` — closes warm-up pages and any leaked by timeouts. Reduces orphan tabs from ~55-70 to ~0 per full verify run.
+- Fixed extraction-executor catch-path leak: when `goto()` fails, close the newly created page before fallback to `autoNavigate`.
+- Fixed `browser stop`/`restart` leaving orphan Chrome processes: `killManaged()` now kills the entire process group (not just parent PID), and discovers the real PID via `lsof` when macOS headed Chrome re-execs.
+- ctrip: nullable types for `getFlightCalendarPrices` fields that API returns as null on error.
+- homedepot: updated discontinued fixture product ID.
+- Verify triage: bloomberg/goodrx/indeed confirmed as bot-blocked or adapter-broken (not real schema drift). Booking fixture fixed (5/5 PASS).
+
+**Why:**
+- Full `verifyAll` accumulated ~157 renderer processes, grinding system to a halt and causing cascading timeouts
+- `browser restart --no-headless` left old headless children alive; `browser stop` reported "no managed Chrome" while Chrome was running
+
+**Key files:** `src/lifecycle/verify.ts`, `src/runtime/extraction-executor.ts`, `src/commands/browser.ts`
+**Verification:** 835 tests pass. Page leak test: 4 browser-dependent sites verified with CDP tab counting (baseline 39 → final 41, delta +2). Browser stop/restart: start→restart(headed)→stop leaves 0 orphan processes.
+**Commit:** `d88cb12`, `62e68aa`
+**Next:** Remaining verify failures are auth-expired (discord, telegram, whatsapp), bot-blocked (bloomberg, goodrx, homedepot, reuters, tripadvisor, zillow), or adapter-broken (indeed page globals renamed). costco/fidelity/leetcode/medium/bestbuy untested after P0 fix.
+**Blockers:** None for completed work.
+
 ## 2026-04-06: Adapter normalization — shared helpers, error unification, spec-native migrations
 
 **What changed:**
