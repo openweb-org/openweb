@@ -97,7 +97,6 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [pharmacy, price]
                       properties:
                         pharmacy:
                           type: string
@@ -143,7 +142,6 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [name, slug, url]
                       properties:
                         name:
                           type: string

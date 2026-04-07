@@ -262,9 +262,9 @@ paths:
                             type: object
                             properties:
                               lat:
-                                type: [number, string]
+                                type: string
                               lng:
-                                type: [number, string]
+                                type: string
                               city:
                                 type: string
                               state:

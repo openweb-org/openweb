@@ -51,8 +51,10 @@ paths:
                     membersCount:
                       type: integer
                     lastMessageDate:
-                      type: integer
-                      description: Unix timestamp of the last message
+                      oneOf:
+                        - type: string
+                        - type: integer
+                      description: Unix timestamp of the last message (may be string or integer)
                   required:
                     - id
                     - title
@@ -264,7 +266,9 @@ paths:
                   lastName:
                     type: string
                   username:
-                    type: string
+                    oneOf:
+                      - type: string
+                      - type: integer
                   phoneNumber:
                     type: string
                   isPremium:

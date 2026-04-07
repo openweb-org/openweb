@@ -75,7 +75,6 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [name, url]
                       properties:
                         name:
                           type: string
@@ -279,7 +278,6 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [name]
                       properties:
                         name:
                           type: string

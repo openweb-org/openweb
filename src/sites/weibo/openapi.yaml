@@ -249,13 +249,13 @@ paths:
                             pic_num:
                               type: integer
                   since_id:
-                    type:
-                      - string
-                      - integer
+                    oneOf:
+                      - type: string
+                      - type: integer
                   max_id:
-                    type:
-                      - string
-                      - integer
+                    oneOf:
+                      - type: string
+                      - type: integer
   /ajax/feed/hottimeline:
     get:
       operationId: getHotFeed
@@ -511,13 +511,13 @@ paths:
                   total_number:
                     type: integer
                   since_id:
-                    type:
-                      - string
-                      - integer
+                    oneOf:
+                      - type: string
+                      - type: integer
                   max_id:
-                    type:
-                      - string
-                      - integer
+                    oneOf:
+                      - type: string
+                      - type: integer
   /ajax/side/hotSearch:
     get:
       operationId: getHotSearch

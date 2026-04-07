@@ -99,16 +99,16 @@ paths:
                     name:
                       type: string
                     isGroup:
-                      type: boolean
+                      type:
+                        - boolean
+                        - 'null'
                     unreadCount:
                       type: integer
                     timestamp:
                       type:
                         - integer
                         - 'null'
-                  required:
-                    - id
-                    - name
+                  additionalProperties: true
   /internal/chats/{chatId}:
     get:
       operationId: getChatById

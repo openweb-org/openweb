@@ -63,10 +63,6 @@ paths:
                     type: array
                     items:
                       type: object
-                      required:
-                        - name
-                        - url
-                        - price
                       properties:
                         name:
                           type: string

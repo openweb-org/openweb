@@ -278,20 +278,22 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
-                    type: object
-                    properties:
-                      lowPriceList:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            date:
-                              type: string
-                            price:
-                              type: number
-                            currency:
-                              type: string
+                  lowPriceInCalenderDtoInfoList:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                        price:
+                          type: number
+                  currency:
+                    type: string
+                  lowestCurrencyPrice:
+                    type: number
+                  hasDirectFlight:
+                    type: boolean
   /restapi/soa2/14427/BatchGetFlightComfort:
     post:
       operationId: getFlightComfort
@@ -359,6 +361,11 @@ paths:
               schema:
                 type: object
                 properties:
+                  ResponseStatus:
+                    type: object
+                    properties:
+                      Ack:
+                        type: string
                   flightComfortList:
                     type: array
                     nullable: true

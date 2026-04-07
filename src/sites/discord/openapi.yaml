@@ -716,6 +716,8 @@ paths:
                           type: string
                         username:
                           type: string
+                        discriminator:
+                          type: string
                         global_name:
                           type:
                             - string
@@ -724,7 +726,85 @@ paths:
                           type:
                             - string
                             - "null"
+                        public_flags:
+                          type: integer
                     timestamp:
                       type: string
+                    edited_timestamp:
+                      type:
+                        - string
+                        - "null"
+                    flags:
+                      type: integer
                     pinned:
                       type: boolean
+                    mention_everyone:
+                      type: boolean
+                    tts:
+                      type: boolean
+                    mentions:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          username:
+                            type: string
+                    mention_roles:
+                      type: array
+                      items:
+                        type: string
+                    attachments:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          filename:
+                            type: string
+                          url:
+                            type: string
+                          size:
+                            type: integer
+                          content_type:
+                            type: string
+                    embeds:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                          title:
+                            type: string
+                          url:
+                            type: string
+                          description:
+                            type: string
+                    components:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: integer
+                    reactions:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          emoji:
+                            type: object
+                            properties:
+                              id:
+                                type:
+                                  - string
+                                  - "null"
+                              name:
+                                type: string
+                          count:
+                            type: integer
+                          me:
+                            type: boolean

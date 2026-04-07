@@ -321,7 +321,6 @@ paths:
                               type: string
                   refinements:
                     type:
-                      - object
                       - array
                       - "null"
                 required:

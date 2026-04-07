@@ -3,7 +3,6 @@
   "cases": [
     {
       "input": {
-        "search": "gitlab-org",
         "per_page": 5
       },
       "assertions": {

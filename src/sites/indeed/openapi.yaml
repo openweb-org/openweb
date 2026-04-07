@@ -180,6 +180,9 @@ paths:
                     type: object
                     nullable: true
                     description: Company info from _initialData.
+                  directApply:
+                    type: boolean
+                    description: Whether direct apply is available.
 
   /career/{title}/salaries:
     get:

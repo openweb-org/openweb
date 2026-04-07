@@ -1,12 +1,12 @@
 # Uber
 
 ## Overview
-Ride-hailing + food delivery platform. Uber Eats (ubereats.com) REST API for restaurant search and order history via L3 adapter with cookie_session auth.
+Ride-hailing + food delivery platform. Uber Eats (ubereats.com) REST API for restaurant search and order history with cookie_session auth via node transport.
 
 ## Workflows
 
 ### Search restaurants
-1. `searchRestaurants(query)` → restaurant list with `storeUuid`, name, rating, delivery time
+1. `searchRestaurants(userQuery)` → restaurant list with `storeUuid`, name, rating, delivery time
 
 ### Review past orders
 1. `getEatsOrderHistory()` → orders with store, items, prices, timestamps
@@ -16,14 +16,14 @@ Ride-hailing + food delivery platform. Uber Eats (ubereats.com) REST API for res
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchRestaurants | search Eats restaurants by keyword | query | storeUuid, name, rating, deliveryTime, deliveryFee | entry point |
+| searchRestaurants | search Eats restaurants by keyword | userQuery | storeUuid, name, rating, deliveryTime, deliveryFee | entry point |
 | getEatsOrderHistory | list past Eats orders | lastWorkflowUUID (pagination) | uuid, storeName, totalPrice, items, completedAt, hasMore, nextCursor | entry point; paginated |
 
 ## Quick Start
 
 ```bash
 # Search Uber Eats restaurants
-openweb uber exec searchRestaurants '{"query":"pizza"}'
+openweb uber exec searchRestaurants '{"userQuery":"pizza"}'
 
 # Get past Eats orders (first page)
 openweb uber exec getEatsOrderHistory '{}'
@@ -46,8 +46,8 @@ openweb uber exec getEatsOrderHistory '{"lastWorkflowUUID":"<nextCursor>"}'
 - Auth check: look for `sid`, `csid`, or `jwt-session` cookies
 
 ## Transport
-- `transport: page` — all operations use browser context for cookie auth via L3 adapter (`adapters/uber-api.ts`)
-- Browser must have visited `ubereats.com` (any page)
+- `transport: node` — all operations use server-side HTTP with cookie_session auth
+- No browser required; cookies sourced from 4-tier cache cascade
 
 ## Known Issues
 - **Ride history not available**: The `getRideHistory` operation was in the original capture plan but is not implemented in the adapter — only Eats operations are supported currently.
