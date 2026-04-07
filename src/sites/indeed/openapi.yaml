@@ -138,7 +138,7 @@ paths:
                   datePosted:
                     type: string
                   baseSalary:
-                    type: object
+                    type: [object, 'null']
                     properties:
                       currency:
                         type: string
