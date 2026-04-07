@@ -158,6 +158,8 @@ pnpm test && pnpm lint
 
 ## Disclaimer
 
+> **Platform:** Tested on macOS with Google Chrome. Linux and Windows paths are implemented but not yet tested. Requires Chrome installed.
+
 OpenWeb is a tool for interacting with websites through their existing interfaces. Users are responsible for complying with each website's terms of service. This project is not affiliated with, endorsed by, or associated with any of the websites listed above.
 
 ## License
