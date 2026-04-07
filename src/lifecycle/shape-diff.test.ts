@@ -36,8 +36,8 @@ describe('extractFields', () => {
     })
   })
 
-  it('null values → skipped', () => {
-    expect(extractFields({ id: 1, deleted: null })).toEqual({ id: 'number' })
+  it('null values → recorded as null type', () => {
+    expect(extractFields({ id: 1, deleted: null })).toEqual({ id: 'number', deleted: 'null' })
   })
 
   it('top-level null → empty', () => {

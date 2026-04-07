@@ -39,7 +39,10 @@ export function extractFields(
     const fields: Record<string, string> = {}
     for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
       const fullPath = prefix ? `${prefix}.${key}` : key
-      if (v === null) continue
+      if (v === null || v === undefined) {
+        fields[fullPath] = 'null'
+        continue
+      }
       fields[fullPath] = Array.isArray(v) ? 'array' : normalizeType(typeof v)
       if (typeof v === 'object') {
         Object.assign(fields, extractFields(v, fullPath, depth + 1))
@@ -74,7 +77,10 @@ export function extractSchemaFields(
     for (const [key, propSchema] of Object.entries(schema.properties)) {
       const fullPath = prefix ? `${prefix}.${key}` : key
       const propType = resolveSchemaType(propSchema)
-      if (propType) fields[fullPath] = normalizeType(propType)
+      if (propType) {
+        const nullable = isNullableSchema(propSchema)
+        fields[fullPath] = nullable ? `${normalizeType(propType)}|null` : normalizeType(propType)
+      }
       if (propType === 'object' || propType === 'array') {
         Object.assign(fields, extractSchemaFields(propSchema, fullPath, depth + 1))
       }
@@ -140,7 +146,10 @@ export function diffShape(
   // Phase 1: type changes — response field exists in schema but type differs
   for (const [path, actualType] of Object.entries(responseFields)) {
     const expectedType = schemaFields[path]
-    if (expectedType && actualType !== expectedType) {
+    if (!expectedType) continue
+    // Support nullable: 'string|null' matches both 'string' and 'null'
+    const allowedTypes = expectedType.split('|')
+    if (!allowedTypes.includes(actualType)) {
       drifts.push({ kind: 'type_change', path, expected: expectedType, actual: actualType })
     }
   }
@@ -178,4 +187,10 @@ function resolveSchemaType(schema: JsonSchema): string | undefined {
   if (schema.properties) return 'object'
   if (schema.items) return 'array'
   return undefined
+}
+
+function isNullableSchema(schema: JsonSchema): boolean {
+  if (Array.isArray(schema.type)) return schema.type.includes('null')
+  if (schema.nullable) return true
+  return false
 }
