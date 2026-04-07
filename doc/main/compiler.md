@@ -1,7 +1,7 @@
 # Compiler Pipeline
 
 > Capture -> Analyze -> Curate -> Generate -> Verify: turning website observations into skill packages.
-> Last updated: 2026-03-28 (pipeline v2 session)
+> Last updated: 2026-04-06 (KISS curation cleanup)
 
 ## Overview
 
@@ -10,7 +10,7 @@ The compiler observes a website's behavior and generates skill packages (OpenAPI
 ```
 Phase 1: Capture      Record HTTP traffic, WebSocket frames, state, DOM
 Phase 2: Analyze      Label, normalize, cluster, infer schemas, detect auth
-Phase 3: Curate       Apply decisions, scrub PII, produce compile plan
+Phase 3: Curate       Auto-defaults, scrub PII, produce compile plan
 Phase 4: Generate     Emit openapi.yaml + asyncapi.yaml + manifest.json + examples/
 Phase 5: Verify       Replay safe reads via lifecycle verify (full executor)
 ```
@@ -65,7 +65,7 @@ HAR entries
 - Blocked hosts/paths loaded from `src/lib/config/*.json` (config files, not hardcoded)
 - Static content-types and file extensions classified as `static`
 - Off-domain requests classified as `off_domain` (not silently dropped)
-- Cross-domain API hosts included via `--allow-host` flag (e.g., `chatgpt.com` → `api.openai.com`)
+- Cross-domain API hosts are classified as `off_domain` and can be added back to the spec manually during curation
 - All status codes pass through (4xx = auth signal, not rejected)
 - Every sample produces a `LabeledSample` — nothing is dropped
 
@@ -190,9 +190,6 @@ All compile artifacts are written to `$OPENWEB_HOME/compile/<site>/`:
 # Scripted recording + compile
 pnpm dev compile <url> --script ./scripts/record-site.ts
 
-# Compile with cross-domain API support
-pnpm dev compile <url> --allow-host api.openai.com
-
 # Compile from existing capture directory (skip capture phase)
 pnpm dev compile <url> --capture-dir ./captures/my-site
 
@@ -228,7 +225,7 @@ src/compiler/
 |   +-- shared-constants.ts # Shared constants (MUTATION_METHODS, SKIP_HEADERS, etc.)
 |   +-- schema.ts           # Legacy schema inference (used by ws-analyzer)
 +-- curation/               # Phase 3: Curate
-|   +-- apply-curation.ts   # AnalysisReport + decisions -> CuratedCompilePlan
+|   +-- apply-curation.ts   # AnalysisReport -> CuratedCompilePlan (auto-defaults)
 |   +-- scrub.ts            # PII scrubbing for example values
 +-- generator/              # Phase 4: Generate
 |   +-- generate-v2.ts      # CuratedCompilePlan -> skill package (OpenAPI + AsyncAPI)
