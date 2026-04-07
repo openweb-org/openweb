@@ -1,3 +1,23 @@
+## 2026-04-06: Drift detection redesign — structural diff replaces fingerprinting
+
+**What changed:**
+- Replaced hash-based fingerprinting (`fingerprint.ts`) with schema-aware structural diff (`shape-diff.ts`). Verify now diffs response fields against openapi.yaml schema directly — zero extra state, no manifest storage.
+- Drift is now advisory warning: `type_change` and `required_missing` are reported but exit code is 0 (not failure). No quarantine, no blocking results.
+- Schema inference (`schema-v2.ts`): 1 sample → all fields optional. Prevents false confidence from under-sampled captures.
+- New `shape-diff.ts` exports: `extractFields`, `extractSchemaFields`, `extractRequiredFields`, `diffShape`. 22 unit tests.
+- Deleted `fingerprint.ts` + `fingerprint.test.ts`, cleaned up `verify.test.ts`.
+
+**Why:**
+- Drift was extremely common (7 sites permanently drifting) because fingerprint hashing couldn't distinguish optional field variance from real structural changes. Array length, key count, and item heterogeneity all triggered false positives. The 4-shape accumulation buffer couldn't converge on combinatorial optional field patterns (2^N).
+- From first principles: the openapi.yaml schema IS the contract. Diff against it directly instead of maintaining a parallel state.
+
+**Key files:** `src/lifecycle/shape-diff.ts`, `src/lifecycle/verify.ts`, `src/commands/verify.ts`, `src/compiler/analyzer/schema-v2.ts`
+**Verification:** 7 previously-drifting sites (chatgpt, ctrip, espn, google-search, linkedin, pinterest, steam) all PASS. 832 tests pass.
+**Commit:** `9b2035e`
+**Design:** `doc/todo/drift-handling/design.md`, `doc/todo/drift-handling/analysis.md`
+**Next:** KISS cleanup of CurationDecisionSet (separate task)
+**Blockers:** None
+
 ## 2026-04-06: KISS cleanup — remove dead CLI abstractions
 
 **What changed:**

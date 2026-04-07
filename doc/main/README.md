@@ -118,7 +118,7 @@ src/
 │
 ├── lifecycle/                   # Site lifecycle management
 │   ├── verify.ts               #   Verify command (execute examples, check drift)
-│   ├── fingerprint.ts          #   Response fingerprinting for drift detection
+│   ├── shape-diff.ts           #   Structural diff for drift detection (response vs schema)
 │   └── registry.ts             #   Site registry (archive, install, rollback)
 │
 ├── lib/                        # Shared utilities

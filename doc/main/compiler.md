@@ -127,7 +127,7 @@ Consumes `CuratedCompilePlan` and emits the skill package.
 
 ## Phase 5: Verify
 
-Compile-time verify uses the same `verifySite()` as the lifecycle health check — full executor with all transports, auth resolvers, and fingerprinting.
+Compile-time verify uses the same `verifySite()` as the lifecycle health check — full executor with all transports, auth resolvers, and structural diff against schema.
 
 ```
 For each operation:
@@ -136,7 +136,7 @@ For each operation:
     safe_read -> executeOperation() via full executor
       auth resolvers (token cache → browser CDP → fail)
       transport routing (node / page / browser-fetch)
-      fingerprint comparison against stored hashes
+      structural diff: response fields vs openapi.yaml schema (type changes + required missing)
 
 WS operations -> verified via live connection (connect, send, wait for response)
 ```

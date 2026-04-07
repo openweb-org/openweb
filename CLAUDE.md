@@ -55,7 +55,7 @@ src/
     navigator.ts    # CLI navigation helper (render site/operation info)
     page-polyfill.ts, page-candidates.ts  # Browser page utilities
     primitives/     # Auth/CSRF/signing resolvers
-  lifecycle/        # Verify, registry, fingerprint (site drift detection)
+  lifecycle/        # Verify, registry, shape-diff (site drift detection)
   capture/          # CDP browser recording (body-size-gate, no content filtering)
   commands/         # CLI command handlers
   types/            # Meta-spec type system

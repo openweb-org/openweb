@@ -60,7 +60,7 @@ browser and verifies page-transport ops that would otherwise fail.
 | Status | Meaning | Action |
 |--------|---------|--------|
 | `PASS` | Works | Continue to runtime exec |
-| `DRIFT` | Works but response shape changed | Re-compile or update fixtures. Document if transient |
+| `DRIFT` | Works but type change or required field missing detected | Advisory warning (exit 0). Review schema if persistent |
 | `auth_expired` | Session expired | `openweb login <site>`, `openweb browser restart`, rerun |
 | `FAIL` | Execution failed | Read detail line, fix spec or environment, rerun |
 | `FAIL` (403 + cookies) | CSRF misconfiguration | Check `authCandidates[0].csrfOptions` in analysis.json |
