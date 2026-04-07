@@ -7,6 +7,7 @@ import {
   getRequestBodySchema,
   isObjectSchema,
 } from '../lib/openapi.js'
+import type { XOpenWebOperation } from '../types/extensions.js'
 
 const UNSAFE_REF_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
 
@@ -112,20 +113,36 @@ export function buildJsonRequestBody(operation: OpenApiOperation, params: Record
     return undefined
   }
 
+  const opExt = (operation as { 'x-openweb'?: unknown })['x-openweb'] as XOpenWebOperation | undefined
+  const wrapKey = opExt?.wrap
+
   const bodyParams = getRequestBodyParameters(operation)
   const body: Record<string, unknown> = {}
+  const wrapped: Record<string, unknown> = {}
   for (const param of bodyParams) {
+    const isConst = param.schema?.const !== undefined
+    const target = wrapKey && !isConst ? wrapped : body
     const value = params[param.name]
     if (value !== undefined) {
       if (param.schema?.type === 'object' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
         const defaults = applySchemaDefaults(param.schema as Record<string, unknown>)
-        body[param.name] = defaults ? { ...defaults, ...(value as Record<string, unknown>) } : value
+        target[param.name] = defaults ? { ...defaults, ...(value as Record<string, unknown>) } : value
       } else {
-        body[param.name] = value
+        target[param.name] = value
       }
     } else if (param.schema?.type === 'object') {
-      body[param.name] = applySchemaDefaults(param.schema as Record<string, unknown>) ?? {}
+      target[param.name] = applySchemaDefaults(param.schema as Record<string, unknown>) ?? {}
     }
+  }
+
+  if (wrapKey && Object.keys(wrapped).length > 0) {
+    body[wrapKey] = wrapped
+  }
+
+  // Inject GraphQL query string at body root when wrap is active
+  // and the schema property name conflicts with a user-facing param
+  if (wrapKey && opExt?.graphql_query) {
+    body.query = opExt.graphql_query
   }
 
   if (Object.keys(body).length === 0 && !operation.requestBody?.required) {

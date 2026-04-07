@@ -80,6 +80,9 @@ export const xOpenWebOperationSchema = {
     extraction: extractionPrimitiveSchema,
     adapter: adapterRefSchema,
     actual_path: { type: 'string' },
+    unwrap: { type: 'string' },
+    wrap: { type: 'string' },
+    graphql_query: { type: 'string' },
   },
   additionalProperties: false,
 } as const

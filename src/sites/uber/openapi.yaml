@@ -39,9 +39,9 @@ paths:
             schema:
               type: object
               required:
-                - userQuery
+                - query
               properties:
-                userQuery:
+                query:
                   type: string
                   description: Search keyword (e.g. "pizza", "sushi", "thai").
                 date:

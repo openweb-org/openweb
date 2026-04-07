@@ -19,6 +19,24 @@ paths:
       x-openweb:
         permission: read
         unwrap: data
+        wrap: variables
+        graphql_query: |-
+          query autocompleteFacetFeed($query: String!) {
+            autocompleteFacetFeed(query: $query) {
+              body {
+                id
+                body {
+                  id
+                  name
+                  text { title subtitle accessory description }
+                  images { main { uri } }
+                  custom
+                  component { id category }
+                }
+              }
+              page { next { name data } }
+            }
+          }
         build:
           stable_id: dd0001
           tool_version: 2
@@ -37,38 +55,14 @@ paths:
             schema:
               type: object
               required:
-                - variables
+                - query
               properties:
                 operationName:
                   type: string
                   const: autocompleteFacetFeed
-                variables:
-                  type: object
-                  required:
-                    - query
-                  properties:
-                    query:
-                      type: string
-                      description: Search keyword (e.g. "pizza", "sushi", "thai").
                 query:
                   type: string
-                  const: |-
-                    query autocompleteFacetFeed($query: String!) {
-                      autocompleteFacetFeed(query: $query) {
-                        body {
-                          id
-                          body {
-                            id
-                            name
-                            text { title subtitle accessory description }
-                            images { main { uri } }
-                            custom
-                            component { id category }
-                          }
-                        }
-                        page { next { name data } }
-                      }
-                    }
+                  description: Search keyword (e.g. "pizza", "sushi", "thai").
       responses:
         '200':
           description: Search results with matching restaurants.
@@ -86,7 +80,7 @@ paths:
                           type: object
                           properties:
                             id:
-                              type: string
+                              type: [string, 'null']
                             body:
                               type: array
                               items:
@@ -95,31 +89,31 @@ paths:
                                   id:
                                     type: string
                                   name:
-                                    type: string
+                                    type: [string, 'null']
                                   text:
                                     type: object
                                     properties:
                                       title:
-                                        type: string
+                                        type: [string, 'null']
                                         description: Restaurant name.
                                       subtitle:
-                                        type: string
+                                        type: [string, 'null']
                                       accessory:
-                                        type: string
+                                        type: [string, 'null']
                                       description:
-                                        type: string
+                                        type: [string, 'null']
                                         description: Cuisine/category tags.
                                   images:
-                                    type: object
+                                    type: [object, 'null']
                                     properties:
                                       main:
-                                        type: object
+                                        type: [object, 'null']
                                         properties:
                                           uri:
                                             type: string
                                             description: Cover image URL.
                                   custom:
-                                    type: string
+                                    type: [string, 'null']
                                     description: JSON string with store_id and result_type.
                                   component:
                                     type: object
@@ -135,9 +129,9 @@ paths:
                             type: [object, 'null']
                             properties:
                               name:
-                                type: string
+                                type: [string, 'null']
                               data:
-                                type: string
+                                type: [string, 'null']
 
   /graphql/storepageFeed:
     post:
@@ -146,6 +140,7 @@ paths:
       x-openweb:
         permission: read
         unwrap: data
+        wrap: variables
         build:
           stable_id: dd0002
           tool_version: 2
@@ -164,29 +159,11 @@ paths:
             schema:
               type: object
               required:
-                - variables
+                - storeId
               properties:
                 operationName:
                   type: string
                   const: storepageFeed
-                variables:
-                  type: object
-                  required:
-                    - storeId
-                  properties:
-                    storeId:
-                      type: string
-                      description: DoorDash store ID (from searchRestaurants).
-                    menuId:
-                      type: string
-                      description: Specific menu ID. Omit for default menu.
-                    fulfillmentType:
-                      type: string
-                      default: Delivery
-                      enum:
-                        - Delivery
-                        - Pickup
-                      description: Delivery or Pickup.
                 query:
                   type: string
                   const: |-
@@ -224,6 +201,19 @@ paths:
                         }
                       }
                     }
+                storeId:
+                  type: string
+                  description: DoorDash store ID (from searchRestaurants).
+                menuId:
+                  type: string
+                  description: Specific menu ID. Omit for default menu.
+                fulfillmentType:
+                  type: string
+                  default: Delivery
+                  enum:
+                    - Delivery
+                    - Pickup
+                  description: Delivery or Pickup.
       responses:
         '200':
           description: Store details and menu.
@@ -272,9 +262,9 @@ paths:
                             type: object
                             properties:
                               lat:
-                                type: number
+                                type: [number, string]
                               lng:
-                                type: number
+                                type: [number, string]
                               city:
                                 type: string
                               state:
@@ -433,6 +423,7 @@ paths:
       x-openweb:
         permission: read
         unwrap: data
+        wrap: variables
         build:
           stable_id: dd0003
           tool_version: 2
@@ -450,27 +441,10 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - variables
               properties:
                 operationName:
                   type: string
                   const: getConsumerOrdersWithDetails
-                variables:
-                  type: object
-                  properties:
-                    offset:
-                      type: integer
-                      default: 0
-                      description: Pagination offset.
-                    limit:
-                      type: integer
-                      default: 10
-                      description: Number of orders to return (max 20).
-                    includeCancelled:
-                      type: boolean
-                      default: true
-                      description: Include cancelled orders.
                 query:
                   type: string
                   const: |-
@@ -487,6 +461,18 @@ paths:
                         deliveryAddress { id formattedAddress }
                       }
                     }
+                offset:
+                  type: integer
+                  default: 0
+                  description: Pagination offset.
+                limit:
+                  type: integer
+                  default: 10
+                  description: Number of orders to return (max 20).
+                includeCancelled:
+                  type: boolean
+                  default: true
+                  description: Include cancelled orders.
       responses:
         '200':
           description: Order history.
@@ -587,7 +573,7 @@ paths:
                             id:
                               type: string
                             formattedAddress:
-                              type: string
+                              type: [string, 'null']
 
   /graphql/addCartItem:
     post:
@@ -596,6 +582,7 @@ paths:
       x-openweb:
         permission: write
         unwrap: data
+        wrap: variables
         build:
           stable_id: dd0004
           tool_version: 2
@@ -614,61 +601,12 @@ paths:
             schema:
               type: object
               required:
-                - variables
+                - addCartItemInput
+                - fulfillmentContext
               properties:
                 operationName:
                   type: string
                   const: addCartItem
-                variables:
-                  type: object
-                  required:
-                    - addCartItemInput
-                    - fulfillmentContext
-                  properties:
-                    addCartItemInput:
-                      type: object
-                      required:
-                        - storeId
-                        - itemId
-                      properties:
-                        storeId:
-                          type: string
-                          description: DoorDash store ID (from searchRestaurants or getRestaurantMenu).
-                        itemId:
-                          type: string
-                          description: Menu item ID (from getRestaurantMenu items[].id).
-                        quantity:
-                          type: integer
-                          default: 1
-                          description: Quantity to add.
-                        specialInstructions:
-                          type: string
-                          default: ''
-                          description: Special instructions (e.g. "no onions").
-                        substitutionPreference:
-                          type: string
-                          default: substitute
-                        cartId:
-                          type: string
-                          default: ''
-                        isBundle:
-                          type: boolean
-                          default: false
-                        bundleType:
-                          type: string
-                          default: BUNDLE_TYPE_UNSPECIFIED
-                    fulfillmentContext:
-                      type: object
-                      default:
-                        shouldUpdateFulfillment: false
-                        fulfillmentType: Delivery
-                    cartContext:
-                      type: object
-                      default:
-                        isBundle: false
-                    returnCartFromOrderService:
-                      type: boolean
-                      default: false
                 query:
                   type: string
                   const: |-
@@ -696,6 +634,50 @@ paths:
                         }
                       }
                     }
+                addCartItemInput:
+                  type: object
+                  required:
+                    - storeId
+                    - itemId
+                  properties:
+                    storeId:
+                      type: string
+                      description: DoorDash store ID (from searchRestaurants or getRestaurantMenu).
+                    itemId:
+                      type: string
+                      description: Menu item ID (from getRestaurantMenu items[].id).
+                    quantity:
+                      type: integer
+                      default: 1
+                      description: Quantity to add.
+                    specialInstructions:
+                      type: string
+                      default: ''
+                      description: Special instructions (e.g. "no onions").
+                    substitutionPreference:
+                      type: string
+                      default: substitute
+                    cartId:
+                      type: string
+                      default: ''
+                    isBundle:
+                      type: boolean
+                      default: false
+                    bundleType:
+                      type: string
+                      default: BUNDLE_TYPE_UNSPECIFIED
+                fulfillmentContext:
+                  type: object
+                  default:
+                    shouldUpdateFulfillment: false
+                    fulfillmentType: Delivery
+                cartContext:
+                  type: object
+                  default:
+                    isBundle: false
+                returnCartFromOrderService:
+                  type: boolean
+                  default: false
       responses:
         '200':
           description: Cart update result.

@@ -19,6 +19,7 @@ paths:
         permission: read
         actual_path: /gql
         unwrap: data
+        wrap: variables
         build:
           verified: true
           stable_id: tw0001
@@ -44,30 +45,25 @@ paths:
             schema:
               type: object
               required:
-                - variables
+                - query
               properties:
                 operationName:
                   type: string
                   const: SearchResultsPage_SearchResults
-                variables:
+                query:
+                  type: string
+                  description: Search keyword (e.g. "valorant", "minecraft", a streamer name).
+                platform:
+                  type: string
+                  default: web
+                options:
                   type: object
-                  required:
-                    - query
-                  properties:
-                    platform:
-                      type: string
-                      default: web
-                    query:
-                      type: string
-                      description: Search keyword (e.g. "valorant", "minecraft", a streamer name).
-                    options:
-                      type: object
-                      default:
-                        targets: null
-                        shouldSkipDiscoveryControl: false
-                    requestID:
-                      type: string
-                      default: ''
+                  default:
+                    targets: null
+                    shouldSkipDiscoveryControl: false
+                requestID:
+                  type: string
+                  default: ''
                 extensions:
                   type: object
                   const:
@@ -127,6 +123,7 @@ paths:
         permission: read
         actual_path: /gql
         unwrap: data
+        wrap: variables
         build:
           verified: true
           stable_id: tw0002
@@ -152,22 +149,17 @@ paths:
             schema:
               type: object
               required:
-                - variables
+                - channelLogin
               properties:
                 operationName:
                   type: string
                   const: ChannelRoot_AboutPanel
-                variables:
-                  type: object
-                  required:
-                    - channelLogin
-                  properties:
-                    channelLogin:
-                      type: string
-                      description: Channel login name (e.g. "shroud", "pokimane").
-                    skipSchedule:
-                      type: boolean
-                      default: false
+                channelLogin:
+                  type: string
+                  description: Channel login name (e.g. "shroud", "pokimane").
+                skipSchedule:
+                  type: boolean
+                  default: false
                 extensions:
                   type: object
                   const:
@@ -242,6 +234,7 @@ paths:
         permission: read
         actual_path: /gql
         unwrap: data
+        wrap: variables
         build:
           verified: true
           stable_id: tw0003
@@ -267,19 +260,14 @@ paths:
             schema:
               type: object
               required:
-                - variables
+                - channelLogin
               properties:
                 operationName:
                   type: string
                   const: StreamMetadata
-                variables:
-                  type: object
-                  required:
-                    - channelLogin
-                  properties:
-                    channelLogin:
-                      type: string
-                      description: Channel login name (e.g. "shroud", "xqc").
+                channelLogin:
+                  type: string
+                  description: Channel login name (e.g. "shroud", "xqc").
                 extensions:
                   type: object
                   const:
@@ -340,6 +328,7 @@ paths:
         permission: read
         actual_path: /gql
         unwrap: data
+        wrap: variables
         build:
           verified: true
           stable_id: tw0004
@@ -364,37 +353,22 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - variables
               properties:
                 operationName:
                   type: string
                   const: BrowsePage_AllDirectories
-                variables:
+                limit:
+                  type: integer
+                  default: 30
+                  description: Number of categories to return (default 30).
+                options:
                   type: object
-                  properties:
-                    limit:
-                      type: integer
-                      default: 30
-                      description: Number of categories to return (default 30).
-                    options:
-                      type: object
-                      properties:
-                        recommendationsContext:
-                          type: object
-                          default:
-                            platform: web
-                        requestID:
-                          type: string
-                          default: ''
-                        sort:
-                          type: string
-                          enum: [VIEWER_COUNT, RELEVANCE]
-                          default: VIEWER_COUNT
-                          description: Sort order (VIEWER_COUNT or RELEVANCE).
-                        tags:
-                          type: array
-                          default: []
+                  default:
+                    recommendationsContext:
+                      platform: web
+                    requestID: ''
+                    sort: VIEWER_COUNT
+                    tags: []
                 extensions:
                   type: object
                   const:

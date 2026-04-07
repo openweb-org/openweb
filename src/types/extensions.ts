@@ -49,4 +49,9 @@ export interface XOpenWebOperation {
   readonly actual_path?: string
   /** Dot-path into the parsed response body to extract before returning (e.g. 'data', '0.data') */
   readonly unwrap?: string
+  /** Wrap non-const request body params under this key (e.g. 'variables' for GraphQL) */
+  readonly wrap?: string
+  /** GraphQL query string injected at body root when wrap is active and the schema
+   *  property name would conflict with a user-facing param (e.g. both named 'query') */
+  readonly graphql_query?: string
 }

@@ -1792,15 +1792,6 @@ paths:
                                   - pid
                                   - text
                                   - marks
-                          required:
-                            - author
-                            - comment_count
-                            - comment_permission
-                            - content
-                            - id
-                            - reaction_instruction
-                            - type
-                            - url
                         verb:
                           type: string
                         created_time:
@@ -1810,8 +1801,6 @@ paths:
                           properties:
                             can_show_sticker:
                               type: boolean
-                          required:
-                            - can_show_sticker
                         actor:
                           type: object
                           properties:
@@ -1998,37 +1987,10 @@ paths:
                               required:
                                 - is_vip
                                 - target_url
-                          required:
-                            - id
-                            - name
-                            - headline
-                            - type
-                            - user_type
-                            - url
-                            - url_token
-                            - avatar_url
-                            - gender
-                            - is_following
-                            - is_followed
-                            - is_org
-                            - badge
-                            - badge_v2
-                            - vip_info
-                            - kvip_info
                         action_text:
                           type: string
                         is_sticky:
                           type: boolean
-                      required:
-                        - id
-                        - type
-                        - target
-                        - verb
-                        - created_time
-                        - interaction
-                        - actor
-                        - action_text
-                        - is_sticky
                   paging:
                     type: object
                     properties:
@@ -2126,7 +2088,6 @@ paths:
                       - is_vip
                       - vip_type
                       - rename_days
-                      - entrance_v2
                       - rename_frequency
                       - rename_await_days
                   kvip_info:
@@ -2228,19 +2189,8 @@ paths:
                               type: string
                             source:
                               type: string
-                          required:
-                            - pid
-                            - source
                       goods_count:
                         type: integer
-                    required:
-                      - status
-                      - showcase_permission
-                      - jingdong_param
-                      - jingdong_app_param
-                      - available_source
-                      - bind_info
-                      - goods_count
                 required:
                   - id
                   - url_token
@@ -2272,7 +2222,6 @@ paths:
                   - line_like_count
                   - line_comment_only_count
                   - available_medals_count
-                  - org_verify_status
                   - uid
                   - default_notifications_count
                   - follow_notifications_count
@@ -2283,7 +2232,6 @@ paths:
                   - has_applying_column
                   - has_add_baike_summary_permission
                   - editor_info
-                  - ai_assistant_info
   /api/v4/members/{url_token}:
     get:
       operationId: getMember
@@ -2381,7 +2329,6 @@ paths:
                       - is_vip
                       - vip_type
                       - rename_days
-                      - entrance_v2
                       - rename_frequency
                       - rename_await_days
                   kvip_info:
@@ -2415,12 +2362,6 @@ paths:
                         type: string
                       night_icon:
                         type: string
-                    required:
-                      - title
-                      - merged_badges
-                      - detail_badges
-                      - icon
-                      - night_icon
                   allow_message:
                     type: boolean
                   is_following:
@@ -2573,8 +2514,6 @@ paths:
                           properties:
                             is_vip:
                               type: boolean
-                          required:
-                            - is_vip
                         is_advertiser:
                           type: boolean
                         avatar_url:
@@ -2596,26 +2535,6 @@ paths:
                             required:
                               - type
                               - description
-                      required:
-                        - is_followed
-                        - avatar_url_template
-                        - user_type
-                        - answer_count
-                        - is_following
-                        - url
-                        - type
-                        - url_token
-                        - id
-                        - articles_count
-                        - name
-                        - headline
-                        - gender
-                        - vip_info
-                        - is_advertiser
-                        - avatar_url
-                        - is_org
-                        - follower_count
-                        - badge
                 required:
                   - paging
                   - data
@@ -2801,18 +2720,6 @@ paths:
                           required: []
                         id:
                           type: string
-                      required:
-                        - type
-                        - title
-                        - question_type
-                        - created
-                        - updated_time
-                        - url
-                        - answer_count
-                        - comment_count
-                        - follower_count
-                        - relationship
-                        - id
                 required:
                   - paging
                   - data
@@ -4009,14 +3916,11 @@ paths:
                 required:
                   - paging
                   - data
-                  - hit_labels
                   - related_search_result
                   - search_action_info
                   - is_brand_word
-                  - pendant
                   - sensitive_level
                   - warning
-                  - filter_items
                   - ab_params
                   - item_in_view
                   - domain_info
