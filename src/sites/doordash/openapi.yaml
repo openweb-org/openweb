@@ -8,108 +8,222 @@ info:
 servers:
   - url: https://www.doordash.com
     x-openweb:
-      transport: page
+      transport: node
       auth:
         type: cookie_session
 paths:
-  /internal/searchRestaurants:
-    get:
+  /graphql/autocompleteFacetFeed:
+    post:
       operationId: searchRestaurants
       summary: Search restaurants by keyword — returns names, categories, images, store IDs
       x-openweb:
         permission: read
+        unwrap: data
         build:
           stable_id: dd0001
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: doordash-graphql
-          operation: searchRestaurants
       parameters:
-        - name: query
+        - name: operation
           in: query
           required: true
           schema:
             type: string
-          description: Search keyword (e.g. "pizza", "sushi", "thai").
+            const: autocompleteFacetFeed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - variables
+              properties:
+                operationName:
+                  type: string
+                  const: autocompleteFacetFeed
+                variables:
+                  type: object
+                  required:
+                    - query
+                  properties:
+                    query:
+                      type: string
+                      description: Search keyword (e.g. "pizza", "sushi", "thai").
+                query:
+                  type: string
+                  const: |-
+                    query autocompleteFacetFeed($query: String!) {
+                      autocompleteFacetFeed(query: $query) {
+                        body {
+                          id
+                          body {
+                            id
+                            name
+                            text { title subtitle accessory description }
+                            images { main { uri } }
+                            custom
+                            component { id category }
+                          }
+                        }
+                        page { next { name data } }
+                      }
+                    }
       responses:
         '200':
-          description: List of matching restaurants.
+          description: Search results with matching restaurants.
           content:
             application/json:
               schema:
                 type: object
-                required:
-                  - restaurants
-                  - count
                 properties:
-                  count:
-                    type: integer
-                    description: Total number of results returned.
-                  restaurants:
-                    type: array
-                    items:
-                      type: object
-                      required:
-                        - name
-                      properties:
-                        name:
-                          type: string
-                          description: Restaurant name.
-                        categories:
-                          type:
-                            - string
-                            - 'null'
-                          description: Comma-separated cuisine/category tags (null for non-store results).
-                        imageUrl:
-                          type: string
-                          description: Cover image URL.
-                        storeId:
-                          type: string
-                          description: DoorDash store ID (use with getRestaurantMenu).
-                        resultType:
-                          type: string
-                          description: Result type (STORE, ITEM, etc.).
-  /internal/getRestaurantMenu:
-    get:
+                  autocompleteFacetFeed:
+                    type: object
+                    properties:
+                      body:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            body:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  name:
+                                    type: string
+                                  text:
+                                    type: object
+                                    properties:
+                                      title:
+                                        type: string
+                                        description: Restaurant name.
+                                      subtitle:
+                                        type: string
+                                      accessory:
+                                        type: string
+                                      description:
+                                        type: string
+                                        description: Cuisine/category tags.
+                                  images:
+                                    type: object
+                                    properties:
+                                      main:
+                                        type: object
+                                        properties:
+                                          uri:
+                                            type: string
+                                            description: Cover image URL.
+                                  custom:
+                                    type: string
+                                    description: JSON string with store_id and result_type.
+                                  component:
+                                    type: object
+                                    properties:
+                                      id:
+                                        type: string
+                                      category:
+                                        type: string
+                      page:
+                        type: object
+                        properties:
+                          next:
+                            type: [object, 'null']
+                            properties:
+                              name:
+                                type: string
+                              data:
+                                type: string
+
+  /graphql/storepageFeed:
+    post:
       operationId: getRestaurantMenu
       summary: Get restaurant details and full menu — header info, categories, items with prices
       x-openweb:
         permission: read
+        unwrap: data
         build:
           stable_id: dd0002
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: doordash-graphql
-          operation: getRestaurantMenu
       parameters:
-        - name: storeId
+        - name: operation
           in: query
           required: true
           schema:
             type: string
-          description: DoorDash store ID (from searchRestaurants).
-        - name: menuId
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Specific menu ID. Omit for default menu.
-        - name: fulfillmentType
-          in: query
-          required: false
-          schema:
-            type: string
-            default: Delivery
-            enum:
-              - Delivery
-              - Pickup
-          description: Delivery or Pickup.
+            const: storepageFeed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - variables
+              properties:
+                operationName:
+                  type: string
+                  const: storepageFeed
+                variables:
+                  type: object
+                  required:
+                    - storeId
+                  properties:
+                    storeId:
+                      type: string
+                      description: DoorDash store ID (from searchRestaurants).
+                    menuId:
+                      type: string
+                      description: Specific menu ID. Omit for default menu.
+                    fulfillmentType:
+                      type: string
+                      default: Delivery
+                      enum:
+                        - Delivery
+                        - Pickup
+                      description: Delivery or Pickup.
+                query:
+                  type: string
+                  const: |-
+                    query storepageFeed($storeId: ID!, $menuId: ID, $fulfillmentType: FulfillmentType) {
+                      storepageFeed(storeId: $storeId, menuId: $menuId, fulfillmentType: $fulfillmentType) {
+                        storeHeader {
+                          id name description priceRange priceRangeDisplayString
+                          offersDelivery offersPickup isDashpassPartner
+                          coverImgUrl coverSquareImgUrl
+                          address { lat lng city state street displayAddress }
+                          ratings { numRatings numRatingsDisplayString averageRating isNewlyAdded }
+                          status {
+                            delivery { isAvailable minutes displayUnavailableStatus }
+                            pickup { isAvailable minutes displayUnavailableStatus }
+                          }
+                          deliveryFeeLayout { title subtitle }
+                          businessTags { name link }
+                        }
+                        menuBook {
+                          id name displayOpenHours
+                          menuCategories { id name numItems }
+                        }
+                        itemLists {
+                          id name description
+                          items {
+                            id name description displayPrice imageUrl
+                            dietaryTagsList { type abbreviatedTagDisplayString }
+                            dynamicLabelDisplayString calloutDisplayString ratingDisplayString
+                          }
+                        }
+                        reviewPreview {
+                          consumerReviewData {
+                            avgRating numRatings numRatingsDisplayString numReviews
+                          }
+                        }
+                      }
+                    }
       responses:
         '200':
           description: Store details and menu.
@@ -117,164 +231,262 @@ paths:
             application/json:
               schema:
                 type: object
-                required:
-                  - storeHeader
-                  - menuBook
-                  - itemLists
                 properties:
-                  storeHeader:
+                  storepageFeed:
                     type: object
                     required:
-                      - id
-                      - name
+                      - storeHeader
+                      - menuBook
+                      - itemLists
                     properties:
-                      id:
-                        type: string
-                        description: DoorDash store ID.
-                      name:
-                        type: string
-                        description: Restaurant name.
-                      description:
-                        type: string
-                        description: Restaurant description.
-                      priceRange:
-                        type: integer
-                        description: Price tier (1–4).
-                      address:
+                      storeHeader:
                         type: object
                         required:
-                          - displayAddress
+                          - id
+                          - name
                         properties:
-                          displayAddress:
+                          id:
                             type: string
-                            description: Full display address.
-                          city:
+                            description: DoorDash store ID.
+                          name:
                             type: string
-                          state:
+                            description: Restaurant name.
+                          description:
                             type: string
-                      ratings:
-                        type: object
-                        required:
-                          - averageRating
-                          - numRatingsDisplayString
-                        properties:
-                          averageRating:
-                            type: number
-                            description: Average star rating (e.g. 4.7).
-                          numRatingsDisplayString:
+                          priceRange:
+                            type: integer
+                            description: Price tier (1–4).
+                          priceRangeDisplayString:
                             type: string
-                            description: Display string for rating count (e.g. "1,200+ ratings").
-                      status:
-                        type: object
-                        properties:
-                          delivery:
+                          offersDelivery:
+                            type: boolean
+                          offersPickup:
+                            type: boolean
+                          isDashpassPartner:
+                            type: boolean
+                          coverImgUrl:
+                            type: string
+                          coverSquareImgUrl:
+                            type: string
+                          address:
                             type: object
-                            required:
-                              - isAvailable
                             properties:
-                              isAvailable:
-                                type: boolean
-                                description: Whether delivery is currently available.
-                              minutes:
+                              lat:
+                                type: number
+                              lng:
+                                type: number
+                              city:
                                 type: string
-                                description: Estimated delivery time (e.g. "25-35").
-                  menuBook:
-                    type: object
-                    required:
-                      - name
-                      - menuCategories
-                    properties:
-                      name:
-                        type: string
-                        description: Menu name (e.g. "Dinner", "All Day").
-                      menuCategories:
+                              state:
+                                type: string
+                              street:
+                                type: string
+                              displayAddress:
+                                type: string
+                                description: Full display address.
+                          ratings:
+                            type: object
+                            properties:
+                              numRatings:
+                                type: integer
+                              numRatingsDisplayString:
+                                type: string
+                                description: Display string for rating count.
+                              averageRating:
+                                type: number
+                                description: Average star rating (e.g. 4.7).
+                              isNewlyAdded:
+                                type: boolean
+                          status:
+                            type: object
+                            properties:
+                              delivery:
+                                type: object
+                                properties:
+                                  isAvailable:
+                                    type: boolean
+                                  minutes:
+                                    type: string
+                                    description: Estimated delivery time (e.g. "25-35").
+                                  displayUnavailableStatus:
+                                    type: [string, 'null']
+                              pickup:
+                                type: object
+                                properties:
+                                  isAvailable:
+                                    type: boolean
+                                  minutes:
+                                    type: string
+                                  displayUnavailableStatus:
+                                    type: [string, 'null']
+                          deliveryFeeLayout:
+                            type: object
+                            properties:
+                              title:
+                                type: string
+                              subtitle:
+                                type: string
+                          businessTags:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                link:
+                                  type: string
+                      menuBook:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                            description: Menu name (e.g. "Dinner", "All Day").
+                          displayOpenHours:
+                            type: string
+                          menuCategories:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - name
+                              properties:
+                                id:
+                                  type: string
+                                name:
+                                  type: string
+                                  description: Category name (e.g. "Popular Items", "Appetizers").
+                                numItems:
+                                  type: integer
+                      itemLists:
                         type: array
                         items:
                           type: object
                           required:
-                            - id
                             - name
+                            - items
                           properties:
                             id:
                               type: string
                             name:
                               type: string
-                              description: Category name (e.g. "Popular Items", "Appetizers").
-                            numItems:
-                              type: integer
-                              description: Number of items in this category.
-                  itemLists:
-                    type: array
-                    items:
-                      type: object
-                      required:
-                        - name
-                        - items
-                      properties:
-                        name:
-                          type: string
-                          description: Menu category name.
-                        items:
-                          type: array
-                          items:
+                              description: Menu category name.
+                            description:
+                              type: string
+                            items:
+                              type: array
+                              items:
+                                type: object
+                                required:
+                                  - id
+                                  - name
+                                  - displayPrice
+                                properties:
+                                  id:
+                                    type: string
+                                    description: Menu item ID (use with addToCart).
+                                  name:
+                                    type: string
+                                  description:
+                                    type: string
+                                  displayPrice:
+                                    type: string
+                                    description: Formatted price (e.g. "$12.99").
+                                  imageUrl:
+                                    type: string
+                                  dietaryTagsList:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        type:
+                                          type: string
+                                        abbreviatedTagDisplayString:
+                                          type: string
+                                  dynamicLabelDisplayString:
+                                    type: [string, 'null']
+                                  calloutDisplayString:
+                                    type: [string, 'null']
+                                  ratingDisplayString:
+                                    type: [string, 'null']
+                      reviewPreview:
+                        type: object
+                        properties:
+                          consumerReviewData:
                             type: object
-                            required:
-                              - id
-                              - name
-                              - displayPrice
                             properties:
-                              id:
+                              avgRating:
+                                type: number
+                              numRatings:
+                                type: integer
+                              numRatingsDisplayString:
                                 type: string
-                                description: Menu item ID (use with addToCart).
-                              name:
-                                type: string
-                                description: Item name.
-                              description:
-                                type: string
-                                description: Item description.
-                              displayPrice:
-                                type: string
-                                description: Formatted price (e.g. "$12.99").
-                              imageUrl:
-                                type: string
-                                description: Item image URL.
-  /internal/getOrderHistory:
-    get:
+                              numReviews:
+                                type: integer
+
+  /graphql/getConsumerOrdersWithDetails:
+    post:
       operationId: getOrderHistory
       summary: Get order history with details — store, items, totals, timestamps
       x-openweb:
         permission: read
+        unwrap: data
         build:
           stable_id: dd0003
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: doordash-graphql
-          operation: getOrderHistory
       parameters:
-        - name: offset
+        - name: operation
           in: query
-          required: false
+          required: true
           schema:
-            type: integer
-            default: 0
-          description: Pagination offset.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 10
-          description: Number of orders to return (max 20).
-        - name: includeCancelled
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: true
-          description: Include cancelled orders.
+            type: string
+            const: getConsumerOrdersWithDetails
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - variables
+              properties:
+                operationName:
+                  type: string
+                  const: getConsumerOrdersWithDetails
+                variables:
+                  type: object
+                  properties:
+                    offset:
+                      type: integer
+                      default: 0
+                      description: Pagination offset.
+                    limit:
+                      type: integer
+                      default: 10
+                      description: Number of orders to return (max 20).
+                    includeCancelled:
+                      type: boolean
+                      default: true
+                      description: Include cancelled orders.
+                query:
+                  type: string
+                  const: |-
+                    query getConsumerOrdersWithDetails($offset: Int!, $limit: Int!, $includeCancelled: Boolean) {
+                      getConsumerOrdersWithDetails(offset: $offset, limit: $limit, includeCancelled: $includeCancelled) {
+                        id orderUuid createdAt submittedAt cancelledAt fulfilledAt
+                        isPickup fulfillmentType
+                        store { id name business { id name } }
+                        orders {
+                          id
+                          items { id name quantity originalItemPrice }
+                        }
+                        grandTotal { unitAmount currency decimalPlaces displayString }
+                        deliveryAddress { id formattedAddress }
+                      }
+                    }
       responses:
         '200':
           description: Order history.
@@ -282,10 +494,8 @@ paths:
             application/json:
               schema:
                 type: object
-                required:
-                  - orders
                 properties:
-                  orders:
+                  getConsumerOrdersWithDetails:
                     type: array
                     items:
                       type: object
@@ -301,16 +511,19 @@ paths:
                           description: Order ID.
                         orderUuid:
                           type: string
-                          description: Order UUID.
                         createdAt:
                           type: string
                           description: Order creation timestamp.
+                        submittedAt:
+                          type: [string, 'null']
+                        cancelledAt:
+                          type: [string, 'null']
                         fulfilledAt:
-                          type: string
-                          description: Order fulfillment timestamp.
+                          type: [string, 'null']
                         isPickup:
                           type: boolean
-                          description: Whether this was a pickup order.
+                        fulfillmentType:
+                          type: string
                         store:
                           type: object
                           required:
@@ -321,14 +534,20 @@ paths:
                               type: string
                             name:
                               type: string
-                              description: Store name.
+                            business:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                name:
+                                  type: string
                         orders:
                           type: array
                           items:
                             type: object
-                            required:
-                              - items
                             properties:
+                              id:
+                                type: string
                               items:
                                 type: array
                                 items:
@@ -337,14 +556,14 @@ paths:
                                     - name
                                     - quantity
                                   properties:
+                                    id:
+                                      type: string
                                     name:
                                       type: string
-                                      description: Item name.
                                     quantity:
                                       type: integer
                                     originalItemPrice:
                                       type: number
-                                      description: Original item price in dollars.
                         grandTotal:
                           type: object
                           required:
@@ -352,56 +571,131 @@ paths:
                             - unitAmount
                             - currency
                           properties:
-                            displayString:
-                              type: string
-                              description: Formatted total (e.g. "$24.99").
                             unitAmount:
                               type: integer
                               description: Total in smallest currency unit (cents).
                             currency:
                               type: string
-                              description: Currency code (e.g. "USD").
-  /internal/addToCart:
+                            decimalPlaces:
+                              type: integer
+                            displayString:
+                              type: string
+                              description: Formatted total (e.g. "$24.99").
+                        deliveryAddress:
+                          type: [object, 'null']
+                          properties:
+                            id:
+                              type: string
+                            formattedAddress:
+                              type: string
+
+  /graphql/addCartItem:
     post:
       operationId: addToCart
-      summary: Add a menu item to DoorDash cart — returns success, cartId, subtotal, item list
+      summary: Add a menu item to DoorDash cart — returns cart ID, subtotal, item list
       x-openweb:
         permission: write
+        unwrap: data
         build:
           stable_id: dd0004
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: doordash-graphql
-          operation: addToCart
       parameters:
-        - name: storeId
+        - name: operation
           in: query
           required: true
           schema:
             type: string
-          description: DoorDash store ID (from searchRestaurants or getRestaurantMenu).
-        - name: itemId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Menu item ID (from getRestaurantMenu items[].id).
-        - name: quantity
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Quantity to add (default 1).
-        - name: specialInstructions
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Special instructions for the item (e.g. "no onions").
+            const: addCartItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - variables
+              properties:
+                operationName:
+                  type: string
+                  const: addCartItem
+                variables:
+                  type: object
+                  required:
+                    - addCartItemInput
+                    - fulfillmentContext
+                  properties:
+                    addCartItemInput:
+                      type: object
+                      required:
+                        - storeId
+                        - itemId
+                      properties:
+                        storeId:
+                          type: string
+                          description: DoorDash store ID (from searchRestaurants or getRestaurantMenu).
+                        itemId:
+                          type: string
+                          description: Menu item ID (from getRestaurantMenu items[].id).
+                        quantity:
+                          type: integer
+                          default: 1
+                          description: Quantity to add.
+                        specialInstructions:
+                          type: string
+                          default: ''
+                          description: Special instructions (e.g. "no onions").
+                        substitutionPreference:
+                          type: string
+                          default: substitute
+                        cartId:
+                          type: string
+                          default: ''
+                        isBundle:
+                          type: boolean
+                          default: false
+                        bundleType:
+                          type: string
+                          default: BUNDLE_TYPE_UNSPECIFIED
+                    fulfillmentContext:
+                      type: object
+                      default:
+                        shouldUpdateFulfillment: false
+                        fulfillmentType: Delivery
+                    cartContext:
+                      type: object
+                      default:
+                        isBundle: false
+                    returnCartFromOrderService:
+                      type: boolean
+                      default: false
+                query:
+                  type: string
+                  const: |-
+                    mutation addCartItem($addCartItemInput: AddCartItemInput!, $fulfillmentContext: FulfillmentContextInput!, $cartContext: CartContextInput, $returnCartFromOrderService: Boolean) {
+                      addCartItemV2(
+                        addCartItemInput: $addCartItemInput
+                        fulfillmentContext: $fulfillmentContext
+                        cartContext: $cartContext
+                        returnCartFromOrderService: $returnCartFromOrderService
+                      ) {
+                        id
+                        subtotal
+                        currencyCode
+                        fulfillmentType
+                        restaurant { id name slug }
+                        orders {
+                          id
+                          orderItems {
+                            id
+                            quantity
+                            singlePrice
+                            priceDisplayString
+                            item { id name imageUrl price }
+                          }
+                        }
+                      }
+                    }
       responses:
         '200':
           description: Cart update result.
@@ -409,47 +703,57 @@ paths:
             application/json:
               schema:
                 type: object
-                required:
-                  - success
-                  - cartId
                 properties:
-                  success:
-                    type: boolean
-                    description: Whether the item was added successfully.
-                  cartId:
-                    type: string
-                    description: Cart UUID.
-                  subtotal:
-                    type: integer
-                    description: Cart subtotal in cents.
-                  currencyCode:
-                    type: string
-                    description: Currency code (e.g. "USD").
-                  restaurant:
+                  addCartItemV2:
                     type: object
-                    required:
-                      - id
-                      - name
                     properties:
                       id:
                         type: string
-                      name:
+                        description: Cart UUID.
+                      subtotal:
+                        type: integer
+                        description: Cart subtotal in cents.
+                      currencyCode:
                         type: string
-                  items:
-                    type: array
-                    items:
-                      type: object
-                      required:
-                        - id
-                        - name
-                        - quantity
-                      properties:
-                        id:
-                          type: string
-                        name:
-                          type: string
-                        quantity:
-                          type: integer
-                        price:
-                          type: string
-                          description: Formatted price string.
+                      fulfillmentType:
+                        type: string
+                      restaurant:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          slug:
+                            type: string
+                      orders:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            orderItems:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  quantity:
+                                    type: integer
+                                  singlePrice:
+                                    type: integer
+                                  priceDisplayString:
+                                    type: string
+                                  item:
+                                    type: object
+                                    properties:
+                                      id:
+                                        type: string
+                                      name:
+                                        type: string
+                                      imageUrl:
+                                        type: string
+                                      price:
+                                        type: integer

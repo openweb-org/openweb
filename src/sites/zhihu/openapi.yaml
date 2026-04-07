@@ -9,7 +9,7 @@ info:
 servers:
   - url: https://www.zhihu.com
     x-openweb:
-      transport: page
+      transport: node
       auth:
         type: cookie_session
       csrf:
@@ -4116,9 +4116,6 @@ paths:
           verified: true
           signals:
             - status-match
-        adapter:
-          name: zhihu-web
-          operation: getUserAnswers
       parameters:
         - name: url_token
           in: path
@@ -4147,6 +4144,13 @@ paths:
             type: string
             default: created
           description: "Sort order: created, voteups."
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "data[*].is_normal,admin_closed_comment,reward_info,is_collapsed,annotation_action,annotation_detail,collapse_reason,collapsed_by,suggest_edit,comment_count,can_comment,content,voteup_count,reshipment_settings,comment_permission,mark_infos,created_time,updated_time,review_info,excerpt,is_labeled,label_info,relationship.is_authorized,voting,is_author,is_thanked,is_nothelp,is_recognized;data[*].author.badge[?(type=best_answerer)].topics;data[*].question.has_publishing_draft,relationship"
+          description: Fields to include in the response.
       responses:
         "200":
           description: Success.
@@ -4240,9 +4244,6 @@ paths:
           verified: true
           signals:
             - status-match
-        adapter:
-          name: zhihu-web
-          operation: upvoteAnswer
       parameters:
         - name: answer_id
           in: path
@@ -4250,16 +4251,22 @@ paths:
           schema:
             type: string
           description: Answer ID to upvote (numeric string).
-        - name: type
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - up
-              - neutral
-            default: up
-          description: "Vote type: 'up' to upvote, 'neutral' to cancel vote."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - up
+                    - neutral
+                  default: up
+                  description: "Vote type: 'up' to upvote, 'neutral' to cancel vote."
+              required:
+                - type
       responses:
         "200":
           description: Vote registered.
@@ -4293,9 +4300,6 @@ paths:
           verified: true
           signals:
             - status-match
-        adapter:
-          name: zhihu-web
-          operation: followUser
       parameters:
         - name: url_token
           in: path
@@ -4329,9 +4333,6 @@ paths:
           verified: true
           signals:
             - status-match
-        adapter:
-          name: zhihu-web
-          operation: followQuestion
       parameters:
         - name: question_id
           in: path
