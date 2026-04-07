@@ -216,4 +216,28 @@ describe('diffShape', () => {
     })
     expect(drifts).toContainEqual({ kind: 'required_missing', path: 'name' })
   })
+
+  it('zero overlap between schema and response → schema_mismatch', () => {
+    const schema = { id: 'number', name: 'string', items: 'array' }
+    const response = { error: 'string', code: 'number' }
+    const drifts = diffShape(schema, response, new Set())
+    expect(drifts).toContainEqual({
+      kind: 'schema_mismatch',
+      path: '',
+      expected: '3 schema fields',
+      actual: '0 matched',
+    })
+  })
+
+  it('no schema_mismatch when at least one field overlaps', () => {
+    const schema = { id: 'number', name: 'string' }
+    const response = { id: 'number', extra: 'string' }
+    const drifts = diffShape(schema, response, new Set())
+    expect(drifts).toEqual([])
+  })
+
+  it('no schema_mismatch when schema is empty', () => {
+    const drifts = diffShape({}, { error: 'string' }, new Set())
+    expect(drifts).toEqual([])
+  })
 })

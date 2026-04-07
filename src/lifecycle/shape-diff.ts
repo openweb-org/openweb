@@ -4,7 +4,7 @@ const MAX_DEPTH = 3
 const SAMPLE_SIZE = 3
 
 export interface DriftResult {
-  readonly kind: 'type_change' | 'required_missing'
+  readonly kind: 'type_change' | 'required_missing' | 'schema_mismatch'
   readonly path: string
   readonly expected?: string
   readonly actual?: string
@@ -82,8 +82,8 @@ export function extractSchemaFields(
     return fields
   }
 
-  // Primitive schema at top level
-  if (type && !prefix) return { '': normalizeType(type) }
+  // Primitive schema at top level (not bare object/array without structure)
+  if (type && !prefix && type !== 'object' && type !== 'array') return { '': normalizeType(type) }
   return {}
 }
 
@@ -149,6 +149,15 @@ export function diffShape(
   for (const path of requiredFields) {
     if (!(path in responseFields)) {
       drifts.push({ kind: 'required_missing', path })
+    }
+  }
+
+  // Phase 3: zero-overlap check — schema has fields but none appear in response
+  const schemaKeys = Object.keys(schemaFields)
+  if (schemaKeys.length > 0) {
+    const overlap = schemaKeys.filter((k) => k in responseFields).length
+    if (overlap === 0) {
+      drifts.push({ kind: 'schema_mismatch', path: '', expected: `${schemaKeys.length} schema fields`, actual: '0 matched' })
     }
   }
 
