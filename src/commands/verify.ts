@@ -102,7 +102,7 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
         process.stdout.write(`  ${statusIcon(o.status)} ${o.operationId}: ${o.status}${o.detail ? ` — ${o.detail}` : ''}\n`)
       }
 
-      if (result.overallStatus !== 'PASS') {
+      if (result.overallStatus !== 'PASS' && result.overallStatus !== 'DRIFT') {
         throw new OpenWebError({
           error: 'execution_failed',
           code: 'EXECUTION_FAILED',

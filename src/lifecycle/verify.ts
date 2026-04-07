@@ -5,7 +5,7 @@ import { type AsyncApiSpec, loadAsyncApi } from '../lib/asyncapi.js'
 import { openwebHome } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
 import { loadManifest, saveManifest } from '../lib/manifest.js'
-import { listOperations, listSites, loadOpenApi, pathExists, resolveSiteRoot } from '../lib/openapi.js'
+import { listOperations, listSites, loadOpenApi, pathExists, resolveSiteRoot, findOperation, getResponseSchema } from '../lib/openapi.js'
 import { ensureBrowser } from '../runtime/browser-lifecycle.js'
 import { type ExecuteDependencies, executeOperation } from '../runtime/executor.js'
 import { resolveTransport } from '../runtime/operation-context.js'
@@ -15,7 +15,7 @@ import { WsConnectionPool } from '../runtime/ws-pool.js'
 import { openWsSession } from '../runtime/ws-runtime.js'
 import type { Manifest } from '../types/manifest.js'
 import type { XOpenWebWsOperation } from '../types/ws-extensions.js'
-import { computeResponseFingerprint } from './fingerprint.js'
+import { type DriftResult, diffShape, extractFields, extractRequiredFields, extractSchemaFields } from './shape-diff.js'
 
 export type DriftType = 'schema_drift' | 'auth_drift' | 'bot_detection' | 'endpoint_removed' | 'error'
 
@@ -38,8 +38,7 @@ export interface OperationVerifyResult {
   readonly status: OperationStatus
   readonly driftType?: DriftType
   readonly detail?: string
-  readonly newFingerprint?: string
-  readonly oldFingerprint?: string
+  readonly drifts?: readonly DriftResult[]
 }
 
 export interface SiteVerifyResult {
@@ -127,7 +126,7 @@ function resolveReplaySafety(
 }
 
 /**
- * Verify a single site: run all test cases, compare fingerprints.
+ * Verify a single site: run all test cases, check structural drift.
  */
 export async function verifySite(
   site: string,
@@ -136,16 +135,14 @@ export async function verifySite(
 ): Promise<SiteVerifyResult> {
   const siteRoot = await resolveSiteRoot(site)
   const manifest = await loadManifest(siteRoot)
-  const storedFingerprints = manifest?.fingerprint?.response_shape_hash
-    ? parseStoredFingerprints(manifest.fingerprint.response_shape_hash)
-    : new Map<string, string>()
 
   // Build permission lookup for replaySafety resolution (best-effort)
   const permissionMap = new Map<string, string>()
   let needsBrowser = false
   let siteBaseUrl = ''
+  let openapi: import('../lib/spec-loader.js').OpenApiSpec | undefined
   try {
-    const openapi = await loadOpenApi(site)
+    openapi = await loadOpenApi(site)
     for (const ref of listOperations(openapi)) {
       const ext = ref.operation['x-openweb'] as Record<string, unknown> | undefined
       if (ext?.permission) permissionMap.set(ref.operation.operationId, ext.permission as string)
@@ -242,7 +239,6 @@ export async function verifySite(
             testCase,
             asyncapi,
             wsPool,
-            storedFingerprints.get(testFile.operation_id),
             deps,
           ),
           testFile.operation_id,
@@ -261,7 +257,7 @@ export async function verifySite(
           site,
           testFile.operation_id,
           testCase,
-          storedFingerprints.get(testFile.operation_id),
+          openapi,
           effectiveDeps,
         ),
         testFile.operation_id,
@@ -303,21 +299,6 @@ export async function verifySite(
 
   // Update manifest with verification results
   if (manifest) {
-    const newFingerprints = new Map(storedFingerprints)
-    for (const op of operations) {
-      if (op.newFingerprint) {
-        const existing = newFingerprints.get(op.operationId)
-        // Preserve 'pending' — it signals an intentionally skipped fingerprint
-        if (existing === 'pending') continue
-        // Accumulate multiple shapes (different test cases may produce different valid shapes)
-        const shapes = existing ? existing.split('|') : []
-        if (!shapes.includes(op.newFingerprint)) {
-          shapes.push(op.newFingerprint)
-        }
-        newFingerprints.set(op.operationId, shapes.slice(-4).join('|'))
-      }
-    }
-
     // Only clear quarantine on actual PASS — not auth_expired
     const updatedQuarantine = shouldQuarantine
       ? true
@@ -329,7 +310,6 @@ export async function verifySite(
       quarantined: updatedQuarantine,
       fingerprint: {
         ...manifest.fingerprint,
-        response_shape_hash: serializeFingerprints(newFingerprints),
         last_validated: new Date().toISOString(),
       },
     }
@@ -343,7 +323,7 @@ async function verifyOperation(
   site: string,
   operationId: string,
   testCase: HttpTestCase,
-  storedFingerprint: string | undefined,
+  openapi: import('../lib/spec-loader.js').OpenApiSpec | undefined,
   deps?: ExecuteDependencies,
 ): Promise<OperationVerifyResult> {
   try {
@@ -361,22 +341,32 @@ async function verifyOperation(
       }
     }
 
-    // Compute and compare fingerprint
-    const newFingerprint = computeResponseFingerprint(result.body)
-
-    const knownShapes = parseShapeSet(storedFingerprint)
-    if (knownShapes.length > 0 && !knownShapes.includes(newFingerprint)) {
-      return {
-        operationId,
-        status: 'DRIFT',
-        driftType: 'schema_drift',
-        detail: 'response shape changed',
-        newFingerprint,
-        oldFingerprint: storedFingerprint,
+    // Structural diff: compare response shape against OpenAPI schema
+    if (openapi && result.body != null) {
+      try {
+        const opRef = findOperation(openapi, operationId)
+        const responseSchema = getResponseSchema(opRef.operation)
+        if (responseSchema) {
+          const responseFields = extractFields(result.body)
+          const schemaFields = extractSchemaFields(responseSchema)
+          const requiredFields = extractRequiredFields(responseSchema)
+          const drifts = diffShape(schemaFields, responseFields, requiredFields)
+          if (drifts.length > 0) {
+            return {
+              operationId,
+              status: 'DRIFT',
+              driftType: 'schema_drift',
+              detail: drifts.map((d) => `${d.kind}:${d.path}`).join(', '),
+              drifts,
+            }
+          }
+        }
+      } catch {
+        // Schema lookup failed — skip structural diff, still PASS
       }
     }
 
-    return { operationId, status: 'PASS', newFingerprint }
+    return { operationId, status: 'PASS' }
   } catch (error) {
     if (isAuthDrift(error)) {
       return {
@@ -429,7 +419,6 @@ async function verifyWsOperation(
   testCase: WsTestCase,
   asyncapi: AsyncApiSpec | undefined,
   pool: WsConnectionPool | undefined,
-  storedFingerprint: string | undefined,
   deps?: ExecuteDependencies,
 ): Promise<OperationVerifyResult> {
   if (!testCase.assertions) {
@@ -494,21 +483,8 @@ async function verifyWsOperation(
       body = first.value
     }
 
-    // Fingerprint comparison
-    const newFingerprint = computeResponseFingerprint(body)
-    const knownShapes = parseShapeSet(storedFingerprint)
-    if (knownShapes.length > 0 && !knownShapes.includes(newFingerprint)) {
-      return {
-        operationId,
-        status: 'DRIFT',
-        driftType: 'schema_drift',
-        detail: 'response shape changed',
-        newFingerprint,
-        oldFingerprint: storedFingerprint,
-      }
-    }
-
-    return { operationId, status: 'PASS', newFingerprint }
+    // WS operations: no structural diff yet (no schema source), just PASS
+    return { operationId, status: 'PASS' }
   } catch (error) {
     if (isAuthDrift(error)) {
       return { operationId, status: 'FAIL', driftType: 'auth_drift', detail: 'WS auth failed' }
@@ -568,10 +544,11 @@ export async function verifyAll(deps?: ExecuteDependencies, options?: VerifyOpti
 }
 
 /**
- * Check if any site result represents a non-passing state (for exit codes).
+ * Check if any site result represents a failing state (for exit codes).
+ * DRIFT is advisory — only FAIL, auth_expired, and bot_blocked are non-pass.
  */
 export function hasNonPassResults(results: SiteVerifyResult[]): boolean {
-  return results.some((r) => r.overallStatus !== 'PASS')
+  return results.some((r) => r.overallStatus !== 'PASS' && r.overallStatus !== 'DRIFT')
 }
 
 /**
@@ -695,30 +672,4 @@ export async function writeVerifyReport(report: VerifyReport): Promise<string> {
   const filePath = path.join(dir, 'verify-report.json')
   await writeFile(filePath, JSON.stringify(report, null, 2), 'utf8')
   return filePath
-}
-
-// ── Fingerprint serialization ──────────────────────
-// Store per-operation fingerprints as "opId:hash,opId:hash" in the single response_shape_hash field
-
-function parseStoredFingerprints(serialized: string): Map<string, string> {
-  const map = new Map<string, string>()
-  if (!serialized.includes(':')) return map
-  for (const entry of serialized.split(',')) {
-    const [opId, hash] = entry.split(':')
-    if (opId && hash) map.set(opId, hash)
-  }
-  return map
-}
-
-function serializeFingerprints(map: Map<string, string>): string {
-  return Array.from(map.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([opId, hash]) => `${opId}:${hash}`)
-    .join(',')
-}
-
-/** Split a stored fingerprint value into its known shapes (pipe-separated). */
-function parseShapeSet(stored: string | undefined): string[] {
-  if (!stored || stored === 'pending') return []
-  return stored.split('|')
 }

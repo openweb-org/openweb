@@ -95,7 +95,9 @@ function inferSingleKind(
     }
 
     const properties: Record<string, JsonSchema> = {}
-    const required = new Set<string>(Object.keys(objects[0] ?? {}))
+    const required = objects.length >= 2
+      ? new Set<string>(Object.keys(objects[0] ?? {}))
+      : new Set<string>()
 
     for (const key of keys) {
       const values = objects.map((o) => o[key]).filter((v) => v !== undefined)
