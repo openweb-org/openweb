@@ -1,15 +1,19 @@
 import type { Page } from 'patchright'
 
+type AdapterErrors = { botBlocked(msg: string): Error; unknownOp(op: string): Error; wrap(error: unknown): Error }
+
 /** Navigate to a Redfin URL and wait for content to load. */
-async function navigateTo(page: Page, path: string): Promise<void> {
+async function navigateTo(page: Page, path: string, errors: AdapterErrors): Promise<void> {
   const url = `https://www.redfin.com${path}`
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 }).catch(() => {})
+  // Redfin rate-limits by redirecting to ratelimited.redfin.com
+  if (page.url().includes('ratelimited.')) throw errors.botBlocked('Rate limited by Redfin')
   await page.waitForSelector('script[type="application/ld+json"], h1, [data-rf-test-id]', { timeout: 10_000 }).catch(() => {})
 }
 
-async function searchHomes(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function searchHomes(page: Page, params: Record<string, unknown>, errors: AdapterErrors): Promise<unknown> {
   const { regionId, state, city } = params as { regionId: string; state: string; city: string }
-  await navigateTo(page, `/city/${regionId}/${state}/${city}`)
+  await navigateTo(page, `/city/${regionId}/${state}/${city}`, errors)
   return page.evaluate(() => {
     const listings: Record<string, unknown>[] = []
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
@@ -47,9 +51,9 @@ async function searchHomes(page: Page, params: Record<string, unknown>): Promise
   })
 }
 
-async function getPropertyDetails(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getPropertyDetails(page: Page, params: Record<string, unknown>, errors: AdapterErrors): Promise<unknown> {
   const { state, city, address, propertyId } = params as { state: string; city: string; address: string; propertyId: string }
-  await navigateTo(page, `/${state}/${city}/${address}/home/${propertyId}`)
+  await navigateTo(page, `/${state}/${city}/${address}/home/${propertyId}`, errors)
   return page.evaluate(() => {
     const scripts = document.querySelectorAll('script[type="application/ld+json"]')
     for (const s of scripts) {
@@ -121,9 +125,9 @@ async function getPropertyDetails(page: Page, params: Record<string, unknown>): 
   })
 }
 
-async function getMarketData(page: Page, params: Record<string, unknown>): Promise<unknown> {
+async function getMarketData(page: Page, params: Record<string, unknown>, errors: AdapterErrors): Promise<unknown> {
   const { regionId, state, city } = params as { regionId: string; state: string; city: string }
-  await navigateTo(page, `/city/${regionId}/${state}/${city}/housing-market`)
+  await navigateTo(page, `/city/${regionId}/${state}/${city}/housing-market`, errors)
   return page.evaluate(() => {
     // Try the housing-market page structure first
     const text = document.body.innerText || ''
@@ -184,7 +188,7 @@ async function getMarketData(page: Page, params: Record<string, unknown>): Promi
   })
 }
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: AdapterErrors) => Promise<unknown>> = {
   searchHomes,
   getPropertyDetails,
   getMarketData,
@@ -203,11 +207,11 @@ const adapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
-    const { errors } = helpers as { errors: { unknownOp(op: string): Error; wrap(error: unknown): Error } }
+    const { errors } = helpers as { errors: AdapterErrors }
     try {
       const handler = OPERATIONS[operation]
       if (!handler) throw errors.unknownOp(operation)
-      return await handler(page, { ...params })
+      return await handler(page, { ...params }, errors)
     } catch (error) {
       throw errors.wrap(error)
     }
