@@ -1,3 +1,36 @@
+## 2026-04-08: Prerelease-review fixes + doc/todo archive sweep
+
+**What changed:**
+- Fixed 3 bugs: buildQueryUrl base path reset, 304-as-redirect, timeout cancel (AbortController)
+- Fixed 2 code quality issues: bare Error in ws-runtime, magic SPA timeouts centralized
+- Added 87 new tests: http-executor (38), cache-manager (16), node-ssr-executor (13), SSRF (17 new)
+- Eliminated 62 `any` types across 4 adapters (xiaohongshu, homedepot, telegram, bilibili)
+- Deleted 3 unused barrel files (lib/index, types/index, lib/openapi), updated 28 importers
+- Enabled v8 coverage reporting in vitest
+- Added security docs: adapter sandboxing warning, DNS rebinding limitation, CLI-only note
+- Archived 17 completed doc/todo/ projects to doc/archive/ (kept: CI, android, cleanup, test_infra)
+- Archived 6 task trees (68 tasks) from tasks.json
+- Created doc/todo/ws-controlpatterns/ for deferred WS design gap
+
+**Why:**
+- Prerelease Codex review found 24 items; 17 now resolved, remainder is oversized files + executor duplication (deferred)
+- doc/todo/ had accumulated 22 folders; agent audit confirmed 17 were complete
+
+**Key files:**
+- `src/lib/url-builder.ts` — path concat fix
+- `src/runtime/redirect.ts` — explicit redirect status set
+- `src/runtime/http-executor.ts` — AbortController + 38 new tests
+- `src/runtime/cache-manager.test.ts`, `node-ssr-executor.test.ts` — new
+- `src/lib/ssrf.test.ts` — 3→20 tests
+- `src/lib/config.ts` — TIMEOUT.spaSettle, TIMEOUT.moduleWalkSettle
+- `src/sites/{xiaohongshu,homedepot,telegram,bilibili}/adapters/` — any→typed
+- `doc/main/security.md`, `README.md` — new security + CLI-only docs
+
+**Verification:** pnpm build (61 sites), pnpm test (919/919 pass, +87 new), coverage enabled
+**Commit:** 6c9da78
+**Next:** WS controlPatterns design (doc/todo/ws-controlpatterns/)
+**Blockers:** None
+
 ## 2026-04-08: Probe-first guide redesign — skill/openweb/add-site/ rewritten
 
 **What changed:**
