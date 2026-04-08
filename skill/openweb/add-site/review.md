@@ -2,6 +2,22 @@
 
 How to review the analysis output and decide: continue to curation, re-capture, or stop.
 
+## Conditional Step
+
+Review only applies to families where compile ran. If compile was skipped
+(extraction-only or adapter-only families), there is nothing to review — those
+families proceed directly to Build Package (guide.md Step 7).
+
+## Probe Matrix Cross-Check
+
+Before diving into analysis output, re-read the probe matrix from
+`DOC.md ## Internal: Probe Results`. Review compares compile output to probe
+findings:
+- Treat probe findings as the **classifier** (lane, transport hypothesis)
+- Treat compile findings as **artifact evidence** (schemas, auth ranking, clusters)
+- If compile output contradicts the probe-determined lane or transport, the
+  family routes back to Probe (guide.md Step 2), not forward to Build
+
 ## Which File to Read
 
 **Read `analysis-summary.json` first.** It is a compact (<100 KB) subset of the
@@ -169,20 +185,24 @@ If target operations are missing:
 | Auth `confidence: 0`, `rejectedSignals` mentions no overlap | Capture was unauthenticated | Re-capture with login |
 | CSRF missing | Token in JS, not cookie/meta | Find manually in dev tools, add to spec |
 
-### Stop-Iterating Rules
+### Failure-Based Loop Targets
 
-- **2 capture iterations** with no new clusters for a target intent = likely
-  infeasible with current pipeline.
-- Site flagged **BLOCKED** in archetype profile = stop, tell user.
-- Bot detection blocks all transports = document in DOC.md Known Issues,
-  report which intents could not be fulfilled.
+| Failure type | Route to | Rationale |
+|---|---|---|
+| Missing family coverage (target intent has no cluster) | Capture (Step 4) | Need more traffic evidence |
+| Wrong target domain or evidence scope | Capture (Step 4) | Scoping problem |
+| Compile output contradicts family lane or transport | Probe (Step 2) | Lane was wrong, re-discover |
+| 2 capture iterations with no new clusters | Stop | Likely infeasible with current pipeline |
+| Site flagged BLOCKED | Stop | Document in DOC.md Known Issues |
+| Bot detection blocks all transports | Stop | Document and inform user |
+| Usable draft with matched intents | Build Package (Step 7) | Proceed |
 
 ---
 
 ## Related Files
 
 - `add-site/guide.md` — loads this at Review step
-- `add-site/curate-operations.md` — next step: apply cluster edits
+- `add-site/curate-operations.md` — used during Build Package (Step 7)
 - `knowledge/auth-routing.md` — expected auth by site signal
 - `knowledge/auth-primitives.md` — auth primitive config
 - `knowledge/graphql.md` — GraphQL patterns

@@ -1,3 +1,32 @@
+## 2026-04-08: Probe-first guide redesign — skill/openweb/add-site/ rewritten
+
+**What changed:**
+- Redesigned add-site workflow: 8-step linear flow → 10-step probe-first flow with conditional routing
+- New probe step (Step 2) front-loads transport/data-source discovery before capture
+- Per-family routing (Step 3): mixed sites get different lanes per intent family
+- Adapter/intercept promoted to first-class lane, not late escalation
+- Capture is conditional with 4 granularities (none/micro/targeted/broad)
+- Failure-based repair loops replace generic re-capture loops
+- New file: `skill/openweb/add-site/probe.md` — full CDP probe protocol
+- Intercept pattern (interceptApi template + real examples) moved from guide to curate-runtime.md
+
+**Why:**
+- JD adapter discovery proved probe-first saves ~25 min and ~75% context vs blind capture-compile
+- Design produced via double-design (Claude + Codex, 5 alignment rounds)
+
+**Key files:**
+- `skill/openweb/add-site/guide.md` — major restructure (234→445 lines)
+- `skill/openweb/add-site/probe.md` — new (217 lines)
+- `skill/openweb/add-site/capture.md` — +Capture Granularity section
+- `skill/openweb/add-site/review.md` — +Conditional Step, +Probe Cross-Check, failure loops
+- `skill/openweb/add-site/curate-runtime.md` — +probe-first note, +extraction priority, +intercept pattern
+- `skill/openweb/add-site/verify.md` — failure-based loops, node transport trust
+- `doc/todo/flexible-discover/` — design doc, CN version, review, plan
+
+**Verification:** pnpm build (61 sites), pnpm test (835/835 pass), independent agent review ACCEPT
+**Next:** Implement guide — walk through for adapter site (JD) + replay site to validate
+**Blockers:** None
+
 ## 2026-04-07: Tripadvisor, ctrip, indeed, homedepot — all sites PASS
 
 **What changed:**

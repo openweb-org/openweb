@@ -44,6 +44,12 @@ Does the endpoint return JSON directly (XHR/fetch)?
        └─ No, or complex → adapter
 ```
 
+> **Probe-first rule:** Transport is now an INPUT from the probe step, not
+> discovered during curation. The probe matrix records a transport hypothesis
+> (`node_candidate`, `page_required`, `adapter_required`, `intercept_required`,
+> or `extraction`). Curation configures the spec to match that hypothesis.
+> `node_candidate` is provisional — only trusted after verify passes.
+
 - **`node`** — Direct HTTP from Node.js. Auth tokens extracted from browser once,
   cached. Fast path — default unless bot detection blocks it.
 - **`page`** — Executes `fetch()` inside the browser tab. Required when Akamai,
@@ -171,12 +177,20 @@ navigates, and evaluates.
 | `html_selector` | Data in DOM elements | `page_url`, `selectors`, `attribute` |
 | `script_json` | `<script type="application/json">` | `selector`, `path` |
 
-**Decision flow:** Prefer API > JSON extraction > DOM extraction > adapter.
+**Extraction priority** (high to low):
+1. **API** (JSON response) — cleanest, most stable, clearest schema
+2. **SSR JSON** (`__NEXT_DATA__`, `__INITIAL_STATE__`, LD+JSON) — structured data, no render dependency
+3. **In-page JSON** (script tags, window globals) — structured but less predictable sources
+4. **DOM** — last fallback, slowest and most fragile. If DOM extraction exceeds ~5 lines, escalate to adapter.
 
 **Complexity rule:** If expression exceeds ~5 lines, move to an adapter.
 Inline OK for simple `ssr_next_data`, `page_global`, short `html_selector`.
 
 > Pattern catalog: `knowledge/extraction.md`
+
+> **Adapter is a first-class lane.** Adapter/intercept is a normal routing
+> outcome from the probe step, not a late escalation from failed replay.
+> If probe evidence says adapter is the right path, route there directly.
 
 ### Adapter (TypeScript Code)
 
@@ -199,6 +213,45 @@ shared helpers via the 4th `execute()` parameter:
 - `helpers.pageFetch(page, { url, method?, body?, headers?, timeout? })` — browser-context fetch, returns `{ status, text }`
 - `helpers.graphqlFetch(page, { url, operationName, variables, hash?, query?, batched? })` — GraphQL fetch, returns unwrapped `data`
 - `helpers.errors` — error factories: `unknownOp`, `missingParam`, `httpError`, `apiError`, `needsLogin`, `botBlocked`, `fatal`, `retriable`, `wrap`
+
+### Intercept Pattern
+
+When the site's own JS must trigger the API call (e.g., client-side signing
+like JD's `h5st`, Akamai sensor-blocked `page.evaluate(fetch)`), use passive
+response interception:
+
+```typescript
+async function interceptApi(
+  page: Page, urlMatch: string, navigateUrl: string, timeout = 20_000,
+): Promise<unknown> {
+  let captured: unknown = null
+  const handler = async (resp: PwResponse) => {
+    if (captured) return
+    if (resp.url().includes(urlMatch)) {
+      try { captured = await resp.json() } catch {}
+    }
+  }
+  page.on('response', handler)
+  try {
+    await page.goto(navigateUrl, { waitUntil: 'load', timeout: 30_000 })
+    const deadline = Date.now() + timeout
+    while (!captured && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 500))
+    }
+  } finally {
+    page.off('response', handler)
+  }
+  return captured
+}
+```
+
+Real examples:
+- `src/sites/homedepot/adapters/homedepot-web.ts` — generic `interceptGraphQL()` helper
+- `src/sites/jd/adapters/jd-global-api.ts` — multi-API interception from one navigation
+- `src/sites/instacart/adapters/instacart-graphql.ts` — dual request+response interception
+
+Adapter `.ts` files are authored directly in `src/sites/<site>/adapters/`.
+`pnpm build` compiles `.ts` → `.js` and syncs to `$OPENWEB_HOME` and `dist/`.
 
 ### Adapter Path Semantics
 

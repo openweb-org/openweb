@@ -4,7 +4,7 @@ Verify a site package across runtime, spec, and documentation before install.
 
 ## When to Load
 
-- After curating the spec and writing DOC.md (guide.md Verify step)
+- After building the package and writing DOC.md (guide.md Step 8)
 - Standalone re-verification of an existing site package
 - After any site update (new operations, auth fix, transport change)
 
@@ -102,14 +102,22 @@ If any fail → diagnose below.
 
 After fixing the spec, return to batch verify.
 
-### When to Stop Iterating
+### Failure-Based Loop Targets
 
-- **2 cycles with no progress** → likely missing traffic. Return to capture
-  (guide.md Capture step) for re-capture.
-- **Bot detection blocks all transports** → document blocker in DOC.md Known
-  Issues and inform the user.
-- **Only non-target bonus ops fail** → proceed to install. Document failures
-  in DOC.md Known Issues.
+| Failure | Return to |
+|---|---|
+| 403 / 999 / bot block / redirect loop / wrong signing | Probe (Step 2) — re-discover transport |
+| Missing operation / missing evidence / missing write-time token | Capture (Step 4) — gather more evidence |
+| Schema, naming, doc, or merge-quality issue | Build Package (Step 7) — fix spec/doc |
+| Auth expired | Login and rerun verify |
+| 2 cycles with no progress on same failure | Stop — document in DOC.md Known Issues |
+| Bot detection blocks all transports | Stop — document blocker, inform user |
+| Only non-target bonus ops fail | Proceed to Install — document in Known Issues |
+
+> **Node transport trust:** `node_candidate` from probe is provisional.
+> Node transport is only trusted after verify passes under runtime conditions.
+> If node-transport operations fail with 403/999/bot-block, switch to
+> `transport: page` and re-verify.
 
 ### WS Verification
 
@@ -205,7 +213,7 @@ When all pass → proceed to install (guide.md Install step).
 
 ## Related Files
 
-- `guide.md` — workflow that invokes this at the Verify step
+- `guide.md` — workflow that invokes this at Step 8 (Verify)
 - `curate-operations.md` — spec standards: naming, noise, permissions
 - `curate-runtime.md` — spec standards: auth, transport, extraction
 - `curate-schemas.md` — spec standards: schemas, examples, PII

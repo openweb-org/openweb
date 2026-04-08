@@ -217,8 +217,9 @@ These principles govern all skill doc authoring and maintenance:
 ```
 skill/openweb/
 ├── SKILL.md                   # Router + exec flow + load discipline
-├── add-site/                  # Contributor workflow (10-step)
-│   ├── guide.md               # Unified flow entry
+├── add-site/                  # Contributor workflow (10-step: probe-first)
+│   ├── guide.md               # Unified flow entry (probe → route → build)
+│   ├── probe.md               # CDP probe protocol (Step 2)
 │   ├── capture.md, review.md  # Step-specific docs
 │   ├── curate-operations.md, curate-runtime.md, curate-schemas.md
 │   ├── verify.md, document.md

@@ -3,7 +3,7 @@
 How to capture site traffic for the compiler. Interactive browsing, direct API
 calls, scripted capture, auth injection, and troubleshooting.
 
-**Load when:** guide.md Step 2 (Capture), or when debugging capture scripts.
+**Load when:** guide.md Step 4 (Capture Evidence), or when debugging capture scripts.
 
 ---
 
@@ -11,6 +11,27 @@ calls, scripted capture, auth injection, and troubleshooting.
 
 Both modes produce HAR traffic. Use them together — UI browsing discovers
 endpoints you don't know about; direct calls fill known coverage gaps.
+
+### Capture Granularity
+
+Probe determines how much capture each intent family needs. Capture is not a
+repeat of probe — it is compile's input. When compile adds no value for a
+family, capture adds no value either.
+
+| Mode | When to use | Typical scope |
+|------|-------------|---------------|
+| **None** | Pure extraction or direct adapter/intercept; compile adds no value | Skip capture entirely |
+| **Micro** | Endpoint already known; compile saves manual schema/example/auth work | 1-3 representative requests |
+| **Targeted** | Family needs param variation, GraphQL clustering, path normalization | Focused family capture with varied actions |
+| **Broad** | Surface still unknown after probe, WS discovery, many unknown ops | Large-surface capture |
+
+Broad capture is not the default. Use it only when micro or targeted did not
+produce enough evidence, the surface is still unknown, or WS discovery needs
+longer observation.
+
+**Probe drives capture scope:** Use the family's capture mode from the probe
+matrix to select granularity. Avoid blind browsing — capture only the traffic
+needed for the decision being answered.
 
 ### UI Navigation
 
