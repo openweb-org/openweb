@@ -1,7 +1,7 @@
 import type { Page, Response as PwResponse } from 'patchright'
 
 /**
- * Home Depot L3 adapter — navigation-based GraphQL interception + DOM extraction.
+ * Home Depot L3 adapter — navigation-based GraphQL interception.
  *
  * Akamai blocks programmatic `page.evaluate(fetch(...))` on the federation gateway.
  * Instead we navigate to the search/product pages and intercept the GraphQL responses
@@ -128,99 +128,14 @@ async function getProductDetail(page: Page, params: Record<string, unknown>, err
   }
 }
 
-async function getStoreLocator(page: Page, params: Record<string, unknown>, errors: Errors) {
-  const zipCode = String(params.zipCode || params.zip || '')
-  if (!zipCode) throw errors.missingParam('zipCode')
-
-  // Navigate to store locator results page
-  await page.goto(`https://www.homedepot.com/l/search/${encodeURIComponent(zipCode)}`, {
-    waitUntil: 'load',
-    timeout: 30_000,
-  })
-  await wait(4000)
-
-  return page.evaluate(`
-    (() => {
-      const stores = [];
-      // Try Apollo cache extraction from window.__APOLLO_STATE__
-      // Otherwise fall back to DOM extraction
-
-      // Look for store cards in the DOM
-      const cards = document.querySelectorAll('[data-testid*="store"], .store-pod, .storeResult, [class*="storeCard"], [class*="StoreCard"]');
-
-      if (cards.length > 0) {
-        cards.forEach(card => {
-          const nameEl = card.querySelector('h2, h3, [class*="storeName"], [class*="StoreName"]');
-          const addrEl = card.querySelector('[class*="address"], [class*="Address"], address');
-          const phoneEl = card.querySelector('[class*="phone"], [class*="Phone"], a[href^="tel:"]');
-          const distEl = card.querySelector('[class*="distance"], [class*="Distance"], [class*="miles"]');
-          const hoursEl = card.querySelector('[class*="hours"], [class*="Hours"]');
-          const storeLink = card.querySelector('a[href*="/l/"]');
-
-          if (nameEl) {
-            stores.push({
-              name: nameEl.textContent?.trim() || '',
-              address: addrEl ? addrEl.textContent?.trim().replace(/\\s+/g, ' ') : '',
-              phone: phoneEl ? (phoneEl.getAttribute('href')?.replace('tel:', '') || phoneEl.textContent?.trim()) : '',
-              distance: distEl ? distEl.textContent?.trim() : '',
-              hours: hoursEl ? hoursEl.textContent?.trim() : '',
-              url: storeLink ? 'https://www.homedepot.com' + storeLink.getAttribute('href') : '',
-            });
-          }
-        });
-      }
-
-      // Fallback: parse the page for store information blocks
-      if (stores.length === 0) {
-        const allLinks = [...document.querySelectorAll('a[href*="/l/"][href*="/"]')];
-        const storeLinks = allLinks.filter(a => {
-          const href = a.getAttribute('href') || '';
-          return href.match(/\\/l\\/[A-Za-z]+-[A-Za-z]+/) && !href.includes('/search');
-        });
-
-        const seen = new Set();
-        for (const link of storeLinks) {
-          const href = link.getAttribute('href') || '';
-          if (seen.has(href)) continue;
-          seen.add(href);
-          const text = link.textContent?.trim() || '';
-          if (text.length < 3 || text.length > 100) continue;
-
-          // Try to find address info near this link
-          const container = link.closest('div, li, article, section') || link.parentElement;
-          const containerText = container ? container.textContent?.trim() || '' : '';
-          const addrMatch = containerText.match(/(\\d+[^,]+,\\s*[A-Za-z]+,?\\s*[A-Z]{2}\\s*\\d{5})/);
-          const phoneMatch = containerText.match(/(\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4})/);
-
-          stores.push({
-            name: text.split('\\n')[0].trim(),
-            address: addrMatch ? addrMatch[1] : '',
-            phone: phoneMatch ? phoneMatch[1] : '',
-            distance: '',
-            hours: '',
-            url: 'https://www.homedepot.com' + href,
-          });
-        }
-      }
-
-      return {
-        zipCode: ${JSON.stringify(zipCode)},
-        count: stores.length,
-        stores,
-      };
-    })()
-  `)
-}
-
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
   searchProducts,
   getProductDetail,
-  getStoreLocator,
 }
 
 const adapter = {
   name: 'homedepot-web',
-  description: 'Home Depot — product search, detail, store locator via navigation-based GraphQL interception and DOM extraction',
+  description: 'Home Depot — product search and detail via navigation-based GraphQL interception',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('homedepot.com')

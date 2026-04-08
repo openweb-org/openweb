@@ -1,7 +1,0 @@
-{
-  "operation_id": "getStoreLocator",
-  "cases": [{
-    "input": { "zipCode": "10001" },
-    "assertions": { "status": 200, "response_schema_valid": true }
-  }]
-}

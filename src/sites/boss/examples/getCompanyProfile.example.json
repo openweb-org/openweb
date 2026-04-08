@@ -3,7 +3,7 @@
   "method": "get",
   "cases": [
     {
-      "input": { "companyId": "test.html" },
+      "input": { "companyId": "a67b361452e384e71XV82N4~.html" },
       "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]

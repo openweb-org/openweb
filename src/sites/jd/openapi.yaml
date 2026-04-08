@@ -79,12 +79,12 @@ paths:
   /internal/getProductDetail:
     get:
       operationId: getProductDetail
-      summary: Get product detail by SKU ID — name, price, images, variants, review count
+      summary: Get product detail by SKU ID — name, price, images, variants, shop
       x-openweb:
         permission: read
         build:
           stable_id: jd0002
-          tool_version: 1
+          tool_version: 2
           verified: false
           signals:
             - adapter-verified
@@ -100,11 +100,12 @@ paths:
           description: JD product SKU ID.
       responses:
         '200':
-          description: Full product detail.
+          description: Full product detail from api.m.jd.com wareBusiness API.
           content:
             application/json:
               schema:
                 type: object
+                required: [skuId]
                 properties:
                   skuId:
                     type: string
@@ -113,18 +114,21 @@ paths:
                   price:
                     type: ['string', 'null']
                     description: Current price (CNY).
+                  originalPrice:
+                    type: ['string', 'null']
+                    description: Original/reference price (CNY).
                   shopId:
                     type: ['string', 'null']
-                  venderId:
-                    type: ['integer', 'null']
-                  brand:
-                    type: ['integer', 'null']
-                  brandName:
+                  shopName:
                     type: ['string', 'null']
+                  brand:
+                    type: ['string', 'null']
+                    description: Brand name (e.g. "华为（HUAWEI）").
                   categories:
                     type: array
                     items:
-                      type: integer
+                      type: string
+                    description: Category breadcrumb labels.
                   images:
                     type: array
                     items:
@@ -136,12 +140,11 @@ paths:
                       properties:
                         skuId:
                           type: string
-                          description: Variant SKU ID.
-                      additionalProperties:
-                        type: string
-                        description: Product-specific attribute (e.g. color, size). Key name varies by product.
-                  reviewCount:
-                    type: ['string', 'null']
+                        text:
+                          type: string
+                          description: Variant label (e.g. color name).
+                        image:
+                          type: ['string', 'null']
                   inStock:
                     type: ['boolean', 'null']
   /internal/getProductReviews:
@@ -152,7 +155,7 @@ paths:
         permission: read
         build:
           stable_id: jd0003
-          tool_version: 1
+          tool_version: 2
           verified: false
           signals:
             - adapter-verified
@@ -168,7 +171,7 @@ paths:
           description: JD product SKU ID.
       responses:
         '200':
-          description: Product reviews.
+          description: Product reviews from getLegoWareDetailComment API.
           content:
             application/json:
               schema:
@@ -176,10 +179,10 @@ paths:
                 properties:
                   totalCount:
                     type: string
-                    description: Total number of reviews.
+                    description: Total number of reviews (e.g. "50万+").
                   goodRate:
                     type: ['string', 'null']
-                    description: Positive review percentage.
+                    description: Positive review percentage (e.g. "96%").
                   tags:
                     type: array
                     items:
@@ -198,6 +201,9 @@ paths:
                           type: string
                         content:
                           type: string
+                        score:
+                          type: integer
+                          description: Review score (1-5).
   /internal/getProductPrice:
     get:
       operationId: getProductPrice
@@ -206,7 +212,7 @@ paths:
         permission: read
         build:
           stable_id: jd0004
-          tool_version: 1
+          tool_version: 2
           verified: false
           signals:
             - adapter-verified

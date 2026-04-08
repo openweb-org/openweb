@@ -3,7 +3,7 @@
   "method": "get",
   "cases": [
     {
-      "input": { "jobId": "/job_detail/test.html" },
+      "input": { "jobId": "/job_detail/c87fbe4ceb69849d0nZz29W1EFRR.html" },
       "assertions": { "status": 200, "response_schema_valid": true }
     }
   ]

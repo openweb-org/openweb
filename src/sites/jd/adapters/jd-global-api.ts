@@ -1,16 +1,72 @@
-import type { Page } from "patchright";
+import type { Page, Response as PwResponse } from "patchright";
 
 /**
- * JD L3 adapter — DOM extraction + page.evaluate(fetch) for product data.
+ * JD L3 adapter — search via DOM extraction, detail/price/reviews via API intercept.
  *
- * Covers:
- *   search.jd.com  — product search (DOM extraction, no auth needed)
- *   item.jd.com    — product detail, price, reviews (pageConfig + DOM)
+ * search.jd.com  — product search (DOM extraction)
+ * item.jd.com    — product detail, price, reviews
+ *   JD's item page is client-rendered. Data comes from api.m.jd.com APIs
+ *   signed with h5st (client-side HMAC). page.evaluate(fetch) cannot replicate
+ *   the signature, so we use the intercept pattern: navigate to the product page
+ *   and capture the API responses that JD's own JS triggers.
  */
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-type Errors = { missingParam(name: string): Error; unknownOp(op: string): Error; wrap(error: unknown): Error };
+type Errors = {
+	missingParam(name: string): Error;
+	unknownOp(op: string): Error;
+	wrap(error: unknown): Error;
+};
+
+/* ---------- Intercept helpers ---------- */
+
+interface InterceptResult {
+	wareData: Record<string, unknown> | null;
+	commentData: Record<string, unknown> | null;
+}
+
+/**
+ * Navigate to a JD product page and intercept the two key API responses:
+ * - pc_detailpage_wareBusiness: product attributes, price, stock, shop, images, variants
+ * - getLegoWareDetailComment: reviews, ratings, tags
+ */
+async function interceptProductApis(
+	page: Page,
+	skuId: string,
+	timeout = 15000,
+): Promise<InterceptResult> {
+	let wareData: Record<string, unknown> | null = null;
+	let commentData: Record<string, unknown> | null = null;
+
+	const handler = async (resp: PwResponse) => {
+		const url = resp.url();
+		try {
+			if (!wareData && url.includes("pc_detailpage_wareBusiness")) {
+				wareData = (await resp.json()) as Record<string, unknown>;
+			}
+			if (!commentData && url.includes("getLegoWareDetailComment")) {
+				commentData = (await resp.json()) as Record<string, unknown>;
+			}
+		} catch { /* response body unavailable */ }
+	};
+
+	page.on("response", handler);
+	try {
+		await page.goto(`https://item.jd.com/${skuId}.html`, {
+			waitUntil: "load",
+			timeout: 30_000,
+		});
+		const deadline = Date.now() + timeout;
+		while ((!wareData || !commentData) && Date.now() < deadline) {
+			await sleep(500);
+		}
+	} finally {
+		page.off("response", handler);
+	}
+
+	return { wareData, commentData };
+}
 
 /* ---------- searchProducts ---------- */
 
@@ -37,78 +93,41 @@ async function searchProducts(
 				const skuId = item.getAttribute("data-sku");
 				if (!skuId) continue;
 
-				// Name from title attribute (robust across CSS module changes)
 				const titleEl = item.querySelector("[title]");
-				const name =
-					titleEl?.getAttribute("title")?.trim() || null;
+				const name = titleEl?.getAttribute("title")?.trim() || null;
 
-				// Price: walk text nodes to find ¥ + number pattern
 				let price: string | null = null;
-				const walker = document.createTreeWalker(
-					item,
-					NodeFilter.SHOW_TEXT,
-				);
+				const walker = document.createTreeWalker(item, NodeFilter.SHOW_TEXT);
 				let node: Node | null = walker.nextNode();
 				while (node) {
 					const match = node.textContent?.match(/[¥￥]([\d,.]+)/);
-					if (match) {
-						price = match[1];
-						break;
-					}
+					if (match) { price = match[1]; break; }
 					node = walker.nextNode();
 				}
 
-				// Shop from mall/shop links
 				let shopName: string | null = null;
-				const links = item.querySelectorAll("a");
-				for (const link of links) {
+				for (const link of item.querySelectorAll("a")) {
 					const href = link.getAttribute("href") || "";
-					if (
-						href.includes("mall.jd.com") ||
-						href.includes("shop.jd.com")
-					) {
+					if (href.includes("mall.jd.com") || href.includes("shop.jd.com")) {
 						shopName = link.textContent?.trim() || null;
 						break;
 					}
 				}
 
-				// Sales volume from text matching "已售N+"
 				let sales: string | null = null;
-				const allSpans = item.querySelectorAll("span");
-				for (const span of allSpans) {
+				for (const span of item.querySelectorAll("span")) {
 					const text = span.getAttribute("title") || "";
-					if (text.match(/已售[\d万+]+/)) {
-						sales = text.replace("已售", "");
-						break;
-					}
+					if (text.match(/已售[\d万+]+/)) { sales = text.replace("已售", ""); break; }
 				}
 
-				// Image
 				const img = item.querySelector("img");
-				const imgSrc =
-					img?.getAttribute("data-src") || img?.getAttribute("src");
-				const image = imgSrc
-					? imgSrc.startsWith("//")
-						? `https:${imgSrc}`
-						: imgSrc
-					: null;
+				const imgSrc = img?.getAttribute("data-src") || img?.getAttribute("src");
+				const image = imgSrc ? (imgSrc.startsWith("//") ? `https:${imgSrc}` : imgSrc) : null;
 
-				products.push({
-					skuId,
-					name,
-					price,
-					shopName,
-					sales,
-					image,
-				});
+				products.push({ skuId, name, price, shopName, sales, image });
 			}
 
-			return {
-				keyword,
-				page: pageNum,
-				resultCount: products.length,
-				products,
-			};
+			return { keyword, page: pageNum, resultCount: products.length, products };
 		},
 		{ keyword, pageNum },
 	);
@@ -124,61 +143,51 @@ async function getProductDetail(
 	const skuId = String(params.skuId || "");
 	if (!skuId) throw errors.missingParam("skuId");
 
-	await page.goto(`https://item.jd.com/${skuId}.html`, {
-		waitUntil: "load",
-		timeout: 30_000,
+	const { wareData } = await interceptProductApis(page, skuId);
+	if (!wareData) return { skuId, name: null, price: null };
+
+	const attrs = (wareData.productAttributeVO as Record<string, unknown>)?.attributes as Array<Record<string, string>> | undefined;
+	const price = wareData.price as Record<string, string> | undefined;
+	const shop = wareData.itemShopInfo as Record<string, unknown> | undefined;
+	const head = wareData.skuHeadVO as Record<string, unknown> | undefined;
+	const mainImage = wareData.mainImageVO as Record<string, unknown> | undefined;
+	const colorSize = wareData.colorSizeVO as Record<string, unknown> | undefined;
+	const stock = wareData.stockVO as Record<string, unknown> | undefined;
+	const crumbs = (wareData.crumbInfoVO as Record<string, unknown>)?.crumbs as Array<Record<string, string>> | undefined;
+
+	const findAttr = (name: string) => attrs?.find((a) => a.labelName === name)?.labelValue || null;
+
+	// Images from mainImageVO carousel
+	const carousel = (mainImage?.carouselArea as Array<Record<string, string>>) || [];
+	const images = carousel.map((img) => {
+		const src = img.imageUrl || img.bigUrl || "";
+		return src.startsWith("//") ? `https:${src}` : src.startsWith("http") ? src : `https://img14.360buyimg.com/n1/${src}`;
+	}).filter(Boolean);
+
+	// Variants from colorSizeVO
+	const colorSizeList = (colorSize?.colorSizeList as Array<Record<string, unknown>>) || [];
+	const variants = colorSizeList.flatMap((group) => {
+		const buttons = (group.buttons as Array<Record<string, unknown>>) || [];
+		return buttons.map((b) => ({
+			skuId: String(b.skuId || ""),
+			text: String(b.text || ""),
+			image: b.fullImageUrl ? `https://img14.360buyimg.com/n1/${b.fullImageUrl}` : null,
+		}));
 	});
-	await sleep(4000);
 
-	return page.evaluate((paramSkuId: string) => {
-		const pc = (
-			window as unknown as {
-				pageConfig?: { product?: Record<string, unknown> };
-			}
-		).pageConfig;
-		const p = pc?.product as Record<string, unknown> | undefined;
-
-		// Price from DOM
-		const priceEl = document.querySelector(".p-price .price, span.price");
-		const price = priceEl?.textContent?.trim() || null;
-
-		// Review summary from DOM
-		const countEl = document.querySelector("#comment-count, .comment-count");
-		const countText = countEl?.textContent?.trim() || "";
-		const countMatch = countText.match(/([\d万+]+)/);
-
-		// Name from DOM fallback
-		const titleEl = document.querySelector(".sku-name, .itemInfo-wrap .sku-name");
-		const domName = titleEl?.textContent?.trim() || null;
-
-		return {
-			skuId: p ? String(p.skuid) : paramSkuId,
-			name: (p?.name as string) || domName,
-			price,
-			shopId: p ? String(p.shopId) : null,
-			venderId: (p?.venderId as number) ?? null,
-			brand: (p?.brand as number) ?? null,
-			brandName: (p?.brandName as string) || null,
-			categories: (p?.cat as number[]) || [],
-			images: ((p?.imageList as string[]) || []).map((img: string) =>
-				img.startsWith("//")
-					? `https:${img}`
-					: img.startsWith("http")
-						? img
-						: `https://img14.360buyimg.com/n1/${img}`,
-			),
-			variants: (
-				(p?.colorSize as Array<Record<string, unknown>>) || []
-			).map((v) => ({
-				skuId: String(v.skuId),
-				...Object.fromEntries(
-					Object.entries(v).filter(([k]) => k !== "skuId"),
-				),
-			})),
-			reviewCount: countMatch ? countMatch[1] : null,
-			inStock: p ? (p.warestatus as number) !== 0 : null,
-		};
-	}, skuId);
+	return {
+		skuId,
+		name: (head?.skuTitle as string) || null,
+		price: price?.p || null,
+		originalPrice: price?.op || null,
+		shopId: shop?.shopId != null ? String(shop.shopId) : null,
+		shopName: (shop?.shopName as string) || null,
+		brand: findAttr("品牌"),
+		categories: crumbs?.map((c) => c.text) || [],
+		images,
+		variants,
+		inStock: stock?.stockStateName !== "无货",
+	};
 }
 
 /* ---------- getProductReviews ---------- */
@@ -191,86 +200,27 @@ async function getProductReviews(
 	const skuId = String(params.skuId || "");
 	if (!skuId) throw errors.missingParam("skuId");
 
-	await page.goto(`https://item.jd.com/${skuId}.html`, {
-		waitUntil: "load",
-		timeout: 30_000,
-	});
-	await sleep(4000);
+	const { commentData } = await interceptProductApis(page, skuId);
+	if (!commentData) return { totalCount: "0", goodRate: null, tags: [], reviews: [] };
 
-	return page.evaluate(() => {
-		const bodyText = document.body?.innerText || "";
+	const tags = ((commentData.semanticTagList as Array<Record<string, unknown>>) || []).map((t) => ({
+		label: String(t.name || ""),
+		count: Number(t.count) || 0,
+	}));
 
-		// Extract count and rate from review section
-		const countMatch = bodyText.match(/买家评价\(?([\d万+]+)\)?/);
-		const rateMatch = bodyText.match(/好评率高达(\d+%?)/);
+	const commentInfoList = (commentData.commentInfoList as Array<Record<string, unknown>>) || [];
+	const reviews = commentInfoList.map((c) => ({
+		user: String((c.userInfo as Record<string, unknown>)?.nickName || ""),
+		content: String(c.commentData || ""),
+		score: Number(c.score) || 0,
+	}));
 
-		// Extract tags (e.g., "物流速度快 1", "材料质量好 1")
-		const tagSection = bodyText.match(
-			/好评率高达\d+%\n([\s\S]*?)\n[^\n]*\*[^\n]*\n/,
-		);
-		const tags: Array<{ label: string; count: number }> = [];
-		if (tagSection?.[1]) {
-			const tagLines = tagSection[1].split("\n").filter((l) => l.trim());
-			for (let i = 0; i < tagLines.length - 1; i += 2) {
-				const label = tagLines[i]?.trim();
-				const count = Number.parseInt(tagLines[i + 1]?.trim() || "0");
-				if (label && !Number.isNaN(count)) {
-					tags.push({ label, count });
-				}
-			}
-		}
-
-		// Extract individual reviews from .comment-root or DOM text
-		const reviews: Array<{ user: string; content: string }> = [];
-		const commentUsers = document.querySelectorAll(".comment-user");
-		if (commentUsers.length > 0) {
-			// Structured DOM extraction
-			for (const userEl of commentUsers) {
-				const user = userEl.textContent?.trim() || "";
-				// Review content follows the user element
-				const parent = userEl.closest("[class*='comment']");
-				const fullText = parent?.textContent?.trim() || "";
-				// Extract content after username
-				const idx = fullText.indexOf(user);
-				if (idx >= 0) {
-					const content = fullText
-						.substring(idx + user.length)
-						.trim()
-						.replace(/全部评价.*$/, "")
-						.trim();
-					if (user && content) {
-						reviews.push({ user, content });
-					}
-				}
-			}
-		}
-
-		// Fallback: parse from body text
-		if (reviews.length === 0) {
-			const reviewStart = bodyText.indexOf("好评率高达");
-			const reviewEnd = bodyText.indexOf("全部评价");
-			if (reviewStart > 0 && reviewEnd > reviewStart) {
-				const section = bodyText.substring(reviewStart, reviewEnd);
-				const lines = section.split("\n").filter((l) => l.trim());
-				for (let i = 0; i < lines.length; i++) {
-					if (lines[i].includes("*")) {
-						const user = lines[i].trim();
-						const content = lines[i + 1]?.trim();
-						if (user && content) {
-							reviews.push({ user, content });
-						}
-					}
-				}
-			}
-		}
-
-		return {
-			totalCount: countMatch ? countMatch[1] : "0",
-			goodRate: rateMatch ? rateMatch[1] : null,
-			tags,
-			reviews,
-		};
-	});
+	return {
+		totalCount: String(commentData.allCntStr || commentData.allCnt || "0"),
+		goodRate: (commentData.goodRate as string) || null,
+		tags,
+		reviews,
+	};
 }
 
 /* ---------- getProductPrice ---------- */
@@ -283,55 +233,30 @@ async function getProductPrice(
 	const skuId = String(params.skuId || "");
 	if (!skuId) throw errors.missingParam("skuId");
 
-	await page.goto(`https://item.jd.com/${skuId}.html`, {
-		waitUntil: "load",
-		timeout: 30_000,
-	});
-	await sleep(4000);
+	const { wareData } = await interceptProductApis(page, skuId);
+	if (!wareData) return { skuId, currentPrice: null, originalPrice: null, currency: "CNY", inStock: null };
 
-	return page.evaluate(() => {
-		const pc = (
-			window as unknown as {
-				pageConfig?: { product?: Record<string, unknown> };
-			}
-		).pageConfig;
-		const skuid = pc?.product
-			? String((pc.product as Record<string, unknown>).skuid)
-			: null;
+	const price = wareData.price as Record<string, string> | undefined;
+	const stock = wareData.stockVO as Record<string, unknown> | undefined;
+	const promo = wareData.promotion as Record<string, unknown> | undefined;
 
-		// Current price from DOM
-		const priceEl = document.querySelector(".p-price .price, span.price");
-		const currentPrice = priceEl?.textContent?.trim() || null;
-
-		// Original/reference price
-		const oppEl = document.querySelector("#page_opprice, .summary-price-reference");
-		const originalPrice = oppEl?.textContent?.trim()?.replace(/[¥￥]/g, "") || null;
-
-		// Promotion info from DOM
-		const promoEls = document.querySelectorAll(
-			".J-prom-flag, .p-promotions, [class*='promo']",
-		);
-		const promotions: string[] = [];
-		for (const el of promoEls) {
-			const text = el.textContent?.trim();
-			if (text && text.length < 200) promotions.push(text);
+	const promotions: string[] = [];
+	if (promo) {
+		const promoList = (promo.promoInfoList as Array<Record<string, unknown>>) || [];
+		for (const p of promoList) {
+			const text = String(p.promoText || p.content || "");
+			if (text) promotions.push(text);
 		}
+	}
 
-		// In stock check
-		const warestatus = pc?.product
-			? ((pc.product as Record<string, unknown>).warestatus as number)
-			: null;
-		const inStock = warestatus !== 0;
-
-		return {
-			skuId: skuid,
-			currentPrice,
-			originalPrice: originalPrice || null,
-			currency: "CNY",
-			inStock,
-			promotions: promotions.length > 0 ? promotions : null,
-		};
-	});
+	return {
+		skuId,
+		currentPrice: price?.p || null,
+		originalPrice: price?.op || null,
+		currency: "CNY",
+		inStock: stock?.stockStateName !== "无货",
+		promotions: promotions.length > 0 ? promotions : null,
+	};
 }
 
 /* ---------- Adapter ---------- */
@@ -348,20 +273,15 @@ const OPERATIONS: Record<
 
 const adapter = {
 	name: "jd-global-api",
-	description:
-		"JD — product search, detail, reviews, and pricing via DOM extraction",
+	description: "JD — search via DOM, detail/price/reviews via API intercept",
 
 	async init(page: Page): Promise<boolean> {
 		const url = page.url();
-		return (
-			url.includes("jd.com") ||
-			url.includes("item.jd.com") ||
-			url.includes("search.jd.com")
-		);
+		return url.includes("jd.com");
 	},
 
 	async isAuthenticated(): Promise<boolean> {
-		return true; // All ops work without login
+		return true;
 	},
 
 	async execute(
@@ -371,13 +291,9 @@ const adapter = {
 		helpers: { errors: Errors },
 	): Promise<unknown> {
 		const { errors } = helpers;
-		try {
-			const handler = OPERATIONS[operation];
-			if (!handler) throw errors.unknownOp(operation);
-			return handler(page, { ...params }, errors);
-		} catch (error) {
-			throw errors.wrap(error);
-		}
+		const handler = OPERATIONS[operation];
+		if (!handler) throw errors.unknownOp(operation);
+		return handler(page, { ...params }, errors);
 	},
 };
 
