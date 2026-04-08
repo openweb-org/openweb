@@ -1,3 +1,24 @@
+## 2026-04-07: Tripadvisor, ctrip, indeed, homedepot — all sites PASS
+
+**What changed:**
+- tripadvisor: `searchLocation` rewritten from DOM scraping to TypeAheadJson API (Search page now fully client-rendered). 4/4 PASS.
+- ctrip: removed `getFlightCalendarPrices` — API endpoint retired from us.trip.com (international). 9/9 PASS.
+- indeed: `baseSalary` made nullable. Adapter was never broken — previous `{}` results were transient bot detection (now correctly caught). 8/8 PASS.
+- homedepot: adapter rewritten from `page.evaluate(fetch)` to navigation-based GraphQL interception. Akamai sensor blocks programmatic fetch but passes the site's own React JS. Intercept pattern: navigate to real page, capture response via `page.on('response')`. 3/3 PASS.
+- bot-detection.md: added intercept pattern to transport decision tree under adapter transport.
+- troubleshooting.md: added "Akamai Blocks page.evaluate(fetch)" pattern.
+
+**Why:**
+- tripadvisor Search page migrated to client-side rendering, DOM scraping returned empty
+- ctrip calendar API no longer exists on international version; domestic version uses incompatible endpoint
+- homedepot Akamai Bot Manager validates sensor data per-request, blocking programmatic fetch. Intercept pattern bypasses this by letting the site's own JS make the request.
+
+**Key files:** `src/sites/tripadvisor/adapters/tripadvisor.ts`, `src/sites/ctrip/openapi.yaml`, `src/sites/indeed/openapi.yaml`, `src/sites/homedepot/adapters/homedepot-web.ts`, `skill/openweb/knowledge/bot-detection.md`
+**Verification:** 835 tests pass. All 4 sites verified with real data in headed browser.
+**Commit:** `69f856a`, `97ed6e8`, `e3a2f3a`, `93a191b`, `6d75283`
+**Next:** All sites PASS except goodrx/zillow (PerimeterX cooldown). Session complete.
+**Blockers:** None
+
 ## 2026-04-07: Telegram/discord schema fixes, shape-diff empty array, page-leak sites restored
 
 **What changed:**
