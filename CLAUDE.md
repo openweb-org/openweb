@@ -21,6 +21,10 @@ pnpm dev <site> exec <op> '{...}'   # execute an operation
 - **Active work:** `doc/todo/`
 - **Historical docs:** `doc/archive/`
 
+## Documentation Sync
+
+When running /update-doc, also check and sync `skill/openweb/` — this repo ships skill docs as a deliverable alongside code. See `doc/main/README.md` § Skill Documentation for the governing principles and structure. Priority areas: files that reference runtime behavior, CLI flags, x-openweb fields, or transport/auth semantics.
+
 ## Project Structure
 
 ```
