@@ -214,6 +214,10 @@ export const TIMEOUT = {
   asyncapiDefault: 10_000,
   /** Recording script child process timeout */
   recording: _cfg.recordingTimeout ?? 120_000,
+  /** SPA settle wait after navigation (redirects, hydration) */
+  spaSettle: 2_000,
+  /** Webpack module walk settle — longer for heavy bundle init */
+  moduleWalkSettle: 3_000,
 } as const
 
 // ── Browser config helper ────────────────────────

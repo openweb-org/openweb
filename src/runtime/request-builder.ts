@@ -6,7 +6,7 @@ import {
   getRequestBodyParameters,
   getRequestBodySchema,
   isObjectSchema,
-} from '../lib/openapi.js'
+} from '../lib/spec-loader.js'
 import type { XOpenWebOperation } from '../types/extensions.js'
 
 const UNSAFE_REF_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])

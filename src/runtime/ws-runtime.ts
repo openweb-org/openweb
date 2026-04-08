@@ -167,7 +167,7 @@ function waitForReady(connection: WsConnectionManager, timeoutMs: number): Promi
       settled = true
       connection.removeListener('stateChange', onState)
       connection.removeListener('error', onError)
-      reject(new Error(`WS connection did not reach READY within ${timeoutMs}ms (state: ${connection.getState()})`))
+      reject(new OpenWebError(`WS connection did not reach READY within ${timeoutMs}ms (state: ${connection.getState()})`))
     }, timeoutMs)
 
     function onState(_from: string, to: string) {
@@ -183,7 +183,7 @@ function waitForReady(connection: WsConnectionManager, timeoutMs: number): Promi
         clearTimeout(timer)
         connection.removeListener('stateChange', onState)
         connection.removeListener('error', onError)
-        reject(new Error('WS connection closed before reaching READY'))
+        reject(new OpenWebError('WS connection closed before reaching READY'))
       }
     }
 

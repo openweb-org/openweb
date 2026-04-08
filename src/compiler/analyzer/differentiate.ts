@@ -1,4 +1,4 @@
-import type { JsonSchema } from '../../lib/openapi.js'
+import type { JsonSchema } from '../../lib/spec-loader.js'
 import type { ClusteredEndpoint, ParameterDescriptor } from '../types.js'
 import { selectExample } from './example-select.js'
 

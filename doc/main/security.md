@@ -163,6 +163,20 @@ src/lib/
 
 ---
 
+## Adapter Sandboxing
+
+Site packages can include JavaScript adapters that run with **full Node.js privileges** — file system access, network requests, and browser control via CDP. There is no sandbox or capability restriction on adapter code. Users should only install site packages from trusted sources. The bundled sites ship with the package and are reviewed; user-installed site packages are not.
+
+---
+
+## Known Limitations
+
+### DNS Rebinding (TOCTOU)
+
+The SSRF validator resolves DNS and checks resolved IPs against private ranges, but the subsequent HTTP request resolves DNS independently. A malicious DNS server could return a public IP during validation and a private IP during the actual request. This is a known TOCTOU gap in v0.1. The practical risk is minimal: all server URLs originate from site package specs (trusted code, not user input), so an attacker would need to compromise a site package to exploit this.
+
+---
+
 ## Related Docs
 
 - [runtime.md](runtime.md) — How security checks are invoked during execution

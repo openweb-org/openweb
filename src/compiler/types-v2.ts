@@ -5,7 +5,7 @@
  * Capture -> Analyze -> Curate -> Generate -> Verify
  */
 
-import type { JsonSchema } from '../lib/openapi.js'
+import type { JsonSchema } from '../lib/spec-loader.js'
 import type { PermissionCategory, Transport } from '../types/extensions.js'
 import type { AuthPrimitive, CsrfPrimitive, SigningPrimitive } from '../types/primitives.js'
 import type { WsMessageTemplate } from '../types/ws-primitives.js'

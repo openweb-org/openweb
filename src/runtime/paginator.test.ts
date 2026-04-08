@@ -11,7 +11,7 @@ vi.mock('./executor.js', () => ({
 }))
 
 // Mock openapi helpers
-vi.mock('../lib/openapi.js', () => ({
+vi.mock('../lib/spec-loader.js', () => ({
   loadOpenApi: vi.fn(async () => ({
     openapi: '3.1.0',
     info: { title: 'test', version: '1.0.0' },

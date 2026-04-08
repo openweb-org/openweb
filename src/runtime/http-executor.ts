@@ -6,16 +6,16 @@ import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
 import { loadManifest } from '../lib/manifest.js'
+import { validateParams } from '../lib/param-validator.js'
+import { resolveSiteRoot } from '../lib/site-resolver.js'
 import {
-  buildQueryUrl,
   findOperation,
   getRequestBodyParameters,
   getResponseSchema,
   getServerUrl,
   loadOpenApi,
-  resolveSiteRoot,
-  validateParams,
-} from '../lib/openapi.js'
+} from '../lib/spec-loader.js'
+import { buildQueryUrl } from '../lib/url-builder.js'
 import { derivePermissionFromMethod } from '../lib/permission-derive.js'
 import { checkPermission, loadPermissions } from '../lib/permissions.js'
 import { parseResponseBody } from '../lib/response-parser.js'
@@ -458,22 +458,36 @@ export async function dispatchOperation(
   const pkg = await loadSitePackage(site)
   const entry = findOperationEntry(pkg, operationId)
 
+  // AbortController to cancel underlying work (fetch, browser ops) on timeout
+  const controller = new AbortController()
+  const { signal } = controller
+
+  // Wrap fetchImpl so every underlying fetch call receives the abort signal.
+  // This covers node-fetch, redirect chains, session-executor, cache-manager, etc.
+  const baseFetch = deps.fetchImpl ?? fetch
+  const abortableFetch: typeof fetch = (input, init) =>
+    baseFetch(input, { ...init, signal: init?.signal ?? signal })
+  const abortableDeps: ExecuteDependencies = { ...deps, fetchImpl: abortableFetch }
+
   const execute = entry.protocol === 'http'
-    ? withHttpRetry(() => executeOperation(site, operationId, params, deps), site)
-    : (await import('./ws-cli-executor.js')).executeWsFromCli(site, operationId, params, deps)
+    ? withHttpRetry(() => executeOperation(site, operationId, params, abortableDeps), site)
+    : (await import('./ws-cli-executor.js')).executeWsFromCli(site, operationId, params, abortableDeps)
 
   let timer: ReturnType<typeof setTimeout>
   return Promise.race([
     execute,
     new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new OpenWebError({
-        error: 'execution_failed',
-        code: 'EXECUTION_FAILED',
-        message: `Operation ${operationId} timed out after ${OPERATION_TIMEOUT}ms`,
-        action: 'Increase timeout in $OPENWEB_HOME/config.json (milliseconds).',
-        retriable: true,
-        failureClass: 'retriable',
-      })), OPERATION_TIMEOUT)
+      timer = setTimeout(() => {
+        controller.abort()
+        reject(new OpenWebError({
+          error: 'execution_failed',
+          code: 'EXECUTION_FAILED',
+          message: `Operation ${operationId} timed out after ${OPERATION_TIMEOUT}ms`,
+          action: 'Increase timeout in $OPENWEB_HOME/config.json (milliseconds).',
+          retriable: true,
+          failureClass: 'retriable',
+        }))
+      }, OPERATION_TIMEOUT)
     }),
   ]).finally(() => clearTimeout(timer))
 }

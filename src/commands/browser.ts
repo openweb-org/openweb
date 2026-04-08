@@ -407,7 +407,7 @@ export async function browserStatusCommand(): Promise<void> {
 
 export async function loginCommand(site: string): Promise<void> {
   // Load manifest to get site_url
-  const { resolveSiteRoot } = await import('../lib/openapi.js')
+  const { resolveSiteRoot } = await import('../lib/site-resolver.js')
   const { loadManifest } = await import('../lib/manifest.js')
 
   const siteRoot = await resolveSiteRoot(site)

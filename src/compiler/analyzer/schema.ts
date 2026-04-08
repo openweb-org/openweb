@@ -1,4 +1,4 @@
-import type { JsonSchema } from '../../lib/openapi.js'
+import type { JsonSchema } from '../../lib/spec-loader.js'
 
 function kindOf(value: unknown): string {
   if (value === null) {

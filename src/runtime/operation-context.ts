@@ -1,5 +1,5 @@
 import { OpenWebError } from '../lib/errors.js'
-import type { OpenApiOperation, OpenApiSpec } from '../lib/openapi.js'
+import type { OpenApiOperation, OpenApiSpec } from '../lib/spec-loader.js'
 import type { XOpenWebServer } from '../types/extensions.js'
 import type { Transport } from '../types/extensions.js'
 

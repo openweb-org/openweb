@@ -14,6 +14,11 @@ const API_BASE = 'https://api.bilibili.com'
 
 type Errors = { missingParam(name: string): Error; unknownOp(op: string): Error; needsLogin(): Error; wrap(error: unknown): Error }
 
+/** Check if a Bilibili API response indicates success (code === 0). */
+function isApiOk(resp: unknown): boolean {
+  return resp != null && typeof resp === 'object' && (resp as Record<string, unknown>).code === 0
+}
+
 /* ---------- helpers ---------- */
 
 async function getCSRFToken(page: Page, errors: Errors): Promise<string> {
@@ -107,7 +112,7 @@ async function searchVideos(page: Page, params: Record<string, unknown>, errors:
     searchUrl,
   ).catch(() => null)
 
-  if (resp && typeof resp === 'object' && (resp as any).code === 0) return resp
+  if (isApiOk(resp)) return resp
 
   // Fallback: use in-page fetch (browser handles Wbi signing)
   return fetchApiViaPage(page, '/x/web-interface/wbi/search/all/v2', {
@@ -152,7 +157,7 @@ async function getVideoComments(page: Page, params: Record<string, unknown>, err
     mode,
     pagination_str: JSON.stringify({ offset: '' }),
   })
-  if (result && typeof result === 'object' && (result as any).code === 0) return result
+  if (isApiOk(result)) return result
 
   // Fallback: navigate to video page and intercept the wbi comment API
   const bvid = String(params.bvid ?? '')
@@ -172,7 +177,7 @@ async function getUserInfo(page: Page, params: Record<string, unknown>, errors: 
 
   // Try non-wbi endpoint first
   const result = await fetchApiViaPage(page, '/x/space/acc/info', { mid })
-  if (result && typeof result === 'object' && (result as any).code === 0) return result
+  if (isApiOk(result)) return result
 
   // Fallback: navigate to user space page and intercept the wbi endpoint
   return interceptApiResponse(
@@ -191,7 +196,7 @@ async function getUserVideos(page: Page, params: Record<string, unknown>, errors
 
   // Try non-wbi endpoint first
   const result = await fetchApiViaPage(page, '/x/space/arc/search', { mid, pn, ps, order })
-  if (result && typeof result === 'object' && (result as any).code === 0) return result
+  if (isApiOk(result)) return result
 
   // Fallback: navigate to user space and intercept the wbi endpoint
   return interceptApiResponse(

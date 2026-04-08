@@ -5,13 +5,13 @@ import { formatCookieString } from '../lib/cookies.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
+import { validateParams } from '../lib/param-validator.js'
 import {
   type OpenApiOperation,
   type OpenApiSpec,
   getRequestBodyParameters,
   getServerUrl,
-  validateParams,
-} from '../lib/openapi.js'
+} from '../lib/spec-loader.js'
 import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { XOpenWebServer } from '../types/extensions.js'
@@ -44,7 +44,7 @@ export async function executeCachedFetch(
     params,
   )
   const resolvedPath = substitutePath(operationRef.path, allParams, inputParams)
-  const url = (await import('../lib/openapi.js')).buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
+  const url = (await import('../lib/url-builder.js')).buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
   const requestHeaders = buildHeaderParams(allParams, inputParams)
 
   // Inject cached cookies

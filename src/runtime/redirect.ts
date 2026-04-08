@@ -1,6 +1,7 @@
 import { OpenWebError } from '../lib/errors.js'
 
 const MAX_REDIRECTS = 5
+const REDIRECT_CODES = new Set([301, 302, 303, 307, 308])
 const SENSITIVE_HEADERS = ['cookie', 'authorization', 'x-csrftoken', 'x-csrf-token']
 
 export interface RedirectOptions {
@@ -36,7 +37,7 @@ export async function fetchWithRedirects(
       redirect: 'manual',
     })
 
-    if (response.status < 300 || response.status >= 400) {
+    if (!REDIRECT_CODES.has(response.status)) {
       return response
     }
 

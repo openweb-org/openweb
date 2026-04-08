@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { OpenApiSpec } from '../lib/openapi.js'
+import type { OpenApiSpec } from '../lib/spec-loader.js'
 import { executeBrowserFetch } from './browser-fetch-executor.js'
 
 function mockBrowser(

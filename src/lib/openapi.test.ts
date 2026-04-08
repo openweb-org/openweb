@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { OpenWebError } from './errors.js'
-import { buildQueryUrl, findOperation, getRequestBodyParameters, loadOpenApi, validateParams } from './openapi.js'
-import type { OpenApiSpec } from './openapi.js'
+import { findOperation, getRequestBodyParameters, loadOpenApi } from './spec-loader.js'
+import type { OpenApiSpec } from './spec-loader.js'
+import { buildQueryUrl } from './url-builder.js'
+import { validateParams } from './param-validator.js'
 
 describe('buildQueryUrl', () => {
   it('builds query string for scalar and array params', () => {

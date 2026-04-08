@@ -2,7 +2,7 @@ import type { Browser, BrowserContext, Page } from 'patchright'
 
 import { CDP_PORT } from '../lib/config.js'
 import { OpenWebError } from '../lib/errors.js'
-import type { OpenApiOperation, OpenApiSpec } from '../lib/openapi.js'
+import type { OpenApiOperation, OpenApiSpec } from '../lib/spec-loader.js'
 import type { ExtractionPrimitive } from '../types/primitives.js'
 import type { ExecutorResult } from './executor-result.js'
 import { detectPageBotBlock } from './bot-detect.js'

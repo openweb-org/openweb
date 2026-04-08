@@ -11,6 +11,12 @@ import type { Page } from 'patchright'
 
 type Errors = { missingParam(name: string): Error; unknownOp(op: string): Error; needsLogin(): Error; wrap(error: unknown): Error }
 
+/** Deeply-nested SSR state node — self-referential index signature replaces `any` for Vue reactive state. */
+interface SsrNode { readonly [key: string]: SsrNode }
+
+/** Window with XHS Vue SSR __INITIAL_STATE__ */
+type XhsWindow = Window & typeof globalThis & { __INITIAL_STATE__?: SsrNode }
+
 const BASE = 'https://www.xiaohongshu.com'
 
 /* ---------- helpers ---------- */
@@ -36,14 +42,14 @@ async function searchNotes(page: Page, params: Record<string, unknown>, errors: 
   const needsLogin = await page.evaluate(() => document.body.innerText.includes('登录后查看搜索结果'))
   if (needsLogin) throw errors.needsLogin()
   const ssrResult = await page.evaluate(() => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     if (!state?.search) return null
     const feedsRef = state.search.feeds
-    const feeds: any[] = feedsRef?._rawValue ?? feedsRef ?? []
+    const feeds: SsrNode[] = feedsRef?._rawValue ?? feedsRef ?? []
     if (!Array.isArray(feeds) || feeds.length === 0) return null
     const notes = feeds
-      .filter((f: any) => f.modelType === 'note' && f.noteCard)
-      .map((f: any) => {
+      .filter((f: SsrNode) => f.modelType === 'note' && f.noteCard)
+      .map((f: SsrNode) => {
         const card = f.noteCard
         return {
           noteId: f.id, xsecToken: f.xsecToken, type: card.type, displayTitle: card.displayTitle,
@@ -63,8 +69,8 @@ async function searchNotes(page: Page, params: Record<string, unknown>, errors: 
       const items = data.items as Array<Record<string, unknown>> | undefined
       if (Array.isArray(items) && items.length > 0) {
         const notes = items
-          .filter((item: any) => item.model_type === 'note' && item.note_card)
-          .map((item: any) => {
+          .filter((item: SsrNode) => item.model_type === 'note' && item.note_card)
+          .map((item: SsrNode) => {
             const card = item.note_card
             return {
               noteId: item.id, xsecToken: item.xsec_token, type: card.type, displayTitle: card.display_title,
@@ -92,17 +98,17 @@ async function getNoteDetail(page: Page, params: Record<string, unknown>, errors
   await page.goto(`${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForFunction(
     (id: string) => {
-      const state = (window as any).__INITIAL_STATE__
+      const state = (window as XhsWindow).__INITIAL_STATE__
       if (!state?.note?.noteDetailMap) return false
       const map = state.note.noteDetailMap._rawValue ?? state.note.noteDetailMap
       return !!(map && typeof map === 'object' && map[id])
     }, noteId, { timeout: 10000 },
   ).catch(() => null)
   const noteData = await page.evaluate((id: string) => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     if (!state?.note) return null
     const mapRef = state.note.noteDetailMap
-    const map: Record<string, any> = mapRef?._rawValue ?? mapRef ?? {}
+    const map: Record<string, SsrNode> = mapRef?._rawValue ?? mapRef ?? {}
     const entry = map[id]
     if (!entry) return null
     const detail = entry.note ?? entry
@@ -114,7 +120,7 @@ async function getNoteDetail(page: Page, params: Record<string, unknown>, errors
         likedCount: detail.interactInfo.likedCount, collectedCount: detail.interactInfo.collectedCount,
         commentCount: detail.interactInfo.commentCount, shareCount: detail.interactInfo.shareCount,
       } : null,
-      tagList: Array.isArray(detail.tagList) ? detail.tagList.map((t: any) => ({ id: t.id, name: t.name, type: t.type })) : [],
+      tagList: Array.isArray(detail.tagList) ? detail.tagList.map((t: SsrNode) => ({ id: t.id, name: t.name, type: t.type })) : [],
       imageCount: detail.imageList?.length ?? 0,
     }
   }, noteId)
@@ -149,10 +155,10 @@ async function getUserProfile(page: Page, params: Record<string, unknown>, error
   if (page.url().includes('captcha')) throw errors.needsLogin()
   await page.waitForTimeout(4000)
   return page.evaluate(() => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     if (!state?.user) return null
     const pageDataRef = state.user.userPageData
-    const pageData: Record<string, any> = pageDataRef?._rawValue ?? pageDataRef ?? {}
+    const pageData: Record<string, SsrNode> = pageDataRef?._rawValue ?? pageDataRef ?? {}
     const basicInfo = pageData.basicInfo?._rawValue ?? pageData.basicInfo ?? {}
     const interactions = pageData.interactions?._rawValue ?? pageData.interactions ?? []
     const tags = pageData.tags?._rawValue ?? pageData.tags ?? []
@@ -160,8 +166,8 @@ async function getUserProfile(page: Page, params: Record<string, unknown>, error
       userId: basicInfo.redId ?? null, nickname: basicInfo.nickname ?? null, desc: basicInfo.desc ?? null,
       gender: basicInfo.gender ?? null, avatar: basicInfo.images ?? null, avatarLarge: basicInfo.imageb ?? null,
       ipLocation: basicInfo.ipLocation ?? null,
-      interactions: Array.isArray(interactions) ? interactions.map((i: any) => ({ type: i.type, name: i.name, count: i.count })) : [],
-      tags: Array.isArray(tags) ? tags.map((t: any) => ({ name: t.name, tagType: t.tagType })) : [],
+      interactions: Array.isArray(interactions) ? interactions.map((i: SsrNode) => ({ type: i.type, name: i.name, count: i.count })) : [],
+      tags: Array.isArray(tags) ? tags.map((t: SsrNode) => ({ name: t.name, tagType: t.tagType })) : [],
     }
   })
 }
@@ -174,14 +180,14 @@ async function getUserNotes(page: Page, params: Record<string, unknown>, errors:
   if (page.url().includes('captcha')) throw errors.needsLogin()
   await page.waitForTimeout(4000)
   return page.evaluate(() => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     if (!state?.user) return { notes: [], count: 0 }
     const notesRef = state.user.notes
-    const notePages: any[] = notesRef?._rawValue ?? notesRef ?? []
+    const notePages: SsrNode[] = notesRef?._rawValue ?? notesRef ?? []
     if (!Array.isArray(notePages) || notePages.length === 0) return { notes: [], count: 0 }
-    const allNotes: any[] = []
+    const allNotes: SsrNode[] = []
     for (const page of notePages) {
-      const items: any[] = page?._rawValue ?? page ?? []
+      const items: SsrNode[] = page?._rawValue ?? page ?? []
       if (Array.isArray(items)) {
         for (const item of items) {
           if (item?.noteCard) {
@@ -204,14 +210,14 @@ async function getExploreFeed(page: Page, _params: Record<string, unknown>, _err
   await page.goto(`${BASE}/explore`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForTimeout(4000)
   return page.evaluate(() => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     if (!state?.feed) return { notes: [], count: 0 }
     const feedsRef = state.feed.feeds
-    const feeds: any[] = feedsRef?._rawValue ?? feedsRef ?? []
+    const feeds: SsrNode[] = feedsRef?._rawValue ?? feedsRef ?? []
     if (!Array.isArray(feeds)) return { notes: [], count: 0 }
     const notes = feeds
-      .filter((f: any) => f.modelType === 'note' && f.noteCard)
-      .map((f: any) => {
+      .filter((f: SsrNode) => f.modelType === 'note' && f.noteCard)
+      .map((f: SsrNode) => {
         const card = f.noteCard
         return {
           noteId: f.id, xsecToken: f.xsecToken, type: card.type, displayTitle: card.displayTitle,
@@ -232,7 +238,7 @@ async function navigateToNote(page: Page, params: Record<string, unknown>, error
   await page.goto(`${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForFunction(
     (id: string) => {
-      const state = (window as any).__INITIAL_STATE__
+      const state = (window as XhsWindow).__INITIAL_STATE__
       if (!state?.note?.noteDetailMap) return false
       const map = state.note.noteDetailMap._rawValue ?? state.note.noteDetailMap
       return !!(map && typeof map === 'object' && map[id])
@@ -244,10 +250,10 @@ async function navigateToNote(page: Page, params: Record<string, unknown>, error
 async function likeNote(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const noteId = await navigateToNote(page, params, errors)
   const wasLiked = await page.evaluate(() => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     const mapRef = state?.note?.noteDetailMap
-    const map: Record<string, any> = mapRef?._rawValue ?? mapRef ?? {}
-    const entry = Object.values(map)[0] as any
+    const map: Record<string, SsrNode> = mapRef?._rawValue ?? mapRef ?? {}
+    const entry = Object.values(map)[0] as SsrNode
     return (entry?.note ?? entry)?.interactInfo?.liked ?? false
   })
   if (wasLiked) return { noteId, liked: true, action: 'already_liked' }
@@ -264,10 +270,10 @@ async function likeNote(page: Page, params: Record<string, unknown>, errors: Err
 async function bookmarkNote(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const noteId = await navigateToNote(page, params, errors)
   const wasCollected = await page.evaluate(() => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     const mapRef = state?.note?.noteDetailMap
-    const map: Record<string, any> = mapRef?._rawValue ?? mapRef ?? {}
-    const entry = Object.values(map)[0] as any
+    const map: Record<string, SsrNode> = mapRef?._rawValue ?? mapRef ?? {}
+    const entry = Object.values(map)[0] as SsrNode
     return (entry?.note ?? entry)?.interactInfo?.collected ?? false
   })
   if (wasCollected) return { noteId, bookmarked: true, action: 'already_bookmarked' }
@@ -285,13 +291,13 @@ async function getHotSearch(page: Page, _params: Record<string, unknown>, _error
   await page.goto(`${BASE}/explore`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForTimeout(3000)
   return page.evaluate(() => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     if (!state?.search) return { items: [], count: 0 }
     for (const key of ['hotSearch', 'searchHotSpots', 'searchCardHotSpots']) {
-      const ref = (state.search as Record<string, any>)[key]
-      const arr: any[] = ref?._rawValue ?? ref ?? []
+      const ref = (state.search as Record<string, SsrNode>)[key]
+      const arr: SsrNode[] = ref?._rawValue ?? ref ?? []
       if (Array.isArray(arr) && arr.length > 0) {
-        const items = arr.map((h: any, i: number) => ({
+        const items = arr.map((h: SsrNode, i: number) => ({
           keyword: h.name ?? h.word ?? h.keyword ?? '', score: h.score ?? null, rank: h.rank ?? i + 1,
         }))
         return { items, count: items.length }
@@ -311,7 +317,7 @@ async function getNoteComments(page: Page, params: Record<string, unknown>, erro
   ).catch(() => null)
   const tokenParam = xsecToken ? `&xsec_token=${encodeURIComponent(xsecToken)}` : ''
   await page.goto(`${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
-  await page.waitForFunction(() => !!(window as any).__INITIAL_STATE__?.note, { timeout: 10000 }).catch(() => null)
+  await page.waitForFunction(() => !!(window as XhsWindow).__INITIAL_STATE__?.note, { timeout: 10000 }).catch(() => null)
   const commentResp = await commentPromise
   if (!commentResp) return { comments: [], count: 0, hasMore: false }
   try {
@@ -345,14 +351,14 @@ async function getUserCollections(page: Page, params: Record<string, unknown>, e
   await page.click('[class*="tab"]:has-text("收藏")', { timeout: 5000 }).catch(() => null)
   await page.waitForTimeout(2000)
   return page.evaluate(() => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     if (!state?.user) return { notes: [], count: 0 }
     const collectRef = state.user.collect
-    const collectPages: any[] = collectRef?._rawValue ?? collectRef ?? []
+    const collectPages: SsrNode[] = collectRef?._rawValue ?? collectRef ?? []
     if (!Array.isArray(collectPages) || collectPages.length === 0) return { notes: [], count: 0 }
-    const allNotes: any[] = []
+    const allNotes: SsrNode[] = []
     for (const pg of collectPages) {
-      const items: any[] = pg?._rawValue ?? pg ?? []
+      const items: SsrNode[] = pg?._rawValue ?? pg ?? []
       if (Array.isArray(items)) {
         for (const item of items) {
           if (item?.noteCard) {
@@ -381,14 +387,14 @@ async function getUserLiked(page: Page, params: Record<string, unknown>, errors:
   await page.click('[class*="tab"]:has-text("赞过")', { timeout: 5000 }).catch(() => null)
   await page.waitForTimeout(2000)
   return page.evaluate(() => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     if (!state?.user) return { notes: [], count: 0 }
     const likedRef = state.user.liked
-    const likedPages: any[] = likedRef?._rawValue ?? likedRef ?? []
+    const likedPages: SsrNode[] = likedRef?._rawValue ?? likedRef ?? []
     if (!Array.isArray(likedPages) || likedPages.length === 0) return { notes: [], count: 0 }
-    const allNotes: any[] = []
+    const allNotes: SsrNode[] = []
     for (const pg of likedPages) {
-      const items: any[] = pg?._rawValue ?? pg ?? []
+      const items: SsrNode[] = pg?._rawValue ?? pg ?? []
       if (Array.isArray(items)) {
         for (const item of items) {
           if (item?.noteCard) {
@@ -419,7 +425,7 @@ async function getRelatedNotes(page: Page, params: Record<string, unknown>, erro
   await page.goto(`${BASE}/explore/${noteId}?xsec_source=pc_search${tokenParam}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   await page.waitForFunction(
     (id: string) => {
-      const state = (window as any).__INITIAL_STATE__
+      const state = (window as XhsWindow).__INITIAL_STATE__
       if (!state?.note?.noteDetailMap) return false
       const map = state.note.noteDetailMap._rawValue ?? state.note.noteDetailMap
       return !!(map && typeof map === 'object' && map[id])
@@ -432,7 +438,7 @@ async function getRelatedNotes(page: Page, params: Record<string, unknown>, erro
       const data = asRecord(json.data)
       const rawNotes = data.items as Array<Record<string, unknown>> | undefined
       if (Array.isArray(rawNotes) && rawNotes.length > 0) {
-        const notes = rawNotes.map((item: any) => ({
+        const notes = rawNotes.map((item: SsrNode) => ({
           noteId: item.id ?? item.note_id, xsecToken: item.xsec_token ?? null,
           type: item.note_card?.type ?? item.type, displayTitle: item.note_card?.display_title ?? item.title ?? '',
           user: item.note_card?.user ? { userId: item.note_card.user.user_id, nickname: item.note_card.user.nickname, avatar: item.note_card.user.avatar } : null,
@@ -444,12 +450,12 @@ async function getRelatedNotes(page: Page, params: Record<string, unknown>, erro
     } catch { /* fall through to SSR state */ }
   }
   return page.evaluate(() => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     if (!state?.note) return { notes: [], count: 0 }
     const relatedRef = state.note.relatedNotes ?? state.note.recommendNotes
-    const related: any[] = relatedRef?._rawValue ?? relatedRef ?? []
+    const related: SsrNode[] = relatedRef?._rawValue ?? relatedRef ?? []
     if (!Array.isArray(related) || related.length === 0) return { notes: [], count: 0 }
-    const notes = related.map((f: any) => {
+    const notes = related.map((f: SsrNode) => {
       const card = f.noteCard ?? f
       return {
         noteId: f.id ?? card.noteId, xsecToken: f.xsecToken ?? null, type: card.type,
@@ -471,9 +477,9 @@ async function followUser(page: Page, params: Record<string, unknown>, errors: E
   if (page.url().includes('captcha')) throw errors.needsLogin()
   await page.waitForTimeout(3000)
   const wasFollowing = await page.evaluate(() => {
-    const state = (window as any).__INITIAL_STATE__
+    const state = (window as XhsWindow).__INITIAL_STATE__
     const pageDataRef = state?.user?.userPageData
-    const pageData: Record<string, any> = pageDataRef?._rawValue ?? pageDataRef ?? {}
+    const pageData: Record<string, SsrNode> = pageDataRef?._rawValue ?? pageDataRef ?? {}
     const basicInfo = pageData.basicInfo?._rawValue ?? pageData.basicInfo ?? {}
     return basicInfo.isFollowed ?? false
   })

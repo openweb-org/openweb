@@ -5,8 +5,9 @@ import type { WsPattern } from '../types/ws-primitives.js'
 import { listAsyncApiOperations, loadAsyncApi } from './asyncapi.js'
 import type { AsyncApiOperationRef, AsyncApiSpec } from './asyncapi.js'
 import { OpenWebError } from './errors.js'
-import type { HttpMethod, OpenApiSpec, OperationRef } from './openapi.js'
-import { listOperations as listHttpOperations, loadOpenApi, pathExists, resolveSiteRoot } from './openapi.js'
+import { pathExists, resolveSiteRoot } from './site-resolver.js'
+import type { HttpMethod, OpenApiSpec, OperationRef } from './spec-loader.js'
+import { listOperations as listHttpOperations, loadOpenApi } from './spec-loader.js'
 import { derivePermissionFromMethod } from './permission-derive.js'
 
 // ── Operation Index Types ───────────────────────────

@@ -1,4 +1,4 @@
-import type { JsonSchema } from '../lib/openapi.js'
+import type { JsonSchema } from '../lib/spec-loader.js'
 
 const MAX_DEPTH = 3
 const SAMPLE_SIZE = 3

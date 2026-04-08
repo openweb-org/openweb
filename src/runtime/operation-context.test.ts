@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { OpenApiSpec } from '../lib/openapi.js'
+import type { OpenApiSpec } from '../lib/spec-loader.js'
 import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 
 describe('getServerXOpenWeb', () => {

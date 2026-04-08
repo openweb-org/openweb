@@ -1,3 +1,4 @@
+import { TIMEOUT } from '../../lib/config.js'
 import { logger } from '../../lib/logger.js'
 import { OpenWebError } from '../../lib/errors.js'
 import type { BrowserHandle, ResolvedInjections } from './types.js'
@@ -94,7 +95,7 @@ export async function resolveWebpackModuleWalk(
     logger.debug(`webpack_module_walk: cache empty, navigating to ${appUrl}`)
     try {
       await handle.page.goto(appUrl, { waitUntil: 'load', timeout: 15_000 })
-      await new Promise(r => setTimeout(r, 3000))
+      await new Promise(r => setTimeout(r, TIMEOUT.moduleWalkSettle))
     } catch (err) {
       logger.debug(`webpack_module_walk: app_path navigation failed: ${err instanceof Error ? err.message : String(err)}`)
     }

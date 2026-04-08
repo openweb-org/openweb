@@ -1,4 +1,4 @@
-import type { JsonSchema } from '../lib/openapi.js'
+import type { JsonSchema } from '../lib/spec-loader.js'
 
 export type SampleResponse =
   | { readonly kind: 'json'; readonly body: unknown }

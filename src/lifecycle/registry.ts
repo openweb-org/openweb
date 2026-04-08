@@ -4,7 +4,7 @@ import path from 'node:path'
 
 import { openwebHome } from '../lib/config.js'
 import { loadManifest } from '../lib/manifest.js'
-import { resolveSiteRoot } from '../lib/openapi.js'
+import { resolveSiteRoot } from '../lib/site-resolver.js'
 
 const REGISTRY_ROOT = path.join(openwebHome(), 'registry')
 const MAX_VERSIONS = 5

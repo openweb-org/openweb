@@ -1,11 +1,12 @@
 import type { Browser, BrowserContext, Page } from 'patchright'
 
 import { formatCookieString } from '../lib/cookies.js'
-import { DEFAULT_USER_AGENT } from '../lib/config.js'
+import { DEFAULT_USER_AGENT, TIMEOUT } from '../lib/config.js'
 import { shouldApplyCsrf } from '../lib/csrf-scope.js'
 import { OpenWebError, getHttpFailure } from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
-import { type OpenApiOperation, type OpenApiSpec, getRequestBodyParameters, validateParams } from '../lib/openapi.js'
+import { validateParams } from '../lib/param-validator.js'
+import { type OpenApiOperation, type OpenApiSpec, getRequestBodyParameters } from '../lib/spec-loader.js'
 import { parseResponseBody } from '../lib/response-parser.js'
 import { validateSSRF } from '../lib/ssrf.js'
 import type { ExecutorResult } from './executor-result.js'
@@ -101,7 +102,7 @@ export async function autoNavigate(context: BrowserContext, serverUrl: string): 
       return undefined
     }
     // Settle wait: SPAs redirect during load; need stable URL for findPageForOrigin
-    await new Promise(r => setTimeout(r, 2000))
+    await new Promise(r => setTimeout(r, TIMEOUT.spaSettle))
     const matched = await findPageForOrigin(context, serverUrl)
     if (!matched) {
       await newPage.close().catch(() => {})

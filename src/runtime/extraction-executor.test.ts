@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { OpenApiOperation, OpenApiSpec } from '../lib/openapi.js'
+import type { OpenApiOperation, OpenApiSpec } from '../lib/spec-loader.js'
 import { executeExtraction } from './extraction-executor.js'
 
 function extractionBrowser(

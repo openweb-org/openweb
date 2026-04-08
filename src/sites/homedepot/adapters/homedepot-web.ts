@@ -15,6 +15,9 @@ type Errors = {
   retriable(msg: string): Error
 }
 
+/** Deeply-nested GraphQL response node — self-referential to allow property chaining. */
+interface GqlNode { readonly [key: string]: GqlNode }
+
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 const BASE = 'https://www.homedepot.com'
@@ -58,13 +61,13 @@ async function searchProducts(page: Page, params: Record<string, unknown>, error
   if (!keyword) throw errors.missingParam('keyword')
 
   const searchUrl = `${BASE}/s/${encodeURIComponent(keyword)}`
-  const result = await interceptGraphQL(page, 'searchModel', searchUrl) as any
+  const result = await interceptGraphQL(page, 'searchModel', searchUrl) as GqlNode
 
   const searchModel = result?.data?.searchModel
   if (!searchModel) return { totalProducts: 0, keyword, products: [] }
 
   const report = searchModel.searchReport || {}
-  const products = (searchModel.products || []).map((p: any) => ({
+  const products = (searchModel.products || []).map((p: GqlNode) => ({
     itemId: p.identifiers?.itemId || p.itemId || '',
     name: p.identifiers?.productLabel || '',
     brand: p.identifiers?.brandName || '',
@@ -76,7 +79,7 @@ async function searchProducts(page: Page, params: Record<string, unknown>, error
     reviewCount: Number(p.reviews?.ratingsReviews?.totalReviews) || 0,
     image: p.media?.images?.[0]?.url || '',
     availability: p.availabilityType?.type || '',
-    badges: (p.badges || []).map((b: any) => b.label),
+    badges: (p.badges || []).map((b: GqlNode) => b.label),
     sponsored: p.info?.isSponsored || false,
   }))
 
@@ -93,7 +96,7 @@ async function getProductDetail(page: Page, params: Record<string, unknown>, err
 
   // Navigate to product page — use a placeholder slug; HD resolves by itemId
   const productUrl = `${BASE}/p/detail/${itemId}`
-  const result = await interceptGraphQL(page, 'productClientOnlyProduct', productUrl) as any
+  const result = await interceptGraphQL(page, 'productClientOnlyProduct', productUrl) as GqlNode
 
   const product = result?.data?.product
   if (!product) throw errors.fatal(`Product ${itemId} not found`)
@@ -102,11 +105,11 @@ async function getProductDetail(page: Page, params: Record<string, unknown>, err
   const det = product.details || {}
   const pricing = product.pricing || {}
   const reviews = product.reviews?.ratingsReviews || {}
-  const specs = (product.specificationGroup || []).flatMap((g: any) =>
-    (g.specifications || []).map((s: any) => ({ group: g.specTitle, name: s.specName, value: s.specValue })),
+  const specs = (product.specificationGroup || []).flatMap((g: GqlNode) =>
+    (g.specifications || []).map((s: GqlNode) => ({ group: g.specTitle, name: s.specName, value: s.specValue })),
   )
-  const breadcrumbs = (product.taxonomy?.breadCrumbs || []).map((b: any) => b.label)
-  const images = (product.media?.images || []).map((i: any) => i.url)
+  const breadcrumbs = (product.taxonomy?.breadCrumbs || []).map((b: GqlNode) => b.label)
+  const images = (product.media?.images || []).map((i: GqlNode) => i.url)
 
   return {
     itemId: ids.itemId || itemId,

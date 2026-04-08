@@ -62,9 +62,7 @@ const FIND_GET_GLOBAL_SRC = findGetGlobal.toString()
 
 function makeError(message: string, failureClass: string, retriable = false): Error {
   const err = new Error(message)
-  ;(err as any).failureClass = failureClass
-  ;(err as any).retriable = retriable
-  return err
+  return Object.assign(err, { failureClass, retriable })
 }
 
 // --- helpers ---
@@ -129,7 +127,7 @@ async function getMessages(page: Page, params: Readonly<Record<string, unknown>>
     }
     const users = global.users?.byId ?? {}
     return msgIds.slice(0, args.limit).map((id) => {
-      const msg = chatMsgs[id] as Record<string, any>
+      const msg = chatMsgs[id]
       const sender = msg.senderId ? users[msg.senderId] : undefined
       return {
         id: msg.id,
@@ -165,17 +163,17 @@ async function searchMessages(page: Page, params: Readonly<Record<string, unknow
     for (const cid of chatIds) {
       const msgs = global.messages?.byChatId?.[cid]?.byId ?? {}
       for (const msg of Object.values(msgs)) {
-        const text = (msg as any).content?.text?.text ?? ''
+        const text = msg.content?.text?.text ?? ''
         if (text.toLowerCase().includes(q)) {
           const chat = global.chats?.byId?.[cid]
-          const sender = (msg as any).senderId ? global.users?.byId?.[(msg as any).senderId] : undefined
+          const sender = msg.senderId ? global.users?.byId?.[msg.senderId] : undefined
           results.push({
-            id: (msg as any).id,
+            id: msg.id,
             chatId: cid,
             chatTitle: chat?.title ?? 'unknown',
-            date: (msg as any).date,
+            date: msg.date,
             text,
-            senderId: (msg as any).senderId,
+            senderId: msg.senderId,
             senderName: sender ? [sender.firstName, sender.lastName].filter(Boolean).join(' ') : undefined,
           })
         }

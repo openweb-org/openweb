@@ -28,7 +28,7 @@ async function hasSitePackage(dir: string): Promise<boolean> {
 /** Site names must be lowercase alphanumeric with hyphens/underscores. */
 const SAFE_SITE_NAME = /^[a-z0-9][a-z0-9_-]*$/
 
-/** Package root — two levels up from dist/lib/openapi.js (or src/lib/openapi.ts in dev). */
+/** Package root — two levels up from dist/lib/site-resolver.js (or src/lib/site-resolver.ts in dev). */
 const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 /** Bundled sites shipped inside the npm package. */

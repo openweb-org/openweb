@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { OpenWebError } from '../lib/errors.js'
-import type { OpenApiOperation, OpenApiParameter, OpenApiSpec } from '../lib/openapi.js'
+import type { OpenApiOperation, OpenApiParameter, OpenApiSpec } from '../lib/spec-loader.js'
 import { buildHeaderParams, substitutePath } from './request-builder.js'
 import {
   autoNavigate,

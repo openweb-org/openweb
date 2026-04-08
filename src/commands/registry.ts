@@ -1,5 +1,5 @@
 import { OpenWebError } from '../lib/errors.js'
-import { resolveSiteRoot } from '../lib/openapi.js'
+import { resolveSiteRoot } from '../lib/site-resolver.js'
 import {
   archiveSite,
   getCurrentVersion,

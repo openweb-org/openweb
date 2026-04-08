@@ -8,7 +8,9 @@ export function buildQueryUrl(
   parameters: OpenApiParameter[] | undefined,
   inputParams: Record<string, unknown>,
 ): string {
-  const target = new URL(apiPath, baseServerUrl)
+  const baseUrl = new URL(baseServerUrl)
+  const fullPath = baseUrl.origin + baseUrl.pathname.replace(/\/$/, '') + apiPath
+  const target = new URL(fullPath)
 
   const allParameters = parameters ?? []
   const queryParameters = allParameters.filter((param) => param.in === 'query')

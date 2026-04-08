@@ -30,6 +30,8 @@ npx @openweb-org/openweb sites
 npx @openweb-org/openweb wikipedia getPageSummary '{"title":"World_Wide_Web"}'
 ```
 
+> **Note:** OpenWeb is currently a CLI tool only. Programmatic API usage (importing as a library) is not supported — the package exposes only `bin` with no `main`, `exports`, or `types` fields.
+
 ## Install
 
 ### CLI

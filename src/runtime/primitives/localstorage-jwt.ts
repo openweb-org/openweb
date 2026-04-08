@@ -1,3 +1,4 @@
+import { TIMEOUT } from '../../lib/config.js'
 import { OpenWebError } from '../../lib/errors.js'
 import type { BrowserHandle, ResolvedInjections } from './types.js'
 
@@ -38,7 +39,7 @@ export async function resolveLocalStorageJwt(
       page = await handle.context.newPage()
       ownedPage = true
       await page.goto(appUrl, { waitUntil: 'load', timeout: 15_000 }).catch(() => {})
-      await new Promise(r => setTimeout(r, 2000))
+      await new Promise(r => setTimeout(r, TIMEOUT.spaSettle))
     }
   }
 

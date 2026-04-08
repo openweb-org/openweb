@@ -5,7 +5,7 @@
  * Runs PII scrub on the result.
  */
 
-import type { JsonSchema } from '../../lib/openapi.js'
+import type { JsonSchema } from '../../lib/spec-loader.js'
 import { scrubRequestBody } from '../curation/scrub.js'
 
 const FORMAT_EXAMPLES: Record<string, unknown> = {

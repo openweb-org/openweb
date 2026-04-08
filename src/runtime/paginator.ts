@@ -1,5 +1,5 @@
 import { OpenWebError } from '../lib/errors.js'
-import { type OpenApiParameter, findOperation, loadOpenApi } from '../lib/openapi.js'
+import { type OpenApiParameter, findOperation, loadOpenApi } from '../lib/spec-loader.js'
 import type { PaginationPrimitive } from '../types/primitives.js'
 import type { ExecuteDependencies, ExecuteResult } from './executor.js'
 import { getValueAtPath, setValueAtPath } from './value-path.js'
