@@ -18,7 +18,7 @@ paths:
         permission: read
         build:
           stable_id: hd0001
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
@@ -32,20 +32,6 @@ paths:
           schema:
             type: string
           description: Search keyword (e.g. "cordless drill", "patio furniture").
-        - name: pageSize
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 24
-          description: Number of results per page (max 48).
-        - name: startIndex
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Offset for pagination.
       responses:
         '200':
           description: Product search results.
@@ -62,10 +48,6 @@ paths:
                     type: integer
                   keyword:
                     type: string
-                  startIndex:
-                    type: integer
-                  pageSize:
-                    type: integer
                   products:
                     type: array
                     items:
@@ -115,7 +97,7 @@ paths:
         permission: read
         build:
           stable_id: hd0002
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
