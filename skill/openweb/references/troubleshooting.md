@@ -152,6 +152,14 @@ For sites that consistently trigger CAPTCHAs, set `"browser": {"headless": false
 
 **Fix:** Same as CAPTCHA — wait, then retry. Rate limits typically clear after a few minutes without the headed browser workaround.
 
+### Akamai Blocks `page.evaluate(fetch)` (HTTP 206 GenericError)
+
+**Symptom:** `page.evaluate(fetch(...))` returns HTTP 206 with `{"data":{"GenericError":null}}`. The same API works when triggered by the site's own JS. Affects Akamai-heavy sites (e.g., Home Depot).
+
+**Root cause:** Akamai Bot Manager validates sensor data per-request. Programmatic `fetch()` bypasses the site's JS and lacks sensor headers (`_abck` cookie validation fails).
+
+**Fix:** Switch adapter from `page.evaluate(fetch(...))` to the **intercept pattern** — navigate to the real page URL and intercept the response the site's own JS triggers. See `knowledge/bot-detection.md` § Intercept Pattern.
+
 ---
 
 ## WebSocket

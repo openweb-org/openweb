@@ -60,10 +60,43 @@ Can Node make the request without auth cookies?
   +- No -> Does the site use bot detection?
        +- No/light (Cloudflare basic) -> node + browser cookie extraction
        +- Heavy (Akamai/PX/DataDome/custom) -> page transport
+            +- Does page.evaluate(fetch(...)) work?
+                 +- Yes -> page transport with evaluate
+                 +- No (Akamai sensor blocks programmatic fetch) -> intercept pattern
+                      +- Navigate to real page, intercept the GraphQL/API
+                        response the page's own JS triggers
             +- Does page need specific JS context?
-                 +- No -> page transport with evaluate
                  +- Yes -> adapter transport
 ```
+
+### Intercept Pattern (when `page.evaluate(fetch)` is blocked)
+
+Some bot detection systems (notably Akamai Bot Manager) validate not just cookies
+but also client-side sensor data attached to each request. `page.evaluate(fetch(...))`
+bypasses the site's own JS, so the request lacks sensor headers and gets blocked
+(e.g., HTTP 206 with `GenericError`).
+
+**Fix:** Navigate to the real page URL and intercept the response that the site's
+own React/JS code triggers:
+
+```typescript
+// Set up listener BEFORE navigation
+let captured: unknown = null
+page.on('response', async (resp) => {
+  if (resp.url().includes('/graphql') && resp.url().includes('opname=searchModel')) {
+    captured = await resp.json()
+  }
+})
+// Navigate — site's own JS makes the API call with valid sensor headers
+await page.goto('https://example.com/s/keyword', { waitUntil: 'load' })
+// Poll until response captured
+while (!captured) await wait(500)
+```
+
+This works because the site's own bundled JS carries valid Akamai `_abck` sensor
+data that programmatic fetch cannot replicate.
+
+-> See: `src/sites/homedepot/adapters/homedepot-web.ts` (real example)
 
 ## Capture Strategy by Detection Level
 
