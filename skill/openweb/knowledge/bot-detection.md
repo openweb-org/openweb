@@ -60,13 +60,14 @@ Can Node make the request without auth cookies?
   +- No -> Does the site use bot detection?
        +- No/light (Cloudflare basic) -> node + browser cookie extraction
        +- Heavy (Akamai/PX/DataDome/custom) -> page transport
-            +- Does page.evaluate(fetch(...)) work?
-                 +- Yes -> page transport with evaluate
-                 +- No (Akamai sensor blocks programmatic fetch) -> intercept pattern
-                      +- Navigate to real page, intercept the GraphQL/API
-                        response the page's own JS triggers
             +- Does page need specific JS context?
+                 +- No -> page transport with evaluate
                  +- Yes -> adapter transport
+                      +- Does page.evaluate(fetch(...)) work?
+                           +- Yes -> adapter with pageFetch/graphqlFetch
+                           +- No (Akamai sensor blocks) -> intercept pattern
+                                Navigate to real page, intercept the API
+                                response the site's own JS triggers
 ```
 
 ### Intercept Pattern (when `page.evaluate(fetch)` is blocked)
