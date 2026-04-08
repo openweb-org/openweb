@@ -1,4 +1,12 @@
-import type { Page } from 'patchright'
+import type { Page, Response as PwResponse } from 'patchright'
+
+/**
+ * Home Depot L3 adapter — navigation-based GraphQL interception + DOM extraction.
+ *
+ * Akamai blocks programmatic `page.evaluate(fetch(...))` on the federation gateway.
+ * Instead we navigate to the search/product pages and intercept the GraphQL responses
+ * that the page's own JS triggers naturally.
+ */
 
 type Errors = {
   unknownOp(op: string): Error
@@ -9,109 +17,49 @@ type Errors = {
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-const GRAPHQL_URL = '/federation-gateway/graphql'
+const BASE = 'https://www.homedepot.com'
+const GRAPHQL_PATH = '/federation-gateway/graphql'
 
-const SEARCH_QUERY = `query searchModel($keyword: String, $storeId: String, $storefilter: StoreFilter, $startIndex: Int, $pageSize: Int, $orderBy: ProductSort, $filter: ProductFilter, $channel: Channel, $navParam: String) {
-  searchModel(keyword: $keyword, storeId: $storeId, storefilter: $storefilter, channel: $channel, navParam: $navParam) {
-    id
-    searchReport { totalProducts keyword }
-    products(startIndex: $startIndex, pageSize: $pageSize, orderBy: $orderBy, filter: $filter) {
-      itemId
-      dataSources
-      identifiers { productLabel canonicalUrl brandName itemId modelNumber productType storeSkuNumber }
-      media { images { url sizes } }
-      pricing { original value alternatePriceDisplay message }
-      reviews { ratingsReviews { averageRating totalReviews } }
-      availabilityType { type }
-      badges { label }
-      info { isSponsored }
-      fulfillment { fulfillmentOptions { type services { type hasFreeShipping } } }
+/** Intercept a GraphQL response by navigating to a page that triggers it. */
+async function interceptGraphQL(
+  page: Page,
+  opname: string,
+  navigateUrl: string,
+  timeout = 20000,
+): Promise<unknown> {
+  // Collect matching responses via event listener (more reliable than waitForResponse
+  // which can miss responses during SPA navigation)
+  let captured: unknown = null
+  const handler = async (resp: PwResponse) => {
+    if (captured) return
+    const url = resp.url()
+    if (url.includes(GRAPHQL_PATH) && url.includes(`opname=${opname}`)) {
+      try { captured = await resp.json() } catch { /* ignore parse errors */ }
     }
   }
-}`
+  page.on('response', handler)
 
-const PRODUCT_QUERY = `query productClientOnlyProduct($itemId: String!, $storeId: String, $zipCode: String) {
-  product(itemId: $itemId) {
-    itemId
-    dataSources
-    identifiers { productLabel canonicalUrl brandName itemId modelNumber productType storeSkuNumber }
-    details { description descriptiveAttributes { name value } highlights }
-    media { images { url sizes type subType } }
-    pricing { original value alternatePriceDisplay message }
-    reviews { ratingsReviews { averageRating totalReviews } }
-    specificationGroup { specTitle specifications { specName specValue } }
-    availabilityType { type }
-    fulfillment(storeId: $storeId, zipCode: $zipCode) { fulfillmentOptions { type services { type hasFreeShipping deliveryTimeline } } }
-    taxonomy { breadCrumbs { label url } }
+  try {
+    await page.goto(navigateUrl, { waitUntil: 'load', timeout: 30_000 })
+    // Wait for the GraphQL response to arrive (SPA may fire it after load)
+    const deadline = Date.now() + timeout
+    while (!captured && Date.now() < deadline) {
+      await wait(500)
+    }
+  } finally {
+    page.off('response', handler)
   }
-}`
 
-async function graphqlFetch(
-  page: Page,
-  operationName: string,
-  query: string,
-  variables: Record<string, unknown>,
-  errors: Errors,
-): Promise<unknown> {
-  const url = `${GRAPHQL_URL}?opname=${operationName}`
-  const body = JSON.stringify({ operationName, variables, query })
-
-  const result = await page.evaluate(`
-    (async () => {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 15000);
-      try {
-        const r = await fetch(${JSON.stringify(url)}, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'x-experience-name': 'general-merchandise',
-            'x-debug': 'false',
-            'x-current-url': window.location.pathname,
-          },
-          body: ${JSON.stringify(body)},
-          credentials: 'same-origin',
-          signal: ctrl.signal,
-        });
-        clearTimeout(timer);
-        if (!r.ok) return { __error: true, status: r.status, text: await r.text() };
-        return await r.json();
-      } catch (e) {
-        clearTimeout(timer);
-        return { __error: true, message: e.message };
-      }
-    })()
-  `)
-
-  if (result && typeof result === 'object' && '__error' in result) {
-    const msg = (result as any).message || `HTTP ${(result as any).status}`
-    throw errors.retriable(`GraphQL ${operationName} failed: ${msg}`)
-  }
-  return result
+  return captured
 }
 
 async function searchProducts(page: Page, params: Record<string, unknown>, errors: Errors) {
   const keyword = String(params.keyword || params.query || params.q || '')
   if (!keyword) throw errors.missingParam('keyword')
-  const pageSize = Number(params.pageSize) || 24
-  const startIndex = Number(params.startIndex) || 0
 
-  // Navigate to HD homepage for cookie/session warm-up
-  if (!page.url().includes('homedepot.com')) {
-    await page.goto('https://www.homedepot.com', { waitUntil: 'load', timeout: 30_000 })
-    await wait(3000)
-  }
+  const searchUrl = `${BASE}/s/${encodeURIComponent(keyword)}`
+  const result = await interceptGraphQL(page, 'searchModel', searchUrl) as any
 
-  const variables: Record<string, unknown> = {
-    keyword,
-    storefilter: 'ALL',
-    channel: 'DESKTOP',
-    startIndex,
-    pageSize,
-  }
-
-  const result = await graphqlFetch(page, 'searchModel', SEARCH_QUERY, variables, errors) as any
   const searchModel = result?.data?.searchModel
   if (!searchModel) return { totalProducts: 0, keyword, products: [] }
 
@@ -121,11 +69,11 @@ async function searchProducts(page: Page, params: Record<string, unknown>, error
     name: p.identifiers?.productLabel || '',
     brand: p.identifiers?.brandName || '',
     modelNumber: p.identifiers?.modelNumber || '',
-    url: p.identifiers?.canonicalUrl ? `https://www.homedepot.com${p.identifiers.canonicalUrl}` : '',
+    url: p.identifiers?.canonicalUrl ? `${BASE}${p.identifiers.canonicalUrl}` : '',
     price: p.pricing?.value ?? p.pricing?.original ?? null,
     priceDisplay: p.pricing?.alternatePriceDisplay || p.pricing?.message || '',
-    rating: p.reviews?.ratingsReviews?.averageRating ?? null,
-    reviewCount: p.reviews?.ratingsReviews?.totalReviews ?? 0,
+    rating: p.reviews?.ratingsReviews?.averageRating != null ? Number(p.reviews.ratingsReviews.averageRating) : null,
+    reviewCount: Number(p.reviews?.ratingsReviews?.totalReviews) || 0,
     image: p.media?.images?.[0]?.url || '',
     availability: p.availabilityType?.type || '',
     badges: (p.badges || []).map((b: any) => b.label),
@@ -135,8 +83,6 @@ async function searchProducts(page: Page, params: Record<string, unknown>, error
   return {
     totalProducts: report.totalProducts || products.length,
     keyword: report.keyword || keyword,
-    startIndex,
-    pageSize,
     products,
   }
 }
@@ -145,16 +91,10 @@ async function getProductDetail(page: Page, params: Record<string, unknown>, err
   const itemId = String(params.itemId || params.id || '')
   if (!itemId) throw errors.missingParam('itemId')
 
-  if (!page.url().includes('homedepot.com')) {
-    await page.goto('https://www.homedepot.com', { waitUntil: 'load', timeout: 30_000 })
-    await wait(3000)
-  }
+  // Navigate to product page — use a placeholder slug; HD resolves by itemId
+  const productUrl = `${BASE}/p/detail/${itemId}`
+  const result = await interceptGraphQL(page, 'productClientOnlyProduct', productUrl) as any
 
-  const variables: Record<string, unknown> = { itemId }
-  if (params.storeId) variables.storeId = String(params.storeId)
-  if (params.zipCode) variables.zipCode = String(params.zipCode)
-
-  const result = await graphqlFetch(page, 'productClientOnlyProduct', PRODUCT_QUERY, variables, errors) as any
   const product = result?.data?.product
   if (!product) throw errors.fatal(`Product ${itemId} not found`)
 
@@ -174,7 +114,7 @@ async function getProductDetail(page: Page, params: Record<string, unknown>, err
     brand: ids.brandName || '',
     modelNumber: ids.modelNumber || '',
     productType: ids.productType || '',
-    url: ids.canonicalUrl ? `https://www.homedepot.com${ids.canonicalUrl}` : '',
+    url: ids.canonicalUrl ? `${BASE}${ids.canonicalUrl}` : '',
     description: det.description || '',
     highlights: det.highlights || [],
     price: pricing.value ?? pricing.original ?? null,
@@ -280,7 +220,7 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
 
 const adapter = {
   name: 'homedepot-web',
-  description: 'Home Depot — product search, detail, store locator via GraphQL API and DOM extraction',
+  description: 'Home Depot — product search, detail, store locator via navigation-based GraphQL interception and DOM extraction',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('homedepot.com')

@@ -1,7 +1,7 @@
 {
   "operation_id": "getProductDetail",
   "cases": [{
-    "input": { "itemId": "204279858", "slug": "detail" },
+    "input": { "itemId": "341983849" },
     "assertions": { "status": 200, "response_schema_valid": true }
   }]
 }
