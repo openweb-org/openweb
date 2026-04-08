@@ -40,7 +40,7 @@ doc/main/
 
 skill/openweb/                     # Agent-facing operator guide (separate deliverable)
 ├── SKILL.md               # Router: exec flow, intent routing, load discipline
-├── add-site/              # Contributor workflow (8-step: frame → document)
+├── add-site/              # Contributor workflow (10-step: probe-first)
 ├── references/            # Lookup: CLI, x-openweb schema, troubleshooting
 └── knowledge/             # Pattern library: archetypes, auth, bot-detection, etc.
 ```
@@ -137,14 +137,14 @@ src/
 │   ├── cookies.ts              #   Cookie management
 │   └── config/                 #   Config files: blocked-domains, blocked-paths, tracking-cookies, static-extensions
 │
-└── sites/                      # Site packages (55 sites)
+└── sites/                      # Site packages (61 sites)
     ├── github/                 #   L1 (no x-openweb)
     ├── instagram/              #   L2 (cookie_session + cookie_to_header)
     ├── youtube/                #   L2 (innertube API)
     ├── discord/                #   L2 (webpack_module_walk, page transport)
     ├── whatsapp/               #   L3 adapter (Meta require() module system)
     ├── telegram/               #   L3 adapter (teact global state)
-    └── ...                     #   50 more sites
+    └── ...                     #   55 more sites
 ```
 
 ---

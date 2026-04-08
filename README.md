@@ -8,7 +8,7 @@
 [![npm version](https://img.shields.io/npm/v/@openweb-org/openweb)](https://www.npmjs.com/package/@openweb-org/openweb)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[Quick Start](#quick-start) · [Install](#install) · [How It Works](#how-it-works) · [Discover & Compile](#discover--compile) · [Sites](#sites) · [Docs](#documentation)
+[Quick Start](#quick-start) · [Install](#install) · [How It Works](#how-it-works) · [Discover](#discover) · [Sites](#sites) · [Docs](#documentation)
 
 </div>
 
@@ -21,7 +21,7 @@ Browser automation clicks buttons, reads pixels, and burns tokens. OpenWeb calls
 - **Predictable, structured output** — Typed params, response schemas, and examples for every operation. JSON in, JSON out.
 - **Safe by default** — Read, write, delete, and transact operations gated by permission tiers. SSRF protection on every request.
 - **Auth that just works** — Cookies, JWT, CSRF, request signing, exchange chains — auto-resolved per request. You never touch tokens.
-- **Any site, any time** — 50+ sites out of the box across social, commerce, content, travel, finance, and more. Not listed? [Add it](#discover--compile).
+- **Any site, any time** — 50+ sites out of the box across social, commerce, content, travel, finance, and more. Not listed? [Add it](#discover).
 
 ## Quick Start
 
@@ -106,23 +106,23 @@ The runtime reads the spec → builds the request (URL, headers, auth, CSRF) →
 
 Auth, CSRF, and transport are declared in the spec via `x-openweb` extensions. Callers never configure them.
 
-## Discover & Compile
+## Discover
 
 Any website can become an OpenWeb site — just ask the agent skill:
 
 ```
-/openweb Discover and compile the search function on example.com.
+/openweb Discover and add the search function on example.com.
 ```
 
 The agent drives the entire process — you stay in chat to make decisions when needed. All 50+ built-in sites were created this way.
 
 ```
-Frame intents → Capture browser traffic → Analyze & detect auth → Generate typed spec → Verify → Learn
+Frame intents → Probe site stack → Route per family → Capture & compile (if needed) → Build package → Verify → Learn
 ```
 
-Each step involves agent judgment: choosing the right auth pattern, deciding if coverage is sufficient, curating operation names, and running independent verification. The knowledge base grows with every site compiled.
+The probe step front-loads transport and data-source discovery — the agent learns whether to use direct HTTP, browser fetch, SSR extraction, or adapter/intercept *before* committing to capture. Each step involves agent judgment: choosing the right auth pattern, deciding if coverage is sufficient, curating operation names, and running independent verification. The knowledge base grows with every site added.
 
-See [`skill/openweb/references/discover.md`](skill/openweb/references/discover.md) and [`skill/openweb/references/compile.md`](skill/openweb/references/compile.md) for the full workflow.
+See [`skill/openweb/add-site/guide.md`](skill/openweb/add-site/guide.md) for the full workflow.
 
 ## Sites
 

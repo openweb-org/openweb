@@ -107,6 +107,7 @@ All paths relative to `skill/openweb/`.
 | File | Load when |
 |---|---|
 | `add-site/guide.md` | Entry point for add/expand workflow |
+| `add-site/probe.md` | Probe step: CDP browser-side discovery |
 | `add-site/capture.md` | Capture step: recording browser traffic |
 | `add-site/review.md` | Review step: reading analysis-summary.json |
 | `add-site/curate-operations.md` | Curate: naming, noise, params, permissions |
