@@ -44,11 +44,17 @@ openweb docker-hub exec getTags '{"namespace":"library","name":"python","page_si
 openweb docker-hub exec getTags '{"namespace":"library","name":"node","ordering":"-last_updated","page_size":25}'
 ```
 
+## Known Issues
+- Official images require `library` as the namespace parameter.
+- Search results use `repo_name` which may be `library/nginx` or `user/repo` format.
+- Tag `full_size` may be 0 for multi-arch manifests; check `images[].size` for per-architecture sizes.
+- Pagination defaults vary: search defaults to 25, tags defaults to 10.
+
 ---
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 Public REST API on `hub.docker.com`. Versioned at `/v2/`.
 - Search: `/v2/search/repositories/`
 - Repository detail: `/v2/repositories/{namespace}/{name}/`
@@ -56,14 +62,8 @@ Public REST API on `hub.docker.com`. Versioned at `/v2/`.
 
 Official Docker images use the `library` namespace (e.g., `library/nginx`).
 
-## Auth
+### Auth
 No auth required for public repository reads.
 
-## Transport
-`node` -- direct HTTP. No bot detection on API endpoints.
-
-## Known Issues
-- Official images require `library` as the namespace parameter.
-- Search results use `repo_name` which may be `library/nginx` or `user/repo` format.
-- Tag `full_size` may be 0 for multi-arch manifests; check `images[].size` for per-architecture sizes.
-- Pagination defaults vary: search defaults to 25, tags defaults to 10.
+### Transport
+`node` — direct HTTP. No bot detection on API endpoints.

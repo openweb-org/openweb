@@ -315,5 +315,6 @@ paths:
                                   - string
                                   - "null"
                                 description: "ISO 8601 timestamp of last push"
+                            required: [architecture, os, digest, size]
                       required: [name, last_updated]
                 required: [count, results]
