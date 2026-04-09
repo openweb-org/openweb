@@ -74,22 +74,22 @@ openweb discord exec addReaction '{"channelId":"CHANNEL_ID","messageId":"MSG_ID"
 Everything below is for discover/compile operators and deep debugging.
 Not needed for basic site usage.
 
-## API Architecture
+### API Architecture
 - REST API on `discord.com/api/v9/`
 - JSON responses
 - Thick SPA — all data via internal API, no SSR
 
-## Auth
+### Auth
 - **Type:** `webpack_module_walk` — token stored in webpack module cache
 - **Chunk global:** `webpackChunkdiscord_app`
 - **app_path:** `/channels/@me` — webpack bundle only loads on the app page, not the landing page
 - **Transport must be `page`** — token cannot be extracted without browser context
 
-## Transport
+### Transport
 - `page` transport required (webpack_module_walk auth)
 - Page URL: `https://discord.com/channels/@me`
 
-## Known Issues
+### Known Issues
 - Verify: all ops PASS (schema-level); live exec requires active Discord browser session (webpack_module_walk auth)
 - Bot detection: Low — browser-only SPA, no commercial bot detection
 - Rate limiting: Discord enforces per-route rate limits with `Retry-After` headers

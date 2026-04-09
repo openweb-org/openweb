@@ -28,6 +28,8 @@ paths:
         build:
           stable_id: a1b2c3d4e5f6a7b8
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters: []
       responses:
         "200":
@@ -36,45 +38,64 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - id
+                  - username
+                  - discriminator
                 properties:
                   id:
                     type: string
+                    description: "User snowflake ID."
                   username:
                     type: string
+                    description: "Unique username."
                   global_name:
                     type:
                       - string
                       - "null"
+                    description: "Display name (may differ from username)."
                   avatar:
                     type:
                       - string
                       - "null"
+                    description: "Avatar hash."
                   discriminator:
                     type: string
+                    description: "Legacy 4-digit tag (\"0\" for new username system)."
                   public_flags:
                     type: integer
+                    description: "Public user flags bitfield (staff, partner, etc.)."
                   flags:
                     type: integer
+                    description: "Private user flags bitfield."
                   banner:
                     type:
                       - string
                       - "null"
+                    description: "Profile banner hash."
                   accent_color:
                     type:
                       - integer
                       - "null"
+                    description: "Profile accent color as integer."
                   mfa_enabled:
                     type: boolean
+                    description: "Whether two-factor authentication is enabled."
                   locale:
                     type: string
+                    description: "User locale (e.g. \"en-US\")."
                   premium_type:
                     type: integer
+                    description: "Nitro subscription type (0=none, 1=Classic, 2=Nitro, 3=Basic)."
                   email:
                     type: string
+                    description: "Email address (only visible to the authenticated user)."
                   verified:
                     type: boolean
+                    description: "Whether the email has been verified."
                   bio:
                     type: string
+                    description: "User bio / about me text."
   /api/v9/users/@me/guilds:
     get:
       operationId: listGuilds
@@ -84,6 +105,8 @@ paths:
         build:
           stable_id: b2c3d4e5f6a7b8c9
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters: []
       responses:
         "200":
@@ -94,27 +117,39 @@ paths:
                 type: array
                 items:
                   type: object
+                  required:
+                    - id
+                    - name
+                    - owner
+                    - permissions
                   properties:
                     id:
                       type: string
+                      description: "Guild snowflake ID."
                     name:
                       type: string
+                      description: "Guild name."
                     icon:
                       type:
                         - string
                         - "null"
+                      description: "Guild icon hash."
                     banner:
                       type:
                         - string
                         - "null"
+                      description: "Guild banner hash."
                     owner:
                       type: boolean
+                      description: "Whether the current user owns this guild."
                     permissions:
                       type: string
+                      description: "Permissions bitfield for the current user."
                     features:
                       type: array
                       items:
                         type: string
+                      description: "Enabled guild features (e.g. COMMUNITY, VERIFIED)."
   /api/v9/users/@me/channels:
     get:
       operationId: getDirectMessages
@@ -124,6 +159,8 @@ paths:
         build:
           stable_id: c3d4e5f6a7b8c9d0
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters: []
       responses:
         "200":
@@ -134,34 +171,50 @@ paths:
                 type: array
                 items:
                   type: object
+                  required:
+                    - id
+                    - type
+                    - flags
                   properties:
                     id:
                       type: string
+                      description: "DM channel snowflake ID."
                     type:
                       type: integer
+                      description: "Channel type (1=DM, 3=group DM)."
                     last_message_id:
                       type:
                         - string
                         - "null"
+                      description: "Snowflake ID of the last message in this DM."
                     flags:
                       type: integer
+                      description: "Channel flags bitfield."
                     recipients:
                       type: array
                       items:
                         type: object
+                        required:
+                          - id
+                          - username
                         properties:
                           id:
                             type: string
+                            description: "Recipient user snowflake ID."
                           username:
                             type: string
+                            description: "Recipient username."
                           global_name:
                             type:
                               - string
                               - "null"
+                            description: "Recipient display name."
                           avatar:
                             type:
                               - string
                               - "null"
+                            description: "Recipient avatar hash."
+                      description: "Users in this DM channel."
   /api/v9/guilds/{guildId}:
     get:
       operationId: getGuildInfo
@@ -171,6 +224,8 @@ paths:
         build:
           stable_id: d4e5f6a7b8c9d0e1
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: guildId
           in: path
@@ -186,62 +241,97 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - id
+                  - name
+                  - owner_id
+                  - verification_level
+                  - premium_tier
+                  - nsfw_level
                 properties:
                   id:
                     type: string
+                    description: "Guild snowflake ID."
                   name:
                     type: string
+                    description: "Guild name."
                   icon:
                     type:
                       - string
                       - "null"
+                    description: "Guild icon hash."
                   description:
                     type:
                       - string
                       - "null"
+                    description: "Guild description (Community servers only)."
                   owner_id:
                     type: string
+                    description: "Snowflake ID of the guild owner."
                   region:
                     type: string
+                    description: "Voice region (deprecated, use channel-level overrides)."
                   afk_timeout:
                     type: integer
+                    description: "AFK timeout in seconds."
                   verification_level:
                     type: integer
+                    description: "Verification level required (0=none … 4=very high)."
                   max_members:
                     type: integer
+                    description: "Maximum member count."
                   premium_tier:
                     type: integer
+                    description: "Server boost level (0-3)."
                   premium_subscription_count:
                     type: integer
+                    description: "Number of active boosts."
                   preferred_locale:
                     type: string
+                    description: "Preferred locale for Community servers."
                   nsfw:
                     type: boolean
+                    description: "Whether the guild is marked as NSFW."
                   nsfw_level:
                     type: integer
+                    description: "NSFW level (0=default, 1=explicit, 2=safe, 3=age-restricted)."
                   features:
                     type: array
                     items:
                       type: string
+                    description: "Enabled guild features."
                   roles:
                     type: array
                     items:
                       type: object
+                      required:
+                        - id
+                        - name
+                        - permissions
+                        - position
                       properties:
                         id:
                           type: string
+                          description: "Role snowflake ID."
                         name:
                           type: string
+                          description: "Role name."
                         permissions:
                           type: string
+                          description: "Permissions bitfield."
                         position:
                           type: integer
+                          description: "Role sort position."
                         color:
                           type: integer
+                          description: "Role color as integer (0 = no color)."
                         hoist:
                           type: boolean
+                          description: "Whether the role is displayed separately in the sidebar."
                         mentionable:
                           type: boolean
+                          description: "Whether the role can be mentioned."
+                    description: "Guild roles."
                   emojis:
                     type: array
                     items:
@@ -249,12 +339,17 @@ paths:
                       properties:
                         id:
                           type: string
+                          description: "Emoji snowflake ID."
                         name:
                           type: string
+                          description: "Emoji name."
                         animated:
                           type: boolean
+                          description: "Whether the emoji is animated."
                         available:
                           type: boolean
+                          description: "Whether the emoji is available for use."
+                    description: "Custom emojis."
                   stickers:
                     type: array
                     items:
@@ -262,12 +357,17 @@ paths:
                       properties:
                         id:
                           type: string
+                          description: "Sticker snowflake ID."
                         name:
                           type: string
+                          description: "Sticker name."
                         type:
                           type: integer
+                          description: "Sticker type (1=standard, 2=guild)."
                         format_type:
                           type: integer
+                          description: "Sticker format (1=PNG, 2=APNG, 3=Lottie, 4=GIF)."
+                    description: "Custom stickers."
   /api/v9/guilds/{guildId}/channels:
     get:
       operationId: listGuildChannels
@@ -277,6 +377,8 @@ paths:
         build:
           stable_id: e5f6a7b8c9d0e1f2
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: guildId
           in: path
@@ -294,48 +396,76 @@ paths:
                 type: array
                 items:
                   type: object
+                  required:
+                    - id
+                    - type
+                    - name
+                    - guild_id
+                    - position
+                    - flags
                   properties:
                     id:
                       type: string
+                      description: "Channel snowflake ID."
                     type:
                       type: integer
+                      description: "Channel type (0=text, 2=voice, 4=category, 5=announcement, 13=stage, 15=forum)."
                     name:
                       type: string
+                      description: "Channel name."
                     guild_id:
                       type: string
+                      description: "Parent guild snowflake ID."
                     position:
                       type: integer
+                      description: "Sorting position."
                     parent_id:
                       type:
                         - string
                         - "null"
+                      description: "Parent category channel ID."
                     topic:
                       type:
                         - string
                         - "null"
+                      description: "Channel topic."
                     nsfw:
                       type: boolean
+                      description: "Whether the channel is NSFW."
                     rate_limit_per_user:
                       type: integer
+                      description: "Slowmode delay in seconds (0 = disabled)."
                     flags:
                       type: integer
+                      description: "Channel flags bitfield."
                     permission_overwrites:
                       type: array
                       items:
                         type: object
+                        required:
+                          - id
+                          - type
+                          - allow
+                          - deny
                         properties:
                           id:
                             type: string
+                            description: "Role or user snowflake ID."
                           type:
                             type: integer
+                            description: "Overwrite type (0=role, 1=member)."
                           allow:
                             type: string
+                            description: "Allowed permissions bitfield."
                           deny:
                             type: string
+                            description: "Denied permissions bitfield."
+                      description: "Permission overwrite entries."
                     last_message_id:
                       type:
                         - string
                         - "null"
+                      description: "Snowflake ID of the last message."
   /api/v9/guilds/{guildId}/roles:
     get:
       operationId: getGuildRoles
@@ -345,6 +475,8 @@ paths:
         build:
           stable_id: f6a7b8c9d0e1f2a3
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: guildId
           in: path
@@ -362,29 +494,49 @@ paths:
                 type: array
                 items:
                   type: object
+                  required:
+                    - id
+                    - name
+                    - permissions
+                    - position
+                    - color
+                    - hoist
+                    - managed
+                    - mentionable
+                    - flags
                   properties:
                     id:
                       type: string
+                      description: "Role snowflake ID."
                     name:
                       type: string
+                      description: "Role name."
                     description:
                       type:
                         - string
                         - "null"
+                      description: "Role description."
                     permissions:
                       type: string
+                      description: "Permissions bitfield."
                     position:
                       type: integer
+                      description: "Role sort position."
                     color:
                       type: integer
+                      description: "Role color as integer (0 = no color)."
                     hoist:
                       type: boolean
+                      description: "Whether the role is displayed separately in the sidebar."
                     managed:
                       type: boolean
+                      description: "Whether the role is managed by an integration."
                     mentionable:
                       type: boolean
+                      description: "Whether the role can be mentioned by anyone."
                     flags:
                       type: integer
+                      description: "Role flags bitfield."
   /api/v9/guilds/{guildId}/messages/search:
     get:
       operationId: searchMessages
@@ -394,6 +546,8 @@ paths:
         build:
           stable_id: a7b8c9d0e1f2a3b4
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: guildId
           in: path
@@ -416,41 +570,65 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - total_results
+                  - messages
                 properties:
                   total_results:
                     type: integer
+                    description: "Total number of matching messages."
                   messages:
                     type: array
                     items:
                       type: array
                       items:
                         type: object
+                        required:
+                          - id
+                          - content
+                          - author
+                          - channel_id
+                          - timestamp
                         properties:
                           id:
                             type: string
+                            description: "Message snowflake ID."
                           content:
                             type: string
+                            description: "Message text content."
                           author:
                             type: object
+                            required:
+                              - id
+                              - username
                             properties:
                               id:
                                 type: string
+                                description: "Author user snowflake ID."
                               username:
                                 type: string
+                                description: "Author username."
                               global_name:
                                 type:
                                   - string
                                   - "null"
+                                description: "Author display name."
                               avatar:
                                 type:
                                   - string
                                   - "null"
+                                description: "Author avatar hash."
+                            description: "Message author."
                           channel_id:
                             type: string
+                            description: "Channel the message belongs to."
                           timestamp:
                             type: string
+                            description: "ISO 8601 timestamp."
                           hit:
                             type: boolean
+                            description: "Whether this message is the search hit (vs. context)."
+                    description: "Groups of messages — each group is a hit with surrounding context."
   /api/v9/channels/{channelId}:
     get:
       operationId: getChannelInfo
@@ -460,6 +638,8 @@ paths:
         build:
           stable_id: c680f0f6f388df44
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: channelId
           in: path
@@ -475,46 +655,73 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - id
+                  - type
+                  - name
+                  - position
+                  - flags
                 properties:
                   id:
                     type: string
+                    description: "Channel snowflake ID."
                   type:
                     type: integer
+                    description: "Channel type (0=text, 2=voice, 4=category, etc.)."
                   guild_id:
                     type: string
+                    description: "Parent guild snowflake ID."
                   name:
                     type: string
+                    description: "Channel name."
                   topic:
                     type:
                       - string
                       - "null"
+                    description: "Channel topic."
                   position:
                     type: integer
+                    description: "Sorting position."
                   last_message_id:
                     type: string
+                    description: "Snowflake ID of the last message."
                   flags:
                     type: integer
+                    description: "Channel flags bitfield."
                   parent_id:
                     type:
                       - string
                       - "null"
+                    description: "Parent category channel ID."
                   rate_limit_per_user:
                     type: integer
+                    description: "Slowmode delay in seconds (0 = disabled)."
                   nsfw:
                     type: boolean
+                    description: "Whether the channel is NSFW."
                   permission_overwrites:
                     type: array
                     items:
                       type: object
+                      required:
+                        - id
+                        - type
+                        - allow
+                        - deny
                       properties:
                         id:
                           type: string
+                          description: "Role or user snowflake ID."
                         type:
                           type: integer
+                          description: "Overwrite type (0=role, 1=member)."
                         allow:
                           type: string
+                          description: "Allowed permissions bitfield."
                         deny:
                           type: string
+                          description: "Denied permissions bitfield."
+                    description: "Permission overwrite entries."
   /api/v9/channels/{channelId}/messages:
     post:
       operationId: sendMessage
@@ -524,6 +731,8 @@ paths:
         build:
           stable_id: e1a2b3c4d5e6f708
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: channelId
           in: path
@@ -558,48 +767,79 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - id
+                  - type
+                  - channel_id
+                  - content
+                  - author
+                  - timestamp
+                  - flags
+                  - pinned
+                  - mention_everyone
+                  - tts
                 properties:
                   id:
                     type: string
+                    description: "Message snowflake ID."
                   type:
                     type: integer
+                    description: "Message type (0=default, 19=reply, etc.)."
                   channel_id:
                     type: string
+                    description: "Channel the message was sent to."
                   content:
                     type: string
+                    description: "Message text content."
                   author:
                     type: object
+                    required:
+                      - id
+                      - username
                     properties:
                       id:
                         type: string
+                        description: "Author user snowflake ID."
                       username:
                         type: string
+                        description: "Author username."
                       discriminator:
                         type: string
+                        description: "Legacy 4-digit tag."
                       global_name:
                         type:
                           - string
                           - "null"
+                        description: "Author display name."
                       avatar:
                         type:
                           - string
                           - "null"
+                        description: "Author avatar hash."
                       public_flags:
                         type: integer
+                        description: "Public user flags bitfield."
+                    description: "Message author."
                   timestamp:
                     type: string
+                    description: "ISO 8601 creation timestamp."
                   edited_timestamp:
                     type:
                       - string
                       - "null"
+                    description: "ISO 8601 last-edit timestamp."
                   flags:
                     type: integer
+                    description: "Message flags bitfield."
                   pinned:
                     type: boolean
+                    description: "Whether the message is pinned."
                   mention_everyone:
                     type: boolean
+                    description: "Whether @everyone was mentioned."
                   tts:
                     type: boolean
+                    description: "Whether this is a TTS message."
                   mentions:
                     type: array
                     items:
@@ -607,24 +847,31 @@ paths:
                       properties:
                         id:
                           type: string
+                          description: "Mentioned user snowflake ID."
                         username:
                           type: string
+                          description: "Mentioned user's username."
+                    description: "Users mentioned in the message."
                   mention_roles:
                     type: array
                     items:
                       type: string
+                    description: "Role IDs mentioned in the message."
                   attachments:
                     type: array
                     items:
                       type: object
+                    description: "File attachments."
                   embeds:
                     type: array
                     items:
                       type: object
+                    description: "Embedded content."
                   components:
                     type: array
                     items:
                       type: object
+                    description: "Message components (buttons, selects, etc.)."
     get:
       operationId: getChannelMessages
       summary: "Get messages in a channel — content, author, attachments, embeds, reactions, timestamps"
@@ -633,6 +880,8 @@ paths:
         build:
           stable_id: d4c95404d9be792f
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: channelId
           in: path
@@ -675,48 +924,79 @@ paths:
                 type: array
                 items:
                   type: object
+                  required:
+                    - id
+                    - type
+                    - channel_id
+                    - content
+                    - author
+                    - timestamp
+                    - flags
+                    - pinned
+                    - mention_everyone
+                    - tts
                   properties:
                     id:
                       type: string
+                      description: "Message snowflake ID."
                     type:
                       type: integer
+                      description: "Message type (0=default, 19=reply, etc.)."
                     channel_id:
                       type: string
+                      description: "Channel the message belongs to."
                     content:
                       type: string
+                      description: "Message text content."
                     author:
                       type: object
+                      required:
+                        - id
+                        - username
                       properties:
                         id:
                           type: string
+                          description: "Author user snowflake ID."
                         username:
                           type: string
+                          description: "Author username."
                         discriminator:
                           type: string
+                          description: "Legacy 4-digit tag."
                         global_name:
                           type:
                             - string
                             - "null"
+                          description: "Author display name."
                         avatar:
                           type:
                             - string
                             - "null"
+                          description: "Author avatar hash."
                         public_flags:
                           type: integer
+                          description: "Public user flags bitfield."
+                      description: "Message author."
                     timestamp:
                       type: string
+                      description: "ISO 8601 creation timestamp."
                     edited_timestamp:
                       type:
                         - string
                         - "null"
+                      description: "ISO 8601 last-edit timestamp."
                     flags:
                       type: integer
+                      description: "Message flags bitfield."
                     pinned:
                       type: boolean
+                      description: "Whether the message is pinned."
                     mention_everyone:
                       type: boolean
+                      description: "Whether @everyone was mentioned."
                     tts:
                       type: boolean
+                      description: "Whether this is a TTS message."
                     mentions:
                       type: array
                       items:
@@ -724,12 +1004,16 @@ paths:
                         properties:
                           id:
                             type: string
+                            description: "Mentioned user snowflake ID."
                           username:
                             type: string
+                            description: "Mentioned user's username."
+                      description: "Users mentioned in the message."
                     mention_roles:
                       type: array
                       items:
                         type: string
+                      description: "Role IDs mentioned in the message."
                     attachments:
                       type: array
                       items:
@@ -737,14 +1021,20 @@ paths:
                         properties:
                           id:
                             type: string
+                            description: "Attachment snowflake ID."
                           filename:
                             type: string
+                            description: "File name."
                           url:
                             type: string
+                            description: "Download URL."
                           size:
                             type: integer
+                            description: "File size in bytes."
                           content_type:
                             type: string
+                            description: "MIME type."
+                      description: "File attachments."
                     embeds:
                       type: array
                       items:
@@ -752,12 +1042,17 @@ paths:
                         properties:
                           type:
                             type: string
+                            description: "Embed type (rich, image, video, link, etc.)."
                           title:
                             type: string
+                            description: "Embed title."
                           url:
                             type: string
+                            description: "Embed URL."
                           description:
                             type: string
+                            description: "Embed description text."
+                      description: "Embedded content (links, media, rich)."
                     components:
                       type: array
                       items:
@@ -765,6 +1060,8 @@ paths:
                         properties:
                           type:
                             type: integer
+                            description: "Component type (1=action row, 2=button, 3=select)."
+                      description: "Message components (buttons, selects, etc.)."
                     reactions:
                       type: array
                       items:
@@ -777,12 +1074,18 @@ paths:
                                 type:
                                   - string
                                   - "null"
+                                description: "Custom emoji snowflake ID (null for Unicode)."
                               name:
                                 type: string
+                                description: "Emoji name or Unicode character."
+                            description: "Reaction emoji."
                           count:
                             type: integer
+                            description: "Number of times this emoji was used."
                           me:
                             type: boolean
+                            description: "Whether the current user reacted."
+                      description: "Reactions on the message."
   /api/v9/channels/{channelId}/pins:
     get:
       operationId: getPinnedMessages
@@ -792,6 +1095,8 @@ paths:
         build:
           stable_id: b8c9d0e1f2a3b4c5
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: channelId
           in: path
@@ -812,45 +1117,62 @@ paths:
                   properties:
                     id:
                       type: string
+                      description: "Message snowflake ID."
                     type:
                       type: integer
+                      description: "Message type (0=default, 19=reply, etc.)."
                     channel_id:
                       type: string
+                      description: "Channel the message belongs to."
                     content:
                       type: string
+                      description: "Message text content."
                     author:
                       type: object
                       properties:
                         id:
                           type: string
+                          description: "Author user snowflake ID."
                         username:
                           type: string
+                          description: "Author username."
                         discriminator:
                           type: string
+                          description: "Legacy 4-digit tag."
                         global_name:
                           type:
                             - string
                             - "null"
+                          description: "Author display name."
                         avatar:
                           type:
                             - string
                             - "null"
+                          description: "Author avatar hash."
                         public_flags:
                           type: integer
+                          description: "Public user flags bitfield."
+                      description: "Message author."
                     timestamp:
                       type: string
+                      description: "ISO 8601 creation timestamp."
                     edited_timestamp:
                       type:
                         - string
                         - "null"
+                      description: "ISO 8601 last-edit timestamp."
                     flags:
                       type: integer
+                      description: "Message flags bitfield."
                     pinned:
                       type: boolean
+                      description: "Whether the message is pinned."
                     mention_everyone:
                       type: boolean
+                      description: "Whether @everyone was mentioned."
                     tts:
                       type: boolean
+                      description: "Whether this is a TTS message."
                     mentions:
                       type: array
                       items:
@@ -858,12 +1180,16 @@ paths:
                         properties:
                           id:
                             type: string
+                            description: "Mentioned user snowflake ID."
                           username:
                             type: string
+                            description: "Mentioned user's username."
+                      description: "Users mentioned in the message."
                     mention_roles:
                       type: array
                       items:
                         type: string
+                      description: "Role IDs mentioned in the message."
                     attachments:
                       type: array
                       items:
@@ -871,14 +1197,20 @@ paths:
                         properties:
                           id:
                             type: string
+                            description: "Attachment snowflake ID."
                           filename:
                             type: string
+                            description: "File name."
                           url:
                             type: string
+                            description: "Download URL."
                           size:
                             type: integer
+                            description: "File size in bytes."
                           content_type:
                             type: string
+                            description: "MIME type."
+                      description: "File attachments."
                     embeds:
                       type: array
                       items:
@@ -886,12 +1218,17 @@ paths:
                         properties:
                           type:
                             type: string
+                            description: "Embed type (rich, image, video, link, etc.)."
                           title:
                             type: string
+                            description: "Embed description."
                           url:
                             type: string
+                            description: "Embed URL."
                           description:
                             type: string
+                            description: "Embed description text."
+                      description: "Embedded content."
                     components:
                       type: array
                       items:
@@ -899,6 +1236,8 @@ paths:
                         properties:
                           type:
                             type: integer
+                            description: "Component type (1=action row, 2=button, 3=select)."
+                      description: "Message components."
                     reactions:
                       type: array
                       items:
@@ -911,12 +1250,18 @@ paths:
                                 type:
                                   - string
                                   - "null"
+                                description: "Custom emoji snowflake ID (null for Unicode)."
                               name:
                                 type: string
+                                description: "Emoji name or Unicode character."
+                            description: "Reaction emoji."
                           count:
                             type: integer
+                            description: "Number of times this emoji was used."
                           me:
                             type: boolean
+                            description: "Whether the current user reacted."
+                      description: "Reactions on the message."
   /api/v9/channels/{channelId}/messages/{messageId}/reactions/{emoji}/@me:
     put:
       operationId: addReaction
@@ -926,6 +1271,8 @@ paths:
         build:
           stable_id: f2b3c4d5e6f70819
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: channelId
           in: path
