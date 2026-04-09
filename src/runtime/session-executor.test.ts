@@ -1154,8 +1154,8 @@ describe('executeSessionHttp', () => {
     expect((fetchMock as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
   })
 
-  // CR-18: Non-JSON response test
-  it('throws OpenWebError when response is not valid JSON', async () => {
+  // CR-18: Non-JSON response test — HTML is now returned as raw text (for extraction sites)
+  it('returns raw HTML body when response is text/html', async () => {
     const browser = mockBrowser([
       { name: 'sessionid', value: 'sess_abc' },
       { name: 'csrftoken', value: 'csrf_xyz' },
@@ -1169,8 +1169,7 @@ describe('executeSessionHttp', () => {
     ) as unknown as typeof fetch
 
     const spec = instagramSpec()
-    await expect(
-      executeSessionHttp(
+    const result = await executeSessionHttp(
         browser,
         spec,
         '/feed/timeline/',
@@ -1178,10 +1177,9 @@ describe('executeSessionHttp', () => {
         spec.paths?.['/feed/timeline/']?.get ?? ({} as OpenApiOperation),
         {},
         { fetchImpl: fetchMock, ssrfValidator: async () => {} },
-      ),
-    ).rejects.toMatchObject({
-      payload: { message: expect.stringContaining('not valid JSON') },
-    })
+      )
+    expect(result.status).toBe(200)
+    expect(result.body).toBe('<html><body>Not Found</body></html>')
   })
 })
 

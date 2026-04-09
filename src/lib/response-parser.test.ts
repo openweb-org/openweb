@@ -8,8 +8,8 @@ describe('parseResponseBody', () => {
     expect(parseResponseBody('{"ok":true}', 'application/json', 200)).toEqual({ ok: true })
   })
 
-  it('throws on invalid JSON', () => {
-    expect(() => parseResponseBody('<html>', 'text/html', 200)).toThrow(OpenWebError)
+  it('returns raw text for HTML content', () => {
+    expect(parseResponseBody('<html>', 'text/html', 200)).toBe('<html>')
   })
 
   it('parses JSON even without content-type', () => {
