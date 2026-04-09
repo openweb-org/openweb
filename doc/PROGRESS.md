@@ -1,3 +1,23 @@
+## 2026-04-09: Polish spotify site package
+
+**What changed:**
+- Added `required` arrays to all response objects across 8 operations (4 original + 4 new)
+- Added `description` on every property at every nesting level — no bare `type: object`
+- Added `example` values to all parameters (searchTerm, uri, userId, limit, offset)
+- Added `verified: true` and `signals: [adapter-verified]` to all 8 build sections
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added `replay_safety: safe_read` to all 8 example files
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions
+
+**Key files:**
+- `src/sites/spotify/openapi.yaml` — schema hardening
+- `src/sites/spotify/DOC.md` — heading level fix
+- `src/sites/spotify/examples/*.example.json` — replay_safety
+
+**Verification:** pnpm build, pnpm dev verify spotify
+
 ## 2026-04-09: Polish instagram site package
 
 **What changed:**

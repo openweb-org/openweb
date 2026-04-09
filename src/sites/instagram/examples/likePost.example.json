@@ -1,0 +1,16 @@
+{
+  "operation_id": "likePost",
+  "method": "post",
+  "replay_safety": "unsafe_write",
+  "cases": [
+    {
+      "input": {
+        "id": "3865890235180097425"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

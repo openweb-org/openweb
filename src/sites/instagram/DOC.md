@@ -82,24 +82,24 @@ openweb instagram exec searchUsers '{"query":"nasa"}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - REST API v1 at `https://www.instagram.com/api/v1/`
 - Search at `https://www.instagram.com/web/search/topsearch/`
 - Also has GraphQL at `/graphql/query/` and `/api/graphql` (not used in this package)
 - All JSON responses
 
-## Auth
+### Auth
 - `cookie_session` — session cookies from logged-in browser (`sessionid`, `ds_user_id`, `csrftoken`)
 - CSRF: `csrftoken` cookie → `x-csrftoken` header (POST/PUT/DELETE only)
 - Additional headers sent automatically: `x-ig-app-id`, `x-ig-www-claim`
 
-## Transport
+### Transport
 - `page` — Meta bot detection blocks direct node HTTP requests
 - Non-adapter ops: requests execute via page transport (browser-context fetch)
 - `getUserPosts`: adapter (`instagram-api`) composes profile lookup + feed fetch in browser context via `pageFetch`
 - Page URL: `https://www.instagram.com/`
 
-## Known Issues
+### Known Issues
 - Meta bot detection: aggressive TLS fingerprinting, blocks all non-browser requests
 - Rate limiting on API endpoints — avoid rapid sequential calls
 - Requires logged-in session for all API endpoints

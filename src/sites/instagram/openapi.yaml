@@ -470,29 +470,41 @@ paths:
                 properties:
                   user:
                     type: object
+                    description: Resolved user from profile lookup
                     properties:
                       id:
                         type: string
+                        description: Numeric user ID
                       username:
                         type: string
+                        description: Instagram handle
                       full_name:
                         type: string
+                        description: Display name
+                    required:
+                      - id
+                      - username
                   num_results:
                     type: integer
+                    description: Number of posts returned in this page
                   more_available:
                     type: boolean
+                    description: Whether more posts exist beyond this page
                   next_max_id:
                     type: string
-                    description: Cursor for next page
+                    description: Cursor for next page — pass as max_id
                   items:
                     type: array
+                    description: Post items in reverse-chronological order
                     items:
                       type: object
                       properties:
                         id:
                           type: string
+                          description: Composite media ID (pk_userId)
                         pk:
                           type: string
+                          description: Numeric media PK — use as id in getPost, getPostComments, likePost
                         code:
                           type: string
                           description: Shortcode for URL (instagram.com/p/{code}/)
@@ -501,37 +513,61 @@ paths:
                           description: "1=photo, 2=video, 8=carousel"
                         caption:
                           type: object
+                          description: Post caption
                           properties:
                             text:
                               type: string
+                              description: Caption text content
                         like_count:
                           type: integer
+                          description: Number of likes
                         comment_count:
                           type: integer
+                          description: Number of comments
                         taken_at:
                           type: integer
+                          description: Unix timestamp when posted
                         image_versions2:
                           type: object
+                          description: Image renditions at multiple resolutions
                           properties:
                             candidates:
                               type: array
+                              description: Available image sizes sorted by quality
                               items:
                                 type: object
+                                description: Single image rendition
                                 properties:
                                   width:
                                     type: integer
+                                    description: Width in pixels
                                   height:
                                     type: integer
+                                    description: Height in pixels
                                   url:
                                     type: string
                                     format: uri
+                                    description: CDN URL for this rendition
+                                required:
+                                  - width
+                                  - height
+                                  - url
                         user:
                           type: object
+                          description: Post author
                           properties:
                             pk:
                               type: string
+                              description: Numeric user ID
                             username:
                               type: string
+                              description: Instagram handle
+                          required:
+                            - pk
+                            - username
+                      required:
+                        - pk
+                        - media_type
                 required:
                   - num_results
                   - items
@@ -584,42 +620,65 @@ paths:
                 properties:
                   comments:
                     type: array
+                    description: Comment list ordered by recency
                     items:
                       type: object
+                      description: Single comment
                       properties:
                         pk:
                           type: string
+                          description: Comment primary key
                         text:
                           type: string
+                          description: Comment text
                         created_at:
                           type: integer
+                          description: Unix timestamp
                         user:
                           type: object
+                          description: Comment author
                           properties:
                             pk:
                               type: [string, integer]
+                              description: "User ID — string for newer accounts, integer for older ones"
                             username:
                               type: string
+                              description: Instagram handle
                             full_name:
                               type: string
+                              description: Display name
                             profile_pic_url:
                               type: string
                               format: uri
+                              description: Profile picture URL
                             is_verified:
                               type: boolean
+                              description: Blue-check verification status
+                          required:
+                            - pk
+                            - username
                         comment_like_count:
                           type: integer
+                          description: Number of likes on this comment
                         child_comment_count:
                           type: integer
+                          description: Number of threaded replies
+                      required:
+                        - pk
+                        - text
+                        - user
                   comment_count:
                     type: integer
+                    description: Total comments on the post
                   has_more_comments:
                     type: boolean
+                    description: Whether more comments exist
                   next_min_id:
                     type: string
-                    description: Cursor for next page of comments
+                    description: Cursor for next page — pass as min_id
                   status:
                     type: string
+                    description: API status
                 required:
                   - comments
                   - status
@@ -659,66 +718,111 @@ paths:
                 properties:
                   reel:
                     type: ["null", object]
+                    description: "Story reel — null if user has no active stories"
                     properties:
                       id:
                         type: string
+                        description: Reel ID (matches user ID)
                       items:
                         type: array
+                        description: Story items in chronological order
                         items:
                           type: object
+                          description: Single story item
                           properties:
                             id:
                               type: string
+                              description: Composite story ID
                             pk:
                               type: string
+                              description: Numeric story PK
                             media_type:
                               type: integer
                               description: "1=photo, 2=video"
                             taken_at:
                               type: integer
+                              description: Unix timestamp when posted
                             expiring_at:
                               type: integer
+                              description: Unix timestamp when story expires (24h after taken_at)
                             image_versions2:
                               type: object
+                              description: Image renditions at multiple resolutions
                               properties:
                                 candidates:
                                   type: array
+                                  description: Available image sizes
                                   items:
                                     type: object
+                                    description: Single image rendition
                                     properties:
                                       width:
                                         type: integer
+                                        description: Width in pixels
                                       height:
                                         type: integer
+                                        description: Height in pixels
                                       url:
                                         type: string
                                         format: uri
+                                        description: CDN URL
+                                    required:
+                                      - width
+                                      - height
+                                      - url
                             video_versions:
                               type: array
+                              description: Video renditions (present when media_type=2)
                               items:
                                 type: object
+                                description: Single video rendition
                                 properties:
                                   width:
                                     type: integer
+                                    description: Width in pixels
                                   height:
                                     type: integer
+                                    description: Height in pixels
                                   url:
                                     type: string
                                     format: uri
+                                    description: CDN URL
+                                required:
+                                  - width
+                                  - height
+                                  - url
+                          required:
+                            - pk
+                            - media_type
+                            - taken_at
+                            - expiring_at
                       user:
                         type: object
+                        description: Story owner
                         properties:
                           pk:
                             type: string
+                            description: Numeric user ID
                           username:
                             type: string
+                            description: Instagram handle
                           full_name:
                             type: string
+                            description: Display name
                           profile_pic_url:
                             type: string
                             format: uri
+                            description: Profile picture URL
+                        required:
+                          - pk
+                          - username
+                    required:
+                      - id
+                      - items
+                      - user
                   status:
                     type: string
+                    description: API status
                 required:
                   - status
   /api/v1/web/likes/{id}/like/:
@@ -757,5 +861,6 @@ paths:
                 properties:
                   status:
                     type: string
+                    description: "API status — \"ok\" on success"
                 required:
                   - status
