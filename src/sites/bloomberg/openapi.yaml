@@ -44,10 +44,13 @@ paths:
                       description: Bloomberg ticker ID (e.g. "SPX:IND", "CCMP:IND", "CL1:COM").
                     name:
                       type: string
+                      description: Full security name.
                     longName:
                       type: [string, 'null']
+                      description: Extended security name.
                     shortName:
                       type: string
+                      description: Abbreviated security name (display label).
                     percentChange1Day:
                       type: [number, 'null']
                       description: Daily percent change.
@@ -58,6 +61,7 @@ paths:
                       description: Yield for bonds, null for equities/commodities.
                     realTimeTickerDescription:
                       type: [string, 'null']
+                      description: Real-time ticker description text.
   /news-headlines:
     get:
       operationId: getNewsHeadlines
@@ -117,41 +121,57 @@ paths:
                 properties:
                   count:
                     type: integer
+                    description: Total number of headlines returned.
                   items:
                     type: array
+                    description: Array of headline objects.
                     items:
                       type: object
                       required: [id, headline]
                       properties:
                         id:
                           type: string
+                          description: Story identifier.
                         headline:
                           type: string
+                          description: Story headline text.
                         abstract:
                           type: [string, 'null']
+                          description: Story summary or lead paragraph.
                         url:
                           type: [string, 'null']
+                          description: Relative URL to full story.
                         publishedAt:
                           type: [string, 'null']
+                          description: ISO 8601 publication timestamp.
                         updatedAt:
                           type: [string, 'null']
+                          description: ISO 8601 last update timestamp.
                         byline:
                           type: [string, 'null']
+                          description: Author byline.
                         brand:
                           type: [string, 'null']
+                          description: Bloomberg brand or section label.
                         type:
                           type: [string, 'null']
+                          description: Content type (e.g. "article", "video").
                         imageUrl:
                           type: [string, 'null']
+                          description: Thumbnail image URL.
                         topics:
                           type: array
+                          description: Associated topic tags.
                           items:
                             type: object
+                            required: [name]
                             properties:
                               name:
                                 type: string
+                                description: Topic name.
                               url:
                                 type: [string, 'null']
+                                description: Topic page URL.
   /latest-news:
     get:
       operationId: getLatestNews
@@ -202,26 +222,35 @@ paths:
                 properties:
                   count:
                     type: integer
+                    description: Total number of stories returned.
                   items:
                     type: array
+                    description: Array of breaking news stories.
                     items:
                       type: object
                       required: [id, headline]
                       properties:
                         id:
                           type: string
+                          description: Story identifier.
                         headline:
                           type: string
+                          description: Story headline text.
                         abstract:
                           type: [string, 'null']
+                          description: Story summary.
                         url:
                           type: [string, 'null']
+                          description: Relative URL to full story.
                         publishedAt:
                           type: [string, 'null']
+                          description: ISO 8601 publication timestamp.
                         byline:
                           type: [string, 'null']
+                          description: Author byline.
                         brand:
                           type: [string, 'null']
+                          description: Bloomberg brand or section label.
   /search:
     get:
       operationId: searchBloomberg
@@ -272,6 +301,7 @@ paths:
           schema:
             type: string
           description: Search query (ticker, company name, topic).
+          example: artificial intelligence
       responses:
         '200':
           description: Success.
@@ -279,26 +309,36 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [count, items]
                 properties:
                   count:
                     type: integer
+                    description: Total number of search results.
                   items:
                     type: array
+                    description: Array of search result objects.
                     items:
                       type: object
+                      required: [id, headline]
                       properties:
                         id:
                           type: string
+                          description: Result identifier.
                         headline:
                           type: string
+                          description: Result headline text.
                         abstract:
                           type: [string, 'null']
+                          description: Result summary.
                         url:
                           type: [string, 'null']
+                          description: Relative URL to full article.
                         publishedAt:
                           type: [string, 'null']
+                          description: ISO 8601 publication timestamp.
                         type:
                           type: [string, 'null']
+                          description: Result type (e.g. "article", "quote", "person").
   /profile/company/{ticker}:
     get:
       operationId: getCompanyProfile
@@ -346,6 +386,7 @@ paths:
           schema:
             type: string
           description: Bloomberg ticker with exchange suffix (e.g. "AAPL:US", "MSFT:US").
+          example: AAPL:US
       responses:
         '200':
           description: Success.
@@ -353,6 +394,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [name, ticker]
                 properties:
                   name:
                     type: [string, 'null']
@@ -445,6 +487,7 @@ paths:
           schema:
             type: string
           description: Bloomberg ticker with exchange suffix (e.g. "AAPL:US", "SPX:IND").
+          example: AAPL:US
       responses:
         '200':
           description: Success.
@@ -568,6 +611,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [indices, bonds, commodities, currencies]
                 properties:
                   indices:
                     type: array
@@ -577,16 +621,22 @@ paths:
                       properties:
                         id:
                           type: [string, 'null']
+                          description: Bloomberg ticker ID (e.g. "SPX:IND").
                         name:
                           type: [string, 'null']
+                          description: Index name.
                         price:
                           type: [number, 'null']
+                          description: Last price.
                         priceChange:
                           type: [number, 'null']
+                          description: Absolute price change (1-day).
                         percentChange:
                           type: [number, 'null']
+                          description: Percent price change (1-day).
                         currency:
                           type: [string, 'null']
+                          description: Price currency.
                   bonds:
                     type: array
                     description: Bond/fixed-income securities.
@@ -595,16 +645,22 @@ paths:
                       properties:
                         id:
                           type: [string, 'null']
+                          description: Bloomberg ticker ID.
                         name:
                           type: [string, 'null']
+                          description: Bond name.
                         price:
                           type: [number, 'null']
+                          description: Last price or yield.
                         priceChange:
                           type: [number, 'null']
+                          description: Absolute price change (1-day).
                         percentChange:
                           type: [number, 'null']
+                          description: Percent price change (1-day).
                         currency:
                           type: [string, 'null']
+                          description: Price currency.
                   commodities:
                     type: array
                     description: Commodity prices.
@@ -613,16 +669,22 @@ paths:
                       properties:
                         id:
                           type: [string, 'null']
+                          description: Bloomberg ticker ID (e.g. "CL1:COM").
                         name:
                           type: [string, 'null']
+                          description: Commodity name.
                         price:
                           type: [number, 'null']
+                          description: Last price.
                         priceChange:
                           type: [number, 'null']
+                          description: Absolute price change (1-day).
                         percentChange:
                           type: [number, 'null']
+                          description: Percent price change (1-day).
                         currency:
                           type: [string, 'null']
+                          description: Price currency.
                   currencies:
                     type: array
                     description: Currency pairs.
@@ -631,13 +693,19 @@ paths:
                       properties:
                         id:
                           type: [string, 'null']
+                          description: Bloomberg ticker ID.
                         name:
                           type: [string, 'null']
+                          description: Currency pair name.
                         price:
                           type: [number, 'null']
+                          description: Exchange rate.
                         priceChange:
                           type: [number, 'null']
+                          description: Absolute rate change (1-day).
                         percentChange:
                           type: [number, 'null']
+                          description: Percent rate change (1-day).
                         currency:
                           type: [string, 'null']
+                          description: Quote currency.

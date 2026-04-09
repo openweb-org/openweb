@@ -1,3 +1,63 @@
+## 2026-04-09: Polish tripadvisor site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added `required` arrays to all 7 response schemas (getRestaurant, getAttractionReviews, getHotelDetail, getAttractionDetail already had count-level; added `[name]` on detail ops)
+- Added descriptions to all properties across all 7 response schemas — no bare type-only fields
+- Added descriptions to all nested objects (address, openingHours items, hotel/restaurant/attraction items, review items)
+- Added `required: [day, opens, closes]` on openingHours items (getRestaurant, getAttractionDetail)
+- Added `example` values to all parameters (query, geoId, locationId, slug, location)
+- Added `replay_safety: "safe_read"` to all 7 example files
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions, replay_safety on examples
+- Enhanced site (4→7 ops): new getHotelDetail, getAttractionDetail, searchRestaurants operations needed full schema hardening
+
+**Key files:**
+- `src/sites/tripadvisor/openapi.yaml` — schema hardening across all 7 ops
+- `src/sites/tripadvisor/DOC.md` — heading level fix
+- `src/sites/tripadvisor/examples/*.example.json` — replay_safety added
+
+**Verification:** pnpm build, pnpm dev verify tripadvisor
+
+## 2026-04-09: Polish expedia site package
+
+**What changed:**
+- Added `required` arrays to all 6 response schemas (4 original + 2 new: getHotelPrices, getHotelReviews)
+- Added `description` on every property at every nesting level — no bare `type: object`
+- Added `verified: true` and `signals: [adapter-verified]` to all 6 build sections
+- Added `replay_safety: "safe_read"` to all 6 example files
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions
+- Enhanced site (4→6 ops): new getHotelPrices, getHotelReviews operations needed full schema hardening
+
+**Key files:**
+- `src/sites/expedia/openapi.yaml` — schema hardening across all 6 ops
+- `src/sites/expedia/DOC.md` — heading level fix
+- `src/sites/expedia/examples/*.example.json` — replay_safety added
+
+**Verification:** pnpm build, pnpm dev verify expedia
+
+## 2026-04-09: Polish bloomberg site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added `required` arrays to all response schemas — searchBloomberg, getCompanyProfile, getMarketOverview top-level; nested items across all 7 ops
+- Added `description` on every property at every nesting level — no bare type-only fields
+- Added `example` values to all parameters (query, ticker)
+- Enhanced site (4→7 ops): getCompanyProfile, getStockChart, getMarketOverview schemas fully hardened
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions, examples on parameters
+
+**Key files:**
+- `src/sites/bloomberg/openapi.yaml` — schema hardening across all 7 ops
+- `src/sites/bloomberg/DOC.md` — heading level fix
+
+**Verification:** pnpm build, pnpm dev verify bloomberg
+
 ## 2026-04-09: Polish spotify site package
 
 **What changed:**

@@ -63,20 +63,20 @@ openweb bloomberg exec getMarketOverview '{}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - **Next.js SSR**: All data embedded in `__NEXT_DATA__` script tag — no separate API endpoints
 - **PerimeterX bot detection**: Direct HTTP blocked; browser-only access (`transport: page`)
 - Homepage has ~7MB of `__NEXT_DATA__` with 60+ editorial modules and a ticker bar
 
-## Auth
+### Auth
 No auth required. All 7 operations work on public Bloomberg pages. Bloomberg Terminal data (BLP) requires paid subscription — not accessible through web.
 
-## Transport
+### Transport
 - `transport: page` — browser fetch only (PerimeterX blocks node/direct HTTP)
 - Bot detection: PerimeterX (px-cloud.net, perimeterx.net)
 - Slow navigation required — rapid page loads trigger CAPTCHA
 
-## Extraction
+### Extraction
 - `ssr_next_data` — direct path into `__NEXT_DATA__` JSON for simple extractions (getTickerBar)
 - `page_global_data` — JavaScript expressions for complex extractions (all other operations)
 - All data is in `__NEXT_DATA__` under `props.pageProps`
@@ -85,7 +85,7 @@ No auth required. All 7 operations work on public Bloomberg pages. Bloomberg Ter
 - Profile page: `initialState.company` (description, sector, market cap)
 - Markets page: categorized arrays (indices, bonds, commodities, currencies)
 
-## Known Issues
+### Known Issues
 - **PerimeterX rate limiting**: Navigating too many pages in rapid succession triggers CAPTCHA. Space requests 5-10 seconds apart.
 - **Sub-page navigation blocked**: PerimeterX blocks programmatic `page.goto()` to sub-pages (`/quote/`, `/profile/`, `/markets`). Operations targeting these pages require the user to manually open the tab in the browser first. Homepage-based operations (`getTickerBar`, `getNewsHeadlines`, `getLatestNews`, `searchBloomberg`) are unaffected.
 - **Nullable fields**: Some ticker fields return null for non-applicable security types (e.g., lastYield null for equities, percentChange1Day null for bonds).
