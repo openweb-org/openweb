@@ -27,6 +27,7 @@ paths:
         build:
           stable_id: ed98da697f5878a7
           tool_version: 2
+          verified: true
       parameters: []
       responses:
         "200":
@@ -35,30 +36,43 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [miniProfile]
                 properties:
                   plainId:
                     type: integer
+                    description: Numeric member ID.
                   miniProfile:
                     type: object
+                    description: Compact profile with name, headline, and identifiers.
+                    required: [firstName, lastName, publicIdentifier, entityUrn]
                     properties:
                       firstName:
                         type: string
+                        description: First name.
                       lastName:
                         type: string
+                        description: Last name.
                       occupation:
                         type: string
+                        description: Current headline or occupation.
                       publicIdentifier:
                         type: string
+                        description: Vanity URL slug (e.g. "williamhgates").
                       entityUrn:
                         type: string
+                        description: Profile URN (e.g. "urn:li:fs_miniProfile:...").
                       dashEntityUrn:
                         type: string
+                        description: Dash-format profile URN for identity API.
                       picture:
                         type: object
+                        description: Profile photo with resolution variants.
                   publicContactInfo:
                     type: object
+                    description: Public contact details (websites, Twitter handle, etc.).
                   premiumSubscriber:
                     type: boolean
+                    description: Whether the user has a Premium subscription.
 
   /internal/getProfile:
     get:
@@ -69,6 +83,7 @@ paths:
         build:
           stable_id: aeb9887866a5beda
           tool_version: 2
+          verified: true
           signals: [adapter-verified]
         adapter:
           name: linkedin-graphql
@@ -88,15 +103,20 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    description: Primary response payload with profile fields.
                   meta:
                     type: object
+                    description: Response metadata (pagination tokens, request context).
                   included:
                     type: array
+                    description: Normalized referenced entities (companies, schools, skills).
                     items:
                       type: object
+                      description: A referenced entity.
 
   /voyager/api/identity/dash/profiles/{id}:
     get:
@@ -107,6 +127,7 @@ paths:
         build:
           stable_id: ba1451f11cad9007
           tool_version: 2
+          verified: true
       parameters:
         - name: id
           in: path
@@ -129,31 +150,42 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [firstName, lastName, entityUrn]
                 properties:
                   firstName:
                     type: string
+                    description: First name.
                   lastName:
                     type: string
+                    description: Last name.
                   headline:
                     type: string
+                    description: Professional headline.
                   summary:
-                    type: string
-                    nullable: true
+                    type: [string, "null"]
+                    description: Profile summary / about section.
                   publicIdentifier:
                     type: string
+                    description: Vanity URL slug.
                   entityUrn:
                     type: string
+                    description: Profile URN identifier.
                   industry:
                     type: object
+                    description: Industry classification.
                     properties:
                       name:
                         type: string
+                        description: Industry name (e.g. "Computer Software").
                   geoLocation:
                     type: object
+                    description: Geographic location with country and region codes.
                   profilePicture:
                     type: object
+                    description: Profile photo with resolution variants.
                   premium:
                     type: boolean
+                    description: Whether the user has a Premium subscription.
 
   /internal/getFeed:
     get:
@@ -164,6 +196,7 @@ paths:
         build:
           stable_id: d9ca7024f34babc3
           tool_version: 2
+          verified: true
           signals: [adapter-verified]
         adapter:
           name: linkedin-graphql
@@ -183,15 +216,20 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    description: Primary response payload with feed entries.
                   meta:
                     type: object
+                    description: Response metadata (pagination tokens, request context).
                   included:
                     type: array
+                    description: Normalized referenced entities (authors, companies, media).
                     items:
                       type: object
+                      description: A referenced entity.
 
   /voyager/api/relationships/connectionsSummary:
     get:
@@ -202,6 +240,7 @@ paths:
         build:
           stable_id: ad14a83784ac972c
           tool_version: 2
+          verified: true
       parameters: []
       responses:
         "200":
@@ -210,11 +249,14 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [numConnections]
                 properties:
                   entityUrn:
                     type: string
+                    description: Connections summary entity URN.
                   numConnections:
                     type: integer
+                    description: Total number of first-degree connections.
 
   /voyager/api/relationships/invitationViews:
     get:
@@ -225,6 +267,7 @@ paths:
         build:
           stable_id: 5e4a43553b6e9370
           tool_version: 2
+          verified: true
       parameters:
         - name: count
           in: query
@@ -261,57 +304,82 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [elements, paging]
                 properties:
                   metadata:
                     type: object
+                    description: Response metadata with pagination token.
                     properties:
                       paginationToken:
                         type: string
+                        description: Token for fetching the next page.
                   elements:
                     type: array
+                    description: Invitation entries.
                     items:
                       type: object
+                      description: A pending invitation with sender info.
+                      required: [invitation]
                       properties:
                         entityUrn:
                           type: string
+                          description: Invitation entity URN.
                         insights:
                           type: array
+                          description: Connection insights (shared connections, mutual companies).
                           items:
                             type: object
+                            description: An insight entry.
                         invitation:
                           type: object
+                          description: Invitation details with sender profile.
                           properties:
                             mailboxItemId:
                               type: string
+                              description: Mailbox item identifier.
                             fromMember:
                               type: object
+                              description: Sender's profile summary.
+                              required: [firstName, lastName]
                               properties:
                                 firstName:
                                   type: string
+                                  description: Sender's first name.
                                 lastName:
                                   type: string
+                                  description: Sender's last name.
                                 occupation:
                                   type: string
+                                  description: Sender's headline or occupation.
                                 publicIdentifier:
                                   type: string
+                                  description: Sender's vanity URL slug.
                             message:
-                              type: string
-                              nullable: true
+                              type: [string, "null"]
+                              description: Custom invitation message (null if no message).
                             sentTime:
                               type: integer
+                              description: Unix timestamp (ms) when invitation was sent.
                             customMessage:
                               type: boolean
+                              description: Whether the invitation included a custom message.
                             invitationType:
                               type: string
+                              description: "Invitation type (e.g. CONNECTION)."
                   paging:
                     type: object
+                    description: Pagination state.
+                    required: [count, start]
                     properties:
                       count:
                         type: integer
+                        description: Number of items returned.
                       start:
                         type: integer
+                        description: Current offset.
                       total:
                         type: integer
+                        description: Total number of pending invitations.
 
   /voyager/api/voyagerIdentityDashNotificationCards:
     get:
@@ -322,6 +390,7 @@ paths:
         build:
           stable_id: 3cead00fe2be51a1
           tool_version: 2
+          verified: true
       parameters:
         - name: count
           in: query
@@ -351,47 +420,68 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [elements]
                 properties:
                   metadata:
                     type: object
+                    description: Notification metadata with unseen count.
                     properties:
                       numUnseen:
                         type: integer
+                        description: Number of unseen notifications.
                       nextStart:
                         type: integer
+                        description: Offset for fetching the next page.
                       latestPublishedAt:
                         type: integer
+                        description: Unix timestamp (ms) of the most recent notification.
                   elements:
                     type: array
+                    description: Notification card entries.
                     items:
                       type: object
+                      description: A notification card (like, comment, mention, job alert).
+                      required: [entityUrn, publishedAt]
                       properties:
                         entityUrn:
                           type: string
+                          description: Notification entity URN.
                         read:
                           type: boolean
+                          description: Whether the notification has been read.
                         publishedAt:
                           type: integer
+                          description: Unix timestamp (ms) when notification was published.
                         headline:
                           type: object
+                          description: Notification headline text.
                           properties:
                             text:
                               type: string
+                              description: Human-readable notification summary.
                         headerImage:
                           type: object
+                          description: Avatar or icon for the notification.
                         cardAction:
                           type: object
+                          description: Primary action (URL to navigate to on click).
                         actions:
                           type: array
+                          description: Secondary actions (e.g. dismiss, mark read).
                           items:
                             type: object
+                            description: An action button.
                   paging:
                     type: object
+                    description: Pagination state.
+                    required: [count, start]
                     properties:
                       count:
                         type: integer
+                        description: Number of items returned.
                       start:
                         type: integer
+                        description: Current offset.
 
   /internal/getNewsStorylines:
     get:
@@ -402,6 +492,7 @@ paths:
         build:
           stable_id: "0480efd17380ac76"
           tool_version: 2
+          verified: true
           signals: [adapter-verified]
         adapter:
           name: linkedin-graphql
@@ -421,15 +512,20 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    description: Primary response payload with news storylines.
                   meta:
                     type: object
+                    description: Response metadata (pagination tokens, request context).
                   included:
                     type: array
+                    description: Normalized referenced entities (articles, authors, topics).
                     items:
                       type: object
+                      description: A referenced entity.
 
   /internal/getCompany:
     get:
@@ -440,6 +536,7 @@ paths:
         build:
           stable_id: f002a6bde64bf160
           tool_version: 2
+          verified: true
           signals: [adapter-verified]
         adapter:
           name: linkedin-graphql
@@ -459,15 +556,20 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    description: Primary response payload with company profile fields.
                   meta:
                     type: object
+                    description: Response metadata (pagination tokens, request context).
                   included:
                     type: array
+                    description: Normalized referenced entities (employees, locations, specialties).
                     items:
                       type: object
+                      description: A referenced entity.
 
   /voyager/api/relationships/myNetworkNotifications:
     get:
@@ -478,6 +580,7 @@ paths:
         build:
           stable_id: 5bc65670eab8eb94
           tool_version: 2
+          verified: true
       parameters: []
       responses:
         "200":
@@ -486,25 +589,35 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [elements]
                 properties:
                   metadata:
                     type: object
+                    description: Network notification metadata.
                     properties:
                       numUnseen:
                         type: integer
+                        description: Number of unseen network notifications.
                       latestPublishedAt:
                         type: integer
+                        description: Unix timestamp (ms) of the most recent notification.
                   elements:
                     type: array
+                    description: Network notification entries.
                     items:
                       type: object
+                      description: A network notification (connection suggestion, birthday, work anniversary).
                   paging:
                     type: object
+                    description: Pagination state.
+                    required: [count, start]
                     properties:
                       count:
                         type: integer
+                        description: Number of items returned.
                       start:
                         type: integer
+                        description: Current offset.
 
   /internal/searchJobs:
     get:
@@ -515,6 +628,7 @@ paths:
         build:
           stable_id: a7c3b892d4e1f056
           tool_version: 2
+          verified: true
           signals: [adapter-verified]
         adapter:
           name: linkedin-graphql
@@ -555,15 +669,20 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    description: Primary response payload with job search results.
                   meta:
                     type: object
+                    description: Response metadata (pagination tokens, total count).
                   included:
                     type: array
+                    description: Normalized referenced entities (companies, locations, job cards).
                     items:
                       type: object
+                      description: A referenced entity.
 
   /internal/getJobDetail:
     get:
@@ -574,6 +693,7 @@ paths:
         build:
           stable_id: c8d9e0f1a3b45678
           tool_version: 2
+          verified: true
           signals: [adapter-verified]
         adapter:
           name: linkedin-graphql
@@ -593,12 +713,17 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    description: Primary response payload with job posting details.
                   meta:
                     type: object
+                    description: Response metadata (request context).
                   included:
                     type: array
+                    description: Normalized referenced entities (company, skills, salary info).
                     items:
                       type: object
+                      description: A referenced entity.
