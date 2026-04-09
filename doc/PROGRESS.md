@@ -1,3 +1,71 @@
+## 2026-04-09: Polish linkedin site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Removed stale `queryId` params from Quick Start examples — adapter resolves queryIds dynamically
+- Added note to API Architecture about dynamic queryId resolution
+- Added `required` arrays to all 12 response schemas — top-level and nested objects (miniProfile, fromMember, invitation, paging, notification elements)
+- Added `description` on every property at every nesting level — no bare type-only fields
+- Fixed `nullable: true` → `[type, "null"]` pattern (getProfileByUrn.summary, getInvitations.invitation.message)
+- Added `verified: true` to 6 build sections that were missing it (getMe, getProfileByUrn, getConnectionsSummary, getInvitations, getNotificationCards, getMyNetworkNotifications)
+- Added `replay_safety: "safe_read"` to 2 new example files (searchJobs, getJobDetail)
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions, replay_safety on examples
+- Enhanced site (10→12 ops): new searchJobs, getJobDetail operations needed example files
+
+**Key files:**
+- `src/sites/linkedin/openapi.yaml` — schema hardening across all 12 ops
+- `src/sites/linkedin/DOC.md` — heading level fix, Quick Start cleanup
+- `src/sites/linkedin/examples/searchJobs.example.json` — new
+- `src/sites/linkedin/examples/getJobDetail.example.json` — new
+
+**Verification:** pnpm build, pnpm dev verify linkedin
+
+## 2026-04-09: Polish xueqiu site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added `description` on every property at every nesting level — no bare type-only fields across all 10 operations
+- Added `verified: true` and `signals` to all 10 build sections (4 new ops were missing build metadata entirely)
+- Fixed `items: {}` on financial indicator arrays → proper `anyOf: [number, null]` typing
+- Added `replay_safety: "safe_read"` to all 10 example files
+- Created missing `getWatchlist.example.json`
+
+**Why:**
+- Quality checklist: no bare type:object, descriptions on all properties, verified build metadata, replay_safety on examples
+- Enhanced site (6→10 ops): getStockKline, getStockFinancials, getStockComments, getWatchlist schemas fully hardened
+
+**Key files:**
+- `src/sites/xueqiu/openapi.yaml` — schema hardening across all 10 ops
+- `src/sites/xueqiu/DOC.md` — heading level fix
+- `src/sites/xueqiu/examples/*.example.json` — replay_safety added, getWatchlist created
+
+**Verification:** pnpm build, pnpm dev verify xueqiu
+
+## 2026-04-09: Polish reuters site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added common section IDs reference table to DOC.md
+- Cleaned up DOC.md known issues (removed duplicate/flaky entries, tightened wording)
+- Added `required` arrays to all 4 response schemas — top-level (result), container (articles), and nested objects (author items)
+- Added `description` on every property at every nesting level — no bare type-only fields
+- Added `example` values to all parameters (keyword, section_id, article_url, size, offset)
+- Added `replay_safety: "safe_read"` to all 4 example files
+- Fixed getArticleDetail example — invalid `/world/` article_url replaced with realistic path
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions, examples on parameters
+- Enhanced site (2→4 ops): getArticleDetail, getTopNews schemas fully hardened
+
+**Key files:**
+- `src/sites/reuters/openapi.yaml` — schema hardening across all 4 ops
+- `src/sites/reuters/DOC.md` — heading levels, section IDs table, known issues cleanup
+- `src/sites/reuters/examples/*.example.json` — replay_safety added, article_url fixed
+
+**Verification:** pnpm build, pnpm dev verify reuters
+
 ## 2026-04-09: Polish zillow site package
 
 **What changed:**

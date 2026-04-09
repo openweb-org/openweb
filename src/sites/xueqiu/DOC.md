@@ -83,20 +83,20 @@ openweb xueqiu exec getIndustryStocks '{"code":"SH600519","type":1,"size":30}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 REST API split across two domains:
 - `xueqiu.com` — search, events, timeline, industry data
 - `stock.xueqiu.com` — quotes, order book, stock data
 
 JSON responses. Some endpoints use anti-bot `md5__1038` hash parameter (removed from spec — not needed for node transport with cookies).
 
-## Auth
+### Auth
 `xq_a_token` cookie auto-set on first page load (24h expiry). No login required for public data. Cookie-based session auth via `cookie_session`.
 
-## Transport
+### Transport
 Node transport with cookie_session auth for most operations. Cookies extracted from browser once and cached. The `stock.xueqiu.com` endpoints share cookies cross-domain. `getTimeline` uses page transport (browser-fetch) because the `/statuses/hot/listV2.json` endpoint returns HTML instead of JSON to node requests without the `md5__1038` anti-bot hash. `getStockKline`, `getStockFinancials`, and `getWatchlist` also use page transport — these `stock.xueqiu.com` endpoints return HTTP 400 from node, likely requiring browser context for additional validation.
 
-## Known Issues
+### Known Issues
 - `xq_a_token` expires after 24h — browser reload refreshes it
 - `getTimeline` may return HTML instead of JSON if cookies are missing or expired
 - `getWatchlist` requires user login — anonymous session returns error 60201 (invalid user ID)

@@ -1,5 +1,6 @@
 {
   "operation_id": "getHotEvents",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "count": 10 },

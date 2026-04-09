@@ -1,5 +1,6 @@
 {
   "operation_id": "getTimeline",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "since_id": -1, "max_id": -1, "size": 15 },

@@ -1,5 +1,6 @@
 {
   "operation_id": "getStockComments",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "symbol": "SH600519", "count": 5, "sort": "time", "source": "all" },

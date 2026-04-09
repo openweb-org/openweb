@@ -1,5 +1,6 @@
 {
   "operation_id": "searchStocks",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "q": "茅台", "count": 10 },

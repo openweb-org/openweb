@@ -1,5 +1,6 @@
 {
   "operation_id": "getIndustryStocks",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "code": "SH600519", "type": 1, "size": 30 },

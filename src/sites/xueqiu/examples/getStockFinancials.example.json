@@ -1,5 +1,6 @@
 {
   "operation_id": "getStockFinancials",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "symbol": "SH600519", "type": "Q4", "is_detail": true, "count": 3, "timestamp": "" },

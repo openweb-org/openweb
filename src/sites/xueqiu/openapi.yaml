@@ -22,6 +22,9 @@ paths:
         build:
           stable_id: afa699cb57a04a9f
           tool_version: 2
+          verified: true
+          signals:
+            - node-verified
       parameters:
         - name: q
           in: query
@@ -47,29 +50,41 @@ paths:
                 properties:
                   count:
                     type: integer
+                    description: Total number of matching results
                   list:
                     type: array
+                    description: Array of matching stock results
                     items:
                       type: object
+                      description: Stock search result
                       properties:
                         code:
                           type: string
+                          description: "Stock symbol with exchange prefix (e.g. SH600519)"
                         name:
                           type: string
+                          description: Stock name
                         current:
                           type: string
+                          description: Current price as string
                         exchange:
                           type: string
+                          description: "Exchange code (e.g. SH, SZ, NYSE)"
                         percentage:
                           type: number
+                          description: Price change percentage
                         indName:
                           type: string
+                          description: Industry sector name
                         stockId:
                           type: integer
+                          description: Internal stock identifier
                         subType:
                           type: string
+                          description: Stock sub-type classification
                         market_status:
                           type: integer
+                          description: "Market trading status code"
                       required:
                         - code
                         - name
@@ -79,10 +94,13 @@ paths:
                         - stockId
                   maxPage:
                     type: integer
+                    description: Total number of pages available
                   page:
                     type: integer
+                    description: Current page number
                   size:
                     type: integer
+                    description: Number of results per page
                 required:
                   - count
                   - list
@@ -98,6 +116,9 @@ paths:
         build:
           stable_id: 569882a05450bce5
           tool_version: 2
+          verified: true
+          signals:
+            - node-verified
       parameters:
         - name: symbol
           in: query
@@ -116,47 +137,67 @@ paths:
                 properties:
                   data:
                     type: array
+                    description: Array of stock quote data
                     items:
                       type: object
+                      description: Real-time quote for a single stock
                       properties:
                         symbol:
                           type: string
+                          description: Stock symbol
                         current:
                           type: number
+                          description: Current trading price
                         percent:
                           type: number
+                          description: Price change percentage from previous close
                         chg:
                           type: number
+                          description: Absolute price change from previous close
                         timestamp:
                           type: integer
+                          description: Quote timestamp in milliseconds
                         volume:
                           type: integer
+                          description: Trading volume (shares)
                         amount:
                           type: number
+                          description: Trading amount (currency value)
                         market_capital:
                           type: integer
+                          description: Total market capitalization
                         float_market_capital:
                           anyOf:
                             - type: integer
                             - type: "null"
+                          description: Float market capitalization (null if unavailable)
                         turnover_rate:
                           type: number
+                          description: Turnover rate as percentage
                         amplitude:
                           type: number
+                          description: "Price amplitude: (high - low) / last_close"
                         open:
                           type: number
+                          description: Opening price
                         last_close:
                           type: number
+                          description: Previous trading day close price
                         high:
                           type: number
+                          description: Highest price of the day
                         low:
                           type: number
+                          description: Lowest price of the day
                         avg_price:
                           type: number
+                          description: Volume-weighted average price
                         is_trade:
                           type: boolean
+                          description: Whether the stock is currently trading
                         current_year_percent:
                           type: number
+                          description: Year-to-date price change percentage
                       required:
                         - symbol
                         - current
@@ -172,8 +213,10 @@ paths:
                         - low
                   error_code:
                     type: integer
+                    description: "API error code (0 = success)"
                   error_description:
                     type: "null"
+                    description: Error description (null on success)
                 required:
                   - data
                   - error_code
@@ -188,6 +231,9 @@ paths:
         build:
           stable_id: 4c8b5652775743f8
           tool_version: 2
+          verified: true
+          signals:
+            - node-verified
       parameters:
         - name: symbol
           in: query
@@ -206,53 +252,77 @@ paths:
                 properties:
                   data:
                     type: object
+                    description: Order book depth data
                     properties:
                       symbol:
                         type: string
+                        description: Stock symbol
                       timestamp:
                         type: integer
+                        description: Order book snapshot timestamp in milliseconds
                       current:
                         type: number
+                        description: Current trading price
                       bp1:
                         type: number
+                        description: Best bid price (level 1)
                       bc1:
                         type: integer
+                        description: Bid volume at level 1 (lots)
                       bp2:
                         type: number
+                        description: Bid price level 2
                       bc2:
                         type: integer
+                        description: Bid volume at level 2
                       bp3:
                         type: number
+                        description: Bid price level 3
                       bc3:
                         type: integer
+                        description: Bid volume at level 3
                       bp4:
                         type: number
+                        description: Bid price level 4
                       bc4:
                         type: integer
+                        description: Bid volume at level 4
                       bp5:
                         type: number
+                        description: Bid price level 5
                       bc5:
                         type: integer
+                        description: Bid volume at level 5
                       sp1:
                         type: number
+                        description: Best ask price (level 1)
                       sc1:
                         type: integer
+                        description: Ask volume at level 1 (lots)
                       sp2:
                         type: number
+                        description: Ask price level 2
                       sc2:
                         type: integer
+                        description: Ask volume at level 2
                       sp3:
                         type: number
+                        description: Ask price level 3
                       sc3:
                         type: integer
+                        description: Ask volume at level 3
                       sp4:
                         type: number
+                        description: Ask price level 4
                       sc4:
                         type: integer
+                        description: Ask volume at level 4
                       sp5:
                         type: number
+                        description: Ask price level 5
                       sc5:
                         type: integer
+                        description: Ask volume at level 5
                     required:
                       - symbol
                       - timestamp
@@ -263,6 +333,7 @@ paths:
                       - sc1
                   error_code:
                     type: integer
+                    description: "API error code (0 = success)"
                 required:
                   - data
                   - error_code
@@ -277,6 +348,9 @@ paths:
         build:
           stable_id: d3683c54af1381a1
           tool_version: 2
+          verified: true
+          signals:
+            - node-verified
       parameters:
         - name: count
           in: query
@@ -295,26 +369,36 @@ paths:
                 properties:
                   count:
                     type: integer
+                    description: Total number of hot events
                   page:
                     type: integer
+                    description: Current page number
                   list:
                     type: array
+                    description: Array of trending market events
                     items:
                       type: object
+                      description: Hot market event
                       properties:
                         id:
                           type: integer
+                          description: Event identifier
                         tag:
                           type: string
+                          description: Event topic tag
                         pic:
                           type: string
                           format: uri
+                          description: Event thumbnail image URL
                         hot:
                           type: integer
+                          description: Heat score indicating popularity
                         status_count:
                           type: integer
+                          description: Number of related discussion posts
                         content:
                           type: string
+                          description: Event content summary
                       required:
                         - id
                         - tag
@@ -334,6 +418,9 @@ paths:
         build:
           stable_id: 59966686f2749634
           tool_version: 2
+          verified: true
+          signals:
+            - page-verified
       parameters:
         - name: since_id
           in: query
@@ -366,41 +453,58 @@ paths:
                 properties:
                   next_max_id:
                     type: integer
+                    description: Cursor value for fetching the next page
                   items:
                     type: array
+                    description: Array of timeline posts
                     items:
                       type: object
+                      description: Timeline post entry
                       properties:
                         id:
                           type: integer
+                          description: Timeline entry identifier
                         original_status:
                           type: object
+                          description: Original post content and metadata
                           properties:
                             id:
                               type: integer
+                              description: Post identifier
                             user_id:
                               type: integer
+                              description: Author user identifier
                             title:
                               type: string
+                              description: Post title
                             description:
                               type: string
+                              description: Post body text (may contain HTML)
                             created_at:
                               type: integer
+                              description: Creation timestamp in milliseconds
                             retweet_count:
                               type: integer
+                              description: Number of reposts
                             fav_count:
                               type: integer
+                              description: Number of likes
                             user:
                               type: object
+                              description: Post author profile
                               properties:
                                 id:
                                   type: integer
+                                  description: User identifier
                                 screen_name:
                                   type: string
+                                  description: Display name
                                 followers_count:
                                   type: integer
+                                  description: Number of followers
                                 verified:
                                   type: boolean
+                                  description: Whether the user is verified
                               required:
                                 - id
                                 - screen_name
@@ -423,6 +527,12 @@ paths:
       x-openweb:
         permission: read
         transport: page
+        build:
+          stable_id: a7c3e1f0b2d49856
+          tool_version: 2
+          verified: true
+          signals:
+            - page-verified
       parameters:
         - name: symbol
           in: query
@@ -482,17 +592,22 @@ paths:
                 properties:
                   data:
                     type: object
+                    description: K-line chart data
                     properties:
                       symbol:
                         type: string
+                        description: Stock symbol
                       column:
                         type: array
+                        description: "Column names for item arrays (e.g. timestamp, volume, open, high, low, close, chg, percent, turnoverrate)"
                         items:
                           type: string
                       item:
                         type: array
+                        description: Array of OHLCV data rows, each row matches column order
                         items:
                           type: array
+                          description: Single candlestick data row
                           items:
                             type: number
                     required:
@@ -501,8 +616,10 @@ paths:
                       - item
                   error_code:
                     type: integer
+                    description: "API error code (0 = success)"
                   error_description:
                     type: string
+                    description: Error description
                 required:
                   - data
                   - error_code
@@ -515,6 +632,12 @@ paths:
       x-openweb:
         permission: read
         transport: page
+        build:
+          stable_id: b4d2f6e1c3a58970
+          tool_version: 2
+          verified: true
+          signals:
+            - page-verified
       parameters:
         - name: symbol
           in: query
@@ -562,47 +685,90 @@ paths:
                 properties:
                   data:
                     type: object
+                    description: Financial indicator data
                     properties:
                       symbol:
                         type: string
+                        description: Stock symbol
                       currency:
                         type: string
+                        description: "Reporting currency (e.g. CNY)"
                       list:
                         type: array
+                        description: Array of financial reporting periods
                         items:
                           type: object
+                          description: Financial indicators for one reporting period
                           properties:
                             report_date:
                               type: integer
+                              description: Report date timestamp in milliseconds
                             report_name:
                               type: string
+                              description: "Report period label (e.g. 2024年报)"
                             avg_roe:
                               type: array
-                              items: {}
+                              description: "Average return on equity [value, yoy_change]"
+                              items:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                             np_per_share:
                               type: array
-                              items: {}
+                              description: "Net profit per share [value, yoy_change]"
+                              items:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                             basic_eps:
                               type: array
-                              items: {}
+                              description: "Basic earnings per share [value, yoy_change]"
+                              items:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                             total_revenue:
                               type: array
-                              items: {}
+                              description: "Total revenue [value, yoy_change]"
+                              items:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                             net_profit_atsopc:
                               type: array
-                              items: {}
+                              description: "Net profit attributable to shareholders [value, yoy_change]"
+                              items:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                             gross_selling_rate:
                               type: array
-                              items: {}
+                              description: "Gross profit margin [value, yoy_change]"
+                              items:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                             net_selling_rate:
                               type: array
-                              items: {}
+                              description: "Net profit margin [value, yoy_change]"
+                              items:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                             asset_liab_ratio:
                               type: array
-                              items: {}
+                              description: "Asset-liability ratio [value, yoy_change]"
+                              items:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                             operate_cash_flow_ps:
                               type: array
-                              items: {}
+                              description: "Operating cash flow per share [value, yoy_change]"
+                              items:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                           required:
                             - report_date
                             - report_name
@@ -611,8 +777,10 @@ paths:
                       - list
                   error_code:
                     type: integer
+                    description: "API error code (0 = success)"
                   error_description:
                     type: string
+                    description: Error description
                 required:
                   - data
                   - error_code
@@ -624,6 +792,12 @@ paths:
       summary: "Get user comments and discussions about a stock — post title, text, author, reply count, retweet count, timestamps"
       x-openweb:
         permission: read
+        build:
+          stable_id: c5e3a7d1f4b68092
+          tool_version: 2
+          verified: true
+          signals:
+            - node-verified
       parameters:
         - name: symbol
           in: query
@@ -672,38 +846,54 @@ paths:
                 properties:
                   count:
                     type: integer
+                    description: Total number of matching posts
                   list:
                     type: array
+                    description: Array of discussion posts
                     items:
                       type: object
+                      description: User discussion post about the stock
                       properties:
                         id:
                           type: integer
+                          description: Post identifier
                         user_id:
                           type: integer
+                          description: Author user identifier
                         title:
                           type: string
+                          description: Post title
                         description:
                           type: string
+                          description: Post body text (may contain HTML)
                         created_at:
                           type: integer
+                          description: Creation timestamp in milliseconds
                         reply_count:
                           type: integer
+                          description: Number of replies
                         retweet_count:
                           type: integer
+                          description: Number of reposts
                         fav_count:
                           type: integer
+                          description: Number of likes
                         user:
                           type: object
+                          description: Post author profile
                           properties:
                             id:
                               type: integer
+                              description: User identifier
                             screen_name:
                               type: string
+                              description: Display name
                             followers_count:
                               type: integer
+                              description: Number of followers
                             verified:
                               type: boolean
+                              description: Whether the user is verified
                           required:
                             - id
                             - screen_name
@@ -714,8 +904,10 @@ paths:
                         - user
                   maxPage:
                     type: integer
+                    description: Total number of pages available
                   page:
                     type: integer
+                    description: Current page number
                 required:
                   - count
                   - list
@@ -726,6 +918,12 @@ paths:
       x-openweb:
         permission: read
         transport: page
+        build:
+          stable_id: d6f4b8e2a5c79103
+          tool_version: 2
+          verified: true
+          signals:
+            - page-verified
       parameters:
         - name: pid
           in: query
@@ -758,28 +956,39 @@ paths:
                 properties:
                   data:
                     type: object
+                    description: Watchlist portfolio data
                     properties:
                       pid:
                         type: integer
+                        description: Portfolio identifier
                       category:
                         type: integer
+                        description: Portfolio category
                       stocks:
                         type: array
+                        description: Array of watched stocks
                         items:
                           type: object
+                          description: Stock in user's watchlist
                           properties:
                             symbol:
                               type: string
+                              description: Stock symbol
                             name:
                               type: string
+                              description: Stock name
                             current:
                               type: number
+                              description: Current trading price
                             percent:
                               type: number
+                              description: Price change percentage
                             chg:
                               type: number
+                              description: Absolute price change
                             market_capital:
                               type: integer
+                              description: Total market capitalization
                           required:
                             - symbol
                             - name
@@ -787,8 +996,10 @@ paths:
                             - percent
                   error_code:
                     type: integer
+                    description: "API error code (0 = success)"
                   error_description:
                     type: string
+                    description: Error description
                 required:
                   - data
                   - error_code
@@ -803,6 +1014,9 @@ paths:
         build:
           stable_id: 532260faa3e5268e
           tool_version: 2
+          verified: true
+          signals:
+            - node-verified
       parameters:
         - name: code
           in: query
@@ -835,39 +1049,56 @@ paths:
                 properties:
                   stockname:
                     type: string
+                    description: Queried stock name
                   platename:
                     type: string
+                    description: Industry plate/sector name
                   industryname:
                     type: string
+                    description: Industry classification name
                   exchange:
                     type: string
+                    description: Exchange code
                   code:
                     type: string
+                    description: Queried stock symbol
                   industrystocks:
                     type: array
+                    description: Array of stocks in the same industry
                     items:
                       type: object
+                      description: Industry peer stock
                       properties:
                         symbol:
                           type: string
+                          description: Stock symbol
                         code:
                           type: string
+                          description: Stock code
                         name:
                           type: string
+                          description: Stock name
                         exchange:
                           type: string
+                          description: Exchange code
                         current:
                           type: string
+                          description: Current price as string
                         percentage:
                           type: string
+                          description: Price change percentage as string
                         change:
                           type: string
+                          description: Absolute price change as string
                         volume:
                           type: string
+                          description: Trading volume as string
                         pe_ttm:
                           type: string
+                          description: Trailing twelve months P/E ratio as string
                         marketCapital:
                           type: string
+                          description: Market capitalization as string
                       required:
                         - symbol
                         - code

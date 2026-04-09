@@ -1,5 +1,6 @@
 {
   "operation_id": "getStockKline",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "symbol": "SH600519", "begin": 1712505600000, "period": "day", "type": "before", "count": -5, "indicator": "kline" },
