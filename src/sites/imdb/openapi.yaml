@@ -4,6 +4,8 @@ info:
   version: '1.0'
   x-openweb:
     spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
+    requires_auth: false
 servers:
   - url: https://www.imdb.com
     x-openweb:
@@ -32,6 +34,7 @@ paths:
           schema:
             type: string
           description: 'Search query (e.g. "inception", "breaking bad")'
+          example: inception
       responses:
         '200':
           description: Search results matching the query.
@@ -39,6 +42,10 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - query
+                  - resultCount
+                  - results
                 properties:
                   query:
                     type: string
@@ -50,6 +57,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - imdbId
+                        - title
                       properties:
                         imdbId:
                           type:
@@ -129,6 +139,7 @@ paths:
           schema:
             type: string
           description: 'IMDB title ID (e.g. "tt0111161" for The Shawshank Redemption).'
+          example: tt0111161
       responses:
         '200':
           description: Full title information.
@@ -136,6 +147,9 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - imdbId
+                  - title
                 properties:
                   imdbId:
                     type: string
@@ -219,6 +233,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - category
+                        - names
                       properties:
                         category:
                           type:
@@ -279,6 +296,7 @@ paths:
           schema:
             type: string
           description: 'IMDB title ID (e.g. "tt0111161").'
+          example: tt0111161
       responses:
         '200':
           description: Rating breakdown with vote histogram.
@@ -286,6 +304,9 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - imdbId
+                  - histogram
                 properties:
                   imdbId:
                     type: string
@@ -309,6 +330,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - rating
+                        - voteCount
                       properties:
                         rating:
                           type: integer
@@ -341,6 +365,7 @@ paths:
           schema:
             type: string
           description: 'IMDB title ID (e.g. "tt0111161").'
+          example: tt0111161
       responses:
         '200':
           description: Cast and crew information.
@@ -348,6 +373,12 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - imdbId
+                  - credits
+                  - actors
+                  - directors
+                  - creators
                 properties:
                   imdbId:
                     type: string
@@ -361,6 +392,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - category
+                        - names
                       properties:
                         category:
                           type:
