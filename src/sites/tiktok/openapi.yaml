@@ -84,6 +84,12 @@ paths:
                           description: "Result type (1 = video)"
                         item:
                           type: object
+                          required:
+                            - id
+                            - desc
+                            - video
+                            - author
+                            - stats
                           properties:
                             id:
                               type: string
@@ -96,18 +102,25 @@ paths:
                               description: Unix timestamp of creation
                             video:
                               type: object
+                              required:
+                                - id
+                                - cover
                               properties:
                                 id:
                                   type: string
+                                  description: Video asset ID
                                 height:
                                   type: integer
+                                  description: Video height in pixels
                                 width:
                                   type: integer
+                                  description: Video width in pixels
                                 duration:
                                   type: integer
                                   description: Duration in seconds
                                 ratio:
                                   type: string
+                                  description: Aspect ratio label
                                 cover:
                                   type: string
                                   format: uri
@@ -115,6 +128,7 @@ paths:
                                 originCover:
                                   type: string
                                   format: uri
+                                  description: Original cover image URL
                                 playAddr:
                                   type: string
                                   format: uri
@@ -122,15 +136,23 @@ paths:
                                 downloadAddr:
                                   type: string
                                   format: uri
+                                  description: Video download URL
                                 format:
                                   type: string
+                                  description: Video format (e.g. mp4)
                                 size:
                                   type: integer
+                                  description: File size in bytes
                             author:
                               type: object
+                              required:
+                                - id
+                                - uniqueId
+                                - nickname
                               properties:
                                 id:
                                   type: string
+                                  description: Author user ID
                                 uniqueId:
                                   type: string
                                   description: "@username handle"
@@ -140,64 +162,86 @@ paths:
                                 avatarThumb:
                                   type: string
                                   format: uri
+                                  description: Avatar thumbnail URL
                                 signature:
                                   type: string
                                   description: Author bio
                                 verified:
                                   type: boolean
+                                  description: Whether the author is verified
                                 secUid:
                                   type: string
+                                  description: Secure user ID
                             music:
                               type: object
+                              required:
+                                - id
+                                - title
                               properties:
                                 id:
                                   type: string
+                                  description: Music track ID
                                 title:
                                   type: string
+                                  description: Track title
                                 playUrl:
                                   type: string
                                   format: uri
+                                  description: Music playback URL
                                 authorName:
                                   type: string
+                                  description: Music artist name
                                 original:
                                   type: boolean
+                                  description: Whether this is an original sound
                                 duration:
                                   type: integer
+                                  description: Track duration in seconds
                                 album:
                                   type: string
+                                  description: Album name
                             challenges:
                               type: array
                               description: Hashtags/challenges used
                               items:
                                 type: object
+                                required:
+                                  - id
+                                  - title
                                 properties:
                                   id:
                                     type: string
+                                    description: Challenge/hashtag ID
                                   title:
                                     type: string
+                                    description: Challenge/hashtag name
                                   desc:
                                     type: string
+                                    description: Challenge description
                             stats:
                               type: object
-                              properties:
-                                diggCount:
-                                  type: integer
-                                  description: Number of likes
-                                shareCount:
-                                  type: integer
-                                commentCount:
-                                  type: integer
-                                playCount:
-                                  type: integer
-                                collectCount:
-                                  type: integer
-                                  description: Number of bookmarks
                               required:
                                 - diggCount
                                 - shareCount
                                 - commentCount
                                 - playCount
                                 - collectCount
+                              properties:
+                                diggCount:
+                                  type: integer
+                                  description: Number of likes
+                                shareCount:
+                                  type: integer
+                                  description: Number of shares
+                                commentCount:
+                                  type: integer
+                                  description: Number of comments
+                                playCount:
+                                  type: integer
+                                  description: Number of plays
+                                collectCount:
+                                  type: integer
+                                  description: Number of bookmarks
                   cursor:
                     type: integer
                     description: Cursor for next page (use as offset)
@@ -246,6 +290,12 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - id
+                  - description
+                  - video
+                  - author
+                  - stats
                 properties:
                   id:
                     type: string
@@ -258,86 +308,130 @@ paths:
                     description: Unix timestamp of creation
                   video:
                     type: object
+                    required:
+                      - id
+                      - cover
                     properties:
                       id:
                         type: string
+                        description: Video asset ID
                       height:
                         type: integer
+                        description: Video height in pixels
                       width:
                         type: integer
+                        description: Video width in pixels
                       duration:
                         type: integer
                         description: Duration in seconds
                       cover:
                         type: string
                         format: uri
+                        description: Thumbnail URL
                       playAddr:
                         type: string
                         format: uri
+                        description: Video playback URL
                       downloadAddr:
                         type: string
                         format: uri
+                        description: Video download URL
                   author:
                     type: object
+                    required:
+                      - id
+                      - uniqueId
+                      - nickname
                     properties:
                       id:
                         type: string
+                        description: Author user ID
                       uniqueId:
                         type: string
                         description: "@username handle"
                       nickname:
                         type: string
+                        description: Display name
                       avatarThumb:
                         type: string
                         format: uri
+                        description: Avatar thumbnail URL
                       signature:
                         type: string
+                        description: Author bio
                       verified:
                         type: boolean
+                        description: Whether the author is verified
                   music:
                     type: object
+                    required:
+                      - id
+                      - title
                     properties:
                       id:
                         type: string
+                        description: Music track ID
                       title:
                         type: string
+                        description: Track title
                       authorName:
                         type: string
+                        description: Music artist name
                       playUrl:
                         type: string
                         format: uri
+                        description: Music playback URL
                       duration:
                         type: integer
+                        description: Track duration in seconds
                       original:
                         type: boolean
+                        description: Whether this is an original sound
                       album:
                         type: string
+                        description: Album name
                   stats:
                     type: object
+                    required:
+                      - diggCount
+                      - shareCount
+                      - commentCount
+                      - playCount
+                      - collectCount
                     properties:
                       diggCount:
                         type: integer
                         description: Number of likes
                       shareCount:
                         type: integer
+                        description: Number of shares
                       commentCount:
                         type: integer
+                        description: Number of comments
                       playCount:
                         type: integer
+                        description: Number of plays
                       collectCount:
                         type: integer
                         description: Number of bookmarks
                   challenges:
                     type: array
+                    description: Hashtags/challenges used
                     items:
                       type: object
+                      required:
+                        - id
+                        - title
                       properties:
                         id:
                           type: string
+                          description: Challenge/hashtag ID
                         title:
                           type: string
+                          description: Challenge/hashtag name
                         desc:
                           type: string
+                          description: Challenge description
 
   /@{username}:
     get:
@@ -368,6 +462,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - id
+                  - uniqueId
+                  - nickname
+                  - stats
                 properties:
                   id:
                     type: string
@@ -381,30 +480,43 @@ paths:
                   avatarThumb:
                     type: string
                     format: uri
+                    description: Avatar thumbnail URL
                   avatarMedium:
                     type: string
                     format: uri
+                    description: Medium-size avatar URL
                   signature:
                     type: string
                     description: User bio
                   verified:
                     type: boolean
+                    description: Whether the user is verified
                   privateAccount:
                     type: boolean
+                    description: Whether the account is private
                   region:
                     type: string
+                    description: User region/country code
                   stats:
                     type: object
+                    required:
+                      - followerCount
+                      - followingCount
+                      - heartCount
+                      - videoCount
                     properties:
                       followerCount:
                         type: integer
+                        description: Number of followers
                       followingCount:
                         type: integer
+                        description: Number of accounts followed
                       heartCount:
                         type: integer
                         description: Total likes received
                       videoCount:
                         type: integer
+                        description: Number of published videos
                       diggCount:
                         type: integer
                         description: Total likes given
@@ -445,6 +557,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - comments
                 properties:
                   comments:
                     type: array
@@ -471,13 +585,17 @@ paths:
                           properties:
                             id:
                               type: string
+                              description: Commenter user ID
                             uniqueId:
                               type: string
+                              description: Commenter username
                             nickname:
                               type: string
+                              description: Commenter display name
                             avatarThumb:
                               type: string
                               format: uri
+                              description: Commenter avatar URL
                   total:
                     type: integer
                     description: Total number of comments
@@ -486,6 +604,7 @@ paths:
                     description: Cursor for next page
                   hasMore:
                     type: boolean
+                    description: Whether more comments are available
 
   /internal/getHomeFeed:
     get:
@@ -509,12 +628,19 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - items
                 properties:
                   items:
                     type: array
                     description: Recommended videos
                     items:
                       type: object
+                      required:
+                        - id
+                        - video
+                        - author
+                        - stats
                       properties:
                         id:
                           type: string
@@ -524,58 +650,95 @@ paths:
                           description: Video caption
                         createTime:
                           type: integer
+                          description: Unix timestamp of creation
                         video:
                           type: object
+                          required:
+                            - id
+                            - cover
                           properties:
                             id:
                               type: string
+                              description: Video asset ID
                             height:
                               type: integer
+                              description: Video height in pixels
                             width:
                               type: integer
+                              description: Video width in pixels
                             duration:
                               type: integer
+                              description: Duration in seconds
                             cover:
                               type: string
                               format: uri
+                              description: Thumbnail URL
                             playAddr:
                               type: string
                               format: uri
+                              description: Video playback URL
                         author:
                           type: object
+                          required:
+                            - id
+                            - uniqueId
+                            - nickname
                           properties:
                             id:
                               type: string
+                              description: Author user ID
                             uniqueId:
                               type: string
+                              description: Author username
                             nickname:
                               type: string
+                              description: Author display name
                             avatarThumb:
                               type: string
                               format: uri
+                              description: Author avatar URL
                             verified:
                               type: boolean
+                              description: Whether the author is verified
                         music:
                           type: object
+                          required:
+                            - id
+                            - title
                           properties:
                             id:
                               type: string
+                              description: Music track ID
                             title:
                               type: string
+                              description: Track title
                             authorName:
                               type: string
+                              description: Music artist name
                         stats:
                           type: object
+                          required:
+                            - diggCount
+                            - shareCount
+                            - commentCount
+                            - playCount
+                            - collectCount
                           properties:
                             diggCount:
                               type: integer
+                              description: Number of likes
                             shareCount:
                               type: integer
+                              description: Number of shares
                             commentCount:
                               type: integer
+                              description: Number of comments
                             playCount:
                               type: integer
+                              description: Number of plays
                             collectCount:
                               type: integer
+                              description: Number of bookmarks
                   hasMore:
                     type: boolean
+                    description: Whether more videos are available

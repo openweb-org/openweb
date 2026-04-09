@@ -58,29 +58,32 @@ openweb tiktok exec getHomeFeed '{}'
 
 ## Site Internals
 
-## API Architecture
+Everything below is for discover/compile operators and deep debugging.
+Not needed for basic site usage.
+
+### API Architecture
 - REST API at `www.tiktok.com/api/`
 - Search endpoint: `/api/search/general/full/`
 - Comment endpoint: `/api/comment/list/`
 - Recommend endpoint: `/api/recommend/item_list/`
 - Custom signing (X-Bogus, X-Gnarly, msToken) computed client-side — handled by page transport
 
-## Auth
+### Auth
 - `cookie_session` — browser cookies required
 - Anti-bot signing (X-Bogus, X-Gnarly) generated automatically by page transport
 - No CSRF required for read operations
 
-## Transport
+### Transport
 - `page` transport required — heavy bot detection blocks node transport
 - Browser auto-starts and manages signing
 - Adapter operations (getVideoDetail, getUserProfile, getVideoComments, getHomeFeed) navigate to pages and extract from SSR data (`__UNIVERSAL_DATA_FOR_REHYDRATION__`) or intercept API responses
 
-## Runtime Lanes
+### Runtime Lanes
 - **searchVideos**: replay lane — direct API call via page transport
 - **getVideoDetail, getUserProfile**: adapter lane — SSR extraction from `__UNIVERSAL_DATA_FOR_REHYDRATION__.__DEFAULT_SCOPE__` with DOM fallback
 - **getVideoComments, getHomeFeed**: adapter lane — API response interception with SSR/DOM fallback
 
-## Known Issues
+### Known Issues
 - Heavy bot detection: X-Bogus, X-Gnarly, msToken are computed client-side
 - SSR data structure varies: `__UNIVERSAL_DATA_FOR_REHYDRATION__` scopes include `webapp.video-detail`, `webapp.user-detail`
 - Large responses (~345KB) auto-spill to temp files
