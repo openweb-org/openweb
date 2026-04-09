@@ -4,6 +4,7 @@ info:
   version: "1.0.0"
   x-openweb:
     spec_version: "2.0"
+    compiled_at: "2026-04-09T00:00:00Z"
     requires_auth: false
 servers:
   - url: https://api.coinmarketcap.com
@@ -193,10 +194,14 @@ paths:
                     properties:
                       error_code:
                         type: string
+                        description: "API error code (0 for success)"
                       error_message:
                         type: string
+                        description: "Error message (empty on success)"
                       timestamp:
                         type: string
+                        description: "ISO 8601 response timestamp"
+                    required: [error_code, timestamp]
                 required: [data, status]
 
   /data-api/v3/cryptocurrency/detail:
@@ -269,26 +274,32 @@ paths:
                             type: array
                             items:
                               type: string
+                            description: "Official website URLs"
                           technical_doc:
                             type: array
                             items:
                               type: string
+                            description: "Whitepaper and technical documentation URLs"
                           explorer:
                             type: array
                             items:
                               type: string
+                            description: "Blockchain explorer URLs"
                           source_code:
                             type: array
                             items:
                               type: string
+                            description: "Source code repository URLs"
                           reddit:
                             type: array
                             items:
                               type: string
+                            description: "Reddit community URLs"
                           twitter:
                             type: array
                             items:
                               type: string
+                            description: "Twitter/X profile URLs"
                       statistics:
                         type: object
                         properties:
@@ -404,10 +415,14 @@ paths:
                     properties:
                       error_code:
                         type: string
+                        description: "API error code (0 for success)"
                       error_message:
                         type: string
+                        description: "Error message (empty on success)"
                       timestamp:
                         type: string
+                        description: "ISO 8601 response timestamp"
+                    required: [error_code, timestamp]
                 required: [data, status]
 
   /data-api/v3/unified-trending/top-boost/listing:
@@ -481,8 +496,12 @@ paths:
                     properties:
                       error_code:
                         type: string
+                        description: "API error code (0 for success)"
                       error_message:
                         type: string
+                        description: "Error message (empty on success)"
                       timestamp:
                         type: string
+                        description: "ISO 8601 response timestamp"
+                    required: [error_code, timestamp]
                 required: [data, status]

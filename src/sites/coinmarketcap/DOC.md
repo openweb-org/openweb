@@ -45,18 +45,18 @@ openweb coinmarketcap exec getTrending '{"limit":10}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 Internal REST API on `api.coinmarketcap.com` under `/data-api/v3/`. All responses are JSON wrapped in `{data, status}`. The site is Next.js SSR (`__NEXT_DATA__` present with ~430KB payload on homepage) but the REST API is the cleaner data source.
 
 Also available: `web-api.coinmarketcap.com` and `dapi.coinmarketcap.com` (DEX data), not used here.
 
-## Auth
+### Auth
 No auth required. No session cookies, no API keys, no CSRF tokens needed for public data endpoints.
 
-## Transport
+### Transport
 `node` — direct HTTP. No bot detection observed during probe. All three endpoints return valid JSON via browser fetch without special headers. Tracking cookies (sensorsdata) are analytics-only.
 
-## Known Issues
+### Known Issues
 - Coin IDs are numeric (1=Bitcoin, 1027=Ethereum, 5426=Solana), not slugs. Use `getListings` to discover IDs.
 - Trending API returns prices as strings (for decimal precision), not numbers.
 - `getQuote` statistics fields can be null for very new or low-liquidity coins.
