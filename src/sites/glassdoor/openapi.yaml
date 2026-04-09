@@ -33,6 +33,7 @@ paths:
           schema:
             type: string
           description: 'Company name search query (e.g. "Google", "Microsoft").'
+          example: Google
       responses:
         '200':
           description: Company search results with employer IDs and ratings.
@@ -40,14 +41,17 @@ paths:
             application/json:
               schema:
                 type: object
+                description: Search results wrapper.
                 required: [count, companies]
                 properties:
                   count:
                     type: integer
+                    description: Number of companies returned.
                   companies:
                     type: array
                     items:
                       type: object
+                      description: A matched company.
                       required: [employerId, name]
                       properties:
                         employerId:
@@ -55,16 +59,22 @@ paths:
                           description: 'Glassdoor employer ID (use in getReviews, getSalaries, getInterviews).'
                         name:
                           type: string
+                          description: Company display name.
                         overallRating:
                           type: [number, 'null']
+                          description: Average overall rating (1.0–5.0).
                         headquarters:
                           type: [string, 'null']
+                          description: 'HQ location (e.g. "Mountain View, CA").'
                         industry:
                           type: [string, 'null']
+                          description: Primary industry name.
                         sizeCategory:
                           type: [string, 'null']
+                          description: 'Employee count range (e.g. "10000+").'
                         logo:
                           type: [string, 'null']
+                          description: Square logo URL.
 
   /internal/getReviews:
     get:
@@ -88,6 +98,7 @@ paths:
           schema:
             type: integer
           description: 'Glassdoor employer ID (from searchCompanies).'
+          example: 9079
       responses:
         '200':
           description: Employee reviews with ratings, pros, cons.
@@ -95,32 +106,43 @@ paths:
             application/json:
               schema:
                 type: object
+                description: Company reviews wrapper.
                 required: [companyName, reviews]
                 properties:
                   companyName:
                     type: [string, 'null']
+                    description: Company display name.
                   overallRating:
                     type: [string, 'null']
+                    description: 'Overall rating as displayed (e.g. "4.2").'
                   reviews:
                     type: array
                     items:
                       type: object
+                      description: A single employee review.
                       required: [rating, title]
                       properties:
                         rating:
                           type: [string, 'null']
+                          description: 'Review rating (e.g. "4.0").'
                         date:
                           type: [string, 'null']
+                          description: 'Review date (e.g. "Mar 15, 2025").'
                         title:
                           type: [string, 'null']
+                          description: Review headline.
                         jobTitle:
                           type: [string, 'null']
+                          description: "Reviewer's job title."
                         employeeStatus:
                           type: [string, 'null']
+                          description: 'Current or former employee status.'
                         pros:
                           type: [string, 'null']
+                          description: Positive aspects mentioned.
                         cons:
                           type: [string, 'null']
+                          description: Negative aspects mentioned.
 
   /internal/getSalaries:
     get:
@@ -144,6 +166,7 @@ paths:
           schema:
             type: integer
           description: 'Glassdoor employer ID (from searchCompanies).'
+          example: 9079
       responses:
         '200':
           description: Salary data by role with pay ranges.
@@ -151,24 +174,31 @@ paths:
             application/json:
               schema:
                 type: object
+                description: Company salary data wrapper.
                 required: [companyName, salaries]
                 properties:
                   companyName:
                     type: [string, 'null']
+                    description: Company display name.
                   totalSalaries:
                     type: [string, 'null']
+                    description: Total number of salary reports submitted.
                   salaries:
                     type: array
                     items:
                       type: object
+                      description: Salary data for a single job title.
                       required: [jobTitle]
                       properties:
                         jobTitle:
                           type: string
+                          description: Job title or role name.
                         salaryCount:
                           type: [string, 'null']
+                          description: Number of salary reports for this role.
                         payRange:
                           type: [string, 'null']
+                          description: 'Pay range as displayed (e.g. "$120K - $180K/yr").'
 
   /internal/getInterviews:
     get:
@@ -192,6 +222,7 @@ paths:
           schema:
             type: integer
           description: 'Glassdoor employer ID (from searchCompanies).'
+          example: 9079
       responses:
         '200':
           description: Interview experiences with difficulty and outcome.
@@ -199,31 +230,43 @@ paths:
             application/json:
               schema:
                 type: object
+                description: Company interview data wrapper.
                 required: [companyName, interviews]
                 properties:
                   companyName:
                     type: [string, 'null']
+                    description: Company display name.
                   difficulty:
                     type: [string, 'null']
+                    description: 'Average interview difficulty (e.g. "3.2 out of 5").'
                   interviewCount:
                     type: [string, 'null']
+                    description: Total number of interview reports.
                   interviews:
                     type: array
                     items:
                       type: object
+                      description: A single interview experience report.
                       required: [role]
                       properties:
                         role:
                           type: [string, 'null']
+                          description: Job role interviewed for.
                         date:
                           type: [string, 'null']
+                          description: 'Interview date (e.g. "Jan 10, 2025").'
                         location:
                           type: [string, 'null']
+                          description: 'Interview location (e.g. "San Francisco, CA").'
                         offerStatus:
                           type: [string, 'null']
+                          description: 'Outcome (e.g. "Accepted offer", "Declined offer", "No offer").'
                         experience:
                           type: [string, 'null']
+                          description: 'Sentiment (e.g. "Positive", "Negative", "Neutral").'
                         difficulty:
                           type: [string, 'null']
+                          description: 'Difficulty level (e.g. "Average", "Difficult").'
                         description:
                           type: [string, 'null']
+                          description: Interview process description.

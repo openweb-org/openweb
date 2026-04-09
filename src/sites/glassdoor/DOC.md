@@ -34,6 +34,8 @@ openweb glassdoor exec getSalaries '{"employerId":9079}'
 openweb glassdoor exec getInterviews '{"employerId":9079}'
 ```
 
+---
+
 ## Site Internals
 
 ### API Architecture
@@ -55,3 +57,8 @@ openweb glassdoor exec getInterviews '{"employerId":9079}'
 - **Cloudflare Turnstile** — "Just a moment..." challenge page
 - No persistent session cookies required — challenge passes per-request
 - Headed browser recommended for reliability
+
+### Known Issues
+- Cloudflare Turnstile may require manual CAPTCHA solve under aggressive blocking — restart browser with `--no-headless` if stuck
+- DOM extraction for reviews/salaries/interviews depends on Glassdoor's markup — layout changes may break parsing
+- Salary `payRange` format varies (hourly vs annual) and may return null if the page layout changes
