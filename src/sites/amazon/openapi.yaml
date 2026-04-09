@@ -30,12 +30,14 @@ paths:
           schema:
             type: string
           description: Search keyword
+          example: "laptop"
         - name: page
           in: query
           required: false
           schema:
             type: integer
           description: Page number for pagination (default 1)
+          example: 1
       responses:
         "200":
           description: Search results with product listings.
@@ -43,6 +45,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - items
                 properties:
                   resultCount:
                     type: integer
@@ -50,6 +54,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - asin
+                        - title
                       properties:
                         asin:
                           type: string
@@ -83,6 +90,7 @@ paths:
           schema:
             type: string
           description: "Amazon Standard Identification Number (10-char alphanumeric, e.g. B00MVWGQX0)"
+          example: "B00MVWGQX0"
       responses:
         "200":
           description: Product detail with structured data.
@@ -90,6 +98,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - name
                 properties:
                   name:
                     type: string
@@ -129,12 +139,14 @@ paths:
           schema:
             type: string
           description: "Amazon Standard Identification Number (10-char alphanumeric)"
+          example: "B00MVWGQX0"
         - name: pageNumber
           in: query
           required: false
           schema:
             type: integer
           description: Review page number (default 1)
+          example: 1
         - name: sortBy
           in: query
           required: false
@@ -144,6 +156,7 @@ paths:
               - recent
               - helpful
           description: Sort order for reviews
+          example: "recent"
       responses:
         "200":
           description: Product reviews list.
@@ -151,6 +164,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - items
                 properties:
                   overallRating:
                     type: string
@@ -160,6 +175,10 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - rating
+                        - title
+                        - body
                       properties:
                         rating:
                           type: string
@@ -225,6 +244,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - products
                 properties:
                   nextIndex:
                     type: integer
@@ -234,6 +255,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - asin
+                        - title
                       properties:
                         asin:
                           type: string
@@ -323,8 +347,6 @@ paths:
                     type:
                       - array
                       - "null"
-                required:
-                  - products
 
   /gp/bestsellers/:
     get:
@@ -346,11 +368,16 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - items
                 properties:
                   items:
                     type: array
                     items:
                       type: object
+                      required:
+                        - rank
+                        - title
                       properties:
                         rank:
                           type: integer
@@ -390,6 +417,7 @@ paths:
                 asin:
                   type: string
                   description: "Amazon Standard Identification Number (10-char alphanumeric, e.g. B00MVWGQX0)"
+                  example: "B00MVWGQX0"
                 quantity:
                   type: integer
                   description: "Number of items to add (default 1)"
@@ -401,6 +429,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -438,6 +468,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - items
                 properties:
                   cartCount:
                     type: integer
@@ -447,6 +479,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - asin
+                        - title
                       properties:
                         asin:
                           type: string

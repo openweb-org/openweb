@@ -1,9 +1,9 @@
 {
-  "operation_id": "getBestSellers",
-  "replay_safety": "safe_read",
+  "operation_id": "addToCart",
+  "replay_safety": "unsafe_write",
   "cases": [
     {
-      "input": {},
+      "input": { "asin": "B00MVWGQX0" },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

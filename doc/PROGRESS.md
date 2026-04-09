@@ -1,3 +1,45 @@
+## 2026-04-09: Polish youtube site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Updated Known Issues — clarified POST verify behavior (uses `replay_safety` now)
+- Added `required` arrays to all 11 response schemas — top-level objects (contents, videoDetails, playabilityStatus, items, actions) and nested adapter responses (comments, videos)
+- Added `description` on every property at every nesting level — no bare type-only fields across all 11 operations
+- Added `required: [clientName, clientVersion]` to all 9 InnerTube request context.client blocks
+- Added `verified: true` to 10 build sections that were missing it (all except getVideoPlayer which already had it)
+- Added `example` to path parameters (videoId on getComments, playlistId on getPlaylist)
+- Added `replay_safety: "safe_read"` to 9 read example files, `"caution"` to 3 write example files (likeVideo, unlikeVideo, subscribeChannel)
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions, replay_safety on examples
+- Enhanced site (9→11 ops): new getComments, getPlaylist adapter operations needed example files and schema hardening
+
+**Key files:**
+- `src/sites/youtube/openapi.yaml` — schema hardening across all 11 ops
+- `src/sites/youtube/DOC.md` — heading level fix, Known Issues cleanup
+- `src/sites/youtube/examples/*.example.json` — replay_safety added to all 12 files
+
+**Verification:** pnpm build, pnpm dev verify youtube
+
+## 2026-04-09: Polish amazon site package
+
+**What changed:**
+- Added `required` arrays to all 7 response schemas — top-level (items, products, success) and nested array items (asin+title for products, rank+title for bestsellers, rating+title+body for reviews)
+- Added `example` values to all parameters (k, asin, page, pageNumber, sortBy, startIndex, pageSize) and requestBody asin
+- Added `replay_safety` to all 7 example files (safe_read for reads, unsafe_write for addToCart)
+- Created missing example files for addToCart and getCart operations
+
+**Why:**
+- Quality checklist: required fields, parameter examples, replay_safety on all examples
+- Enhanced site (5→7 ops): new addToCart, getCart operations needed example files
+
+**Key files:**
+- `src/sites/amazon/openapi.yaml` — required arrays, parameter examples across all 7 ops
+- `src/sites/amazon/examples/addToCart.example.json` — new
+- `src/sites/amazon/examples/getCart.example.json` — new
+
+**Verification:** pnpm build, pnpm dev verify amazon
+
 ## 2026-04-09: Polish linkedin site package
 
 **What changed:**

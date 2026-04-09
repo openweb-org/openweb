@@ -1,5 +1,6 @@
 {
   "operation_id": "getProductReviews",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "asin": "B00MVWGQX0" },
