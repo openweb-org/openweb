@@ -1,5 +1,6 @@
 {
   "operation_id": "getAttractionDetail",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "geoId": "60763", "locationId": "104365", "slug": "Statue_of_Liberty-New_York_City_New_York" },

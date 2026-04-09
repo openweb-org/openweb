@@ -1,5 +1,6 @@
 {
   "operation_id": "searchHotels",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "geoId": "60763", "location": "New_York_City_New_York" },

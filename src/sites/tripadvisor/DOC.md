@@ -76,7 +76,7 @@ openweb tripadvisor exec getAttractionReviews '{"geoId":"60763","locationId":"10
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 TripAdvisor embeds rich LD+JSON structured data in SSR HTML pages:
 - Hotel search pages: `ItemList` with `Hotel` items (name, rating, address, priceRange)
 - Hotel detail pages: `Hotel`/`LodgingBusiness` (name, rating, amenities, starRating, checkin/out)
@@ -86,13 +86,13 @@ TripAdvisor embeds rich LD+JSON structured data in SSR HTML pages:
 - Attraction review pages: `LocalBusiness` (name, rating, address) + DOM review cards
 - DataDome bot protection blocks all direct HTTP/fetch — requires real browser
 
-## Auth
+### Auth
 No auth required. All operations read public data.
 
-## Transport
+### Transport
 Page transport (real Chrome via CDP). DataDome blocks node transport entirely.
 
-## Extraction
+### Extraction
 - **searchLocation**: TypeAheadJson API via `page.evaluate(fetch)` → parse geoId and slug from results
 - **searchHotels**: LD+JSON `ItemList` → `itemListElement[].item` (type `Hotel`/`LodgingBusiness`), DOM `[data-automation="hotel-card-title"]` fallback
 - **getHotelDetail**: LD+JSON `Hotel`/`LodgingBusiness` from `<script type="application/ld+json">` — amenityFeature, starRating, checkinTime
@@ -101,7 +101,7 @@ Page transport (real Chrome via CDP). DataDome blocks node transport entirely.
 - **getAttractionDetail**: LD+JSON `TouristAttraction`/`LocalBusiness` — description, openingHoursSpecification
 - **getAttractionReviews**: LD+JSON for attraction info + DOM reviews via `[data-reviewid]`, `[data-test-target="review-title"]`, `[data-automation*="reviewText"]`
 
-## Known Issues
+### Known Issues
 - **DataDome:** Aggressive bot detection on all endpoints. Must use page transport with real Chrome profile. If captcha appears, solve it manually in the headed browser, then retry.
 - **Review ratings:** Bubble ratings extracted from CSS class `ui_bubble_rating bubble_N` when available.
 - **Selector fragility:** TripAdvisor frequently changes DOM structure. Adapter uses tiered fallbacks (LD+JSON → specific data attributes → generic DOM) to reduce breakage.

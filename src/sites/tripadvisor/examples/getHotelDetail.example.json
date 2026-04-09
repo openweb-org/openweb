@@ -1,5 +1,6 @@
 {
   "operation_id": "getHotelDetail",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "geoId": "60763", "locationId": "93450", "slug": "The_Plaza-New_York_City_New_York" },

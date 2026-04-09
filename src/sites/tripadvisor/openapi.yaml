@@ -33,6 +33,7 @@ paths:
           schema:
             type: string
           description: 'Location search query (e.g. "Paris", "Tokyo", "New York").'
+          example: Tokyo
       responses:
         '200':
           description: Location search results with geoIds and slugs.
@@ -44,17 +45,21 @@ paths:
                 properties:
                   count:
                     type: integer
+                    description: Number of matching locations.
                   results:
                     type: array
+                    description: Matching locations with geoIds and slugs.
                     items:
                       type: object
                       required: [geoId, name, type]
+                      description: A location result from the TypeAheadJson API.
                       properties:
                         geoId:
                           type: string
                           description: 'TripAdvisor geo ID (use in searchHotels, getRestaurant, getAttractionReviews).'
                         name:
                           type: string
+                          description: Display name of the location.
                         type:
                           type: string
                           description: 'Location type from TypeAheadJson API.'
@@ -63,6 +68,7 @@ paths:
                           description: 'URL slug for the location (use as "location" param in searchHotels).'
                         url:
                           type: string
+                          description: Full TripAdvisor URL for the location page.
 
   /internal/searchHotels:
     get:
@@ -86,12 +92,14 @@ paths:
           schema:
             type: string
           description: 'TripAdvisor geo ID for the location (e.g. "60763" for New York City, "187147" for Paris).'
+          example: '60763'
         - name: location
           in: query
           required: true
           schema:
             type: string
           description: 'Location name as URL slug (e.g. "New_York_City_New_York", "Paris_Ile_de_France").'
+          example: New_York_City_New_York
       responses:
         '200':
           description: List of hotels from LD+JSON ItemList.
@@ -103,40 +111,55 @@ paths:
                 properties:
                   count:
                     type: integer
+                    description: Number of hotels found.
                   hotels:
                     type: array
+                    description: Hotels matching the location search.
                     items:
                       type: object
                       required: [name, url]
+                      description: A hotel listing from LD+JSON ItemList.
                       properties:
                         name:
                           type: string
+                          description: Hotel name.
                         url:
                           type: string
+                          description: TripAdvisor URL for the hotel page.
                         rating:
                           type: [number, 'null']
                           description: Aggregate rating out of 5.
                         reviewCount:
                           type: [integer, 'null']
+                          description: Total number of reviews.
                         priceRange:
                           type: [string, 'null']
+                          description: 'Price range indicator (e.g. "$", "$$-$$$").'
                         address:
                           type: [object, 'null']
+                          description: Hotel street address.
                           properties:
                             street:
                               type: [string, 'null']
+                              description: Street address line.
                             city:
                               type: [string, 'null']
+                              description: City name.
                             region:
                               type: [string, 'null']
+                              description: State or region.
                             country:
                               type: [string, 'null']
+                              description: Country name.
                             postalCode:
                               type: [string, 'null']
+                              description: Postal or ZIP code.
                         telephone:
                           type: [string, 'null']
+                          description: Hotel phone number.
                         image:
                           type: [string, 'null']
+                          description: URL of the hotel thumbnail image.
 
   /internal/getRestaurant:
     get:
@@ -160,18 +183,21 @@ paths:
           schema:
             type: string
           description: 'TripAdvisor geo ID (e.g. "60763").'
+          example: '60763'
         - name: locationId
           in: query
           required: true
           schema:
             type: string
           description: 'Restaurant location ID (e.g. "457808" for Le Bernardin).'
+          example: '457808'
         - name: slug
           in: query
           required: true
           schema:
             type: string
           description: 'Restaurant URL slug (e.g. "Le_Bernardin-New_York_City_New_York").'
+          example: Le_Bernardin-New_York_City_New_York
       responses:
         '200':
           description: Restaurant detail from LD+JSON FoodEstablishment schema.
@@ -179,52 +205,73 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [name]
                 properties:
                   name:
                     type: [string, 'null']
+                    description: Restaurant name.
                   url:
                     type: [string, 'null']
+                    description: TripAdvisor URL for the restaurant page.
                   cuisine:
                     type: array
                     items:
                       type: string
+                    description: List of cuisine types served.
                   rating:
                     type: [number, 'null']
                     description: Aggregate rating out of 5.
                   reviewCount:
                     type: [integer, 'null']
+                    description: Total number of reviews.
                   priceRange:
                     type: [string, 'null']
+                    description: 'Price range indicator (e.g. "$", "$$-$$$").'
                   telephone:
                     type: [string, 'null']
+                    description: Restaurant phone number.
                   menuUrl:
                     type: [string, 'null']
+                    description: URL to the restaurant menu page.
                   address:
                     type: [object, 'null']
+                    description: Restaurant street address.
                     properties:
                       street:
                         type: [string, 'null']
+                        description: Street address line.
                       city:
                         type: [string, 'null']
+                        description: City name.
                       region:
                         type: [string, 'null']
+                        description: State or region.
                       country:
                         type: [string, 'null']
+                        description: Country name.
                       postalCode:
                         type: [string, 'null']
+                        description: Postal or ZIP code.
                   openingHours:
                     type: array
+                    description: Weekly opening hours schedule.
                     items:
                       type: object
+                      description: Opening hours for a specific day.
+                      required: [day, opens, closes]
                       properties:
                         day:
                           type: string
+                          description: 'Day of the week (e.g. "Monday").'
                         opens:
                           type: string
+                          description: 'Opening time in HH:MM format.'
                         closes:
                           type: string
+                          description: 'Closing time in HH:MM format.'
                   image:
                     type: [string, 'null']
+                    description: URL of the restaurant thumbnail image.
 
   /internal/getAttractionReviews:
     get:
@@ -248,18 +295,21 @@ paths:
           schema:
             type: string
           description: 'TripAdvisor geo ID (e.g. "60763").'
+          example: '60763'
         - name: locationId
           in: query
           required: true
           schema:
             type: string
           description: 'Attraction location ID (e.g. "104365" for Statue of Liberty).'
+          example: '104365'
         - name: slug
           in: query
           required: true
           schema:
             type: string
           description: 'Attraction URL slug (e.g. "Statue_of_Liberty-New_York_City_New_York").'
+          example: Statue_of_Liberty-New_York_City_New_York
       responses:
         '200':
           description: Attraction info from LD+JSON plus reviews from DOM.
@@ -267,42 +317,58 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [name]
                 properties:
                   name:
                     type: [string, 'null']
+                    description: Attraction name.
                   rating:
                     type: [number, 'null']
                     description: Aggregate rating out of 5.
                   reviewCount:
                     type: [integer, 'null']
+                    description: Total number of reviews.
                   address:
                     type: [object, 'null']
+                    description: Attraction street address.
                     properties:
                       street:
                         type: [string, 'null']
+                        description: Street address line.
                       city:
                         type: [string, 'null']
+                        description: City name.
                       region:
                         type: [string, 'null']
+                        description: State or region.
                       country:
                         type: [string, 'null']
+                        description: Country name.
                       postalCode:
                         type: [string, 'null']
+                        description: Postal or ZIP code.
                   telephone:
                     type: [string, 'null']
+                    description: Attraction phone number.
                   image:
                     type: [string, 'null']
+                    description: URL of the attraction thumbnail image.
                   reviews:
                     type: array
+                    description: User reviews extracted from DOM.
                     items:
                       type: object
+                      description: A single user review.
                       properties:
                         title:
                           type: [string, 'null']
+                          description: Review headline.
                         text:
                           type: [string, 'null']
+                          description: Full review body text.
                         date:
                           type: [string, 'null']
+                          description: Review publication date.
 
   /internal/getHotelDetail:
     get:
@@ -326,18 +392,21 @@ paths:
           schema:
             type: string
           description: 'TripAdvisor geo ID (e.g. "60763").'
+          example: '60763'
         - name: locationId
           in: query
           required: true
           schema:
             type: string
           description: 'Hotel location ID (e.g. "93450" for The Plaza).'
+          example: '93450'
         - name: slug
           in: query
           required: true
           schema:
             type: string
           description: 'Hotel URL slug (e.g. "The_Plaza-New_York_City_New_York").'
+          example: The_Plaza-New_York_City_New_York
       responses:
         '200':
           description: Hotel detail from LD+JSON Hotel/LodgingBusiness schema.
@@ -345,49 +414,65 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [name]
                 properties:
                   name:
                     type: [string, 'null']
+                    description: Hotel name.
                   url:
                     type: [string, 'null']
+                    description: TripAdvisor URL for the hotel page.
                   rating:
                     type: [number, 'null']
                     description: Aggregate rating out of 5.
                   reviewCount:
                     type: [integer, 'null']
+                    description: Total number of reviews.
                   priceRange:
                     type: [string, 'null']
+                    description: 'Price range indicator (e.g. "$", "$$-$$$").'
                   starRating:
                     type: [number, 'null']
                     description: Hotel star classification (e.g. 5 for five-star).
                   description:
                     type: [string, 'null']
+                    description: Hotel description text.
                   amenities:
                     type: array
                     items:
                       type: string
-                    description: List of hotel amenities (e.g. "Free WiFi", "Pool", "Spa").
+                    description: 'List of hotel amenities (e.g. "Free WiFi", "Pool", "Spa").'
                   address:
                     type: [object, 'null']
+                    description: Hotel street address.
                     properties:
                       street:
                         type: [string, 'null']
+                        description: Street address line.
                       city:
                         type: [string, 'null']
+                        description: City name.
                       region:
                         type: [string, 'null']
+                        description: State or region.
                       country:
                         type: [string, 'null']
+                        description: Country name.
                       postalCode:
                         type: [string, 'null']
+                        description: Postal or ZIP code.
                   telephone:
                     type: [string, 'null']
+                    description: Hotel phone number.
                   checkinTime:
                     type: [string, 'null']
+                    description: Check-in time.
                   checkoutTime:
                     type: [string, 'null']
+                    description: Check-out time.
                   image:
                     type: [string, 'null']
+                    description: URL of the hotel thumbnail image.
 
   /internal/getAttractionDetail:
     get:
@@ -411,18 +496,21 @@ paths:
           schema:
             type: string
           description: 'TripAdvisor geo ID (e.g. "60763").'
+          example: '60763'
         - name: locationId
           in: query
           required: true
           schema:
             type: string
           description: 'Attraction location ID (e.g. "104365" for Statue of Liberty).'
+          example: '104365'
         - name: slug
           in: query
           required: true
           schema:
             type: string
           description: 'Attraction URL slug (e.g. "Statue_of_Liberty-New_York_City_New_York").'
+          example: Statue_of_Liberty-New_York_City_New_York
       responses:
         '200':
           description: Attraction detail from LD+JSON TouristAttraction/LocalBusiness schema.
@@ -430,46 +518,64 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [name]
                 properties:
                   name:
                     type: [string, 'null']
+                    description: Attraction name.
                   url:
                     type: [string, 'null']
+                    description: TripAdvisor URL for the attraction page.
                   description:
                     type: [string, 'null']
+                    description: Attraction description text.
                   rating:
                     type: [number, 'null']
                     description: Aggregate rating out of 5.
                   reviewCount:
                     type: [integer, 'null']
+                    description: Total number of reviews.
                   address:
                     type: [object, 'null']
+                    description: Attraction street address.
                     properties:
                       street:
                         type: [string, 'null']
+                        description: Street address line.
                       city:
                         type: [string, 'null']
+                        description: City name.
                       region:
                         type: [string, 'null']
+                        description: State or region.
                       country:
                         type: [string, 'null']
+                        description: Country name.
                       postalCode:
                         type: [string, 'null']
+                        description: Postal or ZIP code.
                   telephone:
                     type: [string, 'null']
+                    description: Attraction phone number.
                   image:
                     type: [string, 'null']
+                    description: URL of the attraction thumbnail image.
                   openingHours:
                     type: array
+                    description: Weekly opening hours schedule.
                     items:
                       type: object
+                      description: Opening hours for a specific day.
                       properties:
                         day:
-                          type: string
+                          type: [string, 'null']
+                          description: 'Day of the week (e.g. "Monday").'
                         opens:
-                          type: string
+                          type: [string, 'null']
+                          description: 'Opening time in HH:MM format.'
                         closes:
-                          type: string
+                          type: [string, 'null']
+                          description: 'Closing time in HH:MM format.'
 
   /internal/searchRestaurants:
     get:
@@ -493,12 +599,14 @@ paths:
           schema:
             type: string
           description: 'TripAdvisor geo ID for the location (e.g. "60763" for New York City, "187147" for Paris).'
+          example: '60763'
         - name: location
           in: query
           required: true
           schema:
             type: string
           description: 'Location name as URL slug (e.g. "New_York_City_New_York", "Paris_Ile_de_France").'
+          example: New_York_City_New_York
       responses:
         '200':
           description: List of restaurants from LD+JSON ItemList.
@@ -510,41 +618,57 @@ paths:
                 properties:
                   count:
                     type: integer
+                    description: Number of restaurants found.
                   restaurants:
                     type: array
+                    description: Restaurants matching the location search.
                     items:
                       type: object
                       required: [name, url]
+                      description: A restaurant listing from LD+JSON ItemList.
                       properties:
                         name:
                           type: string
+                          description: Restaurant name.
                         url:
                           type: string
+                          description: TripAdvisor URL for the restaurant page.
                         rating:
                           type: [number, 'null']
                           description: Aggregate rating out of 5.
                         reviewCount:
                           type: [integer, 'null']
+                          description: Total number of reviews.
                         priceRange:
                           type: [string, 'null']
+                          description: 'Price range indicator (e.g. "$", "$$-$$$").'
                         cuisine:
                           type: array
                           items:
                             type: string
+                          description: List of cuisine types served.
                         address:
                           type: [object, 'null']
+                          description: Restaurant street address.
                           properties:
                             street:
                               type: [string, 'null']
+                              description: Street address line.
                             city:
                               type: [string, 'null']
+                              description: City name.
                             region:
                               type: [string, 'null']
+                              description: State or region.
                             country:
                               type: [string, 'null']
+                              description: Country name.
                             postalCode:
                               type: [string, 'null']
+                              description: Postal or ZIP code.
                         telephone:
                           type: [string, 'null']
+                          description: Restaurant phone number.
                         image:
                           type: [string, 'null']
+                          description: URL of the restaurant thumbnail image.
