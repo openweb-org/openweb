@@ -72,6 +72,8 @@ paths:
                     type:
                       - object
                       - "null"
+                    additionalProperties:
+                      type: string
                     description: "Named URLs (Documentation, Source, etc.)."
                   requires_python:
                     type:
@@ -135,35 +137,44 @@ paths:
                 properties:
                   name:
                     type: string
+                    description: Canonical package name.
                   summary:
                     type: string
+                    description: Short one-line description.
                   version:
                     type: string
+                    description: Release version string.
                   author:
                     type:
                       - string
                       - "null"
+                    description: Package author name.
                   author_email:
                     type:
                       - string
                       - "null"
+                    description: Author email address.
                   license:
                     type:
                       - string
                       - "null"
+                    description: License identifier (e.g. MIT, Apache-2.0).
                   requires_python:
                     type:
                       - string
                       - "null"
+                    description: "Python version constraint (e.g. >=3.8)."
                   requires_dist:
                     type:
                       - array
                       - "null"
                     items:
                       type: string
+                    description: "List of dependency specifiers."
                 required:
                   - name
                   - version
+                  - summary
 
   /simple/{package}/:
     get:
@@ -226,6 +237,9 @@ paths:
                           oneOf:
                             - type: string
                             - type: boolean
+                      required:
+                        - filename
+                        - url
                     description: Download files across all versions.
                 required:
                   - name
