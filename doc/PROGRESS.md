@@ -1,3 +1,22 @@
+## 2026-04-09: Polish npr site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added `required` arrays to all nested objects (displayDate, image, slug)
+- Added descriptions to all bare properties across 3 response schemas
+- Added `example` values to filters, hitsPerPage, page parameters
+- Eliminated bare `type: object` — all nested objects now have descriptions
+- Created PROGRESS.md
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions
+
+**Key files:**
+- `src/sites/npr/openapi.yaml` — schema hardening
+- `src/sites/npr/DOC.md` — heading level fix
+
+**Verification:** pnpm build, pnpm dev verify npr
+
 ## 2026-04-09: Polish guardian site package
 
 **What changed:**

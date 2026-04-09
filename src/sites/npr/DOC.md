@@ -46,20 +46,20 @@ openweb npr exec searchArticles '{"query": "economy", "hitsPerPage": 20, "page":
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - NPR uses Algolia as its search backend with a public API key embedded in the site JavaScript
 - Single Algolia index `nprorg-cds` contains all NPR content (stories, pages, transcripts)
 - GET-based REST API at `7s4f1grybg-dsn.algolia.net`
 - Article body text is stored directly in the Algolia index as plain text (not HTML)
 - Search results include teaser/summary `bodyText`; single-object GET returns full `bodyText`
 
-## Auth
+### Auth
 No auth required. Public Algolia API key (`f2f5be631a4287148759373ff4ab5227`) and application ID (`7S4F1GRYBG`) are embedded as default query parameters.
 
-## Transport
+### Transport
 `node` — direct HTTP to Algolia API. No browser needed, no bot detection on the Algolia endpoint.
 
-## Known Issues
+### Known Issues
 - Article `bodyText` is plain text, not HTML. No paragraph/heading structure preserved.
 - Some older or non-standard content (transcripts pages, corrections pages) appears in unfiltered searches. Use `filters: "type:story"` to exclude them.
 - `bylines` array may contain null entries for wire/AP stories.

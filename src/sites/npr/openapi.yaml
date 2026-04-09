@@ -49,6 +49,7 @@ paths:
             type: string
             default: 'type:story'
           description: 'Algolia filter expression. Default filters to stories only. Use "type:story AND topics:\"Health\"" to filter by topic.'
+          example: 'type:story AND topics:"Health"'
         - name: hitsPerPage
           in: query
           required: false
@@ -56,6 +57,7 @@ paths:
             type: integer
             default: 10
           description: Number of results per page (max 50).
+          example: 10
         - name: page
           in: query
           required: false
@@ -63,6 +65,7 @@ paths:
             type: integer
             default: 0
           description: Zero-indexed page number for pagination.
+          example: 0
       responses:
         '200':
           description: Array of matching articles (after hits unwrap).
@@ -91,6 +94,7 @@ paths:
                       description: Full canonical URL.
                     displayDate:
                       type: object
+                      description: Publication date in human and machine formats.
                       properties:
                         longDate:
                           type: string
@@ -99,6 +103,7 @@ paths:
                           type: string
                           format: date-time
                           description: ISO 8601 date-time.
+                      required: [longDate, dateTime]
                     bylines:
                       type: array
                       items:
@@ -113,6 +118,7 @@ paths:
                       description: Topic tags (Health, Politics, World, etc.).
                     image:
                       type: object
+                      description: Lead image for the article.
                       properties:
                         url:
                           type: string
@@ -120,8 +126,10 @@ paths:
                           description: Image URL.
                         caption:
                           type: string
+                          description: Image caption text.
                         credit:
                           type: string
+                          description: Photographer or source credit.
                     hasAudio:
                       type: boolean
                       description: Whether the article has an audio version.
@@ -187,6 +195,7 @@ paths:
                     description: Full canonical URL.
                   displayDate:
                     type: object
+                    description: Publication date in human and machine formats.
                     properties:
                       longDate:
                         type: string
@@ -195,6 +204,7 @@ paths:
                         type: string
                         format: date-time
                         description: ISO 8601 date-time.
+                    required: [longDate, dateTime]
                   bylines:
                     type: array
                     items:
@@ -212,19 +222,24 @@ paths:
                     description: Associated NPR shows.
                   image:
                     type: object
+                    description: Lead image for the article.
                     properties:
                       url:
                         type: string
                         format: uri
                       caption:
                         type: string
+                        description: Image caption text.
                       credit:
                         type: string
+                        description: Photographer or source credit.
+                    required: [url]
                   hasAudio:
                     type: boolean
                     description: Whether the article has an audio version.
                   slug:
                     type: object
+                    description: Section/category the article belongs to.
                     properties:
                       title:
                         type: string
@@ -233,6 +248,7 @@ paths:
                         type: string
                         format: uri
                         description: Section URL.
+                    required: [title]
                   type:
                     type: string
                     description: Content type.
@@ -241,7 +257,7 @@ paths:
   /1/indexes/nprorg-cds?top:
     get:
       operationId: getTopStories
-      summary: Get latest NPR top stories / front page headlines
+      summary: Get latest NPR top stories — returns title, summary, author, date, topic for front-page headlines
       x-openweb:
         permission: read
         unwrap: hits
@@ -278,6 +294,7 @@ paths:
             type: string
             default: 'type:story AND topics:"Home Page Top Stories"'
           description: Filter for top stories. Defaults to homepage stories.
+          example: 'type:story AND topics:"Home Page Top Stories"'
         - name: hitsPerPage
           in: query
           required: false
@@ -285,6 +302,7 @@ paths:
             type: integer
             default: 10
           description: Number of stories to return (max 50).
+          example: 10
         - name: page
           in: query
           required: false
@@ -292,6 +310,7 @@ paths:
             type: integer
             default: 0
           description: Zero-indexed page number.
+          example: 0
       responses:
         '200':
           description: Array of top stories (after hits unwrap).
@@ -317,36 +336,49 @@ paths:
                     canonicalUrl:
                       type: string
                       format: uri
+                      description: Full canonical URL.
                     displayDate:
                       type: object
+                      description: Publication date in human and machine formats.
                       properties:
                         longDate:
                           type: string
+                          description: Human-readable date (e.g. "April 09, 2026").
                         dateTime:
                           type: string
                           format: date-time
+                          description: ISO 8601 date-time.
+                      required: [longDate, dateTime]
                     bylines:
                       type: array
                       items:
                         type:
                           - string
                           - 'null'
+                      description: Author names (may contain null for wire stories).
                     topics:
                       type: array
                       items:
                         type: string
+                      description: Topic tags (Health, Politics, World, etc.).
                     image:
                       type: object
+                      description: Lead image for the article.
                       properties:
                         url:
                           type: string
                           format: uri
+                          description: Image URL.
                         caption:
                           type: string
+                          description: Image caption text.
                         credit:
                           type: string
+                          description: Photographer or source credit.
                     hasAudio:
                       type: boolean
+                      description: Whether the article has an audio version.
                     type:
                       type: string
+                      description: Content type (story, etc.).
                   required: [objectID, title, type]
