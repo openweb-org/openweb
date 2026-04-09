@@ -1,5 +1,6 @@
 {
   "operation_id": "searchMusic",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "searchTerm": "radiohead", "limit": 3 },

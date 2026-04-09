@@ -1,5 +1,6 @@
 {
   "operation_id": "getTrack",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "uri": "spotify:track:4u7EnebtmKWzUH433cf5Qv" },

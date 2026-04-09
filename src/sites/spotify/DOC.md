@@ -74,31 +74,31 @@ openweb spotify exec getRecommendations '{"uri":"spotify:track:4u7EnebtmKWzUH433
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - GraphQL API via `api-partner.spotify.com/pathfinder/v2/query`
 - Persisted queries with `sha256Hash` — no inline query strings
 - Single endpoint, operations differentiated by `operationName` + hash
 - Cross-origin: API on `api-partner.spotify.com`, web app on `open.spotify.com`
 - REST API via `spclient.wg.spotify.com` for user profile / playlists
 
-## Auth
+### Auth
 - Bearer token extracted from web player's fetch interceptor at runtime
 - `client-token` also required (obtained from `clienttoken.spotify.com`)
 - Both tokens are managed by the adapter via request interception
 - Works for both anonymous and logged-in users
 
-## Transport
+### Transport
 - Adapter (`spotify-pathfinder`) — required because:
   1. Cross-origin API (different domain than web app)
   2. Bearer token must be extracted from web player runtime
   3. GraphQL persisted queries need specific request formatting
   4. getUserPlaylists uses a separate REST API (spclient.wg.spotify.com)
 
-## Extraction
+### Extraction
 - Direct JSON responses from GraphQL API
 - User profile REST endpoint returns JSON with `Accept: application/json` header
 
-## Known Issues
+### Known Issues
 - **Token expiry:** Bearer tokens expire periodically; adapter retries with fresh token on 401/403
 - **Rate limiting:** `api.spotify.com/v1/` rate-limits aggressively with web player tokens; use pathfinder API instead
 - **Persisted query hashes:** Hashes may change with web player updates; re-capture if queries return `PersistedQueryNotFound`

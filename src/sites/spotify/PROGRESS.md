@@ -1,5 +1,17 @@
 # Spotify — Progress
 
+## 2026-04-09: Polish — docs, schema, examples
+
+**What changed:**
+- openapi.yaml: added `required` arrays to all response objects across 8 operations, `description` on every property, `example` on all parameters, `verified: true` + `signals: [adapter-verified]` in all build sections
+- DOC.md: fixed heading levels (Site Internals subsections now `###`)
+- All 8 example files: added `replay_safety: safe_read`
+
+**Why:**
+- Align with site package quality checklist
+
+**Verification:** `pnpm build && pnpm --silent dev verify spotify`
+
 ## 2026-04-05
 
 ### Verify fix

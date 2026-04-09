@@ -25,6 +25,9 @@ paths:
         build:
           stable_id: spotify_search_v1
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
       parameters:
         - name: searchTerm
           in: query
@@ -32,6 +35,7 @@ paths:
           schema:
             type: string
           description: "Search query (artist, track, album name)"
+          example: "radiohead"
         - name: limit
           in: query
           required: false
@@ -39,6 +43,7 @@ paths:
             type: integer
             default: 10
           description: "Max results per category"
+          example: 10
         - name: offset
           in: query
           required: false
@@ -46,6 +51,7 @@ paths:
             type: integer
             default: 0
           description: "Pagination offset"
+          example: 0
       responses:
         "200":
           description: Search results across content types
@@ -53,109 +59,165 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [searchV2]
                 properties:
                   searchV2:
                     type: object
+                    description: Search results grouped by content type.
+                    required: [artists, tracksV2, albumsV2]
                     properties:
                       artists:
                         type: object
+                        description: Matching artists.
+                        required: [totalCount, items]
                         properties:
                           totalCount:
                             type: integer
+                            description: Total number of matching artists.
                           items:
                             type: array
+                            description: Artist result entries.
                             items:
                               type: object
+                              required: [data]
                               properties:
                                 data:
                                   type: object
+                                  description: Artist data wrapper.
+                                  required: [profile, uri]
                                   properties:
                                     profile:
                                       type: object
+                                      description: Artist profile info.
+                                      required: [name]
                                       properties:
                                         name:
                                           type: string
+                                          description: Artist name.
                                     uri:
                                       type: string
                                       description: "spotify:artist:ID"
                       tracksV2:
                         type: object
+                        description: Matching tracks.
+                        required: [totalCount, items]
                         properties:
                           totalCount:
                             type: integer
+                            description: Total number of matching tracks.
                           items:
                             type: array
+                            description: Track result entries.
                             items:
                               type: object
+                              required: [item]
                               properties:
                                 item:
                                   type: object
+                                  description: Track item wrapper.
+                                  required: [data]
                                   properties:
                                     data:
                                       type: object
+                                      description: Track data.
+                                      required: [name, uri]
                                       properties:
                                         name:
                                           type: string
+                                          description: Track title.
                                         uri:
                                           type: string
+                                          description: "spotify:track:ID"
                                         duration:
                                           type: object
+                                          description: Track duration.
+                                          required: [totalMilliseconds]
                                           properties:
                                             totalMilliseconds:
                                               type: integer
+                                              description: Duration in milliseconds.
                                         albumOfTrack:
                                           type: object
+                                          description: Album containing this track.
+                                          required: [name]
                                           properties:
                                             name:
                                               type: string
+                                              description: Album name.
                                         artists:
                                           type: object
+                                          description: Track artists.
+                                          required: [items]
                                           properties:
                                             items:
                                               type: array
+                                              description: Artist entries.
                                               items:
                                                 type: object
+                                                required: [profile]
                                                 properties:
                                                   profile:
                                                     type: object
+                                                    description: Artist profile.
+                                                    required: [name]
                                                     properties:
                                                       name:
                                                         type: string
+                                                        description: Artist name.
                       albumsV2:
                         type: object
+                        description: Matching albums.
+                        required: [totalCount, items]
                         properties:
                           totalCount:
                             type: integer
+                            description: Total number of matching albums.
                           items:
                             type: array
+                            description: Album result entries.
                             items:
                               type: object
+                              required: [data]
                               properties:
                                 data:
                                   type: object
+                                  description: Album data.
+                                  required: [name, uri]
                                   properties:
                                     name:
                                       type: string
+                                      description: Album name.
                                     uri:
                                       type: string
+                                      description: "spotify:album:ID"
                                     date:
                                       type: object
+                                      description: Release date.
+                                      required: [year]
                                       properties:
                                         year:
                                           type: integer
+                                          description: Release year.
                                     artists:
                                       type: object
+                                      description: Album artists.
+                                      required: [items]
                                       properties:
                                         items:
                                           type: array
+                                          description: Artist entries.
                                           items:
                                             type: object
+                                            required: [profile]
                                             properties:
                                               profile:
                                                 type: object
+                                                description: Artist profile.
+                                                required: [name]
                                                 properties:
                                                   name:
                                                     type: string
+                                                    description: Artist name.
 
   /internal/getArtist:
     post:
@@ -169,6 +231,9 @@ paths:
         build:
           stable_id: spotify_artist_v1
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
       parameters:
         - name: uri
           in: query
@@ -176,6 +241,7 @@ paths:
           schema:
             type: string
           description: "Spotify URI (spotify:artist:ID) — get from searchMusic"
+          example: "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
       responses:
         "200":
           description: Artist profile with stats, discography, related content
@@ -183,102 +249,154 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [artistUnion]
                 properties:
                   artistUnion:
                     type: object
+                    description: Artist profile and associated content.
+                    required: [id, uri, profile, stats, discography]
                     properties:
                       id:
                         type: string
+                        description: Spotify internal artist ID.
                       uri:
                         type: string
+                        description: "spotify:artist:ID"
                       profile:
                         type: object
+                        description: Artist profile information.
+                        required: [name]
                         properties:
                           name:
                             type: string
+                            description: Artist name.
                           biography:
                             type: object
+                            description: Artist biography.
                             properties:
                               text:
                                 type: string
+                                description: Biography text.
                           verified:
                             type: boolean
+                            description: Whether the artist is verified.
                       stats:
                         type: object
+                        description: Artist popularity stats.
+                        required: [followers, monthlyListeners]
                         properties:
                           followers:
                             type: integer
+                            description: Follower count.
                           monthlyListeners:
                             type: integer
+                            description: Monthly listener count.
                           worldRank:
                             type: integer
+                            description: Global popularity rank.
                           topCities:
                             type: object
+                            description: Top listening cities.
+                            required: [items]
                             properties:
                               items:
                                 type: array
+                                description: City entries.
                                 items:
                                   type: object
+                                  required: [city, country, numberOfListeners]
                                   properties:
                                     city:
                                       type: string
+                                      description: City name.
                                     country:
                                       type: string
+                                      description: Country name.
                                     numberOfListeners:
                                       type: integer
+                                      description: Number of listeners in the city.
                       discography:
                         type: object
+                        description: Artist discography summary.
+                        required: [topTracks]
                         properties:
                           topTracks:
                             type: object
+                            description: Most popular tracks.
+                            required: [items]
                             properties:
                               items:
                                 type: array
+                                description: Top track entries.
                                 items:
                                   type: object
+                                  required: [track]
                                   properties:
                                     track:
                                       type: object
+                                      description: Track data.
+                                      required: [name, uri]
                                       properties:
                                         name:
                                           type: string
+                                          description: Track title.
                                         uri:
                                           type: string
+                                          description: "spotify:track:ID"
                                         playcount:
                                           type: string
+                                          description: Total play count.
                                         duration:
                                           type: object
+                                          description: Track duration.
+                                          required: [totalMilliseconds]
                                           properties:
                                             totalMilliseconds:
                                               type: integer
+                                              description: Duration in milliseconds.
                           albums:
                             type: object
+                            description: Albums summary.
+                            required: [totalCount]
                             properties:
                               totalCount:
                                 type: integer
+                                description: Total album count.
                           singles:
                             type: object
+                            description: Singles summary.
+                            required: [totalCount]
                             properties:
                               totalCount:
                                 type: integer
+                                description: Total singles count.
                       relatedContent:
                         type: object
+                        description: Related content.
                         properties:
                           relatedArtists:
                             type: object
+                            description: Similar artists.
+                            required: [items]
                             properties:
                               items:
                                 type: array
+                                description: Related artist entries.
                                 items:
                                   type: object
+                                  required: [uri, profile]
                                   properties:
                                     uri:
                                       type: string
+                                      description: "spotify:artist:ID"
                                     profile:
                                       type: object
+                                      description: Artist profile.
+                                      required: [name]
                                       properties:
                                         name:
                                           type: string
+                                          description: Artist name.
 
   /internal/getArtistDiscography:
     post:
@@ -292,6 +410,9 @@ paths:
         build:
           stable_id: spotify_discography_v1
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
       parameters:
         - name: uri
           in: query
@@ -299,18 +420,23 @@ paths:
           schema:
             type: string
           description: "Spotify URI (spotify:artist:ID) — get from searchMusic"
+          example: "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"
         - name: offset
           in: query
           required: false
           schema:
             type: integer
             default: 0
+          description: "Pagination offset"
+          example: 0
         - name: limit
           in: query
           required: false
           schema:
             type: integer
             default: 20
+          description: "Max releases to return"
+          example: 20
       responses:
         "200":
           description: Paginated artist discography
@@ -318,44 +444,65 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [artistUnion]
                 properties:
                   artistUnion:
                     type: object
+                    description: Artist discography wrapper.
+                    required: [discography]
                     properties:
                       discography:
                         type: object
+                        description: Full discography.
+                        required: [all]
                         properties:
                           all:
                             type: object
+                            description: All releases combined.
+                            required: [totalCount, items]
                             properties:
                               totalCount:
                                 type: integer
+                                description: Total number of releases.
                               items:
                                 type: array
+                                description: Release group entries.
                                 items:
                                   type: object
+                                  required: [releases]
                                   properties:
                                     releases:
                                       type: object
+                                      description: Release variants.
+                                      required: [items]
                                       properties:
                                         items:
                                           type: array
+                                          description: Individual releases.
                                           items:
                                             type: object
+                                            required: [id, uri, name, type]
                                             properties:
                                               id:
                                                 type: string
+                                                description: Spotify internal release ID.
                                               uri:
                                                 type: string
+                                                description: "spotify:album:ID"
                                               name:
                                                 type: string
+                                                description: Release name.
                                               type:
                                                 type: string
+                                                description: "Release type (ALBUM, SINGLE, COMPILATION)."
                                               date:
                                                 type: object
+                                                description: Release date.
+                                                required: [year]
                                                 properties:
                                                   year:
                                                     type: integer
+                                                    description: Release year.
 
   /internal/getAlbumTracks:
     post:
@@ -369,6 +516,9 @@ paths:
         build:
           stable_id: spotify_album_tracks_v1
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
       parameters:
         - name: uri
           in: query
@@ -376,18 +526,23 @@ paths:
           schema:
             type: string
           description: "Spotify URI (spotify:album:ID) — get from getArtist or getArtistDiscography"
+          example: "spotify:album:6dVIqQ8qmQ5GBnJ9shOYGE"
         - name: offset
           in: query
           required: false
           schema:
             type: integer
             default: 0
+          description: "Pagination offset"
+          example: 0
         - name: limit
           in: query
           required: false
           schema:
             type: integer
             default: 300
+          description: "Max tracks to return"
+          example: 300
       responses:
         "200":
           description: Album track listing
@@ -395,51 +550,76 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [albumUnion]
                 properties:
                   albumUnion:
                     type: object
+                    description: Album content wrapper.
+                    required: [tracksV2]
                     properties:
                       tracksV2:
                         type: object
+                        description: Album tracks.
+                        required: [totalCount, items]
                         properties:
                           totalCount:
                             type: integer
+                            description: Total track count.
                           items:
                             type: array
+                            description: Track entries.
                             items:
                               type: object
+                              required: [track]
                               properties:
                                 track:
                                   type: object
+                                  description: Track data.
+                                  required: [name, uri]
                                   properties:
                                     name:
                                       type: string
+                                      description: Track title.
                                     uri:
                                       type: string
+                                      description: "spotify:track:ID"
                                     playcount:
                                       type: string
+                                      description: Total play count.
                                     discNumber:
                                       type: integer
+                                      description: Disc number for multi-disc albums.
                                     duration:
                                       type: object
+                                      description: Track duration.
+                                      required: [totalMilliseconds]
                                       properties:
                                         totalMilliseconds:
                                           type: integer
+                                          description: Duration in milliseconds.
                                     artists:
                                       type: object
+                                      description: Track artists.
+                                      required: [items]
                                       properties:
                                         items:
                                           type: array
+                                          description: Artist entries.
                                           items:
                                             type: object
+                                            required: [uri, profile]
                                             properties:
                                               uri:
                                                 type: string
+                                                description: "spotify:artist:ID"
                                               profile:
                                                 type: object
+                                                description: Artist profile.
+                                                required: [name]
                                                 properties:
                                                   name:
                                                     type: string
+                                                    description: Artist name.
 
   /internal/getTrack:
     post:
@@ -453,6 +633,9 @@ paths:
         build:
           stable_id: spotify_track_v1
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
       parameters:
         - name: uri
           in: query
@@ -460,6 +643,7 @@ paths:
           schema:
             type: string
           description: "Spotify URI (spotify:track:ID) — get from searchMusic or getAlbumTracks"
+          example: "spotify:track:4u7EnebtmKWzUH433cf5Qv"
       responses:
         "200":
           description: Track details with artist and album info
@@ -467,99 +651,147 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [trackUnion]
                 properties:
                   trackUnion:
                     type: object
+                    description: Track details wrapper.
+                    required: [id, uri, name, firstArtist, albumOfTrack]
                     properties:
                       id:
                         type: string
+                        description: Spotify internal track ID.
                       uri:
                         type: string
+                        description: "spotify:track:ID"
                       name:
                         type: string
+                        description: Track title.
                       playcount:
                         type: string
+                        description: Total play count.
                       trackNumber:
                         type: integer
+                        description: Track position within album.
                       contentRating:
                         type: object
+                        description: Content advisory rating.
+                        required: [label]
                         properties:
                           label:
                             type: string
+                            description: "Rating label (e.g. NONE, EXPLICIT)."
                       duration:
                         type: object
+                        description: Track duration.
+                        required: [totalMilliseconds]
                         properties:
                           totalMilliseconds:
                             type: integer
+                            description: Duration in milliseconds.
                       albumOfTrack:
                         type: object
+                        description: Album containing this track.
+                        required: [id, uri, name]
                         properties:
                           id:
                             type: string
+                            description: Spotify internal album ID.
                           uri:
                             type: string
+                            description: "spotify:album:ID"
                           name:
                             type: string
+                            description: Album name.
                           type:
                             type: string
+                            description: "Album type (ALBUM, SINGLE, COMPILATION)."
                           date:
                             type: object
+                            description: Release date.
                             properties:
                               isoString:
                                 type: string
+                                description: ISO 8601 date string.
                               year:
                                 type: integer
+                                description: Release year.
                           coverArt:
                             type: object
+                            description: Album cover art.
+                            required: [sources]
                             properties:
                               sources:
                                 type: array
+                                description: Image sources at different sizes.
                                 items:
                                   type: object
+                                  required: [url]
                                   properties:
                                     url:
                                       type: string
+                                      description: Image URL.
                                     width:
                                       type: integer
+                                      description: Image width in pixels.
                                     height:
                                       type: integer
+                                      description: Image height in pixels.
                       firstArtist:
                         type: object
+                        description: Primary artist.
+                        required: [items]
                         properties:
                           items:
                             type: array
+                            description: Primary artist entries.
                             items:
                               type: object
+                              required: [uri, id, profile]
                               properties:
                                 uri:
                                   type: string
+                                  description: "spotify:artist:ID"
                                 id:
                                   type: string
+                                  description: Spotify internal artist ID.
                                 profile:
                                   type: object
+                                  description: Artist profile.
+                                  required: [name]
                                   properties:
                                     name:
                                       type: string
+                                      description: Artist name.
                       otherArtists:
                         type: object
+                        description: Featured or collaborating artists.
                         properties:
                           items:
                             type: array
+                            description: Additional artist entries.
                             items:
                               type: object
+                              required: [uri, profile]
                               properties:
                                 uri:
                                   type: string
+                                  description: "spotify:artist:ID"
                                 profile:
                                   type: object
+                                  description: Artist profile.
+                                  required: [name]
                                   properties:
                                     name:
                                       type: string
+                                      description: Artist name.
                       sharingInfo:
                         type: object
+                        description: Sharing metadata.
                         properties:
                           shareUrl:
                             type: string
+                            description: Public share URL.
 
   /internal/getPlaylist:
     post:
@@ -573,6 +805,9 @@ paths:
         build:
           stable_id: spotify_playlist_v1
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
       parameters:
         - name: uri
           in: query
@@ -580,6 +815,7 @@ paths:
           schema:
             type: string
           description: "Spotify URI (spotify:playlist:ID) — get from searchMusic or getUserPlaylists"
+          example: "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"
         - name: offset
           in: query
           required: false
@@ -587,6 +823,7 @@ paths:
             type: integer
             default: 0
           description: "Pagination offset"
+          example: 0
         - name: limit
           in: query
           required: false
@@ -594,6 +831,7 @@ paths:
             type: integer
             default: 100
           description: "Max tracks to return"
+          example: 100
       responses:
         "200":
           description: Playlist with metadata and track listing
@@ -601,109 +839,161 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [playlistV2]
                 properties:
                   playlistV2:
                     type: object
+                    description: Playlist details and content.
+                    required: [content]
                     properties:
                       name:
                         type: string
+                        description: Playlist name.
                       uri:
                         type: string
+                        description: "spotify:playlist:ID"
                       description:
                         type: string
+                        description: Playlist description set by owner.
                       followers:
                         type: integer
+                        description: Number of followers.
                       ownerV2:
                         type: object
+                        description: Playlist owner.
                         properties:
                           data:
                             type: object
+                            description: Owner profile data.
                             properties:
                               name:
                                 type: string
+                                description: Owner display name.
                               uri:
                                 type: string
+                                description: Owner Spotify URI.
                       images:
                         type: object
+                        description: Playlist cover images.
                         properties:
                           items:
                             type: array
+                            description: Image entries.
                             items:
                               type: object
+                              required: [sources]
                               properties:
                                 sources:
                                   type: array
+                                  description: Image sources at different sizes.
                                   items:
                                     type: object
+                                    required: [url]
                                     properties:
                                       url:
                                         type: string
+                                        description: Image URL.
                                       width:
                                         type: integer
+                                        description: Image width in pixels.
                                       height:
                                         type: integer
+                                        description: Image height in pixels.
                       content:
                         type: object
+                        description: Playlist track content.
+                        required: [totalCount, items]
                         properties:
                           totalCount:
                             type: integer
+                            description: Total tracks in playlist.
                           items:
                             type: array
+                            description: Track entries with metadata.
                             items:
                               type: object
+                              required: [itemV2]
                               properties:
                                 addedAt:
                                   type: object
+                                  description: When the track was added.
                                   properties:
                                     isoString:
                                       type: string
+                                      description: ISO 8601 timestamp.
                                 itemV2:
                                   type: object
+                                  description: Track item wrapper.
+                                  required: [data]
                                   properties:
                                     data:
                                       type: object
+                                      description: Track data.
+                                      required: [name, uri]
                                       properties:
                                         name:
                                           type: string
+                                          description: Track title.
                                         uri:
                                           type: string
+                                          description: "spotify:track:ID"
                                         trackDuration:
                                           type: object
+                                          description: Track duration.
+                                          required: [totalMilliseconds]
                                           properties:
                                             totalMilliseconds:
                                               type: integer
+                                              description: Duration in milliseconds.
                                         artists:
                                           type: object
+                                          description: Track artists.
+                                          required: [items]
                                           properties:
                                             items:
                                               type: array
+                                              description: Artist entries.
                                               items:
                                                 type: object
+                                                required: [uri, profile]
                                                 properties:
                                                   uri:
                                                     type: string
+                                                    description: "spotify:artist:ID"
                                                   profile:
                                                     type: object
+                                                    description: Artist profile.
+                                                    required: [name]
                                                     properties:
                                                       name:
                                                         type: string
+                                                        description: Artist name.
                                         albumOfTrack:
                                           type: object
+                                          description: Album containing this track.
+                                          required: [name, uri]
                                           properties:
                                             name:
                                               type: string
+                                              description: Album name.
                                             uri:
                                               type: string
+                                              description: "spotify:album:ID"
                                             coverArt:
                                               type: object
+                                              description: Album cover art.
+                                              required: [sources]
                                               properties:
                                                 sources:
                                                   type: array
+                                                  description: Image sources.
                                                   items:
                                                     type: object
+                                                    required: [url]
                                                     properties:
                                                       url:
                                                         type: string
+                                                        description: Image URL.
 
   /internal/getUserPlaylists:
     post:
@@ -717,6 +1007,9 @@ paths:
         build:
           stable_id: spotify_user_playlists_v1
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
       parameters:
         - name: userId
           in: query
@@ -724,6 +1017,7 @@ paths:
           schema:
             type: string
           description: "Spotify user ID (e.g. 'spotify' for Spotify's official account)"
+          example: "spotify"
         - name: limit
           in: query
           required: false
@@ -731,6 +1025,7 @@ paths:
             type: integer
             default: 10
           description: "Max playlists to return"
+          example: 10
       responses:
         "200":
           description: User profile with public playlists
@@ -738,34 +1033,48 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [uri, name, public_playlists]
                 properties:
                   uri:
                     type: string
+                    description: User Spotify URI.
                   name:
                     type: string
+                    description: User display name.
                   image_url:
                     type: string
+                    description: User profile image URL.
                   followers_count:
                     type: integer
+                    description: Number of followers.
                   following_count:
                     type: integer
+                    description: Number of accounts followed.
                   public_playlists:
                     type: array
+                    description: User's public playlists.
                     items:
                       type: object
+                      required: [uri, name]
                       properties:
                         uri:
                           type: string
+                          description: "spotify:playlist:ID"
                         name:
                           type: string
+                          description: Playlist name.
                         image_url:
                           type: string
+                          description: Playlist cover image URL.
                         followers_count:
                           type: integer
+                          description: Number of playlist followers.
                         owner_name:
                           type: string
+                          description: Playlist owner display name.
                         owner_uri:
                           type: string
+                          description: Playlist owner Spotify URI.
 
   /internal/getRecommendations:
     post:
@@ -779,6 +1088,9 @@ paths:
         build:
           stable_id: spotify_recommendations_v1
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
       parameters:
         - name: uri
           in: query
@@ -786,6 +1098,7 @@ paths:
           schema:
             type: string
           description: "Spotify URI of seed track (spotify:track:ID) — get from searchMusic or getTrack"
+          example: "spotify:track:4u7EnebtmKWzUH433cf5Qv"
         - name: limit
           in: query
           required: false
@@ -793,6 +1106,7 @@ paths:
             type: integer
             default: 10
           description: "Max recommended tracks"
+          example: 10
       responses:
         "200":
           description: Recommended tracks based on seed
@@ -800,65 +1114,99 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [seoRecommendedTrack]
                 properties:
                   seoRecommendedTrack:
                     type: object
+                    description: Recommendation results.
+                    required: [items]
                     properties:
                       items:
                         type: array
+                        description: Recommended track entries.
                         items:
                           type: object
+                          required: [data]
                           properties:
                             data:
                               type: object
+                              description: Track data.
+                              required: [name, uri, id]
                               properties:
                                 name:
                                   type: string
+                                  description: Track title.
                                 uri:
                                   type: string
+                                  description: "spotify:track:ID"
                                 id:
                                   type: string
+                                  description: Spotify internal track ID.
                                 playcount:
                                   type: string
+                                  description: Total play count.
                                 duration:
                                   type: object
+                                  description: Track duration.
+                                  required: [totalMilliseconds]
                                   properties:
                                     totalMilliseconds:
                                       type: integer
+                                      description: Duration in milliseconds.
                                 contentRating:
                                   type: object
+                                  description: Content advisory rating.
+                                  required: [label]
                                   properties:
                                     label:
                                       type: string
+                                      description: "Rating label (e.g. NONE, EXPLICIT)."
                                 artists:
                                   type: object
+                                  description: Track artists.
+                                  required: [items]
                                   properties:
                                     items:
                                       type: array
+                                      description: Artist entries.
                                       items:
                                         type: object
+                                        required: [uri, profile]
                                         properties:
                                           uri:
                                             type: string
+                                            description: "spotify:artist:ID"
                                           profile:
                                             type: object
+                                            description: Artist profile.
+                                            required: [name]
                                             properties:
                                               name:
                                                 type: string
+                                                description: Artist name.
                                 albumOfTrack:
                                   type: object
+                                  description: Album containing this track.
+                                  required: [uri, id]
                                   properties:
                                     uri:
                                       type: string
+                                      description: "spotify:album:ID"
                                     id:
                                       type: string
+                                      description: Spotify internal album ID.
                                     coverArt:
                                       type: object
+                                      description: Album cover art.
+                                      required: [sources]
                                       properties:
                                         sources:
                                           type: array
+                                          description: Image sources.
                                           items:
                                             type: object
+                                            required: [url]
                                             properties:
                                               url:
                                                 type: string
+                                                description: Image URL.

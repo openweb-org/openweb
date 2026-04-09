@@ -1,5 +1,6 @@
 {
   "operation_id": "getAlbumTracks",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "uri": "spotify:album:6dVIqQ8qmQ5GBnJ9shOYGE" },

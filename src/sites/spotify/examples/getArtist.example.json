@@ -1,5 +1,6 @@
 {
   "operation_id": "getArtist",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "uri": "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb" },
