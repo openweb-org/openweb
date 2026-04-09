@@ -39,26 +39,26 @@ openweb ebay exec getSellerProfile '{"username": "freegeekportland"}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - No public JSON APIs — all data extracted from DOM
 - Item detail pages have LD+JSON `@type: Product` schema (structured price, condition, images)
 - Search results use `.s-card` component classes
 - Store pages at `/str/{storeName}` use `.str-seller-card` classes
 
-## Auth
+### Auth
 No auth required for public read operations.
 
-## Transport
+### Transport
 - `page` transport with adapter — heavy bot detection blocks direct HTTP
 - Adapter: `adapters/ebay.ts`
 - All operations navigate to real eBay pages and extract data from DOM/LD+JSON
 
-## Extraction
+### Extraction
 - **Search**: DOM extraction from `.s-card` elements (title, price, condition, itemId from link)
 - **Item detail**: LD+JSON `@type: Product` with DOM fallback for seller info
 - **Seller profile**: DOM extraction from `.str-seller-card` on store page
 
-## Known Issues
+### Known Issues
 - Heavy bot detection (Cloudflare, Akamai, PerimeterX, DataDome) — requires real browser with page transport
 - Search result images often empty due to lazy loading
 - Promoted/sponsored results (itemId "123456") are filtered out

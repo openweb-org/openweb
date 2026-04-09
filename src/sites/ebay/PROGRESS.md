@@ -1,5 +1,15 @@
 # eBay — Progress
 
+## 2026-04-09: Polish site package
+
+**What changed:**
+- openapi.yaml: added `compiled_at`, per-op `build` metadata (stable_id, signals), embedded extraction expressions
+- openapi.yaml: added `required` arrays and descriptions on all nested objects — no bare `type: object` remaining
+- openapi.yaml: added `example` values on all parameters
+- DOC.md: fixed heading hierarchy (Site Internals subsections now ### not ##)
+
+**Verification:** `pnpm build && pnpm --silent dev verify ebay`
+
 ## 2026-04-09: Initial site package
 
 **What changed:**
