@@ -81,6 +81,7 @@ paths:
                 type: array
                 items:
                   type: object
+                  required: [question_id, title, link, score, answer_count, is_answered, tags, creation_date]
                   properties:
                     question_id:
                       type: integer
@@ -116,15 +117,20 @@ paths:
                       description: "Unix timestamp of last activity"
                     owner:
                       type: object
+                      description: "Question author"
                       properties:
                         user_id:
                           type: integer
+                          description: "User ID (use with getUser)"
                         display_name:
                           type: string
+                          description: "Display name"
                         reputation:
                           type: integer
+                          description: "Reputation score"
                         link:
                           type: string
+                          description: "URL to user profile"
 
   /questions/{id}:
     get:
@@ -168,6 +174,7 @@ paths:
                 type: array
                 items:
                   type: object
+                  required: [question_id, title, link, score, answer_count, is_answered, tags, creation_date]
                   properties:
                     question_id:
                       type: integer
@@ -206,15 +213,20 @@ paths:
                       description: "Unix timestamp of last activity"
                     owner:
                       type: object
+                      description: "Question author"
                       properties:
                         user_id:
                           type: integer
+                          description: "User ID (use with getUser)"
                         display_name:
                           type: string
+                          description: "Display name"
                         reputation:
                           type: integer
+                          description: "Reputation score"
                         link:
                           type: string
+                          description: "URL to user profile"
 
   /questions/{id}/answers:
     get:
@@ -288,6 +300,7 @@ paths:
                 type: array
                 items:
                   type: object
+                  required: [answer_id, question_id, score, is_accepted, creation_date]
                   properties:
                     answer_id:
                       type: integer
@@ -312,15 +325,20 @@ paths:
                       description: "Unix timestamp of last activity"
                     owner:
                       type: object
+                      description: "Answer author"
                       properties:
                         user_id:
                           type: integer
+                          description: "User ID (use with getUser)"
                         display_name:
                           type: string
+                          description: "Display name"
                         reputation:
                           type: integer
+                          description: "Reputation score"
                         link:
                           type: string
+                          description: "URL to user profile"
 
   /users/{id}:
     get:
@@ -357,6 +375,7 @@ paths:
                 type: array
                 items:
                   type: object
+                  required: [user_id, display_name, reputation, badge_counts, creation_date]
                   properties:
                     user_id:
                       type: integer
@@ -372,14 +391,17 @@ paths:
                       description: "Reputation score"
                     badge_counts:
                       type: object
+                      description: "Badge counts by tier"
                       properties:
                         gold:
                           type: integer
+                          description: "Number of gold badges"
                         silver:
                           type: integer
+                          description: "Number of silver badges"
                         bronze:
                           type: integer
-                      description: "Badge counts by tier"
+                          description: "Number of bronze badges"
                     accept_rate:
                       type:
                         - integer
@@ -470,6 +492,7 @@ paths:
                 type: array
                 items:
                   type: object
+                  required: [name, count]
                   properties:
                     name:
                       type: string
