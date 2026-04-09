@@ -37,22 +37,25 @@ openweb yelp exec searchBusinesses '{"find_desc": "pizza", "find_loc": "San Fran
 
 ## Site Internals
 
-## API Architecture
+Everything below is for discover/compile operators and deep debugging.
+Not needed for basic site usage.
+
+### API Architecture
 - `autocompleteBusinesses` hits a JSON API at `/search_suggest/v2/prefetch` — works via direct HTTP (node transport)
 - `searchBusinesses` loads the search results page and extracts data via a custom adapter — dual extraction from SSR JSON (`<script type="application/json">`) with DOM fallback (`[data-testid="serp-ia-card"]`)
 - Search results include both organic results and ads (marked with `isAd: true`)
 
-## Auth
+### Auth
 No auth required. All operations are public read.
 
-## Transport
+### Transport
 - `autocompleteBusinesses`: node (direct HTTP)
 - `searchBusinesses`: page (browser via `yelp-web` adapter) — Yelp blocks direct HTTP for search pages
 
-## Extraction
+### Extraction
 - **searchBusinesses**: SSR JSON extraction from large `<script type="application/json">` blocks, merged with DOM fallback from `[data-testid="serp-ia-card"]` elements. Ad results are detected via redirect URLs and handled separately.
 
-## Known Issues
+### Known Issues
 - `searchBusinesses` requires browser transport (page) — Yelp blocks direct node HTTP for search result pages
 - SSR JSON structure may change across Yelp deployments; DOM fallback provides resilience
 - Ad results use redirect URLs; the adapter resolves these to extract the actual business alias

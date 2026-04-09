@@ -1,5 +1,7 @@
 {
   "operation_id": "autocompleteBusinesses",
+  "method": "get",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "prefix": "piz", "loc": "San Francisco, CA" },

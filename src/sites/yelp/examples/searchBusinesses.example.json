@@ -1,5 +1,7 @@
 {
   "operation_id": "searchBusinesses",
+  "method": "get",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "find_desc": "pizza", "find_loc": "San Francisco, CA" },

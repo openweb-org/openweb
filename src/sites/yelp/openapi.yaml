@@ -31,12 +31,14 @@ paths:
           schema:
             type: string
           description: Location to search near (e.g. "San Francisco", "New York").
+          example: "San Francisco, CA"
         - name: prefix
           in: query
           required: true
           schema:
             type: string
           description: Search prefix text (e.g. "piz" for pizza, "coff" for coffee).
+          example: piz
       responses:
         "200":
           description: Success.
@@ -44,32 +46,50 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - response
                 properties:
                   unique_request_id:
                     type: string
+                    description: Unique identifier for this autocomplete request
                   response:
                     type: array
+                    description: Autocomplete response groups keyed by prefix
                     items:
                       type: object
+                      required:
+                        - prefix
+                        - suggestions
                       properties:
                         prefix:
                           type: string
+                          description: The prefix that generated these suggestions
                         suggestions:
                           type: array
+                          description: List of autocomplete suggestions
                           items:
                             type: object
+                            required:
+                              - title
+                              - type
                             properties:
                               title:
                                 type: string
+                                description: Display title of the suggestion
                               query:
                                 type: string
+                                description: Search query to use when selecting this suggestion
                               subtitle:
-                                type: string
-                                nullable: true
+                                type:
+                                  - string
+                                  - "null"
+                                description: Secondary text (e.g. category or location context)
                               type:
                                 type: string
+                                description: Suggestion type (e.g. "term", "business", "category")
                   should_not_cache:
                     type: boolean
+                    description: Whether the client should skip caching this response
   /search/businesses:
     get:
       operationId: searchBusinesses
@@ -79,6 +99,10 @@ paths:
         adapter:
           name: yelp-web
           operation: searchBusinesses
+        build:
+          verified: true
+          signals:
+            - adapter-verified
       parameters:
         - name: find_desc
           in: query
@@ -86,12 +110,14 @@ paths:
           schema:
             type: string
           description: Search term (e.g. "pizza", "restaurants", "plumber").
+          example: pizza
         - name: find_loc
           in: query
           required: true
           schema:
             type: string
           description: Location to search in (e.g. "San Francisco, CA", "New York, NY").
+          example: "San Francisco, CA"
         - name: start
           in: query
           required: false
@@ -99,6 +125,7 @@ paths:
             type: integer
             default: 0
           description: Pagination offset (results per page is 10).
+          example: 0
       responses:
         "200":
           description: Success.
@@ -106,55 +133,90 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - businesses
                 properties:
                   businesses:
                     type: array
+                    description: List of matching businesses
                     items:
                       type: object
+                      required:
+                        - name
                       properties:
                         bizId:
-                          type: string
+                          type:
+                            - string
+                            - "null"
+                          description: Unique business identifier
                         name:
                           type: string
+                          description: Business display name
                         alias:
-                          type: string
+                          type:
+                            - string
+                            - "null"
+                          description: URL-safe business alias (e.g. "joes-pizza-san-francisco")
                         url:
-                          type: string
-                          nullable: true
+                          type:
+                            - string
+                            - "null"
+                          description: Business page URL on Yelp
                         rating:
-                          type: number
-                          nullable: true
+                          type:
+                            - number
+                            - "null"
+                          description: Average star rating (1.0–5.0)
                         reviewCount:
-                          type: integer
-                          nullable: true
+                          type:
+                            - integer
+                            - "null"
+                          description: Total number of reviews
                         priceRange:
-                          type: string
-                          nullable: true
+                          type:
+                            - string
+                            - "null"
+                          description: Price level indicator (e.g. "$", "$$", "$$$")
                         phone:
-                          type: string
-                          nullable: true
+                          type:
+                            - string
+                            - "null"
+                          description: Business phone number
                         categories:
                           type: array
+                          description: Business category labels (e.g. "Pizza", "Italian")
                           items:
                             type: string
                         neighborhoods:
                           type: array
+                          description: Neighborhood names where the business is located
                           items:
                             type: string
                         address:
-                          type: string
-                          nullable: true
+                          type:
+                            - string
+                            - "null"
+                          description: Street address of the business
                         isAd:
                           type: boolean
+                          description: Whether this result is a sponsored/ad listing
                         snippet:
-                          type: string
-                          nullable: true
+                          type:
+                            - string
+                            - "null"
+                          description: Review snippet or highlight text
                   totalResults:
-                    type: integer
-                    nullable: true
+                    type:
+                      - integer
+                      - "null"
+                    description: Total number of matching businesses
                   resultsPerPage:
-                    type: integer
-                    nullable: true
+                    type:
+                      - integer
+                      - "null"
+                    description: Number of results returned per page
                   startResult:
-                    type: integer
-                    nullable: true
+                    type:
+                      - integer
+                      - "null"
+                    description: Offset index of the first result in this page
