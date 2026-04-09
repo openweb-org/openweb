@@ -1,0 +1,13 @@
+{
+  "operation_id": "searchImages",
+  "cases": [
+    {
+      "input": { "query": "nginx" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    },
+    {
+      "input": { "query": "python", "page_size": 5 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

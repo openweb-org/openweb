@@ -1,0 +1,330 @@
+openapi: '3.1.0'
+info:
+  title: Kayak API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.kayak.com
+    x-openweb:
+      transport: page
+paths:
+  /flights/search:
+    get:
+      operationId: searchFlights
+      summary: 'Search flights — airlines, times, stops, duration, price, booking links'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: kayak0001
+          tool_version: 2
+        adapter:
+          name: kayak-search
+          operation: searchFlights
+      parameters:
+        - name: origin
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Origin airport code (e.g. "SFO", "JFK", "LAX").'
+        - name: destination
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Destination airport code or city (e.g. "NYC", "LAX", "MIA").'
+        - name: departureDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Departure date (YYYY-MM-DD).
+        - name: returnDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Return date for round trips (YYYY-MM-DD). Omit for one-way.
+        - name: adults
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Number of adult passengers.
+        - name: cabinClass
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [economy, premiumeconomy, business, first]
+            default: economy
+          description: Cabin class preference.
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [bestflight_a, price_a, duration_a, takeoff_a, landing_a]
+            default: bestflight_a
+          description: Sort order (best flight, price, duration, takeoff time, landing time).
+      responses:
+        '200':
+          description: Flight search results with progressive polling data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  searchId:
+                    type: string
+                    description: Unique search session ID.
+                  status:
+                    type: string
+                    description: Search completion status.
+                  totalCount:
+                    type: integer
+                    description: Total number of matching flights.
+                  filteredCount:
+                    type: integer
+                    description: Number of flights after filters.
+                  results:
+                    type: array
+                    description: Flight result entries.
+                    items:
+                      type: object
+                      properties:
+                        resultId:
+                          type: string
+                        type:
+                          type: string
+                          description: 'Result type (e.g. "fsr").'
+                        bookingOptions:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              bookingUrl:
+                                type: object
+                                properties:
+                                  url:
+                                    type: string
+                              providerCode:
+                                type: string
+                              displayPrice:
+                                type: object
+                                properties:
+                                  price:
+                                    type: number
+                                  totalPrice:
+                                    type: number
+                  legs:
+                    type: object
+                    description: 'Map of leg IDs → leg details (duration, segments, times).'
+                    additionalProperties:
+                      type: object
+                      properties:
+                        duration:
+                          type: integer
+                          description: Total leg duration in minutes.
+                        segments:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                        arrival:
+                          type: string
+                          format: date-time
+                        departure:
+                          type: string
+                          format: date-time
+                  segments:
+                    type: object
+                    description: 'Map of segment IDs → flight segment details.'
+                    additionalProperties:
+                      type: object
+                      properties:
+                        airline:
+                          type: string
+                        flightNumber:
+                          type: string
+                        origin:
+                          type: string
+                        destination:
+                          type: string
+                        arrival:
+                          type: string
+                          format: date-time
+                        departure:
+                          type: string
+                          format: date-time
+                        duration:
+                          type: integer
+                          description: Segment duration in minutes.
+                        equipmentTypeName:
+                          type: string
+                          description: Aircraft type.
+                  airlines:
+                    type: object
+                    description: 'Map of airline codes → airline info.'
+                  airports:
+                    type: object
+                    description: 'Map of airport codes → airport info.'
+                  sortMode:
+                    type: string
+
+  /hotels/search:
+    get:
+      operationId: searchHotels
+      summary: 'Search hotels — name, price, rating, location, provider comparison'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: kayak0002
+          tool_version: 2
+        adapter:
+          name: kayak-search
+          operation: searchHotels
+      parameters:
+        - name: destination
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'City or location (e.g. "New-York", "San-Francisco,CA", "London"). Use dashes for spaces.'
+        - name: checkInDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Check-in date (YYYY-MM-DD).
+        - name: checkOutDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Check-out date (YYYY-MM-DD).
+        - name: guests
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 2
+          description: Number of guests.
+        - name: rooms
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Number of rooms.
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [rank_a, price_a, distance_a, review_a, stars_a, stars_d]
+            default: rank_a
+          description: Sort order.
+      responses:
+        '200':
+          description: Hotel search results with pricing and provider comparison.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  searchId:
+                    type: string
+                  status:
+                    type: string
+                  totalCount:
+                    type: integer
+                  filteredCount:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      description: Hotel result with name, rating, prices from multiple providers.
+
+  /cars/search:
+    get:
+      operationId: searchCars
+      summary: 'Search rental cars — vehicle type, provider, price, pickup/dropoff'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: kayak0003
+          tool_version: 2
+        adapter:
+          name: kayak-search
+          operation: searchCars
+      parameters:
+        - name: location
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Pickup location — airport code (e.g. "LAX") or city (e.g. "Los-Angeles").'
+        - name: pickupDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Pickup date (YYYY-MM-DD).
+        - name: dropoffDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Dropoff date (YYYY-MM-DD).
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [rank_a, price_a]
+            default: rank_a
+          description: Sort order.
+      responses:
+        '200':
+          description: Rental car search results with pricing and providers.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  searchId:
+                    type: string
+                  status:
+                    type: string
+                  totalCount:
+                    type: integer
+                  filteredCount:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      description: Car result with vehicle type, agency, price.
+                  agencyMap:
+                    type: object
+                    description: 'Map of agency codes → agency details.'
+                  providerMap:
+                    type: object
+                    description: 'Map of provider codes → provider details.'
+                  carLocationMap:
+                    type: object
+                    description: 'Map of location IDs → pickup/dropoff details.'

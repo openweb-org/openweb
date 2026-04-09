@@ -192,3 +192,328 @@ paths:
                       type: string
                   availability:
                     type: string
+  /p/{slug}/{itemId}/reviews:
+    get:
+      operationId: getProductReviews
+      summary: Get customer reviews for a product — rating, text, photos, badges
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hd0003
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getProductReviews
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Product item ID (e.g. "306283873"). Get from searchProducts results.
+        - name: slug
+          in: path
+          required: false
+          schema:
+            type: string
+            default: detail
+          description: Product URL slug (ignored by adapter, any value works).
+      responses:
+        '200':
+          description: Customer reviews for the product.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - itemId
+                  - totalReviews
+                  - reviews
+                properties:
+                  itemId:
+                    type: string
+                  totalReviews:
+                    type: integer
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - rating
+                        - text
+                      properties:
+                        id:
+                          type: string
+                        rating:
+                          type: integer
+                          minimum: 1
+                          maximum: 5
+                        title:
+                          type:
+                            - string
+                            - 'null'
+                        text:
+                          type: string
+                        author:
+                          type: string
+                        date:
+                          type: string
+                        isRecommended:
+                          type:
+                            - boolean
+                            - 'null'
+                        isSyndicated:
+                          type: boolean
+                        helpfulVotes:
+                          type: integer
+                        unhelpfulVotes:
+                          type: integer
+                        photos:
+                          type: array
+                          items:
+                            type: string
+                        badges:
+                          type: array
+                          items:
+                            type: string
+                        location:
+                          type:
+                            - string
+                            - 'null'
+  /p/{slug}/{itemId}/pricing:
+    get:
+      operationId: getProductPricing
+      summary: Get detailed pricing — current, original, promotions, unit price, clearance
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hd0004
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getProductPricing
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Product item ID (e.g. "306283873"). Get from searchProducts results.
+        - name: slug
+          in: path
+          required: false
+          schema:
+            type: string
+            default: detail
+          description: Product URL slug (ignored by adapter, any value works).
+      responses:
+        '200':
+          description: Detailed pricing information for the product.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - itemId
+                  - name
+                properties:
+                  itemId:
+                    type: string
+                  name:
+                    type: string
+                  price:
+                    type:
+                      - number
+                      - 'null'
+                  originalPrice:
+                    type:
+                      - number
+                      - 'null'
+                  unitOfMeasure:
+                    type:
+                      - string
+                      - 'null'
+                  mapAboveOriginalPrice:
+                    type:
+                      - boolean
+                      - 'null'
+                  clearance:
+                    type:
+                      - boolean
+                      - 'null'
+                  specialBuy:
+                    type:
+                      - boolean
+                      - 'null'
+                  promotion:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      type:
+                        type: string
+                      description:
+                        type: string
+                      dollarOff:
+                        type:
+                          - number
+                          - 'null'
+                      percentageOff:
+                        type:
+                          - number
+                          - 'null'
+                      startDate:
+                        type:
+                          - string
+                          - 'null'
+                      endDate:
+                        type:
+                          - string
+                          - 'null'
+                  unitPricing:
+                    type:
+                      - object
+                      - 'null'
+                    properties:
+                      value:
+                        type: number
+                      unitOfMeasure:
+                        type: string
+                  bulkPricing:
+                    type:
+                      - object
+                      - 'null'
+                  conditionalPromotions:
+                    type:
+                      - array
+                      - 'null'
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        subType:
+                          type: string
+                        description:
+                          type: string
+                        startDate:
+                          type:
+                            - string
+                            - 'null'
+                        endDate:
+                          type:
+                            - string
+                            - 'null'
+  /p/{slug}/{itemId}/availability:
+    get:
+      operationId: getStoreAvailability
+      summary: Check store pickup and delivery availability for a product
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hd0005
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: homedepot-web
+          operation: getStoreAvailability
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Product item ID (e.g. "306283873"). Get from searchProducts results.
+        - name: slug
+          in: path
+          required: false
+          schema:
+            type: string
+            default: detail
+          description: Product URL slug (ignored by adapter, any value works).
+      responses:
+        '200':
+          description: Store availability and fulfillment options.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - itemId
+                  - fulfillmentOptions
+                properties:
+                  itemId:
+                    type: string
+                  name:
+                    type: string
+                  availabilityType:
+                    type: string
+                  discontinued:
+                    type: boolean
+                  buyable:
+                    type: boolean
+                  fulfillmentOptions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          description: '"pickup" or "delivery"'
+                        fulfillable:
+                          type: boolean
+                        services:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              type:
+                                type: string
+                                description: '"bopis", "express delivery", "sth" (ship-to-home)'
+                              deliveryTimeline:
+                                type:
+                                  - string
+                                  - 'null'
+                              startDate:
+                                type:
+                                  - string
+                                  - 'null'
+                              endDate:
+                                type:
+                                  - string
+                                  - 'null'
+                              deliveryCharge:
+                                type:
+                                  - number
+                                  - 'null'
+                              hasFreeShipping:
+                                type: boolean
+                              storeId:
+                                type:
+                                  - string
+                                  - 'null'
+                              storeName:
+                                type:
+                                  - string
+                                  - 'null'
+                              storePhone:
+                                type:
+                                  - string
+                                  - 'null'
+                              inStock:
+                                type: boolean
+                              quantity:
+                                type: integer
+                              isLimitedQuantity:
+                                type: boolean
+                              curbsidePickup:
+                                type: boolean

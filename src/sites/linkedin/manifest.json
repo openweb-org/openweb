@@ -8,7 +8,7 @@
   "quarantined": false,
   "last_verified": "2026-04-04T16:09:53.917Z",
   "fingerprint": {
-    "response_shape_hash": "getCompany:583f239bb7bf20c0,getConnectionsSummary:18aaa66b3d69bbf7,getFeed:pending,getInvitations:474007ae67a09da0,getMe:fd445abb3090631e,getMyNetworkNotifications:91ec9dd145b25109,getNewsStorylines:fab1a64ddc4b8fab,getNotificationCards:116f00f0cb31ed78,getProfile:8303fec45f736600,getProfileByUrn:7720117469411834",
+    "response_shape_hash": "getCompany:583f239bb7bf20c0,getConnectionsSummary:18aaa66b3d69bbf7,getFeed:pending,getInvitations:474007ae67a09da0,getJobDetail:pending,getMe:fd445abb3090631e,getMyNetworkNotifications:91ec9dd145b25109,getNewsStorylines:fab1a64ddc4b8fab,getNotificationCards:116f00f0cb31ed78,getProfile:8303fec45f736600,getProfileByUrn:7720117469411834,searchJobs:pending",
     "last_validated": "2026-04-04T16:09:53.918Z"
   }
 }

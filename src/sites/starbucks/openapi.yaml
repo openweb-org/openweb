@@ -1,0 +1,310 @@
+openapi: '3.1.0'
+info:
+  title: Starbucks
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://www.starbucks.com
+    x-openweb:
+      transport: page
+paths:
+  /stores/search:
+    get:
+      operationId: searchStores
+      summary: Find nearby Starbucks stores by coordinates — name, address, hours, amenities, distance, mobile ordering status
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sbux0001
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: starbucks
+          operation: searchStores
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Latitude of search center (e.g. 37.7749 for San Francisco).
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Longitude of search center (e.g. -122.4194 for San Francisco).
+      responses:
+        '200':
+          description: Nearby Starbucks stores sorted by distance.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - count
+                  - stores
+                properties:
+                  count:
+                    type: integer
+                    description: Number of stores returned (up to 50).
+                  stores:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - storeNumber
+                        - name
+                      properties:
+                        storeNumber:
+                          type: string
+                          description: Unique store number (use with getStoreDetail).
+                        name:
+                          type: string
+                        distance:
+                          type: number
+                          description: Distance in miles from search center.
+                        phoneNumber:
+                          type:
+                            - string
+                            - 'null'
+                        open:
+                          type: boolean
+                        openStatus:
+                          type: string
+                          description: Human-readable open status (e.g. "Opens Thursday at 4:30 AM").
+                        hours:
+                          type: string
+                          description: Today's hours (e.g. "Open 4:30 AM-8:00 PM").
+                        address:
+                          type: string
+                          description: Single-line address.
+                        city:
+                          type: string
+                        state:
+                          type: string
+                        postalCode:
+                          type: string
+                        latitude:
+                          type: number
+                        longitude:
+                          type: number
+                        amenities:
+                          type: array
+                          items:
+                            type: string
+                          description: Available features (e.g. "Nitro Cold Brew", "Mobile Order and Pay").
+                        mobileOrdering:
+                          type: boolean
+                          description: Whether mobile ordering is currently available.
+
+  /stores/detail:
+    get:
+      operationId: getStoreDetail
+      summary: Get full store details — address, weekly schedule, amenities, mobile ordering, coordinates
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sbux0002
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: starbucks
+          operation: getStoreDetail
+      parameters:
+        - name: storeNumber
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Store number from searchStores (e.g. "53646-283069").
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Approximate latitude of the store (from searchStores).
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Approximate longitude of the store (from searchStores).
+      responses:
+        '200':
+          description: Full store details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - storeNumber
+                  - name
+                properties:
+                  storeNumber:
+                    type: string
+                  name:
+                    type: string
+                  phoneNumber:
+                    type:
+                      - string
+                      - 'null'
+                  open:
+                    type: boolean
+                  isOpen24Hours:
+                    type: boolean
+                  openStatus:
+                    type: string
+                  hours:
+                    type: string
+                  address:
+                    type: object
+                    properties:
+                      streetAddress:
+                        type: string
+                      city:
+                        type: string
+                      state:
+                        type: string
+                      postalCode:
+                        type: string
+                      country:
+                        type: string
+                      singleLine:
+                        type: string
+                  coordinates:
+                    type: object
+                    properties:
+                      latitude:
+                        type: number
+                      longitude:
+                        type: number
+                  schedule:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        day:
+                          type: string
+                        hours:
+                          type: string
+                        open:
+                          type: boolean
+                  amenities:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                        name:
+                          type: string
+                  mobileOrdering:
+                    type: object
+                    properties:
+                      available:
+                        type: boolean
+                      guestOrdering:
+                        type: boolean
+                  ownershipType:
+                    type: string
+                    description: Ownership type code (CO = company-owned, LS = licensed).
+                  slug:
+                    type: string
+                    description: URL slug for the store.
+
+  /menu:
+    get:
+      operationId: getMenu
+      summary: Get Starbucks menu — categories, subcategories, products with sizes, availability, and images
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sbux0003
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: starbucks
+          operation: getMenu
+      parameters: []
+      responses:
+        '200':
+          description: Full menu organized by categories.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - categories
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - name
+                        - subcategories
+                      properties:
+                        name:
+                          type: string
+                          description: Category name (e.g. "Drinks", "Food").
+                        subcategories:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - name
+                              - products
+                            properties:
+                              name:
+                                type: string
+                                description: Subcategory name (e.g. "Hot Coffee", "Bakery").
+                              imageUrl:
+                                type:
+                                  - string
+                                  - 'null'
+                              products:
+                                type: array
+                                items:
+                                  type: object
+                                  required:
+                                    - name
+                                    - productNumber
+                                  properties:
+                                    name:
+                                      type: string
+                                    productNumber:
+                                      type: integer
+                                      description: Product identifier.
+                                    productType:
+                                      type: string
+                                      description: '"Beverage" or "Food".'
+                                    availability:
+                                      type: string
+                                    imageUrl:
+                                      type:
+                                        - string
+                                        - 'null'
+                                    formCode:
+                                      type:
+                                        - string
+                                        - 'null'
+                                      description: Form code (e.g. "Iced", "Hot").
+                                    defaultSize:
+                                      type:
+                                        - string
+                                        - 'null'
+                                      description: Default size name (e.g. "Grande").
+                                    sizes:
+                                      type: array
+                                      items:
+                                        type: string
+                                      description: Available sizes (e.g. ["Tall", "Grande", "Venti"]).

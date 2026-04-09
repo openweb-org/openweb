@@ -1,0 +1,7 @@
+{
+  "operation_id": "searchFlights",
+  "cases": [{
+    "input": { "origin": "LAX", "destination": "JFK", "date": "2026-05-15", "adults": 1, "cabinClass": "economy" },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

@@ -1,0 +1,229 @@
+openapi: '3.1.0'
+info:
+  title: Glassdoor
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.glassdoor.com
+    x-openweb:
+      transport: page
+paths:
+  /internal/searchCompanies:
+    get:
+      operationId: searchCompanies
+      summary: Search for companies by name — returns employer IDs, names, and ratings from Next.js SSR data
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: gd0001
+          tool_version: 2
+          signals:
+            - adapter-verified
+        adapter:
+          name: glassdoor
+          operation: searchCompanies
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Company name search query (e.g. "Google", "Microsoft").'
+      responses:
+        '200':
+          description: Company search results with employer IDs and ratings.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, companies]
+                properties:
+                  count:
+                    type: integer
+                  companies:
+                    type: array
+                    items:
+                      type: object
+                      required: [employerId, name]
+                      properties:
+                        employerId:
+                          type: integer
+                          description: 'Glassdoor employer ID (use in getReviews, getSalaries, getInterviews).'
+                        name:
+                          type: string
+                        overallRating:
+                          type: [number, 'null']
+                        headquarters:
+                          type: [string, 'null']
+                        industry:
+                          type: [string, 'null']
+                        sizeCategory:
+                          type: [string, 'null']
+                        logo:
+                          type: [string, 'null']
+
+  /internal/getReviews:
+    get:
+      operationId: getReviews
+      summary: Get employee reviews for a company — ratings, pros, cons, job titles from DOM extraction
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: gd0002
+          tool_version: 2
+          signals:
+            - adapter-verified
+        adapter:
+          name: glassdoor
+          operation: getReviews
+      parameters:
+        - name: employerId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'Glassdoor employer ID (from searchCompanies).'
+      responses:
+        '200':
+          description: Employee reviews with ratings, pros, cons.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [companyName, reviews]
+                properties:
+                  companyName:
+                    type: [string, 'null']
+                  overallRating:
+                    type: [string, 'null']
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      required: [rating, title]
+                      properties:
+                        rating:
+                          type: [string, 'null']
+                        date:
+                          type: [string, 'null']
+                        title:
+                          type: [string, 'null']
+                        jobTitle:
+                          type: [string, 'null']
+                        employeeStatus:
+                          type: [string, 'null']
+                        pros:
+                          type: [string, 'null']
+                        cons:
+                          type: [string, 'null']
+
+  /internal/getSalaries:
+    get:
+      operationId: getSalaries
+      summary: Get salary data for a company — job titles, pay ranges, salary counts from DOM extraction
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: gd0003
+          tool_version: 2
+          signals:
+            - adapter-verified
+        adapter:
+          name: glassdoor
+          operation: getSalaries
+      parameters:
+        - name: employerId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'Glassdoor employer ID (from searchCompanies).'
+      responses:
+        '200':
+          description: Salary data by role with pay ranges.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [companyName, salaries]
+                properties:
+                  companyName:
+                    type: [string, 'null']
+                  totalSalaries:
+                    type: [string, 'null']
+                  salaries:
+                    type: array
+                    items:
+                      type: object
+                      required: [jobTitle]
+                      properties:
+                        jobTitle:
+                          type: string
+                        salaryCount:
+                          type: [string, 'null']
+                        payRange:
+                          type: [string, 'null']
+
+  /internal/getInterviews:
+    get:
+      operationId: getInterviews
+      summary: Get interview experiences for a company — questions, difficulty, outcome from DOM extraction
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: gd0004
+          tool_version: 2
+          signals:
+            - adapter-verified
+        adapter:
+          name: glassdoor
+          operation: getInterviews
+      parameters:
+        - name: employerId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'Glassdoor employer ID (from searchCompanies).'
+      responses:
+        '200':
+          description: Interview experiences with difficulty and outcome.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [companyName, interviews]
+                properties:
+                  companyName:
+                    type: [string, 'null']
+                  difficulty:
+                    type: [string, 'null']
+                  interviewCount:
+                    type: [string, 'null']
+                  interviews:
+                    type: array
+                    items:
+                      type: object
+                      required: [role]
+                      properties:
+                        role:
+                          type: [string, 'null']
+                        date:
+                          type: [string, 'null']
+                        location:
+                          type: [string, 'null']
+                        offerStatus:
+                          type: [string, 'null']
+                        experience:
+                          type: [string, 'null']
+                        difficulty:
+                          type: [string, 'null']
+                        description:
+                          type: [string, 'null']

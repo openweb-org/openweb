@@ -1,0 +1,271 @@
+openapi: '3.1.0'
+info:
+  title: Etsy
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://www.etsy.com
+    x-openweb:
+      transport: page
+paths:
+  /search/{query}:
+    get:
+      operationId: searchListings
+      summary: Search listings by keyword — title, price, shop, rating, image, free shipping
+      x-openweb:
+        permission: read
+        adapter:
+          name: etsy
+          operation: searchListings
+      parameters:
+        - name: query
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "handmade pottery", "vintage jewelry").
+      responses:
+        '200':
+          description: Search results with listing summaries.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - query
+                  - totalResults
+                  - listings
+                properties:
+                  query:
+                    type: string
+                  totalResults:
+                    type: integer
+                  listings:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - listingId
+                        - title
+                      properties:
+                        listingId:
+                          type: string
+                          description: Listing ID (use with getListingDetail, getReviews).
+                        title:
+                          type: string
+                        url:
+                          type: string
+                        price:
+                          type:
+                            - string
+                            - 'null'
+                          description: Display price (e.g. "$45.00").
+                        currency:
+                          type: string
+                        image:
+                          type: string
+                        shopName:
+                          type: string
+                          description: Shop name (use with getShop).
+                        rating:
+                          type:
+                            - number
+                            - 'null'
+                        reviewCount:
+                          type:
+                            - string
+                            - 'null'
+                          description: Review count (e.g. "7.1k").
+                        freeShipping:
+                          type: boolean
+
+  /listing/{listingId}:
+    get:
+      operationId: getListingDetail
+      summary: Get listing details — title, price, description, photos, seller, rating, material
+      x-openweb:
+        permission: read
+        adapter:
+          name: etsy
+          operation: getListingDetail
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Listing ID from searchListings.
+      responses:
+        '200':
+          description: Full listing details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - listingId
+                  - title
+                properties:
+                  listingId:
+                    type: string
+                  title:
+                    type: string
+                  url:
+                    type: string
+                  description:
+                    type: string
+                  price:
+                    type:
+                      - number
+                      - 'null'
+                  currency:
+                    type: string
+                  availability:
+                    type: string
+                  shopName:
+                    type: string
+                    description: Shop name (use with getShop).
+                  category:
+                    type: string
+                  material:
+                    type:
+                      - string
+                      - 'null'
+                  rating:
+                    type:
+                      - number
+                      - 'null'
+                  reviewCount:
+                    type:
+                      - integer
+                      - 'null'
+                  photos:
+                    type: array
+                    items:
+                      type: string
+                  image:
+                    type: string
+
+  /listing/{listingId}/reviews:
+    get:
+      operationId: getReviews
+      summary: Get reviews for a listing — rating, text, author, date, aggregate stats
+      x-openweb:
+        permission: read
+        adapter:
+          name: etsy
+          operation: getReviews
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Listing ID from searchListings.
+      responses:
+        '200':
+          description: Listing reviews and aggregate rating.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - listingId
+                  - reviews
+                properties:
+                  listingId:
+                    type: string
+                  averageRating:
+                    type:
+                      - number
+                      - 'null'
+                  totalReviews:
+                    type:
+                      - integer
+                      - 'null'
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        rating:
+                          type:
+                            - integer
+                            - 'null'
+                        text:
+                          type: string
+                        author:
+                          type: string
+                        date:
+                          type: string
+                          description: ISO date (e.g. "2026-04-01").
+
+  /shop/{shopName}:
+    get:
+      operationId: getShop
+      summary: Get shop profile — name, location, rating, sales, owner, active listings
+      x-openweb:
+        permission: read
+        adapter:
+          name: etsy
+          operation: getShop
+      parameters:
+        - name: shopName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Shop name from searchListings or getListingDetail.
+      responses:
+        '200':
+          description: Shop profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - shopName
+                properties:
+                  shopName:
+                    type: string
+                  description:
+                    type: string
+                  url:
+                    type: string
+                  logo:
+                    type: string
+                  location:
+                    type: string
+                  slogan:
+                    type:
+                      - string
+                      - 'null'
+                  owner:
+                    type:
+                      - string
+                      - 'null'
+                  rating:
+                    type:
+                      - number
+                      - 'null'
+                  reviewCount:
+                    type:
+                      - integer
+                      - 'null'
+                  sales:
+                    type:
+                      - string
+                      - 'null'
+                    description: Sales count (e.g. "28.5k").
+                  yearsOnEtsy:
+                    type:
+                      - integer
+                      - 'null'
+                  activeListings:
+                    type: integer
+                  image:
+                    type:
+                      - string
+                      - 'null'

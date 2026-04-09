@@ -1,0 +1,199 @@
+openapi: '3.1.0'
+info:
+  title: Wayfair
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://www.wayfair.com
+    x-openweb:
+      transport: page
+paths:
+  /keyword.html:
+    get:
+      operationId: searchProducts
+      summary: Search furniture and home goods by keyword — name, price, rating, image
+      x-openweb:
+        permission: read
+        adapter:
+          name: wayfair-web
+          operation: searchProducts
+      parameters:
+        - name: keyword
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword (e.g. "office desk", "sofa", "bookshelf").
+      responses:
+        '200':
+          description: Product search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - keyword
+                  - totalProducts
+                  - products
+                properties:
+                  keyword:
+                    type: string
+                  totalProducts:
+                    type: integer
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - sku
+                        - name
+                      properties:
+                        sku:
+                          type: string
+                          description: Product SKU (use with getProductDetail and getReviews).
+                        name:
+                          type: string
+                        url:
+                          type: string
+                        currentPrice:
+                          type:
+                            - number
+                            - 'null'
+                        originalPrice:
+                          type:
+                            - number
+                            - 'null'
+                        rating:
+                          type:
+                            - number
+                            - 'null'
+                        reviewCount:
+                          type: integer
+                        image:
+                          type: string
+  /furniture/pdp/-{sku}.html:
+    get:
+      operationId: getProductDetail
+      summary: Get product details — name, brand, price, specs, dimensions, images, rating
+      x-openweb:
+        permission: read
+        adapter:
+          name: wayfair-web
+          operation: getProductDetail
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Product SKU (e.g. "w005220014"). Get from searchProducts results.
+      responses:
+        '200':
+          description: Full product details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - sku
+                  - name
+                properties:
+                  sku:
+                    type: string
+                  name:
+                    type: string
+                  brand:
+                    type: string
+                  description:
+                    type: string
+                  currentPrice:
+                    type:
+                      - number
+                      - 'null'
+                  originalPrice:
+                    type:
+                      - number
+                      - 'null'
+                  rating:
+                    type:
+                      - number
+                      - 'null'
+                  reviewCount:
+                    type: integer
+                  images:
+                    type: array
+                    items:
+                      type: string
+                  specifications:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        value:
+                          type: string
+                  url:
+                    type: string
+  /furniture/pdp/p-{sku}.html/reviews:
+    get:
+      operationId: getReviews
+      summary: Get customer reviews — rating, text, author, date
+      x-openweb:
+        permission: read
+        adapter:
+          name: wayfair-web
+          operation: getReviews
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Product SKU (e.g. "w005220014"). Get from searchProducts results.
+      responses:
+        '200':
+          description: Customer reviews for the product.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - sku
+                  - totalReviews
+                  - reviews
+                properties:
+                  sku:
+                    type: string
+                  overallRating:
+                    type:
+                      - number
+                      - 'null'
+                  totalReviews:
+                    type: integer
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - rating
+                        - text
+                      properties:
+                        rating:
+                          type: integer
+                          minimum: 1
+                          maximum: 5
+                        author:
+                          type: string
+                        location:
+                          type:
+                            - string
+                            - 'null'
+                        verified:
+                          type: boolean
+                        text:
+                          type: string
+                        date:
+                          type: string

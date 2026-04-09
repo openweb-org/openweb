@@ -1,0 +1,291 @@
+openapi: '3.1.0'
+info:
+  title: npm
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://registry.npmjs.org
+    x-openweb:
+      transport: node
+paths:
+  /-/v1/search:
+    get:
+      operationId: searchPackages
+      summary: Search packages by keyword — returns name, version, description, author, date, links
+      x-openweb:
+        permission: read
+        build:
+          stable_id: npm0001
+          tool_version: 1
+      parameters:
+        - name: text
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (keyword, name, or phrase).
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of results to return (max 250).
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Offset for pagination.
+      responses:
+        '200':
+          description: Search results with package metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    description: Total number of matching packages.
+                  objects:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        package:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              description: Package name.
+                            version:
+                              type: string
+                              description: Latest version.
+                            description:
+                              type: string
+                              description: Package description.
+                            keywords:
+                              type: array
+                              items:
+                                type: string
+                            date:
+                              type: string
+                              description: Last publish date (ISO 8601).
+                            links:
+                              type: object
+                              properties:
+                                npm:
+                                  type: string
+                                homepage:
+                                  type: string
+                                repository:
+                                  type: string
+                            author:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                            publisher:
+                              type: object
+                              properties:
+                                username:
+                                  type: string
+                        score:
+                          type: object
+                          properties:
+                            final:
+                              type: number
+                            detail:
+                              type: object
+                              properties:
+                                quality:
+                                  type: number
+                                popularity:
+                                  type: number
+                                maintenance:
+                                  type: number
+                        searchScore:
+                          type: number
+  /{package}:
+    get:
+      operationId: getPackage
+      summary: Get package details — name, description, latest version, dependencies, repository, license
+      x-openweb:
+        permission: read
+        build:
+          stable_id: npm0002
+          tool_version: 1
+      parameters:
+        - name: package
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Package name (e.g. "express", "react"). For scoped packages use URL encoding (e.g. "@babel%2Fcore").
+      responses:
+        '200':
+          description: Full package document with all versions and metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Package name.
+                  description:
+                    type: string
+                    description: Package description.
+                  dist-tags:
+                    type: object
+                    properties:
+                      latest:
+                        type: string
+                        description: Latest published version.
+                    additionalProperties:
+                      type: string
+                  license:
+                    type: string
+                    description: SPDX license identifier.
+                  homepage:
+                    type: string
+                    description: Project homepage URL.
+                  repository:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      url:
+                        type: string
+                  readme:
+                    type: string
+                    description: Package README content.
+                  versions:
+                    type: object
+                    description: Map of version string to version metadata.
+                    additionalProperties:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        version:
+                          type: string
+                        dependencies:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        devDependencies:
+                          type: object
+                          additionalProperties:
+                            type: string
+                  time:
+                    type: object
+                    description: Map of version string to publish timestamp (ISO 8601).
+                    additionalProperties:
+                      type: string
+                  maintainers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        email:
+                          type: string
+  /{package}/latest:
+    get:
+      operationId: getVersions
+      summary: List all versions of a package — version numbers with publish dates from the time field
+      x-openweb:
+        permission: read
+        build:
+          stable_id: npm0003
+          tool_version: 1
+      parameters:
+        - name: package
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Package name (e.g. "express"). For scoped packages use URL encoding (e.g. "@babel%2Fcore").
+      responses:
+        '200':
+          description: Abbreviated package metadata for the latest version.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Package name.
+                  version:
+                    type: string
+                    description: Version string.
+                  description:
+                    type: string
+                    description: Package description.
+                  dependencies:
+                    type: object
+                    additionalProperties:
+                      type: string
+                    description: Runtime dependencies.
+                  devDependencies:
+                    type: object
+                    additionalProperties:
+                      type: string
+                    description: Development dependencies.
+                  dist:
+                    type: object
+                    properties:
+                      tarball:
+                        type: string
+                        description: URL to the package tarball.
+                      shasum:
+                        type: string
+                  license:
+                    type: string
+  /downloads/point/last-week/{package}:
+    get:
+      operationId: getDownloads
+      summary: Get weekly download statistics for a package — downloads count and date range
+      servers:
+        - url: https://api.npmjs.org
+          x-openweb:
+            transport: node
+      x-openweb:
+        permission: read
+        build:
+          stable_id: npm0004
+          tool_version: 1
+      parameters:
+        - name: package
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Package name (e.g. "express"). For scoped packages use URL encoding (e.g. "@babel%2Fcore").
+      responses:
+        '200':
+          description: Download count for the last week.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  downloads:
+                    type: integer
+                    description: Total downloads in the period.
+                  start:
+                    type: string
+                    description: Period start date (YYYY-MM-DD).
+                  end:
+                    type: string
+                    description: Period end date (YYYY-MM-DD).
+                  package:
+                    type: string
+                    description: Package name.

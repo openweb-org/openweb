@@ -1,0 +1,7 @@
+{
+  "operation_id": "searchArticles",
+  "cases": [{
+    "input": { "query": "AAPL", "size": 3 },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

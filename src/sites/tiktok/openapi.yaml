@@ -209,3 +209,373 @@ paths:
                   - data
                   - cursor
                   - has_more
+
+  /@{username}/video/{videoId}:
+    get:
+      operationId: getVideoDetail
+      summary: "Get video detail — description, likes, comments, shares, play count, music, author info"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tk_getVideoDetail_v1
+          tool_version: 2
+          signals:
+            - adapter-verified
+        adapter:
+          name: tiktok-web
+          operation: getVideoDetail
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: "TikTok username (without @ prefix, e.g. 'charlidamelio')"
+          schema:
+            type: string
+          example: tiktok
+        - name: videoId
+          in: path
+          required: true
+          description: "Video ID (numeric, e.g. '7345678901234567890')"
+          schema:
+            type: string
+          example: "7345678901234567890"
+      responses:
+        "200":
+          description: Video detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Video ID
+                  description:
+                    type: string
+                    description: Video caption/description
+                  createTime:
+                    type: integer
+                    description: Unix timestamp of creation
+                  video:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      height:
+                        type: integer
+                      width:
+                        type: integer
+                      duration:
+                        type: integer
+                        description: Duration in seconds
+                      cover:
+                        type: string
+                        format: uri
+                      playAddr:
+                        type: string
+                        format: uri
+                      downloadAddr:
+                        type: string
+                        format: uri
+                  author:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      uniqueId:
+                        type: string
+                        description: "@username handle"
+                      nickname:
+                        type: string
+                      avatarThumb:
+                        type: string
+                        format: uri
+                      signature:
+                        type: string
+                      verified:
+                        type: boolean
+                  music:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      title:
+                        type: string
+                      authorName:
+                        type: string
+                      playUrl:
+                        type: string
+                        format: uri
+                      duration:
+                        type: integer
+                      original:
+                        type: boolean
+                      album:
+                        type: string
+                  stats:
+                    type: object
+                    properties:
+                      diggCount:
+                        type: integer
+                        description: Number of likes
+                      shareCount:
+                        type: integer
+                      commentCount:
+                        type: integer
+                      playCount:
+                        type: integer
+                      collectCount:
+                        type: integer
+                        description: Number of bookmarks
+                  challenges:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        desc:
+                          type: string
+
+  /@{username}:
+    get:
+      operationId: getUserProfile
+      summary: "Get user profile — followers, following, bio, video count, likes, verified status"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tk_getUserProfile_v1
+          tool_version: 2
+          signals:
+            - adapter-verified
+        adapter:
+          name: tiktok-web
+          operation: getUserProfile
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: "TikTok username (without @ prefix, e.g. 'charlidamelio')"
+          schema:
+            type: string
+          example: tiktok
+      responses:
+        "200":
+          description: User profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: User ID
+                  uniqueId:
+                    type: string
+                    description: "@username handle"
+                  nickname:
+                    type: string
+                    description: Display name
+                  avatarThumb:
+                    type: string
+                    format: uri
+                  avatarMedium:
+                    type: string
+                    format: uri
+                  signature:
+                    type: string
+                    description: User bio
+                  verified:
+                    type: boolean
+                  privateAccount:
+                    type: boolean
+                  region:
+                    type: string
+                  stats:
+                    type: object
+                    properties:
+                      followerCount:
+                        type: integer
+                      followingCount:
+                        type: integer
+                      heartCount:
+                        type: integer
+                        description: Total likes received
+                      videoCount:
+                        type: integer
+                      diggCount:
+                        type: integer
+                        description: Total likes given
+
+  /internal/getVideoComments:
+    get:
+      operationId: getVideoComments
+      summary: "Get comments on a video — text, author, likes, reply count"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tk_getVideoComments_v1
+          tool_version: 2
+          signals:
+            - adapter-verified
+        adapter:
+          name: tiktok-web
+          operation: getVideoComments
+      parameters:
+        - name: videoId
+          in: query
+          required: true
+          description: "Video ID (numeric, e.g. '7345678901234567890')"
+          schema:
+            type: string
+          example: "7345678901234567890"
+        - name: username
+          in: query
+          required: true
+          description: "Video author's username (without @ prefix)"
+          schema:
+            type: string
+          example: tiktok
+      responses:
+        "200":
+          description: Video comments.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Comment ID
+                        text:
+                          type: string
+                          description: Comment text
+                        createTime:
+                          type: integer
+                          description: Unix timestamp
+                        diggCount:
+                          type: integer
+                          description: Number of likes on comment
+                        replyCount:
+                          type: integer
+                          description: Number of replies
+                        author:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            uniqueId:
+                              type: string
+                            nickname:
+                              type: string
+                            avatarThumb:
+                              type: string
+                              format: uri
+                  total:
+                    type: integer
+                    description: Total number of comments
+                  cursor:
+                    type: integer
+                    description: Cursor for next page
+                  hasMore:
+                    type: boolean
+
+  /internal/getHomeFeed:
+    get:
+      operationId: getHomeFeed
+      summary: "Get trending/recommended videos from the For You feed — video details, stats, authors"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tk_getHomeFeed_v1
+          tool_version: 2
+          signals:
+            - adapter-verified
+        adapter:
+          name: tiktok-web
+          operation: getHomeFeed
+      parameters: []
+      responses:
+        "200":
+          description: Home feed videos.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    description: Recommended videos
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Video ID
+                        description:
+                          type: string
+                          description: Video caption
+                        createTime:
+                          type: integer
+                        video:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            height:
+                              type: integer
+                            width:
+                              type: integer
+                            duration:
+                              type: integer
+                            cover:
+                              type: string
+                              format: uri
+                            playAddr:
+                              type: string
+                              format: uri
+                        author:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            uniqueId:
+                              type: string
+                            nickname:
+                              type: string
+                            avatarThumb:
+                              type: string
+                              format: uri
+                            verified:
+                              type: boolean
+                        music:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            authorName:
+                              type: string
+                        stats:
+                          type: object
+                          properties:
+                            diggCount:
+                              type: integer
+                            shareCount:
+                              type: integer
+                            commentCount:
+                              type: integer
+                            playCount:
+                              type: integer
+                            collectCount:
+                              type: integer
+                  hasMore:
+                    type: boolean

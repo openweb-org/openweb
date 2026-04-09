@@ -1,0 +1,7 @@
+{
+  "operation_id": "getReviews",
+  "cases": [{
+    "input": { "sku": "w005220014" },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

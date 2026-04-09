@@ -1,0 +1,383 @@
+openapi: '3.1.0'
+info:
+  title: OpenTable
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.opentable.com
+    x-openweb:
+      transport: page
+paths:
+  /internal/searchRestaurants:
+    get:
+      operationId: searchRestaurants
+      summary: Search restaurants by name, cuisine, or location — returns name, cuisine, price, rating, neighborhood
+      x-openweb:
+        permission: read
+        adapter:
+          name: opentable
+          operation: searchRestaurants
+      parameters:
+        - name: term
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Search term — restaurant name, cuisine, or keyword (e.g. "italian", "sushi", "steakhouse").'
+        - name: location
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Location to search near (e.g. "San Francisco", "New York").'
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 'Reservation date in YYYY-MM-DD format. Omit for general search without availability.'
+        - name: time
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '19:00'
+          description: 'Reservation time in HH:MM format (24h). Defaults to 19:00.'
+        - name: covers
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 2
+          description: 'Party size. Defaults to 2.'
+        - name: metroId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 'OpenTable metro area ID (e.g. "4" for San Francisco Bay Area). Improves result relevance.'
+      responses:
+        '200':
+          description: Search results with restaurant list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restaurants:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        restaurantId:
+                          type: integer
+                          description: 'OpenTable restaurant ID (use in getAvailability, getReviews).'
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                          nullable: true
+                          description: 'URL slug for the restaurant (use in getRestaurant).'
+                        cuisine:
+                          type: string
+                          nullable: true
+                        priceBand:
+                          type: string
+                          nullable: true
+                          description: 'Price range description (e.g. "$31 to $60").'
+                        priceSymbol:
+                          type: string
+                          nullable: true
+                          description: 'Price indicator (e.g. "$$", "$$$").'
+                        neighborhood:
+                          type: string
+                          nullable: true
+                        rating:
+                          type: number
+                          nullable: true
+                        reviewCount:
+                          type: integer
+                          nullable: true
+                        photos:
+                          type: array
+                          items:
+                            type: string
+                        latitude:
+                          type: number
+                          nullable: true
+                        longitude:
+                          type: number
+                          nullable: true
+                        isPromoted:
+                          type: boolean
+                  totalResults:
+                    type: integer
+                  searchTerm:
+                    type: string
+
+  /internal/getRestaurant:
+    get:
+      operationId: getRestaurant
+      summary: Get restaurant details — name, cuisine, price, ratings, hours, address, description, photos
+      x-openweb:
+        permission: read
+        adapter:
+          name: opentable
+          operation: getRestaurant
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Restaurant URL slug (e.g. "ceron-kitchen-alameda"). Get from searchRestaurants.'
+      responses:
+        '200':
+          description: Restaurant detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restaurantId:
+                    type: integer
+                  name:
+                    type: string
+                  description:
+                    type: string
+                    nullable: true
+                  cuisine:
+                    type: string
+                    nullable: true
+                  cuisines:
+                    type: array
+                    items:
+                      type: string
+                  priceBand:
+                    type: string
+                    nullable: true
+                  diningStyle:
+                    type: string
+                    nullable: true
+                  neighborhood:
+                    type: string
+                    nullable: true
+                  address:
+                    type: object
+                    nullable: true
+                    properties:
+                      line1:
+                        type: string
+                      city:
+                        type: string
+                      state:
+                        type: string
+                      postCode:
+                        type: string
+                      country:
+                        type: string
+                  phone:
+                    type: string
+                    nullable: true
+                  website:
+                    type: string
+                    nullable: true
+                  latitude:
+                    type: number
+                    nullable: true
+                  longitude:
+                    type: number
+                    nullable: true
+                  hoursOfOperation:
+                    type: string
+                    nullable: true
+                  dressCode:
+                    type: string
+                    nullable: true
+                  executiveChef:
+                    type: string
+                    nullable: true
+                  rating:
+                    type: number
+                    nullable: true
+                  reviewCount:
+                    type: integer
+                    nullable: true
+                  ratings:
+                    type: object
+                    nullable: true
+                    properties:
+                      overall:
+                        type: number
+                        nullable: true
+                      food:
+                        type: number
+                        nullable: true
+                      service:
+                        type: number
+                        nullable: true
+                      ambience:
+                        type: number
+                        nullable: true
+                      value:
+                        type: number
+                        nullable: true
+                  features:
+                    type: object
+                    nullable: true
+                    properties:
+                      bar:
+                        type: boolean
+                      outdoor:
+                        type: boolean
+                      counter:
+                        type: boolean
+                      maxPartySize:
+                        type: integer
+                        nullable: true
+                  photos:
+                    type: array
+                    items:
+                      type: string
+
+  /internal/getAvailability:
+    get:
+      operationId: getAvailability
+      summary: Check reservation availability — time slots for a date, time, and party size
+      x-openweb:
+        permission: read
+        adapter:
+          name: opentable
+          operation: getAvailability
+      parameters:
+        - name: restaurantId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'OpenTable restaurant ID (from searchRestaurants or getRestaurant).'
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Date in YYYY-MM-DD format.'
+        - name: time
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '19:00'
+          description: 'Center time in HH:MM (24h). Slots are returned around this time. Defaults to 19:00.'
+        - name: partySize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 2
+          description: 'Party size. Defaults to 2.'
+      responses:
+        '200':
+          description: Available time slots.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restaurantId:
+                    type: integer
+                  date:
+                    type: string
+                  time:
+                    type: string
+                  partySize:
+                    type: integer
+                  slots:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        timeOffsetMinutes:
+                          type: integer
+                          description: 'Offset in minutes from the requested time (e.g. -30 = 30 min earlier).'
+                        type:
+                          type: string
+                          description: 'Slot type (e.g. "Standard").'
+                        seatingTypes:
+                          type: array
+                          items:
+                            type: string
+                          description: 'Available seating options (e.g. "bar", "outdoor").'
+
+  /internal/getReviews:
+    get:
+      operationId: getReviews
+      summary: Get customer reviews — rating, text, date, reviewer name, paginated
+      x-openweb:
+        permission: read
+        adapter:
+          name: opentable
+          operation: getReviews
+      parameters:
+        - name: restaurantId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'OpenTable restaurant ID (from searchRestaurants or getRestaurant).'
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: 'Page number (10 reviews per page). Defaults to 1.'
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: string
+            default: newestReview
+          description: 'Sort order: "newestReview", "oldestReview", "highestRating", "lowestRating".'
+      responses:
+        '200':
+          description: Paginated reviews.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        reviewId:
+                          type: string
+                        rating:
+                          type: number
+                        text:
+                          type: string
+                          nullable: true
+                        displayName:
+                          type: string
+                          nullable: true
+                        submittedDate:
+                          type: string
+                          nullable: true
+                        dinedDate:
+                          type: string
+                          nullable: true
+                        photos:
+                          type: array
+                          items:
+                            type: string
+                  totalCount:
+                    type: integer
+                  totalPages:
+                    type: integer
+                  page:
+                    type: integer

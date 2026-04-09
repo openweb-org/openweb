@@ -1,0 +1,9 @@
+{
+  "operation_id": "getMarketData",
+  "cases": [
+    {
+      "input": { "vs_currency": "usd", "per_page": 10 },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

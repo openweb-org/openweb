@@ -364,3 +364,97 @@ paths:
                           type: string
                         image:
                           type: string
+
+  /cart/add:
+    post:
+      operationId: addToCart
+      summary: "Add a product to the shopping cart by ASIN — returns cart count, confirmation, subtotal"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: amz_addToCart_v1
+          tool_version: 2
+        adapter:
+          name: amazon
+          operation: addToCart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - asin
+              properties:
+                asin:
+                  type: string
+                  description: "Amazon Standard Identification Number (10-char alphanumeric, e.g. B00MVWGQX0)"
+                quantity:
+                  type: integer
+                  description: "Number of items to add (default 1)"
+                  default: 1
+      responses:
+        "200":
+          description: Add-to-cart confirmation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  cartCount:
+                    type: integer
+                  message:
+                    type: string
+                  item:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      price:
+                        type: string
+                  subtotal:
+                    type: string
+
+  /gp/cart/view.html:
+    get:
+      operationId: getCart
+      summary: "View current cart contents — items, quantities, prices, subtotal"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: amz_getCart_v1
+          tool_version: 2
+        adapter:
+          name: amazon
+          operation: getCart
+      parameters: []
+      responses:
+        "200":
+          description: Cart contents.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cartCount:
+                    type: integer
+                  subtotal:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        asin:
+                          type: string
+                        title:
+                          type: string
+                        price:
+                          type: string
+                        quantity:
+                          type: integer
+                        image:
+                          type: string

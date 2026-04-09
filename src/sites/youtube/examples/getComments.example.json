@@ -1,0 +1,15 @@
+{
+  "operation_id": "getComments",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "videoId": "dQw4w9WgXcQ"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

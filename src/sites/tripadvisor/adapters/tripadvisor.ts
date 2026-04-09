@@ -327,6 +327,225 @@ async function getAttractionReviews(page: Page, params: Readonly<Record<string, 
   })
 }
 
+/* ---------- getHotelDetail ---------- */
+
+async function getHotelDetail(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const geoId = String(params.geoId ?? '')
+  const locationId = String(params.locationId ?? '')
+  const slug = String(params.slug ?? '')
+  if (!geoId || !locationId || !slug) throw new Error('geoId, locationId, and slug are required')
+
+  await navigateTo(page, `${TA_ORIGIN}/Hotel_Review-g${geoId}-d${locationId}-Reviews-${slug}.html`)
+
+  return safeEvaluate(page, () => {
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
+    const hotelTypes = new Set(['Hotel', 'LodgingBusiness', 'Hostel', 'Motel', 'BedAndBreakfast', 'Resort'])
+
+    const parseAddr = (a: Record<string, unknown> | null) => {
+      if (!a) return null
+      const c = a.addressCountry
+      return {
+        street: (a.streetAddress as string) ?? null,
+        city: (a.addressLocality as string) ?? null,
+        region: (a.addressRegion as string) ?? null,
+        country: typeof c === 'object' && c ? (c as Record<string, unknown>).name ?? null : c ?? null,
+        postalCode: (a.postalCode as string) ?? null,
+      }
+    }
+
+    const parse = (d: Record<string, unknown>) => {
+      const agg = d.aggregateRating as Record<string, unknown> | null
+      const amenities = d.amenityFeature as Array<Record<string, unknown>> | undefined
+      return {
+        name: d.name ?? null,
+        url: d.url ?? null,
+        rating: agg?.ratingValue != null ? Number(agg.ratingValue) : null,
+        reviewCount: agg?.reviewCount != null ? Number(agg.reviewCount) : null,
+        priceRange: d.priceRange ?? null,
+        starRating: d.starRating != null ? Number((d.starRating as Record<string, unknown>)?.ratingValue ?? d.starRating) : null,
+        description: d.description ?? null,
+        amenities: amenities?.map(a => (a.name ?? a.value ?? '') as string).filter(Boolean) ?? [],
+        address: parseAddr(d.address as Record<string, unknown> | null),
+        telephone: d.telephone ?? null,
+        checkinTime: d.checkinTime ?? null,
+        checkoutTime: d.checkoutTime ?? null,
+        image: d.image ?? null,
+      }
+    }
+
+    // Strategy 1: match by @type
+    for (const s of scripts) {
+      try {
+        const d = JSON.parse(s.textContent ?? '')
+        const t = d['@type']
+        const types: string[] = Array.isArray(t) ? t : [t]
+        if (types.some(x => hotelTypes.has(x))) return parse(d)
+      } catch { /* skip */ }
+    }
+    // Strategy 2: any LD+JSON with aggregateRating on this hotel page
+    for (const s of scripts) {
+      try {
+        const d = JSON.parse(s.textContent ?? '')
+        if (d.aggregateRating && d.name) return parse(d)
+      } catch { /* skip */ }
+    }
+    return null
+  })
+}
+
+/* ---------- getAttractionDetail ---------- */
+
+async function getAttractionDetail(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const geoId = String(params.geoId ?? '')
+  const locationId = String(params.locationId ?? '')
+  const slug = String(params.slug ?? '')
+  if (!geoId || !locationId || !slug) throw new Error('geoId, locationId, and slug are required')
+
+  await navigateTo(page, `${TA_ORIGIN}/Attraction_Review-g${geoId}-d${locationId}-Reviews-${slug}.html`)
+
+  return safeEvaluate(page, () => {
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
+    const attrTypes = new Set(['LocalBusiness', 'TouristAttraction', 'LandmarksOrHistoricalBuildings', 'Place', 'CivicStructure', 'Museum', 'Park'])
+
+    const parseAddr = (a: Record<string, unknown> | null) => {
+      if (!a) return null
+      const c = a.addressCountry
+      return {
+        street: (a.streetAddress as string) ?? null,
+        city: (a.addressLocality as string) ?? null,
+        region: (a.addressRegion as string) ?? null,
+        country: typeof c === 'object' && c ? (c as Record<string, unknown>).name ?? null : c ?? null,
+        postalCode: (a.postalCode as string) ?? null,
+      }
+    }
+
+    const parse = (d: Record<string, unknown>) => {
+      const agg = d.aggregateRating as Record<string, unknown> | null
+      const hours = (d.openingHoursSpecification ?? []) as Array<Record<string, unknown>>
+      return {
+        name: d.name ?? null,
+        url: d.url ?? null,
+        description: d.description ?? null,
+        rating: agg?.ratingValue != null ? Number(agg.ratingValue) : null,
+        reviewCount: agg?.reviewCount != null ? Number(agg.reviewCount) : null,
+        address: parseAddr(d.address as Record<string, unknown> | null),
+        telephone: d.telephone ?? null,
+        image: d.image ?? null,
+        openingHours: hours.map(h => ({
+          day: (h.dayOfWeek as string) ?? null,
+          opens: (h.opens as string) ?? null,
+          closes: (h.closes as string) ?? null,
+        })),
+      }
+    }
+
+    // Match by @type
+    for (const s of scripts) {
+      try {
+        const d = JSON.parse(s.textContent ?? '')
+        const t = d['@type']
+        const types: string[] = Array.isArray(t) ? t : [t]
+        if (types.some(x => attrTypes.has(x))) return parse(d)
+      } catch { /* skip */ }
+    }
+    // Fallback: any LD+JSON with aggregateRating
+    for (const s of scripts) {
+      try {
+        const d = JSON.parse(s.textContent ?? '')
+        if (d.aggregateRating && d.name) return parse(d)
+      } catch { /* skip */ }
+    }
+    return null
+  })
+}
+
+/* ---------- searchRestaurants ---------- */
+
+async function searchRestaurants(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+  const geoId = String(params.geoId ?? '')
+  const location = String(params.location ?? '')
+  if (!geoId || !location) throw new Error('geoId and location are required')
+
+  await navigateTo(page, `${TA_ORIGIN}/Restaurants-g${geoId}-${location}.html`)
+
+  return safeEvaluate(page, () => {
+    const parseAddr = (a: Record<string, unknown> | null) => {
+      if (!a) return null
+      const c = a.addressCountry
+      return {
+        street: (a.streetAddress as string) ?? null,
+        city: (a.addressLocality as string) ?? null,
+        region: (a.addressRegion as string) ?? null,
+        country: typeof c === 'object' && c ? (c as Record<string, unknown>).name ?? null : c ?? null,
+        postalCode: (a.postalCode as string) ?? null,
+      }
+    }
+    const restFrom = (item: Record<string, unknown>) => {
+      const agg = item.aggregateRating as Record<string, unknown> | null
+      const cuisineRaw = item.servesCuisine
+      const imgRaw = item.image
+      const image = typeof imgRaw === 'string' ? imgRaw
+        : Array.isArray(imgRaw) ? (imgRaw[0] as string) ?? null
+        : imgRaw && typeof imgRaw === 'object' ? ((imgRaw as Record<string, unknown>).url as string) ?? null
+        : null
+      return {
+        name: (item.name as string) ?? null,
+        url: (item.url as string) ?? null,
+        rating: agg?.ratingValue != null ? Number(agg.ratingValue) : null,
+        reviewCount: agg?.reviewCount != null ? Number(agg.reviewCount) : null,
+        priceRange: (item.priceRange as string) ?? null,
+        cuisine: Array.isArray(cuisineRaw) ? cuisineRaw : cuisineRaw ? [cuisineRaw as string] : [],
+        address: parseAddr(item.address as Record<string, unknown> | null),
+        telephone: (item.telephone as string) ?? null,
+        image,
+      }
+    }
+
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]')
+
+    // Strategy 1: LD+JSON ItemList
+    for (const s of scripts) {
+      try {
+        const d = JSON.parse(s.textContent ?? '')
+        if (d['@type'] !== 'ItemList') continue
+        const restaurants = ((d.itemListElement ?? []) as Array<Record<string, unknown>>)
+          .map(li => restFrom((li.item ?? li) as Record<string, unknown>))
+        return { count: restaurants.length, restaurants }
+      } catch { /* skip */ }
+    }
+    // Strategy 2: Individual Restaurant/FoodEstablishment LD+JSON blocks
+    const restTypes = new Set(['Restaurant', 'FoodEstablishment', 'BarOrPub', 'CafeOrCoffeeShop', 'FastFoodRestaurant', 'LocalBusiness'])
+    const restaurants: ReturnType<typeof restFrom>[] = []
+    for (const s of scripts) {
+      try {
+        const d = JSON.parse(s.textContent ?? '')
+        const t = d['@type']
+        const types: string[] = Array.isArray(t) ? t : [t]
+        if (types.some(x => restTypes.has(x))) restaurants.push(restFrom(d))
+      } catch { /* skip */ }
+    }
+    if (restaurants.length) return { count: restaurants.length, restaurants }
+
+    // Strategy 3: DOM fallback — restaurant links
+    const domRestaurants: { name: string; url: string | null }[] = []
+    for (const link of document.querySelectorAll('a[href*="Restaurant_Review"]')) {
+      const name = link.textContent?.trim() || ''
+      if (name && name.length > 1 && name.length < 120) {
+        domRestaurants.push({ name, url: (link as HTMLAnchorElement).href || null })
+      }
+    }
+    // Deduplicate by name
+    const seen = new Set<string>()
+    const unique = domRestaurants.filter(r => {
+      if (seen.has(r.name)) return false
+      seen.add(r.name)
+      return true
+    })
+    if (unique.length) return { count: unique.length, restaurants: unique }
+    return { count: 0, restaurants: [] }
+  })
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, unknown>>) => Promise<unknown>> = {
@@ -334,6 +553,9 @@ const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, un
   searchHotels,
   getRestaurant,
   getAttractionReviews,
+  getHotelDetail,
+  getAttractionDetail,
+  searchRestaurants,
 }
 
 const adapter: CodeAdapter = {

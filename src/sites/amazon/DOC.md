@@ -1,7 +1,7 @@
 # Amazon
 
 ## Overview
-E-commerce marketplace — search products, view details, read reviews, browse deals.
+E-commerce marketplace — search products, view details, read reviews, browse deals, manage cart.
 
 ## Workflows
 
@@ -17,6 +17,11 @@ E-commerce marketplace — search products, view details, read reviews, browse d
 ### Discover trending products
 1. `getBestSellers` → ranked best-selling products
 
+### Cart operations
+1. `searchProducts(k)` → find product `asin`
+2. `addToCart(asin)` → add product to cart (returns confirmation, cart count)
+3. `getCart` → view current cart contents (items, quantities, subtotal)
+
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
@@ -26,6 +31,8 @@ E-commerce marketplace — search products, view details, read reviews, browse d
 | getProductReviews | read customer reviews | asin ← searchProducts | rating, title, body, author, date | paginated (pageNumber); sortBy: recent/helpful |
 | searchDeals | browse active deals | startIndex, pageSize | asin, title, price, dealBadge, percentClaimed | JSON API; paginated (nextIndex) |
 | getBestSellers | view best sellers | — | title, price, rating, link | entry point |
+| addToCart | add product to cart | asin ← searchProducts, quantity? | success, cartCount, subtotal | write op; clicks Add to Cart button |
+| getCart | view cart contents | — | items (asin, title, price, quantity), subtotal | reads cart page DOM |
 
 ## Quick Start
 
@@ -44,6 +51,12 @@ openweb amazon exec searchDeals '{"startIndex": 1, "pageSize": 20}'
 
 # View best sellers
 openweb amazon exec getBestSellers '{}'
+
+# Add product to cart
+openweb amazon exec addToCart '{"asin": "B00MVWGQX0"}'
+
+# View cart
+openweb amazon exec getCart '{}'
 ```
 
 ---
@@ -71,6 +84,8 @@ Search results and reviews are extracted from the rendered DOM.
 - **getProductDetail**: `script_json` — parses `<script type="application/ld+json">` (Schema.org Product)
 - **getProductReviews**: `html_selector` — extracts from `[data-hook="review"]` DOM elements
 - **getBestSellers**: `html_selector` — extracts from `#gridItemRoot` DOM elements
+- **addToCart**: `adapter` — navigates to product page, clicks Add to Cart button, extracts confirmation
+- **getCart**: `adapter` — navigates to `/gp/cart/view.html`, extracts cart items from `[data-asin][data-itemtype="active"]`
 
 ## Known Issues
 - **Akamai Bot Manager**: Node transport fails (403 with invalid `_abck` cookie). Must use page transport.

@@ -1,0 +1,9 @@
+{
+  "operation_id": "getAnswers",
+  "cases": [
+    {
+      "input": { "slug": "What-is-JavaScript", "limit": 5 },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

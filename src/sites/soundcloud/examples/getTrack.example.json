@@ -1,0 +1,14 @@
+{
+  "operation_id": "getTrack",
+  "cases": [
+    {
+      "input": {
+        "id": 899253886
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "operation_id": "getTrending",
+  "cases": [
+    {
+      "input": {},
+      "assertions": { "status": 200 }
+    }
+  ]
+}

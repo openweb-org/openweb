@@ -1,0 +1,394 @@
+openapi: '3.1.0'
+info:
+  title: Skyscanner API
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.skyscanner.com
+    x-openweb:
+      transport: page
+paths:
+  /flights/search:
+    get:
+      operationId: searchFlights
+      summary: 'Search flights — airline, departure/arrival times, duration, stops, price, fare policy'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sky0001
+          tool_version: 2
+        adapter:
+          name: skyscanner
+          operation: searchFlights
+      parameters:
+        - name: origin
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Origin airport IATA code (e.g. "LAX", "SFO", "LHR").'
+        - name: destination
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Destination airport IATA code (e.g. "JFK", "CDG", "NRT").'
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Departure date (YYYY-MM-DD).
+        - name: adults
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Number of adult passengers.
+        - name: cabinClass
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [economy, premiumeconomy, business, first]
+            default: economy
+          description: Cabin class preference.
+        - name: directOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Show only direct (non-stop) flights.
+      responses:
+        '200':
+          description: Flight search results with itineraries, carriers, and pricing.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  filterStats:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        description: Total number of matching itineraries.
+                      duration:
+                        type: object
+                        properties:
+                          min:
+                            type: integer
+                            description: Minimum flight duration in minutes.
+                          max:
+                            type: integer
+                            description: Maximum flight duration in minutes.
+                      carriers:
+                        type: array
+                        description: Available airlines with logos.
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            alternateId:
+                              type: string
+                              description: 'IATA airline code (e.g. "DL", "AA").'
+                            name:
+                              type: string
+                            logoUrl:
+                              type: string
+                      airports:
+                        type: array
+                        description: Origin and destination airports.
+                        items:
+                          type: object
+                  results:
+                    type: array
+                    description: Flight itineraries sorted by score.
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Itinerary ID.
+                        price:
+                          type: object
+                          properties:
+                            raw:
+                              type: number
+                              description: Price in USD.
+                            formatted:
+                              type: string
+                              description: 'Formatted price (e.g. "$149").'
+                        score:
+                          type: number
+                          description: Ranking score (0-1, higher is better).
+                        tags:
+                          type: array
+                          items:
+                            type: string
+                          description: 'Tags like "cheapest", "best", "shortest".'
+                        farePolicy:
+                          type: object
+                          properties:
+                            isChangeAllowed:
+                              type: boolean
+                            isCancellationAllowed:
+                              type: boolean
+                        legs:
+                          type: array
+                          description: Flight legs (1 for one-way, 2 for round-trip).
+                          items:
+                            type: object
+                            properties:
+                              origin:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                    description: Airport IATA code.
+                                  name:
+                                    type: string
+                                  city:
+                                    type: string
+                              destination:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  name:
+                                    type: string
+                                  city:
+                                    type: string
+                              departure:
+                                type: string
+                                description: 'Departure time (ISO 8601, e.g. "2026-05-15T15:20:00").'
+                              arrival:
+                                type: string
+                                description: 'Arrival time (ISO 8601).'
+                              durationInMinutes:
+                                type: integer
+                                description: Total leg duration in minutes.
+                              stopCount:
+                                type: integer
+                                description: Number of stops (0 = direct).
+                              carriers:
+                                type: object
+                                properties:
+                                  marketing:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        alternateId:
+                                          type: string
+                                          description: Airline IATA code.
+                                        name:
+                                          type: string
+                                        logoUrl:
+                                          type: string
+                              segments:
+                                type: array
+                                description: Individual flight segments.
+                                items:
+                                  type: object
+                                  properties:
+                                    flightNumber:
+                                      type: string
+                                    departure:
+                                      type: string
+                                    arrival:
+                                      type: string
+                                    durationInMinutes:
+                                      type: integer
+                                    marketingCarrier:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                        alternateId:
+                                          type: string
+                                          description: Airline IATA code.
+                                        displayCode:
+                                          type: string
+                                    operatingCarrier:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                        alternateId:
+                                          type: string
+                  agents:
+                    type: array
+                    description: Booking agents (airlines and OTAs) with ratings.
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        isCarrier:
+                          type: boolean
+                        rating:
+                          type: number
+
+  /flights/detail:
+    get:
+      operationId: getFlightDetail
+      summary: 'Get flight detail — same as searchFlights with full segment, fare, and carrier info'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sky0002
+          tool_version: 2
+        adapter:
+          name: skyscanner
+          operation: getFlightDetail
+      parameters:
+        - name: origin
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Origin airport IATA code.'
+        - name: destination
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Destination airport IATA code.'
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Departure date (YYYY-MM-DD).
+        - name: adults
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: cabinClass
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [economy, premiumeconomy, business, first]
+            default: economy
+      responses:
+        '200':
+          description: Detailed flight search results with full fare and segment information.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  filterStats:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        price:
+                          type: object
+                          properties:
+                            raw:
+                              type: number
+                            formatted:
+                              type: string
+                        legs:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              departure:
+                                type: string
+                              arrival:
+                                type: string
+                              durationInMinutes:
+                                type: integer
+                              stopCount:
+                                type: integer
+                              carriers:
+                                type: object
+                              segments:
+                                type: array
+                                items:
+                                  type: object
+
+  /flights/price-history:
+    get:
+      operationId: getPriceHistory
+      summary: 'Get price history — daily cheapest price for a route over ~300 days'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sky0003
+          tool_version: 2
+        adapter:
+          name: skyscanner
+          operation: getPriceHistory
+      parameters:
+        - name: origin
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Origin airport IATA code (e.g. "LAX").'
+        - name: destination
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Destination airport IATA code (e.g. "JFK").'
+      responses:
+        '200':
+          description: Daily price calendar with cheapest prices and price group categories.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  flights:
+                    type: object
+                    properties:
+                      groups:
+                        type: array
+                        description: 'Price group definitions (low=$, medium=$$, high=$$$).'
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            label:
+                              type: string
+                      days:
+                        type: array
+                        description: Daily price entries (~300 days from today).
+                        items:
+                          type: object
+                          properties:
+                            day:
+                              type: string
+                              description: 'Date (YYYY-MM-DD).'
+                            group:
+                              type: string
+                              description: 'Price category: "low", "medium", or "high".'
+                            price:
+                              type: number
+                              description: Cheapest price in USD for this date.

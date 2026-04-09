@@ -1,0 +1,8 @@
+{
+  "name": "soundcloud",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://soundcloud.com",
+  "requires_auth": false,
+  "quarantined": false
+}

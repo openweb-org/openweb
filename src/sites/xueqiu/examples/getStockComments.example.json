@@ -1,0 +1,9 @@
+{
+  "operation_id": "getStockComments",
+  "cases": [
+    {
+      "input": { "symbol": "SH600519", "count": 5, "sort": "time", "source": "all" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

@@ -14,6 +14,12 @@ Real-time messaging platform. Archetype: Messaging.
 1. `listGuilds` → pick guild → `guildId`
 2. `searchMessages(guildId, content)` → matching messages with context
 
+### Send a message & react
+1. `listGuilds` → pick guild → `guildId`
+2. `listGuildChannels(guildId)` → pick channel → `channelId`
+3. `sendMessage(channelId, content)` → message with ID → `messageId`
+4. `addReaction(channelId, messageId, emoji)` → 204
+
 ### Inspect a server
 1. `listGuilds` → pick guild → `guildId`
 2. `getGuildInfo(guildId)` → server details, member count, features
@@ -33,6 +39,8 @@ Real-time messaging platform. Archetype: Messaging.
 | getChannelInfo | channel details | channelId ← listGuildChannels | name, type, topic, guild_id | |
 | getChannelMessages | read messages | channelId ← listGuildChannels | content, author, timestamp, attachments, embeds | paginated (limit, before, after) |
 | getPinnedMessages | pinned messages | channelId ← listGuildChannels | content, author, timestamp | no pagination |
+| sendMessage | send a message | channelId ← listGuildChannels, content | id, content, author, timestamp | write op |
+| addReaction | react to message | channelId, messageId ← getChannelMessages, emoji | 204 no content | write op |
 
 ## Quick Start
 
@@ -51,6 +59,12 @@ openweb discord exec getChannelMessages '{"channelId":"CHANNEL_ID","limit":50}'
 
 # Search messages in a guild
 openweb discord exec searchMessages '{"guildId":"GUILD_ID","content":"search term"}'
+
+# Send a message to a channel
+openweb discord exec sendMessage '{"channelId":"CHANNEL_ID","content":"Hello!"}'
+
+# React to a message with thumbs up
+openweb discord exec addReaction '{"channelId":"CHANNEL_ID","messageId":"MSG_ID","emoji":"%F0%9F%91%8D"}'
 ```
 
 ---

@@ -1,0 +1,221 @@
+openapi: 3.1.0
+info:
+  title: rotten-tomatoes
+  version: 1.0.0
+  x-openweb:
+    spec_version: "2.0"
+    requires_auth: false
+servers:
+  - url: https://www.rottentomatoes.com
+    x-openweb:
+      transport: page
+paths:
+  /search:
+    get:
+      operationId: searchMovies
+      summary: >-
+        Search movies — title, year, Tomatometer score, certified fresh status,
+        cast, thumbnail
+      x-openweb:
+        permission: read
+        adapter:
+          name: rotten-tomatoes-web
+          operation: searchMovies
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (movie or TV show title)
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Number of movie results returned
+                  movies:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: [string, "null"]
+                          description: Movie title
+                        url:
+                          type: [string, "null"]
+                          description: Full Rotten Tomatoes URL
+                        slug:
+                          type: [string, "null"]
+                          description: "URL slug for movie detail (e.g. 'inception')"
+                        year:
+                          type: [string, "null"]
+                          description: Release year
+                        tomatometerScore:
+                          type: [string, "null"]
+                          description: "Tomatometer score (e.g. '87')"
+                        tomatometerSentiment:
+                          type: [string, "null"]
+                          description: "POSITIVE, NEGATIVE, or empty"
+                        isCertifiedFresh:
+                          type: boolean
+                          description: Whether the movie is Certified Fresh
+                        cast:
+                          type: [string, "null"]
+                          description: Comma-separated top cast names
+                        thumbnail:
+                          type: [string, "null"]
+                          description: Poster thumbnail URL
+  /m/{slug}:
+    get:
+      operationId: getMovieDetail
+      summary: >-
+        Get movie details — title, synopsis, Tomatometer, audience score, cast,
+        directors, genre, content rating, release date
+      x-openweb:
+        permission: read
+        adapter:
+          name: rotten-tomatoes-web
+          operation: getMovieDetail
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Movie URL slug (e.g. 'inception', 'the_dark_knight')"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: [string, "null"]
+                    description: Movie title
+                  url:
+                    type: [string, "null"]
+                    description: Canonical Rotten Tomatoes URL
+                  synopsis:
+                    type: [string, "null"]
+                    description: Movie synopsis / plot summary
+                  contentRating:
+                    type: [string, "null"]
+                    description: "MPAA rating (PG-13, R, etc.)"
+                  releaseDate:
+                    type: [string, "null"]
+                    description: "Release date (YYYY-MM-DD)"
+                  genre:
+                    type: array
+                    items:
+                      type: string
+                    description: Genre list
+                  poster:
+                    type: [string, "null"]
+                    description: Poster image URL
+                  tomatometerScore:
+                    type: [string, "null"]
+                    description: "Tomatometer percentage (e.g. '87%')"
+                  tomatometerSentiment:
+                    type: [string, "null"]
+                    description: "POSITIVE or NEGATIVE"
+                  isCertifiedFresh:
+                    type: boolean
+                    description: Whether the movie is Certified Fresh
+                  criticsReviewCount:
+                    type: [integer, "null"]
+                    description: Number of critic reviews
+                  audienceScore:
+                    type: [string, "null"]
+                    description: "Audience score percentage (e.g. '91%')"
+                  audienceSentiment:
+                    type: [string, "null"]
+                    description: "POSITIVE or NEGATIVE"
+                  cast:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: [string, "null"]
+                        url:
+                          type: [string, "null"]
+                    description: Top billed cast
+                  directors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: [string, "null"]
+                        url:
+                          type: [string, "null"]
+  /tomatometer/{slug}:
+    get:
+      operationId: getTomatoMeter
+      summary: >-
+        Get Tomatometer and audience scores — critic score, certified fresh
+        status, review count, audience score, sentiment
+      x-openweb:
+        permission: read
+        adapter:
+          name: rotten-tomatoes-web
+          operation: getTomatoMeter
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Movie URL slug (e.g. 'inception', 'the_dark_knight')"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: [string, "null"]
+                    description: Movie title
+                  url:
+                    type: [string, "null"]
+                    description: Rotten Tomatoes URL
+                  tomatometer:
+                    type: object
+                    properties:
+                      score:
+                        type: [string, "null"]
+                        description: "Tomatometer percentage (e.g. '87%')"
+                      label:
+                        type: [string, "null"]
+                        description: "Score label (e.g. 'Tomatometer')"
+                      sentiment:
+                        type: [string, "null"]
+                        description: "POSITIVE or NEGATIVE"
+                      isCertifiedFresh:
+                        type: boolean
+                        description: Whether the movie is Certified Fresh
+                      reviewCount:
+                        type: [integer, "null"]
+                        description: Total number of critic reviews
+                  audienceScore:
+                    type: object
+                    properties:
+                      score:
+                        type: [string, "null"]
+                        description: "Audience score percentage (e.g. '91%')"
+                      label:
+                        type: [string, "null"]
+                        description: "Score label (e.g. 'Popcornmeter')"
+                      sentiment:
+                        type: [string, "null"]
+                        description: "POSITIVE or NEGATIVE"

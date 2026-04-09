@@ -1,0 +1,330 @@
+openapi: '3.1.0'
+info:
+  title: Product Hunt
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.producthunt.com
+    x-openweb:
+      transport: page
+paths:
+  /internal/getToday:
+    get:
+      operationId: getToday
+      summary: "Today's featured products — name, tagline, votes, rank"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ph0001
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: producthunt
+          operation: getToday
+      responses:
+        '200':
+          description: Array of today's featured products.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: Post ID.
+                    name:
+                      type: string
+                      description: Product name.
+                    slug:
+                      type: string
+                      description: URL slug for the product.
+                    tagline:
+                      type:
+                        - string
+                        - 'null'
+                      description: Short product tagline.
+                    votesCount:
+                      type: integer
+                      description: Total upvotes.
+                    commentsCount:
+                      type: integer
+                      description: Total comments.
+                    dailyRank:
+                      type:
+                        - string
+                        - 'null'
+                      description: 'Rank for the day, e.g. "1".'
+                    createdAt:
+                      type:
+                        - string
+                        - 'null'
+                      description: ISO timestamp when posted.
+                    featuredAt:
+                      type:
+                        - string
+                        - 'null'
+                      description: ISO timestamp when featured.
+                    thumbnailUrl:
+                      type:
+                        - string
+                        - 'null'
+                      description: Product thumbnail image URL.
+                    topics:
+                      type: array
+                      items:
+                        type: string
+                      description: Topic names.
+                    productSlug:
+                      type: string
+                      description: Slug for the product page.
+  /internal/getPosts:
+    get:
+      operationId: getPosts
+      summary: 'Featured posts by section — today, yesterday, last week, last month'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ph0002
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: producthunt
+          operation: getPosts
+      parameters:
+        - name: section
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - TODAY
+              - YESTERDAY
+              - LAST_WEEK
+              - LAST_MONTH
+            default: TODAY
+          description: Time section to fetch posts from.
+      responses:
+        '200':
+          description: Array of featured posts for the given section.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    slug:
+                      type: string
+                    tagline:
+                      type:
+                        - string
+                        - 'null'
+                    votesCount:
+                      type: integer
+                    commentsCount:
+                      type: integer
+                    dailyRank:
+                      type:
+                        - string
+                        - 'null'
+                    createdAt:
+                      type:
+                        - string
+                        - 'null'
+                    featuredAt:
+                      type:
+                        - string
+                        - 'null'
+                    thumbnailUrl:
+                      type:
+                        - string
+                        - 'null'
+                    topics:
+                      type: array
+                      items:
+                        type: string
+                    productSlug:
+                      type: string
+  /internal/getPost:
+    get:
+      operationId: getPost
+      summary: 'Product details — name, description, votes, makers, categories'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ph0003
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: producthunt
+          operation: getPost
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Product slug from getPosts or searchProducts (e.g. "novavoice").'
+      responses:
+        '200':
+          description: Full product details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Product ID.
+                  name:
+                    type: string
+                    description: Product name.
+                  slug:
+                    type: string
+                    description: URL slug.
+                  tagline:
+                    type:
+                      - string
+                      - 'null'
+                    description: Short tagline.
+                  description:
+                    type:
+                      - string
+                      - 'null'
+                    description: Full product description.
+                  websiteUrl:
+                    type:
+                      - string
+                      - 'null'
+                    description: Product website URL.
+                  votesCount:
+                    type: integer
+                    description: Total upvotes.
+                  commentsCount:
+                    type: integer
+                    description: Total comments.
+                  dailyRank:
+                    type:
+                      - string
+                      - 'null'
+                    description: Daily rank.
+                  createdAt:
+                    type:
+                      - string
+                      - 'null'
+                    description: ISO timestamp.
+                  featuredAt:
+                    type:
+                      - string
+                      - 'null'
+                    description: ISO timestamp when featured.
+                  followersCount:
+                    type: integer
+                    description: Number of followers.
+                  reviewsCount:
+                    type: integer
+                    description: Number of reviews.
+                  reviewsRating:
+                    type: number
+                    description: Average review rating.
+                  categories:
+                    type: array
+                    items:
+                      type: string
+                    description: Product category names.
+                  makers:
+                    type: array
+                    description: Product makers/team.
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        username:
+                          type:
+                            - string
+                            - 'null'
+                        headline:
+                          type:
+                            - string
+                            - 'null'
+                  thumbnailUrl:
+                    type:
+                      - string
+                      - 'null'
+                    description: Thumbnail image URL.
+                  logoUrl:
+                    type:
+                      - string
+                      - 'null'
+                    description: Product logo URL.
+  /internal/searchProducts:
+    get:
+      operationId: searchProducts
+      summary: 'Search products by keyword — name, tagline, rating'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ph0004
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: producthunt
+          operation: searchProducts
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search keyword.
+      responses:
+        '200':
+          description: Array of matching products.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: Product ID.
+                    name:
+                      type: string
+                      description: Product name.
+                    slug:
+                      type: string
+                      description: URL slug.
+                    tagline:
+                      type:
+                        - string
+                        - 'null'
+                      description: Product tagline.
+                    reviewsRating:
+                      type: number
+                      description: Average review rating.
+                    reviewsCount:
+                      type: integer
+                      description: Number of reviews.
+                    logoUrl:
+                      type:
+                        - string
+                        - 'null'
+                      description: Product logo URL.

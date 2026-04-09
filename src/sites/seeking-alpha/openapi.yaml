@@ -1,0 +1,325 @@
+openapi: '3.1.0'
+info:
+  title: Seeking Alpha
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://seekingalpha.com
+    x-openweb:
+      transport: page
+paths:
+  /search/articles:
+    get:
+      operationId: searchArticles
+      summary: Search for articles, analysis, and tickers by keyword — title, url, company, quant rating
+      x-openweb:
+        permission: read
+        adapter:
+          name: seeking-alpha-api
+          operation: searchArticles
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Search keyword, ticker symbol, or company name.
+          schema:
+            type: string
+        - name: size
+          in: query
+          required: false
+          description: Number of results (default 10, max 20).
+          schema:
+            type: integer
+            default: 10
+        - name: page
+          in: query
+          required: false
+          description: Page number (default 1).
+          schema:
+            type: integer
+            default: 1
+        - name: period
+          in: query
+          required: false
+          description: Time period filter (all, year, quarter, month, week).
+          schema:
+            type: string
+            default: quarter
+      responses:
+        '200':
+          description: Search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: [integer, string]
+                          description: Result ID (ticker ID for symbols, article ID for articles).
+                        type:
+                          type: string
+                          description: Result type (symbol, article, news, etc.).
+                        score:
+                          type: number
+                        url:
+                          type: string
+                        name:
+                          type: string
+                          description: Display name (may contain HTML bold tags).
+                        company_name:
+                          type: [string, 'null']
+                        exchange:
+                          type: [string, 'null']
+                        sector:
+                          type: [string, 'null']
+                        industry:
+                          type: [string, 'null']
+                        quant_rating:
+                          type: [number, 'null']
+                          description: Seeking Alpha quant rating (1-5 scale).
+                        slug:
+                          type: [string, 'null']
+                        content:
+                          type: [string, 'null']
+                          description: Snippet or description.
+                  meta:
+                    type: object
+                    properties:
+                      page:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                            description: Total number of results.
+
+  /articles/{articleId}:
+    get:
+      operationId: getArticle
+      summary: Get article content — title, summary, full HTML content, author, tickers
+      x-openweb:
+        permission: read
+        adapter:
+          name: seeking-alpha-api
+          operation: getArticle
+      parameters:
+        - name: articleId
+          in: path
+          required: true
+          description: Article ID (from search results or transcript listings).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Full article.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: [string, 'null']
+                  summary:
+                    type: [array, string, 'null']
+                    description: Article summary/abstract. May be a string or array.
+                  content:
+                    type: [string, 'null']
+                    description: Full article HTML content. Null if paywalled.
+                  publishedAt:
+                    type: [string, 'null']
+                    description: ISO publish date.
+                  lastModified:
+                    type: [string, 'null']
+                  isPaywalled:
+                    type: boolean
+                    description: True if full content requires premium subscription.
+                  isTranscript:
+                    type: boolean
+                  commentCount:
+                    type: integer
+                  likesCount:
+                    type: integer
+                  author:
+                    type: [object, 'null']
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: [string, 'null']
+                  tickers:
+                    type: array
+                    items:
+                      type: string
+                    description: Related ticker symbols.
+
+  /symbols/{ticker}/analysis:
+    get:
+      operationId: getStockAnalysis
+      summary: Get stock analysis — quant rating, author rating, sell-side rating, value/growth/momentum grades, key metrics
+      x-openweb:
+        permission: read
+        adapter:
+          name: seeking-alpha-api
+          operation: getStockAnalysis
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          description: Ticker symbol (e.g. AAPL, MSFT, TSLA).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stock analysis and ratings.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ticker]
+                properties:
+                  ticker:
+                    type: string
+                  ratings:
+                    type: array
+                    description: Rating periods (current, 3-month ago, 6-month ago).
+                    items:
+                      type: object
+                      properties:
+                        asDate:
+                          type: [string, 'null']
+                          description: Rating date.
+                        period:
+                          type: [integer, 'null']
+                          description: Months ago (0=current, 3=3mo ago, 6=6mo ago).
+                        isLocked:
+                          type: boolean
+                          description: True if data requires premium.
+                        quantRating:
+                          type: [number, 'null']
+                          description: Quant rating (1-5). Null if locked.
+                        authorsRating:
+                          type: [number, 'null']
+                          description: SA authors consensus rating. Null if locked.
+                        sellSideRating:
+                          type: [number, 'null']
+                          description: Wall Street analyst consensus (1-5).
+                        valueGrade:
+                          type: [integer, 'null']
+                          description: Value grade (1=A+, 13=F).
+                        growthGrade:
+                          type: [integer, 'null']
+                          description: Growth grade (1=A+, 13=F).
+                        profitabilityGrade:
+                          type: [integer, 'null']
+                          description: Profitability grade (1=A+, 13=F).
+                        momentumGrade:
+                          type: [integer, 'null']
+                          description: Momentum grade (1=A+, 13=F).
+                  metrics:
+                    type: object
+                    description: Key financial metrics.
+                    properties:
+                      marketcap:
+                        type: [number, 'null']
+                        description: Market capitalization.
+                      peRatioFwd:
+                        type: [number, 'null']
+                        description: Forward P/E ratio.
+                      price_to_sales:
+                        type: [number, 'null']
+                      price_to_book:
+                        type: [number, 'null']
+                      diluted_eps_growth:
+                        type: [number, 'null']
+                        description: Diluted EPS growth rate.
+                      revenue_growth:
+                        type: [number, 'null']
+                      div_yield_fwd:
+                        type: [number, 'null']
+                        description: Forward dividend yield.
+
+  /symbols/{ticker}/earnings:
+    get:
+      operationId: getEarnings
+      summary: Get earnings data — EPS and revenue estimates vs actuals, earnings call transcripts
+      x-openweb:
+        permission: read
+        adapter:
+          name: seeking-alpha-api
+          operation: getEarnings
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          description: Ticker symbol (e.g. AAPL, MSFT, TSLA).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Earnings estimates and transcripts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ticker]
+                properties:
+                  ticker:
+                    type: string
+                  tickerId:
+                    type: integer
+                    description: SA internal ticker ID.
+                  estimates:
+                    type: array
+                    description: Quarterly EPS and revenue estimates vs actuals.
+                    items:
+                      type: object
+                      properties:
+                        relativePeriod:
+                          type: integer
+                          description: Period relative to current (negative=past, 0=current, positive=future).
+                        fiscalYear:
+                          type: [integer, 'null']
+                        fiscalQuarter:
+                          type: [integer, 'null']
+                        periodEndDate:
+                          type: [string, 'null']
+                          description: Quarter end date.
+                        eps_normalized_consensus_mean:
+                          type: [number, 'null']
+                          description: EPS consensus estimate.
+                        eps_normalized_actual:
+                          type: [number, 'null']
+                          description: Actual reported EPS.
+                        revenue_consensus_mean:
+                          type: [number, 'null']
+                          description: Revenue consensus estimate.
+                        revenue_actual:
+                          type: [number, 'null']
+                          description: Actual reported revenue.
+                  transcripts:
+                    type: array
+                    description: Recent earnings call transcripts.
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Transcript article ID (use with getArticle).
+                        title:
+                          type: [string, 'null']
+                        publishedAt:
+                          type: [string, 'null']
+                        isPaywalled:
+                          type: boolean
+                        url:
+                          type: [string, 'null']
+                          description: Relative URL path.

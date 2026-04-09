@@ -1,0 +1,9 @@
+{
+  "operation_id": "searchCoins",
+  "cases": [
+    {
+      "input": { "query": "bitcoin" },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

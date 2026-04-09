@@ -1,0 +1,9 @@
+{
+  "operation_id": "getUser",
+  "cases": [
+    {
+      "input": { "id": 22656, "site": "stackoverflow" },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "operation_id": "searchTags",
+  "cases": [
+    {
+      "input": { "inname": "javascript", "site": "stackoverflow" },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

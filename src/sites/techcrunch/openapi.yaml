@@ -1,0 +1,386 @@
+openapi: '3.1.0'
+info:
+  title: TechCrunch
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://techcrunch.com/wp-json/wp/v2
+    x-openweb:
+      transport: node
+paths:
+  /posts?search:
+    get:
+      operationId: searchArticles
+      summary: Search articles by keyword — returns title, excerpt, date, author, category, featured image
+      x-openweb:
+        permission: read
+        actual_path: /posts
+        build:
+          stable_id: techcrunch0001
+          tool_version: 1
+      parameters:
+        - name: search
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (keyword or phrase).
+          example: artificial intelligence
+        - name: _embed
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '1'
+          description: Include embedded resources (author, featured media). Use "1" to enable.
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page (max 100).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+        - name: orderby
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [date, relevance, id, title]
+            default: relevance
+          description: Sort field for results.
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort direction.
+      responses:
+        '200':
+          description: Array of matching posts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: Post ID.
+                    date:
+                      type: string
+                      format: date-time
+                      description: Publication date in ISO 8601.
+                    slug:
+                      type: string
+                      description: URL slug for the post.
+                    link:
+                      type: string
+                      format: uri
+                      description: Full URL on techcrunch.com.
+                    title:
+                      type: object
+                      properties:
+                        rendered:
+                          type: string
+                          description: HTML-rendered title.
+                    excerpt:
+                      type: object
+                      properties:
+                        rendered:
+                          type: string
+                          description: Article excerpt as HTML.
+                    author:
+                      type: integer
+                      description: Author ID.
+                    categories:
+                      type: array
+                      items:
+                        type: integer
+                      description: Category IDs.
+                    featured_media:
+                      type: integer
+                      description: Featured image attachment ID.
+                  required: [id, date, slug, link, title]
+
+  /posts/{id}:
+    get:
+      operationId: getArticle
+      summary: Get full article content — title, body, date, author, category, featured image
+      x-openweb:
+        permission: read
+        build:
+          stable_id: techcrunch0002
+          tool_version: 1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Post ID (numeric). Use an ID from searchArticles or getLatest results.
+          example: 2748925
+        - name: _embed
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '1'
+          description: Include embedded resources (author, featured media). Use "1" to enable.
+      responses:
+        '200':
+          description: Single post object with full content.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    description: Post ID.
+                  date:
+                    type: string
+                    format: date-time
+                    description: Publication date in ISO 8601.
+                  modified:
+                    type: string
+                    format: date-time
+                    description: Last modified date.
+                  slug:
+                    type: string
+                    description: URL slug for the post.
+                  link:
+                    type: string
+                    format: uri
+                    description: Full URL on techcrunch.com.
+                  title:
+                    type: object
+                    properties:
+                      rendered:
+                        type: string
+                        description: HTML-rendered title.
+                  content:
+                    type: object
+                    properties:
+                      rendered:
+                        type: string
+                        description: Full article body as HTML.
+                  excerpt:
+                    type: object
+                    properties:
+                      rendered:
+                        type: string
+                        description: Article excerpt as HTML.
+                  author:
+                    type: integer
+                    description: Author ID.
+                  categories:
+                    type: array
+                    items:
+                      type: integer
+                    description: Category IDs.
+                  tags:
+                    type: array
+                    items:
+                      type: integer
+                    description: Tag IDs.
+                  featured_media:
+                    type: integer
+                    description: Featured image attachment ID.
+                required: [id, date, slug, link, title]
+
+  /posts?latest:
+    get:
+      operationId: getLatest
+      summary: Get the latest articles — most recent posts sorted by date
+      x-openweb:
+        permission: read
+        actual_path: /posts
+        build:
+          stable_id: techcrunch0003
+          tool_version: 1
+      parameters:
+        - name: _embed
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '1'
+          description: Include embedded resources (author, featured media). Use "1" to enable.
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page (max 100).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+      responses:
+        '200':
+          description: Array of latest posts sorted by date descending.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: Post ID.
+                    date:
+                      type: string
+                      format: date-time
+                      description: Publication date in ISO 8601.
+                    slug:
+                      type: string
+                      description: URL slug for the post.
+                    link:
+                      type: string
+                      format: uri
+                      description: Full URL on techcrunch.com.
+                    title:
+                      type: object
+                      properties:
+                        rendered:
+                          type: string
+                          description: HTML-rendered title.
+                    excerpt:
+                      type: object
+                      properties:
+                        rendered:
+                          type: string
+                          description: Article excerpt as HTML.
+                    author:
+                      type: integer
+                      description: Author ID.
+                    categories:
+                      type: array
+                      items:
+                        type: integer
+                      description: Category IDs.
+                    featured_media:
+                      type: integer
+                      description: Featured image attachment ID.
+                  required: [id, date, slug, link, title]
+
+  /posts?categories:
+    get:
+      operationId: getCategory
+      summary: Get articles in a specific category — startups, venture, AI, apps, etc.
+      x-openweb:
+        permission: read
+        actual_path: /posts
+        build:
+          stable_id: techcrunch0004
+          tool_version: 1
+      parameters:
+        - name: categories
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: "Category ID. Common IDs: 577030455 (AI), 449557042 (Apps), 576965044 (Venture), 20429 (Startups). Use getCategories on the WP categories endpoint to discover IDs."
+          example: 577030455
+        - name: _embed
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '1'
+          description: Include embedded resources (author, featured media). Use "1" to enable.
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page (max 100).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+        - name: orderby
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [date, relevance, id, title]
+            default: date
+          description: Sort field.
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort direction.
+      responses:
+        '200':
+          description: Array of posts in the specified category.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: Post ID.
+                    date:
+                      type: string
+                      format: date-time
+                      description: Publication date in ISO 8601.
+                    slug:
+                      type: string
+                      description: URL slug for the post.
+                    link:
+                      type: string
+                      format: uri
+                      description: Full URL on techcrunch.com.
+                    title:
+                      type: object
+                      properties:
+                        rendered:
+                          type: string
+                          description: HTML-rendered title.
+                    excerpt:
+                      type: object
+                      properties:
+                        rendered:
+                          type: string
+                          description: Article excerpt as HTML.
+                    author:
+                      type: integer
+                      description: Author ID.
+                    categories:
+                      type: array
+                      items:
+                        type: integer
+                      description: Category IDs.
+                    featured_media:
+                      type: integer
+                      description: Featured image attachment ID.
+                  required: [id, date, slug, link, title]

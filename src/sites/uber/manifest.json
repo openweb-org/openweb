@@ -4,15 +4,16 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.uber.com",
-  "description": "Uber Eats restaurant search, Eats order history — REST via L3 adapter, cookie_session auth",
+  "description": "Uber Eats restaurant search, menu browsing, order history, add-to-cart — REST + adapter, cookie_session auth",
   "requires_auth": true,
   "dependencies": {},
   "stats": {
-    "operation_count": 2,
+    "operation_count": 4,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 2,
-    "ws_count": 0
+    "l3_count": 3,
+    "ws_count": 0,
+    "adapter_count": 1
   },
   "quarantined": false,
   "last_verified": "2026-04-03T03:19:08.610Z",

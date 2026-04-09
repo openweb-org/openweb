@@ -1,0 +1,319 @@
+openapi: "3.1.0"
+info:
+  title: Docker Hub
+  version: "1.0.0"
+  x-openweb:
+    spec_version: "2.0"
+    requires_auth: false
+servers:
+  - url: https://hub.docker.com
+    x-openweb:
+      transport: node
+paths:
+  /v2/search/repositories/:
+    get:
+      operationId: searchImages
+      summary: "Search for container images by keyword — name, description, stars, pulls"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: dockerhub_searchImages_v1
+          tool_version: 1
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Search query (e.g., nginx, python, node)"
+          example: nginx
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Number of results per page (default 25, max 100)"
+          example: 25
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Page number for pagination (starts at 1)"
+          example: 1
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: "Total number of matching results"
+                  next:
+                    type:
+                      - string
+                      - "null"
+                    description: "URL for next page of results"
+                  previous:
+                    type:
+                      - string
+                      - "null"
+                    description: "URL for previous page of results"
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        repo_name:
+                          type: string
+                          description: "Full repository name (e.g., library/nginx or user/repo)"
+                        short_description:
+                          type: string
+                          description: "Brief description of the image"
+                        star_count:
+                          type: integer
+                          description: "Number of stars"
+                        pull_count:
+                          type: integer
+                          description: "Number of pulls/downloads"
+                        repo_owner:
+                          type:
+                            - string
+                            - "null"
+                          description: "Owner username or null for official images"
+                        is_automated:
+                          type: boolean
+                          description: "Whether the build is automated"
+                        is_official:
+                          type: boolean
+                          description: "Whether this is an official Docker image"
+                      required: [repo_name, short_description, star_count, pull_count, is_official]
+                required: [count, results]
+
+  /v2/repositories/{namespace}/{name}/:
+    get:
+      operationId: getImage
+      summary: "Get image details — full description, stars, pulls, last updated"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: dockerhub_getImage_v1
+          tool_version: 1
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Image namespace (use 'library' for official images, or the username)"
+          example: library
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Image name (e.g., nginx, python, node)"
+          example: nginx
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: string
+                    description: "Owner username"
+                  name:
+                    type: string
+                    description: "Repository name"
+                  namespace:
+                    type: string
+                    description: "Repository namespace"
+                  repository_type:
+                    type: string
+                    description: "Type of repository (e.g., image)"
+                  status:
+                    type: integer
+                    description: "Repository status code"
+                  status_description:
+                    type: string
+                    description: "Human-readable status"
+                  description:
+                    type:
+                      - string
+                      - "null"
+                    description: "Short description"
+                  full_description:
+                    type:
+                      - string
+                      - "null"
+                    description: "Full description (may contain markdown)"
+                  is_private:
+                    type: boolean
+                    description: "Whether the repository is private"
+                  star_count:
+                    type: integer
+                    description: "Number of stars"
+                  pull_count:
+                    type: integer
+                    description: "Number of pulls/downloads"
+                  last_updated:
+                    type: string
+                    description: "ISO 8601 timestamp of last update"
+                  date_registered:
+                    type: string
+                    description: "ISO 8601 timestamp of registration"
+                  affiliation:
+                    type:
+                      - string
+                      - "null"
+                    description: "Affiliation status"
+                  media_types:
+                    type: array
+                    items:
+                      type: string
+                    description: "Supported media types"
+                  content_types:
+                    type: array
+                    items:
+                      type: string
+                    description: "Content types (e.g., image, plugin)"
+                required: [user, name, namespace, star_count, pull_count, last_updated]
+
+  /v2/repositories/{namespace}/{name}/tags/:
+    get:
+      operationId: getTags
+      summary: "List tags/versions for an image — tag name, size, last updated, digest"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: dockerhub_getTags_v1
+          tool_version: 1
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Image namespace (use 'library' for official images, or the username)"
+          example: library
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Image name (e.g., nginx, python, node)"
+          example: nginx
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Number of tags per page (default 10, max 100)"
+          example: 25
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Page number for pagination (starts at 1)"
+          example: 1
+        - name: ordering
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [last_updated, "-last_updated", name, "-name"]
+          description: "Sort order for tags (prefix with - for descending)"
+          example: "-last_updated"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: "Total number of tags"
+                  next:
+                    type:
+                      - string
+                      - "null"
+                    description: "URL for next page of results"
+                  previous:
+                    type:
+                      - string
+                      - "null"
+                    description: "URL for previous page of results"
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: "Tag ID"
+                        name:
+                          type: string
+                          description: "Tag name (e.g., latest, 1.25, alpine)"
+                        full_size:
+                          type: integer
+                          description: "Full compressed size in bytes"
+                        v2:
+                          type: boolean
+                          description: "Whether the tag uses v2 manifest"
+                        tag_status:
+                          type: string
+                          description: "Tag status (e.g., active, stale)"
+                        tag_last_pulled:
+                          type:
+                            - string
+                            - "null"
+                          description: "ISO 8601 timestamp of last pull"
+                        tag_last_pushed:
+                          type:
+                            - string
+                            - "null"
+                          description: "ISO 8601 timestamp of last push"
+                        last_updated:
+                          type: string
+                          description: "ISO 8601 timestamp of last update"
+                        images:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              architecture:
+                                type: string
+                                description: "CPU architecture (e.g., amd64, arm64)"
+                              os:
+                                type: string
+                                description: "Operating system (e.g., linux)"
+                              digest:
+                                type: string
+                                description: "Image digest (sha256)"
+                              size:
+                                type: integer
+                                description: "Compressed size in bytes"
+                              status:
+                                type: string
+                                description: "Image status (e.g., active)"
+                              last_pulled:
+                                type:
+                                  - string
+                                  - "null"
+                                description: "ISO 8601 timestamp of last pull"
+                              last_pushed:
+                                type:
+                                  - string
+                                  - "null"
+                                description: "ISO 8601 timestamp of last push"
+                      required: [name, last_updated]
+                required: [count, results]

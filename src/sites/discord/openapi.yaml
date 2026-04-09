@@ -516,6 +516,115 @@ paths:
                         deny:
                           type: string
   /api/v9/channels/{channelId}/messages:
+    post:
+      operationId: sendMessage
+      summary: "Send a message to a channel — returns the created message with ID, content, author, timestamp"
+      x-openweb:
+        permission: write
+        build:
+          stable_id: e1a2b3c4d5e6f708
+          tool_version: 2
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Discord channel snowflake ID"
+          example: "1280234300012494862"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  description: "Message content (up to 2000 characters)"
+                  example: "Hello from OpenWeb!"
+                tts:
+                  type: boolean
+                  description: "Whether this is a text-to-speech message"
+                nonce:
+                  type: string
+                  description: "Nonce for message deduplication"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  type:
+                    type: integer
+                  channel_id:
+                    type: string
+                  content:
+                    type: string
+                  author:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      username:
+                        type: string
+                      discriminator:
+                        type: string
+                      global_name:
+                        type:
+                          - string
+                          - "null"
+                      avatar:
+                        type:
+                          - string
+                          - "null"
+                      public_flags:
+                        type: integer
+                  timestamp:
+                    type: string
+                  edited_timestamp:
+                    type:
+                      - string
+                      - "null"
+                  flags:
+                    type: integer
+                  pinned:
+                    type: boolean
+                  mention_everyone:
+                    type: boolean
+                  tts:
+                    type: boolean
+                  mentions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        username:
+                          type: string
+                  mention_roles:
+                    type: array
+                    items:
+                      type: string
+                  attachments:
+                    type: array
+                    items:
+                      type: object
+                  embeds:
+                    type: array
+                    items:
+                      type: object
+                  components:
+                    type: array
+                    items:
+                      type: object
     get:
       operationId: getChannelMessages
       summary: "Get messages in a channel — content, author, attachments, embeds, reactions, timestamps"
@@ -808,3 +917,37 @@ paths:
                             type: integer
                           me:
                             type: boolean
+  /api/v9/channels/{channelId}/messages/{messageId}/reactions/{emoji}/@me:
+    put:
+      operationId: addReaction
+      summary: "Add an emoji reaction to a message — returns 204 on success"
+      x-openweb:
+        permission: write
+        build:
+          stable_id: f2b3c4d5e6f70819
+          tool_version: 2
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Discord channel snowflake ID"
+          example: "1280234300012494862"
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Discord message snowflake ID"
+          example: "1280234300012494900"
+        - name: emoji
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "URL-encoded emoji — Unicode (e.g. %F0%9F%91%8D) or custom (name:id)"
+          example: "%F0%9F%91%8D"
+      responses:
+        "204":
+          description: Success (no content).

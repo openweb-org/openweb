@@ -1,4 +1,4 @@
-import type { Page } from 'patchright'
+import type { Page, Response as PwResponse } from 'patchright'
 /**
  * Expedia L3 adapter — GraphQL APQ via browser fetch.
  *
@@ -280,6 +280,90 @@ async function getFlightDetail(page: Page, params: Record<string, unknown>, erro
   return searchFlights(page, params, errors)
 }
 
+async function getHotelPrices(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
+  const propertyId = String(params.propertyId ?? params.id)
+  const checkIn = String(params.checkInDate ?? params.checkIn ?? '2026-05-01')
+  const checkOut = String(params.checkOutDate ?? params.checkOut ?? '2026-05-03')
+  const adults = Number(params.adults ?? 2)
+
+  // Navigate to the hotel page with dates in the URL — Expedia fires rate/offer
+  // GraphQL queries on load. Intercept the response containing pricing data.
+  const hotelUrl = `https://www.expedia.com/h${propertyId}.Hotel-Information?chkin=${checkIn}&chkout=${checkOut}&adults=${adults}`
+
+  let captured: unknown = null
+  const handler = async (resp: PwResponse) => {
+    if (captured) return
+    try {
+      const req = resp.request()
+      if (!req.url().includes('/graphql') || req.method() !== 'POST') return
+      const postData = req.postData() ?? ''
+      if (!postData.includes('PropertyOffers') && !postData.includes('Rates')) return
+      const json = await resp.json()
+      const entry = Array.isArray(json) ? json[0] : json
+      if (entry?.data) captured = entry.data
+    } catch { /* ignore parse errors */ }
+  }
+
+  page.on('response', handler)
+  try {
+    await page.goto(hotelUrl, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
+    const deadline = Date.now() + 20_000
+    while (!captured && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 500))
+    }
+  } finally {
+    page.off('response', handler)
+  }
+
+  if (!captured) {
+    throw errors.apiError('getHotelPrices', 'No pricing data captured — page may not have loaded offers')
+  }
+
+  const data = captured as Record<string, unknown>
+  return data?.propertyRatesDateSelector ?? data?.propertyOffers ?? data
+}
+
+async function getHotelReviews(page: Page, params: Record<string, unknown>, errors: ErrorHelpers): Promise<unknown> {
+  const propertyId = String(params.propertyId ?? params.id)
+
+  // Reviews are loaded via a separate GraphQL query on the hotel page.
+  // Since we don't have the APQ hash, use intercept: navigate to the hotel
+  // reviews page and capture the GraphQL response containing review data.
+  const hotelUrl = `https://www.expedia.com/h${propertyId}.Hotel-Reviews`
+
+  let captured: unknown = null
+  const handler = async (resp: PwResponse) => {
+    if (captured) return
+    try {
+      const req = resp.request()
+      if (!req.url().includes('/graphql') || req.method() !== 'POST') return
+      const postData = req.postData() ?? ''
+      if (!postData.includes('Review')) return
+      const json = await resp.json()
+      const entry = Array.isArray(json) ? json[0] : json
+      if (entry?.data) captured = entry.data
+    } catch { /* ignore parse errors */ }
+  }
+
+  page.on('response', handler)
+  try {
+    await page.goto(hotelUrl, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
+    const deadline = Date.now() + 20_000
+    while (!captured && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 500))
+    }
+  } finally {
+    page.off('response', handler)
+  }
+
+  if (!captured) {
+    throw errors.apiError('getHotelReviews', 'No review data captured — page may not have loaded reviews')
+  }
+
+  const data = captured as Record<string, unknown>
+  return data?.propertyInfo?.reviewInfo ?? data?.propertyReviews ?? data
+}
+
 /* ---------- helpers ---------- */
 
 async function getDuaid(page: Page): Promise<string> {
@@ -295,6 +379,8 @@ async function getDuaid(page: Page): Promise<string> {
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: ErrorHelpers) => Promise<unknown>> = {
   searchHotels,
   getHotelDetail,
+  getHotelPrices,
+  getHotelReviews,
   searchFlights,
   getFlightDetail,
 }

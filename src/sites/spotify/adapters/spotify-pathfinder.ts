@@ -49,6 +49,21 @@ const OPERATIONS: Record<string, OperationConfig> = {
     hash: 'b9bfabef66ed756e5e13f68a942deb60bd4125ec1f1be8cc42769dc0259b4b10',
     defaultVariables: { offset: 0, limit: 300 },
   },
+  getTrack: {
+    operationName: 'getTrack',
+    hash: '612585ae06ba435ad26369870deaae23b5c8800a256cd8a57e08eddc25a37294',
+    defaultVariables: {},
+  },
+  getPlaylist: {
+    operationName: 'fetchPlaylistContents',
+    hash: '32b05e92e438438408674f95d0fdad8082865dc32acd55bd97f5113b8579092b',
+    defaultVariables: { offset: 0, limit: 100, includeEpisodeContentRatingsV2: false },
+  },
+  getRecommendations: {
+    operationName: 'internalLinkRecommenderTrack',
+    hash: 'c77098ee9d6ee8ad3eb844938722db60570d040b49f41f5ec6e7be9160a7c86b',
+    defaultVariables: { limit: 10 },
+  },
 }
 
 async function extractToken(page: Page, errors: ErrorHelpers): Promise<{ accessToken: string; clientToken: string }> {
@@ -127,12 +142,53 @@ async function pathfinderFetch(
   return json.data
 }
 
+async function userProfileFetch(
+  page: Page,
+  params: Readonly<Record<string, unknown>>,
+  accessToken: string,
+  clientToken: string,
+  errors: ErrorHelpers,
+): Promise<unknown> {
+  const userId = params.userId as string
+  const limit = (params.limit as number) ?? 10
+
+  const url = `https://spclient.wg.spotify.com/user-profile-view/v3/profile/${encodeURIComponent(userId)}?playlist_limit=${limit}&artist_limit=10&episode_limit=10&market=US`
+
+  const result = await page.evaluate(
+    async (args: { url: string; accessToken: string; clientToken: string }) => {
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 15_000)
+      try {
+        const resp = await fetch(args.url, {
+          headers: {
+            Accept: 'application/json',
+            'app-platform': 'WebPlayer',
+            authorization: `Bearer ${args.accessToken}`,
+            'client-token': args.clientToken,
+          },
+          signal: ctrl.signal,
+        })
+        return { status: resp.status, text: await resp.text() }
+      } finally {
+        clearTimeout(timer)
+      }
+    },
+    { url, accessToken, clientToken },
+  )
+
+  if (result.status >= 400) {
+    throw errors.httpError(result.status)
+  }
+
+  return JSON.parse(result.text)
+}
+
 // Cached tokens per page
 let cachedTokens: { accessToken: string; clientToken: string } | null = null
 
 const adapter = {
   name: 'spotify-pathfinder',
-  description: 'Spotify GraphQL pathfinder API — search, artist, discography, album tracks',
+  description: 'Spotify GraphQL pathfinder API — search, artist, discography, album tracks, playlists, recommendations',
 
   async init(page: Page): Promise<boolean> {
     // Check if we're on open.spotify.com
@@ -155,7 +211,7 @@ const adapter = {
   ): Promise<unknown> {
     const { errors } = helpers as { errors: ErrorHelpers }
     const config = OPERATIONS[operation]
-    if (!config) {
+    if (!config && operation !== 'getUserPlaylists') {
       throw errors.unknownOp(operation)
     }
 
@@ -164,17 +220,22 @@ const adapter = {
       cachedTokens = await extractToken(page, errors)
     }
 
+    // getUserPlaylists uses a REST endpoint, not pathfinder
+    if (operation === 'getUserPlaylists') {
+      return userProfileFetch(page, params, cachedTokens.accessToken, cachedTokens.clientToken, errors)
+    }
+
     // Merge default variables with user params
-    const variables = { ...config.defaultVariables, ...params }
+    const variables = { ...config!.defaultVariables, ...params }
 
     try {
-      return await pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
+      return await pathfinderFetch(page, config!, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
     } catch (err) {
       // If auth expired (401/403), retry with fresh token
       const failureClass = (err as { payload?: { failureClass?: string } }).payload?.failureClass
       if (failureClass === 'needs_login') {
         cachedTokens = await extractToken(page, errors)
-        return pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
+        return pathfinderFetch(page, config!, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
       }
       throw err
     }

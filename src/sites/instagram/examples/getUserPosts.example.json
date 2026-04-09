@@ -1,0 +1,17 @@
+{
+  "operation_id": "getUserPosts",
+  "method": "get",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "username": "instagram",
+        "count": 3
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

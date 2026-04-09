@@ -1,0 +1,9 @@
+{
+  "operation_id": "getTags",
+  "cases": [
+    {
+      "input": { "namespace": "library", "name": "nginx", "page_size": 5 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

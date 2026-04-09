@@ -1,0 +1,14 @@
+{
+  "operation_id": "getHostProfile",
+  "cases": [
+    {
+      "input": {
+        "hostId": "70270073"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

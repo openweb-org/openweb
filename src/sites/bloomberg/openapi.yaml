@@ -299,3 +299,345 @@ paths:
                           type: [string, 'null']
                         type:
                           type: [string, 'null']
+  /profile/company/{ticker}:
+    get:
+      operationId: getCompanyProfile
+      summary: Get company profile — name, description, sector, market cap, employees, headquarters
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0011
+          signature_id: bb0011s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return null;
+              try {
+                const data = JSON.parse(el.textContent);
+                const pp = data.props?.pageProps || {};
+                const state = pp.initialState || pp;
+                const co = state.company || state.companyProfile || pp.company || pp.profile || {};
+                return {
+                  name: co.name || co.companyName || co.longName || null,
+                  ticker: co.ticker || co.id || co.tickerSymbol || null,
+                  description: co.description || co.longDescription || co.businessDescription || null,
+                  sector: co.sector || co.industrySector || null,
+                  industry: co.industry || co.industryGroup || co.subIndustry || null,
+                  marketCap: co.marketCap || co.marketCapitalization || null,
+                  employees: co.employees || co.numOfEmployees || co.numberOfEmployees || null,
+                  headquarters: co.headquarters || co.address?.city || null,
+                  country: co.country || co.address?.country || null,
+                  website: co.website || co.url || co.webSite || null,
+                  phone: co.phone || co.phoneNumber || null,
+                  founded: co.founded || co.yearFounded || null,
+                };
+              } catch { return null; }
+            })()
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bloomberg ticker with exchange suffix (e.g. "AAPL:US", "MSFT:US").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: [string, 'null']
+                    description: Company name.
+                  ticker:
+                    type: [string, 'null']
+                    description: Bloomberg ticker symbol.
+                  description:
+                    type: [string, 'null']
+                    description: Business description.
+                  sector:
+                    type: [string, 'null']
+                    description: Industry sector (e.g. "Technology").
+                  industry:
+                    type: [string, 'null']
+                    description: Industry group (e.g. "Software").
+                  marketCap:
+                    type: [number, 'null']
+                    description: Market capitalization.
+                  employees:
+                    type: [integer, 'null']
+                    description: Number of employees.
+                  headquarters:
+                    type: [string, 'null']
+                    description: Headquarters city.
+                  country:
+                    type: [string, 'null']
+                    description: Country of incorporation.
+                  website:
+                    type: [string, 'null']
+                    description: Company website URL.
+                  phone:
+                    type: [string, 'null']
+                    description: Phone number.
+                  founded:
+                    type: [string, 'null']
+                    description: Year founded.
+  /quote/{ticker}:
+    get:
+      operationId: getStockChart
+      summary: Get stock quote and price chart — price, change, open/high/low, 1Y and 5Y price history
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0012
+          signature_id: bb0012s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return null;
+              try {
+                const data = JSON.parse(el.textContent);
+                const pp = data.props?.pageProps || {};
+                const state = pp.initialState || pp;
+                const q = state.quote || state.security || pp.quote || {};
+                const pm1y = q.priceMovements1Year || q.priceTimeSeries?.oneYear || [];
+                const pm5y = q.priceMovements5Years || q.priceTimeSeries?.fiveYear || [];
+                const mapPts = (arr) => Array.isArray(arr)
+                  ? arr.slice(0, 260).map(p => ({ dateTime: p.dateTime || p.date || null, value: p.value || p.price || null }))
+                  : [];
+                return {
+                  ticker: q.ticker || q.id || null,
+                  name: q.name || q.longName || q.shortName || null,
+                  price: q.price || q.lastPrice || null,
+                  currency: q.currency || q.priceCurrency || null,
+                  priceChange: q.priceChange1Day || q.netChange || null,
+                  percentChange: q.percentChange1Day || q.pctChange1Day || null,
+                  open: q.openPrice || q.open || null,
+                  dayHigh: q.highPrice || q.dayHigh || null,
+                  dayLow: q.lowPrice || q.dayLow || null,
+                  previousClose: q.previousClosingPriceOneTradingDayAgo || q.prevClose || null,
+                  volume: q.volume || null,
+                  marketCap: q.marketCap || null,
+                  isExchangeDelayed: q.isExchangeDelayed ?? true,
+                  priceHistory1Y: mapPts(pm1y),
+                  priceHistory5Y: mapPts(pm5y),
+                };
+              } catch { return null; }
+            })()
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bloomberg ticker with exchange suffix (e.g. "AAPL:US", "SPX:IND").
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ticker]
+                properties:
+                  ticker:
+                    type: [string, 'null']
+                    description: Bloomberg ticker symbol.
+                  name:
+                    type: [string, 'null']
+                    description: Security name.
+                  price:
+                    type: [number, 'null']
+                    description: Last price.
+                  currency:
+                    type: [string, 'null']
+                    description: Price currency (e.g. "USD").
+                  priceChange:
+                    type: [number, 'null']
+                    description: Absolute price change (1-day).
+                  percentChange:
+                    type: [number, 'null']
+                    description: Percent price change (1-day).
+                  open:
+                    type: [number, 'null']
+                    description: Opening price.
+                  dayHigh:
+                    type: [number, 'null']
+                    description: Day high.
+                  dayLow:
+                    type: [number, 'null']
+                    description: Day low.
+                  previousClose:
+                    type: [number, 'null']
+                    description: Previous closing price.
+                  volume:
+                    type: [number, 'null']
+                    description: Trading volume.
+                  marketCap:
+                    type: [number, 'null']
+                    description: Market capitalization.
+                  isExchangeDelayed:
+                    type: boolean
+                    description: Whether quote data is delayed (typically 15 minutes).
+                  priceHistory1Y:
+                    type: array
+                    description: 1-year price history (daily points).
+                    items:
+                      type: object
+                      properties:
+                        dateTime:
+                          type: [string, 'null']
+                          description: ISO date-time.
+                        value:
+                          type: [number, 'null']
+                          description: Price at that date.
+                  priceHistory5Y:
+                    type: array
+                    description: 5-year price history (monthly points).
+                    items:
+                      type: object
+                      properties:
+                        dateTime:
+                          type: [string, 'null']
+                          description: ISO date-time.
+                        value:
+                          type: [number, 'null']
+                          description: Price at that date.
+  /markets:
+    get:
+      operationId: getMarketOverview
+      summary: Get market overview — indices, bonds, commodities, currencies with prices and changes
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bb0013
+          signature_id: bb0013s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return null;
+              try {
+                const data = JSON.parse(el.textContent);
+                const pp = data.props?.pageProps || {};
+                const state = pp.initialState || pp;
+                const fmt = (items) => {
+                  if (!Array.isArray(items)) return [];
+                  return items.map(s => ({
+                    id: s.id || null,
+                    name: s.name || s.shortName || null,
+                    price: s.price || s.lastPrice || null,
+                    priceChange: s.priceChange1Day || s.netChange || null,
+                    percentChange: s.percentChange1Day || null,
+                    currency: s.currency || null,
+                  }));
+                };
+                const mods = state.markets || state.modulesById || state;
+                return {
+                  indices: fmt(mods.indices || mods.stockIndices || state.indices || []),
+                  bonds: fmt(mods.bonds || mods.fixedIncome || state.bonds || []),
+                  commodities: fmt(mods.commodities || state.commodities || []),
+                  currencies: fmt(mods.currencies || mods.forex || state.currencies || []),
+                };
+              } catch { return null; }
+            })()
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  indices:
+                    type: array
+                    description: Stock market indices.
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: [string, 'null']
+                        name:
+                          type: [string, 'null']
+                        price:
+                          type: [number, 'null']
+                        priceChange:
+                          type: [number, 'null']
+                        percentChange:
+                          type: [number, 'null']
+                        currency:
+                          type: [string, 'null']
+                  bonds:
+                    type: array
+                    description: Bond/fixed-income securities.
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: [string, 'null']
+                        name:
+                          type: [string, 'null']
+                        price:
+                          type: [number, 'null']
+                        priceChange:
+                          type: [number, 'null']
+                        percentChange:
+                          type: [number, 'null']
+                        currency:
+                          type: [string, 'null']
+                  commodities:
+                    type: array
+                    description: Commodity prices.
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: [string, 'null']
+                        name:
+                          type: [string, 'null']
+                        price:
+                          type: [number, 'null']
+                        priceChange:
+                          type: [number, 'null']
+                        percentChange:
+                          type: [number, 'null']
+                        currency:
+                          type: [string, 'null']
+                  currencies:
+                    type: array
+                    description: Currency pairs.
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: [string, 'null']
+                        name:
+                          type: [string, 'null']
+                        price:
+                          type: [number, 'null']
+                        priceChange:
+                          type: [number, 'null']
+                        percentChange:
+                          type: [number, 'null']
+                        currency:
+                          type: [string, 'null']

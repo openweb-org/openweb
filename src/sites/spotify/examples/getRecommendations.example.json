@@ -1,0 +1,9 @@
+{
+  "operation_id": "getRecommendations",
+  "cases": [
+    {
+      "input": { "uri": "spotify:track:4u7EnebtmKWzUH433cf5Qv", "limit": 5 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

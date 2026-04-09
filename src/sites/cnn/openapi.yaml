@@ -1,0 +1,256 @@
+openapi: '3.1.0'
+info:
+  title: CNN
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.cnn.com
+    x-openweb:
+      transport: page
+paths:
+  /:
+    get:
+      operationId: getHeadlines
+      summary: Get CNN front-page headlines — title, url, content type
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: cnn0001
+          signature_id: cnn0001s
+          tool_version: 1
+          signals:
+            - dom
+        extraction:
+          type: page_global_data
+          page_url: /
+          expression: |
+            (() => {
+              const cards = document.querySelectorAll('[data-component-name="card"]');
+              const seen = new Set();
+              const items = [];
+              for (const card of cards) {
+                const link = card.querySelector('a[href]');
+                if (!link) continue;
+                const href = link.getAttribute('href');
+                if (!href || seen.has(href)) continue;
+                seen.add(href);
+                const headlineEl = card.querySelector('.container__headline-text');
+                const title = headlineEl?.textContent?.trim();
+                if (!title) continue;
+                const linkType = link.getAttribute('data-link-type') || null;
+                items.push({
+                  title,
+                  url: href.startsWith('/') ? href : new URL(href).pathname,
+                  contentType: linkType,
+                });
+              }
+              return { count: items.length, items };
+            })()
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, items]
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [title, url]
+                      properties:
+                        title:
+                          type: string
+                        url:
+                          type: string
+                          description: Relative URL path (e.g. /2026/04/09/politics/example-story).
+                        contentType:
+                          type: [string, 'null']
+                          description: Link type — article, live-story, video, etc.
+  /{slug}:
+    get:
+      operationId: getArticle
+      summary: Get a CNN article — title, body, author, published date, section
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: cnn0002
+          signature_id: cnn0002s
+          tool_version: 1
+          signals:
+            - ld_json
+        extraction:
+          type: page_global_data
+          page_url: /{slug}
+          expression: |
+            (() => {
+              const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+              let article = null;
+              for (const s of scripts) {
+                try {
+                  const data = JSON.parse(s.textContent);
+                  const items = Array.isArray(data) ? data : [data];
+                  for (const item of items) {
+                    if (item['@type'] === 'NewsArticle') { article = item; break; }
+                  }
+                } catch {}
+                if (article) break;
+              }
+              if (!article) return null;
+              const authors = (article.author || []).map(a => typeof a === 'string' ? a : a.name).filter(Boolean);
+              return {
+                title: article.headline || null,
+                description: article.description || null,
+                author: authors.join(', ') || null,
+                publishedAt: article.datePublished || null,
+                modifiedAt: article.dateModified || null,
+                section: (article.articleSection || [])[0] || null,
+                body: article.articleBody || null,
+                thumbnail: article.thumbnailUrl || null,
+              };
+            })()
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Article URL slug (e.g. 2026/04/07/weather/super-el-nino-extreme-weather-climate-disaster).
+          example: '2026/04/07/weather/super-el-nino-extreme-weather-climate-disaster'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [title, body]
+                properties:
+                  title:
+                    type: string
+                  description:
+                    type: [string, 'null']
+                    description: Article summary / meta description.
+                  author:
+                    type: [string, 'null']
+                    description: Comma-separated author names.
+                  publishedAt:
+                    type: [string, 'null']
+                    description: ISO 8601 publication timestamp.
+                  modifiedAt:
+                    type: [string, 'null']
+                    description: ISO 8601 last modified timestamp.
+                  section:
+                    type: [string, 'null']
+                    description: Article section (e.g. weather, politics, world).
+                  body:
+                    type: [string, 'null']
+                    description: Full article text.
+                  thumbnail:
+                    type: [string, 'null']
+                    description: Thumbnail image URL.
+  /search:
+    get:
+      operationId: searchArticles
+      summary: Search CNN for articles — title, url, description, date
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: cnn0003
+          signature_id: cnn0003s
+          tool_version: 1
+          signals:
+            - dom
+        extraction:
+          type: page_global_data
+          expression: |
+            (async () => {
+              const poll = (sel, ms, max) => new Promise((res) => {
+                let t = 0;
+                const id = setInterval(() => {
+                  t += ms;
+                  if (document.querySelectorAll(sel).length > 0 || t >= max) { clearInterval(id); res(); }
+                }, ms);
+              });
+              await poll('[data-component-name="card"] .container__headline-text', 200, 8000);
+              const cards = document.querySelectorAll('[data-component-name="card"]');
+              const items = [];
+              for (const card of cards) {
+                const link = card.querySelector('a[href]');
+                if (!link) continue;
+                const href = link.getAttribute('href');
+                if (!href) continue;
+                const headlineEl = card.querySelector('.container__headline-text');
+                const title = headlineEl?.textContent?.trim();
+                if (!title) continue;
+                const descEl = card.querySelector('.container__description');
+                const dateEl = card.querySelector('.container__date');
+                items.push({
+                  title,
+                  url: href.startsWith('http') ? new URL(href).pathname : href,
+                  description: descEl?.textContent?.trim() || null,
+                  date: dateEl?.textContent?.trim() || null,
+                });
+              }
+              return { count: items.length, results: items };
+            })()
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query.
+          example: climate change
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number (1-indexed).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results]
+                properties:
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [title, url]
+                      properties:
+                        title:
+                          type: string
+                        url:
+                          type: string
+                          description: Relative URL path.
+                        description:
+                          type: [string, 'null']
+                        date:
+                          type: [string, 'null']
+                          description: Publish date text.

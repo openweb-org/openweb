@@ -1,0 +1,12 @@
+{
+  "name": "npm",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.npmjs.com",
+  "requires_auth": false,
+  "quarantined": false,
+  "fingerprint": {
+    "last_validated": "2026-04-09T05:03:09.183Z"
+  },
+  "last_verified": "2026-04-09T05:03:09.182Z"
+}

@@ -1,0 +1,16 @@
+{
+  "operation_id": "getListingAvailability",
+  "cases": [
+    {
+      "input": {
+        "id": "20713816",
+        "check_in": "2026-06-01",
+        "check_out": "2026-06-05"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

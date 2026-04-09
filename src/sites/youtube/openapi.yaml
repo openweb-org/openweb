@@ -594,3 +594,137 @@ paths:
             application/json:
               schema:
                 type: object
+
+  /video/{videoId}/comments:
+    get:
+      operationId: getComments
+      summary: "Get comments on a video — author, text, likes, reply count, timestamps"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: yt0011
+          tool_version: 2
+          signals:
+            - adapter-verified
+        adapter:
+          name: youtube-innertube
+          operation: getComments
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "YouTube video ID (e.g. dQw4w9WgXcQ). Get from searchVideos or browseContent."
+      responses:
+        "200":
+          description: Video comments with author, text, and engagement.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - videoId
+                  - comments
+                properties:
+                  videoId:
+                    type: string
+                  totalComments:
+                    type: integer
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - commentId
+                        - author
+                        - text
+                      properties:
+                        commentId:
+                          type: string
+                        author:
+                          type: string
+                        text:
+                          type: string
+                        publishedTime:
+                          type: string
+                          description: "Relative time (e.g. '2 days ago')"
+                        likeCount:
+                          type: string
+                          description: "Like count as displayed (e.g. '1.2K')"
+                        replyCount:
+                          type: integer
+                        authorThumbnail:
+                          type: string
+                  note:
+                    type: string
+                    description: "Present when comments are disabled or unavailable"
+
+  /playlist/{playlistId}:
+    get:
+      operationId: getPlaylist
+      summary: "Get playlist details and video list — title, owner, video count, videos with IDs and durations"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: yt0012
+          tool_version: 2
+          signals:
+            - adapter-verified
+        adapter:
+          name: youtube-innertube
+          operation: getPlaylist
+      parameters:
+        - name: playlistId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "YouTube playlist ID (e.g. PLWKjhJtqVAbkArDMaJhn2XB080UlFNRCt). Get from searchVideos or browseContent."
+      responses:
+        "200":
+          description: Playlist metadata and video list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - playlistId
+                  - title
+                  - videos
+                properties:
+                  playlistId:
+                    type: string
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  owner:
+                    type: string
+                  videoCount:
+                    type: string
+                    description: "Video count as displayed (e.g. '50 videos')"
+                  viewCount:
+                    type: string
+                    description: "Total views as displayed"
+                  videos:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - videoId
+                        - title
+                      properties:
+                        videoId:
+                          type: string
+                          description: "Video ID (use with getVideoDetail, getVideoPlayer)"
+                        title:
+                          type: string
+                        duration:
+                          type: string
+                        channelName:
+                          type: string
+                        thumbnail:
+                          type: string
+                        index:
+                          type: string

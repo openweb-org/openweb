@@ -1,0 +1,433 @@
+openapi: '3.1.0'
+info:
+  title: IMDB
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+servers:
+  - url: https://www.imdb.com
+    x-openweb:
+      transport: page
+paths:
+  /find:
+    get:
+      operationId: searchTitles
+      summary: 'Search movies and TV shows by keyword — returns title, year, rating, genres, plot'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: imdb0001
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+            - ssr_next_data
+        adapter:
+          name: imdb
+          operation: searchTitles
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Search query (e.g. "inception", "breaking bad")'
+      responses:
+        '200':
+          description: Search results matching the query.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                    description: The search query used.
+                  resultCount:
+                    type: integer
+                    description: Number of results returned.
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        imdbId:
+                          type:
+                            - string
+                            - 'null'
+                          description: 'IMDB title ID (e.g. "tt1375666").'
+                        title:
+                          type:
+                            - string
+                            - 'null'
+                          description: Title name.
+                        year:
+                          type:
+                            - integer
+                            - 'null'
+                          description: Release year.
+                        type:
+                          type:
+                            - string
+                            - 'null'
+                          description: 'Title type (e.g. "movie", "tvSeries").'
+                        genres:
+                          type: array
+                          items:
+                            type: string
+                          description: Genre list.
+                        plot:
+                          type:
+                            - string
+                            - 'null'
+                          description: Short plot summary.
+                        rating:
+                          type:
+                            - number
+                            - 'null'
+                          description: 'IMDB rating (1-10).'
+                        voteCount:
+                          type:
+                            - integer
+                            - 'null'
+                          description: Total votes.
+                        runtime:
+                          type:
+                            - integer
+                            - 'null'
+                          description: Runtime in minutes.
+                        certificate:
+                          type:
+                            - string
+                            - 'null'
+                          description: 'Content rating (e.g. "PG-13", "R").'
+                        image:
+                          type:
+                            - string
+                            - 'null'
+                          description: Poster image URL.
+  /title/{imdbId}:
+    get:
+      operationId: getTitleDetail
+      summary: 'Full title details — plot, cast, rating, year, genres, runtime, credits'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: imdb0002
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+            - ssr_next_data
+        adapter:
+          name: imdb
+          operation: getTitleDetail
+      parameters:
+        - name: imdbId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 'IMDB title ID (e.g. "tt0111161" for The Shawshank Redemption).'
+      responses:
+        '200':
+          description: Full title information.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imdbId:
+                    type: string
+                    description: IMDB title ID.
+                  title:
+                    type:
+                      - string
+                      - 'null'
+                    description: Title name.
+                  originalTitle:
+                    type:
+                      - string
+                      - 'null'
+                    description: Original title (for foreign titles).
+                  type:
+                    type:
+                      - string
+                      - 'null'
+                    description: 'Title type (e.g. "Movie", "TV Series").'
+                  year:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Release year.
+                  endYear:
+                    type:
+                      - integer
+                      - 'null'
+                    description: End year (for TV series).
+                  rating:
+                    type:
+                      - number
+                      - 'null'
+                    description: 'IMDB rating (1-10).'
+                  voteCount:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Total votes.
+                  runtime:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Runtime in minutes.
+                  runtimeDisplay:
+                    type:
+                      - string
+                      - 'null'
+                    description: 'Human-readable runtime (e.g. "2h 22m").'
+                  certificate:
+                    type:
+                      - string
+                      - 'null'
+                    description: 'Content rating (e.g. "R", "PG-13").'
+                  genres:
+                    type: array
+                    items:
+                      type: string
+                    description: Genre list.
+                  plot:
+                    type:
+                      - string
+                      - 'null'
+                    description: Plot summary.
+                  image:
+                    type:
+                      - string
+                      - 'null'
+                    description: Primary image URL.
+                  releaseDate:
+                    type:
+                      - string
+                      - 'null'
+                    description: 'Release date (YYYY-MM-DD).'
+                  keywords:
+                    type: array
+                    items:
+                      type: string
+                    description: Keywords/tags.
+                  credits:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        category:
+                          type:
+                            - string
+                            - 'null'
+                          description: 'Credit category (e.g. "Directors", "Writers", "Stars").'
+                        names:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type:
+                                  - string
+                                  - 'null'
+                                description: Person name.
+                              id:
+                                type:
+                                  - string
+                                  - 'null'
+                                description: 'IMDB name ID (e.g. "nm0001104").'
+                    description: Principal credits.
+                  reviewCount:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Total user reviews.
+                  wins:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Total award wins.
+                  nominations:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Total nominations (excluding wins).
+  /title/{imdbId}/ratings:
+    get:
+      operationId: getRatings
+      summary: 'Ratings breakdown — histogram of votes by rating 1-10'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: imdb0003
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+            - ssr_next_data
+        adapter:
+          name: imdb
+          operation: getRatings
+      parameters:
+        - name: imdbId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 'IMDB title ID (e.g. "tt0111161").'
+      responses:
+        '200':
+          description: Rating breakdown with vote histogram.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imdbId:
+                    type: string
+                    description: IMDB title ID.
+                  title:
+                    type:
+                      - string
+                      - 'null'
+                    description: Title name.
+                  aggregateRating:
+                    type:
+                      - number
+                      - 'null'
+                    description: 'Weighted average rating (1-10).'
+                  voteCount:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Total votes.
+                  histogram:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        rating:
+                          type: integer
+                          description: 'Rating value (1-10).'
+                        voteCount:
+                          type: integer
+                          description: Number of votes for this rating.
+                    description: Vote distribution per rating level.
+  /title/{imdbId}/cast:
+    get:
+      operationId: getCast
+      summary: 'Cast and crew — directors, writers, and actors from credits and LD+JSON'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: imdb0004
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+            - ssr_next_data
+            - ld_json
+        adapter:
+          name: imdb
+          operation: getCast
+      parameters:
+        - name: imdbId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 'IMDB title ID (e.g. "tt0111161").'
+      responses:
+        '200':
+          description: Cast and crew information.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imdbId:
+                    type: string
+                    description: IMDB title ID.
+                  title:
+                    type:
+                      - string
+                      - 'null'
+                    description: Title name.
+                  credits:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        category:
+                          type:
+                            - string
+                            - 'null'
+                          description: 'Credit category (e.g. "Directors", "Writers", "Stars").'
+                        names:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type:
+                                  - string
+                                  - 'null'
+                                description: Person name.
+                              id:
+                                type:
+                                  - string
+                                  - 'null'
+                                description: IMDB name ID.
+                    description: Principal credits from __NEXT_DATA__.
+                  actors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: Actor name.
+                        url:
+                          type:
+                            - string
+                            - 'null'
+                          description: IMDB profile URL.
+                    description: Actors from LD+JSON structured data.
+                  directors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: Director name.
+                        url:
+                          type:
+                            - string
+                            - 'null'
+                          description: IMDB profile URL.
+                    description: Directors from LD+JSON structured data.
+                  creators:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                          description: Creator/writer name.
+                        url:
+                          type:
+                            - string
+                            - 'null'
+                          description: IMDB profile URL.
+                    description: Writers/creators from LD+JSON structured data.

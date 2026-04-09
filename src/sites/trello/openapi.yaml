@@ -1,0 +1,363 @@
+openapi: '3.1.0'
+info:
+  title: Trello
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
+    requires_auth: true
+servers:
+  - url: https://trello.com
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+paths:
+  /internal/getBoards:
+    get:
+      operationId: getBoards
+      summary: List the authenticated user's open boards — id, name, description, url, dateLastActivity
+      x-openweb:
+        permission: read
+        adapter:
+          name: trello-api
+          operation: getBoards
+        build:
+          verified: true
+          stable_id: tr0001
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters: []
+      responses:
+        '200':
+          description: List of user's open boards.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, boards]
+                properties:
+                  count:
+                    type: integer
+                  boards:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, url]
+                      properties:
+                        id:
+                          type: string
+                          description: Board ID (use in getBoard, getLists).
+                        name:
+                          type: string
+                        description:
+                          type: [string, 'null']
+                        url:
+                          type: string
+                        shortUrl:
+                          type: [string, 'null']
+                        closed:
+                          type: boolean
+                        dateLastActivity:
+                          type: [string, 'null']
+                          description: ISO 8601 timestamp.
+                        idOrganization:
+                          type: [string, 'null']
+
+  /internal/getBoard:
+    get:
+      operationId: getBoard
+      summary: Get board details with all open lists and cards — name, description, lists[].name, cards[].name/due/labels
+      x-openweb:
+        permission: read
+        adapter:
+          name: trello-api
+          operation: getBoard
+        build:
+          verified: true
+          stable_id: tr0002
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters:
+        - name: boardId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Board ID from getBoards.
+      responses:
+        '200':
+          description: Board with lists and cards.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, lists, cards]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: [string, 'null']
+                  url:
+                    type: string
+                  shortUrl:
+                    type: [string, 'null']
+                  closed:
+                    type: boolean
+                  dateLastActivity:
+                    type: [string, 'null']
+                  lists:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name]
+                      properties:
+                        id:
+                          type: string
+                          description: List ID (use in getCards, createCard).
+                        name:
+                          type: string
+                        closed:
+                          type: boolean
+                        pos:
+                          type: number
+                  cards:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, idList]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        description:
+                          type: [string, 'null']
+                        url:
+                          type: string
+                        shortUrl:
+                          type: [string, 'null']
+                        idList:
+                          type: string
+                          description: ID of the list this card belongs to.
+                        due:
+                          type: [string, 'null']
+                          description: Due date in ISO 8601 format.
+                        labels:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                              color:
+                                type: string
+                        closed:
+                          type: boolean
+                        dateLastActivity:
+                          type: [string, 'null']
+
+  /internal/getLists:
+    get:
+      operationId: getLists
+      summary: Get open lists in a board — id, name, position
+      x-openweb:
+        permission: read
+        adapter:
+          name: trello-api
+          operation: getLists
+        build:
+          verified: true
+          stable_id: tr0003
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters:
+        - name: boardId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Board ID from getBoards.
+      responses:
+        '200':
+          description: Open lists in the board.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, lists]
+                properties:
+                  count:
+                    type: integer
+                  lists:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name]
+                      properties:
+                        id:
+                          type: string
+                          description: List ID (use in getCards, createCard).
+                        name:
+                          type: string
+                        closed:
+                          type: boolean
+                        pos:
+                          type: number
+                        idBoard:
+                          type: string
+
+  /internal/getCards:
+    get:
+      operationId: getCards
+      summary: Get cards in a list — id, name, description, due, labels, members
+      x-openweb:
+        permission: read
+        adapter:
+          name: trello-api
+          operation: getCards
+        build:
+          verified: true
+          stable_id: tr0004
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters:
+        - name: listId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: List ID from getLists or getBoard.
+      responses:
+        '200':
+          description: Cards in the list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, cards]
+                properties:
+                  count:
+                    type: integer
+                  cards:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, idList]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        description:
+                          type: [string, 'null']
+                        url:
+                          type: string
+                        shortUrl:
+                          type: [string, 'null']
+                        idList:
+                          type: string
+                        due:
+                          type: [string, 'null']
+                          description: Due date in ISO 8601 format.
+                        labels:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                              color:
+                                type: string
+                        closed:
+                          type: boolean
+                        dateLastActivity:
+                          type: [string, 'null']
+                        idMembers:
+                          type: array
+                          items:
+                            type: string
+
+  /internal/createCard:
+    post:
+      operationId: createCard
+      summary: Create a new card in a list — returns id, name, url
+      x-openweb:
+        permission: write
+        adapter:
+          name: trello-api
+          operation: createCard
+        build:
+          verified: true
+          stable_id: tr0005
+          tool_version: 1
+          signals:
+            - adapter-verified
+      parameters:
+        - name: idList
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target list ID from getLists or getBoard.
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Card title.
+        - name: desc
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Card description (Markdown supported).
+        - name: due
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Due date in ISO 8601 format (e.g. "2026-04-15T12:00:00Z").
+        - name: pos
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 'Position: "top", "bottom", or a positive number.'
+      responses:
+        '200':
+          description: Created card.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: [string, 'null']
+                  url:
+                    type: string
+                  shortUrl:
+                    type: [string, 'null']
+                  idList:
+                    type: string
+                  due:
+                    type: [string, 'null']
+                  closed:
+                    type: boolean
+                  dateLastActivity:
+                    type: [string, 'null']

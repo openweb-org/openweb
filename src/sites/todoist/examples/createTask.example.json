@@ -1,0 +1,8 @@
+{
+  "operation_id": "createTask",
+  "replay_safety": "unsafe_mutation",
+  "cases": [{
+    "input": { "content": "Test task from openweb", "priority": 1 },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

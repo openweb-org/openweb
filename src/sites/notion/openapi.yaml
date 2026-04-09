@@ -355,6 +355,226 @@ paths:
                         type: object
                         additionalProperties:
                           type: object
+  /api/v3/loadPageChunk:
+    post:
+      operationId: getPage
+      summary: Get a page's content — title, blocks, properties, parent info
+      x-openweb:
+        permission: read
+        build:
+          stable_id: notion_get_page
+          tool_version: 2
+      parameters:
+        - name: x-notion-space-id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Workspace space ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - page
+                - limit
+                - cursor
+                - chunkNumber
+                - verticalColumns
+              properties:
+                page:
+                  type: object
+                  required:
+                    - id
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      description: Page block ID
+                limit:
+                  type: integer
+                  default: 100
+                  description: Max number of blocks to return per chunk
+                cursor:
+                  type: object
+                  properties:
+                    stack:
+                      type: array
+                      items:
+                        type: array
+                      default: []
+                  description: Pagination cursor (empty stack for first chunk)
+                chunkNumber:
+                  type: integer
+                  default: 0
+                  description: Chunk index (0 for first request)
+                verticalColumns:
+                  type: boolean
+                  default: false
+                  description: Include vertical column layout data
+            example:
+              page:
+                id: "{pageId}"
+              limit: 100
+              cursor:
+                stack: []
+              chunkNumber: 0
+              verticalColumns: false
+      responses:
+        "200":
+          description: Page content with blocks and record map
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recordMap:
+                    type: object
+                    description: Block tree, collection schemas, and space metadata
+                    properties:
+                      block:
+                        type: object
+                        additionalProperties:
+                          type: object
+                          properties:
+                            value:
+                              type: object
+                              description: "Block data — type, properties, content[], parent_id"
+                      collection:
+                        type: object
+                        additionalProperties:
+                          type: object
+                      space:
+                        type: object
+                        additionalProperties:
+                          type: object
+                  cursor:
+                    type: object
+                    description: Cursor for next chunk (empty stack means no more)
+                    properties:
+                      stack:
+                        type: array
+                        items:
+                          type: array
+  /notion/pages:
+    post:
+      operationId: createPage
+      summary: Create a new page in a workspace or under a parent page — returns page ID
+      x-openweb:
+        permission: write
+        adapter:
+          name: notion-api
+          operation: createPage
+        build:
+          stable_id: notion_create_page
+          tool_version: 2
+      parameters:
+        - name: x-notion-space-id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Workspace space ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  description: Page title
+                parentId:
+                  type: string
+                  format: uuid
+                  description: "Parent page ID. If omitted, creates at workspace top level (parent = space)."
+            example:
+              title: My New Page
+      responses:
+        "200":
+          description: Created page details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pageId:
+                    type: string
+                    format: uuid
+                    description: ID of the newly created page
+                  title:
+                    type: string
+                  parentId:
+                    type: string
+                    format: uuid
+                  parentTable:
+                    type: string
+                    enum:
+                      - space
+                      - block
+  /notion/pages/{pageId}:
+    patch:
+      operationId: updatePage
+      summary: Update a page's title — returns updated page info
+      x-openweb:
+        permission: write
+        adapter:
+          name: notion-api
+          operation: updatePage
+        build:
+          stable_id: notion_update_page
+          tool_version: 2
+      parameters:
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Page block ID to update
+        - name: x-notion-space-id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Workspace space ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  description: New page title
+            example:
+              title: Updated Page Title
+      responses:
+        "200":
+          description: Updated page info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pageId:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  updated:
+                    type: boolean
   /api/v3/getSpaces:
     post:
       operationId: getSpaces

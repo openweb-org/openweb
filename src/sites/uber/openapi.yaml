@@ -253,3 +253,189 @@ paths:
                     properties:
                       hasMore:
                         type: boolean
+
+  /_p/api/getStoreV1:
+    post:
+      operationId: getRestaurantMenu
+      summary: Get Uber Eats restaurant menu — categories, items, prices, images, availability
+      x-openweb:
+        permission: read
+        unwrap: data
+      parameters:
+        - name: x-csrf-token
+          in: header
+          required: true
+          schema:
+            type: string
+            const: 'x'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - storeUuid
+              properties:
+                storeUuid:
+                  type: string
+                  description: Full UUID of the restaurant (from searchRestaurants storeUuid field).
+      responses:
+        '200':
+          description: Restaurant info and full menu (after data unwrap).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    description: Restaurant name.
+                  uuid:
+                    type: string
+                  slug:
+                    type: string
+                  rating:
+                    type: object
+                    properties:
+                      ratingValue:
+                        type: number
+                      reviewCount:
+                        type: string
+                  currencyCode:
+                    type: string
+                    description: Currency code (e.g. "USD").
+                  isOpen:
+                    type: boolean
+                  etaRange:
+                    type: object
+                    description: Delivery time estimate.
+                  location:
+                    type: object
+                    properties:
+                      address:
+                        type: string
+                        description: Full street address.
+                      latitude:
+                        type: number
+                      longitude:
+                        type: number
+                  hours:
+                    type: array
+                    description: Operating hours by day.
+                  sections:
+                    type: array
+                    description: Menu time sections (e.g. Dinner, Lunch). Each has subsectionUuids.
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        uuid:
+                          type: string
+                        subsectionUuids:
+                          type: array
+                          items:
+                            type: string
+                  catalogSectionsMap:
+                    type: object
+                    description: "Map of section UUID to menu categories array. Each category has standardItemsPayload.catalogItems."
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            description: "Layout type (HORIZONTAL_GRID, VERTICAL_GRID)."
+                          catalogSectionUUID:
+                            type: string
+                          payload:
+                            type: object
+                            properties:
+                              standardItemsPayload:
+                                type: object
+                                properties:
+                                  title:
+                                    type: object
+                                    properties:
+                                      text:
+                                        type: string
+                                        description: Category name (e.g. "Featured items", "Burgers").
+                                  catalogItems:
+                                    type: array
+                                    description: Menu items in this category.
+                                    items:
+                                      type: object
+                                      properties:
+                                        uuid:
+                                          type: string
+                                          description: Item UUID — use for item detail or cart operations.
+                                        title:
+                                          type: string
+                                          description: Item name.
+                                        price:
+                                          type: integer
+                                          description: Price in cents.
+                                        imageUrl:
+                                          type:
+                                            - string
+                                            - 'null'
+                                        isSoldOut:
+                                          type: boolean
+                                        hasCustomizations:
+                                          type: boolean
+                                          description: Whether item requires customization choices.
+                                        isAvailable:
+                                          type: boolean
+                                        subsectionUuid:
+                                          type: string
+                                        sectionUuid:
+                                          type: string
+
+  /internal/addToCart:
+    post:
+      operationId: addToCart
+      summary: Add an item to Uber Eats cart — requires store UUID and item UUID from getRestaurantMenu
+      x-openweb:
+        permission: write
+        adapter:
+          name: uber-eats
+          operation: addToCart
+        transport: page
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - storeUuid
+                - itemUuid
+              properties:
+                storeUuid:
+                  type: string
+                  description: Full UUID of the restaurant.
+                itemUuid:
+                  type: string
+                  description: Item UUID from getRestaurantMenu catalogItems.
+                quantity:
+                  type: integer
+                  default: 1
+                  description: Number of items to add.
+      responses:
+        '200':
+          description: Cart state after adding item.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  storeUuid:
+                    type: string
+                  itemUuid:
+                    type: string
+                  quantity:
+                    type: integer

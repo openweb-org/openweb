@@ -1,0 +1,9 @@
+{
+  "operation_id": "getModel",
+  "cases": [
+    {
+      "input": { "owner": "google-bert", "name": "bert-base-uncased" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

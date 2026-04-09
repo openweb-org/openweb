@@ -1,0 +1,401 @@
+openapi: '3.1.0'
+info:
+  title: SoundCloud
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://api-v2.soundcloud.com
+    x-openweb:
+      transport: node
+paths:
+  /search/tracks:
+    get:
+      operationId: searchTracks
+      summary: Search tracks by keyword — title, artist, duration, play count, likes, waveform URL
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sc0001
+          tool_version: 1
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (keyword, artist name, or phrase).
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+            const: EsIST4DWFy7hEa8mvPoVwdjZ4NTZqmei
+          description: SoundCloud API client ID (public, embedded in page JS).
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of results to return (max 50).
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Offset for pagination.
+      responses:
+        '200':
+          description: Search results with track metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  collection:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: Track ID.
+                        title:
+                          type: string
+                          description: Track title.
+                        description:
+                          type: string
+                          nullable: true
+                          description: Track description.
+                        duration:
+                          type: integer
+                          description: Duration in milliseconds.
+                        genre:
+                          type: string
+                          nullable: true
+                          description: Genre tag.
+                        permalink_url:
+                          type: string
+                          description: Public URL on SoundCloud.
+                        artwork_url:
+                          type: string
+                          nullable: true
+                          description: Album art URL.
+                        waveform_url:
+                          type: string
+                          description: Waveform image URL.
+                        playback_count:
+                          type: integer
+                          description: Total play count.
+                        likes_count:
+                          type: integer
+                          description: Total likes.
+                        comment_count:
+                          type: integer
+                          description: Total comments.
+                        reposts_count:
+                          type: integer
+                          description: Total reposts.
+                        created_at:
+                          type: string
+                          description: Upload date (ISO 8601).
+                        user:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            username:
+                              type: string
+                            permalink_url:
+                              type: string
+                  total_results:
+                    type: integer
+                    description: Total matching tracks.
+                  next_href:
+                    type: string
+                    nullable: true
+                    description: URL for the next page of results.
+
+  /tracks/{id}:
+    get:
+      operationId: getTrack
+      summary: Get track details — title, artist, duration, plays, likes, comments, waveform, genre
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sc0002
+          tool_version: 1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Track ID (from searchTracks results).
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+            const: EsIST4DWFy7hEa8mvPoVwdjZ4NTZqmei
+          description: SoundCloud API client ID (public, embedded in page JS).
+      responses:
+        '200':
+          description: Full track metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    description: Track ID.
+                  title:
+                    type: string
+                    description: Track title.
+                  description:
+                    type: string
+                    nullable: true
+                    description: Track description.
+                  duration:
+                    type: integer
+                    description: Duration in milliseconds.
+                  full_duration:
+                    type: integer
+                    description: Full duration including silence.
+                  genre:
+                    type: string
+                    nullable: true
+                    description: Genre tag.
+                  tag_list:
+                    type: string
+                    description: Space-separated tags.
+                  permalink_url:
+                    type: string
+                    description: Public URL on SoundCloud.
+                  artwork_url:
+                    type: string
+                    nullable: true
+                    description: Album art URL.
+                  waveform_url:
+                    type: string
+                    description: Waveform image URL.
+                  playback_count:
+                    type: integer
+                    description: Total play count.
+                  likes_count:
+                    type: integer
+                    description: Total likes.
+                  comment_count:
+                    type: integer
+                    description: Total comments.
+                  reposts_count:
+                    type: integer
+                    description: Total reposts.
+                  download_count:
+                    type: integer
+                    description: Total downloads.
+                  created_at:
+                    type: string
+                    description: Upload date (ISO 8601).
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      username:
+                        type: string
+                      permalink_url:
+                        type: string
+                      avatar_url:
+                        type: string
+                        nullable: true
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      summary: Get user/artist profile — username, bio, followers, tracks count, playlists, verified status
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sc0003
+          tool_version: 1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID (from track or search results).
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+            const: EsIST4DWFy7hEa8mvPoVwdjZ4NTZqmei
+          description: SoundCloud API client ID (public, embedded in page JS).
+      responses:
+        '200':
+          description: User profile metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    description: User ID.
+                  username:
+                    type: string
+                    description: Username / display name.
+                  full_name:
+                    type: string
+                    nullable: true
+                    description: Full name.
+                  description:
+                    type: string
+                    nullable: true
+                    description: Bio / about text.
+                  permalink_url:
+                    type: string
+                    description: Public profile URL.
+                  avatar_url:
+                    type: string
+                    nullable: true
+                    description: Profile picture URL.
+                  city:
+                    type: string
+                    nullable: true
+                    description: City.
+                  country_code:
+                    type: string
+                    nullable: true
+                    description: Two-letter country code.
+                  followers_count:
+                    type: integer
+                    description: Number of followers.
+                  followings_count:
+                    type: integer
+                    description: Number of accounts followed.
+                  track_count:
+                    type: integer
+                    description: Number of uploaded tracks.
+                  playlist_count:
+                    type: integer
+                    description: Number of playlists.
+                  likes_count:
+                    type: integer
+                    description: Total likes received.
+                  reposts_count:
+                    type: integer
+                    nullable: true
+                    description: Total reposts.
+                  verified:
+                    type: boolean
+                    description: Whether the user is verified.
+                  created_at:
+                    type: string
+                    nullable: true
+                    description: Account creation date (ISO 8601).
+
+  /playlists/{id}:
+    get:
+      operationId: getPlaylist
+      summary: Get playlist details and track list — title, description, track count, duration, creator
+      x-openweb:
+        permission: read
+        build:
+          stable_id: sc0004
+          tool_version: 1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Playlist ID (from search or user playlists).
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+            const: EsIST4DWFy7hEa8mvPoVwdjZ4NTZqmei
+          description: SoundCloud API client ID (public, embedded in page JS).
+      responses:
+        '200':
+          description: Playlist metadata with embedded tracks.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    description: Playlist ID.
+                  title:
+                    type: string
+                    description: Playlist title.
+                  description:
+                    type: string
+                    nullable: true
+                    description: Playlist description.
+                  duration:
+                    type: integer
+                    description: Total duration in milliseconds.
+                  track_count:
+                    type: integer
+                    description: Number of tracks in the playlist.
+                  genre:
+                    type: string
+                    nullable: true
+                    description: Genre tag.
+                  permalink_url:
+                    type: string
+                    description: Public URL on SoundCloud.
+                  is_album:
+                    type: boolean
+                    description: Whether the playlist is an album.
+                  likes_count:
+                    type: integer
+                    description: Total likes.
+                  reposts_count:
+                    type: integer
+                    description: Total reposts.
+                  created_at:
+                    type: string
+                    description: Creation date (ISO 8601).
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      username:
+                        type: string
+                      permalink_url:
+                        type: string
+                  tracks:
+                    type: array
+                    description: List of tracks in the playlist.
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        title:
+                          type: string
+                        duration:
+                          type: integer
+                        permalink_url:
+                          type: string
+                        playback_count:
+                          type: integer
+                        user:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            username:
+                              type: string

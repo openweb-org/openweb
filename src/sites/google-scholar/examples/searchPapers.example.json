@@ -1,0 +1,14 @@
+{
+  "operation_id": "searchPapers",
+  "cases": [
+    {
+      "input": {
+        "q": "transformer attention"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

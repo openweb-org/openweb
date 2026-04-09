@@ -1,0 +1,236 @@
+openapi: "3.1.0"
+info:
+  title: Quora
+  version: "1.0.0"
+  x-openweb:
+    spec_version: "2.0"
+    requires_auth: false
+servers:
+  - url: https://www.quora.com
+    x-openweb:
+      transport: page
+paths:
+  /search:
+    get:
+      operationId: searchQuestions
+      summary: "Search questions by keyword — title, answer count, follower count, slug"
+      x-openweb:
+        permission: read
+        adapter:
+          name: quora
+          operation: searchQuestions
+        build:
+          stable_id: quora0001
+          tool_version: 1
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Search query (keyword or phrase)"
+          example: "python programming"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: "Max results to return (max 25)"
+      responses:
+        "200":
+          description: Search results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        qid:
+                          type: integer
+                          description: "Unique question ID"
+                        slug:
+                          type: string
+                          description: "URL slug (use as input to getQuestion/getAnswers)"
+                        title:
+                          type: string
+                          description: "Question title (plain text)"
+                        answerCount:
+                          type: integer
+                          description: "Number of answers"
+                        followerCount:
+                          type: integer
+                          description: "Number of followers"
+                  hasMore:
+                    type: boolean
+                    description: "Whether more results exist"
+
+  /question:
+    get:
+      operationId: getQuestion
+      summary: "Get question details — title, answer count, followers, topics, top answers preview"
+      x-openweb:
+        permission: read
+        adapter:
+          name: quora
+          operation: getQuestion
+        build:
+          stable_id: quora0002
+          tool_version: 1
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Question URL slug (from searchQuestions)"
+          example: "What-is-JavaScript"
+      responses:
+        "200":
+          description: Question details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    description: "Question title"
+                  answerCount:
+                    type: integer
+                    description: "Total number of answers"
+                  followerCount:
+                    type: string
+                    description: "Number of followers (may include K/M suffix)"
+                  topics:
+                    type: array
+                    items:
+                      type: string
+                    description: "Related topics"
+                  topAnswers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        author:
+                          type: string
+                        credential:
+                          type: string
+                        content:
+                          type: string
+                          description: "Answer preview (first ~500 chars)"
+                        upvotes:
+                          type: string
+                    description: "Top 3 answer previews"
+
+  /answers:
+    get:
+      operationId: getAnswers
+      summary: "Get answers for a question — author, content, upvotes"
+      x-openweb:
+        permission: read
+        adapter:
+          name: quora
+          operation: getAnswers
+        build:
+          stable_id: quora0003
+          tool_version: 1
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Question URL slug (from searchQuestions)"
+          example: "What-is-JavaScript"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: "Max answers to return (max 20)"
+      responses:
+        "200":
+          description: Answers for the question.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  slug:
+                    type: string
+                    description: "Question slug"
+                  answers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        author:
+                          type: string
+                          description: "Author name"
+                        content:
+                          type: string
+                          description: "Full answer text"
+                        upvotes:
+                          type: string
+                          description: "Upvote count"
+
+  /profile:
+    get:
+      operationId: getProfile
+      summary: "Get user profile — name, bio, follower count, answer count, topics"
+      x-openweb:
+        permission: read
+        adapter:
+          name: quora
+          operation: getProfile
+        build:
+          stable_id: quora0004
+          tool_version: 1
+      parameters:
+        - name: username
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Profile URL slug (e.g. Adam-DAngelo)"
+          example: "Adam-DAngelo"
+      responses:
+        "200":
+          description: User profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: "Display name"
+                  bio:
+                    type: string
+                    description: "Profile bio/tagline"
+                  profileImageUrl:
+                    type: string
+                    description: "Profile image URL"
+                  followers:
+                    type: string
+                    description: "Follower count (may include K/M suffix)"
+                  answers:
+                    type: string
+                    description: "Answer count"
+                  questions:
+                    type: string
+                    description: "Question count"
+                  posts:
+                    type: string
+                    description: "Post count"
+                  knownFor:
+                    type: array
+                    items:
+                      type: string
+                    description: "Expertise topics"

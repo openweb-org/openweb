@@ -1,0 +1,15 @@
+{
+  "operation_id": "getPlaylist",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "playlistId": "PLWKjhJtqVAbkArDMaJhn2XB080UlFNRCt"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

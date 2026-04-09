@@ -1,0 +1,602 @@
+openapi: "3.1.0"
+info:
+  title: CoinGecko
+  version: "1.0.0"
+  x-openweb:
+    spec_version: "2.0"
+    requires_auth: false
+servers:
+  - url: https://api.coingecko.com
+    x-openweb:
+      transport: node
+paths:
+  /api/v3/search:
+    get:
+      operationId: searchCoins
+      summary: "Search cryptocurrencies by name or symbol — id, name, symbol, market cap rank, thumb"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: coingecko_searchCoins_v1
+          tool_version: 1
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Search query (coin name or symbol, e.g., bitcoin, eth, solana)"
+          example: bitcoin
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  coins:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: "CoinGecko coin ID (use for other endpoints)"
+                        name:
+                          type: string
+                          description: "Full coin name"
+                        api_symbol:
+                          type: string
+                          description: "API symbol identifier"
+                        symbol:
+                          type: string
+                          description: "Trading symbol (e.g., btc, eth)"
+                        market_cap_rank:
+                          type:
+                            - integer
+                            - "null"
+                          description: "Market cap ranking position"
+                        thumb:
+                          type: string
+                          description: "Thumbnail image URL"
+                        large:
+                          type: string
+                          description: "Large image URL"
+                      required: [id, name, symbol]
+                  exchanges:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        market_type:
+                          type: string
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                  nfts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        symbol:
+                          type: string
+                required: [coins]
+
+  /api/v3/coins/{id}:
+    get:
+      operationId: getCoinDetail
+      summary: "Get coin details — price, market cap, description, links, developer stats"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: coingecko_getCoinDetail_v1
+          tool_version: 1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "CoinGecko coin ID (from searchCoins, e.g., bitcoin, ethereum, solana)"
+          example: bitcoin
+        - name: localization
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Include all localized languages in response (default true)"
+          example: false
+        - name: tickers
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Include exchange tickers data (default true)"
+          example: false
+        - name: market_data
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Include market data such as price, volume, market cap (default true)"
+          example: true
+        - name: community_data
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Include community data like Reddit/Twitter stats (default true)"
+          example: false
+        - name: developer_data
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Include developer data like GitHub stats (default true)"
+          example: false
+        - name: sparkline
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Include sparkline 7-day price data (default false)"
+          example: false
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: "CoinGecko coin ID"
+                  symbol:
+                    type: string
+                    description: "Trading symbol"
+                  name:
+                    type: string
+                    description: "Full coin name"
+                  web_slug:
+                    type: string
+                    description: "URL slug for CoinGecko website"
+                  block_time_in_minutes:
+                    type:
+                      - integer
+                      - "null"
+                    description: "Average block time"
+                  hashing_algorithm:
+                    type:
+                      - string
+                      - "null"
+                    description: "Hashing algorithm used"
+                  categories:
+                    type: array
+                    items:
+                      type: string
+                    description: "Coin categories"
+                  description:
+                    type: object
+                    properties:
+                      en:
+                        type: string
+                        description: "English description (may contain HTML)"
+                  links:
+                    type: object
+                    properties:
+                      homepage:
+                        type: array
+                        items:
+                          type: string
+                      whitepaper:
+                        type: string
+                      blockchain_site:
+                        type: array
+                        items:
+                          type: string
+                      subreddit_url:
+                        type:
+                          - string
+                          - "null"
+                      repos_url:
+                        type: object
+                        properties:
+                          github:
+                            type: array
+                            items:
+                              type: string
+                  image:
+                    type: object
+                    properties:
+                      thumb:
+                        type: string
+                      small:
+                        type: string
+                      large:
+                        type: string
+                  genesis_date:
+                    type:
+                      - string
+                      - "null"
+                    description: "Coin genesis/launch date"
+                  market_cap_rank:
+                    type:
+                      - integer
+                      - "null"
+                    description: "Market cap ranking"
+                  market_data:
+                    type: object
+                    properties:
+                      current_price:
+                        type: object
+                        description: "Current price in various currencies (e.g., {usd: 50000, eur: 45000})"
+                      market_cap:
+                        type: object
+                        description: "Market cap in various currencies"
+                      total_volume:
+                        type: object
+                        description: "24h trading volume in various currencies"
+                      high_24h:
+                        type: object
+                        description: "24h high in various currencies"
+                      low_24h:
+                        type: object
+                        description: "24h low in various currencies"
+                      price_change_24h:
+                        type:
+                          - number
+                          - "null"
+                        description: "Price change in last 24h (USD)"
+                      price_change_percentage_24h:
+                        type:
+                          - number
+                          - "null"
+                        description: "Price change percentage in last 24h"
+                      price_change_percentage_7d:
+                        type:
+                          - number
+                          - "null"
+                        description: "Price change percentage in last 7 days"
+                      price_change_percentage_30d:
+                        type:
+                          - number
+                          - "null"
+                        description: "Price change percentage in last 30 days"
+                      market_cap_change_24h:
+                        type:
+                          - number
+                          - "null"
+                        description: "Market cap change in last 24h"
+                      circulating_supply:
+                        type:
+                          - number
+                          - "null"
+                        description: "Current circulating supply"
+                      total_supply:
+                        type:
+                          - number
+                          - "null"
+                        description: "Total supply"
+                      max_supply:
+                        type:
+                          - number
+                          - "null"
+                        description: "Maximum supply (null if unlimited)"
+                      ath:
+                        type: object
+                        description: "All-time high price in various currencies"
+                      atl:
+                        type: object
+                        description: "All-time low price in various currencies"
+                  last_updated:
+                    type: string
+                    description: "ISO 8601 timestamp of last data update"
+                required: [id, symbol, name]
+
+  /api/v3/coins/markets:
+    get:
+      operationId: getMarketData
+      summary: "Get market data for top coins — price, market cap, volume, price change"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: coingecko_getMarketData_v1
+          tool_version: 1
+      parameters:
+        - name: vs_currency
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Target currency for market data (e.g., usd, eur, btc)"
+          example: usd
+        - name: ids
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Comma-separated coin IDs to filter (e.g., bitcoin,ethereum,solana)"
+          example: "bitcoin,ethereum"
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [market_cap_desc, market_cap_asc, volume_desc, volume_asc, id_desc, id_asc]
+          description: "Sort order (default: market_cap_desc)"
+          example: market_cap_desc
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Results per page (1-250, default 100)"
+          example: 20
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Page number (default 1)"
+          example: 1
+        - name: sparkline
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Include sparkline 7-day price data (default false)"
+          example: false
+        - name: price_change_percentage
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Comma-separated price change percentage timeframes (e.g., 1h,24h,7d,30d)"
+          example: "24h,7d"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: "CoinGecko coin ID"
+                    symbol:
+                      type: string
+                      description: "Trading symbol"
+                    name:
+                      type: string
+                      description: "Full coin name"
+                    image:
+                      type: string
+                      description: "Coin image URL"
+                    current_price:
+                      type:
+                        - number
+                        - "null"
+                      description: "Current price in target currency"
+                    market_cap:
+                      type:
+                        - number
+                        - "null"
+                      description: "Market capitalization"
+                    market_cap_rank:
+                      type:
+                        - integer
+                        - "null"
+                      description: "Market cap ranking"
+                    fully_diluted_valuation:
+                      type:
+                        - number
+                        - "null"
+                      description: "Fully diluted valuation"
+                    total_volume:
+                      type:
+                        - number
+                        - "null"
+                      description: "24h trading volume"
+                    high_24h:
+                      type:
+                        - number
+                        - "null"
+                      description: "24h high price"
+                    low_24h:
+                      type:
+                        - number
+                        - "null"
+                      description: "24h low price"
+                    price_change_24h:
+                      type:
+                        - number
+                        - "null"
+                      description: "24h price change"
+                    price_change_percentage_24h:
+                      type:
+                        - number
+                        - "null"
+                      description: "24h price change percentage"
+                    market_cap_change_24h:
+                      type:
+                        - number
+                        - "null"
+                      description: "24h market cap change"
+                    circulating_supply:
+                      type:
+                        - number
+                        - "null"
+                      description: "Circulating supply"
+                    total_supply:
+                      type:
+                        - number
+                        - "null"
+                      description: "Total supply"
+                    max_supply:
+                      type:
+                        - number
+                        - "null"
+                      description: "Maximum supply"
+                    ath:
+                      type:
+                        - number
+                        - "null"
+                      description: "All-time high price"
+                    atl:
+                      type:
+                        - number
+                        - "null"
+                      description: "All-time low price"
+                    last_updated:
+                      type: string
+                      description: "ISO 8601 timestamp of last update"
+                  required: [id, symbol, name]
+
+  /api/v3/search/trending:
+    get:
+      operationId: getTrending
+      summary: "Get trending coins and searches — top 7 trending coins by search volume"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: coingecko_getTrending_v1
+          tool_version: 1
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  coins:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        item:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: "CoinGecko coin ID"
+                            coin_id:
+                              type: integer
+                              description: "Numeric coin ID"
+                            name:
+                              type: string
+                              description: "Full coin name"
+                            symbol:
+                              type: string
+                              description: "Trading symbol"
+                            market_cap_rank:
+                              type:
+                                - integer
+                                - "null"
+                              description: "Market cap ranking"
+                            thumb:
+                              type: string
+                              description: "Thumbnail image URL"
+                            small:
+                              type: string
+                              description: "Small image URL"
+                            large:
+                              type: string
+                              description: "Large image URL"
+                            slug:
+                              type: string
+                              description: "URL slug"
+                            price_btc:
+                              type:
+                                - number
+                                - "null"
+                              description: "Price in BTC"
+                            score:
+                              type: integer
+                              description: "Trending rank score (0 = most trending)"
+                          required: [id, name, symbol, score]
+                required: [coins]
+
+  /api/v3/simple/price:
+    get:
+      operationId: getPrice
+      summary: "Get simple price for coins — current price in specified currencies"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: coingecko_getPrice_v1
+          tool_version: 1
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Comma-separated CoinGecko coin IDs (e.g., bitcoin,ethereum,solana)"
+          example: "bitcoin,ethereum"
+        - name: vs_currencies
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Comma-separated target currencies (e.g., usd,eur,btc)"
+          example: usd
+        - name: include_market_cap
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Include market cap in response (default false)"
+          example: true
+        - name: include_24hr_vol
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Include 24h volume in response (default false)"
+          example: false
+        - name: include_24hr_change
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Include 24h price change in response (default false)"
+          example: true
+        - name: include_last_updated_at
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Include last updated timestamp (default false)"
+          example: true
+      responses:
+        "200":
+          description: "Success. Response is a dynamic object keyed by coin ID, each containing currency prices."
+          content:
+            application/json:
+              schema:
+                type: object
+                description: "Object keyed by coin ID. Each value contains price in requested currencies (e.g., {bitcoin: {usd: 50000, eur: 45000}})"
+                additionalProperties:
+                  type: object
+                  additionalProperties:
+                    type: number

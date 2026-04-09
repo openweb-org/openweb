@@ -1,0 +1,9 @@
+{
+  "operation_id": "getPlaylist",
+  "cases": [
+    {
+      "input": { "uri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M", "limit": 5 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

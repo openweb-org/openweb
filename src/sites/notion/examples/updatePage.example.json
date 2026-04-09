@@ -1,0 +1,17 @@
+{
+  "operation_id": "updatePage",
+  "cases": [
+    {
+      "input": {
+        "x-notion-space-id": "fba8f373-0afa-439e-b6d5-f69d38f144fb",
+        "pageId": "20615b89-eae6-800b-8cc4-000bcb6574a0",
+        "title": "Updated Test Title"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      },
+      "replaySafety": "unsafe_mutation"
+    }
+  ]
+}

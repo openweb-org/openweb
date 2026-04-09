@@ -440,3 +440,425 @@ paths:
                                                 properties:
                                                   name:
                                                     type: string
+
+  /internal/getTrack:
+    post:
+      operationId: getTrack
+      summary: "Get track — name, artist, album, duration, play count, content rating"
+      x-openweb:
+        permission: read
+        adapter:
+          name: spotify-pathfinder
+          operation: getTrack
+        build:
+          stable_id: spotify_track_v1
+          tool_version: 2
+      parameters:
+        - name: uri
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Spotify URI (spotify:track:ID) — get from searchMusic or getAlbumTracks"
+      responses:
+        "200":
+          description: Track details with artist and album info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trackUnion:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      uri:
+                        type: string
+                      name:
+                        type: string
+                      playcount:
+                        type: string
+                      trackNumber:
+                        type: integer
+                      contentRating:
+                        type: object
+                        properties:
+                          label:
+                            type: string
+                      duration:
+                        type: object
+                        properties:
+                          totalMilliseconds:
+                            type: integer
+                      albumOfTrack:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          uri:
+                            type: string
+                          name:
+                            type: string
+                          type:
+                            type: string
+                          date:
+                            type: object
+                            properties:
+                              isoString:
+                                type: string
+                              year:
+                                type: integer
+                          coverArt:
+                            type: object
+                            properties:
+                              sources:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    url:
+                                      type: string
+                                    width:
+                                      type: integer
+                                    height:
+                                      type: integer
+                      firstArtist:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                uri:
+                                  type: string
+                                id:
+                                  type: string
+                                profile:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                      otherArtists:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                uri:
+                                  type: string
+                                profile:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                      sharingInfo:
+                        type: object
+                        properties:
+                          shareUrl:
+                            type: string
+
+  /internal/getPlaylist:
+    post:
+      operationId: getPlaylist
+      summary: "Get playlist — name, description, followers, owner, track list with artists and durations"
+      x-openweb:
+        permission: read
+        adapter:
+          name: spotify-pathfinder
+          operation: getPlaylist
+        build:
+          stable_id: spotify_playlist_v1
+          tool_version: 2
+      parameters:
+        - name: uri
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Spotify URI (spotify:playlist:ID) — get from searchMusic or getUserPlaylists"
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: "Pagination offset"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+          description: "Max tracks to return"
+      responses:
+        "200":
+          description: Playlist with metadata and track listing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  playlistV2:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      uri:
+                        type: string
+                      description:
+                        type: string
+                      followers:
+                        type: integer
+                      ownerV2:
+                        type: object
+                        properties:
+                          data:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              uri:
+                                type: string
+                      images:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                sources:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      url:
+                                        type: string
+                                      width:
+                                        type: integer
+                                      height:
+                                        type: integer
+                      content:
+                        type: object
+                        properties:
+                          totalCount:
+                            type: integer
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                addedAt:
+                                  type: object
+                                  properties:
+                                    isoString:
+                                      type: string
+                                itemV2:
+                                  type: object
+                                  properties:
+                                    data:
+                                      type: object
+                                      properties:
+                                        name:
+                                          type: string
+                                        uri:
+                                          type: string
+                                        trackDuration:
+                                          type: object
+                                          properties:
+                                            totalMilliseconds:
+                                              type: integer
+                                        artists:
+                                          type: object
+                                          properties:
+                                            items:
+                                              type: array
+                                              items:
+                                                type: object
+                                                properties:
+                                                  uri:
+                                                    type: string
+                                                  profile:
+                                                    type: object
+                                                    properties:
+                                                      name:
+                                                        type: string
+                                        albumOfTrack:
+                                          type: object
+                                          properties:
+                                            name:
+                                              type: string
+                                            uri:
+                                              type: string
+                                            coverArt:
+                                              type: object
+                                              properties:
+                                                sources:
+                                                  type: array
+                                                  items:
+                                                    type: object
+                                                    properties:
+                                                      url:
+                                                        type: string
+
+  /internal/getUserPlaylists:
+    post:
+      operationId: getUserPlaylists
+      summary: "Get user's public playlists — name, followers, cover image"
+      x-openweb:
+        permission: read
+        adapter:
+          name: spotify-pathfinder
+          operation: getUserPlaylists
+        build:
+          stable_id: spotify_user_playlists_v1
+          tool_version: 2
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Spotify user ID (e.g. 'spotify' for Spotify's official account)"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: "Max playlists to return"
+      responses:
+        "200":
+          description: User profile with public playlists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uri:
+                    type: string
+                  name:
+                    type: string
+                  image_url:
+                    type: string
+                  followers_count:
+                    type: integer
+                  following_count:
+                    type: integer
+                  public_playlists:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uri:
+                          type: string
+                        name:
+                          type: string
+                        image_url:
+                          type: string
+                        followers_count:
+                          type: integer
+                        owner_name:
+                          type: string
+                        owner_uri:
+                          type: string
+
+  /internal/getRecommendations:
+    post:
+      operationId: getRecommendations
+      summary: "Get recommended tracks — similar tracks based on a seed track"
+      x-openweb:
+        permission: read
+        adapter:
+          name: spotify-pathfinder
+          operation: getRecommendations
+        build:
+          stable_id: spotify_recommendations_v1
+          tool_version: 2
+      parameters:
+        - name: uri
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Spotify URI of seed track (spotify:track:ID) — get from searchMusic or getTrack"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: "Max recommended tracks"
+      responses:
+        "200":
+          description: Recommended tracks based on seed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  seoRecommendedTrack:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            data:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                uri:
+                                  type: string
+                                id:
+                                  type: string
+                                playcount:
+                                  type: string
+                                duration:
+                                  type: object
+                                  properties:
+                                    totalMilliseconds:
+                                      type: integer
+                                contentRating:
+                                  type: object
+                                  properties:
+                                    label:
+                                      type: string
+                                artists:
+                                  type: object
+                                  properties:
+                                    items:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          uri:
+                                            type: string
+                                          profile:
+                                            type: object
+                                            properties:
+                                              name:
+                                                type: string
+                                albumOfTrack:
+                                  type: object
+                                  properties:
+                                    uri:
+                                      type: string
+                                    id:
+                                      type: string
+                                    coverArt:
+                                      type: object
+                                      properties:
+                                        sources:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              url:
+                                                type: string

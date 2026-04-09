@@ -1,0 +1,9 @@
+{
+  "operation_id": "getStockKline",
+  "cases": [
+    {
+      "input": { "symbol": "SH600519", "begin": 1712505600000, "period": "day", "type": "before", "count": -5, "indicator": "kline" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "operation_id": "searchArticles",
+  "cases": [
+    {
+      "input": {
+        "search": "artificial intelligence"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

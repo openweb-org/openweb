@@ -24,6 +24,8 @@ const QUERY_NAME: Record<string, string> = {
   getFeed: 'relevance-feed',
   getCompany: 'organization-by-name-guide-fetcher-query',
   getNewsStorylines: 'breaking-news',
+  // searchJobs uses REST API (voyagerJobsDashJobCards) — no GraphQL query name needed
+  getJobDetail: 'full-job-posting-detail-section',
 }
 
 // ── QueryId extraction ────────────────────────────
@@ -126,6 +128,42 @@ async function graphqlGet(
   )
 }
 
+// ── REST API request helper ──────────────────────
+
+/**
+ * LinkedIn's job search moved from GraphQL to a REST API endpoint.
+ * /voyager/api/voyagerJobsDashJobCards?decorationId=...&q=jobSearch&query=(...)
+ */
+async function restGet(
+  page: Page,
+  path: string,
+  queryParts: string[],
+): Promise<unknown> {
+  return page.evaluate(
+    async (args: { path: string; queryParts: string[] }) => {
+      const cookies = document.cookie.split(';').map(c => c.trim())
+      const jsessionCookie = cookies.find(c => c.startsWith('JSESSIONID='))
+      const csrfToken = jsessionCookie
+        ? jsessionCookie.split('=').slice(1).join('=').replace(/^"|"$/g, '')
+        : ''
+
+      const url = `https://www.linkedin.com${args.path}?${args.queryParts.join('&')}`
+
+      const resp = await fetch(url, {
+        headers: {
+          Accept: 'application/vnd.linkedin.normalized+json+2.1',
+          'csrf-token': csrfToken,
+          'x-restli-protocol-version': '2.0.0',
+        },
+        credentials: 'include',
+      })
+      const text = await resp.text()
+      return { status: resp.status, text }
+    },
+    { path, queryParts },
+  )
+}
+
 // ── Per-operation dispatch ────────────────────────
 
 type Errors = { unknownOp(op: string): Error; missingParam(name: string): Error; httpError(status: number): Error; fatal(msg: string): Error }
@@ -159,6 +197,46 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     const queryName = QUERY_NAME.getNewsStorylines
     const queryId = await getQueryId(page, queryName, errors)
     return doGraphqlGet(page, queryId, variables, params.includeWebMetadata !== 'false', errors)
+  },
+
+  searchJobs: async (page, params, errors) => {
+    const keywords = String(params.keywords ?? '')
+    if (!keywords) throw errors.missingParam('keywords')
+    const count = Number(params.count ?? 25)
+    const start = Number(params.start ?? 0)
+    const geoId = params.geoId ? String(params.geoId) : ''
+
+    const encoded = encodeURIComponent(keywords)
+    let query = `(origin:JOB_SEARCH_PAGE_OTHER_ENTRY,keywords:${encoded}`
+    if (geoId) query += `,locationUnion:(geoId:${geoId})`
+    query += ',selectedFilters:(sortBy:List(DD)))'
+
+    const decorationId = encodeURIComponent(
+      'com.linkedin.voyager.dash.deco.jobs.search.JobSearchCardsCollectionLite-88',
+    )
+
+    const queryParts = [
+      `decorationId=${decorationId}`,
+      `count=${count}`,
+      'q=jobSearch',
+      `query=${query}`,
+      `start=${start}`,
+    ]
+
+    const result = (await restGet(page, '/voyager/api/voyagerJobsDashJobCards', queryParts)) as {
+      status: number
+      text: string
+    }
+    if (result.status >= 400) throw errors.httpError(result.status)
+    return JSON.parse(result.text)
+  },
+
+  getJobDetail: async (page, params, errors) => {
+    const jobId = String(params.jobId ?? '')
+    if (!jobId) throw errors.missingParam('jobId')
+    const variables = `(cardSectionTypes:List(TOP_CARD,HOW_YOU_FIT_CARD),jobPostingUrn:urn%3Ali%3Afsd_jobPosting%3A${jobId},includeSecondaryActionsV2:true,jobDetailsContext:(isJobSearch:true))`
+    const queryId = await getQueryId(page, QUERY_NAME.getJobDetail, errors)
+    return doGraphqlGet(page, queryId, variables, true, errors)
   },
 }
 

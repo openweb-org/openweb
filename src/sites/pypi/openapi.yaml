@@ -1,0 +1,232 @@
+openapi: "3.1.0"
+info:
+  title: PyPI
+  version: "1.0.0"
+  x-openweb:
+    spec_version: "2.0"
+    requires_auth: false
+servers:
+  - url: https://pypi.org
+    x-openweb:
+      transport: node
+paths:
+  /pypi/{package}/json:
+    get:
+      operationId: getPackage
+      summary: "Get package metadata — name, summary, version, author, license, urls, dependencies"
+      x-openweb:
+        permission: read
+        unwrap: info
+        build:
+          stable_id: pypi0001
+          tool_version: 1
+      parameters:
+        - name: package
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Package name (case-insensitive, e.g. requests, flask, numpy)"
+          example: requests
+      responses:
+        "200":
+          description: Package metadata from the latest release.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Canonical package name.
+                  summary:
+                    type: string
+                    description: Short one-line description.
+                  version:
+                    type: string
+                    description: Latest release version.
+                  author:
+                    type:
+                      - string
+                      - "null"
+                    description: Package author name.
+                  author_email:
+                    type:
+                      - string
+                      - "null"
+                    description: Author email address.
+                  license:
+                    type:
+                      - string
+                      - "null"
+                    description: License identifier (e.g. MIT, Apache-2.0).
+                  home_page:
+                    type:
+                      - string
+                      - "null"
+                    description: Project home page URL.
+                  package_url:
+                    type: string
+                    description: PyPI project page URL.
+                  project_urls:
+                    type:
+                      - object
+                      - "null"
+                    description: "Named URLs (Documentation, Source, etc.)."
+                  requires_python:
+                    type:
+                      - string
+                      - "null"
+                    description: "Python version constraint (e.g. >=3.8)."
+                  requires_dist:
+                    type:
+                      - array
+                      - "null"
+                    items:
+                      type: string
+                    description: "List of dependency specifiers."
+                  keywords:
+                    type:
+                      - string
+                      - "null"
+                    description: Comma-separated keywords.
+                  classifiers:
+                    type: array
+                    items:
+                      type: string
+                    description: "Trove classifiers (e.g. Development Status, License)."
+                required:
+                  - name
+                  - version
+                  - summary
+
+  /pypi/{package}/{version}/json:
+    get:
+      operationId: getPackageVersion
+      summary: "Get metadata for a specific version — name, version, summary, author, license, download files"
+      x-openweb:
+        permission: read
+        unwrap: info
+        build:
+          stable_id: pypi0002
+          tool_version: 1
+      parameters:
+        - name: package
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Package name (case-insensitive)"
+          example: requests
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Exact version string (e.g. 2.31.0)"
+          example: "2.31.0"
+      responses:
+        "200":
+          description: Package metadata for the specified version.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  summary:
+                    type: string
+                  version:
+                    type: string
+                  author:
+                    type:
+                      - string
+                      - "null"
+                  author_email:
+                    type:
+                      - string
+                      - "null"
+                  license:
+                    type:
+                      - string
+                      - "null"
+                  requires_python:
+                    type:
+                      - string
+                      - "null"
+                  requires_dist:
+                    type:
+                      - array
+                      - "null"
+                    items:
+                      type: string
+                required:
+                  - name
+                  - version
+
+  /simple/{package}/:
+    get:
+      operationId: getReleases
+      summary: "List all releases/versions of a package — version list and download files"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: pypi0003
+          tool_version: 1
+      parameters:
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            const: application/vnd.pypi.simple.v1+json
+          description: "JSON content negotiation for the Simple API"
+        - name: package
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Package name (case-insensitive, e.g. requests)"
+          example: requests
+      responses:
+        "200":
+          description: All versions and download files for the package.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Canonical package name.
+                  versions:
+                    type: array
+                    items:
+                      type: string
+                    description: "All released version strings in chronological order."
+                  files:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        filename:
+                          type: string
+                          description: Distribution filename.
+                        url:
+                          type: string
+                          description: Download URL.
+                        requires-python:
+                          type:
+                            - string
+                            - "null"
+                          description: Python version constraint for this file.
+                        yanked:
+                          description: Yank reason if yanked, false otherwise.
+                          oneOf:
+                            - type: string
+                            - type: boolean
+                    description: Download files across all versions.
+                required:
+                  - name
+                  - versions

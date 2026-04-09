@@ -1,0 +1,9 @@
+{
+  "operation_id": "getCoinDetail",
+  "cases": [
+    {
+      "input": { "id": "bitcoin", "localization": false, "tickers": false, "community_data": false, "developer_data": false },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

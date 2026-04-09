@@ -1,17 +1,17 @@
 {
   "name": "airbnb",
   "display_name": "Airbnb",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "spec_version": "2.0",
   "site_url": "https://www.airbnb.com",
-  "description": "Accommodation search and listing details via browser SSR extraction",
+  "description": "Accommodation search, listing details, reviews, availability, and host profiles via browser SSR extraction",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
-    "operation_count": 2,
+    "operation_count": 5,
     "l1_count": 0,
     "l2_count": 2,
-    "l3_count": 0,
+    "l3_count": 3,
     "ws_count": 0
   },
   "quarantined": false

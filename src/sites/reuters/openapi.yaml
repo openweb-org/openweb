@@ -190,3 +190,148 @@ paths:
                                   type: string
                                 alt_text:
                                   type: string
+
+  /reuters/article:
+    get:
+      operationId: getArticleDetail
+      summary: "Get full article content — title, body text, published date, authors, section, word count"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: reuters_getArticleDetail_v1
+          tool_version: 2
+        adapter:
+          name: reuters-api
+          operation: getArticleDetail
+      parameters:
+        - name: article_url
+          in: query
+          required: true
+          description: "Article canonical URL path (e.g., /world/us/some-article-slug-ABC123/)"
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Full article content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      title:
+                        type: string
+                      description:
+                        type: string
+                      body:
+                        type: string
+                        description: "Full article text (paragraphs joined by double newlines)"
+                      published_time:
+                        type: string
+                      updated_time:
+                        type: string
+                      authors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            topic_url:
+                              type: string
+                      section:
+                        type: string
+                      canonical_url:
+                        type: string
+                      word_count:
+                        type: integer
+                      thumbnail:
+                        type: object
+                        nullable: true
+                        properties:
+                          url:
+                            type: string
+                          caption:
+                            type: string
+                          alt_text:
+                            type: string
+
+  /reuters/top-news:
+    get:
+      operationId: getTopNews
+      summary: "Get top/breaking news stories from the Reuters homepage feed"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: reuters_getTopNews_v1
+          tool_version: 2
+        adapter:
+          name: reuters-api
+          operation: getTopNews
+      parameters:
+        - name: size
+          in: query
+          required: false
+          description: "Number of stories to return (default 10, max 20)"
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Top news stories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      pagination:
+                        type: object
+                        properties:
+                          size:
+                            type: integer
+                          total_size:
+                            type: integer
+                      articles:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            description:
+                              type: string
+                            canonical_url:
+                              type: string
+                            published_time:
+                              type: string
+                            word_count:
+                              type: integer
+                            read_minutes:
+                              type: integer
+                            authors:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    type: string
+                                  topic_url:
+                                    type: string
+                            thumbnail:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                caption:
+                                  type: string
+                                alt_text:
+                                  type: string

@@ -1,0 +1,9 @@
+{
+  "operation_id": "getStockFinancials",
+  "cases": [
+    {
+      "input": { "symbol": "SH600519", "type": "Q4", "is_detail": true, "count": 3, "timestamp": "" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

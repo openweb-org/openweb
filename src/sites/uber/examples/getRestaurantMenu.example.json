@@ -1,0 +1,12 @@
+{
+  "operation_id": "getRestaurantMenu",
+  "cases": [
+    {
+      "input": { "storeUuid": "8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

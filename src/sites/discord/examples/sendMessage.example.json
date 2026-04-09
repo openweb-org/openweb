@@ -1,0 +1,17 @@
+{
+  "operation_id": "sendMessage",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "channelId": "1280234300012494862",
+        "content": "Hello from OpenWeb!"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

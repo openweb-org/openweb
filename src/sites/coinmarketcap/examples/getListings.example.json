@@ -1,0 +1,9 @@
+{
+  "operation_id": "getListings",
+  "cases": [
+    {
+      "input": { "limit": 10 },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

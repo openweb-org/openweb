@@ -1,0 +1,219 @@
+openapi: '3.1.0'
+info:
+  title: Craigslist
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://sfbay.craigslist.org
+    x-openweb:
+      transport: page
+paths:
+  /search/{category}:
+    get:
+      operationId: searchListings
+      summary: Search classified listings by city and category with optional keyword
+      x-openweb:
+        permission: read
+        build:
+          stable_id: cl0001
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: craigslist-dom
+          operation: searchListings
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+          description: >-
+            Category code (e.g. "apa" for apartments, "jjj" for jobs,
+            "sss" for all for-sale, "ccc" for community, "ggg" for gigs).
+        - name: city
+          in: query
+          required: false
+          schema:
+            type: string
+            default: sfbay
+          description: >-
+            City subdomain (e.g. "sfbay", "newyork", "losangeles",
+            "chicago", "seattle").
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search keyword (e.g. "2br", "remote", "honda civic").
+      responses:
+        '200':
+          description: Search results from Craigslist.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resultCount:
+                    type: integer
+                  listings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        url:
+                          type: string
+                        price:
+                          type:
+                            - string
+                            - 'null'
+                        location:
+                          type:
+                            - string
+                            - 'null'
+                        date:
+                          type:
+                            - string
+                            - 'null'
+                        postId:
+                          type:
+                            - string
+                            - 'null'
+  /{category}/d/{slug}/{id}:
+    get:
+      operationId: getListing
+      summary: Get a specific listing's details — title, body, price, location, images, attributes
+      x-openweb:
+        permission: read
+        build:
+          stable_id: cl0002
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: craigslist-dom
+          operation: getListing
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Category code (e.g. "apa", "sss").
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: URL slug from the listing link (e.g. "sunny-2br-apt-in-mission").
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Craigslist post ID (e.g. "7891234567").
+        - name: city
+          in: query
+          required: false
+          schema:
+            type: string
+            default: sfbay
+          description: City subdomain (e.g. "sfbay", "newyork").
+      responses:
+        '200':
+          description: Full listing details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  price:
+                    type:
+                      - string
+                      - 'null'
+                  body:
+                    type: string
+                  location:
+                    type:
+                      - string
+                      - 'null'
+                  latitude:
+                    type:
+                      - number
+                      - 'null'
+                  longitude:
+                    type:
+                      - number
+                      - 'null'
+                  postedAt:
+                    type:
+                      - string
+                      - 'null'
+                  updatedAt:
+                    type:
+                      - string
+                      - 'null'
+                  attributes:
+                    type: array
+                    items:
+                      type: string
+                  images:
+                    type: array
+                    items:
+                      type: string
+                  url:
+                    type: string
+  /:
+    get:
+      operationId: getCategories
+      summary: List all available categories on Craigslist
+      x-openweb:
+        permission: read
+        build:
+          stable_id: cl0003
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: craigslist-dom
+          operation: getCategories
+      parameters:
+        - name: city
+          in: query
+          required: false
+          schema:
+            type: string
+            default: sfbay
+          description: City subdomain (e.g. "sfbay", "newyork").
+      responses:
+        '200':
+          description: List of categories with codes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  city:
+                    type: string
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        code:
+                          type: string
+                        section:
+                          type:
+                            - string
+                            - 'null'

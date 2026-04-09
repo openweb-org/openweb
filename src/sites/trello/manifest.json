@@ -1,0 +1,23 @@
+{
+  "name": "trello",
+  "display_name": "Trello",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://trello.com",
+  "description": "Kanban board task management — boards, lists, cards",
+  "requires_auth": true,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 5,
+    "l1_count": 0,
+    "l2_count": 5,
+    "l3_count": 0,
+    "ws_count": 0
+  },
+  "last_verified": "2026-04-09T00:00:00Z",
+  "quarantined": false,
+  "fingerprint": {
+    "response_shape_hash": "",
+    "last_validated": "2026-04-09T00:00:00Z"
+  }
+}

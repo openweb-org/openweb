@@ -1,0 +1,9 @@
+{
+  "operation_id": "getQuote",
+  "cases": [
+    {
+      "input": { "id": 1 },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

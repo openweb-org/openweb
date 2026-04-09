@@ -1,0 +1,15 @@
+{
+  "operation_id": "getCast",
+  "cases": [
+    {
+      "input": {
+        "imdbId": "tt0111161"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true,
+        "has_fields": ["imdbId", "title", "credits", "actors", "directors"]
+      }
+    }
+  ]
+}

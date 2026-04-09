@@ -1,0 +1,17 @@
+{
+  "name": "imdb",
+  "display_name": "IMDB",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.imdb.com",
+  "description": "IMDB — search titles, detail, ratings, and cast via SSR extraction",
+  "requires_auth": false,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 4,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 4,
+    "ws_count": 0
+  }
+}

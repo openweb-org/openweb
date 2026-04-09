@@ -5,9 +5,9 @@ export function parseResponseBody(text: string, contentType: string | null, stat
   // 204 No Content or empty body — return null
   if (!text || status === 204) return null
 
-  // Binary content types (protobuf, octet-stream) — return raw text
+  // Non-JSON content types — return raw text
   const ct = contentType ?? ''
-  if (ct.includes('octet-stream') || ct.includes('protobuf')) {
+  if (ct.includes('octet-stream') || ct.includes('protobuf') || ct.includes('xml') || ct.includes('html')) {
     return text
   }
 

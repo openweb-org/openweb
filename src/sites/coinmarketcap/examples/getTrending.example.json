@@ -1,0 +1,9 @@
+{
+  "operation_id": "getTrending",
+  "cases": [
+    {
+      "input": { "limit": 10 },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

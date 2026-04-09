@@ -9,9 +9,22 @@ Travel review and booking platform. Archetype: Travel. Adapter-only site — all
 1. `searchLocation(query)` → pick location → `geoId`, `locationSlug`
 2. `searchHotels(geoId, location)` → hotel list with names, ratings, addresses
 
+### Get hotel detail
+1. `searchLocation(query)` → `geoId`
+2. `searchHotels(geoId, location)` → pick hotel → extract `locationId` and `slug` from URL
+3. `getHotelDetail(geoId, locationId, slug)` → name, rating, amenities, star rating, price range, check-in/out
+
+### Search restaurants in a city
+1. `searchLocation(query)` → pick location → `geoId`, `locationSlug`
+2. `searchRestaurants(geoId, location)` → restaurant list with names, ratings, cuisine, price range
+
 ### Get restaurant detail
 1. `searchLocation(query)` → `geoId`
 2. `getRestaurant(geoId, locationId, slug)` → name, cuisine, rating, hours, address, menu URL
+
+### Get attraction detail
+1. `searchLocation(query)` → `geoId`
+2. `getAttractionDetail(geoId, locationId, slug)` → name, rating, description, hours, address
 
 ### Read attraction reviews
 1. `searchLocation(query)` → `geoId`
@@ -21,9 +34,12 @@ Travel review and booking platform. Archetype: Travel. Adapter-only site — all
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchLocation | find geoId for a city/region | query | geoId, locationSlug, type | entry point; uses /Search URL |
+| searchLocation | find geoId for a city/region | query | geoId, locationSlug, type | entry point; uses TypeAheadJson API |
 | searchHotels | list hotels in a city | geoId ← searchLocation, location ← locationSlug | name, rating, reviewCount, priceRange, address | LD+JSON `ItemList`/`Hotel`/`LodgingBusiness` + DOM fallback |
+| getHotelDetail | hotel detail page | geoId ← searchLocation, locationId, slug | name, rating, amenities, starRating, priceRange, checkin/out | LD+JSON `Hotel`/`LodgingBusiness` |
+| searchRestaurants | list restaurants in a city | geoId ← searchLocation, location ← locationSlug | name, rating, cuisine, priceRange, address | LD+JSON `ItemList`/`Restaurant` + DOM fallback |
 | getRestaurant | restaurant detail | geoId ← searchLocation, locationId, slug | name, cuisine, rating, reviewCount, hours, menuUrl | LD+JSON `Restaurant`/`FoodEstablishment`/`LocalBusiness` |
+| getAttractionDetail | attraction detail page | geoId ← searchLocation, locationId, slug | name, description, rating, hours, address | LD+JSON `TouristAttraction`/`LocalBusiness` |
 | getAttractionReviews | attraction info + reviews | geoId ← searchLocation, locationId, slug | name, rating, reviewCount, reviews[] | LD+JSON + DOM `[data-reviewid]`/`[data-test-target]` |
 
 **Parameter format:**
@@ -40,8 +56,17 @@ openweb tripadvisor exec searchLocation '{"query":"Tokyo"}'
 # Search hotels (use geoId and locationSlug from searchLocation)
 openweb tripadvisor exec searchHotels '{"geoId":"298184","location":"Tokyo_Tokyo_Prefecture_Kanto"}'
 
+# Get hotel detail
+openweb tripadvisor exec getHotelDetail '{"geoId":"60763","locationId":"93450","slug":"The_Plaza-New_York_City_New_York"}'
+
+# Search restaurants
+openweb tripadvisor exec searchRestaurants '{"geoId":"60763","location":"New_York_City_New_York"}'
+
 # Get restaurant detail
 openweb tripadvisor exec getRestaurant '{"geoId":"60763","locationId":"457808","slug":"Le_Bernardin-New_York_City_New_York"}'
+
+# Get attraction detail
+openweb tripadvisor exec getAttractionDetail '{"geoId":"60763","locationId":"104365","slug":"Statue_of_Liberty-New_York_City_New_York"}'
 
 # Get attraction reviews
 openweb tripadvisor exec getAttractionReviews '{"geoId":"60763","locationId":"104365","slug":"Statue_of_Liberty-New_York_City_New_York"}'
@@ -54,8 +79,11 @@ openweb tripadvisor exec getAttractionReviews '{"geoId":"60763","locationId":"10
 ## API Architecture
 TripAdvisor embeds rich LD+JSON structured data in SSR HTML pages:
 - Hotel search pages: `ItemList` with `Hotel` items (name, rating, address, priceRange)
+- Hotel detail pages: `Hotel`/`LodgingBusiness` (name, rating, amenities, starRating, checkin/out)
+- Restaurant search pages: `ItemList` with `Restaurant` items (name, cuisine, rating, priceRange)
 - Restaurant detail pages: `FoodEstablishment` (name, cuisine, hours, rating, address)
-- Attraction detail pages: `LocalBusiness` (name, rating, address) + DOM review cards
+- Attraction detail pages: `TouristAttraction`/`LocalBusiness` (name, rating, description, hours, address)
+- Attraction review pages: `LocalBusiness` (name, rating, address) + DOM review cards
 - DataDome bot protection blocks all direct HTTP/fetch — requires real browser
 
 ## Auth
@@ -65,9 +93,12 @@ No auth required. All operations read public data.
 Page transport (real Chrome via CDP). DataDome blocks node transport entirely.
 
 ## Extraction
-- **searchLocation**: `/Search?q=...` page → parse geoId and slug from result links
+- **searchLocation**: TypeAheadJson API via `page.evaluate(fetch)` → parse geoId and slug from results
 - **searchHotels**: LD+JSON `ItemList` → `itemListElement[].item` (type `Hotel`/`LodgingBusiness`), DOM `[data-automation="hotel-card-title"]` fallback
+- **getHotelDetail**: LD+JSON `Hotel`/`LodgingBusiness` from `<script type="application/ld+json">` — amenityFeature, starRating, checkinTime
+- **searchRestaurants**: LD+JSON `ItemList` → `itemListElement[].item` (type `Restaurant`), DOM `a[href*="Restaurant_Review"]` fallback
 - **getRestaurant**: LD+JSON `Restaurant`/`FoodEstablishment`/`LocalBusiness` from `<script type="application/ld+json">`
+- **getAttractionDetail**: LD+JSON `TouristAttraction`/`LocalBusiness` — description, openingHoursSpecification
 - **getAttractionReviews**: LD+JSON for attraction info + DOM reviews via `[data-reviewid]`, `[data-test-target="review-title"]`, `[data-automation*="reviewText"]`
 
 ## Known Issues

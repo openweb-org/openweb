@@ -1,0 +1,349 @@
+openapi: '3.1.0'
+info:
+  title: BBC News
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://www.bbc.com
+    x-openweb:
+      transport: page
+paths:
+  /news:
+    get:
+      operationId: getHeadlines
+      summary: Get top BBC News headlines — title, description, url, topic, timestamp
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bbc0001
+          signature_id: bbc0001s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          page_url: /news
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return { count: 0, items: [] };
+              const data = JSON.parse(el.textContent);
+              const pp = data.props?.pageProps || {};
+              const pageData = pp.page || {};
+              const mainKey = Object.keys(pageData)[0];
+              const section = pageData[mainKey];
+              if (!section?.sections) return { count: 0, items: [] };
+              const seen = new Set();
+              const items = [];
+              for (const sec of section.sections) {
+                if (sec.type === 'advertisement') continue;
+                for (const item of (sec.content || [])) {
+                  if (!item.title || seen.has(item.id)) continue;
+                  seen.add(item.id);
+                  items.push({
+                    title: item.title,
+                    description: item.description || null,
+                    url: item.href || null,
+                    topic: item.metadata?.topics?.[0] || null,
+                    contentType: item.metadata?.contentType || null,
+                    lastUpdated: item.metadata?.lastUpdated || null,
+                    isLive: item.isLiveNow || false,
+                  });
+                }
+              }
+              return { count: items.length, items };
+            })()
+      parameters: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, items]
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [title]
+                      properties:
+                        title:
+                          type: string
+                        description:
+                          type: [string, 'null']
+                        url:
+                          type: [string, 'null']
+                          description: Relative URL path (e.g. /news/articles/c62l597wl0yo).
+                        topic:
+                          type: [string, 'null']
+                          description: Primary topic name.
+                        contentType:
+                          type: [string, 'null']
+                          description: Content type — article, live, video, etc.
+                        lastUpdated:
+                          type: [number, 'null']
+                          description: Unix timestamp in milliseconds.
+                        isLive:
+                          type: boolean
+  /news/articles/{articleId}:
+    get:
+      operationId: getArticle
+      summary: Get a BBC News article — title, body text, author, published date, topics
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bbc0002
+          signature_id: bbc0002s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          page_url: /news/articles/{articleId}
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return null;
+              const data = JSON.parse(el.textContent);
+              const pp = data.props?.pageProps || {};
+              const pageData = pp.page || {};
+              const mainKey = Object.keys(pageData)[0];
+              const article = pageData[mainKey];
+              if (!article?.contents) return null;
+              function findParagraphs(obj) {
+                const out = [];
+                if (!obj || typeof obj !== 'object') return out;
+                if (Array.isArray(obj)) { for (const i of obj) out.push(...findParagraphs(i)); return out; }
+                if (obj.type === 'paragraph' && obj.model?.text) { out.push(obj.model.text); return out; }
+                if (obj.model) out.push(...findParagraphs(obj.model));
+                if (obj.blocks) out.push(...findParagraphs(obj.blocks));
+                return out;
+              }
+              let headline = '', byline = '', timestamp = null;
+              const paragraphs = [];
+              for (const block of article.contents) {
+                const t = block.type;
+                if (t === 'headline') { const p = findParagraphs(block); if (p.length) headline = p[0]; }
+                else if (t === 'byline') { const p = findParagraphs(block); byline = p.join(', '); }
+                else if (t === 'timestamp') timestamp = block.model?.timestamp || null;
+                else if (t === 'text') paragraphs.push(...findParagraphs(block));
+              }
+              return {
+                title: headline,
+                byline: byline || null,
+                publishedAt: timestamp,
+                body: paragraphs.join('\n\n'),
+                topics: (article.topics || []).map(t => ({ title: t.title, url: t.url })),
+              };
+            })()
+      parameters:
+        - name: articleId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Article ID from the URL path (e.g. c62l597wl0yo).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [title, body]
+                properties:
+                  title:
+                    type: string
+                  byline:
+                    type: [string, 'null']
+                    description: Author name and role.
+                  publishedAt:
+                    type: [number, 'null']
+                    description: Unix timestamp in milliseconds.
+                  body:
+                    type: string
+                    description: Full article text with paragraphs separated by double newlines.
+                  topics:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        url:
+                          type: [string, 'null']
+  /search:
+    get:
+      operationId: searchArticles
+      summary: Search BBC for articles — title, description, url
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bbc0003
+          signature_id: bbc0003s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return { page: 0, pageSize: 0, total: 0, results: [] };
+              const data = JSON.parse(el.textContent);
+              const pp = data.props?.pageProps || {};
+              const pageData = pp.page || {};
+              const mainKey = Object.keys(pageData)[0];
+              const search = pageData[mainKey];
+              if (!search?.results) return { page: 0, pageSize: 0, total: 0, results: [] };
+              return {
+                page: search.page || 0,
+                pageSize: search.pageSize || 0,
+                total: search.total || 0,
+                results: search.results.filter(r => r.title).map(r => ({
+                  title: r.title,
+                  description: r.description || null,
+                  url: r.href || null,
+                  contentType: r.metadata?.contentType || null,
+                  lastUpdated: r.metadata?.lastUpdated || null,
+                })),
+              };
+            })()
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number (1-indexed).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results]
+                properties:
+                  page:
+                    type: integer
+                  pageSize:
+                    type: integer
+                  total:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: [string, 'null']
+                        description:
+                          type: [string, 'null']
+                        url:
+                          type: [string, 'null']
+                        contentType:
+                          type: [string, 'null']
+                        lastUpdated:
+                          type: [number, 'null']
+                          description: Unix timestamp in milliseconds.
+  /news/{topic}:
+    get:
+      operationId: getTopicFeed
+      summary: Get BBC News articles for a topic — title, description, url, timestamp
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: bbc0004
+          signature_id: bbc0004s
+          tool_version: 1
+          signals:
+            - next_data
+        extraction:
+          type: page_global_data
+          page_url: /news/{topic}
+          expression: |
+            (() => {
+              const el = document.getElementById('__NEXT_DATA__');
+              if (!el) return { count: 0, items: [] };
+              const data = JSON.parse(el.textContent);
+              const pp = data.props?.pageProps || {};
+              const pageData = pp.page || {};
+              const mainKey = Object.keys(pageData)[0];
+              const section = pageData[mainKey];
+              if (!section?.sections) return { count: 0, items: [] };
+              const seen = new Set();
+              const items = [];
+              for (const sec of section.sections) {
+                if (sec.type === 'advertisement') continue;
+                for (const item of (sec.content || [])) {
+                  if (!item.title || seen.has(item.id)) continue;
+                  seen.add(item.id);
+                  items.push({
+                    title: item.title,
+                    description: item.description || null,
+                    url: item.href || null,
+                    topic: item.metadata?.topics?.[0] || null,
+                    contentType: item.metadata?.contentType || null,
+                    lastUpdated: item.metadata?.lastUpdated || null,
+                  });
+                }
+              }
+              return { count: items.length, items };
+            })()
+      parameters:
+        - name: topic
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [world, business, innovation, culture, arts, travel]
+          description: Topic slug. Common topics — world, business, innovation, culture, arts, travel.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, items]
+                properties:
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [title]
+                      properties:
+                        title:
+                          type: string
+                        description:
+                          type: [string, 'null']
+                        url:
+                          type: [string, 'null']
+                        topic:
+                          type: [string, 'null']
+                        contentType:
+                          type: [string, 'null']
+                        lastUpdated:
+                          type: [number, 'null']
+                          description: Unix timestamp in milliseconds.

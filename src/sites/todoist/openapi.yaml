@@ -1,0 +1,264 @@
+openapi: "3.1.0"
+info:
+  title: Todoist
+  version: "1.0.0"
+  x-openweb:
+    spec_version: "2.0"
+    compiled_at: "2026-04-09T00:00:00.000Z"
+    requires_auth: true
+servers:
+  - url: https://app.todoist.com
+    x-openweb:
+      transport: page
+      auth:
+        type: cookie_session
+paths:
+  /todoist/projects:
+    get:
+      operationId: getProjects
+      summary: "List all projects — id, name, color, is_favorite, is_inbox, view_style"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: todoist_getProjects_v1
+          tool_version: 2
+        adapter:
+          name: todoist-api
+          operation: getProjects
+      parameters: []
+      responses:
+        "200":
+          description: List of user projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    color:
+                      type: string
+                    parent_id:
+                      type: string
+                      nullable: true
+                    order:
+                      type: integer
+                    comment_count:
+                      type: integer
+                    is_shared:
+                      type: boolean
+                    is_favorite:
+                      type: boolean
+                    is_inbox_project:
+                      type: boolean
+                    view_style:
+                      type: string
+                      description: "View style: 'list' or 'board'"
+                    url:
+                      type: string
+
+  /todoist/tasks:
+    get:
+      operationId: getTasks
+      summary: "Get tasks in a project — id, content, description, due date, priority, labels, is_completed"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: todoist_getTasks_v1
+          tool_version: 2
+        adapter:
+          name: todoist-api
+          operation: getTasks
+      parameters:
+        - name: project_id
+          in: query
+          required: false
+          description: "Project ID to filter tasks (from getProjects). Omit for all tasks."
+          schema:
+            type: string
+        - name: label
+          in: query
+          required: false
+          description: "Filter by label name"
+          schema:
+            type: string
+        - name: filter
+          in: query
+          required: false
+          description: "Todoist filter expression (e.g., 'today', 'overdue', 'priority 1')"
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    content:
+                      type: string
+                      description: "Task title"
+                    description:
+                      type: string
+                    project_id:
+                      type: string
+                    section_id:
+                      type: string
+                      nullable: true
+                    parent_id:
+                      type: string
+                      nullable: true
+                    order:
+                      type: integer
+                    priority:
+                      type: integer
+                      description: "1 (normal) to 4 (urgent)"
+                    due:
+                      type: object
+                      nullable: true
+                      properties:
+                        date:
+                          type: string
+                          description: "Due date (YYYY-MM-DD)"
+                        string:
+                          type: string
+                          description: "Human-readable due string"
+                        datetime:
+                          type: string
+                          nullable: true
+                          description: "Due datetime (ISO 8601) if time is set"
+                        is_recurring:
+                          type: boolean
+                    labels:
+                      type: array
+                      items:
+                        type: string
+                    comment_count:
+                      type: integer
+                    is_completed:
+                      type: boolean
+                    creator_id:
+                      type: string
+                    created_at:
+                      type: string
+                    url:
+                      type: string
+
+  /todoist/tasks/create:
+    post:
+      operationId: createTask
+      summary: "Create a new task — returns created task with id, content, due, priority, labels"
+      x-openweb:
+        permission: write
+        build:
+          stable_id: todoist_createTask_v1
+          tool_version: 2
+        adapter:
+          name: todoist-api
+          operation: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  description: "Task title text"
+                description:
+                  type: string
+                  description: "Markdown-formatted task description"
+                project_id:
+                  type: string
+                  description: "Target project ID (from getProjects). Defaults to Inbox."
+                due_string:
+                  type: string
+                  description: "Natural-language due date (e.g., 'tomorrow', 'every friday', 'Jan 25')"
+                due_date:
+                  type: string
+                  description: "Specific due date in YYYY-MM-DD format"
+                priority:
+                  type: integer
+                  description: "1 (normal) to 4 (urgent)"
+                labels:
+                  type: array
+                  items:
+                    type: string
+                  description: "Label names to attach"
+      responses:
+        "200":
+          description: Created task
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  content:
+                    type: string
+                  description:
+                    type: string
+                  project_id:
+                    type: string
+                  priority:
+                    type: integer
+                  due:
+                    type: object
+                    nullable: true
+                    properties:
+                      date:
+                        type: string
+                      string:
+                        type: string
+                      datetime:
+                        type: string
+                        nullable: true
+                      is_recurring:
+                        type: boolean
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                  url:
+                    type: string
+
+  /todoist/tasks/complete:
+    post:
+      operationId: completeTask
+      summary: "Mark a task as complete — closes the task by ID"
+      x-openweb:
+        permission: write
+        build:
+          stable_id: todoist_completeTask_v1
+          tool_version: 2
+        adapter:
+          name: todoist-api
+          operation: completeTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - task_id
+              properties:
+                task_id:
+                  type: string
+                  description: "Task ID to complete (from getTasks)"
+      responses:
+        "204":
+          description: Task completed successfully (empty response)

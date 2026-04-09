@@ -1,0 +1,15 @@
+{
+  "operation_id": "getZestimate",
+  "cases": [
+    {
+      "input": {
+        "zpid": "2077416986",
+        "slug": "_"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "operation_id": "getSellerProfile",
+  "cases": [{
+    "input": { "username": "freegeekportland" },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

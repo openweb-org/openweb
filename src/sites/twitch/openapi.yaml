@@ -413,3 +413,343 @@ paths:
                                     properties:
                                       localizedName:
                                         type: string
+
+  /gql~getTopStreams:
+    post:
+      operationId: getTopStreams
+      summary: Get currently most-watched live streams — streamer names, viewer counts, game names, stream titles
+      x-openweb:
+        permission: read
+        actual_path: /gql
+        unwrap: data
+        wrap: variables
+        graphql_query: |-
+          query($limit: Int) {
+            streams(first: $limit) {
+              edges {
+                node {
+                  id
+                  viewersCount
+                  broadcaster {
+                    id
+                    displayName
+                    login
+                    broadcastSettings {
+                      title
+                    }
+                  }
+                  game {
+                    id
+                    name
+                  }
+                  type
+                }
+              }
+            }
+          }
+        build:
+          verified: false
+          stable_id: tw0005
+          signature_id: tw0005s
+          tool_version: 2
+      parameters:
+        - name: Client-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: kimne78kx3ncx6brgo4mv6wki5h1ko
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            const: text/plain;charset=UTF-8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit:
+                  type: integer
+                  default: 25
+                  description: Number of streams to return (default 25).
+      responses:
+        '200':
+          description: Top live streams sorted by viewer count.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  streams:
+                    type: object
+                    properties:
+                      edges:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            node:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                viewersCount:
+                                  type: integer
+                                broadcaster:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: string
+                                    displayName:
+                                      type: string
+                                    login:
+                                      type: string
+                                    broadcastSettings:
+                                      type: object
+                                      properties:
+                                        title:
+                                          type: string
+                                game:
+                                  type: [object, 'null']
+                                  properties:
+                                    id:
+                                      type: string
+                                    name:
+                                      type: string
+                                type:
+                                  type: string
+
+  /gql~getClips:
+    post:
+      operationId: getClips
+      summary: Get popular clips for a channel — clip titles, view counts, durations, game names
+      x-openweb:
+        permission: read
+        actual_path: /gql
+        unwrap: data
+        wrap: variables
+        build:
+          verified: false
+          stable_id: tw0006
+          signature_id: tw0006s
+          tool_version: 2
+      parameters:
+        - name: Client-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: kimne78kx3ncx6brgo4mv6wki5h1ko
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            const: text/plain;charset=UTF-8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+              properties:
+                operationName:
+                  type: string
+                  const: ClipsCards__User
+                login:
+                  type: string
+                  description: Channel login name (e.g. "shroud", "pokimane").
+                limit:
+                  type: integer
+                  default: 20
+                  description: Number of clips to return (default 20).
+                criteria:
+                  type: object
+                  default:
+                    filter: LAST_WEEK
+                  properties:
+                    filter:
+                      type: string
+                      description: 'Time filter: LAST_DAY, LAST_WEEK, LAST_MONTH, or ALL_TIME.'
+                      default: LAST_WEEK
+                cursor:
+                  type: [string, 'null']
+                  default: null
+                  description: Pagination cursor from previous response.
+                extensions:
+                  type: object
+                  const:
+                    persistedQuery:
+                      version: 1
+                      sha256Hash: 90c33f5e6465122fba8f9371e2a97076f9ed06c6fed3788d002ab9eba8f91d88
+      responses:
+        '200':
+          description: Clips for the specified channel.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: [object, 'null']
+                    properties:
+                      clips:
+                        type: object
+                        properties:
+                          edges:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                cursor:
+                                  type: [string, 'null']
+                                node:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: string
+                                    slug:
+                                      type: string
+                                    title:
+                                      type: string
+                                    viewCount:
+                                      type: integer
+                                    createdAt:
+                                      type: string
+                                    durationSeconds:
+                                      type: number
+                                    thumbnailURL:
+                                      type: string
+                                    broadcaster:
+                                      type: object
+                                      properties:
+                                        login:
+                                          type: string
+                                        displayName:
+                                          type: string
+                                    game:
+                                      type: [object, 'null']
+                                      properties:
+                                        name:
+                                          type: string
+
+  /gql~getVideos:
+    post:
+      operationId: getVideos
+      summary: Get past broadcasts and VODs for a channel — video titles, view counts, durations, broadcast types
+      x-openweb:
+        permission: read
+        actual_path: /gql
+        unwrap: data
+        wrap: variables
+        build:
+          verified: false
+          stable_id: tw0007
+          signature_id: tw0007s
+          tool_version: 2
+      parameters:
+        - name: Client-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: kimne78kx3ncx6brgo4mv6wki5h1ko
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            const: text/plain;charset=UTF-8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - channelOwnerLogin
+              properties:
+                operationName:
+                  type: string
+                  const: FilterableVideoTower_Videos
+                channelOwnerLogin:
+                  type: string
+                  description: Channel login name (e.g. "shroud", "pokimane").
+                limit:
+                  type: integer
+                  default: 30
+                  description: Number of videos to return (default 30).
+                broadcastType:
+                  type: [string, 'null']
+                  default: null
+                  description: 'Filter by type: ARCHIVE (past broadcasts), HIGHLIGHT, UPLOAD, or null (all).'
+                videoSort:
+                  type: string
+                  default: TIME
+                  description: 'Sort order: TIME (most recent) or VIEWS (most viewed).'
+                cursor:
+                  type: [string, 'null']
+                  default: null
+                  description: Pagination cursor from previous response.
+                extensions:
+                  type: object
+                  const:
+                    persistedQuery:
+                      version: 1
+                      sha256Hash: 67004f7881e65c297936f32c75246470629557a393788fb5a69d6d9a25a8fd5f
+      responses:
+        '200':
+          description: Videos for the specified channel.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: [object, 'null']
+                    properties:
+                      videos:
+                        type: object
+                        properties:
+                          edges:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                cursor:
+                                  type: string
+                                node:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: string
+                                    title:
+                                      type: string
+                                    viewCount:
+                                      type: integer
+                                    createdAt:
+                                      type: string
+                                    lengthSeconds:
+                                      type: integer
+                                    broadcastType:
+                                      type: string
+                                    previewThumbnailURL:
+                                      type: string
+                                    owner:
+                                      type: object
+                                      properties:
+                                        login:
+                                          type: string
+                                        displayName:
+                                          type: string
+                                    game:
+                                      type: [object, 'null']
+                                      properties:
+                                        name:
+                                          type: string

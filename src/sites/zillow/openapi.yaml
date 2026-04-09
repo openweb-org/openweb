@@ -327,3 +327,286 @@ paths:
                                       type: number
                   requestId:
                     type: integer
+  /homedetails/{slug}/{zpid}:
+    get:
+      operationId: getPropertyDetail
+      summary: >-
+        Get full property details — address, price, beds, baths, sqft, photos,
+        description, Zestimate, tax history, days on Zillow
+      x-openweb:
+        permission: read
+        build:
+          stable_id: zw_detail_v1
+          tool_version: 1
+        adapter:
+          name: zillow-detail
+          operation: getPropertyDetail
+      parameters:
+        - name: zpid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Zillow Property ID (numeric string, e.g. "2077416986")
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            default: _
+          description: URL slug (e.g. "123-Main-St-Seattle-WA-98101"). Use "_" if unknown.
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: [object, "null"]
+                properties:
+                  zpid:
+                    type: [integer, "null"]
+                    description: Zillow property ID
+                  address:
+                    type: [object, "null"]
+                    properties:
+                      streetAddress:
+                        type: [string, "null"]
+                      city:
+                        type: [string, "null"]
+                      state:
+                        type: [string, "null"]
+                      zipcode:
+                        type: [string, "null"]
+                  price:
+                    type: [integer, "null"]
+                    description: Current listing or last sold price
+                  bedrooms:
+                    type: [integer, "null"]
+                  bathrooms:
+                    type: [number, "null"]
+                  livingArea:
+                    type: [integer, "null"]
+                    description: Living area in sqft
+                  livingAreaUnits:
+                    type: [string, "null"]
+                  lotSize:
+                    type: [number, "null"]
+                    description: Lot size
+                  homeType:
+                    type: [string, "null"]
+                    description: "SINGLE_FAMILY, CONDO, TOWNHOUSE, MULTI_FAMILY, etc."
+                  homeStatus:
+                    type: [string, "null"]
+                    description: "FOR_SALE, RECENTLY_SOLD, etc."
+                  yearBuilt:
+                    type: [integer, "null"]
+                  description:
+                    type: [string, "null"]
+                    description: Property listing description
+                  zestimate:
+                    type: [integer, "null"]
+                    description: Zillow estimated home value
+                  rentZestimate:
+                    type: [integer, "null"]
+                    description: Zillow estimated rental value
+                  taxAssessedValue:
+                    type: [integer, "null"]
+                  daysOnZillow:
+                    type: [integer, "null"]
+                  pageViewCount:
+                    type: [integer, "null"]
+                  favoriteCount:
+                    type: [integer, "null"]
+                  photos:
+                    type: [array, "null"]
+                    items:
+                      type: [object, string, "null"]
+                    description: Up to 10 photo URLs or mixed-source objects
+                  url:
+                    type: [string, "null"]
+                    description: Canonical Zillow property URL
+  /zestimate/{slug}/{zpid}:
+    get:
+      operationId: getZestimate
+      summary: >-
+        Get Zillow's home value estimate (Zestimate) — current value, rent
+        estimate, confidence range, tax assessment, recent history
+      x-openweb:
+        permission: read
+        build:
+          stable_id: zw_zestimate_v1
+          tool_version: 1
+        adapter:
+          name: zillow-detail
+          operation: getZestimate
+      parameters:
+        - name: zpid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Zillow Property ID (numeric string)
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            default: _
+          description: URL slug. Use "_" if unknown.
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: [object, "null"]
+                properties:
+                  zpid:
+                    type: [integer, "null"]
+                  address:
+                    type: [object, "null"]
+                    properties:
+                      streetAddress:
+                        type: [string, "null"]
+                      city:
+                        type: [string, "null"]
+                      state:
+                        type: [string, "null"]
+                      zipcode:
+                        type: [string, "null"]
+                  zestimate:
+                    type: [integer, "null"]
+                    description: Current Zestimate value in dollars
+                  rentZestimate:
+                    type: [integer, "null"]
+                    description: Estimated monthly rent
+                  zestimateLowPercent:
+                    type: [number, "null"]
+                    description: Low-end confidence percentage
+                  zestimateHighPercent:
+                    type: [number, "null"]
+                    description: High-end confidence percentage
+                  taxAssessedValue:
+                    type: [integer, "null"]
+                  taxAssessedYear:
+                    type: [integer, "null"]
+                  price:
+                    type: [integer, "null"]
+                    description: Current listing price for comparison
+                  homeType:
+                    type: [string, "null"]
+                  livingArea:
+                    type: [integer, "null"]
+                  bedrooms:
+                    type: [integer, "null"]
+                  bathrooms:
+                    type: [number, "null"]
+                  zestimateHistory:
+                    type: [array, "null"]
+                    description: Up to 12 recent Zestimate data points
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: [string, "null"]
+                        value:
+                          type: [number, "null"]
+  /neighborhood/{slug}/{zpid}:
+    get:
+      operationId: getNeighborhood
+      summary: >-
+        Get neighborhood data — schools, walk/transit/bike scores, nearby homes
+      x-openweb:
+        permission: read
+        build:
+          stable_id: zw_neighborhood_v1
+          tool_version: 1
+        adapter:
+          name: zillow-detail
+          operation: getNeighborhood
+      parameters:
+        - name: zpid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Zillow Property ID (numeric string)
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            default: _
+          description: URL slug. Use "_" if unknown.
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: [object, "null"]
+                properties:
+                  zpid:
+                    type: [integer, "null"]
+                  address:
+                    type: [object, "null"]
+                    properties:
+                      streetAddress:
+                        type: [string, "null"]
+                      city:
+                        type: [string, "null"]
+                      state:
+                        type: [string, "null"]
+                      zipcode:
+                        type: [string, "null"]
+                  walkScore:
+                    type: [integer, "null"]
+                    description: Walk Score (0-100)
+                  transitScore:
+                    type: [integer, "null"]
+                    description: Transit Score (0-100)
+                  bikeScore:
+                    type: [integer, "null"]
+                    description: Bike Score (0-100)
+                  schools:
+                    type: [array, "null"]
+                    description: Nearby schools with ratings
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: [string, "null"]
+                        rating:
+                          type: [integer, "null"]
+                          description: GreatSchools rating (1-10)
+                        level:
+                          type: [string, "null"]
+                          description: "elementary, middle, high"
+                        type:
+                          type: [string, "null"]
+                          description: "public, private, charter"
+                        distance:
+                          type: [number, "null"]
+                          description: Distance in miles
+                        link:
+                          type: [string, "null"]
+                  nearbyHomes:
+                    type: [array, "null"]
+                    description: Comparable nearby properties
+                    items:
+                      type: object
+                      properties:
+                        zpid:
+                          type: [integer, "null"]
+                        address:
+                          type: [string, "null"]
+                        price:
+                          type: [integer, "null"]
+                        bedrooms:
+                          type: [integer, "null"]
+                        bathrooms:
+                          type: [number, "null"]
+                        livingArea:
+                          type: [integer, "null"]
+                        homeType:
+                          type: [string, "null"]

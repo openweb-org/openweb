@@ -1,0 +1,14 @@
+{
+  "operation_id": "getBook",
+  "cases": [
+    {
+      "input": {
+        "bookId": "44767458-dune"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

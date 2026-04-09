@@ -1,0 +1,13 @@
+{
+  "operation_id": "getArticle",
+  "cases": [
+    {
+      "input": {
+        "ids": "technology/2025/dec/10/police-facial-recognition-technology-bias"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

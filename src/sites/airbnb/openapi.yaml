@@ -185,3 +185,179 @@ paths:
                               type: [object, 'null']
                       metadata:
                         type: object
+
+  /rooms/{id}/reviews:
+    get:
+      operationId: getListingReviews
+      summary: Get reviews for a listing — ratings, reviewer info, review text
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ab0003
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: airbnb-web
+          operation: getListingReviews
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Listing ID from searchListings results.
+      responses:
+        '200':
+          description: Reviews with text, ratings, and reviewer info from GraphQL interception.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  listingId:
+                    type: string
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        comments:
+                          type: [string, 'null']
+                        rating:
+                          type: [integer, 'null']
+                        createdAt:
+                          type: [string, 'null']
+                        localizedDate:
+                          type: [string, 'null']
+                        reviewer:
+                          type: [object, 'null']
+                        language:
+                          type: [string, 'null']
+                        highlightType:
+                          type: [string, 'null']
+                        reviewHighlight:
+                          type: [string, 'null']
+                  reviewsCount:
+                    type: integer
+                  overallRating:
+                    type: [number, 'null']
+                  ratings:
+                    type: [array, 'null']
+                    items:
+                      type: object
+
+  /rooms/{id}/availability:
+    get:
+      operationId: getListingAvailability
+      summary: Get availability, pricing, and booking info for a listing
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ab0004
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: airbnb-web
+          operation: getListingAvailability
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Listing ID from searchListings results.
+        - name: check_in
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-in date in YYYY-MM-DD format.
+        - name: check_out
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Check-out date in YYYY-MM-DD format.
+      responses:
+        '200':
+          description: Calendar availability data from GraphQL interception.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  listingId:
+                    type: string
+                  checkIn:
+                    type: [string, 'null']
+                  checkOut:
+                    type: [string, 'null']
+                  calendarMonths:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        month:
+                          type: integer
+                        year:
+                          type: integer
+                        days:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              calendarDate:
+                                type: string
+                              available:
+                                type: boolean
+                              minNights:
+                                type: [integer, 'null']
+                              maxNights:
+                                type: [integer, 'null']
+                              availableForCheckin:
+                                type: boolean
+                              availableForCheckout:
+                                type: boolean
+                              price:
+                                type: [object, 'null']
+
+  /users/{hostId}:
+    get:
+      operationId: getHostProfile
+      summary: Get host profile — superhost status, response rate, about, listings
+      x-openweb:
+        permission: read
+        build:
+          stable_id: ab0005
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: airbnb-web
+          operation: getHostProfile
+      parameters:
+        - name: hostId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Host user ID (from listing detail host section).
+      responses:
+        '200':
+          description: Host profile data from SSR extraction.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hostId:
+                    type: string
+                  profile:
+                    type: object

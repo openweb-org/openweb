@@ -1,0 +1,14 @@
+{
+  "operation_id": "getPaper",
+  "cases": [
+    {
+      "input": {
+        "id_list": "1706.03762"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

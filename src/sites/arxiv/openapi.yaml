@@ -1,0 +1,123 @@
+openapi: '3.1.0'
+info:
+  title: arXiv
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://export.arxiv.org
+    x-openweb:
+      transport: node
+paths:
+  /api/query:
+    get:
+      operationId: searchPapers
+      summary: Search arXiv papers by keyword, author, or category — returns titles, authors, abstracts, categories, links
+      x-openweb:
+        permission: read
+        build:
+          stable_id: arxiv0001
+          tool_version: 1
+      parameters:
+        - name: search_query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Search query using arXiv query syntax. Prefix with field: all, ti (title), au (author), abs (abstract), cat (category). Examples: "all:transformer", "au:hinton", "cat:cs.AI".'
+          example: 'all:transformer'
+        - name: max_results
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Maximum number of results to return (max 100).
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Offset for pagination.
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [relevance, lastUpdatedDate, submittedDate]
+          description: Sort order for results.
+        - name: sortOrder
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ascending, descending]
+          description: Sort direction.
+      responses:
+        '200':
+          description: Atom XML feed containing matching papers with metadata.
+          content:
+            application/xml:
+              schema:
+                type: string
+                description: Atom XML feed. Each <entry> contains id, title, summary (abstract), author(s), published, updated, category, and links to abstract page and PDF.
+  /query:
+    get:
+      operationId: getPaper
+      summary: Get paper metadata by arXiv ID — title, authors, abstract, categories, PDF link
+      servers:
+        - url: https://export.arxiv.org/api
+          x-openweb:
+            transport: node
+      x-openweb:
+        permission: read
+        build:
+          stable_id: arxiv0002
+          tool_version: 1
+      parameters:
+        - name: id_list
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Comma-separated arXiv paper IDs. Examples: "2301.07041", "1706.03762", "2301.07041,1706.03762".'
+          example: '1706.03762'
+      responses:
+        '200':
+          description: Atom XML feed containing metadata for the requested paper(s).
+          content:
+            application/xml:
+              schema:
+                type: string
+                description: Atom XML with <entry> elements. Each entry has id, title, summary (abstract), author/name, published, updated, arxiv:primary_category, and link elements (rel=alternate for abstract, title=pdf for PDF).
+  /abs/{arxiv_id}:
+    get:
+      operationId: getAbstract
+      summary: Get the abstract page for a paper — title, authors, abstract text, categories, submission dates
+      servers:
+        - url: https://arxiv.org
+          x-openweb:
+            transport: node
+      x-openweb:
+        permission: read
+        build:
+          stable_id: arxiv0003
+          tool_version: 1
+      parameters:
+        - name: arxiv_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 'arXiv paper ID (e.g. "1706.03762" or "2301.07041v2").'
+          example: '1706.03762'
+      responses:
+        '200':
+          description: HTML abstract page containing paper title, authors, abstract, categories, and links.
+          content:
+            text/html:
+              schema:
+                type: string
+                description: HTML page. Key elements include the paper title, author list, abstract text, subject categories, submission/revision dates, and links to PDF and other formats.

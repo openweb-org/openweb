@@ -1,0 +1,9 @@
+{
+  "operation_id": "searchQuestions",
+  "cases": [
+    {
+      "input": { "query": "python programming", "limit": 5 },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

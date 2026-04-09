@@ -14,7 +14,8 @@ Professional networking platform — social media archetype with Voyager REST/Gr
 2. `getNewsStorylines(queryId, variables)` → trending topics, curated news
 
 ### Search people, jobs, or content
-Search is not yet supported — queryIds rotate with LinkedIn deploys and the captured queryId was stale.
+1. `searchJobs(keywords, geoId?, count?, start?)` → job cards with titles, companies, locations
+2. `getJobDetail(jobId)` → full posting with description, requirements, salary
 
 ### Check connections and invitations
 1. `getConnectionsSummary()` → total count, new connections
@@ -38,6 +39,8 @@ Search is not yet supported — queryIds rotate with LinkedIn deploys and the ca
 | getNewsStorylines | trending news | — | topics, articles, industry updates | via GraphQL |
 | getCompany | company page | universalName (URL slug) | name, industry, size, followers | via GraphQL |
 | getMyNetworkNotifications | network updates | — | connection suggestions | |
+| searchJobs | search for jobs | keywords, geoId?, count?, start? | job cards: title, company, location, posting date | via GraphQL |
+| getJobDetail | get job posting details | jobId ← searchJobs or URL | description, requirements, company, salary, applicants | via GraphQL |
 
 ## Quick Start
 
@@ -59,6 +62,12 @@ openweb linkedin exec getInvitations '{"q":"receivedInvitation","count":10,"star
 
 # Get notification cards
 openweb linkedin exec getNotificationCards '{"decorationId":"com.linkedin.voyager.dash.deco.identity.notifications.CardsCollectionWithInjectionsNoPills-24","q":"filterVanityName","count":10}'
+
+# Search for jobs
+openweb linkedin exec searchJobs '{"keywords":"software engineer","geoId":"103644278","count":25}'
+
+# Get job posting details
+openweb linkedin exec getJobDetail '{"jobId":"3945709057"}'
 ```
 
 ---

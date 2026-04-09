@@ -219,6 +219,198 @@ paths:
                     type: object
                     description: FAQs about the property.
 
+  /hotels/{propertyId}/prices:
+    get:
+      operationId: getHotelPrices
+      summary: 'Get hotel prices — daily rate calendar with per-day nightly rates and availability'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: exp0005
+          tool_version: 2
+        adapter:
+          name: expedia-graphql
+          operation: getHotelPrices
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 'Property ID from searchHotels (e.g. "27924").'
+        - name: checkInDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Check-in date (YYYY-MM-DD).
+        - name: checkOutDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Check-out date (YYYY-MM-DD).
+        - name: adults
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 2
+          description: Number of adults per room.
+        - name: rooms
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Number of rooms.
+      responses:
+        '200':
+          description: Daily rate calendar with per-day pricing and availability.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configuration:
+                    type: object
+                    description: Calendar configuration (date range, constraints).
+                  days:
+                    type: array
+                    description: Per-day pricing entries across ~240 days.
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: object
+                          properties:
+                            day:
+                              type: integer
+                            month:
+                              type: integer
+                            year:
+                              type: integer
+                        displayPrice:
+                          type: string
+                          description: 'Formatted nightly rate (e.g. "$616").'
+                        available:
+                          type: boolean
+                          nullable: true
+                          description: Whether the date is available for check-in.
+                        checkinValidity:
+                          type: object
+                          nullable: true
+                          description: Check-in validity constraints for this date.
+                        checkoutValidity:
+                          type: object
+                          nullable: true
+                          description: Check-out validity constraints for this date.
+                  disclaimer:
+                    type: object
+                    nullable: true
+                    description: Pricing disclaimer text.
+                  validationMessage:
+                    type: string
+                    nullable: true
+                    description: Validation message for date selection (e.g. max stay length).
+
+  /hotels/{propertyId}/reviews:
+    get:
+      operationId: getHotelReviews
+      summary: 'Get hotel reviews — guest ratings, review text, reviewer info, overall score breakdown'
+      x-openweb:
+        permission: read
+        build:
+          stable_id: exp0006
+          tool_version: 2
+        adapter:
+          name: expedia-graphql
+          operation: getHotelReviews
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 'Property ID from searchHotels (e.g. "27924").'
+      responses:
+        '200':
+          description: Guest reviews and rating summary for the hotel.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary:
+                    type: object
+                    properties:
+                      overallScoreWithDescriptionA11y:
+                        type: object
+                        description: Overall score with accessibility text.
+                      totalCount:
+                        type: object
+                        description: Total review count with raw value.
+                      cleanliness:
+                        type: string
+                        description: Cleanliness rating.
+                      serviceAndStaff:
+                        type: string
+                        description: Service and staff rating.
+                      hotelCondition:
+                        type: string
+                        description: Hotel condition rating.
+                      roomComfort:
+                        type: string
+                        description: Room comfort rating.
+                  reviews:
+                    type: array
+                    description: Individual guest reviews.
+                    items:
+                      type: object
+                      properties:
+                        contentDirectFeedbackPromptId:
+                          type: string
+                          nullable: true
+                        id:
+                          type: string
+                          description: Review ID.
+                        superlative:
+                          type: string
+                          description: 'Rating label (e.g. "Excellent", "Good").'
+                        locale:
+                          type: string
+                        title:
+                          type: string
+                          description: Review title.
+                        brandType:
+                          type: string
+                        reviewScoreWithDescription:
+                          type: object
+                          description: Score with label and accessibility text.
+                        text:
+                          type: string
+                          description: Full review text.
+                        submissionTime:
+                          type: object
+                          description: Review submission date.
+                        themes:
+                          type: array
+                          nullable: true
+                          description: Tagged review themes (location, cleanliness, etc.).
+                          items:
+                            type: object
+                        reviewAuthorAttribution:
+                          type: object
+                          description: Reviewer info (name, location).
+                        photographsByGuest:
+                          type: array
+                          nullable: true
+                          description: Guest-uploaded photos.
+                          items:
+                            type: object
+
   /flights/search:
     get:
       operationId: searchFlights

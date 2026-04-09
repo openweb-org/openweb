@@ -1,0 +1,352 @@
+openapi: '3.1.0'
+info:
+  title: NPR
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://7s4f1grybg-dsn.algolia.net
+    x-openweb:
+      transport: node
+paths:
+  /1/indexes/nprorg-cds:
+    get:
+      operationId: searchArticles
+      summary: Search NPR articles by keyword — returns title, summary, author, date, image, audio info
+      x-openweb:
+        permission: read
+        unwrap: hits
+        build:
+          stable_id: npr0001
+          tool_version: 1
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (keyword or phrase).
+          example: climate change
+        - name: x-algolia-api-key
+          in: query
+          required: true
+          schema:
+            type: string
+            default: f2f5be631a4287148759373ff4ab5227
+          description: Algolia API key (public, embedded in NPR site).
+        - name: x-algolia-application-id
+          in: query
+          required: true
+          schema:
+            type: string
+            default: 7S4F1GRYBG
+          description: Algolia application ID.
+        - name: filters
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 'type:story'
+          description: 'Algolia filter expression. Default filters to stories only. Use "type:story AND topics:\"Health\"" to filter by topic.'
+        - name: hitsPerPage
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page (max 50).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Zero-indexed page number for pagination.
+      responses:
+        '200':
+          description: Array of matching articles (after hits unwrap).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    objectID:
+                      type: string
+                      description: Unique article ID (e.g. "nx-s1-5777587"). Use with getArticle.
+                    title:
+                      type: string
+                      description: Article headline.
+                    bodyText:
+                      type: string
+                      description: Article summary/teaser text.
+                    url:
+                      type: string
+                      description: Relative URL path on npr.org.
+                    canonicalUrl:
+                      type: string
+                      format: uri
+                      description: Full canonical URL.
+                    displayDate:
+                      type: object
+                      properties:
+                        longDate:
+                          type: string
+                          description: Human-readable date (e.g. "April 09, 2026").
+                        dateTime:
+                          type: string
+                          format: date-time
+                          description: ISO 8601 date-time.
+                    bylines:
+                      type: array
+                      items:
+                        type:
+                          - string
+                          - 'null'
+                      description: Author names.
+                    topics:
+                      type: array
+                      items:
+                        type: string
+                      description: Topic tags (Health, Politics, World, etc.).
+                    image:
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                          format: uri
+                          description: Image URL.
+                        caption:
+                          type: string
+                        credit:
+                          type: string
+                    hasAudio:
+                      type: boolean
+                      description: Whether the article has an audio version.
+                    type:
+                      type: string
+                      description: Content type (story, etc.).
+                  required: [objectID, title, type]
+
+  /1/indexes/nprorg-cds/{objectID}:
+    get:
+      operationId: getArticle
+      summary: Get full NPR article — title, full body text, author, date, topics, image
+      x-openweb:
+        permission: read
+        build:
+          stable_id: npr0002
+          tool_version: 1
+      parameters:
+        - name: objectID
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Article ID from search results objectID field (e.g. "nx-s1-5777587").
+          example: nx-s1-5777587
+        - name: x-algolia-api-key
+          in: query
+          required: true
+          schema:
+            type: string
+            default: f2f5be631a4287148759373ff4ab5227
+          description: Algolia API key (public, embedded in NPR site).
+        - name: x-algolia-application-id
+          in: query
+          required: true
+          schema:
+            type: string
+            default: 7S4F1GRYBG
+          description: Algolia application ID.
+      responses:
+        '200':
+          description: Full article object with complete body text.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  objectID:
+                    type: string
+                    description: Unique article ID.
+                  title:
+                    type: string
+                    description: Article headline.
+                  bodyText:
+                    type: string
+                    description: Full article body as plain text.
+                  url:
+                    type: string
+                    description: Relative URL path on npr.org.
+                  canonicalUrl:
+                    type: string
+                    format: uri
+                    description: Full canonical URL.
+                  displayDate:
+                    type: object
+                    properties:
+                      longDate:
+                        type: string
+                        description: Human-readable date.
+                      dateTime:
+                        type: string
+                        format: date-time
+                        description: ISO 8601 date-time.
+                  bylines:
+                    type: array
+                    items:
+                      type: string
+                    description: Author names.
+                  topics:
+                    type: array
+                    items:
+                      type: string
+                    description: Topic tags.
+                  shows:
+                    type: array
+                    items:
+                      type: string
+                    description: Associated NPR shows.
+                  image:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                        format: uri
+                      caption:
+                        type: string
+                      credit:
+                        type: string
+                  hasAudio:
+                    type: boolean
+                    description: Whether the article has an audio version.
+                  slug:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        description: Section name (e.g. "Health").
+                      url:
+                        type: string
+                        format: uri
+                        description: Section URL.
+                  type:
+                    type: string
+                    description: Content type.
+                required: [objectID, title, type]
+
+  /1/indexes/nprorg-cds?top:
+    get:
+      operationId: getTopStories
+      summary: Get latest NPR top stories / front page headlines
+      x-openweb:
+        permission: read
+        unwrap: hits
+        actual_path: /1/indexes/nprorg-cds
+        build:
+          stable_id: npr0003
+          tool_version: 1
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+            default: ''
+          description: Optional keyword to narrow top stories.
+        - name: x-algolia-api-key
+          in: query
+          required: true
+          schema:
+            type: string
+            default: f2f5be631a4287148759373ff4ab5227
+          description: Algolia API key (public, embedded in NPR site).
+        - name: x-algolia-application-id
+          in: query
+          required: true
+          schema:
+            type: string
+            default: 7S4F1GRYBG
+          description: Algolia application ID.
+        - name: filters
+          in: query
+          required: true
+          schema:
+            type: string
+            default: 'type:story AND topics:"Home Page Top Stories"'
+          description: Filter for top stories. Defaults to homepage stories.
+        - name: hitsPerPage
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of stories to return (max 50).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Zero-indexed page number.
+      responses:
+        '200':
+          description: Array of top stories (after hits unwrap).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    objectID:
+                      type: string
+                      description: Unique article ID. Use with getArticle for full text.
+                    title:
+                      type: string
+                      description: Article headline.
+                    bodyText:
+                      type: string
+                      description: Article summary/teaser text.
+                    url:
+                      type: string
+                      description: Relative URL path on npr.org.
+                    canonicalUrl:
+                      type: string
+                      format: uri
+                    displayDate:
+                      type: object
+                      properties:
+                        longDate:
+                          type: string
+                        dateTime:
+                          type: string
+                          format: date-time
+                    bylines:
+                      type: array
+                      items:
+                        type:
+                          - string
+                          - 'null'
+                    topics:
+                      type: array
+                      items:
+                        type: string
+                    image:
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                          format: uri
+                        caption:
+                          type: string
+                        credit:
+                          type: string
+                    hasAudio:
+                      type: boolean
+                    type:
+                      type: string
+                  required: [objectID, title, type]

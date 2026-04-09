@@ -1,0 +1,12 @@
+{
+  "operation_id": "getReviews",
+  "cases": [
+    {
+      "input": { "restaurantId": 1204381, "page": 1 },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

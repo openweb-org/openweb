@@ -1,3 +1,19 @@
+## 2026-04-09: Add cart operations (addToCart, getCart)
+
+**What changed:**
+- Added addToCart (write op) — navigates to product page, clicks Add to Cart, extracts confirmation with cart count and subtotal
+- Added getCart (read op) — navigates to cart page, extracts items with ASIN, title, price, quantity, image
+- Both operations use adapter lane with page transport (Akamai requires browser)
+- addToCart marked with safety: caution (reversible write)
+- Updated DOC.md with cart workflow, operations table, quick start examples
+- Total operations: 7 (was 5)
+
+**Why:**
+- Cart operations are core e-commerce interactions missing from the initial package
+- addToCart is a safe, reversible write op suitable for agent automation
+
+**Verification:** pending browser verify
+
 ## 2026-04-01: Initial discovery and compilation
 
 **What changed:**

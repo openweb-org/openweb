@@ -1,0 +1,331 @@
+openapi: '3.1.0'
+info:
+  title: Google Scholar
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
+    requires_auth: false
+servers:
+  - url: https://scholar.google.com
+    x-openweb:
+      transport: page
+paths:
+  /scholar:
+    get:
+      operationId: searchPapers
+      summary: Search academic papers by keyword or author — title, authors, citation count, PDF link, snippet
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: gsc0001
+          signature_id: gsc0001s
+          tool_version: 1
+          signals:
+            - extraction_detected
+        extraction:
+          type: page_global_data
+          page_url: /scholar
+          expression: |
+            (() => {
+              const results = document.querySelectorAll('.gs_r.gs_or.gs_scl');
+              const items = [...results].map(r => {
+                const titleEl = r.querySelector('.gs_rt a');
+                const title = titleEl?.textContent?.trim() || '';
+                const url = titleEl?.href || '';
+                const authLine = r.querySelector('.gs_a')?.textContent?.trim() || '';
+                const parts = authLine.split(' - ');
+                const authors = (parts[0] || '').trim();
+                const venueYear = (parts[1] || '').trim();
+                const yearMatch = authLine.match(/,\s*(\d{4})\s*-/);
+                const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
+                const snippet = r.querySelector('.gs_rs')?.textContent?.trim() || '';
+                const flLinks = r.querySelectorAll('.gs_fl.gs_flb a');
+                let citedBy = 0;
+                let cites = null;
+                for (const a of flLinks) {
+                  const t = a.textContent || '';
+                  if (t.startsWith('Cited by')) {
+                    citedBy = parseInt(t.replace('Cited by ', ''), 10) || 0;
+                    const m = a.href.match(/cites=(\d+)/);
+                    cites = m ? m[1] : null;
+                  }
+                }
+                const pdfLink = r.querySelector('.gs_or_ggsm a')?.href || null;
+                const cid = r.getAttribute('data-cid') || '';
+                return { cid, title, url, authors, venueYear, year, snippet, citedBy, cites, pdfLink };
+              });
+              return { resultCount: items.length, items };
+            })()
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query — keywords, paper title, or author name.
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Result offset for pagination (10 results per page, use 0, 10, 20, ...).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [resultCount, items]
+                properties:
+                  resultCount:
+                    type: integer
+                    description: Number of results on this page (max 10).
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [title, authors]
+                      properties:
+                        cid:
+                          type: string
+                          description: Scholar cluster ID.
+                        title:
+                          type: string
+                        url:
+                          type: string
+                          description: Link to the paper source.
+                        authors:
+                          type: string
+                          description: 'Comma-separated author list (abbreviated).'
+                        venueYear:
+                          type: string
+                          description: 'Venue and year string (e.g. "Nature, 2020").'
+                        year:
+                          type: [integer, 'null']
+                          description: Publication year.
+                        snippet:
+                          type: string
+                          description: Text snippet with query terms highlighted.
+                        citedBy:
+                          type: integer
+                          description: Number of citations.
+                        cites:
+                          type: [string, 'null']
+                          description: Cluster ID for getCitations (pass as clusterId).
+                        pdfLink:
+                          type: [string, 'null']
+                          description: Direct PDF link if available.
+  /scholar/citations:
+    get:
+      operationId: getCitations
+      summary: Get papers that cite a given paper — same fields as search results
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: gsc0002
+          signature_id: gsc0002s
+          tool_version: 1
+          signals:
+            - extraction_detected
+        extraction:
+          type: page_global_data
+          page_url: /scholar
+          expression: |
+            (() => {
+              const results = document.querySelectorAll('.gs_r.gs_or.gs_scl');
+              const items = [...results].map(r => {
+                const titleEl = r.querySelector('.gs_rt a');
+                const title = titleEl?.textContent?.trim() || '';
+                const url = titleEl?.href || '';
+                const authLine = r.querySelector('.gs_a')?.textContent?.trim() || '';
+                const parts = authLine.split(' - ');
+                const authors = (parts[0] || '').trim();
+                const venueYear = (parts[1] || '').trim();
+                const yearMatch = authLine.match(/,\s*(\d{4})\s*-/);
+                const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
+                const snippet = r.querySelector('.gs_rs')?.textContent?.trim() || '';
+                const flLinks = r.querySelectorAll('.gs_fl.gs_flb a');
+                let citedBy = 0;
+                for (const a of flLinks) {
+                  if (a.textContent.startsWith('Cited by')) citedBy = parseInt(a.textContent.replace('Cited by ', ''), 10) || 0;
+                }
+                const pdfLink = r.querySelector('.gs_or_ggsm a')?.href || null;
+                return { title, url, authors, venueYear, year, snippet, citedBy, pdfLink };
+              });
+              const totalEl = document.querySelector('#gs_ab_md .gs_ab_mdw');
+              const totalText = totalEl?.textContent?.trim() || '';
+              const totalMatch = totalText.match(/About ([\d,]+) results/);
+              const totalResults = totalMatch ? parseInt(totalMatch[1].replace(/,/g, ''), 10) : items.length;
+              return { totalResults, resultCount: items.length, items };
+            })()
+      parameters:
+        - name: cites
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Cluster ID from searchPapers `cites` field.
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Result offset for pagination (10 per page).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [totalResults, resultCount, items]
+                properties:
+                  totalResults:
+                    type: integer
+                    description: Approximate total number of citing papers.
+                  resultCount:
+                    type: integer
+                    description: Number of results on this page (max 10).
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [title, authors]
+                      properties:
+                        title:
+                          type: string
+                        url:
+                          type: string
+                        authors:
+                          type: string
+                        venueYear:
+                          type: string
+                        year:
+                          type: [integer, 'null']
+                        snippet:
+                          type: string
+                        citedBy:
+                          type: integer
+                        pdfLink:
+                          type: [string, 'null']
+  /citations:
+    get:
+      operationId: getAuthorProfile
+      summary: Get author profile — name, affiliation, h-index, total citations, research interests, publications
+      x-openweb:
+        permission: read
+        build:
+          verified: true
+          stable_id: gsc0003
+          signature_id: gsc0003s
+          tool_version: 1
+          signals:
+            - extraction_detected
+        extraction:
+          type: page_global_data
+          page_url: /citations
+          expression: |
+            (() => {
+              const name = document.querySelector('#gsc_prf_in')?.textContent?.trim() || '';
+              const affiliation = document.querySelector('.gsc_prf_il')?.textContent?.trim() || '';
+              const photo = document.querySelector('#gsc_prf_pup-img')?.getAttribute('src') || null;
+              const interests = [...document.querySelectorAll('#gsc_prf_int a')].map(a => a.textContent.trim());
+              const statsTable = document.querySelector('#gsc_rsb_st');
+              const statsRows = statsTable ? [...statsTable.querySelectorAll('tr')].slice(1) : [];
+              let citationsAll = 0, citationsRecent = 0, hIndex = 0, hIndexRecent = 0, i10Index = 0, i10IndexRecent = 0;
+              for (const row of statsRows) {
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 3) continue;
+                const label = cells[0]?.textContent?.trim() || '';
+                const all = parseInt(cells[1]?.textContent?.trim() || '0', 10) || 0;
+                const recent = parseInt(cells[2]?.textContent?.trim() || '0', 10) || 0;
+                if (label === 'Citations') { citationsAll = all; citationsRecent = recent; }
+                if (label === 'h-index') { hIndex = all; hIndexRecent = recent; }
+                if (label === 'i10-index') { i10Index = all; i10IndexRecent = recent; }
+              }
+              const pubs = [...document.querySelectorAll('.gsc_a_tr')].slice(0, 20).map(row => {
+                const titleEl = row.querySelector('.gsc_a_at');
+                const title = titleEl?.textContent?.trim() || '';
+                const authors = row.querySelector('.gs_gray')?.textContent?.trim() || '';
+                const venue = row.querySelectorAll('.gs_gray')[1]?.textContent?.trim() || '';
+                const citedBy = parseInt(row.querySelector('.gsc_a_ac a')?.textContent?.trim() || '0', 10) || 0;
+                const year = row.querySelector('.gsc_a_y span')?.textContent?.trim() || '';
+                return { title, authors, venue, citedBy, year };
+              });
+              return {
+                name, affiliation, photo, interests,
+                citationsAll, citationsRecent, hIndex, hIndexRecent, i10Index, i10IndexRecent,
+                publicationCount: pubs.length, publications: pubs,
+              };
+            })()
+      parameters:
+        - name: user
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Author ID from search results author links (e.g. KROUdngAAAAJ).
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name]
+                properties:
+                  name:
+                    type: string
+                  affiliation:
+                    type: string
+                  photo:
+                    type: [string, 'null']
+                    description: Author photo URL.
+                  interests:
+                    type: array
+                    items:
+                      type: string
+                    description: Research interest tags.
+                  citationsAll:
+                    type: integer
+                    description: Total citation count (all time).
+                  citationsRecent:
+                    type: integer
+                    description: Citation count since 5 years ago.
+                  hIndex:
+                    type: integer
+                    description: h-index (all time).
+                  hIndexRecent:
+                    type: integer
+                    description: h-index (recent).
+                  i10Index:
+                    type: integer
+                    description: i10-index (all time).
+                  i10IndexRecent:
+                    type: integer
+                    description: i10-index (recent).
+                  publicationCount:
+                    type: integer
+                    description: Number of publications shown (up to 20).
+                  publications:
+                    type: array
+                    items:
+                      type: object
+                      required: [title]
+                      properties:
+                        title:
+                          type: string
+                        authors:
+                          type: string
+                        venue:
+                          type: string
+                        citedBy:
+                          type: integer
+                        year:
+                          type: string

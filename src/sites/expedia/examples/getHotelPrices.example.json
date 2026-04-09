@@ -1,0 +1,7 @@
+{
+  "operation_id": "getHotelPrices",
+  "cases": [{
+    "input": { "propertyId": "27924", "checkInDate": "2026-05-01", "checkOutDate": "2026-05-03", "adults": 2 },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

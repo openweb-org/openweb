@@ -1,0 +1,271 @@
+openapi: '3.1.0'
+info:
+  title: Grubhub
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://www.grubhub.com
+    x-openweb:
+      transport: page
+paths:
+  /restaurants/search:
+    get:
+      operationId: searchRestaurants
+      summary: Search restaurants by location and cuisine — name, rating, delivery fee, delivery time, cuisines, address
+      x-openweb:
+        permission: read
+        build:
+          stable_id: grub0001
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: grubhub
+          operation: searchRestaurants
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Latitude of delivery location (e.g. 40.7484 for Midtown Manhattan).
+        - name: longitude
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Longitude of delivery location (e.g. -73.9857 for Midtown Manhattan).
+        - name: searchTerm
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Cuisine or restaurant name to filter by (e.g. "pizza", "sushi", "Chinese").
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of results per page (max 50).
+        - name: pageNum
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination (starts at 1).
+      responses:
+        '200':
+          description: List of restaurants matching the search criteria.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - totalResults
+                  - restaurants
+                properties:
+                  totalResults:
+                    type: integer
+                    description: Total number of matching restaurants.
+                  restaurants:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - restaurantId
+                        - name
+                      properties:
+                        restaurantId:
+                          type: string
+                          description: Unique restaurant ID (use with getMenu and getDeliveryEstimate).
+                        name:
+                          type: string
+                        logo:
+                          type:
+                            - string
+                            - 'null'
+                          description: Restaurant logo URL.
+                        cuisines:
+                          type: array
+                          items:
+                            type: string
+                          description: Cuisine types (e.g. "Pizza", "Italian").
+                        rating:
+                          type:
+                            - number
+                            - 'null'
+                          description: Average rating (0-5 scale).
+                        ratingCount:
+                          type: integer
+                          description: Number of ratings.
+                        priceRating:
+                          type: integer
+                          description: Price level (1-4, dollar signs).
+                        deliveryFee:
+                          type: number
+                          description: Delivery fee in dollars (0 = free delivery).
+                        deliveryEstimateMin:
+                          type:
+                            - integer
+                            - 'null'
+                          description: Minimum delivery time in minutes.
+                        deliveryEstimateMax:
+                          type:
+                            - integer
+                            - 'null'
+                          description: Maximum delivery time in minutes.
+                        address:
+                          type: string
+                          description: Restaurant street address.
+                        distance:
+                          type:
+                            - number
+                            - 'null'
+                          description: Distance from delivery location in miles.
+
+  /restaurants/menu:
+    get:
+      operationId: getMenu
+      summary: Get restaurant menu with categories, items, prices, and descriptions
+      x-openweb:
+        permission: read
+        build:
+          stable_id: grub0002
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: grubhub
+          operation: getMenu
+      parameters:
+        - name: restaurantId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Restaurant ID from searchRestaurants (e.g. "64436").
+      responses:
+        '200':
+          description: Full restaurant menu organized by categories.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - restaurantName
+                  - categories
+                properties:
+                  restaurantName:
+                    type: string
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - name
+                        - items
+                      properties:
+                        name:
+                          type: string
+                          description: Menu category name (e.g. "Appetizers", "Pizza").
+                        items:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - itemId
+                              - name
+                              - price
+                            properties:
+                              itemId:
+                                type: string
+                                description: Menu item ID.
+                              name:
+                                type: string
+                              description:
+                                type:
+                                  - string
+                                  - 'null'
+                              price:
+                                type: number
+                                description: Price in dollars.
+                              popular:
+                                type: boolean
+                                description: Whether this item is marked as popular.
+
+  /restaurants/delivery-estimate:
+    get:
+      operationId: getDeliveryEstimate
+      summary: Get delivery time and fee estimate for a restaurant
+      x-openweb:
+        permission: read
+        build:
+          stable_id: grub0003
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: grubhub
+          operation: getDeliveryEstimate
+      parameters:
+        - name: restaurantId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Restaurant ID from searchRestaurants (e.g. "64436").
+      responses:
+        '200':
+          description: Delivery time and fee estimate.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - restaurantId
+                  - deliveryEstimateMin
+                  - deliveryEstimateMax
+                properties:
+                  restaurantId:
+                    type: string
+                  open:
+                    type: boolean
+                    description: Whether the restaurant is currently open.
+                  openDelivery:
+                    type: boolean
+                    description: Whether delivery is currently available.
+                  openPickup:
+                    type: boolean
+                    description: Whether pickup is currently available.
+                  deliveryEstimateMin:
+                    type: integer
+                    description: Minimum delivery time in minutes.
+                  deliveryEstimateMax:
+                    type: integer
+                    description: Maximum delivery time in minutes.
+                  pickupEstimateMin:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Minimum pickup time in minutes.
+                  pickupEstimateMax:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Maximum pickup time in minutes.
+                  deliveryFee:
+                    type: number
+                    description: Delivery fee in dollars.
+                  orderMinimum:
+                    type: number
+                    description: Minimum order amount in dollars.
+                  salesTax:
+                    type: number
+                    description: Sales tax percentage.

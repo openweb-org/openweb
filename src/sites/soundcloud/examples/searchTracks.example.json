@@ -1,0 +1,14 @@
+{
+  "operation_id": "searchTracks",
+  "cases": [
+    {
+      "input": {
+        "q": "lofi"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

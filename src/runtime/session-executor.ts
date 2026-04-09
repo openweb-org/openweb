@@ -88,31 +88,67 @@ export interface AutoNavigateResult {
   owned: boolean
 }
 
-/** Auto-navigate to site URL when no matching page exists */
+/** Try to get the parent domain for subdomain fallback navigation.
+ *  Returns undefined when the hostname has no strippable subdomain
+ *  (e.g. already a bare domain or www-prefixed). */
+function getParentDomainUrl(serverUrl: string): string | undefined {
+  try {
+    const url = new URL(serverUrl)
+    const parts = url.hostname.split('.')
+    // Need at least 3 parts (sub.domain.tld) and the sub must not be www
+    if (parts.length < 3 || parts[0] === 'www') return undefined
+    const parentHost = parts.slice(1).join('.')
+    return `${url.protocol}//${parentHost}/`
+  } catch { return undefined }
+}
+
+/** Auto-navigate to site URL when no matching page exists.
+ *  Falls back to the parent domain when a subdomain returns HTTP 4xx+. */
 export async function autoNavigate(context: BrowserContext, serverUrl: string): Promise<AutoNavigateResult | undefined> {
   const siteUrl = getPageHintUrl(serverUrl)
-  try {
-    logger.debug(`auto-navigating to ${siteUrl}`)
+
+  /** Navigate to a URL, return { page, response status } or undefined on hard failure. */
+  const tryNavigate = async (url: string): Promise<{ page: Page; status: number | null } | undefined> => {
     const newPage = await context.newPage()
     try {
-      await newPage.goto(siteUrl, { waitUntil: 'load', timeout: 15_000 })
+      const response = await newPage.goto(url, { waitUntil: 'load', timeout: 15_000 })
+      return { page: newPage, status: response?.status() ?? null }
     } catch (navErr) {
       await newPage.close().catch(() => {})
-      logger.debug(`auto-navigation failed: ${navErr instanceof Error ? navErr.message : String(navErr)}`)
+      logger.debug(`auto-navigation failed for ${url}: ${navErr instanceof Error ? navErr.message : String(navErr)}`)
       return undefined
     }
+  }
+
+  try {
+    logger.debug(`auto-navigating to ${siteUrl}`)
+    let nav = await tryNavigate(siteUrl)
+
+    // Fallback: if the page returned an HTTP error (e.g. API-only subdomain
+    // like stock.xueqiu.com), try the parent domain where cookies are set.
+    if (nav && nav.status !== null && nav.status >= 400) {
+      const parentUrl = getParentDomainUrl(serverUrl)
+      if (parentUrl && parentUrl !== siteUrl) {
+        logger.debug(`subdomain returned ${nav.status}, falling back to parent domain ${parentUrl}`)
+        await nav.page.close().catch(() => {})
+        nav = await tryNavigate(parentUrl)
+      }
+    }
+
+    if (!nav) return undefined
+
     // Settle wait: SPAs redirect during load; need stable URL for findPageForOrigin
     await new Promise(r => setTimeout(r, TIMEOUT.spaSettle))
     const matched = await findPageForOrigin(context, serverUrl)
     if (!matched) {
-      await newPage.close().catch(() => {})
+      await nav.page.close().catch(() => {})
       return undefined
     }
     // If findPageForOrigin returned a different page, close the one we created
-    if (matched !== newPage) {
-      await newPage.close().catch(() => {})
+    if (matched !== nav.page) {
+      await nav.page.close().catch(() => {})
     }
-    return { page: matched, owned: matched === newPage }
+    return { page: matched, owned: matched === nav.page }
   } catch (err) {
     logger.debug(`auto-navigation failed: ${err instanceof Error ? err.message : String(err)}`)
     return undefined

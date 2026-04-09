@@ -4,14 +4,14 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.twitch.tv",
-  "description": "Live streaming platform — search channels, channel profiles, stream status, top categories via Twitch GraphQL API",
+  "description": "Live streaming platform — search channels, channel profiles, stream status, top streams, clips, VODs via Twitch GraphQL API",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
-    "operation_count": 4,
+    "operation_count": 7,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 4,
+    "l3_count": 7,
     "ws_count": 0
   }
 }

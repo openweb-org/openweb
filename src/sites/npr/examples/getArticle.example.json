@@ -1,0 +1,13 @@
+{
+  "operation_id": "getArticle",
+  "cases": [
+    {
+      "input": {
+        "objectID": "nx-s1-5777587"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

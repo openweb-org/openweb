@@ -505,3 +505,100 @@ paths:
                         type: integer
                       start:
                         type: integer
+
+  /internal/searchJobs:
+    get:
+      operationId: searchJobs
+      summary: "Search for jobs by keyword and location — titles, companies, locations, posting dates, applicant counts"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: a7c3b892d4e1f056
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: linkedin-graphql
+          operation: searchJobs
+      parameters:
+        - name: keywords
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "software engineer"
+          description: "Job search keywords (job title, skill, or company)"
+        - name: geoId
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "103644278"
+          description: "LinkedIn geo ID for location filter (e.g. 103644278 for United States, 102571732 for San Francisco Bay Area)"
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 25
+          description: "Number of results per page (default 25)"
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 0
+          description: "Pagination offset"
+      responses:
+        "200":
+          description: Job search results in LinkedIn normalized JSON format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                  meta:
+                    type: object
+                  included:
+                    type: array
+                    items:
+                      type: object
+
+  /internal/getJobDetail:
+    get:
+      operationId: getJobDetail
+      summary: "Get job posting details — description, requirements, company info, salary range, applicant count"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: c8d9e0f1a3b45678
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: linkedin-graphql
+          operation: getJobDetail
+      parameters:
+        - name: jobId
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "3945709057"
+          description: "Job posting ID — from URL linkedin.com/jobs/view/{id} or from searchJobs results"
+      responses:
+        "200":
+          description: Job posting details in LinkedIn normalized JSON format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                  meta:
+                    type: object
+                  included:
+                    type: array
+                    items:
+                      type: object

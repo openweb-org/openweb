@@ -1,0 +1,298 @@
+openapi: '3.1.0'
+info:
+  title: The Guardian
+  version: '1.0.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: false
+servers:
+  - url: https://content.guardianapis.com
+    x-openweb:
+      transport: node
+paths:
+  /search:
+    get:
+      operationId: searchArticles
+      summary: Search articles by keyword — returns headline, byline, section, date, thumbnail
+      x-openweb:
+        permission: read
+        unwrap: response.results
+        build:
+          stable_id: guardian0001
+          tool_version: 1
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (keyword or phrase).
+          example: climate change
+        - name: api-key
+          in: query
+          required: true
+          schema:
+            type: string
+            default: test
+          description: API key. Use "test" for development.
+        - name: show-fields
+          in: query
+          required: false
+          schema:
+            type: string
+            default: headline,byline,thumbnail
+          description: Comma-separated list of fields to include (headline, byline, body, thumbnail, trailText).
+        - name: page-size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page (max 50).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+        - name: order-by
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [newest, oldest, relevance]
+            default: relevance
+          description: Sort order for results.
+      responses:
+        '200':
+          description: Array of matching articles (after response.results unwrap).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: Article path (e.g. "world/2024/jan/01/article-slug").
+                    type:
+                      type: string
+                      description: Content type (article, liveblog, etc.).
+                    sectionId:
+                      type: string
+                      description: Section slug (world, technology, business, etc.).
+                    sectionName:
+                      type: string
+                      description: Human-readable section name.
+                    webPublicationDate:
+                      type: string
+                      format: date-time
+                      description: Publication date in ISO 8601.
+                    webTitle:
+                      type: string
+                      description: Article headline.
+                    webUrl:
+                      type: string
+                      format: uri
+                      description: URL on theguardian.com.
+                    apiUrl:
+                      type: string
+                      format: uri
+                      description: API URL for this article.
+                    fields:
+                      type: object
+                      properties:
+                        headline:
+                          type: string
+                        byline:
+                          type:
+                            - string
+                            - 'null'
+                        thumbnail:
+                          type:
+                            - string
+                            - 'null'
+                          format: uri
+                  required: [id, type, sectionId, webTitle, webPublicationDate]
+
+  /search?ids:
+    get:
+      operationId: getArticle
+      summary: Get full article content — title, body, byline, date, section, thumbnail
+      x-openweb:
+        permission: read
+        unwrap: response.results.0
+        actual_path: /search
+        build:
+          stable_id: guardian0002
+          tool_version: 1
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Article path from search results id field (e.g. "world/2024/jan/01/article-slug").
+          example: technology/2025/dec/10/police-facial-recognition-technology-bias
+        - name: api-key
+          in: query
+          required: true
+          schema:
+            type: string
+            default: test
+          description: API key. Use "test" for development.
+        - name: show-fields
+          in: query
+          required: false
+          schema:
+            type: string
+            default: body,headline,byline,thumbnail
+          description: Comma-separated list of fields to include.
+      responses:
+        '200':
+          description: Single article object (after response.results.0 unwrap).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Article path.
+                  type:
+                    type: string
+                    description: Content type.
+                  sectionId:
+                    type: string
+                  sectionName:
+                    type: string
+                  webPublicationDate:
+                    type: string
+                    format: date-time
+                  webTitle:
+                    type: string
+                  webUrl:
+                    type: string
+                    format: uri
+                  apiUrl:
+                    type: string
+                    format: uri
+                  fields:
+                    type: object
+                    properties:
+                      headline:
+                        type: string
+                      body:
+                        type: string
+                        description: Full article body as HTML.
+                      byline:
+                        type:
+                          - string
+                          - 'null'
+                      thumbnail:
+                        type:
+                          - string
+                          - 'null'
+                        format: uri
+                required: [id, type, sectionId, webTitle, webPublicationDate]
+
+  /search?section:
+    get:
+      operationId: getSectionFeed
+      summary: Get latest articles in a section — headline, byline, date, thumbnail sorted newest first
+      x-openweb:
+        permission: read
+        unwrap: response.results
+        actual_path: /search
+        build:
+          stable_id: guardian0003
+          tool_version: 1
+      parameters:
+        - name: section
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Section slug (world, technology, business, sport, culture, environment, science, politics, uk-news, us-news).
+          example: technology
+        - name: api-key
+          in: query
+          required: true
+          schema:
+            type: string
+            default: test
+          description: API key. Use "test" for development.
+        - name: show-fields
+          in: query
+          required: false
+          schema:
+            type: string
+            default: headline,byline,thumbnail
+          description: Comma-separated list of fields to include.
+        - name: order-by
+          in: query
+          required: false
+          schema:
+            type: string
+            default: newest
+          description: Sort order (newest, oldest, relevance).
+        - name: page-size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page (max 50).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+      responses:
+        '200':
+          description: Array of latest articles in the section (after response.results unwrap).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    type:
+                      type: string
+                    sectionId:
+                      type: string
+                    sectionName:
+                      type: string
+                    webPublicationDate:
+                      type: string
+                      format: date-time
+                    webTitle:
+                      type: string
+                    webUrl:
+                      type: string
+                      format: uri
+                    apiUrl:
+                      type: string
+                      format: uri
+                    fields:
+                      type: object
+                      properties:
+                        headline:
+                          type: string
+                        byline:
+                          type:
+                            - string
+                            - 'null'
+                        thumbnail:
+                          type:
+                            - string
+                            - 'null'
+                          format: uri
+                  required: [id, type, sectionId, webTitle, webPublicationDate]

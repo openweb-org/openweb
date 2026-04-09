@@ -1,0 +1,14 @@
+{
+  "operation_id": "getVersions",
+  "cases": [
+    {
+      "input": {
+        "package": "express"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

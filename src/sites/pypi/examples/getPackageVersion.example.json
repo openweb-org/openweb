@@ -1,0 +1,15 @@
+{
+  "operation_id": "getPackageVersion",
+  "cases": [
+    {
+      "input": {
+        "package": "requests",
+        "version": "2.31.0"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

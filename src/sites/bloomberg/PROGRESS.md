@@ -1,3 +1,20 @@
+## 2026-04-09: Expand to 7 operations — company profiles, stock charts, market overview
+
+**What changed:**
+- Added 3 new operations: getCompanyProfile, getStockChart, getMarketOverview
+- getCompanyProfile extracts from `/profile/company/{ticker}` — name, description, sector, market cap, employees
+- getStockChart extracts from `/quote/{ticker}` — current price, daily stats, 1Y/5Y price history
+- getMarketOverview extracts from `/markets` — indices, bonds, commodities, currencies
+- All use page_global_data extraction with multi-path fallbacks
+- DOC.md updated with new workflows (research a company, market overview)
+
+**Why:**
+- Bloomberg had only 4 homepage-based operations after the 2026-04-02 cleanup
+- Company/quote/market data is high-value but requires sub-page navigation
+- Sub-page ops require manual tab opening due to PerimeterX blocking programmatic navigation
+
+**Known limitation:** getCompanyProfile, getStockChart, getMarketOverview target sub-pages that PerimeterX may block. User must open the target page in the browser before executing.
+
 ## 2026-04-01: Fresh rediscovery — 10 operations via SSR extraction
 
 **What changed:**

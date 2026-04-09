@@ -1,0 +1,13 @@
+{
+  "operation_id": "getCategory",
+  "cases": [
+    {
+      "input": {
+        "categories": 577030455
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "operation_id": "searchPapers",
+  "cases": [
+    {
+      "input": {
+        "search_query": "all:transformer",
+        "max_results": 3
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

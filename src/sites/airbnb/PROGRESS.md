@@ -1,3 +1,21 @@
+## 2026-04-09: Expand to 5 operations — reviews, availability, host profile
+
+**What changed:**
+- Added `airbnb-web` adapter (`adapters/airbnb-web.ts`) for section-filtered SSR extraction
+- New operations: `getListingReviews`, `getListingAvailability`, `getHostProfile`
+- Reviews and availability extract from detail page SSR sections (REVIEW, BOOK, AVAILABILITY, etc.)
+- Host profile navigates to `/users/show/{hostId}` and extracts full SSR presentation data
+- Example fixtures for all three new operations
+- Updated DOC.md with new workflows, operations table, and extraction details
+- Version bumped to 1.1.0, operation count 2 → 5
+
+**Why:**
+- Expand Airbnb coverage beyond search+detail to support listing evaluation and host research workflows
+
+**Verification:** `pnpm build` + `openweb verify airbnb --browser`
+
+---
+
 ## 2026-04-05: Fix verify — add example fixtures, pass all three dimensions
 
 **What changed:**

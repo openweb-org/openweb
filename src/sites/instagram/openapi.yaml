@@ -430,3 +430,332 @@ paths:
                 required:
                   - users
                   - status
+  /user/{username}/posts:
+    get:
+      operationId: getUserPosts
+      summary: "Get a user's recent posts by username — media grid with captions, likes, comments, media URLs, pagination"
+      x-openweb:
+        permission: read
+        adapter:
+          name: instagram-api
+          operation: getUserPosts
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Instagram username (without @ prefix)
+          schema:
+            type: string
+          example: instagram
+        - name: count
+          in: query
+          required: false
+          description: Number of posts to return (default 12)
+          schema:
+            type: integer
+          example: 12
+        - name: max_id
+          in: query
+          required: false
+          description: Pagination cursor from previous response next_max_id
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      username:
+                        type: string
+                      full_name:
+                        type: string
+                  num_results:
+                    type: integer
+                  more_available:
+                    type: boolean
+                  next_max_id:
+                    type: string
+                    description: Cursor for next page
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        pk:
+                          type: string
+                        code:
+                          type: string
+                          description: Shortcode for URL (instagram.com/p/{code}/)
+                        media_type:
+                          type: integer
+                          description: "1=photo, 2=video, 8=carousel"
+                        caption:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                        like_count:
+                          type: integer
+                        comment_count:
+                          type: integer
+                        taken_at:
+                          type: integer
+                        image_versions2:
+                          type: object
+                          properties:
+                            candidates:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                                  url:
+                                    type: string
+                                    format: uri
+                        user:
+                          type: object
+                          properties:
+                            pk:
+                              type: string
+                            username:
+                              type: string
+                required:
+                  - num_results
+                  - items
+  /api/v1/media/{id}/comments/:
+    get:
+      operationId: getPostComments
+      summary: "Get comments on a post — text, author info, like counts, threading support, pagination"
+      x-openweb:
+        permission: read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "Numeric media PK. Get from getFeed items[].pk or getUserPosts items[].pk"
+          schema:
+            type: string
+          example: "3865890235180097425"
+        - name: can_support_threading
+          in: query
+          required: false
+          description: Enable threaded comment replies
+          schema:
+            type: string
+            default: "true"
+        - name: min_id
+          in: query
+          required: false
+          description: Pagination cursor from previous response next_min_id
+          schema:
+            type: string
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        pk:
+                          type: string
+                        text:
+                          type: string
+                        created_at:
+                          type: integer
+                        user:
+                          type: object
+                          properties:
+                            pk:
+                              type: [string, integer]
+                            username:
+                              type: string
+                            full_name:
+                              type: string
+                            profile_pic_url:
+                              type: string
+                              format: uri
+                            is_verified:
+                              type: boolean
+                        comment_like_count:
+                          type: integer
+                        child_comment_count:
+                          type: integer
+                  comment_count:
+                    type: integer
+                  has_more_comments:
+                    type: boolean
+                  next_min_id:
+                    type: string
+                    description: Cursor for next page of comments
+                  status:
+                    type: string
+                required:
+                  - comments
+                  - status
+  /api/v1/feed/user/{id}/story/:
+    get:
+      operationId: getStories
+      summary: "Get a user's current stories — photos and videos with expiration times, media URLs"
+      x-openweb:
+        permission: read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "User ID (numeric). Get from getUserProfile data.user.id"
+          schema:
+            type: string
+          example: "25025320"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reel:
+                    type: ["null", object]
+                    properties:
+                      id:
+                        type: string
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            pk:
+                              type: string
+                            media_type:
+                              type: integer
+                              description: "1=photo, 2=video"
+                            taken_at:
+                              type: integer
+                            expiring_at:
+                              type: integer
+                            image_versions2:
+                              type: object
+                              properties:
+                                candidates:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      width:
+                                        type: integer
+                                      height:
+                                        type: integer
+                                      url:
+                                        type: string
+                                        format: uri
+                            video_versions:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  width:
+                                    type: integer
+                                  height:
+                                    type: integer
+                                  url:
+                                    type: string
+                                    format: uri
+                      user:
+                        type: object
+                        properties:
+                          pk:
+                            type: string
+                          username:
+                            type: string
+                          full_name:
+                            type: string
+                          profile_pic_url:
+                            type: string
+                            format: uri
+                  status:
+                    type: string
+                required:
+                  - status
+  /api/v1/web/likes/{id}/like/:
+    post:
+      operationId: likePost
+      summary: "Like a post — toggle like on a media item (requires CSRF token)"
+      x-openweb:
+        permission: write
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "Numeric media PK. Get from getFeed items[].pk or getUserPosts items[].pk"
+          schema:
+            type: string
+          example: "3865890235180097425"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                required:
+                  - status

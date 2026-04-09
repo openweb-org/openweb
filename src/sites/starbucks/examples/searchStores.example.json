@@ -1,0 +1,7 @@
+{
+  "operation_id": "searchStores",
+  "cases": [{
+    "input": { "lat": 37.7749, "lng": -122.4194 },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

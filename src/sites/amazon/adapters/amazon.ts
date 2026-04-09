@@ -122,6 +122,74 @@ async function searchDeals(page: Page, params: Record<string, unknown>) {
   }, [String(startIndex), String(pageSize), filters, rankingContext])
 }
 
+async function addToCart(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
+  const asin = String(params.asin || '')
+  if (!asin) throw errors.missingParam('asin')
+  const quantity = Number(params.quantity) || 1
+
+  // Navigate to product page
+  await page.goto(`https://www.amazon.com/dp/${asin}`, { waitUntil: 'load', timeout: 30_000 })
+  await wait(3000)
+
+  // Set quantity if > 1
+  if (quantity > 1) {
+    await page.evaluate((qty: number) => {
+      const sel = document.querySelector('#quantity') as HTMLSelectElement | null
+      if (sel) sel.value = String(qty)
+    }, quantity)
+  }
+
+  // Click "Add to Cart" button
+  const addBtn = page.locator('#add-to-cart-button')
+  await addBtn.click({ timeout: 10_000 })
+  await wait(3000)
+
+  // Extract confirmation from the post-add page or side panel
+  return page.evaluate(`
+    (() => {
+      // Side-sheet confirmation (most common)
+      const cartCount = document.querySelector('#nav-cart-count')?.textContent?.trim() || '';
+      const confirmMsg = document.querySelector('#NATC_SMART_WAGON_CONF_MSG_SUCCESS, #huc-v2-order-row-confirm-text, [data-csa-c-content-id="sw-atc-confirmation"]')?.textContent?.trim() || '';
+      const subtotal = document.querySelector('#sc-subtotal-amount-activecart .sc-price, #sw-subtotal .a-color-price, #hlb-subcart .a-color-price')?.textContent?.trim() || '';
+      const itemTitle = document.querySelector('#huc-v2-order-row-title, .sw-atc-item-title, #productTitle')?.textContent?.trim() || '';
+      const itemPrice = document.querySelector('#huc-v2-order-row-price, .sw-atc-item-price')?.textContent?.trim() || '';
+      return {
+        success: true,
+        cartCount: cartCount ? parseInt(cartCount, 10) : null,
+        message: confirmMsg || 'Added to cart',
+        item: { title: itemTitle, price: itemPrice },
+        subtotal,
+      };
+    })()
+  `)
+}
+
+async function getCart(page: Page, _params: Record<string, unknown>) {
+  await page.goto('https://www.amazon.com/gp/cart/view.html', { waitUntil: 'load', timeout: 30_000 })
+  await wait(3000)
+
+  return page.evaluate(`
+    (() => {
+      const cartItems = document.querySelectorAll('[data-asin][data-itemtype="active"]');
+      const subtotal = document.querySelector('#sc-subtotal-amount-activecart .sc-price')?.textContent?.trim() || '';
+      const cartCount = document.querySelector('#nav-cart-count')?.textContent?.trim() || '0';
+      return {
+        cartCount: parseInt(cartCount, 10) || 0,
+        subtotal,
+        items: [...cartItems].map(el => {
+          const asin = el.getAttribute('data-asin') || '';
+          const title = el.querySelector('.sc-product-title .a-truncate-full, .sc-item-title-content')?.textContent?.trim() || '';
+          const price = el.querySelector('.sc-product-price, .sc-item-price .a-offscreen')?.textContent?.trim() || '';
+          const quantity = el.querySelector('.a-dropdown-prompt, .sc-quantity-textfield')?.textContent?.trim()
+            || el.querySelector('input[name="quantity"]')?.value || '1';
+          const image = el.querySelector('.sc-product-image img, .sc-item-image img')?.getAttribute('src') || '';
+          return { asin, title, price, quantity: parseInt(quantity, 10) || 1, image };
+        }).filter(i => i.asin),
+      };
+    })()
+  `)
+}
+
 async function getBestSellers(page: Page, _params: Record<string, unknown>) {
   await page.goto('https://www.amazon.com/gp/bestsellers/', { waitUntil: 'load', timeout: 30_000 })
   await wait(3000)
@@ -148,7 +216,7 @@ async function getBestSellers(page: Page, _params: Record<string, unknown>) {
 
 const adapter = {
   name: 'amazon',
-  description: 'Amazon — search products, view details, read reviews, browse deals',
+  description: 'Amazon — search products, view details, read reviews, browse deals, manage cart',
 
   async init(page: Page): Promise<boolean> {
     // Accept any page — each operation navigates to the correct URL
@@ -172,6 +240,8 @@ const adapter = {
       case 'getProductReviews': return getProductReviews(page, { ...params }, errors)
       case 'searchDeals': return searchDeals(page, { ...params })
       case 'getBestSellers': return getBestSellers(page, { ...params })
+      case 'addToCart': return addToCart(page, { ...params }, errors)
+      case 'getCart': return getCart(page, { ...params })
       default: throw errors.unknownOp(operation)
     }
   },

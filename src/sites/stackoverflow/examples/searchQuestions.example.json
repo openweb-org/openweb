@@ -1,0 +1,9 @@
+{
+  "operation_id": "searchQuestions",
+  "cases": [
+    {
+      "input": { "q": "async await javascript", "site": "stackoverflow" },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

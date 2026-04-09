@@ -1,0 +1,9 @@
+{
+  "operation_id": "getProfile",
+  "cases": [
+    {
+      "input": { "username": "Adam-DAngelo" },
+      "assertions": { "status": 200 }
+    }
+  ]
+}

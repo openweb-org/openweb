@@ -1,0 +1,488 @@
+openapi: "3.1.0"
+info:
+  title: StackOverflow
+  version: "1.0.0"
+  x-openweb:
+    spec_version: "2.0"
+    requires_auth: false
+servers:
+  - url: https://api.stackexchange.com/2.3
+    x-openweb:
+      transport: node
+paths:
+  /search/advanced:
+    get:
+      operationId: searchQuestions
+      summary: "Search questions by keyword — title, score, answer count, tags, link"
+      x-openweb:
+        permission: read
+        unwrap: items
+        build:
+          stable_id: stackoverflow0001
+          tool_version: 1
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Search query (keyword or phrase)"
+          example: "async await javascript"
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [activity, votes, creation, relevance]
+            default: relevance
+          description: "Sort order for results"
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: "Sort direction"
+        - name: tagged
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Semicolon-separated tags to filter by (e.g. javascript;node.js)"
+        - name: pagesize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: "Number of results per page (max 100)"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: "Page number"
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            default: stackoverflow
+          description: "Stack Exchange site (use stackoverflow)"
+          example: stackoverflow
+      responses:
+        "200":
+          description: Search results.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    question_id:
+                      type: integer
+                      description: "Unique question ID"
+                    title:
+                      type: string
+                      description: "Question title"
+                    link:
+                      type: string
+                      description: "URL to question page"
+                    score:
+                      type: integer
+                      description: "Vote score"
+                    answer_count:
+                      type: integer
+                      description: "Number of answers"
+                    is_answered:
+                      type: boolean
+                      description: "Whether an accepted answer exists"
+                    view_count:
+                      type: integer
+                      description: "Number of views"
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                      description: "Associated tags"
+                    creation_date:
+                      type: integer
+                      description: "Unix timestamp of creation"
+                    last_activity_date:
+                      type: integer
+                      description: "Unix timestamp of last activity"
+                    owner:
+                      type: object
+                      properties:
+                        user_id:
+                          type: integer
+                        display_name:
+                          type: string
+                        reputation:
+                          type: integer
+                        link:
+                          type: string
+
+  /questions/{id}:
+    get:
+      operationId: getQuestion
+      summary: "Get question details — title, body, score, answers count, tags"
+      x-openweb:
+        permission: read
+        unwrap: items
+        build:
+          stable_id: stackoverflow0002
+          tool_version: 1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "Question ID (from searchQuestions)"
+          example: 11227809
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            default: withbody
+          description: "Response filter — use withbody to include body HTML"
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            default: stackoverflow
+          description: "Stack Exchange site (use stackoverflow)"
+          example: stackoverflow
+      responses:
+        "200":
+          description: Question details.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    question_id:
+                      type: integer
+                      description: "Unique question ID"
+                    title:
+                      type: string
+                      description: "Question title"
+                    body:
+                      type: string
+                      description: "Question body (HTML, requires filter=withbody)"
+                    link:
+                      type: string
+                      description: "URL to question page"
+                    score:
+                      type: integer
+                      description: "Vote score"
+                    answer_count:
+                      type: integer
+                      description: "Number of answers"
+                    is_answered:
+                      type: boolean
+                      description: "Whether an accepted answer exists"
+                    view_count:
+                      type: integer
+                      description: "Number of views"
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                      description: "Associated tags"
+                    creation_date:
+                      type: integer
+                      description: "Unix timestamp of creation"
+                    last_activity_date:
+                      type: integer
+                      description: "Unix timestamp of last activity"
+                    owner:
+                      type: object
+                      properties:
+                        user_id:
+                          type: integer
+                        display_name:
+                          type: string
+                        reputation:
+                          type: integer
+                        link:
+                          type: string
+
+  /questions/{id}/answers:
+    get:
+      operationId: getAnswers
+      summary: "Get answers for a question — body, score, accepted status"
+      x-openweb:
+        permission: read
+        unwrap: items
+        build:
+          stable_id: stackoverflow0003
+          tool_version: 1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "Question ID (from searchQuestions or getQuestion)"
+          example: 11227809
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [activity, votes, creation]
+            default: votes
+          description: "Sort order for answers"
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: "Sort direction"
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            default: withbody
+          description: "Response filter — use withbody to include body HTML"
+        - name: pagesize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: "Number of results per page (max 100)"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: "Page number"
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            default: stackoverflow
+          description: "Stack Exchange site (use stackoverflow)"
+          example: stackoverflow
+      responses:
+        "200":
+          description: Answers for the question.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    answer_id:
+                      type: integer
+                      description: "Unique answer ID"
+                    question_id:
+                      type: integer
+                      description: "Parent question ID"
+                    body:
+                      type: string
+                      description: "Answer body (HTML, requires filter=withbody)"
+                    score:
+                      type: integer
+                      description: "Vote score"
+                    is_accepted:
+                      type: boolean
+                      description: "Whether this is the accepted answer"
+                    creation_date:
+                      type: integer
+                      description: "Unix timestamp of creation"
+                    last_activity_date:
+                      type: integer
+                      description: "Unix timestamp of last activity"
+                    owner:
+                      type: object
+                      properties:
+                        user_id:
+                          type: integer
+                        display_name:
+                          type: string
+                        reputation:
+                          type: integer
+                        link:
+                          type: string
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      summary: "Get user profile — reputation, badges, top tags"
+      x-openweb:
+        permission: read
+        unwrap: items
+        build:
+          stable_id: stackoverflow0004
+          tool_version: 1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: "User ID (from question/answer owner)"
+          example: 22656
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            default: stackoverflow
+          description: "Stack Exchange site (use stackoverflow)"
+          example: stackoverflow
+      responses:
+        "200":
+          description: User profile.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    user_id:
+                      type: integer
+                      description: "Unique user ID"
+                    display_name:
+                      type: string
+                      description: "Display name"
+                    link:
+                      type: string
+                      description: "URL to user profile"
+                    reputation:
+                      type: integer
+                      description: "Reputation score"
+                    badge_counts:
+                      type: object
+                      properties:
+                        gold:
+                          type: integer
+                        silver:
+                          type: integer
+                        bronze:
+                          type: integer
+                      description: "Badge counts by tier"
+                    accept_rate:
+                      type:
+                        - integer
+                        - "null"
+                      description: "Accept rate percentage"
+                    creation_date:
+                      type: integer
+                      description: "Unix timestamp of account creation"
+                    last_access_date:
+                      type: integer
+                      description: "Unix timestamp of last access"
+                    location:
+                      type:
+                        - string
+                        - "null"
+                      description: "User location"
+                    website_url:
+                      type:
+                        - string
+                        - "null"
+                      description: "User website"
+                    profile_image:
+                      type: string
+                      description: "Profile image URL"
+
+  /tags:
+    get:
+      operationId: searchTags
+      summary: "Search and browse popular tags — name, question count"
+      x-openweb:
+        permission: read
+        unwrap: items
+        build:
+          stable_id: stackoverflow0005
+          tool_version: 1
+      parameters:
+        - name: inname
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Filter tags containing this string (e.g. java, python)"
+          example: javascript
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [popular, activity, name]
+            default: popular
+          description: "Sort order for tags"
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: "Sort direction"
+        - name: pagesize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: "Number of results per page (max 100)"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: "Page number"
+        - name: site
+          in: query
+          required: true
+          schema:
+            type: string
+            default: stackoverflow
+          description: "Stack Exchange site (use stackoverflow)"
+          example: stackoverflow
+      responses:
+        "200":
+          description: Tag listing.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: "Tag name"
+                    count:
+                      type: integer
+                      description: "Number of questions with this tag"
+                    has_synonyms:
+                      type: boolean
+                      description: "Whether the tag has synonyms"
+                    is_moderator_only:
+                      type: boolean
+                      description: "Whether only moderators can use this tag"
+                    is_required:
+                      type: boolean
+                      description: "Whether this tag is required"

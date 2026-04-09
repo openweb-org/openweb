@@ -1,0 +1,12 @@
+{
+  "operation_id": "searchRestaurants",
+  "cases": [
+    {
+      "input": { "geoId": "60763", "location": "New_York_City_New_York" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "operation_id": "getArticle",
+  "cases": [
+    {
+      "input": {
+        "slug": "2026/04/07/weather/super-el-nino-extreme-weather-climate-disaster"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

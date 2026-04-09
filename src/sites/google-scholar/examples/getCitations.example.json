@@ -1,0 +1,14 @@
+{
+  "operation_id": "getCitations",
+  "cases": [
+    {
+      "input": {
+        "cites": "10449950798206616151"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "operation_id": "getAuthor",
+  "cases": [
+    {
+      "input": {
+        "authorId": "58.Frank_Herbert"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

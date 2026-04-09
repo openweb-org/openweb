@@ -1,0 +1,13 @@
+{
+  "operation_id": "searchArticles",
+  "cases": [
+    {
+      "input": {
+        "query": "climate change"
+      },
+      "assertions": {
+        "status": 200
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "operation_id": "getAuthorProfile",
+  "cases": [
+    {
+      "input": {
+        "user": "KROUdngAAAAJ"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

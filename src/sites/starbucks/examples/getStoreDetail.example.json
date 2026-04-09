@@ -1,0 +1,7 @@
+{
+  "operation_id": "getStoreDetail",
+  "cases": [{
+    "input": { "storeNumber": "53646-283069", "lat": 37.7772, "lng": -122.4193 },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

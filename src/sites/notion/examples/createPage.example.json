@@ -1,0 +1,16 @@
+{
+  "operation_id": "createPage",
+  "cases": [
+    {
+      "input": {
+        "x-notion-space-id": "fba8f373-0afa-439e-b6d5-f69d38f144fb",
+        "title": "OpenWeb Test Page"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      },
+      "replaySafety": "unsafe_mutation"
+    }
+  ]
+}

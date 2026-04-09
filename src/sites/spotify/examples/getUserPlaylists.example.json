@@ -1,0 +1,9 @@
+{
+  "operation_id": "getUserPlaylists",
+  "cases": [
+    {
+      "input": { "userId": "spotify", "limit": 5 },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}
