@@ -58,18 +58,22 @@ paths:
             application/json:
               schema:
                 type: object
+                description: Front-page headline listing.
                 required: [count, items]
                 properties:
                   count:
                     type: integer
+                    description: Number of headline items returned.
                   items:
                     type: array
                     items:
                       type: object
+                      description: A headline card with title, URL, and optional content type.
                       required: [title, url]
                       properties:
                         title:
                           type: string
+                          description: Headline text.
                         url:
                           type: string
                           description: Relative URL path (e.g. /2026/04/09/politics/example-story).
@@ -134,10 +138,12 @@ paths:
             application/json:
               schema:
                 type: object
+                description: Full article content extracted from LD+JSON.
                 required: [title, body]
                 properties:
                   title:
                     type: string
+                    description: Article headline.
                   description:
                     type: [string, 'null']
                     description: Article summary / meta description.
@@ -174,6 +180,7 @@ paths:
             - dom
         extraction:
           type: page_global_data
+          page_url: /search
           expression: |
             (async () => {
               const poll = (sel, ms, max) => new Promise((res) => {
@@ -234,23 +241,28 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [results]
+                description: Search results for the given query.
+                required: [count, results]
                 properties:
                   count:
                     type: integer
+                    description: Number of results returned.
                   results:
                     type: array
                     items:
                       type: object
+                      description: A search result card with title, URL, and metadata.
                       required: [title, url]
                       properties:
                         title:
                           type: string
+                          description: Article headline.
                         url:
                           type: string
                           description: Relative URL path.
                         description:
                           type: [string, 'null']
+                          description: Article snippet or summary.
                         date:
                           type: [string, 'null']
                           description: Publish date text.
