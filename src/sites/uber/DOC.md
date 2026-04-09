@@ -50,23 +50,23 @@ openweb uber exec getEatsOrderHistory '{"lastWorkflowUUID":"<nextCursor>"}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - **Eats**: REST-style POST endpoints at `ubereats.com/_p/api/<operationName>`. Request body is JSON. Response wraps data in `{ status, data }`.
 - Both APIs accept `x-csrf-token: x` (static placeholder, not derived from cookies).
 - **Menu data**: `getStoreV1` returns the full menu via `catalogSectionsMap` → `standardItemsPayload` → `catalogItems`. Each item has `uuid`, `title`, `price` (cents), `imageUrl`, availability flags.
 - **Cart**: Client-side only (localStorage `ubereats.v2.cart`). No server API for add-to-cart — the adapter navigates to the item quickView modal and clicks "Add to order".
 
-## Auth
+### Auth
 - **Type**: cookie_session
 - Shared session cookies across uber.com subdomains
 - Auth check: look for `sid`, `csid`, or `jwt-session` cookies
 
-## Transport
+### Transport
 - `transport: node` — read operations use server-side HTTP with cookie_session auth
 - `transport: page` — addToCart uses browser adapter (cart is client-side)
 - No browser required for read ops; cookies sourced from 4-tier cache cascade
 
-## Known Issues
+### Known Issues
 - **Ride history not available**: The `getRideHistory` operation was in the original capture plan but is not implemented in the adapter — only Eats operations are supported currently.
 - **Ride price estimate not captured**: The fare estimation GraphQL operation requires entering pickup + dropoff addresses via the m.uber.com SPA with custom React components (no standard attributes), making automated interaction difficult.
 - **Eats search redirect**: Navigating to `ubereats.com/search?q=X` redirects through a `?next=` parameter. The `getSearchFeedV1` API call bypasses this.

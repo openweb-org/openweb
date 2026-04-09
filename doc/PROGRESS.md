@@ -1,3 +1,45 @@
+## 2026-04-09: Polish tiktok site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`) and added internals preamble
+- Added `required` arrays to all 5 response schemas — top-level objects (id, description, video, author, stats) and nested objects (video, author, music, challenges, comments, items)
+- Added `description` on every property at every nesting level — no bare type-only fields across all 5 operations
+- Added `replay_safety: "safe_read"` and `method` to all 5 example files
+- Created missing example files for getVideoDetail, getUserProfile, getVideoComments, getHomeFeed
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions, replay_safety on examples
+- Enhanced site (1→5 ops): new getVideoDetail, getUserProfile, getVideoComments, getHomeFeed operations needed example files and schema hardening
+
+**Key files:**
+- `src/sites/tiktok/openapi.yaml` — schema hardening across all 5 ops
+- `src/sites/tiktok/DOC.md` — heading level fix, internals preamble
+- `src/sites/tiktok/examples/*.example.json` — 4 new files, replay_safety on all 5
+
+**Verification:** pnpm build, pnpm dev verify tiktok
+
+## 2026-04-09: Polish uber site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added `required` arrays to all 4 response schemas — top-level objects (feedItems, ordersMap+orderUuids, title+uuid+catalogSectionsMap, success) and nested objects (store, storeInfo, baseEaterOrder, catalogItems)
+- Added `description` on every property at every nesting level — no bare type-only fields across all 4 operations
+- Added `build` metadata (`verified: true`, `signals: [adapter-verified]`) to getRestaurantMenu and addToCart
+- Added `example` values to parameters (userQuery, storeUuid, itemUuid)
+- Added `replay_safety` to all 4 example files (`safe_read` for 3 reads, `unsafe_write` for addToCart)
+- Created missing `addToCart.example.json`
+
+**Why:**
+- Quality checklist: required fields, descriptions on all properties, build metadata, replay_safety on examples
+- Enhanced site (2→4 ops): new getRestaurantMenu, addToCart needed example files and schema hardening
+
+**Key files:**
+- `src/sites/uber/openapi.yaml` — schema hardening across all 4 ops, build metadata
+- `src/sites/uber/DOC.md` — heading level fix
+- `src/sites/uber/examples/addToCart.example.json` — new
+
+**Verification:** pnpm build, pnpm dev verify uber
+
 ## 2026-04-09: Polish youtube site package
 
 **What changed:**

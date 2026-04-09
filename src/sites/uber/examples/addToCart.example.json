@@ -1,0 +1,13 @@
+{
+  "operation_id": "addToCart",
+  "replay_safety": "unsafe_write",
+  "cases": [
+    {
+      "input": { "storeUuid": "8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7", "itemUuid": "6a7477ef-e958-5d7e-ad13-919222778971" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

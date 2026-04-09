@@ -44,6 +44,7 @@ paths:
                 userQuery:
                   type: string
                   description: Search keyword (e.g. "pizza", "sushi", "thai").
+                  example: pizza
                 date:
                   type: string
                   default: ''
@@ -84,23 +85,36 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - feedItems
                 properties:
                   feedItems:
                     type: array
                     description: Feed items — filter by type REGULAR_STORE for restaurants.
                     items:
                       type: object
+                      required:
+                        - type
+                        - store
                       properties:
                         type:
                           type: string
                           description: Item type (e.g. "REGULAR_STORE").
                         store:
                           type: object
+                          description: Restaurant details.
+                          required:
+                            - storeUuid
+                            - title
                           properties:
                             storeUuid:
                               type: string
+                              description: Restaurant UUID — use for getRestaurantMenu.
                             title:
                               type: object
+                              description: Restaurant name wrapper.
+                              required:
+                                - text
                               properties:
                                 text:
                                   type: string
@@ -109,29 +123,38 @@ paths:
                               type:
                                 - object
                                 - 'null'
+                              description: Rating info (null if unrated).
                               properties:
                                 text:
                                   type: string
                                   description: Rating value (e.g. "4.5").
                                 accessibilityText:
                                   type: string
+                                  description: Human-readable rating string.
                             image:
                               type: object
+                              description: Restaurant image gallery.
                               properties:
                                 items:
                                   type: array
+                                  description: Image URLs for the restaurant.
                                   items:
                                     type: object
+                                    required:
+                                      - url
                                     properties:
                                       url:
                                         type: string
+                                        description: Image URL.
                             meta:
                               type: array
+                              description: Metadata badges (delivery time, fees, etc).
                               items:
                                 type: object
                                 properties:
                                   text:
                                     type: string
+                                    description: Badge display text.
                                   badgeType:
                                     type: string
                                     description: Badge type (e.g. ETD for delivery time, MembershipBenefit for delivery fee).
@@ -139,6 +162,7 @@ paths:
                               type:
                                 - string
                                 - 'null'
+                              description: Deep link URL to the restaurant page.
                   subtitle:
                     type:
                       - string
@@ -183,51 +207,78 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - ordersMap
+                  - orderUuids
                 properties:
                   ordersMap:
                     type: object
                     description: Map of order UUID to order details.
                     additionalProperties:
                       type: object
+                      required:
+                        - baseEaterOrder
+                        - storeInfo
                       properties:
                         baseEaterOrder:
                           type: object
+                          description: Core order data.
+                          required:
+                            - uuid
                           properties:
                             uuid:
                               type: string
+                              description: Order UUID.
                             completedAt:
                               type:
                                 - string
                                 - 'null'
+                              description: ISO timestamp when order was completed.
                             isCancelled:
                               type: boolean
+                              description: Whether the order was cancelled.
                             isCompleted:
                               type: boolean
+                              description: Whether the order is completed.
                             shoppingCart:
                               type: object
+                              description: Cart snapshot at time of order.
                               properties:
                                 items:
                                   type: array
+                                  description: Ordered items.
                                   items:
                                     type: object
+                                    required:
+                                      - title
+                                      - price
+                                      - quantity
                                     properties:
                                       title:
                                         type: string
+                                        description: Item name.
                                       price:
                                         type: number
                                         description: Price in cents.
                                       quantity:
                                         type: integer
+                                        description: Number of this item ordered.
                         storeInfo:
                           type: object
+                          description: Restaurant info for this order.
+                          required:
+                            - title
+                            - uuid
                           properties:
                             title:
                               type: string
                               description: Restaurant name.
                             uuid:
                               type: string
+                              description: Restaurant UUID.
                         fareInfo:
                           type: object
+                          description: Pricing breakdown.
                           properties:
                             totalPrice:
                               type:
@@ -243,16 +294,20 @@ paths:
                     type:
                       - object
                       - 'null'
+                    description: Pagination cursor data.
                     properties:
                       nextCursor:
                         type: string
+                        description: Pass as lastWorkflowUUID for next page.
                   meta:
                     type:
                       - object
                       - 'null'
+                    description: Response metadata.
                     properties:
                       hasMore:
                         type: boolean
+                        description: Whether more pages are available.
 
   /_p/api/getStoreV1:
     post:
@@ -261,6 +316,12 @@ paths:
       x-openweb:
         permission: read
         unwrap: data
+        build:
+          stable_id: ub0002
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
       parameters:
         - name: x-csrf-token
           in: header
@@ -280,6 +341,7 @@ paths:
                 storeUuid:
                   type: string
                   description: Full UUID of the restaurant (from searchRestaurants storeUuid field).
+                  example: 8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7
       responses:
         '200':
           description: Restaurant info and full menu (after data unwrap).
@@ -287,39 +349,52 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - title
+                  - uuid
+                  - catalogSectionsMap
                 properties:
                   title:
                     type: string
                     description: Restaurant name.
                   uuid:
                     type: string
+                    description: Restaurant UUID.
                   slug:
                     type: string
+                    description: URL-friendly restaurant slug.
                   rating:
                     type: object
+                    description: Rating and review summary.
                     properties:
                       ratingValue:
                         type: number
+                        description: Average rating (e.g. 4.5).
                       reviewCount:
                         type: string
+                        description: Human-readable review count (e.g. "200+").
                   currencyCode:
                     type: string
                     description: Currency code (e.g. "USD").
                   isOpen:
                     type: boolean
+                    description: Whether the restaurant is currently open.
                   etaRange:
                     type: object
                     description: Delivery time estimate.
                   location:
                     type: object
+                    description: Restaurant location.
                     properties:
                       address:
                         type: string
                         description: Full street address.
                       latitude:
                         type: number
+                        description: Latitude coordinate.
                       longitude:
                         type: number
+                        description: Longitude coordinate.
                   hours:
                     type: array
                     description: Operating hours by day.
@@ -328,13 +403,19 @@ paths:
                     description: Menu time sections (e.g. Dinner, Lunch). Each has subsectionUuids.
                     items:
                       type: object
+                      required:
+                        - title
+                        - uuid
                       properties:
                         title:
                           type: string
+                          description: Section name (e.g. "Dinner", "Lunch").
                         uuid:
                           type: string
+                          description: Section UUID — key into catalogSectionsMap.
                         subsectionUuids:
                           type: array
+                          description: UUIDs of subsections in this section.
                           items:
                             type: string
                   catalogSectionsMap:
@@ -350,14 +431,18 @@ paths:
                             description: "Layout type (HORIZONTAL_GRID, VERTICAL_GRID)."
                           catalogSectionUUID:
                             type: string
+                            description: Category section UUID.
                           payload:
                             type: object
+                            description: Category payload container.
                             properties:
                               standardItemsPayload:
                                 type: object
+                                description: Standard menu items payload.
                                 properties:
                                   title:
                                     type: object
+                                    description: Category title wrapper.
                                     properties:
                                       text:
                                         type: string
@@ -367,10 +452,14 @@ paths:
                                     description: Menu items in this category.
                                     items:
                                       type: object
+                                      required:
+                                        - uuid
+                                        - title
+                                        - price
                                       properties:
                                         uuid:
                                           type: string
-                                          description: Item UUID — use for item detail or cart operations.
+                                          description: Item UUID — use for addToCart.
                                         title:
                                           type: string
                                           description: Item name.
@@ -381,17 +470,22 @@ paths:
                                           type:
                                             - string
                                             - 'null'
+                                          description: Item image URL (null if no image).
                                         isSoldOut:
                                           type: boolean
+                                          description: Whether the item is sold out.
                                         hasCustomizations:
                                           type: boolean
                                           description: Whether item requires customization choices.
                                         isAvailable:
                                           type: boolean
+                                          description: Whether the item is currently available.
                                         subsectionUuid:
                                           type: string
+                                          description: Parent subsection UUID.
                                         sectionUuid:
                                           type: string
+                                          description: Parent section UUID.
 
   /internal/addToCart:
     post:
@@ -403,6 +497,12 @@ paths:
           name: uber-eats
           operation: addToCart
         transport: page
+        build:
+          stable_id: ub0004
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
       requestBody:
         required: true
         content:
@@ -416,9 +516,11 @@ paths:
                 storeUuid:
                   type: string
                   description: Full UUID of the restaurant.
+                  example: 8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7
                 itemUuid:
                   type: string
                   description: Item UUID from getRestaurantMenu catalogItems.
+                  example: 6a7477ef-e958-5d7e-ad13-919222778971
                 quantity:
                   type: integer
                   default: 1
@@ -430,12 +532,18 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
+                    description: Whether the item was added successfully.
                   storeUuid:
                     type: string
+                    description: Restaurant UUID.
                   itemUuid:
                     type: string
+                    description: Item UUID that was added.
                   quantity:
                     type: integer
+                    description: Number of items added.

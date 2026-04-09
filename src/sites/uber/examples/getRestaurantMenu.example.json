@@ -1,5 +1,6 @@
 {
   "operation_id": "getRestaurantMenu",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "storeUuid": "8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7" },
