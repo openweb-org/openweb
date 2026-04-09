@@ -47,25 +47,25 @@ openweb bbc-news exec getTopicFeed '{"topic": "world"}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - Next.js SSR site — all data in `__NEXT_DATA__` script tag
 - Homepage and topic pages: `pageProps.page → sections[] → content[]` (article listings)
 - Article pages: `pageProps.page → contents[]` (nested block model with headline, byline, timestamp, text, image)
 - Search pages: `pageProps.page → results[]`
 - Page key pattern: `@"news",` (homepage), `@"news","articles","{id}",` (article), `/search?terms={q}&page={n}` (search)
 
-## Auth
+### Auth
 No auth required (public news site).
 
-## Transport
+### Transport
 `page` — Cloudflare bot detection (`cf_clearance` cookies) blocks direct HTTP. All operations use `page_global_data` extraction from `__NEXT_DATA__`.
 
-## Extraction
+### Extraction
 - **getHeadlines/getTopicFeed**: Flatten all `sections[].content[]` arrays, skip ads, deduplicate by id
 - **getArticle**: Traverse nested block model (`contents[]`) — headline, byline, timestamp blocks parsed separately; text blocks extracted via recursive paragraph finder
 - **searchArticles**: Direct extraction from `results[]` array in search page data
 
-## Known Issues
+### Known Issues
 - Some BBC topic URLs redirect (e.g., `/news/technology` → `/technology`). Supported topics: world, business, innovation, culture, arts, travel
 - Sport (`/news/sport`) uses a different system without `__NEXT_DATA__` — not supported via this extraction
 - Article URLs from headlines may be relative (`/news/articles/...`) or absolute (`https://www.bbc.com/...`)
