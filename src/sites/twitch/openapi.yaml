@@ -77,43 +77,72 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - searchFor
                 properties:
                   searchFor:
                     type: object
+                    description: Top-level search results container.
+                    required:
+                      - channels
                     properties:
                       channels:
                         type: object
+                        description: Paginated channel search results.
+                        required:
+                          - edges
                         properties:
                           cursor:
                             type: [string, 'null']
+                            description: Pagination cursor for fetching more results.
                           edges:
                             type: array
+                            description: List of matching channel edges.
                             items:
                               type: object
+                              description: A single search result edge containing a channel.
+                              required:
+                                - item
                               properties:
                                 item:
                                   type: object
+                                  description: The matched channel.
+                                  required:
+                                    - id
+                                    - login
+                                    - displayName
                                   properties:
                                     id:
                                       type: string
+                                      description: Unique channel ID.
                                     login:
                                       type: string
+                                      description: Channel login name (used as input to other ops).
                                     displayName:
                                       type: string
+                                      description: Human-readable channel display name.
                                     description:
                                       type: [string, 'null']
+                                      description: Channel bio/description text.
                                     profileImageURL:
                                       type: string
+                                      description: URL of the channel profile image.
                                     followers:
                                       type: object
+                                      description: Follower count container.
+                                      required:
+                                        - totalCount
                                       properties:
                                         totalCount:
                                           type: integer
+                                          description: Total number of followers.
                                     broadcastSettings:
                                       type: object
+                                      description: Current broadcast settings.
                                       properties:
                                         title:
                                           type: [string, 'null']
+                                          description: Current or last broadcast title.
 
   /gql~getChannel:
     post:
@@ -173,58 +202,92 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - user
                 properties:
                   user:
                     type: [object, 'null']
+                    description: Channel profile (null if channel not found).
+                    required:
+                      - id
+                      - displayName
+                      - followers
                     properties:
                       id:
                         type: string
+                        description: Unique channel ID.
                       displayName:
                         type: string
+                        description: Human-readable channel display name.
                       description:
                         type: string
+                        description: Channel bio/description text.
                       profileImageURL:
                         type: string
+                        description: URL of the channel profile image.
                       primaryColorHex:
                         type: string
+                        description: Channel brand color as hex (e.g. "9147FF").
                       followers:
                         type: object
+                        description: Follower count container.
+                        required:
+                          - totalCount
                         properties:
                           totalCount:
                             type: integer
+                            description: Total number of followers.
                       roles:
                         type: object
+                        description: Channel partnership/affiliate status.
                         properties:
                           isPartner:
                             type: boolean
+                            description: Whether the channel is a Twitch Partner.
                           isAffiliate:
                             type: boolean
+                            description: Whether the channel is a Twitch Affiliate.
                       channel:
                         type: object
+                        description: Channel metadata including social links and schedule.
                         properties:
                           socialMedias:
                             type: array
+                            description: List of linked social media accounts.
                             items:
                               type: object
+                              description: A linked social media account.
+                              required:
+                                - name
+                                - title
+                                - url
                               properties:
                                 name:
                                   type: string
+                                  description: Platform identifier (e.g. "twitter", "youtube").
                                 title:
                                   type: string
+                                  description: Display title for the social link.
                                 url:
                                   type: string
+                                  description: URL of the social media profile.
                           schedule:
                             type: [object, 'null']
+                            description: Stream schedule (null if no schedule set).
                             properties:
                               nextSegment:
                                 type: [object, 'null']
+                                description: Next scheduled stream segment (null if none upcoming).
                                 properties:
                                   startAt:
                                     type: string
+                                    description: ISO 8601 start time of the next scheduled stream.
                                   title:
                                     type: [string, 'null']
+                                    description: Title of the scheduled segment.
                                   hasReminder:
                                     type: boolean
+                                    description: Whether the viewer has set a reminder.
 
   /gql~getStream:
     post:
@@ -281,44 +344,71 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - user
                 properties:
                   user:
                     type: [object, 'null']
+                    description: Channel with stream status (null if channel not found).
+                    required:
+                      - id
                     properties:
                       id:
                         type: string
+                        description: Unique channel ID.
                       profileImageURL:
                         type: string
+                        description: URL of the channel profile image.
                       primaryColorHex:
                         type: string
+                        description: Channel brand color as hex (e.g. "9147FF").
                       roles:
                         type: object
+                        description: Channel partnership/affiliate status.
                         properties:
                           isPartner:
                             type: boolean
+                            description: Whether the channel is a Twitch Partner.
                       lastBroadcast:
                         type: [object, 'null']
+                        description: Most recent broadcast info (null if never streamed).
                         properties:
                           title:
                             type: [string, 'null']
+                            description: Title of the last broadcast.
                       stream:
                         type: [object, 'null']
+                        description: Current live stream (null if offline).
+                        required:
+                          - id
+                          - type
+                          - createdAt
                         properties:
                           id:
                             type: string
+                            description: Unique stream session ID.
                           type:
                             type: string
+                            description: Stream type (e.g. "live").
                           createdAt:
                             type: string
+                            description: ISO 8601 timestamp when the stream started.
                           game:
                             type: [object, 'null']
+                            description: Game/category being streamed (null if uncategorized).
+                            required:
+                              - id
+                              - name
                             properties:
                               id:
                                 type: string
+                                description: Unique game/category ID.
                               slug:
                                 type: string
+                                description: URL-friendly game slug.
                               name:
                                 type: string
+                                description: Display name of the game/category.
 
   /gql~getTopGames:
     post:
@@ -382,37 +472,62 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - directoriesWithTags
                 properties:
                   directoriesWithTags:
                     type: object
+                    description: Paginated top categories/games container.
+                    required:
+                      - edges
                     properties:
                       edges:
                         type: array
+                        description: List of category edges sorted by viewer count.
                         items:
                           type: object
+                          description: A single category/game edge.
+                          required:
+                            - node
                           properties:
                             node:
                               type: object
+                              description: The game/category entry.
+                              required:
+                                - id
+                                - displayName
+                                - viewersCount
                               properties:
                                 id:
                                   type: string
+                                  description: Unique game/category ID.
                                 slug:
                                   type: string
+                                  description: URL-friendly game slug.
                                 displayName:
                                   type: string
+                                  description: Display name of the game/category.
                                 viewersCount:
                                   type: integer
+                                  description: Current total viewer count across all streams.
                                 broadcastersCount:
                                   type: integer
+                                  description: Number of channels currently streaming this category.
                                 avatarURL:
                                   type: string
+                                  description: URL of the category box art image.
                                 tags:
                                   type: array
+                                  description: Tags applied to this category.
                                   items:
                                     type: object
+                                    description: A category tag.
+                                    required:
+                                      - localizedName
                                     properties:
                                       localizedName:
                                         type: string
+                                        description: Localized display name of the tag.
 
   /gql~getTopStreams:
     post:
@@ -483,45 +598,79 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - streams
                 properties:
                   streams:
                     type: object
+                    description: Paginated top streams container.
+                    required:
+                      - edges
                     properties:
                       edges:
                         type: array
+                        description: List of stream edges sorted by viewer count.
                         items:
                           type: object
+                          description: A single live stream edge.
+                          required:
+                            - node
                           properties:
                             node:
                               type: object
+                              description: The live stream entry.
+                              required:
+                                - id
+                                - viewersCount
+                                - broadcaster
+                                - type
                               properties:
                                 id:
                                   type: string
+                                  description: Unique stream session ID.
                                 viewersCount:
                                   type: integer
+                                  description: Current number of viewers watching this stream.
                                 broadcaster:
                                   type: object
+                                  description: The channel broadcasting this stream.
+                                  required:
+                                    - id
+                                    - displayName
+                                    - login
                                   properties:
                                     id:
                                       type: string
+                                      description: Unique channel ID.
                                     displayName:
                                       type: string
+                                      description: Human-readable channel display name.
                                     login:
                                       type: string
+                                      description: Channel login name (used as input to other ops).
                                     broadcastSettings:
                                       type: object
+                                      description: Current broadcast settings.
                                       properties:
                                         title:
                                           type: string
+                                          description: Current stream title.
                                 game:
                                   type: [object, 'null']
+                                  description: Game/category being streamed (null if uncategorized).
+                                  required:
+                                    - id
+                                    - name
                                   properties:
                                     id:
                                       type: string
+                                      description: Unique game/category ID.
                                     name:
                                       type: string
+                                      description: Display name of the game/category.
                                 type:
                                   type: string
+                                  description: Stream type (e.g. "live").
 
   /gql~getClips:
     post:
@@ -595,49 +744,86 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - user
                 properties:
                   user:
                     type: [object, 'null']
+                    description: Channel with clips (null if channel not found).
+                    required:
+                      - clips
                     properties:
                       clips:
                         type: object
+                        description: Paginated clips container.
+                        required:
+                          - edges
                         properties:
                           edges:
                             type: array
+                            description: List of clip edges.
                             items:
                               type: object
+                              description: A single clip edge with pagination cursor.
+                              required:
+                                - node
                               properties:
                                 cursor:
                                   type: [string, 'null']
+                                  description: Pagination cursor for this edge.
                                 node:
                                   type: object
+                                  description: The clip entry.
+                                  required:
+                                    - id
+                                    - slug
+                                    - title
+                                    - viewCount
+                                    - durationSeconds
                                   properties:
                                     id:
                                       type: string
+                                      description: Unique clip ID.
                                     slug:
                                       type: string
+                                      description: URL-friendly clip slug (used in twitch.tv/clip/{slug}).
                                     title:
                                       type: string
+                                      description: Clip title set by the creator.
                                     viewCount:
                                       type: integer
+                                      description: Total number of views.
                                     createdAt:
                                       type: string
+                                      description: ISO 8601 timestamp when the clip was created.
                                     durationSeconds:
                                       type: number
+                                      description: Clip duration in seconds.
                                     thumbnailURL:
                                       type: string
+                                      description: URL of the clip thumbnail image.
                                     broadcaster:
                                       type: object
+                                      description: The channel this clip is from.
+                                      required:
+                                        - login
+                                        - displayName
                                       properties:
                                         login:
                                           type: string
+                                          description: Channel login name.
                                         displayName:
                                           type: string
+                                          description: Human-readable channel display name.
                                     game:
                                       type: [object, 'null']
+                                      description: Game/category being played in the clip (null if uncategorized).
+                                      required:
+                                        - name
                                       properties:
                                         name:
                                           type: string
+                                          description: Display name of the game/category.
 
   /gql~getVideos:
     post:
@@ -710,46 +896,82 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - user
                 properties:
                   user:
                     type: [object, 'null']
+                    description: Channel with videos (null if channel not found).
+                    required:
+                      - videos
                     properties:
                       videos:
                         type: object
+                        description: Paginated videos container.
+                        required:
+                          - edges
                         properties:
                           edges:
                             type: array
+                            description: List of video edges.
                             items:
                               type: object
+                              description: A single video edge with pagination cursor.
+                              required:
+                                - node
                               properties:
                                 cursor:
                                   type: string
+                                  description: Pagination cursor for this edge.
                                 node:
                                   type: object
+                                  description: The video entry.
+                                  required:
+                                    - id
+                                    - title
+                                    - viewCount
+                                    - lengthSeconds
                                   properties:
                                     id:
                                       type: string
+                                      description: Unique video ID.
                                     title:
                                       type: string
+                                      description: Video title.
                                     viewCount:
                                       type: integer
+                                      description: Total number of views.
                                     createdAt:
                                       type: string
+                                      description: ISO 8601 timestamp when the video was created.
                                     lengthSeconds:
                                       type: integer
+                                      description: Video duration in seconds.
                                     broadcastType:
                                       type: string
+                                      description: 'Video type: ARCHIVE (past broadcast), HIGHLIGHT, or UPLOAD.'
                                     previewThumbnailURL:
                                       type: string
+                                      description: URL of the video thumbnail image.
                                     owner:
                                       type: object
+                                      description: The channel that owns this video.
+                                      required:
+                                        - login
+                                        - displayName
                                       properties:
                                         login:
                                           type: string
+                                          description: Channel login name.
                                         displayName:
                                           type: string
+                                          description: Human-readable channel display name.
                                     game:
                                       type: [object, 'null']
+                                      description: Game/category being played in the video (null if uncategorized).
+                                      required:
+                                        - name
                                       properties:
                                         name:
                                           type: string
+                                          description: Display name of the game/category.

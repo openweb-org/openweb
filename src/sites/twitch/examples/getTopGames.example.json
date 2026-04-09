@@ -1,5 +1,6 @@
 {
   "operation_id": "getTopGames",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "limit": 10 },

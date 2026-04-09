@@ -1,3 +1,41 @@
+## 2026-04-09: Polish instagram site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added `required` arrays and `description` to all new op response schemas (getUserPosts, getPostComments, getStories, likePost)
+- Added `required` arrays on nested items (comment, story, image rendition, user objects)
+- Created `likePost.example.json` (write op with `unsafe_write` replay safety)
+
+**Why:**
+- Quality checklist: no bare properties without descriptions, required where data always present, complete examples for all ops
+
+**Key files:**
+- `src/sites/instagram/openapi.yaml` — schema hardening
+- `src/sites/instagram/DOC.md` — heading level fix
+- `src/sites/instagram/examples/likePost.example.json` — new
+
+**Verification:** pnpm build, pnpm dev verify instagram
+
+## 2026-04-09: Polish twitch site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added `required` arrays to all 7 response schemas (searchChannels, getChannel, getStream, getTopGames, getTopStreams, getClips, getVideos)
+- Added descriptions to all properties across all 7 response schemas — no bare type-only fields
+- Added descriptions to all nested objects (followers, roles, channel, broadcaster, game, clips, videos, etc.)
+- Added `replay_safety: "safe_read"` to all 7 example files
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions, replay_safety on examples
+- Enhanced site (4→7 ops): new getTopStreams, getClips, getVideos operations needed full schema hardening
+
+**Key files:**
+- `src/sites/twitch/openapi.yaml` — schema hardening across all 7 ops
+- `src/sites/twitch/DOC.md` — heading level fix
+- `src/sites/twitch/examples/*.example.json` — replay_safety added
+
+**Verification:** pnpm build, pnpm dev verify twitch
+
 ## 2026-04-09: Polish npr site package
 
 **What changed:**

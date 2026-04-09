@@ -72,19 +72,19 @@ openweb twitch exec getVideos '{"channelOwnerLogin":"shroud"}'
 Everything below is for discover/compile operators and deep debugging.
 Not needed for basic site usage.
 
-## API Architecture
+### API Architecture
 
 GraphQL API at `gql.twitch.tv/gql` with persisted queries. Most read operations use a sha256 hash that maps to a server-side query — no inline query text accepted for those. Some operations (getTopStreams) use raw GQL queries. Requests require a public `Client-ID` header (`kimne78kx3ncx6brgo4mv6wki5h1ko`).
 
-## Auth
+### Auth
 
 No auth required for public data. Write operations (follow, etc.) would require `auth-token` cookie via OAuth.
 
-## Transport
+### Transport
 
 `node` transport — direct HTTP POST to `gql.twitch.tv/gql`. No browser needed; all operations are public GraphQL persisted queries or raw queries expressed as spec-native virtual paths.
 
-## Known Issues
+### Known Issues
 
 - **Persisted query hashes** are tied to Twitch's frontend version and may break on deploys. Hashes in `openapi.yaml` need periodic updates. getClips and getVideos use yt-dlp-validated hashes.
 - **getTopStreams uses raw GQL** — not a persisted query, so more resilient to frontend deploys but could break if Twitch restricts raw queries.
