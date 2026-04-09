@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-04-01 (batch0/1/2 rediscovery, pipeline gap fixes)
+> Last updated: 2026-04-09 (add-sites sprint: 63→96 sites, 470→634 ops)
 
 ## Quick Start
 

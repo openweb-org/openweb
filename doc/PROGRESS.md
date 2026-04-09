@@ -1,3 +1,30 @@
+## 2026-04-09: Add Sites Sprint — 63→96 sites, 470→634 ops
+
+**What changed:**
+- Added 33 new sites across 8 categories: public APIs (npm, PyPI, Docker Hub, CoinGecko, arXiv, HuggingFace, ProductHunt, StackOverflow), news (BBC, Guardian, TechCrunch, NPR, CNN), consumer (Craigslist, Goodreads, SoundCloud, eBay, Etsy, Wayfair, OpenTable, Glassdoor, Starbucks, Grubhub, Quora, CoinMarketCap, Seeking Alpha, Google Scholar, IMDB, Rotten Tomatoes, Skyscanner), productivity (Todoist, Trello), hard (Facebook, Netflix, Kayak)
+- Enhanced 19 existing sites: Spotify 4→8, Instagram 4→8, Twitch 4→7, TripAdvisor 4→7, Bloomberg 4→7, Expedia 4→6, Xueqiu 6→10, LinkedIn 10→12, YouTube 9→11, Discord 10→12, Airbnb 2→5, HomeDepot 2→5, TikTok 1→5, Zillow 1→4, Reuters 2→4, Uber 2→4, Amazon 5→7, Notion 3→6
+- Fixed 14 bugs: amazon TS leak, reuters section_id, coinmarketcap slug, soundcloud params, craigslist selectors, zillow nullable schemas, wayfair PerimeterX, linkedin queryId, youtube entity-mutation, airbnb GraphQL intercept, homedepot lazy-load scroll, xueqiu defaults+subdomain, rotten-tomatoes timeout, imdb transient
+- Runtime: `autoNavigate` parent-domain fallback for API subdomains (session-executor.ts), HTML passthrough in response-parser.ts
+- Polished all 49 active sites: DOC.md workflows, PROGRESS.md, schema required fields, examples
+- Fixed 3 test assertions to match new behavior (919/919 passing)
+
+**Why:**
+- Gap analysis showed critical coverage holes vs competitors (OpenTabs 112 sites, OpenCLI 83 sites)
+- Missing entire categories: news, package registries, academic/AI, crypto, developer Q&A
+- Existing sites embarrassingly thin: TikTok had 1 op, Zillow had 1 op, Spotify had no playlists
+
+**Key files:**
+- 428 files changed across src/sites/, src/runtime/, src/lib/, doc/
+- New runtime: session-executor.ts (autoNavigate subdomain fallback), response-parser.ts (HTML passthrough)
+- Sprint plan: doc/todo/addsites0409/
+
+**Verification:** pnpm build (96 sites, 884 files), pnpm test (919/919), live exec tests on all sites
+**Commit:** 39d41ad..bce61dd (51 commits: 1 sprint baseline + 50 polish + 1 test fix)
+**Next:** Regression verify on pre-existing 63 sites, release prep
+**Blockers:** 6 sites blocked/auth-gated (Facebook, Netflix, Kayak, Skyscanner, Todoist, Trello)
+
+---
+
 ## 2026-04-09: Polish yelp site package
 
 **What changed:**
