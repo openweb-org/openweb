@@ -51,8 +51,6 @@ openweb coingecko exec getPrice '{"ids":"bitcoin,ethereum,solana","vs_currencies
 
 ---
 
-## Site Internals
-
 ## API Architecture
 Public REST API on `api.coingecko.com`. Versioned at `/api/v3/`. All responses are JSON. No GraphQL, no SSR.
 
