@@ -208,11 +208,13 @@ paths:
                     description: "ISO 8601 creation timestamp"
                   cardData:
                     type: object
+                    additionalProperties: true
                     description: "Parsed model card metadata (license, language, tags, datasets)"
                   siblings:
                     type: array
                     items:
                       type: object
+                      required: [rfilename]
                       properties:
                         rfilename:
                           type: string
@@ -225,6 +227,7 @@ paths:
                     description: "Related Spaces using this model"
                   safetensors:
                     type: object
+                    additionalProperties: true
                     description: "Safetensors file metadata (parameters, format)"
                 required: [id, modelId, downloads, likes]
 
@@ -395,6 +398,7 @@ paths:
                     description: "ISO 8601 creation timestamp"
                   cardData:
                     type: object
+                    additionalProperties: true
                     description: "Parsed dataset card metadata (license, language, task, size)"
                   description:
                     type: string
@@ -406,6 +410,7 @@ paths:
                     type: array
                     items:
                       type: object
+                      required: [rfilename]
                       properties:
                         rfilename:
                           type: string

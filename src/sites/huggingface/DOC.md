@@ -55,7 +55,7 @@ openweb huggingface exec getSpaces '{"search": "chatbot", "limit": 5}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 Public REST API on `huggingface.co/api`. No versioning prefix.
 - Models: `/api/models` (search), `/api/models/{owner}/{name}` (detail)
 - Datasets: `/api/datasets` (search), `/api/datasets/{owner}/{name}` (detail)
@@ -63,10 +63,10 @@ Public REST API on `huggingface.co/api`. No versioning prefix.
 
 All responses are JSON arrays (search) or objects (detail). IDs use `owner/name` format.
 
-## Auth
+### Auth
 No auth required for public reads. Gated models/datasets may return limited info without a token.
 
-## Transport
+### Transport
 `node` -- direct HTTP. No bot detection, no CORS restrictions on API endpoints.
 
 ## Known Issues
