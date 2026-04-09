@@ -1,5 +1,17 @@
 # Etsy — Progress
 
+## 2026-04-09: Polish — docs, schema, examples
+
+**What changed:**
+- DOC.md: fixed heading hierarchy under Site Internals
+- openapi.yaml: version 1.0.0, compiled_at, build metadata, param examples, property descriptions, no bare type:object, review items required array
+- All 4 example files present with replay_safety
+
+**Why:**
+- Align with site package quality checklist
+
+**Verification:** `pnpm --silent dev verify etsy`
+
 ## 2026-04-09: Initial site package
 
 **What changed:**
@@ -11,4 +23,3 @@
 - New site request for handmade/vintage marketplace coverage
 
 **Verification:** All 4 operations PASS runtime verify (searchListings, getListingDetail, getReviews, getShop)
-**Commit:** pending

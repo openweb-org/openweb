@@ -1,9 +1,10 @@
 openapi: '3.1.0'
 info:
   title: Etsy
-  version: '1.0'
+  version: '1.0.0'
   x-openweb:
     spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
     requires_auth: false
 servers:
   - url: https://www.etsy.com
@@ -16,6 +17,13 @@ paths:
       summary: Search listings by keyword — title, price, shop, rating, image, free shipping
       x-openweb:
         permission: read
+        build:
+          verified: true
+          stable_id: etsy0001
+          signature_id: etsy0001s
+          tool_version: 1
+          signals:
+            - extraction_detected
         adapter:
           name: etsy
           operation: searchListings
@@ -26,6 +34,7 @@ paths:
           schema:
             type: string
           description: Search keyword (e.g. "handmade pottery", "vintage jewelry").
+          example: handmade pottery
       responses:
         '200':
           description: Search results with listing summaries.
@@ -40,12 +49,15 @@ paths:
                 properties:
                   query:
                     type: string
+                    description: Echo of the search query.
                   totalResults:
                     type: integer
+                    description: Number of listings returned.
                   listings:
                     type: array
                     items:
                       type: object
+                      description: A listing search result.
                       required:
                         - listingId
                         - title
@@ -55,8 +67,10 @@ paths:
                           description: Listing ID (use with getListingDetail, getReviews).
                         title:
                           type: string
+                          description: Listing title.
                         url:
                           type: string
+                          description: Full URL to the listing page.
                         price:
                           type:
                             - string
@@ -64,8 +78,10 @@ paths:
                           description: Display price (e.g. "$45.00").
                         currency:
                           type: string
+                          description: Currency code (e.g. "USD").
                         image:
                           type: string
+                          description: Primary listing image URL.
                         shopName:
                           type: string
                           description: Shop name (use with getShop).
@@ -73,13 +89,15 @@ paths:
                           type:
                             - number
                             - 'null'
+                          description: Average rating (0-5 scale).
                         reviewCount:
                           type:
                             - string
                             - 'null'
-                          description: Review count (e.g. "7.1k").
+                          description: Review count as display string (e.g. "7.1k").
                         freeShipping:
                           type: boolean
+                          description: Whether listing offers free shipping.
 
   /listing/{listingId}:
     get:
@@ -87,6 +105,13 @@ paths:
       summary: Get listing details — title, price, description, photos, seller, rating, material
       x-openweb:
         permission: read
+        build:
+          verified: true
+          stable_id: etsy0002
+          signature_id: etsy0002s
+          tool_version: 1
+          signals:
+            - extraction_detected
         adapter:
           name: etsy
           operation: getListingDetail
@@ -97,6 +122,7 @@ paths:
           schema:
             type: string
           description: Listing ID from searchListings.
+          example: '168685596'
       responses:
         '200':
           description: Full listing details.
@@ -110,43 +136,56 @@ paths:
                 properties:
                   listingId:
                     type: string
+                    description: Listing ID.
                   title:
                     type: string
+                    description: Listing title.
                   url:
                     type: string
+                    description: Full URL to the listing page.
                   description:
                     type: string
+                    description: Seller-provided listing description.
                   price:
                     type:
                       - number
                       - 'null'
+                    description: Price as a number.
                   currency:
                     type: string
+                    description: Currency code (e.g. "USD").
                   availability:
                     type: string
+                    description: Availability status (e.g. "InStock").
                   shopName:
                     type: string
                     description: Shop name (use with getShop).
                   category:
                     type: string
+                    description: Listing category.
                   material:
                     type:
                       - string
                       - 'null'
+                    description: Material (e.g. "ceramic", "wood").
                   rating:
                     type:
                       - number
                       - 'null'
+                    description: Average rating (0-5 scale).
                   reviewCount:
                     type:
                       - integer
                       - 'null'
+                    description: Total number of reviews.
                   photos:
                     type: array
                     items:
                       type: string
+                    description: List of photo URLs (up to 10).
                   image:
                     type: string
+                    description: Primary listing image URL.
 
   /listing/{listingId}/reviews:
     get:
@@ -154,6 +193,13 @@ paths:
       summary: Get reviews for a listing — rating, text, author, date, aggregate stats
       x-openweb:
         permission: read
+        build:
+          verified: true
+          stable_id: etsy0003
+          signature_id: etsy0003s
+          tool_version: 1
+          signals:
+            - extraction_detected
         adapter:
           name: etsy
           operation: getReviews
@@ -164,6 +210,7 @@ paths:
           schema:
             type: string
           description: Listing ID from searchListings.
+          example: '168685596'
       responses:
         '200':
           description: Listing reviews and aggregate rating.
@@ -177,30 +224,40 @@ paths:
                 properties:
                   listingId:
                     type: string
+                    description: Listing ID.
                   averageRating:
                     type:
                       - number
                       - 'null'
+                    description: Average rating (0-5 scale).
                   totalReviews:
                     type:
                       - integer
                       - 'null'
+                    description: Total number of reviews for this listing.
                   reviews:
                     type: array
+                    description: Recent reviews (~4 from LD+JSON).
                     items:
                       type: object
+                      description: A single review.
+                      required:
+                        - text
                       properties:
                         rating:
                           type:
                             - integer
                             - 'null'
+                          description: Star rating (1-5).
                         text:
                           type: string
+                          description: Review body text.
                         author:
                           type: string
+                          description: Reviewer display name.
                         date:
                           type: string
-                          description: ISO date (e.g. "2026-04-01").
+                          description: Publication date (ISO format, e.g. "2026-04-01").
 
   /shop/{shopName}:
     get:
@@ -208,6 +265,13 @@ paths:
       summary: Get shop profile — name, location, rating, sales, owner, active listings
       x-openweb:
         permission: read
+        build:
+          verified: true
+          stable_id: etsy0004
+          signature_id: etsy0004s
+          tool_version: 1
+          signals:
+            - extraction_detected
         adapter:
           name: etsy
           operation: getShop
@@ -218,6 +282,7 @@ paths:
           schema:
             type: string
           description: Shop name from searchListings or getListingDetail.
+          example: nealpottery
       responses:
         '200':
           description: Shop profile.
@@ -230,42 +295,54 @@ paths:
                 properties:
                   shopName:
                     type: string
+                    description: Shop display name.
                   description:
                     type: string
+                    description: Shop description text.
                   url:
                     type: string
+                    description: Full URL to the shop page.
                   logo:
                     type: string
+                    description: Shop logo image URL.
                   location:
                     type: string
+                    description: Shop location (e.g. "Portland, OR").
                   slogan:
                     type:
                       - string
                       - 'null'
+                    description: Shop tagline or slogan.
                   owner:
                     type:
                       - string
                       - 'null'
+                    description: Shop owner name.
                   rating:
                     type:
                       - number
                       - 'null'
+                    description: Average shop rating (0-5 scale).
                   reviewCount:
                     type:
                       - integer
                       - 'null'
+                    description: Total number of shop reviews.
                   sales:
                     type:
                       - string
                       - 'null'
-                    description: Sales count (e.g. "28.5k").
+                    description: Sales count as display string (e.g. "28.5k").
                   yearsOnEtsy:
                     type:
                       - integer
                       - 'null'
+                    description: Number of years the shop has been on Etsy.
                   activeListings:
                     type: integer
+                    description: Number of active listings currently in the shop.
                   image:
                     type:
                       - string
                       - 'null'
+                    description: Shop banner or featured image URL.
