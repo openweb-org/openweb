@@ -20,9 +20,9 @@ Open-access preprint server for scientific papers (arxiv.org). Public Atom API a
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchPapers | find papers by keyword/author/category | search_query | XML feed with entries (title, authors, abstract, categories) | paginated via start/max_results, supports field prefixes (all:, au:, ti:, cat:) |
-| getPaper | get paper metadata by ID | id_list (comma-separated) | XML entry with full metadata and links | can fetch multiple papers at once |
-| getAbstract | get abstract page by ID | arxiv_id | HTML page with title, authors, abstract | human-readable format, uses arxiv.org host |
+| searchPapers | find papers by keyword/author/category | search_query (user) | XML feed with entries (id, title, authors, abstract, categories) | **entry point** — paginated via start/max_results, field prefixes (all:, au:, ti:, cat:) |
+| getPaper | get paper metadata by ID | id_list ← searchPapers `<id>` or user | XML entry with full metadata and PDF link | can fetch multiple papers at once |
+| getAbstract | get abstract page by ID | arxiv_id ← searchPapers `<id>` or user | HTML page with title, authors, abstract | human-readable format, uses arxiv.org host |
 
 ## Quick Start
 
@@ -38,8 +38,6 @@ openweb arxiv exec getAbstract '{"arxiv_id": "1706.03762"}'
 ```
 
 ---
-
-## Site Internals
 
 ## API Architecture
 - Atom XML API at `export.arxiv.org/api/query` — single endpoint, query param-driven

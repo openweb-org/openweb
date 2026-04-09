@@ -34,6 +34,7 @@ paths:
             type: integer
             default: 10
           description: Maximum number of results to return (max 100).
+          example: 5
         - name: start
           in: query
           required: false
@@ -41,6 +42,7 @@ paths:
             type: integer
             default: 0
           description: Offset for pagination.
+          example: 0
         - name: sortBy
           in: query
           required: false
@@ -48,6 +50,7 @@ paths:
             type: string
             enum: [relevance, lastUpdatedDate, submittedDate]
           description: Sort order for results.
+          example: relevance
         - name: sortOrder
           in: query
           required: false
@@ -55,6 +58,7 @@ paths:
             type: string
             enum: [ascending, descending]
           description: Sort direction.
+          example: descending
       responses:
         '200':
           description: Atom XML feed containing matching papers with metadata.
