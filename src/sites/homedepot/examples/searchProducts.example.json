@@ -1,5 +1,6 @@
 {
   "operation_id": "searchProducts",
+  "replay_safety": "safe_read",
   "cases": [{
     "input": { "keyword": "cordless drill" },
     "assertions": { "status": 200, "response_schema_valid": true }

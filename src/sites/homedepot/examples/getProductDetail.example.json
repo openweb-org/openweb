@@ -1,5 +1,6 @@
 {
   "operation_id": "getProductDetail",
+  "replay_safety": "safe_read",
   "cases": [{
     "input": { "itemId": "341983849" },
     "assertions": { "status": 200, "response_schema_valid": true }

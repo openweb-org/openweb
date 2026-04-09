@@ -32,6 +32,7 @@ paths:
           schema:
             type: string
           description: Search keyword (e.g. "cordless drill", "patio furniture").
+          example: cordless drill
       responses:
         '200':
           description: Product search results.
@@ -46,49 +47,65 @@ paths:
                 properties:
                   totalProducts:
                     type: integer
+                    description: Total number of matching products.
                   keyword:
                     type: string
+                    description: The search keyword that was used.
                   products:
                     type: array
+                    description: List of matching products.
                     items:
                       type: object
                       required:
                         - itemId
                         - name
+                      description: A product search result.
                       properties:
                         itemId:
                           type: string
-                          description: Product item ID (use with getProductDetail).
+                          description: Product item ID (use with getProductDetail, getProductReviews, etc.).
                         name:
                           type: string
+                          description: Product display name.
                         brand:
                           type: string
+                          description: Brand name.
                         modelNumber:
                           type: string
+                          description: Manufacturer model number.
                         url:
                           type: string
+                          description: Product page URL path.
                         price:
                           type:
                             - number
                             - 'null'
+                          description: Current price in USD, or null if unavailable.
                         priceDisplay:
                           type: string
+                          description: Formatted price string (e.g. "$149.00").
                         rating:
                           type:
                             - number
                             - 'null'
+                          description: Average customer rating (1-5), or null if unrated.
                         reviewCount:
                           type: integer
+                          description: Number of customer reviews.
                         image:
                           type: string
+                          description: Primary product image URL.
                         availability:
                           type: string
+                          description: Availability status text.
                         badges:
                           type: array
+                          description: Promotional badges (e.g. "Best Seller", "Top Rated").
                           items:
                             type: string
                         sponsored:
                           type: boolean
+                          description: Whether this is a sponsored listing.
   /p/{slug}/{itemId}:
     get:
       operationId: getProductDetail
@@ -111,6 +128,7 @@ paths:
           schema:
             type: string
           description: Product item ID (e.g. "306283873"). Get from searchProducts results.
+          example: '306283873'
         - name: slug
           in: path
           required: false
@@ -118,18 +136,21 @@ paths:
             type: string
             default: detail
           description: Product URL slug (ignored by adapter, any value works).
+          example: detail
         - name: storeId
           in: query
           required: false
           schema:
             type: string
           description: Store ID for local pricing/availability.
+          example: '6892'
         - name: zipCode
           in: query
           required: false
           schema:
             type: string
           description: ZIP code for delivery estimates.
+          example: '10001'
       responses:
         '200':
           description: Full product details.
@@ -143,55 +164,78 @@ paths:
                 properties:
                   itemId:
                     type: string
+                    description: Product item ID.
                   name:
                     type: string
+                    description: Product display name.
                   brand:
                     type: string
+                    description: Brand name.
                   modelNumber:
                     type: string
+                    description: Manufacturer model number.
                   productType:
                     type: string
+                    description: Product type classification.
                   url:
                     type: string
+                    description: Canonical product page URL.
                   description:
                     type: string
+                    description: Full product description text.
                   highlights:
                     type: array
+                    description: Key product feature bullet points.
                     items:
                       type: string
                   price:
                     type:
                       - number
                       - 'null'
+                    description: Current price in USD, or null if unavailable.
                   priceDisplay:
                     type: string
+                    description: Formatted price string (e.g. "$149.00").
                   rating:
                     type:
                       - number
                       - 'null'
+                    description: Average customer rating (1-5), or null if unrated.
                   reviewCount:
                     type: integer
+                    description: Number of customer reviews.
                   images:
                     type: array
+                    description: Product image URLs.
                     items:
                       type: string
                   specifications:
                     type: array
+                    description: Product specifications grouped by category.
                     items:
                       type: object
+                      required:
+                        - name
+                        - value
+                      description: A single product specification.
                       properties:
                         group:
                           type: string
+                          description: Specification group name (e.g. "Dimensions", "Details").
                         name:
                           type: string
+                          description: Specification name (e.g. "Product Weight (lb.)").
                         value:
                           type: string
+                          description: Specification value (e.g. "4.4 lb").
                   breadcrumbs:
                     type: array
+                    description: Category breadcrumb trail from root to product.
                     items:
                       type: string
                   availability:
                     type: string
+                    description: Availability status text.
   /p/{slug}/{itemId}/reviews:
     get:
       operationId: getProductReviews
@@ -214,6 +258,7 @@ paths:
           schema:
             type: string
           description: Product item ID (e.g. "306283873"). Get from searchProducts results.
+          example: '306283873'
         - name: slug
           in: path
           required: false
@@ -221,6 +266,7 @@ paths:
             type: string
             default: detail
           description: Product URL slug (ignored by adapter, any value works).
+          example: detail
       responses:
         '200':
           description: Customer reviews for the product.
@@ -235,55 +281,72 @@ paths:
                 properties:
                   itemId:
                     type: string
+                    description: Product item ID.
                   totalReviews:
                     type: integer
+                    description: Total number of reviews for this product.
                   reviews:
                     type: array
+                    description: Customer reviews (first page, up to 10).
                     items:
                       type: object
                       required:
                         - id
                         - rating
                         - text
+                      description: A customer review from BazaarVoice.
                       properties:
                         id:
                           type: string
+                          description: Unique review identifier.
                         rating:
                           type: integer
                           minimum: 1
                           maximum: 5
+                          description: Star rating (1-5).
                         title:
                           type:
                             - string
                             - 'null'
+                          description: Review title, or null if not provided.
                         text:
                           type: string
+                          description: Full review text.
                         author:
                           type: string
+                          description: Reviewer display name.
                         date:
                           type: string
+                          description: Review submission date.
                         isRecommended:
                           type:
                             - boolean
                             - 'null'
+                          description: Whether the reviewer recommends this product.
                         isSyndicated:
                           type: boolean
+                          description: Whether the review was syndicated from another site.
                         helpfulVotes:
                           type: integer
+                          description: Number of helpful votes.
                         unhelpfulVotes:
                           type: integer
+                          description: Number of unhelpful votes.
                         photos:
                           type: array
+                          description: URLs of photos attached to the review.
                           items:
                             type: string
                         badges:
                           type: array
+                          description: Reviewer badges (e.g. "Verified Purchase", "Top Contributor").
                           items:
                             type: string
                         location:
                           type:
                             - string
                             - 'null'
+                          description: Reviewer location, or null if not provided.
   /p/{slug}/{itemId}/pricing:
     get:
       operationId: getProductPricing
@@ -306,6 +369,7 @@ paths:
           schema:
             type: string
           description: Product item ID (e.g. "306283873"). Get from searchProducts results.
+          example: '306283873'
         - name: slug
           in: path
           required: false
@@ -313,6 +377,7 @@ paths:
             type: string
             default: detail
           description: Product URL slug (ignored by adapter, any value works).
+          example: detail
       responses:
         '200':
           description: Detailed pricing information for the product.
@@ -326,91 +391,117 @@ paths:
                 properties:
                   itemId:
                     type: string
+                    description: Product item ID.
                   name:
                     type: string
+                    description: Product display name.
                   price:
                     type:
                       - number
                       - 'null'
+                    description: Current price in USD, or null if unavailable.
                   originalPrice:
                     type:
                       - number
                       - 'null'
+                    description: Original price before discount, or null if not on sale.
                   unitOfMeasure:
                     type:
                       - string
                       - 'null'
+                    description: Unit of measure for pricing (e.g. "each", "sq. ft.").
                   mapAboveOriginalPrice:
                     type:
                       - boolean
                       - 'null'
+                    description: Whether minimum advertised price exceeds original price.
                   clearance:
                     type:
                       - boolean
                       - 'null'
+                    description: Whether the product is on clearance.
                   specialBuy:
                     type:
                       - boolean
                       - 'null'
+                    description: Whether the product is a special buy promotion.
                   promotion:
                     type:
                       - object
                       - 'null'
+                    description: Active promotion details, or null if none.
                     properties:
                       type:
                         type: string
+                        description: Promotion type (e.g. "BOGO", "Percentage Off").
                       description:
                         type: string
+                        description: Promotion description text.
                       dollarOff:
                         type:
                           - number
                           - 'null'
+                        description: Dollar amount of discount, or null.
                       percentageOff:
                         type:
                           - number
                           - 'null'
+                        description: Percentage discount, or null.
                       startDate:
                         type:
                           - string
                           - 'null'
+                        description: Promotion start date, or null.
                       endDate:
                         type:
                           - string
                           - 'null'
+                        description: Promotion end date, or null.
                   unitPricing:
                     type:
                       - object
                       - 'null'
+                    description: Per-unit pricing breakdown, or null if not applicable.
                     properties:
                       value:
                         type: number
+                        description: Price per unit.
                       unitOfMeasure:
                         type: string
+                        description: Unit label (e.g. "sq. ft.", "linear ft.").
                   bulkPricing:
                     type:
                       - object
                       - 'null'
+                    description: Bulk/volume pricing details, or null if not available.
                   conditionalPromotions:
                     type:
                       - array
                       - 'null'
+                    description: Conditional promotions (e.g. BOGO, bundle deals), or null.
                     items:
                       type: object
+                      description: A conditional promotion offer.
                       properties:
                         type:
                           type: string
+                          description: Promotion type.
                         subType:
                           type: string
+                          description: Promotion subtype.
                         description:
                           type: string
+                          description: Promotion description text.
                         startDate:
                           type:
                             - string
                             - 'null'
+                          description: Promotion start date, or null.
                         endDate:
                           type:
                             - string
                             - 'null'
+                          description: Promotion end date, or null.
   /p/{slug}/{itemId}/availability:
     get:
       operationId: getStoreAvailability
@@ -433,6 +524,7 @@ paths:
           schema:
             type: string
           description: Product item ID (e.g. "306283873"). Get from searchProducts results.
+          example: '306283873'
         - name: slug
           in: path
           required: false
@@ -440,6 +532,7 @@ paths:
             type: string
             default: detail
           description: Product URL slug (ignored by adapter, any value works).
+          example: detail
       responses:
         '200':
           description: Store availability and fulfillment options.
@@ -453,67 +546,94 @@ paths:
                 properties:
                   itemId:
                     type: string
+                    description: Product item ID.
                   name:
                     type: string
+                    description: Product display name.
                   availabilityType:
                     type: string
+                    description: Availability classification (e.g. "Online", "Store").
                   discontinued:
                     type: boolean
+                    description: Whether the product has been discontinued.
                   buyable:
                     type: boolean
+                    description: Whether the product can be purchased.
                   fulfillmentOptions:
                     type: array
+                    description: Available fulfillment methods (pickup and/or delivery).
                     items:
                       type: object
+                      required:
+                        - type
+                        - fulfillable
+                      description: A fulfillment option (pickup or delivery).
                       properties:
                         type:
                           type: string
-                          description: '"pickup" or "delivery"'
+                          description: Fulfillment type — "pickup" or "delivery".
                         fulfillable:
                           type: boolean
+                          description: Whether this fulfillment method is currently available.
                         services:
                           type: array
+                          description: Specific fulfillment services within this option.
                           items:
                             type: object
+                            required:
+                              - type
+                            description: A specific fulfillment service (e.g. BOPIS, ship-to-home).
                             properties:
                               type:
                                 type: string
-                                description: '"bopis", "express delivery", "sth" (ship-to-home)'
+                                description: Service type — "bopis", "express delivery", "sth" (ship-to-home).
                               deliveryTimeline:
                                 type:
                                   - string
                                   - 'null'
+                                description: Estimated delivery timeline text, or null.
                               startDate:
                                 type:
                                   - string
                                   - 'null'
+                                description: Earliest delivery/pickup date, or null.
                               endDate:
                                 type:
                                   - string
                                   - 'null'
+                                description: Latest delivery/pickup date, or null.
                               deliveryCharge:
                                 type:
                                   - number
                                   - 'null'
+                                description: Delivery fee in USD, or null if free.
                               hasFreeShipping:
                                 type: boolean
+                                description: Whether free shipping is available.
                               storeId:
                                 type:
                                   - string
                                   - 'null'
+                                description: Store ID for pickup, or null for delivery.
                               storeName:
                                 type:
                                   - string
                                   - 'null'
+                                description: Store display name, or null for delivery.
                               storePhone:
                                 type:
                                   - string
                                   - 'null'
+                                description: Store phone number, or null for delivery.
                               inStock:
                                 type: boolean
+                                description: Whether the product is currently in stock.
                               quantity:
                                 type: integer
+                                description: Available quantity in stock.
                               isLimitedQuantity:
                                 type: boolean
+                                description: Whether stock is limited.
                               curbsidePickup:
                                 type: boolean
+                                description: Whether curbside pickup is available.

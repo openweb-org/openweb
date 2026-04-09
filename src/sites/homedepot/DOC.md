@@ -57,16 +57,16 @@ openweb homedepot exec getStoreAvailability '{"itemId": "306283873"}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - **GraphQL interception** — all operations use navigation-based interception of the GraphQL federation gateway (`/federation-gateway/graphql` on `apionline.homedepot.com`)
 - GraphQL operations fire naturally when navigating to search/product pages; the adapter intercepts responses via `page.on('response')`
 - This avoids Akamai blocking that affected the previous `page.evaluate(fetch(...))` approach
 
-## Auth
+### Auth
 - No auth required — all operations work on public data
 - `requires_auth: false`
 
-## Transport
+### Transport
 - **All operations: page** — adapter runs inside managed browser
 - searchProducts navigates to `/s/{keyword}` and intercepts the `searchModel` GraphQL response
 - getProductDetail navigates to `/p/detail/{itemId}` and intercepts the `productClientOnlyProduct` GraphQL response
@@ -74,14 +74,14 @@ openweb homedepot exec getStoreAvailability '{"itemId": "306283873"}'
 - getProductPricing navigates to `/p/detail/{itemId}` and intercepts the `productClientOnlyProduct` GraphQL response (pricing subset)
 - getStoreAvailability navigates to `/p/detail/{itemId}` and intercepts the `productClientOnlyProduct` GraphQL response (fulfillment subset)
 
-## Extraction
+### Extraction
 - **searchProducts**: Navigate to search page, intercept `searchModel` GraphQL response -> adapter maps `identifiers`, `pricing`, `reviews`, `media` into flat product objects
 - **getProductDetail**: Navigate to product page, intercept `productClientOnlyProduct` GraphQL response -> adapter maps product fields, `specificationGroup` -> flat specs array, `taxonomy.breadCrumbs` -> labels
 - **getProductReviews**: Navigate to product page, intercept `reviews` GraphQL response -> BazaarVoice-sourced reviews with ratings, text, photos, badges; returns first page (10 reviews)
 - **getProductPricing**: Navigate to product page, intercept `productClientOnlyProduct` -> focused pricing view with promotions, conditionalPromotions (BOGO), unit pricing, clearance, specialBuy
 - **getStoreAvailability**: Navigate to product page, intercept `productClientOnlyProduct` -> fulfillment options array with pickup (BOPIS) and delivery (express, ship-to-home) services, inventory quantities, store info
 
-## GraphQL Operations Observed on Product Page
+### GraphQL Operations Observed on Product Page
 | GraphQL opname | Used by | Data |
 |---|---|---|
 | `searchModel` | searchProducts | search results |
@@ -92,10 +92,10 @@ openweb homedepot exec getStoreAvailability '{"itemId": "306283873"}'
 | `aislebay` | — (not used) | store aisle/bay location |
 | `promotionProducts` | — (not used) | promotion banners |
 
-## Removed Operations
+### Removed Operations
 - **getStoreLocator** (removed) — URL pattern `/l/search/{zipCode}` is dead; returns an error page. DOM scraper picked up nav chrome garbage ("Store Finder") instead of store data. Requires fresh capture to re-implement.
 
-## Known Issues
+### Known Issues
 - **Expected DRIFT on product data** — prices, availability, and review counts change frequently; schema validates but fingerprint hashes change
 - **Store context** — getStoreAvailability returns data for the browser's currently-selected store (based on prior navigation or geolocation). There is no way to specify a store ID in the URL; changing store requires UI interaction.
 - **Review pagination** — getProductReviews returns the first page (10 reviews) only. The `reviews` GraphQL op supports pagination via page params but the adapter intercepts only the initial page load.
