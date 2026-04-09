@@ -75,7 +75,7 @@ openweb youtube exec getPlaylist '{"playlistId": "PLWKjhJtqVAbkArDMaJhn2XB080UlF
 Everything below is for discover/compile operators and deep debugging.
 Not needed for basic site usage.
 
-## API Architecture
+### API Architecture
 - **InnerTube API** — all endpoints are POST to `/youtubei/v1/*` with JSON body
 - Every request requires `context.client` block with `clientName: "WEB"` and `clientVersion`
 - API key passed as `?key=` query param (public key from page global `ytcfg`)
@@ -83,20 +83,20 @@ Not needed for basic site usage.
 - Single `/browse` endpoint serves channels, playlists, and home feed via `browseId`
 - **Adapter operations** (`getComments`, `getPlaylist`) compose InnerTube calls via `pageFetch` — they share underlying endpoints (`/next`, `/browse`) with existing ops but provide simpler interfaces. `getComments` chains two `/next` calls (video → continuation token → comments). `getPlaylist` wraps `/browse` with `VL`-prefixed browseId.
 
-## Auth
+### Auth
 - **Public access:** `page_global` — extracts InnerTube API key from `ytcfg.data_.INNERTUBE_API_KEY` on YouTube page. Works for search, browse, next, player, guide, transcript.
 - **Authenticated:** `sapisidhash` signing — reads `SAPISID` cookie, computes SHA-1 hash with origin (`https://www.youtube.com`), injects as `Authorization: SAPISIDHASH <timestamp>_<hash>`. Needed for likes, notifications, subscriptions.
 - **CSRF:** Not observed separately — sapisidhash serves as both auth and request integrity.
 
-## Transport
+### Transport
 - `node` — InnerTube API accepts direct HTTP with API key. No browser needed for public operations.
 - `page` — Adapter operations (`getComments`, `getPlaylist`) use browser context via `pageFetch` to compose multi-step InnerTube calls and extract `ytcfg` (API key + clientVersion) from the page.
 
-## Known Issues
+### Known Issues
 - `getTranscript` has an example file but no openapi.yaml entry — cannot be executed via `openweb exec`. The params token is session-bound and the endpoint returns FAILED_PRECONDITION without valid session context.
 - `clientVersion` changes frequently — may need updating when YouTube deploys
 - `getVideoPlayer` returns `UNPLAYABLE` status without auth — video details available but stream URLs restricted
 - Authenticated operations (like, unlike, subscribe, notifications) require sapisidhash which needs browser login
 - Trending browse (`FEtrending`) may return 400 on some regions
 - Large response payloads (100KB+) with deeply nested renderer structures
-- All endpoints are POST, so `openweb verify` skips them by default (use `--include-writes` or manual testing)
+- All InnerTube endpoints are POST — verify uses `replay_safety` to determine which ops to include

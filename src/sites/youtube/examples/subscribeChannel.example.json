@@ -1,6 +1,6 @@
 {
   "operation_id": "subscribeChannel",
-  "method": "post",
+  "replay_safety": "caution",
   "cases": [
     {
       "input": {

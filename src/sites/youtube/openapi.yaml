@@ -19,6 +19,7 @@ paths:
         build:
           stable_id: yt0003
           tool_version: 2
+          verified: true
           signals:
             - status-match
       parameters:
@@ -32,6 +33,7 @@ paths:
         - name: prettyPrint
           in: query
           required: false
+          description: "Disable pretty-printing for smaller payloads."
           schema:
             type: string
           example: "false"
@@ -47,16 +49,22 @@ paths:
               properties:
                 context:
                   type: object
-                  description: "Innertube client context"
+                  description: "InnerTube client context — required on every request."
                   properties:
                     client:
                       type: object
+                      description: "Client identification block."
+                      required:
+                        - clientName
+                        - clientVersion
                       properties:
                         clientName:
                           type: string
+                          description: "Client name identifier."
                           example: WEB
                         clientVersion:
                           type: string
+                          description: "Client version string (changes with YouTube deploys)."
                           example: "2.20260325.08.00"
                 query:
                   type: string
@@ -69,12 +77,19 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - contents
+                  - estimatedResults
                 properties:
                   contents:
                     type: object
-                    description: "Search results in twoColumnSearchResultsRenderer"
+                    description: "Search results in twoColumnSearchResultsRenderer — contains videoRenderer items with title, videoId, viewCount, duration, thumbnail."
                   estimatedResults:
                     type: string
+                    description: "Estimated total result count as a numeric string."
+                  responseContext:
+                    type: object
+                    description: "Server response metadata (service tracking params, visitor data)."
 
   /youtubei/v1/browse:
     post:
@@ -85,19 +100,21 @@ paths:
         build:
           stable_id: yt0004
           tool_version: 2
+          verified: true
           signals:
             - status-match
       parameters:
         - name: key
           in: query
           required: true
-          description: "Innertube API key"
+          description: "InnerTube API key."
           schema:
             type: string
           example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
         - name: prettyPrint
           in: query
           required: false
+          description: "Disable pretty-printing for smaller payloads."
           schema:
             type: string
           example: "false"
@@ -113,15 +130,22 @@ paths:
               properties:
                 context:
                   type: object
+                  description: "InnerTube client context — required on every request."
                   properties:
                     client:
                       type: object
+                      description: "Client identification block."
+                      required:
+                        - clientName
+                        - clientVersion
                       properties:
                         clientName:
                           type: string
+                          description: "Client name identifier."
                           example: WEB
                         clientVersion:
                           type: string
+                          description: "Client version string (changes with YouTube deploys)."
                           example: "2.20260325.08.00"
                 browseId:
                   type: string
@@ -137,13 +161,21 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - contents
                 properties:
                   header:
                     type: object
+                    description: "Page header — channel banner, title, subscriber count (present for channel/playlist browseIds)."
                   contents:
                     type: object
+                    description: "Main content — video grids in twoColumnBrowseResultsRenderer with richGridRenderer or sectionListRenderer."
                   metadata:
                     type: object
+                    description: "Page metadata — channel/playlist title, description, URLs."
+                  responseContext:
+                    type: object
+                    description: "Server response metadata."
 
   /youtubei/v1/next:
     post:
@@ -154,19 +186,21 @@ paths:
         build:
           stable_id: yt0002
           tool_version: 2
+          verified: true
           signals:
             - status-match
       parameters:
         - name: key
           in: query
           required: true
-          description: "Innertube API key"
+          description: "InnerTube API key."
           schema:
             type: string
           example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
         - name: prettyPrint
           in: query
           required: false
+          description: "Disable pretty-printing for smaller payloads."
           schema:
             type: string
           example: "false"
@@ -182,15 +216,22 @@ paths:
               properties:
                 context:
                   type: object
+                  description: "InnerTube client context — required on every request."
                   properties:
                     client:
                       type: object
+                      description: "Client identification block."
+                      required:
+                        - clientName
+                        - clientVersion
                       properties:
                         clientName:
                           type: string
+                          description: "Client name identifier."
                           example: WEB
                         clientVersion:
                           type: string
+                          description: "Client version string (changes with YouTube deploys)."
                           example: "2.20260325.08.00"
                 videoId:
                   type: string
@@ -203,17 +244,24 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - contents
                 properties:
                   contents:
                     type: object
-                    description: "Comments and related videos"
+                    description: "Video watch page — twoColumnWatchNextResults with primary info (title, views, likes, description) and secondary results (recommendations)."
                   engagementPanels:
                     type: array
-                    description: "Engagement panels including transcript params"
+                    description: "Engagement panels including transcript params — look for panelIdentifier 'engagement-panel-searchable-transcript' to extract transcript params token."
                     items:
                       type: object
+                      description: "Individual engagement panel (transcript, chapters, clips)."
                   currentVideoEndpoint:
                     type: object
+                    description: "Endpoint metadata for the current video (videoId, watchEndpoint)."
+                  responseContext:
+                    type: object
+                    description: "Server response metadata."
 
   /youtubei/v1/player:
     post:
@@ -231,13 +279,14 @@ paths:
         - name: key
           in: query
           required: true
-          description: "Innertube API key"
+          description: "InnerTube API key."
           schema:
             type: string
           example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
         - name: prettyPrint
           in: query
           required: false
+          description: "Disable pretty-printing for smaller payloads."
           schema:
             type: string
           example: "false"
@@ -253,15 +302,22 @@ paths:
               properties:
                 context:
                   type: object
+                  description: "InnerTube client context — required on every request."
                   properties:
                     client:
                       type: object
+                      description: "Client identification block."
+                      required:
+                        - clientName
+                        - clientVersion
                       properties:
                         clientName:
                           type: string
+                          description: "Client name identifier."
                           example: WEB
                         clientVersion:
                           type: string
+                          description: "Client version string (changes with YouTube deploys)."
                           example: "2.20260325.08.00"
                 videoId:
                   type: string
@@ -274,14 +330,22 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - videoDetails
+                  - playabilityStatus
                 properties:
                   videoDetails:
                     type: object
+                    description: "Video metadata — title, lengthSeconds, channelId, shortDescription, viewCount, author, thumbnail."
                   streamingData:
                     type: object
+                    description: "Streaming URLs and formats — formats (progressive), adaptiveFormats (DASH/HLS). May be absent without auth."
                   playabilityStatus:
                     type: object
-                    description: "Playability status — may be UNPLAYABLE without auth"
+                    description: "Playability status — status field is OK, UNPLAYABLE, or LOGIN_REQUIRED. Stream URLs restricted without auth."
+                  responseContext:
+                    type: object
+                    description: "Server response metadata."
 
   /youtubei/v1/guide:
     post:
@@ -292,19 +356,21 @@ paths:
         build:
           stable_id: yt0005
           tool_version: 2
+          verified: true
           signals:
             - status-match
       parameters:
         - name: key
           in: query
           required: true
-          description: "Innertube API key"
+          description: "InnerTube API key."
           schema:
             type: string
           example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
         - name: prettyPrint
           in: query
           required: false
+          description: "Disable pretty-printing for smaller payloads."
           schema:
             type: string
           example: "false"
@@ -319,15 +385,22 @@ paths:
               properties:
                 context:
                   type: object
+                  description: "InnerTube client context — required on every request."
                   properties:
                     client:
                       type: object
+                      description: "Client identification block."
+                      required:
+                        - clientName
+                        - clientVersion
                       properties:
                         clientName:
                           type: string
+                          description: "Client name identifier."
                           example: WEB
                         clientVersion:
                           type: string
+                          description: "Client version string (changes with YouTube deploys)."
                           example: "2.20260325.08.00"
       responses:
         "200":
@@ -336,14 +409,18 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - items
                 properties:
                   items:
                     type: array
-                    description: "Guide sections (guideSectionRenderer) with navigation entries"
+                    description: "Guide sections — guideSectionRenderer items with navigation entries (Home, Trending, Subscriptions, Library, etc.)."
                     items:
                       type: object
+                      description: "Guide section with formattedTitle and navigation items."
                   responseContext:
                     type: object
+                    description: "Server response metadata."
 
   /youtubei/v1/notification/get_unseen_count:
     post:
@@ -354,19 +431,21 @@ paths:
         build:
           stable_id: yt0006
           tool_version: 2
+          verified: true
           signals:
             - status-match
       parameters:
         - name: key
           in: query
           required: true
-          description: "Innertube API key"
+          description: "InnerTube API key."
           schema:
             type: string
           example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
         - name: prettyPrint
           in: query
           required: false
+          description: "Disable pretty-printing for smaller payloads."
           schema:
             type: string
           example: "false"
@@ -381,15 +460,22 @@ paths:
               properties:
                 context:
                   type: object
+                  description: "InnerTube client context — required on every request."
                   properties:
                     client:
                       type: object
+                      description: "Client identification block."
+                      required:
+                        - clientName
+                        - clientVersion
                       properties:
                         clientName:
                           type: string
+                          description: "Client name identifier."
                           example: WEB
                         clientVersion:
                           type: string
+                          description: "Client version string (changes with YouTube deploys)."
                           example: "2.20260325.08.00"
       responses:
         "200":
@@ -398,14 +484,18 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - actions
                 properties:
                   actions:
                     type: array
-                    description: "Contains updateNotificationsUnseenCountAction with unseenCount"
+                    description: "Action list — contains updateNotificationsUnseenCountAction with unseenCount integer."
                     items:
                       type: object
+                      description: "Notification action with unseenCount."
                   responseContext:
                     type: object
+                    description: "Server response metadata."
 
   /youtubei/v1/like/like:
     post:
@@ -416,19 +506,21 @@ paths:
         build:
           stable_id: yt0007
           tool_version: 2
+          verified: true
           signals:
             - status-match
       parameters:
         - name: key
           in: query
           required: true
-          description: "Innertube API key"
+          description: "InnerTube API key."
           schema:
             type: string
           example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
         - name: prettyPrint
           in: query
           required: false
+          description: "Disable pretty-printing for smaller payloads."
           schema:
             type: string
           example: "false"
@@ -444,24 +536,32 @@ paths:
               properties:
                 context:
                   type: object
+                  description: "InnerTube client context — required on every request."
                   properties:
                     client:
                       type: object
+                      description: "Client identification block."
+                      required:
+                        - clientName
+                        - clientVersion
                       properties:
                         clientName:
                           type: string
+                          description: "Client name identifier."
                           example: WEB
                         clientVersion:
                           type: string
+                          description: "Client version string (changes with YouTube deploys)."
                           example: "2.20260325.08.00"
                 target:
                   type: object
+                  description: "Like target."
                   required:
                     - videoId
                   properties:
                     videoId:
                       type: string
-                      description: "YouTube video ID to like"
+                      description: "YouTube video ID to like."
                       example: "dQw4w9WgXcQ"
       responses:
         "200":
@@ -470,6 +570,7 @@ paths:
             application/json:
               schema:
                 type: object
+                description: "Empty confirmation object on success."
 
   /youtubei/v1/like/removelike:
     post:
@@ -480,19 +581,21 @@ paths:
         build:
           stable_id: yt0010
           tool_version: 2
+          verified: true
           signals:
             - status-match
       parameters:
         - name: key
           in: query
           required: true
-          description: "Innertube API key"
+          description: "InnerTube API key."
           schema:
             type: string
           example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
         - name: prettyPrint
           in: query
           required: false
+          description: "Disable pretty-printing for smaller payloads."
           schema:
             type: string
           example: "false"
@@ -508,24 +611,32 @@ paths:
               properties:
                 context:
                   type: object
+                  description: "InnerTube client context — required on every request."
                   properties:
                     client:
                       type: object
+                      description: "Client identification block."
+                      required:
+                        - clientName
+                        - clientVersion
                       properties:
                         clientName:
                           type: string
+                          description: "Client name identifier."
                           example: WEB
                         clientVersion:
                           type: string
+                          description: "Client version string (changes with YouTube deploys)."
                           example: "2.20260325.08.00"
                 target:
                   type: object
+                  description: "Unlike target."
                   required:
                     - videoId
                   properties:
                     videoId:
                       type: string
-                      description: "YouTube video ID to unlike"
+                      description: "YouTube video ID to unlike."
                       example: "dQw4w9WgXcQ"
       responses:
         "200":
@@ -534,6 +645,7 @@ paths:
             application/json:
               schema:
                 type: object
+                description: "Empty confirmation object on success."
 
   /youtubei/v1/subscription/subscribe:
     post:
@@ -544,19 +656,21 @@ paths:
         build:
           stable_id: yt0008
           tool_version: 2
+          verified: true
           signals:
             - status-match
       parameters:
         - name: key
           in: query
           required: true
-          description: "Innertube API key"
+          description: "InnerTube API key."
           schema:
             type: string
           example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
         - name: prettyPrint
           in: query
           required: false
+          description: "Disable pretty-printing for smaller payloads."
           schema:
             type: string
           example: "false"
@@ -572,21 +686,29 @@ paths:
               properties:
                 context:
                   type: object
+                  description: "InnerTube client context — required on every request."
                   properties:
                     client:
                       type: object
+                      description: "Client identification block."
+                      required:
+                        - clientName
+                        - clientVersion
                       properties:
                         clientName:
                           type: string
+                          description: "Client name identifier."
                           example: WEB
                         clientVersion:
                           type: string
+                          description: "Client version string (changes with YouTube deploys)."
                           example: "2.20260325.08.00"
                 channelIds:
                   type: array
+                  description: "Channel IDs to subscribe to."
                   items:
                     type: string
-                  description: "Channel IDs to subscribe to (e.g. UCsBjURrPoezykLs9EqgamOA)"
+                    description: "YouTube channel ID (e.g. UCsBjURrPoezykLs9EqgamOA)."
       responses:
         "200":
           description: Subscribe confirmation.
@@ -594,6 +716,7 @@ paths:
             application/json:
               schema:
                 type: object
+                description: "Empty confirmation object on success."
 
   /video/{videoId}/comments:
     get:
@@ -604,6 +727,7 @@ paths:
         build:
           stable_id: yt0011
           tool_version: 2
+          verified: true
           signals:
             - adapter-verified
         adapter:
@@ -616,6 +740,7 @@ paths:
           schema:
             type: string
           description: "YouTube video ID (e.g. dQw4w9WgXcQ). Get from searchVideos or browseContent."
+          example: "dQw4w9WgXcQ"
       responses:
         "200":
           description: Video comments with author, text, and engagement.
@@ -629,10 +754,13 @@ paths:
                 properties:
                   videoId:
                     type: string
+                    description: "The video ID these comments belong to."
                   totalComments:
                     type: integer
+                    description: "Total comment count as parsed from header (e.g. 12345)."
                   comments:
                     type: array
+                    description: "Top-level comment threads."
                     items:
                       type: object
                       required:
@@ -642,23 +770,28 @@ paths:
                       properties:
                         commentId:
                           type: string
+                          description: "Unique comment identifier."
                         author:
                           type: string
+                          description: "Comment author display name."
                         text:
                           type: string
+                          description: "Comment text content."
                         publishedTime:
                           type: string
-                          description: "Relative time (e.g. '2 days ago')"
+                          description: "Relative time (e.g. '2 days ago')."
                         likeCount:
                           type: string
-                          description: "Like count as displayed (e.g. '1.2K')"
+                          description: "Like count as displayed (e.g. '1.2K')."
                         replyCount:
                           type: integer
+                          description: "Number of replies to this comment."
                         authorThumbnail:
                           type: string
+                          description: "URL of the comment author's profile thumbnail."
                   note:
                     type: string
-                    description: "Present when comments are disabled or unavailable"
+                    description: "Present when comments are disabled or unavailable."
 
   /playlist/{playlistId}:
     get:
@@ -669,6 +802,7 @@ paths:
         build:
           stable_id: yt0012
           tool_version: 2
+          verified: true
           signals:
             - adapter-verified
         adapter:
@@ -681,6 +815,7 @@ paths:
           schema:
             type: string
           description: "YouTube playlist ID (e.g. PLWKjhJtqVAbkArDMaJhn2XB080UlFNRCt). Get from searchVideos or browseContent."
+          example: "PLWKjhJtqVAbkArDMaJhn2XB080UlFNRCt"
       responses:
         "200":
           description: Playlist metadata and video list.
@@ -695,36 +830,43 @@ paths:
                 properties:
                   playlistId:
                     type: string
+                    description: "The playlist ID."
                   title:
                     type: string
+                    description: "Playlist title."
                   description:
                     type: string
+                    description: "Playlist description (may be empty)."
                   owner:
                     type: string
+                    description: "Playlist owner channel name."
                   videoCount:
                     type: string
-                    description: "Video count as displayed (e.g. '50 videos')"
+                    description: "Video count as displayed (e.g. '50 videos')."
                   viewCount:
                     type: string
-                    description: "Total views as displayed"
+                    description: "Total views as displayed."
                   videos:
                     type: array
+                    description: "Videos in the playlist."
                     items:
                       type: object
-                      required:
-                        - videoId
-                        - title
                       properties:
                         videoId:
                           type: string
-                          description: "Video ID (use with getVideoDetail, getVideoPlayer)"
+                          description: "Video ID (use with getVideoDetail, getVideoPlayer)."
                         title:
                           type: string
+                          description: "Video title."
                         duration:
                           type: string
+                          description: "Video duration as displayed (e.g. '10:30')."
                         channelName:
                           type: string
+                          description: "Channel that uploaded this video."
                         thumbnail:
                           type: string
+                          description: "Video thumbnail URL."
                         index:
                           type: string
+                          description: "Position in the playlist (1-based)."
