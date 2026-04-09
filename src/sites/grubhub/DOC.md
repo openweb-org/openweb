@@ -38,24 +38,29 @@ openweb grubhub exec getDeliveryEstimate '{"restaurantId": "64436"}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - REST API at `api-gtm.grubhub.com`
 - Search: `GET /restaurants/search/search_listing` with lat/lng/searchTerm query params
 - Detail/Menu: `GET /restaurants/{id}` with feature flag query params
-- Prices in cents (USD), converted to dollars by adapter
 
-## Auth
+### Auth
 - No login required for read operations
 - Cookie session for browser context (managed automatically)
 - No CSRF required on GET endpoints
 
-## Transport
+### Transport
 - `page` — heavy bot detection (Cloudflare + PerimeterX + DataDome) requires browser context
 - All operations use `pageFetch` via `page.evaluate(fetch)` with `credentials: 'include'`
 - Adapter: `adapters/grubhub.ts`
 
-## Known Issues
+### Extraction
+- All operations: JSON from internal REST API responses via `pageFetch`
+- Search: `results[]` array with nested rating/fee/estimate objects
+- Menu: `restaurant.menu_category_list[]` with nested `menu_item_list[]`
+- Delivery: `restaurant_availability` with fee/estimate sub-objects
+- Prices in cents (USD), converted to dollars by adapter
+
+### Known Issues
 - Bot detection: Cloudflare (`cf_clearance`), PerimeterX (`_px3`), DataDome (`datadome`) — all present
 - Search requires valid lat/lng coordinates for a delivery area
 - Delivery estimates are real-time and may vary between requests
-- `delivery_fee.price` from API is in cents, adapter converts to dollars

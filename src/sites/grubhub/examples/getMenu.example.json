@@ -1,5 +1,6 @@
 {
   "operation_id": "getMenu",
+  "replay_safety": "safe_read",
   "cases": [{
     "input": { "restaurantId": "64436" },
     "assertions": { "status": 200, "response_schema_valid": true }
