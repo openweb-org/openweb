@@ -47,22 +47,22 @@ openweb seeking-alpha exec getEarnings '{"ticker":"AAPL"}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - REST JSON API at `seekingalpha.com/api/v3/`
 - JSON:API-style responses with `data`, `included`, `meta` structure
 - Metrics use numeric IDs mapped via `included` section
 - Estimates API requires numeric `ticker_ids` (resolved via search API)
 
-## Auth
+### Auth
 No auth required for all 4 operations. Some data is premium-locked (`is_locked: true` on current-period ratings). Paywalled articles return `isPaywalled: true` with null/truncated content.
 
-## Transport
+### Transport
 - `transport: page` — heavy bot detection blocks Node requests
 - Bot detection: Cloudflare + DataDome + Akamai + PerimeterX (all 4 systems active)
 - Adapter uses `pageFetch` (browser-context fetch) for all API calls
 - Dormant PerimeterX `#px-captcha` div present on all pages (cleaned up in adapter to avoid false positive)
 
-## Known Issues
+### Known Issues
 - **Premium-locked data**: Current-period quant/author ratings (`period: 0`) are locked for non-premium users. Historical periods (3/6 months ago) show full ratings.
 - **Paywalled articles**: Some articles/analysis require SA Premium. `isPaywalled: true` in response.
 - **Dormant PX captcha**: All SA pages contain an empty `#px-captcha` div that triggers false positive bot detection — adapter removes it post-execution.

@@ -1,5 +1,6 @@
 {
   "operation_id": "getEarnings",
+  "replay_safety": "safe_read",
   "cases": [{
     "input": { "ticker": "AAPL" },
     "assertions": { "status": 200, "response_schema_valid": true }
