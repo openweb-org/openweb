@@ -26,6 +26,7 @@ paths:
           schema:
             type: string
           description: Search query (keyword, artist name, or phrase).
+          example: lofi beats
         - name: client_id
           in: query
           required: true
@@ -54,11 +55,14 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [collection]
                 properties:
                   collection:
                     type: array
                     items:
                       type: object
+                      description: A track search result.
+                      required: [id, title, user]
                       properties:
                         id:
                           type: integer
@@ -104,13 +108,18 @@ paths:
                           description: Upload date (ISO 8601).
                         user:
                           type: object
+                          description: Track uploader.
+                          required: [id, username]
                           properties:
                             id:
                               type: integer
+                              description: User ID.
                             username:
                               type: string
+                              description: Display name.
                             permalink_url:
                               type: string
+                              description: Public profile URL.
                   total_results:
                     type: integer
                     description: Total matching tracks.
@@ -135,6 +144,7 @@ paths:
           schema:
             type: integer
           description: Track ID (from searchTracks results).
+          example: 899253886
         - name: client_id
           in: query
           required: true
@@ -149,6 +159,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [id, title, user]
                 properties:
                   id:
                     type: integer
@@ -203,16 +214,22 @@ paths:
                     description: Upload date (ISO 8601).
                   user:
                     type: object
+                    description: Track uploader.
+                    required: [id, username]
                     properties:
                       id:
                         type: integer
+                        description: User ID.
                       username:
                         type: string
+                        description: Display name.
                       permalink_url:
                         type: string
+                        description: Public profile URL.
                       avatar_url:
                         type: string
                         nullable: true
+                        description: Profile picture URL.
 
   /users/{id}:
     get:
@@ -230,6 +247,7 @@ paths:
           schema:
             type: integer
           description: User ID (from track or search results).
+          example: 336200682
         - name: client_id
           in: query
           required: true
@@ -244,6 +262,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [id, username]
                 properties:
                   id:
                     type: integer
@@ -317,6 +336,7 @@ paths:
           schema:
             type: integer
           description: Playlist ID (from search or user playlists).
+          example: 1710939930
         - name: client_id
           in: query
           required: true
@@ -331,6 +351,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [id, title, tracks]
                 properties:
                   id:
                     type: integer
@@ -369,33 +390,49 @@ paths:
                     description: Creation date (ISO 8601).
                   user:
                     type: object
+                    description: Playlist creator.
+                    required: [id, username]
                     properties:
                       id:
                         type: integer
+                        description: User ID.
                       username:
                         type: string
+                        description: Display name.
                       permalink_url:
                         type: string
+                        description: Public profile URL.
                   tracks:
                     type: array
                     description: List of tracks in the playlist.
                     items:
                       type: object
+                      description: A track in the playlist.
+                      required: [id]
                       properties:
                         id:
                           type: integer
+                          description: Track ID.
                         title:
                           type: string
+                          description: Track title.
                         duration:
                           type: integer
+                          description: Duration in milliseconds.
                         permalink_url:
                           type: string
+                          description: Public URL on SoundCloud.
                         playback_count:
                           type: integer
+                          description: Total play count.
                         user:
                           type: object
+                          description: Track uploader.
+                          required: [id, username]
                           properties:
                             id:
                               type: integer
+                              description: User ID.
                             username:
                               type: string
+                              description: Display name.
