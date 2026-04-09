@@ -25,10 +25,10 @@ Leading tech news outlet covering startups, venture capital, AI, and technology.
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchArticles | find articles by keyword | search | id, title, excerpt, date, link | paginated, _embed for author/media |
-| getArticle | full article content | id ← searchArticles.id | content.rendered, title, date, _embedded.author | body is HTML |
-| getLatest | latest articles | (none) | id, title, excerpt, date, link | defaults to date desc |
-| getCategory | articles in a category | categories (ID) | id, title, excerpt, date, link | common IDs in param description |
+| searchArticles | find articles by keyword | search | id, title, excerpt, date, link | entry point, paginated |
+| getArticle | full article content | id ← searchArticles/getLatest/getCategory | content.rendered, title, date, _embedded.author | body is HTML |
+| getLatest | latest articles | — | id, title, excerpt, date, link | entry point, date desc |
+| getCategory | articles in a category | categories (ID) | id, title, excerpt, date, link | entry point, common IDs in param description |
 
 ## Quick Start
 
@@ -37,7 +37,7 @@ Leading tech news outlet covering startups, venture capital, AI, and technology.
 openweb techcrunch exec searchArticles '{"search": "artificial intelligence"}'
 
 # Get a specific article (use id from search results)
-openweb techcrunch exec getArticle '{"id": 2748925}'
+openweb techcrunch exec getArticle '{"id": 3110945}'
 
 # Get latest articles
 openweb techcrunch exec getLatest '{}'
@@ -50,20 +50,20 @@ openweb techcrunch exec getCategory '{"categories": 577030455}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - WordPress REST API at `techcrunch.com/wp-json/wp/v2/`
 - List endpoints return JSON arrays directly (no wrapper object)
 - Single post endpoint returns a JSON object directly
 - `_embed=1` inlines author and featured media in `_embedded` field
 - Title, content, and excerpt are objects with a `rendered` property containing HTML
 
-## Auth
+### Auth
 No auth required. Public read-only API.
 
-## Transport
+### Transport
 `node` — direct HTTP. Public WP REST API, no bot detection, no browser needed.
 
-## Known Issues
+### Known Issues
 - Category IDs are numeric and not intuitive. Use the WP categories endpoint (`/wp-json/wp/v2/categories`) to discover IDs by name.
 - Content fields (`title.rendered`, `content.rendered`, `excerpt.rendered`) contain HTML, not plain text.
 - The `_embedded` field is only present when `_embed=1` is passed.

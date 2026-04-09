@@ -91,12 +91,14 @@ paths:
                       description: Full URL on techcrunch.com.
                     title:
                       type: object
+                      required: [rendered]
                       properties:
                         rendered:
                           type: string
                           description: HTML-rendered title.
                     excerpt:
                       type: object
+                      required: [rendered]
                       properties:
                         rendered:
                           type: string
@@ -112,7 +114,7 @@ paths:
                     featured_media:
                       type: integer
                       description: Featured image attachment ID.
-                  required: [id, date, slug, link, title]
+                  required: [id, date, slug, link, title, excerpt, author, categories]
 
   /posts/{id}:
     get:
@@ -130,7 +132,7 @@ paths:
           schema:
             type: integer
           description: Post ID (numeric). Use an ID from searchArticles or getLatest results.
-          example: 2748925
+          example: 3110945
         - name: _embed
           in: query
           required: false
@@ -166,18 +168,21 @@ paths:
                     description: Full URL on techcrunch.com.
                   title:
                     type: object
+                    required: [rendered]
                     properties:
                       rendered:
                         type: string
                         description: HTML-rendered title.
                   content:
                     type: object
+                    required: [rendered]
                     properties:
                       rendered:
                         type: string
                         description: Full article body as HTML.
                   excerpt:
                     type: object
+                    required: [rendered]
                     properties:
                       rendered:
                         type: string
@@ -198,7 +203,7 @@ paths:
                   featured_media:
                     type: integer
                     description: Featured image attachment ID.
-                required: [id, date, slug, link, title]
+                required: [id, date, slug, link, title, content, excerpt, author, categories]
 
   /posts?latest:
     get:
@@ -258,12 +263,14 @@ paths:
                       description: Full URL on techcrunch.com.
                     title:
                       type: object
+                      required: [rendered]
                       properties:
                         rendered:
                           type: string
                           description: HTML-rendered title.
                     excerpt:
                       type: object
+                      required: [rendered]
                       properties:
                         rendered:
                           type: string
@@ -279,7 +286,7 @@ paths:
                     featured_media:
                       type: integer
                       description: Featured image attachment ID.
-                  required: [id, date, slug, link, title]
+                  required: [id, date, slug, link, title, excerpt, author, categories]
 
   /posts?categories:
     get:
@@ -362,12 +369,14 @@ paths:
                       description: Full URL on techcrunch.com.
                     title:
                       type: object
+                      required: [rendered]
                       properties:
                         rendered:
                           type: string
                           description: HTML-rendered title.
                     excerpt:
                       type: object
+                      required: [rendered]
                       properties:
                         rendered:
                           type: string
@@ -383,4 +392,4 @@ paths:
                     featured_media:
                       type: integer
                       description: Featured image attachment ID.
-                  required: [id, date, slug, link, title]
+                  required: [id, date, slug, link, title, excerpt, author, categories]
