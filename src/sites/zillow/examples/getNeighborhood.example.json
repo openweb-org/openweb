@@ -1,5 +1,6 @@
 {
   "operation_id": "getNeighborhood",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": {

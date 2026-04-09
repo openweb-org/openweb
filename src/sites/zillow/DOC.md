@@ -57,23 +57,23 @@ openweb zillow exec getNeighborhood '{"zpid":"2077416986","slug":"_"}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - Next.js SSR app — primary data delivered via `__NEXT_DATA__` (418KB)
 - `PUT /async-create-search-page-state` is the SPA search API
 - Property detail pages embed all data in `__NEXT_DATA__` (no separate API call needed)
 - GraphQL endpoint at `/zg-graph` (used for user profile, not search)
 
-## Auth
+### Auth
 - `cookie_session` — PerimeterX requires a valid browser session; search API returns 403 without one
 - Login via `openweb login zillow`, then `openweb browser restart`
 - No CSRF required for search or detail pages
 
-## Transport
+### Transport
 - `page` — PerimeterX bot detection blocks all node HTTP
 - Must use headed browser with real Chrome profile
 - Detail operations use adapter with page navigation to `/homedetails/{slug}/{zpid}_zpid/`
 
-## Known Issues
+### Known Issues
 - **PerimeterX**: CAPTCHA challenge on headless browsers. Use `openweb browser restart --no-headless`, solve the CAPTCHA, then retry
 - Response is ~200KB+ per search — auto-spills to temp file
 - `regionId` is required but not easily discoverable — use known IDs or the autocomplete API
