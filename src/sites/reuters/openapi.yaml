@@ -30,6 +30,7 @@ paths:
           description: "Search keyword or phrase"
           schema:
             type: string
+          example: "technology"
         - name: offset
           in: query
           required: false
@@ -37,6 +38,7 @@ paths:
           schema:
             type: integer
             default: 0
+          example: 0
         - name: size
           in: query
           required: false
@@ -44,6 +46,7 @@ paths:
           schema:
             type: integer
             default: 10
+          example: 5
       responses:
         "200":
           description: Search results
@@ -51,56 +54,82 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [result]
                 properties:
                   result:
                     type: object
+                    description: Search result container.
+                    required: [articles]
                     properties:
                       pagination:
                         type: object
+                        description: Pagination metadata.
                         properties:
                           size:
                             type: integer
+                            description: Number of results returned.
                           total_size:
                             type: integer
+                            description: Total number of matching articles.
                       articles:
                         type: array
+                        description: Matching article summaries.
                         items:
                           type: object
+                          required: [id, title, canonical_url]
+                          description: An article summary.
                           properties:
                             id:
                               type: string
+                              description: Unique article identifier.
                             title:
                               type: string
+                              description: Article headline.
                             description:
                               type: string
+                              description: Brief article summary or lede.
                             canonical_url:
                               type: string
+                              description: Canonical URL path for the article (use with getArticleDetail).
                             published_time:
                               type: string
+                              description: Publication timestamp (ISO 8601).
                             updated_time:
                               type: string
+                              description: Last update timestamp (ISO 8601).
                             word_count:
                               type: integer
+                              description: Article word count.
                             read_minutes:
                               type: integer
+                              description: Estimated reading time in minutes.
                             authors:
                               type: array
+                              description: Article authors.
                               items:
                                 type: object
+                                required: [name]
+                                description: An author.
                                 properties:
                                   name:
                                     type: string
+                                    description: Author display name.
                                   topic_url:
                                     type: string
+                                    description: Author topic page URL path.
                             thumbnail:
                               type: object
+                              description: Article thumbnail image.
                               properties:
                                 url:
                                   type: string
+                                  description: Image URL.
                                 caption:
                                   type: string
+                                  description: Image caption.
                                 alt_text:
                                   type: string
+                                  description: Image alt text.
 
   /pf/api/v3/content/fetch/articles-by-section-alias-or-id-v1:
     get:
@@ -121,6 +150,7 @@ paths:
           description: "Section path (e.g., /world/, /business/, /technology/, /markets/, /science/)"
           schema:
             type: string
+          example: "/world/"
         - name: offset
           in: query
           required: false
@@ -128,6 +158,7 @@ paths:
           schema:
             type: integer
             default: 0
+          example: 0
         - name: size
           in: query
           required: false
@@ -135,6 +166,7 @@ paths:
           schema:
             type: integer
             default: 10
+          example: 5
       responses:
         "200":
           description: Topic article list
@@ -142,54 +174,79 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [result]
                 properties:
                   result:
                     type: object
+                    description: Topic result container.
+                    required: [articles]
                     properties:
                       pagination:
                         type: object
+                        description: Pagination metadata.
                         properties:
                           size:
                             type: integer
+                            description: Number of results returned.
                           total_size:
                             type: integer
+                            description: Total number of articles in section.
                       articles:
                         type: array
+                        description: Articles in the topic section.
                         items:
                           type: object
+                          required: [id, title, canonical_url]
+                          description: An article summary.
                           properties:
                             id:
                               type: string
+                              description: Unique article identifier.
                             title:
                               type: string
+                              description: Article headline.
                             description:
                               type: string
+                              description: Brief article summary or lede.
                             canonical_url:
                               type: string
+                              description: Canonical URL path for the article (use with getArticleDetail).
                             published_time:
                               type: string
+                              description: Publication timestamp (ISO 8601).
                             word_count:
                               type: integer
+                              description: Article word count.
                             read_minutes:
                               type: integer
+                              description: Estimated reading time in minutes.
                             authors:
                               type: array
+                              description: Article authors.
                               items:
                                 type: object
+                                required: [name]
+                                description: An author.
                                 properties:
                                   name:
                                     type: string
+                                    description: Author display name.
                                   topic_url:
                                     type: string
+                                    description: Author topic page URL path.
                             thumbnail:
                               type: object
+                              description: Article thumbnail image.
                               properties:
                                 url:
                                   type: string
+                                  description: Image URL.
                                 caption:
                                   type: string
+                                  description: Image caption.
                                 alt_text:
                                   type: string
+                                  description: Image alt text.
 
   /reuters/article:
     get:
@@ -207,9 +264,10 @@ paths:
         - name: article_url
           in: query
           required: true
-          description: "Article canonical URL path (e.g., /world/us/some-article-slug-ABC123/)"
+          description: "Article canonical URL path from search or topic results (e.g., /world/us/some-article-slug-ABC123/)"
           schema:
             type: string
+          example: "/technology/cybersecurity/example-article-2025-04-01/"
       responses:
         "200":
           description: Full article content
@@ -217,48 +275,68 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [result]
                 properties:
                   result:
                     type: object
+                    description: Article detail container.
+                    required: [id, title, body]
                     properties:
                       id:
                         type: string
+                        description: Unique article identifier.
                       title:
                         type: string
+                        description: Article headline.
                       description:
                         type: string
+                        description: Brief article summary or lede.
                       body:
                         type: string
-                        description: "Full article text (paragraphs joined by double newlines)"
+                        description: "Full article text (paragraphs joined by double newlines)."
                       published_time:
                         type: string
+                        description: Publication timestamp (ISO 8601).
                       updated_time:
                         type: string
+                        description: Last update timestamp (ISO 8601).
                       authors:
                         type: array
+                        description: Article authors.
                         items:
                           type: object
+                          required: [name]
+                          description: An author.
                           properties:
                             name:
                               type: string
+                              description: Author display name.
                             topic_url:
                               type: string
+                              description: Author topic page URL path.
                       section:
                         type: string
+                        description: Section the article belongs to (e.g., world, business).
                       canonical_url:
                         type: string
+                        description: Canonical URL path.
                       word_count:
                         type: integer
+                        description: Article word count.
                       thumbnail:
                         type: object
                         nullable: true
+                        description: Article thumbnail image (may be null).
                         properties:
                           url:
                             type: string
+                            description: Image URL.
                           caption:
                             type: string
+                            description: Image caption.
                           alt_text:
                             type: string
+                            description: Image alt text.
 
   /reuters/top-news:
     get:
@@ -280,6 +358,7 @@ paths:
           schema:
             type: integer
             default: 10
+          example: 10
       responses:
         "200":
           description: Top news stories
@@ -287,51 +366,76 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [result]
                 properties:
                   result:
                     type: object
+                    description: Top news result container.
+                    required: [articles]
                     properties:
                       pagination:
                         type: object
+                        description: Pagination metadata.
                         properties:
                           size:
                             type: integer
+                            description: Number of results returned.
                           total_size:
                             type: integer
+                            description: Total number of top stories available.
                       articles:
                         type: array
+                        description: Top/breaking news articles.
                         items:
                           type: object
+                          required: [id, title, canonical_url]
+                          description: A top news article summary.
                           properties:
                             id:
                               type: string
+                              description: Unique article identifier.
                             title:
                               type: string
+                              description: Article headline.
                             description:
                               type: string
+                              description: Brief article summary or lede.
                             canonical_url:
                               type: string
+                              description: Canonical URL path for the article (use with getArticleDetail).
                             published_time:
                               type: string
+                              description: Publication timestamp (ISO 8601).
                             word_count:
                               type: integer
+                              description: Article word count.
                             read_minutes:
                               type: integer
+                              description: Estimated reading time in minutes.
                             authors:
                               type: array
+                              description: Article authors.
                               items:
                                 type: object
+                                required: [name]
+                                description: An author.
                                 properties:
                                   name:
                                     type: string
+                                    description: Author display name.
                                   topic_url:
                                     type: string
+                                    description: Author topic page URL path.
                             thumbnail:
                               type: object
+                              description: Article thumbnail image.
                               properties:
                                 url:
                                   type: string
+                                  description: Image URL.
                                 caption:
                                   type: string
+                                  description: Image caption.
                                 alt_text:
                                   type: string
+                                  description: Image alt text.

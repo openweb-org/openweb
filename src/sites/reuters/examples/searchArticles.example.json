@@ -1,5 +1,6 @@
 {
   "operation_id": "searchArticles",
+  "replay_safety": "safe_read",
   "cases": [{
     "input": { "keyword": "technology", "size": 5 },
     "assertions": { "status": 200, "response_schema_valid": true }

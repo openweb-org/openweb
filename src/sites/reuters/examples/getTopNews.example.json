@@ -1,5 +1,6 @@
 {
   "operation_id": "getTopNews",
+  "replay_safety": "safe_read",
   "cases": [{
     "input": { "size": 5 },
     "assertions": { "status": 200, "response_schema_valid": true }

@@ -1,7 +1,8 @@
 {
   "operation_id": "getArticleDetail",
+  "replay_safety": "safe_read",
   "cases": [{
-    "input": { "article_url": "/world/" },
+    "input": { "article_url": "/technology/cybersecurity/example-article-2025-04-01/" },
     "assertions": { "status": 200, "response_schema_valid": true }
   }]
 }
