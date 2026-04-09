@@ -4,6 +4,7 @@ info:
   version: "1.0.0"
   x-openweb:
     spec_version: "2.0"
+    compiled_at: "2026-04-09T00:00:00Z"
     requires_auth: false
 servers:
   - url: https://www.quora.com
@@ -20,7 +21,9 @@ paths:
           name: quora
           operation: searchQuestions
         build:
+          verified: true
           stable_id: quora0001
+          signature_id: quora0001s
           tool_version: 1
       parameters:
         - name: query
@@ -28,7 +31,7 @@ paths:
           required: true
           schema:
             type: string
-          description: "Search query (keyword or phrase)"
+          description: "Search query — keyword or phrase (e.g. 'machine learning', 'best books')."
           example: "python programming"
         - name: limit
           in: query
@@ -36,38 +39,45 @@ paths:
           schema:
             type: integer
             default: 10
-          description: "Max results to return (max 25)"
+          description: "Max results to return (max 25)."
       responses:
         "200":
-          description: Search results.
+          description: Search results with question summaries.
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - questions
+                  - hasMore
                 properties:
                   questions:
                     type: array
                     items:
                       type: object
+                      required:
+                        - qid
+                        - slug
+                        - title
                       properties:
                         qid:
                           type: integer
-                          description: "Unique question ID"
+                          description: "Unique question ID."
                         slug:
                           type: string
-                          description: "URL slug (use as input to getQuestion/getAnswers)"
+                          description: "URL slug (use as input to getQuestion/getAnswers)."
                         title:
                           type: string
-                          description: "Question title (plain text)"
+                          description: "Question title (plain text)."
                         answerCount:
                           type: integer
-                          description: "Number of answers"
+                          description: "Number of answers."
                         followerCount:
                           type: integer
-                          description: "Number of followers"
+                          description: "Number of followers."
                   hasMore:
                     type: boolean
-                    description: "Whether more results exist"
+                    description: "Whether more results exist."
 
   /question:
     get:
@@ -79,7 +89,9 @@ paths:
           name: quora
           operation: getQuestion
         build:
+          verified: true
           stable_id: quora0002
+          signature_id: quora0002s
           tool_version: 1
       parameters:
         - name: slug
@@ -87,45 +99,53 @@ paths:
           required: true
           schema:
             type: string
-          description: "Question URL slug (from searchQuestions)"
+          description: "Question URL slug (from searchQuestions)."
           example: "What-is-JavaScript"
       responses:
         "200":
-          description: Question details.
+          description: Question details with top answer previews.
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - title
                 properties:
                   title:
                     type: string
-                    description: "Question title"
+                    description: "Question title."
                   answerCount:
                     type: integer
-                    description: "Total number of answers"
+                    description: "Total number of answers."
                   followerCount:
                     type: string
-                    description: "Number of followers (may include K/M suffix)"
+                    description: "Number of followers (may include K/M suffix)."
                   topics:
                     type: array
                     items:
                       type: string
-                    description: "Related topics"
+                    description: "Related topics."
                   topAnswers:
                     type: array
                     items:
                       type: object
+                      required:
+                        - author
+                        - content
                       properties:
                         author:
                           type: string
+                          description: "Answer author name."
                         credential:
                           type: string
+                          description: "Author credential or tagline."
                         content:
                           type: string
-                          description: "Answer preview (first ~500 chars)"
+                          description: "Answer preview (first ~500 chars)."
                         upvotes:
                           type: string
-                    description: "Top 3 answer previews"
+                          description: "Upvote count."
+                    description: "Top 3 answer previews."
 
   /answers:
     get:
@@ -137,7 +157,9 @@ paths:
           name: quora
           operation: getAnswers
         build:
+          verified: true
           stable_id: quora0003
+          signature_id: quora0003s
           tool_version: 1
       parameters:
         - name: slug
@@ -145,7 +167,7 @@ paths:
           required: true
           schema:
             type: string
-          description: "Question URL slug (from searchQuestions)"
+          description: "Question URL slug (from searchQuestions)."
           example: "What-is-JavaScript"
         - name: limit
           in: query
@@ -153,7 +175,7 @@ paths:
           schema:
             type: integer
             default: 10
-          description: "Max answers to return (max 20)"
+          description: "Max answers to return (max 20)."
       responses:
         "200":
           description: Answers for the question.
@@ -161,24 +183,30 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - slug
+                  - answers
                 properties:
                   slug:
                     type: string
-                    description: "Question slug"
+                    description: "Question slug."
                   answers:
                     type: array
                     items:
                       type: object
+                      required:
+                        - author
+                        - content
                       properties:
                         author:
                           type: string
-                          description: "Author name"
+                          description: "Author name."
                         content:
                           type: string
-                          description: "Full answer text"
+                          description: "Full answer text."
                         upvotes:
                           type: string
-                          description: "Upvote count"
+                          description: "Upvote count."
 
   /profile:
     get:
@@ -190,7 +218,9 @@ paths:
           name: quora
           operation: getProfile
         build:
+          verified: true
           stable_id: quora0004
+          signature_id: quora0004s
           tool_version: 1
       parameters:
         - name: username
@@ -198,7 +228,7 @@ paths:
           required: true
           schema:
             type: string
-          description: "Profile URL slug (e.g. Adam-DAngelo)"
+          description: "Profile URL slug (e.g. 'Adam-DAngelo')."
           example: "Adam-DAngelo"
       responses:
         "200":
@@ -207,30 +237,32 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - name
                 properties:
                   name:
                     type: string
-                    description: "Display name"
+                    description: "Display name."
                   bio:
                     type: string
-                    description: "Profile bio/tagline"
+                    description: "Profile bio/tagline."
                   profileImageUrl:
                     type: string
-                    description: "Profile image URL"
+                    description: "Profile image URL."
                   followers:
                     type: string
-                    description: "Follower count (may include K/M suffix)"
+                    description: "Follower count (may include K/M suffix)."
                   answers:
                     type: string
-                    description: "Answer count"
+                    description: "Answer count."
                   questions:
                     type: string
-                    description: "Question count"
+                    description: "Question count."
                   posts:
                     type: string
-                    description: "Post count"
+                    description: "Post count."
                   knownFor:
                     type: array
                     items:
                       type: string
-                    description: "Expertise topics"
+                    description: "Expertise topics."

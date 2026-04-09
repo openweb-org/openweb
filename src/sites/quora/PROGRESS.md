@@ -1,3 +1,17 @@
+# Quora — Progress
+
+## 2026-04-09: Polish — docs, schema, examples
+
+**What changed:**
+- DOC.md: fixed heading hierarchy under Site Internals (### not ##)
+- openapi.yaml: added compiled_at, build verified/signature_id, required arrays on all response objects, descriptions end with periods
+- All 4 example files: added replay_safety and response_schema_valid assertion
+
+**Why:**
+- Align with site package quality checklist
+
+**Verification:** `pnpm --silent dev verify quora` — 3/4 PASS (getQuestion, getAnswers, getProfile); searchQuestions FAIL (GQL interception — query name may have rotated)
+
 ## 2026-04-09: Initial add — 4 read operations
 
 **What changed:**
@@ -9,4 +23,3 @@
 - New site addition — Q&A platform with 4 core read operations
 
 **Verification:** Build passes, runtime verify pending
-**Commit:** pending
