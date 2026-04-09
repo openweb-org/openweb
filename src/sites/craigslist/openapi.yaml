@@ -1,9 +1,10 @@
 openapi: '3.1.0'
 info:
   title: Craigslist
-  version: '1.0'
+  version: '1.0.0'
   x-openweb:
     spec_version: '2.0'
+    compiled_at: '2026-04-09T00:00:00Z'
     requires_auth: false
 servers:
   - url: https://sfbay.craigslist.org
@@ -34,6 +35,7 @@ paths:
           description: >-
             Category code (e.g. "apa" for apartments, "jjj" for jobs,
             "sss" for all for-sale, "ccc" for community, "ggg" for gigs).
+          example: apa
         - name: city
           in: query
           required: false
@@ -43,12 +45,14 @@ paths:
           description: >-
             City subdomain (e.g. "sfbay", "newyork", "losangeles",
             "chicago", "seattle").
+          example: sfbay
         - name: query
           in: query
           required: false
           schema:
             type: string
           description: Search keyword (e.g. "2br", "remote", "honda civic").
+          example: 2br
       responses:
         '200':
           description: Search results from Craigslist.
@@ -56,34 +60,36 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [resultCount, listings]
                 properties:
                   resultCount:
                     type: integer
+                    description: Number of listings returned.
                   listings:
                     type: array
                     items:
                       type: object
+                      description: A classified listing summary.
+                      required: [title, url]
                       properties:
                         title:
                           type: string
+                          description: Listing title.
                         url:
                           type: string
+                          description: Full URL to the listing page.
                         price:
-                          type:
-                            - string
-                            - 'null'
+                          type: [string, 'null']
+                          description: Price string (e.g. "$1,200").
                         location:
-                          type:
-                            - string
-                            - 'null'
+                          type: [string, 'null']
+                          description: Neighborhood or area name.
                         date:
-                          type:
-                            - string
-                            - 'null'
+                          type: [string, 'null']
+                          description: Posted date or datetime string.
                         postId:
-                          type:
-                            - string
-                            - 'null'
+                          type: [string, 'null']
+                          description: Craigslist numeric post ID.
   /{category}/d/{slug}/{id}:
     get:
       operationId: getListing
@@ -106,18 +112,21 @@ paths:
           schema:
             type: string
           description: Category code (e.g. "apa", "sss").
+          example: apa
         - name: slug
           in: path
           required: true
           schema:
             type: string
           description: URL slug from the listing link (e.g. "sunny-2br-apt-in-mission").
+          example: sunny-2br-apt-in-mission
         - name: id
           in: path
           required: true
           schema:
             type: string
           description: Craigslist post ID (e.g. "7891234567").
+          example: '7891234567'
         - name: city
           in: query
           required: false
@@ -125,6 +134,7 @@ paths:
             type: string
             default: sfbay
           description: City subdomain (e.g. "sfbay", "newyork").
+          example: sfbay
       responses:
         '200':
           description: Full listing details.
@@ -132,45 +142,45 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [title, body, url]
                 properties:
                   title:
                     type: string
+                    description: Listing title text.
                   price:
-                    type:
-                      - string
-                      - 'null'
+                    type: [string, 'null']
+                    description: Price string (e.g. "$1,200").
                   body:
                     type: string
+                    description: Full posting body text.
                   location:
-                    type:
-                      - string
-                      - 'null'
+                    type: [string, 'null']
+                    description: Map address or neighborhood.
                   latitude:
-                    type:
-                      - number
-                      - 'null'
+                    type: [number, 'null']
+                    description: Latitude from the embedded map.
                   longitude:
-                    type:
-                      - number
-                      - 'null'
+                    type: [number, 'null']
+                    description: Longitude from the embedded map.
                   postedAt:
-                    type:
-                      - string
-                      - 'null'
+                    type: [string, 'null']
+                    description: ISO datetime when the listing was posted.
                   updatedAt:
-                    type:
-                      - string
-                      - 'null'
+                    type: [string, 'null']
+                    description: ISO datetime when the listing was last updated.
                   attributes:
                     type: array
+                    description: Listing attributes (e.g. sqft, bedrooms, laundry).
                     items:
                       type: string
                   images:
                     type: array
+                    description: URLs of listing images.
                     items:
                       type: string
                   url:
                     type: string
+                    description: Canonical URL of the listing page.
   /:
     get:
       operationId: getCategories
@@ -194,6 +204,7 @@ paths:
             type: string
             default: sfbay
           description: City subdomain (e.g. "sfbay", "newyork").
+          example: sfbay
       responses:
         '200':
           description: List of categories with codes.
@@ -201,19 +212,24 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [city, categories]
                 properties:
                   city:
                     type: string
+                    description: City subdomain used for the request.
                   categories:
                     type: array
                     items:
                       type: object
+                      description: A Craigslist category with its short code.
+                      required: [name, code]
                       properties:
                         name:
                           type: string
+                          description: Human-readable category name.
                         code:
                           type: string
+                          description: Short code used in URLs (e.g. "apa", "jjj").
                         section:
-                          type:
-                            - string
-                            - 'null'
+                          type: [string, 'null']
+                          description: Parent section heading (e.g. "housing", "jobs").
