@@ -1,3 +1,21 @@
+## 2026-04-09: Polish guardian site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added `required` arrays to all 3 response schemas (moved inside items/object)
+- Added `description` to all nested `fields` sub-properties (headline, byline, thumbnail, body)
+- Added `description` to all `items`-level objects (no bare `type: object`)
+- Added descriptions to bare properties in getArticle and getSectionFeed responses
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions
+
+**Key files:**
+- `src/sites/guardian/DOC.md` — heading structure fix
+- `src/sites/guardian/openapi.yaml` — schema hardening
+
+**Verification:** pnpm build, pnpm dev verify guardian
+
 ## 2026-04-09: Polish stackoverflow site package
 
 **What changed:**

@@ -73,6 +73,8 @@ paths:
                 type: array
                 items:
                   type: object
+                  description: A search result article with headline, section, date, and optional fields.
+                  required: [id, type, sectionId, webTitle, webPublicationDate]
                   properties:
                     id:
                       type: string
@@ -103,19 +105,22 @@ paths:
                       description: API URL for this article.
                     fields:
                       type: object
+                      description: Requested content fields (controlled by show-fields parameter).
                       properties:
                         headline:
                           type: string
+                          description: Article headline text.
                         byline:
                           type:
                             - string
                             - 'null'
+                          description: Author name(s).
                         thumbnail:
                           type:
                             - string
                             - 'null'
                           format: uri
-                  required: [id, type, sectionId, webTitle, webPublicationDate]
+                          description: Thumbnail image URL.
 
   /search?ids:
     get:
@@ -157,6 +162,8 @@ paths:
             application/json:
               schema:
                 type: object
+                description: A single article with full content fields.
+                required: [id, type, sectionId, webTitle, webPublicationDate]
                 properties:
                   id:
                     type: string
@@ -166,24 +173,32 @@ paths:
                     description: Content type.
                   sectionId:
                     type: string
+                    description: Section slug.
                   sectionName:
                     type: string
+                    description: Human-readable section name.
                   webPublicationDate:
                     type: string
                     format: date-time
+                    description: Publication date in ISO 8601.
                   webTitle:
                     type: string
+                    description: Article headline.
                   webUrl:
                     type: string
                     format: uri
+                    description: URL on theguardian.com.
                   apiUrl:
                     type: string
                     format: uri
+                    description: API URL for this article.
                   fields:
                     type: object
+                    description: Requested content fields including full body HTML.
                     properties:
                       headline:
                         type: string
+                        description: Article headline text.
                       body:
                         type: string
                         description: Full article body as HTML.
@@ -191,12 +206,13 @@ paths:
                         type:
                           - string
                           - 'null'
+                        description: Author name(s).
                       thumbnail:
                         type:
                           - string
                           - 'null'
                         format: uri
-                required: [id, type, sectionId, webTitle, webPublicationDate]
+                        description: Thumbnail image URL.
 
   /search?section:
     get:
@@ -261,38 +277,51 @@ paths:
                 type: array
                 items:
                   type: object
+                  description: A section feed article with headline, date, and optional fields.
+                  required: [id, type, sectionId, webTitle, webPublicationDate]
                   properties:
                     id:
                       type: string
+                      description: Article path.
                     type:
                       type: string
+                      description: Content type (article, liveblog, etc.).
                     sectionId:
                       type: string
+                      description: Section slug.
                     sectionName:
                       type: string
+                      description: Human-readable section name.
                     webPublicationDate:
                       type: string
                       format: date-time
+                      description: Publication date in ISO 8601.
                     webTitle:
                       type: string
+                      description: Article headline.
                     webUrl:
                       type: string
                       format: uri
+                      description: URL on theguardian.com.
                     apiUrl:
                       type: string
                       format: uri
+                      description: API URL for this article.
                     fields:
                       type: object
+                      description: Requested content fields (controlled by show-fields parameter).
                       properties:
                         headline:
                           type: string
+                          description: Article headline text.
                         byline:
                           type:
                             - string
                             - 'null'
+                          description: Author name(s).
                         thumbnail:
                           type:
                             - string
                             - 'null'
                           format: uri
-                  required: [id, type, sectionId, webTitle, webPublicationDate]
+                          description: Thumbnail image URL.

@@ -45,19 +45,19 @@ openweb guardian exec getSectionFeed '{"section": "world"}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - Public REST API at `content.guardianapis.com`
 - All responses wrapped in `{response: {status, total, results: [...]}}`
 - Single article responses use `{response: {status, content: {...}}}`
 - `show-fields` parameter controls which content fields are included in results
 
-## Auth
+### Auth
 API key passed as `api-key` query parameter. The key `test` works for development with low rate limits. No signup required for basic usage.
 
-## Transport
+### Transport
 `node` — direct HTTP. Public JSON API, no bot detection, no browser needed.
 
-## Known Issues
+### Known Issues
 - The `test` API key has low rate limits (~12 calls/minute). Register for a free key at open-platform.theguardian.com for higher limits.
 - Article body (`fields.body`) is raw HTML, not plain text.
 - Some older articles may have null byline or thumbnail fields.
