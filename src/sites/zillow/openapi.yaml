@@ -417,7 +417,7 @@ paths:
           schema:
             type: string
           description: Zillow Property ID (numeric string, e.g. "2077416986")
-          example: "2077416986"
+          example: "15076238"
         - name: slug
           in: path
           required: true
@@ -425,7 +425,7 @@ paths:
             type: string
             default: _
           description: URL slug (e.g. "123-Main-St-Seattle-WA-98101"). Use "_" if unknown.
-          example: _
+          example: 1000-Fell-St-San-Francisco-CA-94117
       responses:
         "200":
           description: Property details extracted from __NEXT_DATA__.
@@ -441,7 +441,6 @@ paths:
                   address:
                     type: [object, "null"]
                     description: Structured property address.
-                    required: [streetAddress, city, state, zipcode]
                     properties:
                       streetAddress:
                         type: [string, "null"]
@@ -536,7 +535,7 @@ paths:
           schema:
             type: string
           description: Zillow Property ID (numeric string)
-          example: "2077416986"
+          example: "15076238"
         - name: slug
           in: path
           required: true
@@ -544,7 +543,7 @@ paths:
             type: string
             default: _
           description: URL slug. Use "_" if unknown.
-          example: _
+          example: 1000-Fell-St-San-Francisco-CA-94117
       responses:
         "200":
           description: Zestimate data with confidence range and history.
@@ -560,7 +559,6 @@ paths:
                   address:
                     type: [object, "null"]
                     description: Structured property address.
-                    required: [streetAddress, city, state, zipcode]
                     properties:
                       streetAddress:
                         type: [string, "null"]
@@ -644,7 +642,7 @@ paths:
           schema:
             type: string
           description: Zillow Property ID (numeric string)
-          example: "2077416986"
+          example: "15076238"
         - name: slug
           in: path
           required: true
@@ -652,7 +650,7 @@ paths:
             type: string
             default: _
           description: URL slug. Use "_" if unknown.
-          example: _
+          example: 1000-Fell-St-San-Francisco-CA-94117
       responses:
         "200":
           description: Neighborhood data with scores, schools, and nearby homes.
@@ -668,7 +666,6 @@ paths:
                   address:
                     type: [object, "null"]
                     description: Structured property address.
-                    required: [streetAddress, city, state, zipcode]
                     properties:
                       streetAddress:
                         type: [string, "null"]
@@ -697,7 +694,6 @@ paths:
                     items:
                       type: object
                       description: A nearby school with GreatSchools rating.
-                      required: [name]
                       properties:
                         name:
                           type: [string, "null"]
@@ -723,7 +719,6 @@ paths:
                     items:
                       type: object
                       description: A nearby comparable property.
-                      required: [zpid]
                       properties:
                         zpid:
                           type: [integer, "null"]

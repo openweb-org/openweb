@@ -4,8 +4,8 @@
   "cases": [
     {
       "input": {
-        "zpid": "2077416986",
-        "slug": "_"
+        "zpid": "15076238",
+        "slug": "1000-Fell-St-San-Francisco-CA-94117"
       },
       "assertions": {
         "status": 200,

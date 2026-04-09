@@ -34,13 +34,13 @@ Real estate marketplace. Search properties, get full property details, Zestimate
 openweb zillow exec searchProperties '{"searchQueryState":{"pagination":{},"isMapVisible":true,"mapBounds":{"north":37.82,"south":37.70,"east":-122.35,"west":-122.52},"filterState":{"sortSelection":{"value":"globalrelevanceex"},"isAllHomes":{"value":true}},"isListVisible":true,"regionSelection":[{"regionId":20330,"regionType":6}],"category":"cat1"},"wants":{"cat1":["listResults"]},"requestId":1}'
 
 # Get property details by zpid
-openweb zillow exec getPropertyDetail '{"zpid":"2077416986","slug":"_"}'
+openweb zillow exec getPropertyDetail '{"zpid":"15076238","slug":"1000-Fell-St-San-Francisco-CA-94117"}'
 
 # Get Zestimate for a property
-openweb zillow exec getZestimate '{"zpid":"2077416986","slug":"_"}'
+openweb zillow exec getZestimate '{"zpid":"15076238","slug":"1000-Fell-St-San-Francisco-CA-94117"}'
 
 # Get neighborhood data
-openweb zillow exec getNeighborhood '{"zpid":"2077416986","slug":"_"}'
+openweb zillow exec getNeighborhood '{"zpid":"15076238","slug":"1000-Fell-St-San-Francisco-CA-94117"}'
 ```
 
 ### Common Region IDs
