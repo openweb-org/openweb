@@ -1,5 +1,6 @@
 {
   "operation_id": "getRestaurant",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "slug": "ceron-kitchen-alameda" },

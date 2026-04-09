@@ -1,3 +1,16 @@
+## 2026-04-09: Polish — docs, schema, examples
+
+**What changed:**
+- DOC.md: fixed heading hierarchy under Site Internals (## → ###), added Extraction subsection
+- openapi.yaml: added `required` arrays to all response objects, `description` on every property, `example` on all parameters, no bare `type: object`
+- All 4 example files: added `replay_safety: safe_read`
+- Added manifest.json
+
+**Why:**
+- Align with site package quality checklist
+
+**Verification:** `pnpm --silent dev verify opentable`
+
 ## 2026-04-09: Initial site package
 
 **What changed:**

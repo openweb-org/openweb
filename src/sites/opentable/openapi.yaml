@@ -14,7 +14,7 @@ paths:
   /internal/searchRestaurants:
     get:
       operationId: searchRestaurants
-      summary: Search restaurants by name, cuisine, or location — returns name, cuisine, price, rating, neighborhood
+      summary: Search restaurants by name, cuisine, or location — name, cuisine, price, rating, neighborhood, photos
       x-openweb:
         permission: read
         adapter:
@@ -27,18 +27,21 @@ paths:
           schema:
             type: string
           description: 'Search term — restaurant name, cuisine, or keyword (e.g. "italian", "sushi", "steakhouse").'
+          example: italian
         - name: location
           in: query
           required: true
           schema:
             type: string
           description: 'Location to search near (e.g. "San Francisco", "New York").'
+          example: San Francisco
         - name: date
           in: query
           required: false
           schema:
             type: string
           description: 'Reservation date in YYYY-MM-DD format. Omit for general search without availability.'
+          example: '2026-04-12'
         - name: time
           in: query
           required: false
@@ -46,6 +49,7 @@ paths:
             type: string
             default: '19:00'
           description: 'Reservation time in HH:MM format (24h). Defaults to 19:00.'
+          example: '19:00'
         - name: covers
           in: query
           required: false
@@ -53,12 +57,14 @@ paths:
             type: integer
             default: 2
           description: 'Party size. Defaults to 2.'
+          example: 2
         - name: metroId
           in: query
           required: false
           schema:
             type: string
           description: 'OpenTable metro area ID (e.g. "4" for San Francisco Bay Area). Improves result relevance.'
+          example: '4'
       responses:
         '200':
           description: Search results with restaurant list.
@@ -66,17 +72,21 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [restaurants, totalResults]
                 properties:
                   restaurants:
                     type: array
                     items:
                       type: object
+                      description: A restaurant search result.
+                      required: [restaurantId, name]
                       properties:
                         restaurantId:
                           type: integer
                           description: 'OpenTable restaurant ID (use in getAvailability, getReviews).'
                         name:
                           type: string
+                          description: Restaurant name.
                         slug:
                           type: string
                           nullable: true
@@ -84,6 +94,7 @@ paths:
                         cuisine:
                           type: string
                           nullable: true
+                          description: Primary cuisine type.
                         priceBand:
                           type: string
                           nullable: true
@@ -95,28 +106,38 @@ paths:
                         neighborhood:
                           type: string
                           nullable: true
+                          description: Neighborhood or area name.
                         rating:
                           type: number
                           nullable: true
+                          description: Average diner rating (out of 5).
                         reviewCount:
                           type: integer
                           nullable: true
+                          description: Total number of reviews.
                         photos:
                           type: array
                           items:
                             type: string
+                            description: Photo URL.
+                          description: Up to 2 restaurant photos.
                         latitude:
                           type: number
                           nullable: true
+                          description: Latitude coordinate.
                         longitude:
                           type: number
                           nullable: true
+                          description: Longitude coordinate.
                         isPromoted:
                           type: boolean
+                          description: Whether this is a promoted/sponsored listing.
                   totalResults:
                     type: integer
+                    description: Total number of matching restaurants.
                   searchTerm:
                     type: string
+                    description: The search term that was used.
 
   /internal/getRestaurant:
     get:
@@ -134,6 +155,7 @@ paths:
           schema:
             type: string
           description: 'Restaurant URL slug (e.g. "ceron-kitchen-alameda"). Get from searchRestaurants.'
+          example: ceron-kitchen-alameda
       responses:
         '200':
           description: Restaurant detail.
@@ -141,107 +163,147 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [restaurantId, name]
                 properties:
                   restaurantId:
                     type: integer
+                    description: OpenTable restaurant ID.
                   name:
                     type: string
+                    description: Restaurant name.
                   description:
                     type: string
                     nullable: true
+                    description: Restaurant description or tagline.
                   cuisine:
                     type: string
                     nullable: true
+                    description: Primary cuisine type.
                   cuisines:
                     type: array
                     items:
                       type: string
+                      description: A cuisine label.
+                    description: All cuisine tags for the restaurant.
                   priceBand:
                     type: string
                     nullable: true
+                    description: 'Price range description (e.g. "$31 to $60").'
                   diningStyle:
                     type: string
                     nullable: true
+                    description: 'Dining style (e.g. "Casual Dining", "Fine Dining").'
                   neighborhood:
                     type: string
                     nullable: true
+                    description: Neighborhood or area name.
                   address:
                     type: object
                     nullable: true
+                    description: Structured street address.
+                    required: [line1, city, state]
                     properties:
                       line1:
                         type: string
+                        description: Street address line.
                       city:
                         type: string
+                        description: City name.
                       state:
                         type: string
+                        description: State or province code.
                       postCode:
                         type: string
+                        description: Postal or ZIP code.
                       country:
                         type: string
+                        description: Country code.
                   phone:
                     type: string
                     nullable: true
+                    description: Phone number.
                   website:
                     type: string
                     nullable: true
+                    description: Restaurant website URL.
                   latitude:
                     type: number
                     nullable: true
+                    description: Latitude coordinate.
                   longitude:
                     type: number
                     nullable: true
+                    description: Longitude coordinate.
                   hoursOfOperation:
                     type: string
                     nullable: true
+                    description: Operating hours as a text string.
                   dressCode:
                     type: string
                     nullable: true
+                    description: 'Dress code (e.g. "Smart Casual").'
                   executiveChef:
                     type: string
                     nullable: true
+                    description: Executive chef name.
                   rating:
                     type: number
                     nullable: true
+                    description: Overall average rating (out of 5).
                   reviewCount:
                     type: integer
                     nullable: true
+                    description: Total number of reviews.
                   ratings:
                     type: object
                     nullable: true
+                    description: Breakdown of ratings by category.
+                    required: [overall]
                     properties:
                       overall:
                         type: number
                         nullable: true
+                        description: Overall rating (out of 5).
                       food:
                         type: number
                         nullable: true
+                        description: Food quality rating.
                       service:
                         type: number
                         nullable: true
+                        description: Service quality rating.
                       ambience:
                         type: number
                         nullable: true
+                        description: Ambience rating.
                       value:
                         type: number
                         nullable: true
+                        description: Value-for-money rating.
                   features:
                     type: object
                     nullable: true
+                    description: Restaurant features and seating options.
                     properties:
                       bar:
                         type: boolean
+                        description: Whether bar seating is available.
                       outdoor:
                         type: boolean
+                        description: Whether outdoor seating is available.
                       counter:
                         type: boolean
+                        description: Whether counter seating is available.
                       maxPartySize:
                         type: integer
                         nullable: true
+                        description: Maximum party size for reservations.
                   photos:
                     type: array
                     items:
                       type: string
+                      description: Photo URL.
+                    description: Up to 5 restaurant photos.
 
   /internal/getAvailability:
     get:
@@ -259,12 +321,14 @@ paths:
           schema:
             type: integer
           description: 'OpenTable restaurant ID (from searchRestaurants or getRestaurant).'
+          example: 1204381
         - name: date
           in: query
           required: true
           schema:
             type: string
           description: 'Date in YYYY-MM-DD format.'
+          example: '2026-04-12'
         - name: time
           in: query
           required: false
@@ -272,6 +336,7 @@ paths:
             type: string
             default: '19:00'
           description: 'Center time in HH:MM (24h). Slots are returned around this time. Defaults to 19:00.'
+          example: '19:00'
         - name: partySize
           in: query
           required: false
@@ -279,6 +344,7 @@ paths:
             type: integer
             default: 2
           description: 'Party size. Defaults to 2.'
+          example: 2
       responses:
         '200':
           description: Available time slots.
@@ -286,19 +352,26 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [restaurantId, date, slots]
                 properties:
                   restaurantId:
                     type: integer
+                    description: OpenTable restaurant ID.
                   date:
                     type: string
+                    description: Requested date (YYYY-MM-DD).
                   time:
                     type: string
+                    description: Requested center time (HH:MM).
                   partySize:
                     type: integer
+                    description: Requested party size.
                   slots:
                     type: array
                     items:
                       type: object
+                      description: An available reservation time slot.
+                      required: [timeOffsetMinutes, type]
                       properties:
                         timeOffsetMinutes:
                           type: integer
@@ -310,12 +383,13 @@ paths:
                           type: array
                           items:
                             type: string
-                          description: 'Available seating options (e.g. "bar", "outdoor").'
+                            description: 'A seating option (e.g. "bar", "outdoor").'
+                          description: Available seating options for this slot.
 
   /internal/getReviews:
     get:
       operationId: getReviews
-      summary: Get customer reviews — rating, text, date, reviewer name, paginated
+      summary: Get customer reviews — rating, text, date, reviewer name, paginated (10/page)
       x-openweb:
         permission: read
         adapter:
@@ -328,6 +402,7 @@ paths:
           schema:
             type: integer
           description: 'OpenTable restaurant ID (from searchRestaurants or getRestaurant).'
+          example: 1204381
         - name: page
           in: query
           required: false
@@ -335,6 +410,7 @@ paths:
             type: integer
             default: 1
           description: 'Page number (10 reviews per page). Defaults to 1.'
+          example: 1
         - name: sortBy
           in: query
           required: false
@@ -342,6 +418,7 @@ paths:
             type: string
             default: newestReview
           description: 'Sort order: "newestReview", "oldestReview", "highestRating", "lowestRating".'
+          example: newestReview
       responses:
         '200':
           description: Paginated reviews.
@@ -349,35 +426,50 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [reviews, totalCount, totalPages, page]
                 properties:
                   reviews:
                     type: array
                     items:
                       type: object
+                      description: A customer review.
                       properties:
                         reviewId:
                           type: string
+                          nullable: true
+                          description: Unique review identifier.
                         rating:
                           type: number
+                          nullable: true
+                          description: Diner rating (out of 5).
                         text:
                           type: string
                           nullable: true
+                          description: Review text body.
                         displayName:
                           type: string
                           nullable: true
+                          description: Reviewer display name.
                         submittedDate:
                           type: string
                           nullable: true
+                          description: Date the review was submitted (ISO 8601).
                         dinedDate:
                           type: string
                           nullable: true
+                          description: Date the reviewer dined (ISO 8601).
                         photos:
                           type: array
                           items:
                             type: string
+                            description: Photo URL.
+                          description: Photos attached to the review.
                   totalCount:
                     type: integer
+                    description: Total number of reviews.
                   totalPages:
                     type: integer
+                    description: Total number of pages.
                   page:
                     type: integer
+                    description: Current page number.

@@ -47,22 +47,26 @@ openweb opentable exec getReviews '{"restaurantId": 1204381, "page": 1}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - Apollo GraphQL at `/dapi/fe/gql` with persisted queries (sha256 hashes)
 - Search results delivered via SSR in `__INITIAL_STATE__.multiSearch.restaurants`
 - Restaurant details via SSR in `__INITIAL_STATE__.restaurantProfile.restaurant`
 - Availability and reviews fetched via GraphQL persisted queries (`RestaurantsAvailability`, `ReviewSearchResults`)
 
-## Auth
+### Auth
 No auth required. All operations are public read. CSRF token (`window.__CSRF_TOKEN__`) required for GraphQL calls — extracted automatically by adapter.
 
-## Transport
+### Transport
 - All operations: page (browser via `opentable` adapter)
 - Akamai bot detection (`_abck` cookie) blocks direct HTTP
 - Search/detail: page navigation + SSR extraction from `__INITIAL_STATE__`
 - Availability/reviews: browser-context `fetch()` to GraphQL endpoint with CSRF token
 
-## Known Issues
+### Extraction
+- Search/detail: SSR state from `window.__INITIAL_STATE__` (multiSearch.restaurants, restaurantProfile.restaurant)
+- Availability/reviews: JSON from GraphQL persisted query responses
+
+### Known Issues
 - Akamai bot detection requires page transport — node transport will fail
 - GraphQL persisted query hashes may change across deployments — if "PersistedQueryNotFound" errors appear, hashes need re-capture
 - Search returns up to 50 restaurants per page; no direct pagination API — page 2 requires URL navigation

@@ -1,5 +1,6 @@
 {
   "operation_id": "searchRestaurants",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": { "term": "italian", "location": "San Francisco" },
