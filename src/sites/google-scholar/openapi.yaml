@@ -65,6 +65,7 @@ paths:
           schema:
             type: string
           description: Search query — keywords, paper title, or author name.
+          example: transformer attention
         - name: start
           in: query
           required: false
@@ -72,6 +73,7 @@ paths:
             type: integer
             default: 0
           description: Result offset for pagination (10 results per page, use 0, 10, 20, ...).
+          example: 0
       responses:
         '200':
           description: Success.
@@ -95,6 +97,7 @@ paths:
                           description: Scholar cluster ID.
                         title:
                           type: string
+                          description: Paper title.
                         url:
                           type: string
                           description: Link to the paper source.
@@ -170,6 +173,7 @@ paths:
           schema:
             type: string
           description: Cluster ID from searchPapers `cites` field.
+          example: '10449950798206616151'
         - name: start
           in: query
           required: false
@@ -177,6 +181,7 @@ paths:
             type: integer
             default: 0
           description: Result offset for pagination (10 per page).
+          example: 0
       responses:
         '200':
           description: Success.
@@ -200,20 +205,28 @@ paths:
                       properties:
                         title:
                           type: string
+                          description: Paper title.
                         url:
                           type: string
+                          description: Link to the paper source.
                         authors:
                           type: string
+                          description: Comma-separated author list.
                         venueYear:
                           type: string
+                          description: Venue and year string.
                         year:
                           type: [integer, 'null']
+                          description: Publication year.
                         snippet:
                           type: string
+                          description: Text snippet with query terms highlighted.
                         citedBy:
                           type: integer
+                          description: Number of citations.
                         pdfLink:
                           type: [string, 'null']
+                          description: Direct PDF link if available.
   /citations:
     get:
       operationId: getAuthorProfile
@@ -271,6 +284,7 @@ paths:
           schema:
             type: string
           description: Author ID from search results author links (e.g. KROUdngAAAAJ).
+          example: KROUdngAAAAJ
       responses:
         '200':
           description: Success.
@@ -282,8 +296,10 @@ paths:
                 properties:
                   name:
                     type: string
+                    description: Author full name.
                   affiliation:
                     type: string
+                    description: Institutional affiliation.
                   photo:
                     type: [string, 'null']
                     description: Author photo URL.
@@ -321,11 +337,16 @@ paths:
                       properties:
                         title:
                           type: string
+                          description: Publication title.
                         authors:
                           type: string
+                          description: Comma-separated author list.
                         venue:
                           type: string
+                          description: Journal or conference name.
                         citedBy:
                           type: integer
+                          description: Number of citations.
                         year:
                           type: string
+                          description: Publication year.

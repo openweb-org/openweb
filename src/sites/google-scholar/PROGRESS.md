@@ -1,3 +1,15 @@
+## 2026-04-09: Polish — docs, schema, examples
+
+**What changed:**
+- DOC.md: fixed heading hierarchy under Site Internals (## → ###)
+- openapi.yaml: added `example` on all parameters, `description` on every response property
+- All 3 example files: added `replay_safety: safe_read`
+
+**Why:**
+- Align with site package quality checklist
+
+**Verification:** `pnpm --silent dev verify google-scholar`
+
 ## 2026-04-09: Initial add — 3 operations
 
 **What changed:**
