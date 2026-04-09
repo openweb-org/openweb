@@ -1,5 +1,6 @@
 {
   "operation_id": "getStoreDetail",
+  "replay_safety": "safe_read",
   "cases": [{
     "input": { "storeNumber": "53646-283069", "lat": 37.7772, "lng": -122.4193 },
     "assertions": { "status": 200, "response_schema_valid": true }

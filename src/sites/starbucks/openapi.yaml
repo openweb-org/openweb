@@ -31,13 +31,15 @@ paths:
           required: true
           schema:
             type: number
-          description: Latitude of search center (e.g. 37.7749 for San Francisco).
+          description: Latitude of search center.
+          example: 37.7749
         - name: lng
           in: query
           required: true
           schema:
             type: number
-          description: Longitude of search center (e.g. -122.4194 for San Francisco).
+          description: Longitude of search center.
+          example: -122.4194
       responses:
         '200':
           description: Nearby Starbucks stores sorted by distance.
@@ -54,6 +56,7 @@ paths:
                     description: Number of stores returned (up to 50).
                   stores:
                     type: array
+                    description: Stores sorted by distance from search center.
                     items:
                       type: object
                       required:
@@ -65,6 +68,7 @@ paths:
                           description: Unique store number (use with getStoreDetail).
                         name:
                           type: string
+                          description: Store display name.
                         distance:
                           type: number
                           description: Distance in miles from search center.
@@ -72,8 +76,10 @@ paths:
                           type:
                             - string
                             - 'null'
+                          description: Store phone number.
                         open:
                           type: boolean
+                          description: Whether the store is currently open.
                         openStatus:
                           type: string
                           description: Human-readable open status (e.g. "Opens Thursday at 4:30 AM").
@@ -82,17 +88,22 @@ paths:
                           description: Today's hours (e.g. "Open 4:30 AM-8:00 PM").
                         address:
                           type: string
-                          description: Single-line address.
+                          description: Single-line street address.
                         city:
                           type: string
+                          description: City name.
                         state:
                           type: string
+                          description: State or province code.
                         postalCode:
                           type: string
+                          description: Postal/ZIP code.
                         latitude:
                           type: number
+                          description: Store latitude.
                         longitude:
                           type: number
+                          description: Store longitude.
                         amenities:
                           type: array
                           items:
@@ -123,19 +134,22 @@ paths:
           required: true
           schema:
             type: string
-          description: Store number from searchStores (e.g. "53646-283069").
+          description: Store number from searchStores.
+          example: '53646-283069'
         - name: lat
           in: query
           required: true
           schema:
             type: number
           description: Approximate latitude of the store (from searchStores).
+          example: 37.7772
         - name: lng
           in: query
           required: true
           schema:
             type: number
           description: Approximate longitude of the store (from searchStores).
+          example: -122.4193
       responses:
         '200':
           description: Full store details.
@@ -149,75 +163,115 @@ paths:
                 properties:
                   storeNumber:
                     type: string
+                    description: Unique store number.
                   name:
                     type: string
+                    description: Store display name.
                   phoneNumber:
                     type:
                       - string
                       - 'null'
+                    description: Store phone number.
                   open:
                     type: boolean
+                    description: Whether the store is currently open.
                   isOpen24Hours:
                     type: boolean
+                    description: Whether the store operates 24 hours.
                   openStatus:
                     type: string
+                    description: Human-readable open status.
                   hours:
                     type: string
+                    description: Today's hours.
                   address:
                     type: object
+                    required:
+                      - singleLine
+                    description: Store address.
                     properties:
                       streetAddress:
                         type: string
+                        description: Street address line.
                       city:
                         type: string
+                        description: City name.
                       state:
                         type: string
+                        description: State or province code.
                       postalCode:
                         type: string
+                        description: Postal/ZIP code.
                       country:
                         type: string
+                        description: Country code (e.g. "US").
                       singleLine:
                         type: string
+                        description: Full address as a single line.
                   coordinates:
                     type: object
+                    required:
+                      - latitude
+                      - longitude
+                    description: Store geographic coordinates.
                     properties:
                       latitude:
                         type: number
+                        description: Store latitude.
                       longitude:
                         type: number
+                        description: Store longitude.
                   schedule:
                     type: array
+                    description: Weekly operating schedule.
                     items:
                       type: object
+                      required:
+                        - day
+                        - open
                       properties:
                         day:
                           type: string
+                          description: Day of the week (e.g. "Monday").
                         hours:
                           type: string
+                          description: Hours for that day (e.g. "4:30 AM-8:00 PM").
                         open:
                           type: boolean
+                          description: Whether the store is open on that day.
                   amenities:
                     type: array
+                    description: Store amenities and features.
                     items:
                       type: object
+                      required:
+                        - code
+                        - name
                       properties:
                         code:
                           type: string
+                          description: Amenity code identifier.
                         name:
                           type: string
+                          description: Human-readable amenity name.
                   mobileOrdering:
                     type: object
+                    required:
+                      - available
+                    description: Mobile ordering status.
                     properties:
                       available:
                         type: boolean
+                        description: Whether mobile ordering is available.
                       guestOrdering:
                         type: boolean
+                        description: Whether guest (non-account) ordering is supported.
                   ownershipType:
                     type: string
                     description: Ownership type code (CO = company-owned, LS = licensed).
                   slug:
                     type: string
-                    description: URL slug for the store.
+                    description: URL slug for the store page.
 
   /menu:
     get:
@@ -247,6 +301,7 @@ paths:
                 properties:
                   categories:
                     type: array
+                    description: Top-level menu categories.
                     items:
                       type: object
                       required:
@@ -258,6 +313,7 @@ paths:
                           description: Category name (e.g. "Drinks", "Food").
                         subcategories:
                           type: array
+                          description: Subcategories within this category.
                           items:
                             type: object
                             required:
@@ -271,8 +327,10 @@ paths:
                                 type:
                                   - string
                                   - 'null'
+                                description: Subcategory image URL.
                               products:
                                 type: array
+                                description: Products in this subcategory.
                                 items:
                                   type: object
                                   required:
@@ -281,18 +339,21 @@ paths:
                                   properties:
                                     name:
                                       type: string
+                                      description: Product display name.
                                     productNumber:
                                       type: integer
                                       description: Product identifier.
                                     productType:
                                       type: string
-                                      description: '"Beverage" or "Food".'
+                                      description: Product type ("Beverage" or "Food").
                                     availability:
                                       type: string
+                                      description: Availability status.
                                     imageUrl:
                                       type:
                                         - string
                                         - 'null'
+                                      description: Product image URL.
                                     formCode:
                                       type:
                                         - string
