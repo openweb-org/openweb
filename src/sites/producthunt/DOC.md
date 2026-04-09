@@ -45,7 +45,7 @@ openweb producthunt exec getPost '{"slug": "novavoice"}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - Next.js App Router with Apollo Client (GraphQL)
 - GraphQL endpoint: `/frontend/graphql` (persisted queries only, no ad-hoc queries)
 - All data available in Apollo Client cache after SSR hydration
@@ -53,15 +53,15 @@ openweb producthunt exec getPost '{"slug": "novavoice"}'
 - Search uses `productSearch` query (SSR'd on `/search?q=...`)
 - Post detail uses `ProductsPageLayout` persisted query
 
-## Auth
+### Auth
 No auth required for all read operations. Public data only.
 
-## Transport
+### Transport
 - `page` — all operations use adapter with Apollo Client cache extraction
 - Adapter navigates to appropriate page, waits for hydration, reads `__APOLLO_CLIENT__.cache.extract()`
 - Persisted query hashes are deployment-specific — adapter avoids hash dependency by reading from cache
 
-## Known Issues
+### Known Issues
 - No bot detection observed
 - Product makers list on detail page includes all users loaded on the page (may include non-makers like commenters)
 - Persisted query hashes change with deployments — do not hardcode

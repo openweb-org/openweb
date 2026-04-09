@@ -4,6 +4,7 @@ info:
   version: '1.0'
   x-openweb:
     spec_version: '2.0'
+    requires_auth: false
 servers:
   - url: https://www.producthunt.com
     x-openweb:
@@ -33,6 +34,7 @@ paths:
                 type: array
                 items:
                   type: object
+                  required: [id, name, slug, votesCount, commentsCount]
                   properties:
                     id:
                       type: string
@@ -110,6 +112,7 @@ paths:
               - LAST_MONTH
             default: TODAY
           description: Time section to fetch posts from.
+          example: TODAY
       responses:
         '200':
           description: Array of featured posts for the given section.
@@ -119,43 +122,56 @@ paths:
                 type: array
                 items:
                   type: object
+                  required: [id, name, slug, votesCount, commentsCount]
                   properties:
                     id:
                       type: string
+                      description: Post ID.
                     name:
                       type: string
+                      description: Product name.
                     slug:
                       type: string
+                      description: URL slug.
                     tagline:
                       type:
                         - string
                         - 'null'
+                      description: Short product tagline.
                     votesCount:
                       type: integer
+                      description: Total upvotes.
                     commentsCount:
                       type: integer
+                      description: Total comments.
                     dailyRank:
                       type:
                         - string
                         - 'null'
+                      description: 'Rank for the day, e.g. "1".'
                     createdAt:
                       type:
                         - string
                         - 'null'
+                      description: ISO timestamp when posted.
                     featuredAt:
                       type:
                         - string
                         - 'null'
+                      description: ISO timestamp when featured.
                     thumbnailUrl:
                       type:
                         - string
                         - 'null'
+                      description: Product thumbnail image URL.
                     topics:
                       type: array
                       items:
                         type: string
+                      description: Topic names.
                     productSlug:
                       type: string
+                      description: Slug for the product page.
   /internal/getPost:
     get:
       operationId: getPost
@@ -178,6 +194,7 @@ paths:
           schema:
             type: string
           description: 'Product slug from getPosts or searchProducts (e.g. "novavoice").'
+          example: novavoice
       responses:
         '200':
           description: Full product details.
@@ -185,6 +202,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [id, name, slug, votesCount, commentsCount]
                 properties:
                   id:
                     type: string
@@ -250,6 +268,7 @@ paths:
                     description: Product makers/team.
                     items:
                       type: object
+                      required: [name]
                       properties:
                         name:
                           type: string
@@ -293,6 +312,7 @@ paths:
           schema:
             type: string
           description: Search keyword.
+          example: ai
       responses:
         '200':
           description: Array of matching products.
@@ -302,6 +322,7 @@ paths:
                 type: array
                 items:
                   type: object
+                  required: [id, name, slug]
                   properties:
                     id:
                       type: string

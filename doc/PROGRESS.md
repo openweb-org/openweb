@@ -1,3 +1,35 @@
+## 2026-04-09: Polish stackoverflow site package
+
+**What changed:**
+- Added `required` arrays to all 5 response schemas (question, answer, user, tag objects)
+- Added descriptions to all `owner` sub-properties across searchQuestions, getQuestion, getAnswers
+- Added descriptions to `badge_counts` sub-properties in getUser
+- Eliminated bare `type: object` — all nested objects now have descriptions
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions
+
+**Key files:**
+- `src/sites/stackoverflow/openapi.yaml` — schema hardening
+
+**Verification:** pnpm build, pnpm dev verify stackoverflow
+
+## 2026-04-09: Polish producthunt site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added `requires_auth: false` to spec info
+- Added `required` arrays to all response schemas (getToday, getPosts, getPost, searchProducts, makers)
+- Added descriptions to all getPosts response item properties (were bare types)
+- Added `example` values to all parameters (section, slug, query)
+
+**Why:**
+- Align with quality checklist used across all polished site packages
+
+**Key files:**
+- `src/sites/producthunt/openapi.yaml` — schema quality improvements
+- `src/sites/producthunt/DOC.md` — heading level fix
+
 ## 2026-04-08: Prerelease-review fixes + doc/todo archive sweep
 
 **What changed:**
