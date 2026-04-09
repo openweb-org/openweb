@@ -1,5 +1,6 @@
 {
   "operation_id": "getHotelDetail",
+  "replay_safety": "safe_read",
   "cases": [{
     "input": { "propertyId": "27924", "checkInDate": "2026-05-01", "checkOutDate": "2026-05-03" },
     "assertions": { "status": 200, "response_schema_valid": true }

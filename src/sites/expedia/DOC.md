@@ -52,7 +52,7 @@ openweb expedia exec getFlightDetail '{"origin":"San Francisco (SFO)","destinati
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 Single GraphQL endpoint (`POST /graphql`) using APQ — only sha256 hashes sent, no query text. Different `client-info` headers per product vertical:
 - Lodging: `shopping-pwa,...`
 - Flights: `flights-shopping-pwa,...`
@@ -63,13 +63,13 @@ Batched queries common on page load (multiple operations in one request).
 - **APQ direct fetch** (searchHotels, getHotelDetail, searchFlights, getFlightDetail): `page.evaluate(fetch)` with APQ hash. Requires known hash — breaks if Expedia redeploys with new hashes.
 - **Intercept** (getHotelPrices, getHotelReviews): Navigate to hotel page, intercept GraphQL responses matching rate/review operations. Hash-independent — survives Expedia deploys.
 
-## Auth
+### Auth
 No auth required for public search. `cookie_session` for logged-in features. `DUAID` cookie used for device identity. `EG_SESSIONTOKEN` for authenticated sessions.
 
-## Transport
+### Transport
 `page` — Akamai Bot Manager (`_abck`, `bm_*` cookies) blocks all node HTTP requests. Must execute within browser context.
 
-## Known Issues
+### Known Issues
 - **Akamai Bot Manager**: Heavy bot detection. Node transport gets 403/429. Page transport required.
 - **APQ hash stability**: Persisted query hashes may change on Expedia deploys. If operations start failing, hashes in the adapter need updating. getHotelReviews uses intercept pattern and is immune to hash changes.
 - **Locale redirect**: Browser with CN locale gets redirected to `/cn/` paths. Search results show in Chinese. Set browser locale to en_US for English results.

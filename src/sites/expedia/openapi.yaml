@@ -20,6 +20,9 @@ paths:
         build:
           stable_id: exp0001
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: expedia-graphql
           operation: searchHotels
@@ -93,9 +96,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [propertySearchListings]
                 properties:
                   propertySearchListings:
                     type: array
+                    description: Hotel listings matching the search criteria.
                     items:
                       type: object
                       properties:
@@ -104,14 +109,18 @@ paths:
                           description: Property ID (use with getHotelDetail).
                         headingSection:
                           type: object
+                          description: Hotel name and location info.
+                          required: [heading]
                           properties:
                             heading:
                               type: string
                               description: Hotel name.
                             messages:
                               type: array
+                              description: Location and neighborhood messages.
                               items:
                                 type: object
+                                required: [text]
                                 properties:
                                   text:
                                     type: string
@@ -124,25 +133,33 @@ paths:
                           description: Hotel photos gallery.
                   pagination:
                     type: object
+                    description: Pagination info for result paging.
                     properties:
                       subSets:
                         type: object
+                        description: Pagination subset navigation.
                         properties:
                           nextSubSet:
                             type: object
+                            description: Next page of results.
                             properties:
                               size:
                                 type: integer
+                                description: Number of results in the next page.
                               startingIndex:
                                 type: integer
+                                description: Starting index of the next page.
                   summary:
                     type: object
+                    description: Search results summary.
+                    required: [matchedPropertiesSize]
                     properties:
                       matchedPropertiesSize:
                         type: integer
                         description: Total number of matching hotels.
                       resultsHeading:
                         type: string
+                        description: Human-readable results heading.
 
   /hotels/{propertyId}:
     get:
@@ -153,6 +170,9 @@ paths:
         build:
           stable_id: exp0002
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: expedia-graphql
           operation: getHotelDetail
@@ -197,11 +217,14 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [id, summary]
                 properties:
                   id:
                     type: string
+                    description: Property ID.
                   summary:
                     type: object
+                    description: Hotel summary with amenities, location, and overview.
                     properties:
                       amenities:
                         type: object
@@ -228,6 +251,9 @@ paths:
         build:
           stable_id: exp0005
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: expedia-graphql
           operation: getHotelPrices
@@ -273,6 +299,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [days]
                 properties:
                   configuration:
                     type: object
@@ -282,16 +309,22 @@ paths:
                     description: Per-day pricing entries across ~240 days.
                     items:
                       type: object
+                      required: [date]
                       properties:
                         date:
                           type: object
+                          description: Calendar date for this pricing entry.
+                          required: [day, month, year]
                           properties:
                             day:
                               type: integer
+                              description: Day of month (1-31).
                             month:
                               type: integer
+                              description: Month (1-12).
                             year:
                               type: integer
+                              description: Four-digit year.
                         displayPrice:
                           type: string
                           description: 'Formatted nightly rate (e.g. "$616").'
@@ -325,6 +358,9 @@ paths:
         build:
           stable_id: exp0006
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: expedia-graphql
           operation: getHotelReviews
@@ -342,9 +378,12 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [summary, reviews]
                 properties:
                   summary:
                     type: object
+                    description: Aggregate rating breakdown.
+                    required: [overallScoreWithDescriptionA11y, totalCount]
                     properties:
                       overallScoreWithDescriptionA11y:
                         type: object
@@ -369,10 +408,12 @@ paths:
                     description: Individual guest reviews.
                     items:
                       type: object
+                      required: [id, title, text, superlative]
                       properties:
                         contentDirectFeedbackPromptId:
                           type: string
                           nullable: true
+                          description: Internal feedback prompt identifier.
                         id:
                           type: string
                           description: Review ID.
@@ -381,11 +422,13 @@ paths:
                           description: 'Rating label (e.g. "Excellent", "Good").'
                         locale:
                           type: string
+                          description: Review locale code.
                         title:
                           type: string
                           description: Review title.
                         brandType:
                           type: string
+                          description: Brand type of the review source.
                         reviewScoreWithDescription:
                           type: object
                           description: Score with label and accessibility text.
@@ -401,6 +444,7 @@ paths:
                           description: Tagged review themes (location, cleanliness, etc.).
                           items:
                             type: object
+                            description: A theme tag with label and sentiment.
                         reviewAuthorAttribution:
                           type: object
                           description: Reviewer info (name, location).
@@ -410,6 +454,7 @@ paths:
                           description: Guest-uploaded photos.
                           items:
                             type: object
+                            description: A guest photo with URL and caption.
 
   /flights/search:
     get:
@@ -420,6 +465,9 @@ paths:
         build:
           stable_id: exp0003
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: expedia-graphql
           operation: searchFlights
@@ -486,14 +534,19 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [listingResult]
                 properties:
                   listingResult:
                     type: object
+                    description: Container for flight listings.
+                    required: [listings]
                     properties:
                       listings:
                         type: array
+                        description: Flight result listings.
                         items:
                           type: object
+                          required: [__typename]
                           properties:
                             __typename:
                               type: string
@@ -508,6 +561,7 @@ paths:
                               description: Flight journey legs with details and fares.
                               items:
                                 type: object
+                                description: A journey leg with segments and timing.
                             flightsShoppingOfferContent:
                               type: object
                               nullable: true
@@ -523,6 +577,7 @@ paths:
                       moreListingsAvailable:
                         type: boolean
                         nullable: true
+                        description: Whether more results are available for pagination.
                   pageTitle:
                     type: object
                     description: Search context with date and route labels.
@@ -539,6 +594,9 @@ paths:
         build:
           stable_id: exp0004
           tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
         adapter:
           name: expedia-graphql
           operation: getFlightDetail
@@ -589,14 +647,19 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [listingResult]
                 properties:
                   listingResult:
                     type: object
+                    description: Flight listings with full fare details.
+                    required: [listings]
                     properties:
                       listings:
                         type: array
+                        description: Flight result listings with complete details.
                         items:
                           type: object
+                          required: [__typename]
                           properties:
                             __typename:
                               type: string
@@ -607,6 +670,7 @@ paths:
                               description: Flight journey legs with details and fares.
                               items:
                                 type: object
+                                description: A journey leg with segments and timing.
                             flightsShoppingOfferContent:
                               type: object
                               nullable: true
@@ -618,7 +682,7 @@ paths:
                       moreListingsAvailable:
                         type: boolean
                         nullable: true
-                    description: Flight listings with full fare details.
+                        description: Whether more results are available for pagination.
                   pageTitle:
                     type: object
                     description: Search context with date and route labels.
