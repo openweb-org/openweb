@@ -53,7 +53,7 @@ async function searchProducts(page: Page, params: Record<string, unknown>, error
     await navigateInPage(page, BASE)
   }
 
-  await checkBotBlock(page, 'search')
+  await checkBotBlock(page, 'search', errors)
 
   // Use the on-page search bar
   const input = await page.waitForSelector('input[type="search"], input[name="keyword"]', { timeout: 8000 })
@@ -69,7 +69,7 @@ async function searchProducts(page: Page, params: Record<string, unknown>, error
   ])
   await wait(2000)
 
-  await checkBotBlock(page, 'search results')
+  await checkBotBlock(page, 'search results', errors)
 
   const result = await page.evaluate((kw: string) => {
     const links = Array.from(document.querySelectorAll('a[href*="/pdp/"]'))
@@ -161,7 +161,7 @@ async function getProductDetail(page: Page, params: Record<string, unknown>, err
   const productUrl = `${BASE}/furniture/pdp/-${sku}.html`
   await navigateInPage(page, productUrl)
 
-  await checkBotBlock(page, 'product page')
+  await checkBotBlock(page, 'product page', errors)
 
   const result = await page.evaluate(() => {
     const data: Record<string, unknown> = {}
@@ -223,7 +223,7 @@ async function getReviews(page: Page, params: Record<string, unknown>, errors: E
   const productUrl = `${BASE}/furniture/pdp/-${sku}.html`
   await navigateInPage(page, productUrl)
 
-  await checkBotBlock(page, 'reviews page')
+  await checkBotBlock(page, 'reviews page', errors)
 
   // Scroll to reviews section
   await page.evaluate(() => {

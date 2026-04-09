@@ -26,6 +26,7 @@ paths:
           schema:
             type: string
           description: Search keyword (e.g. "office desk", "sofa", "bookshelf").
+          example: office desk
       responses:
         '200':
           description: Product search results.
@@ -46,6 +47,7 @@ paths:
                     type: array
                     items:
                       type: object
+                      description: Product card from search results.
                       required:
                         - sku
                         - name
@@ -55,24 +57,31 @@ paths:
                           description: Product SKU (use with getProductDetail and getReviews).
                         name:
                           type: string
+                          description: Product name.
                         url:
                           type: string
+                          description: Product detail page URL.
                         currentPrice:
                           type:
                             - number
                             - 'null'
+                          description: Current price in USD, null if not shown.
                         originalPrice:
                           type:
                             - number
                             - 'null'
+                          description: Original price before discount, null if no sale.
                         rating:
                           type:
                             - number
                             - 'null'
+                          description: Average star rating (0-5), null if unrated.
                         reviewCount:
                           type: integer
+                          description: Number of customer reviews.
                         image:
                           type: string
+                          description: Product image URL.
   /furniture/pdp/-{sku}.html:
     get:
       operationId: getProductDetail
@@ -89,6 +98,7 @@ paths:
           schema:
             type: string
           description: Product SKU (e.g. "w005220014"). Get from searchProducts results.
+          example: w005220014
       responses:
         '200':
           description: Full product details.
@@ -102,41 +112,58 @@ paths:
                 properties:
                   sku:
                     type: string
+                    description: Product SKU.
                   name:
                     type: string
+                    description: Product name.
                   brand:
                     type: string
+                    description: Manufacturer or brand name.
                   description:
                     type: string
+                    description: Product description from meta tag.
                   currentPrice:
                     type:
                       - number
                       - 'null'
+                    description: Current price in USD.
                   originalPrice:
                     type:
                       - number
                       - 'null'
+                    description: Original price before discount.
                   rating:
                     type:
                       - number
                       - 'null'
+                    description: Average star rating (0-5).
                   reviewCount:
                     type: integer
+                    description: Number of customer reviews.
                   images:
                     type: array
+                    description: Product image URLs from wfcdn CDN.
                     items:
                       type: string
                   specifications:
                     type: array
+                    description: Product spec key-value pairs (dimensions, materials, etc.).
                     items:
                       type: object
+                      description: Single specification entry.
+                      required:
+                        - name
+                        - value
                       properties:
                         name:
                           type: string
+                          description: Specification label.
                         value:
                           type: string
+                          description: Specification value.
                   url:
                     type: string
+                    description: Canonical product page URL.
   /furniture/pdp/p-{sku}.html/reviews:
     get:
       operationId: getReviews
@@ -153,6 +180,7 @@ paths:
           schema:
             type: string
           description: Product SKU (e.g. "w005220014"). Get from searchProducts results.
+          example: w005220014
       responses:
         '200':
           description: Customer reviews for the product.
@@ -167,16 +195,21 @@ paths:
                 properties:
                   sku:
                     type: string
+                    description: Product SKU.
                   overallRating:
                     type:
                       - number
                       - 'null'
+                    description: Average rating across all reviews.
                   totalReviews:
                     type: integer
+                    description: Total number of reviews for the product.
                   reviews:
                     type: array
+                    description: Individual customer reviews (up to 10).
                     items:
                       type: object
+                      description: Single customer review.
                       required:
                         - rating
                         - text
@@ -185,15 +218,21 @@ paths:
                           type: integer
                           minimum: 1
                           maximum: 5
+                          description: Star rating (1-5).
                         author:
                           type: string
+                          description: Reviewer display name.
                         location:
                           type:
                             - string
                             - 'null'
+                          description: Reviewer location (US state abbreviation).
                         verified:
                           type: boolean
+                          description: Whether the reviewer is a verified buyer.
                         text:
                           type: string
+                          description: Review body text.
                         date:
                           type: string
+                          description: Review date (MM/DD/YYYY format).
