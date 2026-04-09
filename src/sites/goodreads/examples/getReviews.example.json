@@ -1,5 +1,6 @@
 {
   "operation_id": "getReviews",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": {

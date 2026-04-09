@@ -44,18 +44,18 @@ openweb goodreads exec getAuthor '{"authorId": "58.Frank_Herbert"}'
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 Traditional Rails SSR application. No SPA framework (no Next.js, no React SSR).
 Book detail pages include LD+JSON (`schema.org/Book`) with structured metadata.
 An AWS AppSync GraphQL API exists (used for reviews, genres, similar books) but
 is secondary to the SSR HTML. All data is extractable from the rendered DOM.
 
-## Auth
+### Auth
 No auth required for public data. `cookie_session` configured at server level
 for future write operations. Session cookie `_session_id2` is present but not
 needed for reads.
 
-## Transport
+### Transport
 `page` transport required for all operations. Heavy bot detection:
 - Cloudflare (cf_clearance cookies)
 - DataDome (datadome cookie)
@@ -63,14 +63,14 @@ needed for reads.
 
 Node transport will fail. Browser must be headed with a real Chrome profile.
 
-## Extraction
+### Extraction
 All operations except getReviews use `page_global_data` extraction with inline JavaScript:
 - **searchBooks**: Parses `tr[itemtype="http://schema.org/Book"]` microdata rows
 - **getBook**: Combines LD+JSON (`script[type="application/ld+json"]`) with DOM selectors for genres, description, series
 - **getReviews**: Adapter (`adapters/goodreads.ts`) — reviews load asynchronously via GraphQL, requiring waitForSelector before DOM extraction
 - **getAuthor**: Parses author page DOM with schema.org microdata for bibliography
 
-## Known Issues
+### Known Issues
 - Heavy bot detection may occasionally trigger challenges on rapid sequential requests
 - Reviews extracted from initial page load only (no pagination/infinite scroll)
 - Author page shows top ~10 books; full bibliography requires pagination

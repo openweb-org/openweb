@@ -60,6 +60,7 @@ paths:
           schema:
             type: string
           description: Search query — book title, author name, or ISBN.
+          example: dune
         - name: page
           in: query
           required: false
@@ -67,6 +68,7 @@ paths:
             type: integer
             default: 1
           description: Page number (1-indexed, 20 results per page).
+          example: 1
       responses:
         '200':
           description: Success.
@@ -83,6 +85,7 @@ paths:
                     type: array
                     items:
                       type: object
+                      description: A book search result.
                       required: [bookId, title, author]
                       properties:
                         bookId:
@@ -90,17 +93,22 @@ paths:
                           description: Numeric book ID for use with getBook.
                         title:
                           type: string
+                          description: Book title.
                         author:
                           type: string
+                          description: Primary author name.
                         authorId:
                           type: string
                           description: Numeric author ID for use with getAuthor.
                         averageRating:
                           type: [number, 'null']
+                          description: Average rating (0-5 scale).
                         ratingsCount:
                           type: [integer, 'null']
+                          description: Total number of ratings.
                         coverImageUrl:
                           type: [string, 'null']
+                          description: URL to the book cover thumbnail.
   /book/show/{bookId}:
     get:
       operationId: getBook
@@ -158,6 +166,7 @@ paths:
           schema:
             type: string
           description: 'Book ID from search results or URL (e.g. 44767458-dune or just 44767458).'
+          example: 44767458-dune
       responses:
         '200':
           description: Success.
@@ -169,28 +178,35 @@ paths:
                 properties:
                   title:
                     type: string
+                    description: Book title.
                   series:
                     type: [string, 'null']
                     description: 'Series name and position (e.g. "Dune #1").'
                   author:
                     type: string
+                    description: Primary author name.
                   authorId:
                     type: string
+                    description: Numeric author ID for use with getAuthor.
                   ratingValue:
                     type: [number, 'null']
                     description: Average rating (0-5 scale).
                   ratingsCount:
                     type: [integer, 'null']
+                    description: Total number of ratings.
                   reviewsCount:
                     type: [integer, 'null']
+                    description: Total number of reviews.
                   description:
                     type: [string, 'null']
+                    description: Book description or blurb.
                   genres:
                     type: array
                     items:
                       type: string
                   pageCount:
                     type: [integer, 'null']
+                    description: Number of pages.
                   format:
                     type: [string, 'null']
                     description: 'Book format (e.g. Hardcover, Paperback, Kindle Edition).'
@@ -199,13 +215,16 @@ paths:
                     description: 'Publication date string (e.g. "First published June 1, 1965").'
                   isbn:
                     type: [string, 'null']
+                    description: ISBN-13 identifier.
                   language:
                     type: [string, 'null']
+                    description: 'Book language (e.g. "English").'
                   awards:
                     type: [string, 'null']
                     description: Comma-separated list of awards.
                   coverImageUrl:
                     type: [string, 'null']
+                    description: URL to the book cover image.
   /book/show/{bookId}/reviews:
     get:
       operationId: getReviews
@@ -230,6 +249,7 @@ paths:
           schema:
             type: string
           description: 'Book ID (e.g. 44767458-dune or 44767458).'
+          example: 44767458-dune
       responses:
         '200':
           description: Success.
@@ -246,6 +266,7 @@ paths:
                     type: array
                     items:
                       type: object
+                      description: A user review with rating and text.
                       required: [name]
                       properties:
                         name:
@@ -314,6 +335,7 @@ paths:
           schema:
             type: string
           description: 'Author ID from search results or URL (e.g. 58.Frank_Herbert or just 58).'
+          example: 58.Frank_Herbert
       responses:
         '200':
           description: Success.
@@ -325,6 +347,7 @@ paths:
                 properties:
                   name:
                     type: string
+                    description: Author full name.
                   image:
                     type: [string, 'null']
                     description: Author photo URL.
@@ -339,6 +362,7 @@ paths:
                     description: 'Death date, if applicable.'
                   website:
                     type: [string, 'null']
+                    description: Author's personal website URL.
                   genres:
                     type: array
                     items:
@@ -353,13 +377,18 @@ paths:
                     type: array
                     items:
                       type: object
+                      description: A book from the author's bibliography.
                       required: [bookId, title]
                       properties:
                         bookId:
                           type: string
+                          description: Numeric book ID for use with getBook.
                         title:
                           type: string
+                          description: Book title.
                         averageRating:
                           type: [number, 'null']
+                          description: Average rating (0-5 scale).
                         ratingsCount:
                           type: [integer, 'null']
+                          description: Total number of ratings.
