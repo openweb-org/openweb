@@ -1,5 +1,6 @@
 {
   "operation_id": "getListingDetail",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": {

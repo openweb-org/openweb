@@ -1,3 +1,45 @@
+## 2026-04-09: Polish homedepot site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Added `required` arrays to nested objects across all 5 response schemas (specifications items, fulfillmentOptions items, services items)
+- Added `description` on every property at every nesting level — no bare type-only fields
+- Added `example` values to all parameters (keyword, itemId, slug, storeId, zipCode)
+- Added `replay_safety: "safe_read"` to all 5 example files
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions, examples on parameters
+- Enhanced site (2→5 ops): new getProductReviews, getProductPricing, getStoreAvailability operations needed full schema hardening
+
+**Key files:**
+- `src/sites/homedepot/openapi.yaml` — schema hardening across all 5 ops
+- `src/sites/homedepot/DOC.md` — heading level fix
+- `src/sites/homedepot/examples/*.example.json` — replay_safety added
+
+**Verification:** pnpm build, pnpm dev verify homedepot
+
+## 2026-04-09: Polish airbnb site package
+
+**What changed:**
+- Fixed DOC.md heading levels (Site Internals subsections now `###`)
+- Updated DOC.md operations table and extraction docs to reflect GraphQL interception (not SSR section filtering)
+- Added `required` arrays to all 5 response schemas (searchListings, getListingDetail, getListingReviews, getListingAvailability, getHostProfile)
+- Added `description` on every property at every nesting level — no bare `type: object`
+- Added `example` values to all parameters across all 5 operations
+- Added `replay_safety: "safe_read"` to all 5 example files
+- Bumped spec version from `1.0.0` to `1.1.0`
+
+**Why:**
+- Quality checklist: no bare type:object, required where data always present, complete property descriptions, replay_safety on examples
+- Enhanced site (2→5 ops): new getListingReviews, getListingAvailability, getHostProfile needed full schema hardening
+
+**Key files:**
+- `src/sites/airbnb/openapi.yaml` — schema hardening across all 5 ops
+- `src/sites/airbnb/DOC.md` — heading level + accuracy fixes
+- `src/sites/airbnb/examples/*.example.json` — replay_safety added
+
+**Verification:** pnpm build, pnpm dev verify airbnb
+
 ## 2026-04-09: Polish tripadvisor site package
 
 **What changed:**

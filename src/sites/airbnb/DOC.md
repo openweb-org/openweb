@@ -22,9 +22,9 @@ Travel marketplace — accommodation search, listing details, reviews, availabil
 |-----------|--------|-----------|------------|-------|
 | searchListings | find places to stay | query, checkin, checkout, adults | id, title, price, rating, photos | entry point; 18 results per page |
 | getListingDetail | full listing info | id ← searchListings | title, description, overallRating, host, amenities | requires listing ID |
-| getListingReviews | guest reviews | id ← searchListings | reviewSections (ratings, review text, reviewer) | adapter; extracts REVIEW sections |
-| getListingAvailability | pricing and availability | id, check_in, check_out | availabilitySections (booking, pricing, policies) | adapter; date params optional |
-| getHostProfile | host info | hostId ← getListingDetail | profile (superhost, response rate, about, listings) | adapter; uses /users/show/{hostId} |
+| getListingReviews | guest reviews | id ← searchListings | reviews[], reviewsCount, overallRating, ratings | adapter; GraphQL interception |
+| getListingAvailability | pricing and availability | id, check_in, check_out | calendarMonths[] (date, available, price) | adapter; GraphQL interception |
+| getHostProfile | host info | hostId ← getListingDetail | profile (superhost, response rate, about, listings) | adapter; SSR from /users/show/{hostId} |
 
 ## Quick Start
 
@@ -51,29 +51,29 @@ openweb airbnb exec getHostProfile '{"hostId":"70270073"}'
 
 Everything below is for discover/compile operators and deep debugging.
 
-## API Architecture
+### API Architecture
 - **No JSON APIs** — all data is SSR-delivered via `<script id="data-deferred-state-0" type="application/json">`
 - Data path: `niobeClientData[0][1].data.presentation.staysSearch` (search) / `stayProductDetailPage` (detail)
 - Search results contain 18 listings per page with cursor-based pagination
 - Listing IDs are base64-encoded in `demandStayListing.id` (format: `DemandStayListing:<numeric_id>`)
 - Detail pages use a section-based architecture with 33 sections (REVIEWS_DEFAULT, LOCATION_DEFAULT, etc.)
 
-## Auth
+### Auth
 No auth required for public browsing and search.
 
-## Transport
+### Transport
 - `transport: page` — browser-only access required
 - All data is embedded in the initial SSR HTML; no separate API calls to intercept
 - Search and detail use declarative `script_json` extraction
 - Reviews, availability, and host profile use the `airbnb-web` adapter (`adapters/airbnb-web.ts`) for section filtering
 
-## Extraction
+### Extraction
 - **Search/Detail:** declarative `script_json` extraction from `#data-deferred-state-0`
-- **Reviews:** adapter navigates to `/rooms/{id}`, extracts SSR, filters for REVIEW sections
-- **Availability:** adapter navigates to `/rooms/{id}` with date params, filters for BOOK/AVAILABILITY/PRICE/POLICIES sections
+- **Reviews:** adapter intercepts `StaysPdpReviewsQuery` GraphQL response (triggered by scroll); SSR fallback
+- **Availability:** adapter intercepts `PdpAvailabilityCalendar` GraphQL response (fires on page load); SSR fallback
 - **Host profile:** adapter navigates to `/users/show/{hostId}`, extracts full SSR presentation data
 
-## Known Issues
+### Known Issues
 - **SSR-only data** — no JSON APIs; all data comes from embedded script tags
 - **No pagination support** — only first page of results (18 listings) is returned
 - **Dynamic pricing** — prices vary by dates, currency, and user session

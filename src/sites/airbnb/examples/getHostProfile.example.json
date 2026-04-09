@@ -1,5 +1,6 @@
 {
   "operation_id": "getHostProfile",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": {

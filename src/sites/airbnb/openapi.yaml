@@ -1,7 +1,7 @@
 openapi: '3.1.0'
 info:
   title: Airbnb
-  version: '1.0.0'
+  version: '1.1.0'
   x-openweb:
     spec_version: '2.0'
     compiled_at: '2026-04-06T01:00:00Z'
@@ -36,19 +36,22 @@ paths:
           required: true
           schema:
             type: string
-          description: Destination search query (e.g. "Tokyo", "Paris", "New York").
+          description: 'Destination search query (e.g. "Tokyo", "Paris", "New York").'
+          example: Tokyo
         - name: checkin
           in: query
           required: false
           schema:
             type: string
           description: Check-in date in YYYY-MM-DD format.
+          example: '2026-05-01'
         - name: checkout
           in: query
           required: false
           schema:
             type: string
           description: Check-out date in YYYY-MM-DD format.
+          example: '2026-05-03'
         - name: adults
           in: query
           required: false
@@ -56,30 +59,35 @@ paths:
             type: integer
             default: 1
           description: Number of adult guests.
+          example: 2
         - name: children
           in: query
           required: false
           schema:
             type: integer
           description: Number of children.
+          example: 0
         - name: infants
           in: query
           required: false
           schema:
             type: integer
           description: Number of infants.
+          example: 0
         - name: price_min
           in: query
           required: false
           schema:
             type: integer
-          description: Minimum price filter.
+          description: Minimum nightly price filter in local currency.
+          example: 50
         - name: price_max
           in: query
           required: false
           schema:
             type: integer
-          description: Maximum price filter.
+          description: Maximum nightly price filter in local currency.
+          example: 300
         - name: room_types[]
           in: query
           required: false
@@ -87,36 +95,49 @@ paths:
             type: string
             enum: [Entire home/apt, Private room, Shared room]
           description: Room type filter.
+          example: Entire home/apt
       responses:
         '200':
-          description: Raw search results from embedded SSR data.
+          description: Search results from embedded SSR data.
           content:
             application/json:
               schema:
                 type: object
+                required: [searchResults]
                 properties:
                   searchResults:
                     type: array
+                    description: Accommodation listings matching the search criteria (up to 18 per page).
                     items:
                       type: object
+                      required: [title]
+                      description: A single listing from search results.
                       properties:
                         title:
                           type: string
+                          description: Listing title.
                         avgRatingLocalized:
                           type: [string, 'null']
+                          description: 'Localized average rating string (e.g. "4.95").'
                         structuredDisplayPrice:
                           type: object
+                          description: Price display object with formatted pricing details.
                         demandStayListing:
                           type: object
+                          description: 'Listing metadata including base64-encoded ID (format: DemandStayListing:<numeric_id>).'
                         contextualPictures:
                           type: array
+                          description: Listing photos for display.
                           items:
                             type: object
+                            description: A single listing photo with URL and caption.
                   paginationInfo:
                     type: object
+                    description: Cursor-based pagination metadata.
                     properties:
                       nextPageCursor:
                         type: [string, 'null']
+                        description: Cursor for the next page of results; null if no more pages.
 
   /rooms/{id}:
     get:
@@ -144,18 +165,21 @@ paths:
           schema:
             type: string
           description: Listing ID from searchListings results.
+          example: '20713816'
         - name: check_in
           in: query
           required: false
           schema:
             type: string
-          description: Check-in date in YYYY-MM-DD format.
+          description: Check-in date in YYYY-MM-DD format (affects pricing).
+          example: '2026-05-01'
         - name: check_out
           in: query
           required: false
           schema:
             type: string
-          description: Check-out date in YYYY-MM-DD format.
+          description: Check-out date in YYYY-MM-DD format (affects pricing).
+          example: '2026-05-03'
         - name: adults
           in: query
           required: false
@@ -163,28 +187,37 @@ paths:
             type: integer
             default: 1
           description: Number of adult guests.
+          example: 2
       responses:
         '200':
-          description: Raw listing detail page data from embedded SSR data.
+          description: Listing detail page data from embedded SSR data.
           content:
             application/json:
               schema:
                 type: object
+                required: [sections]
                 properties:
                   sections:
                     type: object
+                    required: [sections]
+                    description: Section-based page layout container.
                     properties:
                       sections:
                         type: array
+                        description: 'Page sections (e.g. REVIEWS_DEFAULT, LOCATION_DEFAULT, AMENITIES_DEFAULT).'
                         items:
                           type: object
+                          description: A single page section with its content.
                           properties:
                             sectionId:
                               type: [string, 'null']
+                              description: 'Section identifier (e.g. "REVIEWS_DEFAULT", "LOCATION_DEFAULT").'
                             section:
                               type: [object, 'null']
+                              description: Section content payload; structure varies by sectionId.
                       metadata:
                         type: object
+                        description: Page-level metadata (listing title, location, sharing info).
 
   /rooms/{id}/reviews:
     get:
@@ -208,47 +241,66 @@ paths:
           schema:
             type: string
           description: Listing ID from searchListings results.
+          example: '20713816'
       responses:
         '200':
-          description: Reviews with text, ratings, and reviewer info from GraphQL interception.
+          description: Reviews from GraphQL interception with SSR fallback.
           content:
             application/json:
               schema:
                 type: object
+                required: [listingId, reviews, reviewsCount]
                 properties:
                   listingId:
                     type: string
+                    description: The listing ID these reviews belong to.
                   reviews:
                     type: array
+                    description: Guest reviews for the listing.
                     items:
                       type: object
+                      required: [id]
+                      description: A single guest review.
                       properties:
                         id:
                           type: string
+                          description: Unique review identifier.
                         comments:
                           type: [string, 'null']
+                          description: Full review text from the guest.
                         rating:
                           type: [integer, 'null']
+                          description: Star rating (1-5) given by the reviewer.
                         createdAt:
                           type: [string, 'null']
+                          description: ISO timestamp when the review was created.
                         localizedDate:
                           type: [string, 'null']
+                          description: 'Human-readable review date (e.g. "March 2026").'
                         reviewer:
                           type: [object, 'null']
+                          description: Reviewer profile info (name, avatar, location).
                         language:
                           type: [string, 'null']
+                          description: Language code of the review text.
                         highlightType:
                           type: [string, 'null']
+                          description: 'Review highlight category (e.g. "RECENT", "POSITIVE").'
                         reviewHighlight:
                           type: [string, 'null']
+                          description: Short highlighted excerpt from the review.
                   reviewsCount:
                     type: integer
+                    description: Total number of reviews for this listing.
                   overallRating:
                     type: [number, 'null']
+                    description: Average rating across all reviews (0-5 scale).
                   ratings:
                     type: [array, 'null']
+                    description: Rating breakdown by category (cleanliness, accuracy, etc.).
                     items:
                       type: object
+                      description: A single rating category with its score.
 
   /rooms/{id}/availability:
     get:
@@ -272,18 +324,21 @@ paths:
           schema:
             type: string
           description: Listing ID from searchListings results.
+          example: '20713816'
         - name: check_in
           in: query
           required: false
           schema:
             type: string
           description: Check-in date in YYYY-MM-DD format.
+          example: '2026-06-01'
         - name: check_out
           in: query
           required: false
           schema:
             type: string
           description: Check-out date in YYYY-MM-DD format.
+          example: '2026-06-05'
       responses:
         '200':
           description: Calendar availability data from GraphQL interception.
@@ -291,41 +346,60 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [listingId, calendarMonths]
                 properties:
                   listingId:
                     type: string
+                    description: The listing ID this availability data belongs to.
                   checkIn:
                     type: [string, 'null']
+                    description: Requested check-in date, if provided.
                   checkOut:
                     type: [string, 'null']
+                    description: Requested check-out date, if provided.
                   calendarMonths:
                     type: array
+                    description: Monthly availability calendars.
                     items:
                       type: object
+                      required: [month, year, days]
+                      description: A single month of availability data.
                       properties:
                         month:
                           type: integer
+                          description: Month number (1-12).
                         year:
                           type: integer
+                          description: Calendar year.
                         days:
                           type: array
+                          description: Daily availability entries for this month.
                           items:
                             type: object
+                            required: [calendarDate, available]
+                            description: Availability and pricing for a single day.
                             properties:
                               calendarDate:
                                 type: string
+                                description: Date in YYYY-MM-DD format.
                               available:
                                 type: boolean
+                                description: Whether the listing is available for booking on this date.
                               minNights:
                                 type: [integer, 'null']
+                                description: Minimum stay requirement starting from this date.
                               maxNights:
                                 type: [integer, 'null']
+                                description: Maximum stay allowed starting from this date.
                               availableForCheckin:
                                 type: boolean
+                                description: Whether this date can be selected as a check-in date.
                               availableForCheckout:
                                 type: boolean
+                                description: Whether this date can be selected as a check-out date.
                               price:
                                 type: [object, 'null']
+                                description: Nightly price info for this date; null if unavailable.
 
   /users/{hostId}:
     get:
@@ -348,7 +422,8 @@ paths:
           required: true
           schema:
             type: string
-          description: Host user ID (from listing detail host section).
+          description: Host user ID from listing detail host section.
+          example: '70270073'
       responses:
         '200':
           description: Host profile data from SSR extraction.
@@ -356,8 +431,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [hostId, profile]
                 properties:
                   hostId:
                     type: string
+                    description: The host user ID.
                   profile:
                     type: object
+                    description: Full host presentation data (superhost status, response rate, about, listings).
