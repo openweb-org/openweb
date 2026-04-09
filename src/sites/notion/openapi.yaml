@@ -26,6 +26,8 @@ paths:
         build:
           stable_id: notion_search_pages
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: x-notion-space-id
           in: header
@@ -72,51 +74,68 @@ paths:
                   description: Search source context
                 filters:
                   type: object
+                  description: "Search filter constraints."
                   properties:
                     isDeletedOnly:
                       type: boolean
                       default: false
+                      description: "Only return deleted pages."
                     excludeTemplates:
                       type: boolean
                       default: false
+                      description: "Exclude template pages from results."
                     navigableBlockContentOnly:
                       type: boolean
                       default: false
+                      description: "Only return navigable content blocks."
                     requireEditPermissions:
                       type: boolean
                       default: false
+                      description: "Only return pages the user can edit."
                     includePublicPagesWithoutExplicitAccess:
                       type: boolean
                       default: false
+                      description: "Include public pages not explicitly accessed."
                     ancestors:
                       type: array
                       items:
                         type: string
+                      description: "Filter by ancestor block IDs."
                     createdBy:
                       type: array
                       items:
                         type: string
+                      description: "Filter by creator user IDs."
                     editedBy:
                       type: array
                       items:
                         type: string
+                      description: "Filter by editor user IDs."
                     lastEditedTime:
                       type: object
+                      description: "Date range filter for last-edited time."
                     createdTime:
                       type: object
+                      description: "Date range filter for creation time."
                     inTeams:
                       type: array
                       items:
                         type: string
+                      description: "Filter by team IDs."
                     excludeSurrogateCollections:
                       type: boolean
                       default: false
+                      description: "Exclude surrogate (system-generated) collections."
                     excludedParentCollectionIds:
                       type: array
                       items:
                         type: string
+                      description: "Collection IDs to exclude from results."
                 sort:
                   type: object
+                  description: "Sort order for search results."
+                  required:
+                    - field
                   properties:
                     field:
                       type: string
@@ -124,11 +143,13 @@ paths:
                         - relevance
                         - lastEdited
                         - created
+                      description: "Field to sort results by."
                     direction:
                       type: string
                       enum:
                         - asc
                         - desc
+                      description: "Sort direction."
                 peopleBlocksToInclude:
                   type: string
                   default: all
@@ -162,54 +183,72 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - results
+                  - total
+                  - recordMap
                 properties:
                   results:
                     type: array
+                    description: "Matching pages and databases."
                     items:
                       type: object
+                      required:
+                        - id
+                        - score
                       properties:
                         id:
                           type: string
                           format: uuid
-                          description: Block ID of matching page/database
+                          description: "Block ID of matching page/database."
                         highlight:
                           type: object
+                          description: "Highlighted text match."
                           properties:
                             text:
                               type: string
-                              description: Highlighted text snippet
+                              description: "Highlighted text snippet."
                         highlightBlockId:
                           type: string
                           format: uuid
+                          description: "Block ID containing the highlighted match."
                         score:
                           type: number
-                          description: Relevance score
+                          description: "Relevance score."
                         spaceId:
                           type: string
                           format: uuid
+                          description: "Workspace ID of the result."
                         isSurrogateCollection:
                           type: boolean
+                          description: "Whether this is a system-generated collection."
                         badges:
                           type: array
+                          description: "Result badges (e.g. shared, recent)."
                           items:
                             type: object
                   total:
                     type: integer
-                    description: Total matching results count
+                    description: "Total matching results count."
                   recordMap:
                     type: object
-                    description: Associated records (blocks, collections, spaces)
+                    description: "Associated records (blocks, collections, spaces)."
+                    required:
+                      - block
                     properties:
                       block:
                         type: object
+                        description: "Block records keyed by block ID."
                         additionalProperties:
                           type: object
                       collection:
                         type: object
+                        description: "Collection records keyed by collection ID."
                         additionalProperties:
                           type: object
                       space:
                         type: object
+                        description: "Space records keyed by space ID."
                         additionalProperties:
                           type: object
   /api/v3/queryCollection:
@@ -221,6 +260,8 @@ paths:
         build:
           stable_id: notion_query_database
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: x-notion-space-id
           in: header
@@ -242,24 +283,27 @@ paths:
               properties:
                 collection:
                   type: object
+                  description: "Target collection (database) reference."
                   required:
                     - id
                   properties:
                     id:
                       type: string
                       format: uuid
-                      description: Collection (database) ID
+                      description: "Collection (database) ID."
                 collectionView:
                   type: object
+                  description: "View to query through."
                   required:
                     - id
                   properties:
                     id:
                       type: string
                       format: uuid
-                      description: View ID for the database
+                      description: "View ID for the database."
                 loader:
                   type: object
+                  description: "Query configuration — type, reducers, search, filters."
                   required:
                     - type
                     - reducers
@@ -268,37 +312,48 @@ paths:
                       type: string
                       enum:
                         - reducer
+                      description: "Loader type (always \"reducer\")."
                     reducers:
                       type: object
+                      description: "Reducer config for result grouping."
+                      required:
+                        - collection_group_results
                       properties:
                         collection_group_results:
                           type: object
+                          description: "Group results reducer."
+                          required:
+                            - type
                           properties:
                             type:
                               type: string
                               enum:
                                 - results
+                              description: "Reducer output type."
                             limit:
                               type: integer
                               default: 50
+                              description: "Max rows to return."
                     searchQuery:
                       type: string
-                      description: Optional text search within the database
+                      description: "Optional text search within the database."
                       default: ""
                     userTimeZone:
                       type: string
-                      description: User timezone for date calculations
+                      description: "User timezone for date calculations."
                     filter:
                       type: object
-                      description: Optional filter object
+                      description: "Optional filter object."
                       properties:
                         operator:
                           type: string
                           enum:
                             - and
                             - or
+                          description: "Logical operator for combining filters."
                         filters:
                           type: array
+                          description: "Filter conditions."
                           items:
                             type: object
             example:
@@ -321,38 +376,56 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - result
+                  - recordMap
                 properties:
                   result:
                     type: object
+                    description: "Query result with reducer outputs."
+                    required:
+                      - type
+                      - reducerResults
                     properties:
                       type:
                         type: string
+                        description: "Result type identifier."
                       reducerResults:
                         type: object
+                        description: "Reducer output keyed by reducer name."
                         properties:
                           collection_group_results:
                             type: object
+                            description: "Grouped query results."
+                            required:
+                              - blockIds
                             properties:
                               type:
                                 type: string
+                                description: "Result type."
                               blockIds:
                                 type: array
                                 items:
                                   type: string
                                   format: uuid
-                                description: IDs of row blocks in the database
+                                description: "IDs of row blocks in the database."
                       sizeHint:
                         type: integer
+                        description: "Estimated total row count."
                   recordMap:
                     type: object
-                    description: Associated records (blocks with row data, collection schema)
+                    description: "Associated records (blocks with row data, collection schema)."
+                    required:
+                      - block
                     properties:
                       block:
                         type: object
+                        description: "Block records keyed by block ID."
                         additionalProperties:
                           type: object
                       collection:
                         type: object
+                        description: "Collection records keyed by collection ID."
                         additionalProperties:
                           type: object
   /api/v3/loadPageChunk:
@@ -364,6 +437,8 @@ paths:
         build:
           stable_id: notion_get_page
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: x-notion-space-id
           in: header
@@ -387,34 +462,36 @@ paths:
               properties:
                 page:
                   type: object
+                  description: "Target page reference."
                   required:
                     - id
                   properties:
                     id:
                       type: string
                       format: uuid
-                      description: Page block ID
+                      description: "Page block ID."
                 limit:
                   type: integer
                   default: 100
-                  description: Max number of blocks to return per chunk
+                  description: "Max number of blocks to return per chunk."
                 cursor:
                   type: object
+                  description: "Pagination cursor (empty stack for first chunk)."
                   properties:
                     stack:
                       type: array
                       items:
                         type: array
                       default: []
-                  description: Pagination cursor (empty stack for first chunk)
+                      description: "Cursor stack frames."
                 chunkNumber:
                   type: integer
                   default: 0
-                  description: Chunk index (0 for first request)
+                  description: "Chunk index (0 for first request)."
                 verticalColumns:
                   type: boolean
                   default: false
-                  description: Include vertical column layout data
+                  description: "Include vertical column layout data."
             example:
               page:
                 id: "{pageId}"
@@ -430,33 +507,39 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - recordMap
                 properties:
                   recordMap:
                     type: object
-                    description: Block tree, collection schemas, and space metadata
+                    description: "Block tree, collection schemas, and space metadata."
                     properties:
                       block:
                         type: object
+                        description: "Block records keyed by block ID."
                         additionalProperties:
                           type: object
                           properties:
                             value:
                               type: object
-                              description: "Block data — type, properties, content[], parent_id"
+                              description: "Block data — type, properties, content[], parent_id."
                       collection:
                         type: object
+                        description: "Collection records keyed by collection ID."
                         additionalProperties:
                           type: object
                       space:
                         type: object
+                        description: "Space records keyed by space ID."
                         additionalProperties:
                           type: object
                   cursor:
                     type: object
-                    description: Cursor for next chunk (empty stack means no more)
+                    description: "Cursor for next chunk (empty stack means no more)."
                     properties:
                       stack:
                         type: array
+                        description: "Cursor stack frames."
                         items:
                           type: array
   /notion/pages:
@@ -471,6 +554,8 @@ paths:
         build:
           stable_id: notion_create_page
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: x-notion-space-id
           in: header
@@ -490,7 +575,7 @@ paths:
               properties:
                 title:
                   type: string
-                  description: Page title
+                  description: "Page title."
                 parentId:
                   type: string
                   format: uuid
@@ -504,21 +589,29 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - pageId
+                  - title
+                  - parentId
+                  - parentTable
                 properties:
                   pageId:
                     type: string
                     format: uuid
-                    description: ID of the newly created page
+                    description: "ID of the newly created page."
                   title:
                     type: string
+                    description: "Page title as set."
                   parentId:
                     type: string
                     format: uuid
+                    description: "Parent container ID (space or page)."
                   parentTable:
                     type: string
                     enum:
                       - space
                       - block
+                    description: "Parent type — \"space\" for top-level, \"block\" for nested."
   /notion/pages/{pageId}:
     patch:
       operationId: updatePage
@@ -531,6 +624,8 @@ paths:
         build:
           stable_id: notion_update_page
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: pageId
           in: path
@@ -557,7 +652,7 @@ paths:
               properties:
                 title:
                   type: string
-                  description: New page title
+                  description: "New page title."
             example:
               title: Updated Page Title
       responses:
@@ -567,14 +662,21 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - pageId
+                  - title
+                  - updated
                 properties:
                   pageId:
                     type: string
                     format: uuid
+                    description: "Page ID that was updated."
                   title:
                     type: string
+                    description: "New page title."
                   updated:
                     type: boolean
+                    description: "Whether the update succeeded."
   /api/v3/getSpaces:
     post:
       operationId: getSpaces
@@ -584,6 +686,8 @@ paths:
         build:
           stable_id: notion_get_spaces
           tool_version: 2
+          verified: true
+          signals: [page-verified]
       parameters:
         - name: x-notion-space-id
           in: header

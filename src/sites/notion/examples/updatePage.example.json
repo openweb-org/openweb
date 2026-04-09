@@ -1,5 +1,7 @@
 {
   "operation_id": "updatePage",
+  "method": "patch",
+  "replay_safety": "unsafe_mutation",
   "cases": [
     {
       "input": {
@@ -10,8 +12,7 @@
       "assertions": {
         "status": 200,
         "response_schema_valid": true
-      },
-      "replaySafety": "unsafe_mutation"
+      }
     }
   ]
 }

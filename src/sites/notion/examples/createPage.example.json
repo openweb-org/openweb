@@ -1,5 +1,7 @@
 {
   "operation_id": "createPage",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
   "cases": [
     {
       "input": {
@@ -9,8 +11,7 @@
       "assertions": {
         "status": 200,
         "response_schema_valid": true
-      },
-      "replaySafety": "unsafe_mutation"
+      }
     }
   ]
 }

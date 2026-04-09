@@ -19,3 +19,11 @@
 - Created adapter: adapters/notion-api.ts (pageFetch-based, handles transaction format)
 - Added example fixtures for all 3 new operations
 - DOC.md updated with new workflows, operations table, write safety levels
+
+## 2026-04-09 — polish pass
+
+- Added `required` arrays to all response schemas and nested objects (sort, reducers, collection_group_results)
+- Added `description` on every property at every nesting level across all 6 operations
+- Added `verified: true` and `signals: [page-verified]` to all build sections
+- Standardized all 6 example files: added `method`, `replay_safety` (snake_case), removed camelCase `replaySafety`
+- Fixed DOC.md Site Internals heading levels (## → ###)

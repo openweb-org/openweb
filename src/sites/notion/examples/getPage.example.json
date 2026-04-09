@@ -1,5 +1,7 @@
 {
   "operation_id": "getPage",
+  "method": "post",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": {

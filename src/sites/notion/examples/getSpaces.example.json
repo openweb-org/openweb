@@ -1,5 +1,7 @@
 {
   "operation_id": "getSpaces",
+  "method": "post",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": {},

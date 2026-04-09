@@ -75,24 +75,24 @@ openweb notion exec updatePage '{"x-notion-space-id":"<spaceId>","pageId":"<page
 
 ## Site Internals
 
-## API Architecture
+### API Architecture
 - RPC-style JSON API at `https://www.notion.so/api/v3/<endpointName>`
 - All endpoints are POST with JSON body
 - Responses include `recordMap` with denormalized entity data (blocks, collections, spaces)
 - Block data is double-nested: `recordMap.block[id].value.value`
 - Mutations use `/api/v3/submitTransaction` with a transaction/operations array
 
-## Auth
+### Auth
 - `cookie_session` — browser cookies forwarded (key cookie: `token_v2`)
 - CSRF-like: `notion_user_id` cookie → `x-notion-active-user-header` header
 - Additional required header: `x-notion-space-id` (workspace ID)
 
-## Transport
+### Transport
 - `page` — Notion uses Cloudflare + requires browser context
 - Requests must include `x-notion-active-user-header` and `x-notion-space-id` headers
 - Write operations (createPage, updatePage) use an adapter that calls `submitTransaction` via `pageFetch`
 
-## Known Issues
+### Known Issues
 - Cloudflare protection (light — browser handles it)
 - Compiler cannot handle RPC-style API — all `/api/v3/*` endpoints collapse into one parameterized cluster. Spec was written manually.
 - System databases ("Home views", "My Tasks") don't expose `collection_id` — they use internal sync mechanisms instead of `queryCollection`
