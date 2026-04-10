@@ -1,0 +1,14 @@
+{
+  "operation_id": "removeFromPlaylist",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "playlistId": "37i9dQZF1DXcBWIGoYBM5M",
+        "trackUris": ["spotify:track:4u7EnebtmKWzUH433cf5Qv"]
+      },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

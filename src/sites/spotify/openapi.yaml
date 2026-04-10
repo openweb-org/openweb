@@ -1210,3 +1210,233 @@ paths:
                                               url:
                                                 type: string
                                                 description: Image URL.
+
+  /internal/likeTrack:
+    post:
+      operationId: likeTrack
+      summary: "Save a track to the user's Liked Songs library"
+      x-openweb:
+        permission: write
+        safety: caution
+        requires_auth: true
+        adapter:
+          name: spotify-pathfinder
+          operation: likeTrack
+        build:
+          stable_id: spotify_likeTrack_v1
+          tool_version: 2
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trackId]
+              properties:
+                trackId:
+                  type: string
+                  description: "Spotify track ID (the ID part of spotify:track:ID, e.g. '4u7EnebtmKWzUH433cf5Qv')"
+      responses:
+        "200":
+          description: Track saved to Liked Songs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the operation succeeded.
+
+  /internal/unlikeTrack:
+    post:
+      operationId: unlikeTrack
+      summary: "Remove a track from the user's Liked Songs library — reverse of likeTrack"
+      x-openweb:
+        permission: write
+        safety: caution
+        requires_auth: true
+        adapter:
+          name: spotify-pathfinder
+          operation: unlikeTrack
+        build:
+          stable_id: spotify_unlikeTrack_v1
+          tool_version: 2
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trackId]
+              properties:
+                trackId:
+                  type: string
+                  description: "Spotify track ID (the ID part of spotify:track:ID, e.g. '4u7EnebtmKWzUH433cf5Qv')"
+      responses:
+        "200":
+          description: Track removed from Liked Songs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the operation succeeded.
+
+  /internal/addToPlaylist:
+    post:
+      operationId: addToPlaylist
+      summary: "Add tracks to a playlist — requires playlist ownership or collaboration rights"
+      x-openweb:
+        permission: write
+        safety: caution
+        requires_auth: true
+        adapter:
+          name: spotify-pathfinder
+          operation: addToPlaylist
+        build:
+          stable_id: spotify_addToPlaylist_v1
+          tool_version: 2
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playlistId, trackUris]
+              properties:
+                playlistId:
+                  type: string
+                  description: "Spotify playlist ID (from spotify:playlist:ID)"
+                trackUris:
+                  type: array
+                  items:
+                    type: string
+                  description: "Array of Spotify track URIs to add (e.g. ['spotify:track:4u7EnebtmKWzUH433cf5Qv'])"
+                position:
+                  type: integer
+                  description: "Zero-based position to insert tracks. Appends to end if omitted."
+      responses:
+        "200":
+          description: Tracks added to playlist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  snapshot_id:
+                    type: string
+                    description: Playlist snapshot ID after modification.
+
+  /internal/removeFromPlaylist:
+    post:
+      operationId: removeFromPlaylist
+      summary: "Remove tracks from a playlist — reverse of addToPlaylist, requires playlist ownership"
+      x-openweb:
+        permission: write
+        safety: caution
+        requires_auth: true
+        adapter:
+          name: spotify-pathfinder
+          operation: removeFromPlaylist
+        build:
+          stable_id: spotify_removeFromPlaylist_v1
+          tool_version: 2
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playlistId, trackUris]
+              properties:
+                playlistId:
+                  type: string
+                  description: "Spotify playlist ID (from spotify:playlist:ID)"
+                trackUris:
+                  type: array
+                  items:
+                    type: string
+                  description: "Array of Spotify track URIs to remove (e.g. ['spotify:track:4u7EnebtmKWzUH433cf5Qv'])"
+      responses:
+        "200":
+          description: Tracks removed from playlist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  snapshot_id:
+                    type: string
+                    description: Playlist snapshot ID after modification.
+
+  /internal/createPlaylist:
+    post:
+      operationId: createPlaylist
+      summary: "Create a new playlist on the authenticated user's account"
+      x-openweb:
+        permission: write
+        safety: caution
+        requires_auth: true
+        adapter:
+          name: spotify-pathfinder
+          operation: createPlaylist
+        build:
+          stable_id: spotify_createPlaylist_v1
+          tool_version: 2
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  description: "Playlist name"
+                description:
+                  type: string
+                  description: "Playlist description (optional)"
+                public:
+                  type: boolean
+                  description: "Whether the playlist is public. Defaults to true."
+      responses:
+        "200":
+          description: Created playlist details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uri:
+                    type: string
+                    description: "spotify:playlist:ID of the created playlist"
+                  name:
+                    type: string
+                    description: Playlist name.
+                  description:
+                    type: string
+                    description: Playlist description.
+                  owner:
+                    type: object
+                    description: Playlist owner.
+                    properties:
+                      display_name:
+                        type: string
+                        description: Owner display name.
+                      uri:
+                        type: string
+                        description: "spotify:user:ID"

@@ -66,6 +66,9 @@ const OPERATIONS: Record<string, OperationConfig> = {
   },
 }
 
+/** Write operations that use Spotify's internal REST endpoints */
+const WRITE_OPERATIONS = new Set(['likeTrack', 'unlikeTrack', 'addToPlaylist', 'removeFromPlaylist', 'createPlaylist'])
+
 async function extractToken(page: Page, errors: ErrorHelpers): Promise<{ accessToken: string; clientToken: string }> {
   // Use Playwright request interception — more reliable than monkey-patching fetch
   const requestPromise = page.waitForRequest(
@@ -183,6 +186,98 @@ async function userProfileFetch(
   return JSON.parse(result.text)
 }
 
+async function spotifyApiFetch(
+  page: Page,
+  method: string,
+  url: string,
+  accessToken: string,
+  body?: string,
+): Promise<{ status: number; text: string }> {
+  return page.evaluate(
+    async (args: { method: string; url: string; accessToken: string; body?: string }) => {
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 15_000)
+      try {
+        const resp = await fetch(args.url, {
+          method: args.method,
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${args.accessToken}`,
+          },
+          body: args.body,
+          signal: ctrl.signal,
+        })
+        return { status: resp.status, text: await resp.text() }
+      } finally {
+        clearTimeout(timer)
+      }
+    },
+    { method, url, accessToken, body },
+  )
+}
+
+async function writeOperationFetch(
+  page: Page,
+  operation: string,
+  params: Readonly<Record<string, unknown>>,
+  accessToken: string,
+  errors: ErrorHelpers,
+): Promise<unknown> {
+  let result: { status: number; text: string }
+
+  switch (operation) {
+    case 'likeTrack': {
+      const trackId = params.trackId as string
+      const url = `https://api.spotify.com/v1/me/tracks`
+      result = await spotifyApiFetch(page, 'PUT', url, accessToken, JSON.stringify({ ids: [trackId] }))
+      if (result.status >= 400) throw errors.httpError(result.status)
+      return { success: true }
+    }
+    case 'unlikeTrack': {
+      const trackId = params.trackId as string
+      const url = `https://api.spotify.com/v1/me/tracks`
+      result = await spotifyApiFetch(page, 'DELETE', url, accessToken, JSON.stringify({ ids: [trackId] }))
+      if (result.status >= 400) throw errors.httpError(result.status)
+      return { success: true }
+    }
+    case 'addToPlaylist': {
+      const playlistId = params.playlistId as string
+      const trackUris = params.trackUris as string[]
+      const body: Record<string, unknown> = { uris: trackUris }
+      if (params.position !== undefined) body.position = params.position
+      const url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`
+      result = await spotifyApiFetch(page, 'POST', url, accessToken, JSON.stringify(body))
+      if (result.status >= 400) throw errors.httpError(result.status)
+      return JSON.parse(result.text)
+    }
+    case 'removeFromPlaylist': {
+      const playlistId = params.playlistId as string
+      const trackUris = params.trackUris as string[]
+      const body = { tracks: trackUris.map((uri) => ({ uri })) }
+      const url = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`
+      result = await spotifyApiFetch(page, 'DELETE', url, accessToken, JSON.stringify(body))
+      if (result.status >= 400) throw errors.httpError(result.status)
+      return JSON.parse(result.text)
+    }
+    case 'createPlaylist': {
+      // Need user ID — get from /v1/me
+      const meResult = await spotifyApiFetch(page, 'GET', 'https://api.spotify.com/v1/me', accessToken)
+      if (meResult.status >= 400) throw errors.httpError(meResult.status)
+      const userId = (JSON.parse(meResult.text) as { id: string }).id
+      const body: Record<string, unknown> = { name: params.name as string }
+      if (params.description !== undefined) body.description = params.description
+      if (params.public !== undefined) body.public = params.public
+      const url = `https://api.spotify.com/v1/users/${encodeURIComponent(userId)}/playlists`
+      result = await spotifyApiFetch(page, 'POST', url, accessToken, JSON.stringify(body))
+      if (result.status >= 400) throw errors.httpError(result.status)
+      return JSON.parse(result.text)
+    }
+    default:
+      throw errors.unknownOp(operation)
+  }
+}
+
 // Cached tokens per page
 let cachedTokens: { accessToken: string; clientToken: string } | null = null
 
@@ -211,13 +306,27 @@ const adapter = {
   ): Promise<unknown> {
     const { errors } = helpers as { errors: ErrorHelpers }
     const config = OPERATIONS[operation]
-    if (!config && operation !== 'getUserPlaylists') {
+    if (!config && operation !== 'getUserPlaylists' && !WRITE_OPERATIONS.has(operation)) {
       throw errors.unknownOp(operation)
     }
 
     // Extract tokens if not cached
     if (!cachedTokens) {
       cachedTokens = await extractToken(page, errors)
+    }
+
+    // Write operations use Spotify's REST API
+    if (WRITE_OPERATIONS.has(operation)) {
+      try {
+        return await writeOperationFetch(page, operation, params, cachedTokens.accessToken, errors)
+      } catch (err) {
+        const failureClass = (err as { payload?: { failureClass?: string } }).payload?.failureClass
+        if (failureClass === 'needs_login') {
+          cachedTokens = await extractToken(page, errors)
+          return writeOperationFetch(page, operation, params, cachedTokens.accessToken, errors)
+        }
+        throw err
+      }
     }
 
     // getUserPlaylists uses a REST endpoint, not pathfinder

@@ -1,0 +1,11 @@
+{
+  "operation_id": "likeTrack",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": { "trackId": "4u7EnebtmKWzUH433cf5Qv" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

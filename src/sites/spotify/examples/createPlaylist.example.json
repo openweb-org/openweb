@@ -1,0 +1,15 @@
+{
+  "operation_id": "createPlaylist",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "name": "My OpenWeb Playlist",
+        "description": "Created via openweb CLI",
+        "public": false
+      },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}
