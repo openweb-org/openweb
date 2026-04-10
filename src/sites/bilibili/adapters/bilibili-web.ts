@@ -406,6 +406,31 @@ async function followUploader(page: Page, params: Record<string, unknown>, error
   return postApiViaPage(page, '/x/relation/modify', { fid, act, re_src: 11, csrf })
 }
 
+/* ---------- reverse write operations ---------- */
+
+async function unlikeVideo(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  return likeVideo(page, { ...params, like: 2 }, errors)
+}
+
+async function removeFromFavorites(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const rid = Number(params.rid)
+  if (!rid) throw errors.missingParam('rid')
+  const delMediaIds = String(params.del_media_ids ?? '')
+  if (!delMediaIds) throw errors.missingParam('del_media_ids')
+  const csrf = await getCSRFToken(page, errors)
+  return postApiViaPage(page, '/x/v3/fav/resource/deal', {
+    rid,
+    type: 2,
+    add_media_ids: '',
+    del_media_ids: delMediaIds,
+    csrf,
+  })
+}
+
+async function unfollowUploader(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  return followUploader(page, { ...params, act: 2 }, errors)
+}
+
 /* ---------- adapter export ---------- */
 
 type OpHandler = (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>
@@ -423,6 +448,9 @@ const OPERATIONS: Record<string, OpHandler> = {
   likeVideo,
   addToFavorites,
   followUploader,
+  unlikeVideo,
+  removeFromFavorites,
+  unfollowUploader,
   getUserProfile: getUserInfo,
   searchUserVideos: getUserVideos,
 }

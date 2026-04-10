@@ -11546,7 +11546,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               type: object
               required:
@@ -11592,7 +11592,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               type: object
               required:
@@ -11641,7 +11641,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               type: object
               required:
@@ -11657,6 +11657,136 @@ paths:
       responses:
         "200":
           description: Follow result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 0 = success.
+                  message:
+                    type: string
+  /x/web-interface/archive/unlike:
+    post:
+      operationId: unlikeVideo
+      summary: Unlike a previously liked video — reverse of likeVideo
+      x-openweb:
+        permission: write
+        safety: caution
+        requires_auth: true
+        build:
+          stable_id: bili0014
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: bilibili-web
+          operation: unlikeVideo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - aid
+              properties:
+                aid:
+                  type: integer
+                  description: Video aid (from getVideoDetail).
+      responses:
+        "200":
+          description: Unlike result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 0 = success, 65006 = already unliked.
+                  message:
+                    type: string
+  /x/v3/fav/resource/unfav:
+    post:
+      operationId: removeFromFavorites
+      summary: Remove a video from favorites folder — reverse of addToFavorites
+      x-openweb:
+        permission: write
+        safety: caution
+        requires_auth: true
+        build:
+          stable_id: bili0015
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: bilibili-web
+          operation: removeFromFavorites
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rid
+                - del_media_ids
+              properties:
+                rid:
+                  type: integer
+                  description: Video aid (from getVideoDetail).
+                del_media_ids:
+                  type: string
+                  description: Comma-separated favorite folder IDs to remove from.
+      responses:
+        "200":
+          description: Remove from favorites result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 0 = success.
+                  message:
+                    type: string
+  /x/relation/unfollow:
+    post:
+      operationId: unfollowUploader
+      summary: Unfollow a previously followed user — reverse of followUploader
+      x-openweb:
+        permission: write
+        safety: caution
+        requires_auth: true
+        build:
+          stable_id: bili0016
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: bilibili-web
+          operation: unfollowUploader
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fid
+              properties:
+                fid:
+                  type: integer
+                  description: Target user ID (mid).
+      responses:
+        "200":
+          description: Unfollow result.
           content:
             application/json:
               schema:

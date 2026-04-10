@@ -15,6 +15,7 @@ Chinese video sharing and social platform (similar to YouTube). Archetype: Chine
 1. `searchVideos(keyword)` → results with `bvid`, `mid`
 2. `getVideoDetail(bvid)` → full video info → `aid`
 3. `likeVideo(aid)` / `addToFavorites(rid=aid)` → engage (requires auth + write)
+4. `unlikeVideo(aid)` / `removeFromFavorites(rid=aid)` → undo engagement
 
 ### Explore a creator's content
 1. `getUserProfile(mid)` → bio, level, follower count
@@ -22,7 +23,8 @@ Chinese video sharing and social platform (similar to YouTube). Archetype: Chine
 
 ### Follow/unfollow flow
 1. `getUserProfile(mid)` → check user info
-2. `followUploader(fid=mid, act=1)` → follow (act=2 to unfollow)
+2. `followUploader(fid=mid)` → follow
+3. `unfollowUploader(fid=mid)` → unfollow
 
 ## Operations
 
@@ -39,6 +41,9 @@ Chinese video sharing and social platform (similar to YouTube). Archetype: Chine
 | likeVideo | like/unlike a video | `aid` ← getVideoDetail, `like` (1/2) | code, message | write, requires auth |
 | addToFavorites | add/remove from favorites | `rid` (=aid) ← getVideoDetail, `add_media_ids` | code, message | write, requires auth |
 | followUploader | follow/unfollow user | `fid` (=mid) ← getUserProfile, `act` (1/2) | code, message | write, requires auth |
+| unlikeVideo | unlike a previously liked video | `aid` ← getVideoDetail | code, message | reverse of likeVideo, write, requires auth |
+| removeFromFavorites | remove video from favorites | `rid` (=aid) ← getVideoDetail, `del_media_ids` | code, message | reverse of addToFavorites, write, requires auth |
+| unfollowUploader | unfollow a user | `fid` (=mid) ← getUserProfile | code, message | reverse of followUploader, write, requires auth |
 
 ## Quick Start
 
@@ -69,6 +74,15 @@ openweb bilibili exec searchUserVideos '{"mid": 1695320, "pn": 1}'
 
 # Like a video (requires auth + write permission)
 openweb bilibili exec likeVideo '{"aid": 123456, "like": 1}'
+
+# Unlike a video (requires auth + write permission)
+openweb bilibili exec unlikeVideo '{"aid": 123456}'
+
+# Remove from favorites (requires auth + write permission)
+openweb bilibili exec removeFromFavorites '{"rid": 123456, "del_media_ids": "12345"}'
+
+# Unfollow a user (requires auth + write permission)
+openweb bilibili exec unfollowUploader '{"fid": 1695320}'
 ```
 
 ---

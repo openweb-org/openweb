@@ -1,0 +1,17 @@
+{
+  "operation_id": "removeFromFavorites",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "rid": 170001,
+        "del_media_ids": "0"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
