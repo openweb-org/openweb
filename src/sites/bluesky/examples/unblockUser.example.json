@@ -1,0 +1,8 @@
+{
+  "operation_id": "unblockUser",
+  "replay_safety": "unsafe_mutation",
+  "cases": [{
+    "input": { "uri": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.graph.block/3abc345" },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

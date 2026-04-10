@@ -3,10 +3,10 @@
   "display_name": "Bluesky",
   "domain": "public.api.bsky.app",
   "site_url": "https://bsky.app",
-  "description": "Bluesky AT Protocol social network — profiles, feeds, posts, search",
+  "description": "Bluesky AT Protocol social network — profiles, feeds, posts, search, engagement, social graph",
   "category": "social",
-  "requires_browser": false,
-  "requires_login": false,
+  "requires_browser": true,
+  "requires_login": true,
   "last_verified": "2026-04-02T21:55:02.345Z",
   "quarantined": false,
   "fingerprint": {

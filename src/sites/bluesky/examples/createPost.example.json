@@ -1,0 +1,8 @@
+{
+  "operation_id": "createPost",
+  "replay_safety": "unsafe_mutation",
+  "cases": [{
+    "input": { "text": "Hello from openweb!", "langs": ["en"] },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

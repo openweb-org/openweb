@@ -1,0 +1,8 @@
+{
+  "operation_id": "blockUser",
+  "replay_safety": "unsafe_mutation",
+  "cases": [{
+    "input": { "subject": "did:plc:z72i7hdynmk6r22z27h6tvur" },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

@@ -1,0 +1,11 @@
+{
+  "operation_id": "likePost",
+  "replay_safety": "unsafe_mutation",
+  "cases": [{
+    "input": {
+      "uri": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3abc123",
+      "cid": "bafyreid6tirgbhajytlm5fu5feymkqg2mqo7gy4k66xjv2gfwmc7dlwj5i"
+    },
+    "assertions": { "status": 200, "response_schema_valid": true }
+  }]
+}

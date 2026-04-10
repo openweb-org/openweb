@@ -698,3 +698,687 @@ paths:
                           type: array
                           items:
                             type: object
+
+  /pds/createPost:
+    post:
+      operationId: createPost
+      summary: "Create a new post — returns AT URI and CID of the created record"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: createPost
+        build:
+          stable_id: bsky_createPost_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  description: "Post text (max 300 characters)"
+                replyTo:
+                  type: object
+                  description: "Reply target. Get uri/cid from getPostThread or getAuthorFeed."
+                  required: [uri, cid]
+                  properties:
+                    uri:
+                      type: string
+                      description: "AT URI of the parent post"
+                    cid:
+                      type: string
+                      description: "CID of the parent post"
+                    rootUri:
+                      type: string
+                      description: "AT URI of thread root post. Defaults to parent if omitted."
+                    rootCid:
+                      type: string
+                      description: "CID of thread root post. Defaults to parent if omitted."
+                langs:
+                  type: array
+                  items:
+                    type: string
+                  description: "BCP-47 language tags (e.g. ['en'])"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uri:
+                    type: string
+                    description: "AT URI of the created post"
+                  cid:
+                    type: string
+                    description: "CID of the created record"
+
+  /pds/deletePost:
+    post:
+      operationId: deletePost
+      summary: "Delete a post — removes it permanently (reverse of createPost)"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: deletePost
+        build:
+          stable_id: bsky_deletePost_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uri
+              properties:
+                uri:
+                  type: string
+                  description: "AT URI of the post to delete (e.g. at://did:plc:.../app.bsky.feed.post/...)"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /pds/likePost:
+    post:
+      operationId: likePost
+      summary: "Like a post — creates a like record, returns its AT URI"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: likePost
+        build:
+          stable_id: bsky_likePost_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uri
+                - cid
+              properties:
+                uri:
+                  type: string
+                  description: "AT URI of the post to like. Get from getAuthorFeed or getFeed."
+                cid:
+                  type: string
+                  description: "CID of the post to like"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uri:
+                    type: string
+                    description: "AT URI of the created like record"
+                  cid:
+                    type: string
+
+  /pds/unlikePost:
+    post:
+      operationId: unlikePost
+      summary: "Unlike a post — deletes the like record (reverse of likePost)"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: unlikePost
+        build:
+          stable_id: bsky_unlikePost_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uri
+              properties:
+                uri:
+                  type: string
+                  description: "AT URI of the like record to delete. Get from post viewer.like field."
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /pds/repost:
+    post:
+      operationId: repost
+      summary: "Repost a post — creates a repost record, returns its AT URI"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: repost
+        build:
+          stable_id: bsky_repost_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uri
+                - cid
+              properties:
+                uri:
+                  type: string
+                  description: "AT URI of the post to repost. Get from getAuthorFeed or getFeed."
+                cid:
+                  type: string
+                  description: "CID of the post to repost"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uri:
+                    type: string
+                    description: "AT URI of the created repost record"
+                  cid:
+                    type: string
+
+  /pds/unrepost:
+    post:
+      operationId: unrepost
+      summary: "Remove a repost — deletes the repost record (reverse of repost)"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: unrepost
+        build:
+          stable_id: bsky_unrepost_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uri
+              properties:
+                uri:
+                  type: string
+                  description: "AT URI of the repost record to delete. Get from post viewer.repost field."
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /pds/follow:
+    post:
+      operationId: follow
+      summary: "Follow a user — creates a follow record, returns its AT URI"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: follow
+        build:
+          stable_id: bsky_follow_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subject
+              properties:
+                subject:
+                  type: string
+                  description: "DID of the user to follow. Get from getProfile response."
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uri:
+                    type: string
+                    description: "AT URI of the created follow record"
+                  cid:
+                    type: string
+
+  /pds/unfollow:
+    post:
+      operationId: unfollow
+      summary: "Unfollow a user — deletes the follow record (reverse of follow)"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: unfollow
+        build:
+          stable_id: bsky_unfollow_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uri
+              properties:
+                uri:
+                  type: string
+                  description: "AT URI of the follow record to delete. Get from profile viewer.following field."
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /pds/blockUser:
+    post:
+      operationId: blockUser
+      summary: "Block a user — creates a block record, prevents interaction"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: blockUser
+        build:
+          stable_id: bsky_blockUser_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subject
+              properties:
+                subject:
+                  type: string
+                  description: "DID of the user to block. Get from getProfile response."
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uri:
+                    type: string
+                    description: "AT URI of the created block record"
+                  cid:
+                    type: string
+
+  /pds/unblockUser:
+    post:
+      operationId: unblockUser
+      summary: "Unblock a user — deletes the block record (reverse of blockUser)"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: unblockUser
+        build:
+          stable_id: bsky_unblockUser_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uri
+              properties:
+                uri:
+                  type: string
+                  description: "AT URI of the block record to delete. Get from profile viewer.blocking field."
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /pds/muteUser:
+    post:
+      operationId: muteUser
+      summary: "Mute a user — hides their posts from your feeds"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: muteUser
+        build:
+          stable_id: bsky_muteUser_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - actor
+              properties:
+                actor:
+                  type: string
+                  description: "Handle or DID of the user to mute"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /pds/unmuteUser:
+    post:
+      operationId: unmuteUser
+      summary: "Unmute a user — restores their posts in your feeds (reverse of muteUser)"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: bluesky-pds
+          operation: unmuteUser
+        build:
+          stable_id: bsky_unmuteUser_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - actor
+              properties:
+                actor:
+                  type: string
+                  description: "Handle or DID of the user to unmute"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /pds/getNotifications:
+    get:
+      operationId: getNotifications
+      summary: "Get notifications — likes, reposts, follows, mentions, replies, quotes"
+      servers:
+        - url: https://bsky.app
+          x-openweb:
+            transport: page
+            auth:
+              type: localStorage_jwt
+              key: BSKY_STORAGE
+              path: session.currentAccount.accessJwt
+              inject:
+                header: Authorization
+                prefix: "Bearer "
+      x-openweb:
+        permission: read
+        adapter:
+          name: bluesky-pds
+          operation: getNotifications
+        build:
+          stable_id: bsky_getNotifications_v1
+          tool_version: 2
+        pagination:
+          type: cursor
+          response_field: cursor
+          request_param: cursor
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+          description: "Number of notifications (max 100)"
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Pagination cursor from previous response"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uri:
+                          type: string
+                        cid:
+                          type: string
+                        author:
+                          type: object
+                        reason:
+                          type: string
+                          description: "Notification type: like, repost, follow, mention, reply, quote"
+                        record:
+                          type: object
+                        isRead:
+                          type: boolean
+                        indexedAt:
+                          type: string
+                  cursor:
+                    type: string
+                  seenAt:
+                    type: string
