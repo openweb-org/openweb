@@ -1,0 +1,14 @@
+{
+  "operation_id": "unfollowWriter",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": { "userId": "3a38da70d8dc" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

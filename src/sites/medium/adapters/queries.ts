@@ -302,3 +302,27 @@ export const SAVE_ARTICLE_MUTATION = `mutation AddToPredefinedCatalog($type: Pre
     }
   }
 }`
+
+export const UNFOLLOW_USER_MUTATION = `mutation UnfollowUserMutation($userId: ID!) {
+  unfollowUser(targetUserId: $userId) {
+    id
+    name
+    username
+    viewerEdge {
+      id
+      isFollowing
+      __typename
+    }
+    __typename
+  }
+}`
+
+export const UNSAVE_ARTICLE_MUTATION = `mutation RemoveFromPredefinedCatalog($type: PredefinedCatalogType!, $itemId: ID!) {
+  removeFromPredefinedCatalog(type: $type, itemId: $itemId) {
+    __typename
+    ... on RemoveFromPredefinedCatalogSuccess {
+      version
+      __typename
+    }
+  }
+}`

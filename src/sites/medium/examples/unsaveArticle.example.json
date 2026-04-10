@@ -1,0 +1,14 @@
+{
+  "operation_id": "unsaveArticle",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": { "postId": "70d2a62246c0" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

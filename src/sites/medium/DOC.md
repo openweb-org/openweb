@@ -38,6 +38,8 @@ Blogging and publishing platform. Content platform archetype. Search articles, b
 | clapArticle | clap (upvote) a post | postId | clapCount, viewerClapCount | SAFE write; requires auth |
 | followWriter | follow a writer | userId ← getTagWriters | isFollowing | SAFE write; requires auth |
 | saveArticle | save to reading list | postId | saved, catalogItemId | SAFE write; requires auth |
+| unfollowWriter | unfollow a writer | userId ← getTagWriters | isFollowing | CAUTION write; requires auth |
+| unsaveArticle | remove from reading list | postId | removed | CAUTION write; requires auth |
 
 ## Quick Start
 

@@ -11,6 +11,8 @@ import {
   TOPIC_CURATED_LISTS_QUERY,
   TOPIC_LATEST_STORIES_QUERY,
   TOPIC_WRITERS_QUERY,
+  UNFOLLOW_USER_MUTATION,
+  UNSAVE_ARTICLE_MUTATION,
   VIEWER_QUERY,
 } from './queries.js'
 
@@ -330,6 +332,40 @@ async function saveArticle(page: Page, params: Record<string, unknown>, errors: 
   }
 }
 
+async function unfollowWriter(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const userId = String(params.userId ?? params.id ?? '')
+  if (!userId) throw errors.missingParam('userId')
+
+  const data = (await graphqlFetch(page, 'UnfollowUserMutation', UNFOLLOW_USER_MUTATION, {
+    userId,
+  }, errors)) as Record<string, unknown>
+
+  const result = data.unfollowUser as Record<string, unknown>
+  const viewerEdge = result?.viewerEdge as Record<string, unknown> | undefined
+  return {
+    userId: result?.id,
+    name: result?.name,
+    username: result?.username,
+    isFollowing: viewerEdge?.isFollowing,
+  }
+}
+
+async function unsaveArticle(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const postId = String(params.postId ?? params.id ?? '')
+  if (!postId) throw errors.missingParam('postId')
+
+  const data = (await graphqlFetch(page, 'RemoveFromPredefinedCatalog', UNSAVE_ARTICLE_MUTATION, {
+    type: 'READING_LIST',
+    itemId: postId,
+  }, errors)) as Record<string, unknown>
+
+  const result = data.removeFromPredefinedCatalog as Record<string, unknown>
+  return {
+    postId,
+    removed: result?.__typename === 'RemoveFromPredefinedCatalogSuccess',
+  }
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
@@ -346,6 +382,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   clapArticle,
   followWriter,
   saveArticle,
+  unfollowWriter,
+  unsaveArticle,
 }
 
 const adapter = {

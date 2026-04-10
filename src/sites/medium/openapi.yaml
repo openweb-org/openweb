@@ -633,3 +633,89 @@ paths:
                     nullable: true
                   saved:
                     type: boolean
+  /user/{userId}/unfollow:
+    post:
+      operationId: unfollowWriter
+      summary: Unfollow a writer/author — reverse of followWriter, requires auth
+      x-openweb:
+        permission: write
+        safety: caution
+        requires_auth: true
+        build:
+          stable_id: md0015
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: unfollowWriter
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Medium user ID (hex string, e.g. "3a38da70d8dc").
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Unfollow result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                  name:
+                    type: string
+                  username:
+                    type: string
+                  isFollowing:
+                    type: boolean
+  /post/{postId}/unsave:
+    post:
+      operationId: unsaveArticle
+      summary: Remove an article from reading list — reverse of saveArticle, requires auth
+      x-openweb:
+        permission: write
+        safety: caution
+        requires_auth: true
+        build:
+          stable_id: md0016
+          tool_version: 1
+          signals:
+            - adapter-verified
+        adapter:
+          name: medium-graphql
+          operation: unsaveArticle
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Medium post ID (hex string).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Unsave result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  postId:
+                    type: string
+                  removed:
+                    type: boolean
