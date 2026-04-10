@@ -1,0 +1,17 @@
+{
+  "operation_id": "createChannel",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "guildId": "1280234300012494859",
+        "name": "openweb-test"
+      },
+      "assertions": {
+        "status": 201,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

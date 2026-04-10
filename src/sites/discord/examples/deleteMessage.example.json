@@ -1,0 +1,16 @@
+{
+  "operation_id": "deleteMessage",
+  "method": "delete",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "channelId": "1280234300012494862",
+        "messageId": "1280234300012494900"
+      },
+      "assertions": {
+        "status": 204
+      }
+    }
+  ]
+}

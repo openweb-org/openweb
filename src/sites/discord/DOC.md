@@ -20,6 +20,14 @@ Real-time messaging platform. Archetype: Messaging.
 3. `sendMessage(channelId, content)` → message with ID → `messageId`
 4. `addReaction(channelId, messageId, emoji)` → 204
 
+### Undo message & reaction
+1. `deleteMessage(channelId, messageId)` → 204
+2. `removeReaction(channelId, messageId, emoji)` → 204
+
+### Create a server & channel
+1. `createServer(name)` → server with ID → `guildId`
+2. `createChannel(guildId, name, type?)` → channel with ID → `channelId`
+
 ### Inspect a server
 1. `listGuilds` → pick guild → `guildId`
 2. `getGuildInfo(guildId)` → server details, member count, features
@@ -41,6 +49,10 @@ Real-time messaging platform. Archetype: Messaging.
 | getPinnedMessages | pinned messages | channelId ← listGuildChannels | content, author, timestamp | no pagination |
 | sendMessage | send a message | channelId ← listGuildChannels, content | id, content, author, timestamp | write op |
 | addReaction | react to message | channelId, messageId ← getChannelMessages, emoji | 204 no content | write op |
+| deleteMessage | delete a message | channelId, messageId ← getChannelMessages | 204 no content | write op, reverses sendMessage |
+| removeReaction | remove own reaction | channelId, messageId ← getChannelMessages, emoji | 204 no content | write op, reverses addReaction |
+| createServer | create a server | name | id, name, owner_id, roles, channels | write op |
+| createChannel | create a channel | guildId ← listGuilds, name, type? | id, type, name, guild_id, position | write op |
 
 ## Quick Start
 
@@ -65,6 +77,18 @@ openweb discord exec sendMessage '{"channelId":"CHANNEL_ID","content":"Hello!"}'
 
 # React to a message with thumbs up
 openweb discord exec addReaction '{"channelId":"CHANNEL_ID","messageId":"MSG_ID","emoji":"%F0%9F%91%8D"}'
+
+# Delete a message
+openweb discord exec deleteMessage '{"channelId":"CHANNEL_ID","messageId":"MSG_ID"}'
+
+# Remove own reaction from a message
+openweb discord exec removeReaction '{"channelId":"CHANNEL_ID","messageId":"MSG_ID","emoji":"%F0%9F%91%8D"}'
+
+# Create a new server
+openweb discord exec createServer '{"name":"My New Server"}'
+
+# Create a text channel in a server
+openweb discord exec createChannel '{"guildId":"GUILD_ID","name":"general-chat"}'
 ```
 
 ---
