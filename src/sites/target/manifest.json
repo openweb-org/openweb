@@ -4,12 +4,12 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.target.com",
-  "description": "Target product search, product detail, and store availability via Redsky aggregation APIs — node transport",
+  "description": "Target product search, product detail, store availability, and cart management via Redsky aggregation and cart APIs — node transport",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
-    "operation_count": 3,
-    "l1_count": 3,
+    "operation_count": 5,
+    "l1_count": 5,
     "l2_count": 0,
     "l3_count": 0,
     "ws_count": 0

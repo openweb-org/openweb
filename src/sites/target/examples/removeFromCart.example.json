@@ -1,0 +1,16 @@
+{
+  "operation_id": "removeFromCart",
+  "method": "delete",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "cart_item_id": "a1b2c3d4"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

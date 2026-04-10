@@ -673,3 +673,66 @@ paths:
                       guest_pick_sla:
                         type: integer
                         description: Pickup SLA in minutes.
+
+  /web_checkouts/v1/cart_items/{cart_item_id}:
+    servers:
+      - url: https://carts.target.com
+        x-openweb:
+          transport: node
+    delete:
+      operationId: removeFromCart
+      summary: Remove item from cart by cart_item_id — reverses addToCart
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: tgt0005
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: cart_item_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Cart line item ID returned by addToCart (e.g. "a1b2c3d4").
+        - name: field_groups
+          in: query
+          required: true
+          schema:
+            type: string
+            default: CART,CART_ITEMS,SUMMARY
+          description: Response field groups to include.
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            default: 9f36aeafbe60771e321a7cc95a78140772ab3e96
+          description: API key (static, embedded in frontend).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+      responses:
+        '200':
+          description: Item removed from cart — returns updated cart summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cart_id:
+                    type: string
+                    description: Cart identifier.
+                  total_cart_item_quantity:
+                    type: integer
+                    description: Total items remaining in cart.
+                  removed_cart_item_id:
+                    type: string
+                    description: The cart_item_id that was removed.
