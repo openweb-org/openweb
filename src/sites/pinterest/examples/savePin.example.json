@@ -1,0 +1,17 @@
+{
+  "operation_id": "savePin",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "pin_id": "1149473504911636509",
+        "board_id": "1076aborede6421"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

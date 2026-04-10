@@ -8,7 +8,7 @@
   "last_verified": "2026-04-03T02:58:12.057Z",
   "quarantined": false,
   "fingerprint": {
-    "response_shape_hash": "getBoard:cec63fb2405f8924,getPin:7afe1a7ccfc4cb1e,getUserProfile:4cdd823312edf0ee,searchPins:b354b171f0ce87dd,searchTypeahead:ba65416dba3d77ac",
+    "response_shape_hash": "followBoard:pending,getBoard:cec63fb2405f8924,getHomeFeed:pending,getNotifications:pending,getPin:7afe1a7ccfc4cb1e,getUserProfile:4cdd823312edf0ee,savePin:pending,searchPins:b354b171f0ce87dd,searchTypeahead:ba65416dba3d77ac,unfollowBoard:pending,unsavePin:pending",
     "last_validated": "2026-04-03T02:58:12.058Z"
   }
 }

@@ -491,3 +491,467 @@ paths:
                                   type: string
                                 images:
                                   type: object
+
+  /resource/RepinResource/create/:
+    post:
+      operationId: savePin
+      summary: "Save (repin) a pin to one of your boards — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: pinterest_savePin_v1
+          tool_version: 2
+      parameters:
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+        - name: x-pinterest-appstate
+          in: header
+          required: true
+          schema:
+            type: string
+            const: active
+        - name: x-pinterest-source-url
+          in: header
+          required: true
+          schema:
+            type: string
+            default: /
+          description: "Source URL for Pinterest tracking"
+        - name: accept
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "application/json, text/javascript, */*, q=0.01"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pin_id
+                - board_id
+              properties:
+                pin_id:
+                  type: string
+                  description: "ID of the pin to save. Get from searchPins or getPin"
+                board_id:
+                  type: string
+                  description: "ID of the board to save the pin to. Get from getBoard"
+                section_id:
+                  type: string
+                  description: "Optional board section ID to save the pin into"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resource_response:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      data:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          board:
+                            type: object
+                          pinner:
+                            type: object
+
+  /resource/SavePinResource/delete/:
+    post:
+      operationId: unsavePin
+      summary: "Unsave (remove) a saved pin from a board — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: pinterest_unsavePin_v1
+          tool_version: 2
+      parameters:
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+        - name: x-pinterest-appstate
+          in: header
+          required: true
+          schema:
+            type: string
+            const: active
+        - name: x-pinterest-source-url
+          in: header
+          required: true
+          schema:
+            type: string
+            default: /
+          description: "Source URL for Pinterest tracking"
+        - name: accept
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "application/json, text/javascript, */*, q=0.01"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pin_id
+                - board_id
+              properties:
+                pin_id:
+                  type: string
+                  description: "ID of the pin to unsave"
+                board_id:
+                  type: string
+                  description: "ID of the board to remove the pin from"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resource_response:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+
+  /resource/BoardFollowResource/create/:
+    post:
+      operationId: followBoard
+      summary: "Follow a board — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: pinterest_followBoard_v1
+          tool_version: 2
+      parameters:
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+        - name: x-pinterest-appstate
+          in: header
+          required: true
+          schema:
+            type: string
+            const: active
+        - name: x-pinterest-source-url
+          in: header
+          required: true
+          schema:
+            type: string
+            default: /
+          description: "Source URL for Pinterest tracking"
+        - name: accept
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "application/json, text/javascript, */*, q=0.01"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - board_id
+              properties:
+                board_id:
+                  type: string
+                  description: "ID of the board to follow. Get from getBoard"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resource_response:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      data:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          url:
+                            type: string
+
+  /resource/BoardFollowResource/delete/:
+    post:
+      operationId: unfollowBoard
+      summary: "Unfollow a board — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: pinterest_unfollowBoard_v1
+          tool_version: 2
+      parameters:
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+        - name: x-pinterest-appstate
+          in: header
+          required: true
+          schema:
+            type: string
+            const: active
+        - name: x-pinterest-source-url
+          in: header
+          required: true
+          schema:
+            type: string
+            default: /
+          description: "Source URL for Pinterest tracking"
+        - name: accept
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "application/json, text/javascript, */*, q=0.01"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - board_id
+              properties:
+                board_id:
+                  type: string
+                  description: "ID of the board to unfollow"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resource_response:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+
+  /resource/UserHomefeedResource/get/:
+    get:
+      operationId: getHomeFeed
+      summary: "Get personalized home feed — returns recommended pins based on user interests"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: pinterest_getHomeFeed_v1
+          tool_version: 2
+      parameters:
+        - name: source_url
+          in: query
+          required: true
+          schema:
+            type: string
+            default: /
+          description: "Source URL path"
+        - name: data
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'JSON string with feed options. Example: {"options":{"field_set_key":"hifi","in_nux":false,"prependPartner":false,"page_size":25},"context":{}}'
+          example: '{"options":{"field_set_key":"hifi","in_nux":false,"prependPartner":false,"page_size":25},"context":{}}'
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+        - name: x-pinterest-appstate
+          in: header
+          required: true
+          schema:
+            type: string
+            const: active
+        - name: x-pinterest-pws-handler
+          in: header
+          required: true
+          schema:
+            type: string
+            default: "www/index.js"
+          description: "Pinterest PWS handler path"
+        - name: x-pinterest-source-url
+          in: header
+          required: true
+          schema:
+            type: string
+            default: /
+          description: "Source URL for Pinterest tracking"
+        - name: accept
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "application/json, text/javascript, */*, q=0.01"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resource_response:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            type:
+                              type: string
+                            images:
+                              type: object
+                            grid_title:
+                              type: string
+                            description:
+                              type: string
+                            link:
+                              type: string
+                              nullable: true
+                            pinner:
+                              type: object
+                            board:
+                              type: object
+                      bookmark:
+                        type: string
+                        nullable: true
+
+  /resource/NewsHubResource/get/:
+    get:
+      operationId: getNotifications
+      summary: "Get notification feed — recent activity like repins, follows, comments on your pins"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: pinterest_getNotifications_v1
+          tool_version: 2
+      parameters:
+        - name: source_url
+          in: query
+          required: true
+          schema:
+            type: string
+            default: /notifications/
+          description: "Source URL path"
+        - name: data
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'JSON string with notification options. Example: {"options":{"field_set_key":"default","page_size":25},"context":{}}'
+          example: '{"options":{"field_set_key":"default","page_size":25},"context":{}}'
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+        - name: x-pinterest-appstate
+          in: header
+          required: true
+          schema:
+            type: string
+            const: active
+        - name: x-pinterest-pws-handler
+          in: header
+          required: true
+          schema:
+            type: string
+            default: "www/notifications.js"
+          description: "Pinterest PWS handler path"
+        - name: x-pinterest-source-url
+          in: header
+          required: true
+          schema:
+            type: string
+            default: /notifications/
+          description: "Source URL for Pinterest tracking"
+        - name: accept
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "application/json, text/javascript, */*, q=0.01"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resource_response:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            type:
+                              type: string
+                            message:
+                              type: string
+                            timestamp:
+                              type: string
+                            actors:
+                              type: array
+                              items:
+                                type: object
+                            target:
+                              type: object
+                      bookmark:
+                        type: string
+                        nullable: true

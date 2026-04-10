@@ -1,3 +1,19 @@
+## 2026-04-10: Write ops + feed/notifications (6 new ops)
+
+**What changed:**
+- Added 4 write ops: `savePin`, `unsavePin`, `followBoard`, `unfollowBoard` with `permission: write`, `safety: caution`
+- Added 2 read ops: `getHomeFeed` (personalized feed via `UserHomefeedResource`), `getNotifications` (activity via `NewsHubResource`)
+- Write ops use POST to `/resource/{ResourceName}/create/` or `/resource/{ResourceName}/delete/`
+- Created 6 example files (4 `unsafe_mutation`, 2 `safe_read`)
+- Expanded DOC.md with new workflows and ops table
+
+**Why:**
+- Agents could only search and read — couldn't save pins, follow boards, or see their feed
+
+**Verification:** `pnpm build` PASS; `pnpm dev verify pinterest --browser` — PASS (7/7 read ops; 4 write ops skipped as unsafe_mutation)
+
+---
+
 ## 2026-04-01: Initial discovery and compilation
 
 **What changed:**
