@@ -20,6 +20,19 @@ GitHub REST + GraphQL API — code hosting platform (developer tools archetype).
 1. `getRepo(owner, repo)` → confirm repo exists
 2. `createIssue(owner, repo, title, body)` → issue number, html_url
 
+### Manage issues
+1. `listIssues(owner, repo)` → find issue number
+2. `closeIssue(owner, repo, issue_number)` → close it
+3. `reopenIssue(owner, repo, issue_number)` → reopen if needed
+4. `createComment(owner, repo, issue_number, body)` → add a comment
+5. `deleteComment(owner, repo, comment_id)` → remove a comment
+
+### Star / watch a repo
+1. `starRepo(owner, repo)` → star it
+2. `unstarRepo(owner, repo)` → unstar it
+3. `watchRepo(owner, repo)` → subscribe to notifications
+4. `unwatchRepo(owner, repo)` → unsubscribe
+
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
@@ -32,8 +45,15 @@ GitHub REST + GraphQL API — code hosting platform (developer tools archetype).
 | listPullRequests | repository PRs | owner ← getRepo, repo ← getRepo | number, title, state, user.login, head.ref, base.ref | paginated |
 | listContributors | repository contributors | owner ← getRepo, repo ← getRepo | login, contributions | paginated |
 | createIssue | create an issue | owner ← getRepo, repo ← getRepo, title, body | number, html_url | write, CAUTION |
+| closeIssue | close an issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION |
+| reopenIssue | reopen a closed issue | owner, repo, issue_number ← listIssues | number, state, html_url | write, CAUTION — reverse of closeIssue |
+| createComment | comment on issue/PR | owner, repo, issue_number ← listIssues, body | id, body, html_url | write, CAUTION |
+| deleteComment | delete a comment | owner, repo, comment_id ← createComment | — (204) | write, CAUTION — reverse of createComment |
 | forkRepo | fork a repository | owner ← getRepo, repo ← getRepo | full_name | write, CAUTION |
 | starRepo | star a repository | owner ← getRepo, repo ← getRepo | — (204) | write, SAFE |
+| unstarRepo | unstar a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of starRepo |
+| watchRepo | watch a repository | owner ← getRepo, repo ← getRepo | subscribed, ignored | write, CAUTION |
+| unwatchRepo | unwatch a repository | owner ← getRepo, repo ← getRepo | — (204) | write, CAUTION — reverse of watchRepo |
 | graphqlQuery | execute GraphQL | query, variables | data | write (unrestricted mutations possible) |
 
 ## Quick Start
@@ -50,6 +70,20 @@ openweb github exec listIssues '{"owner":"anthropics","repo":"claude-code","per_
 
 # Get user profile
 openweb github exec getUserProfile '{"username":"anthropics"}'
+
+# Close an issue
+openweb github exec closeIssue '{"owner":"anthropics","repo":"claude-code","issue_number":1,"state":"closed"}'
+
+# Comment on an issue
+openweb github exec createComment '{"owner":"anthropics","repo":"claude-code","issue_number":1,"body":"Looks good!"}'
+
+# Star / unstar a repo
+openweb github exec starRepo '{"owner":"anthropics","repo":"claude-code"}'
+openweb github exec unstarRepo '{"owner":"anthropics","repo":"claude-code"}'
+
+# Watch / unwatch a repo
+openweb github exec watchRepo '{"owner":"anthropics","repo":"claude-code"}'
+openweb github exec unwatchRepo '{"owner":"anthropics","repo":"claude-code"}'
 ```
 
 ---
@@ -71,6 +105,8 @@ openweb github exec getUserProfile '{"username":"anthropics"}'
 `node` — all endpoints use direct HTTP. No bot detection, no browser needed.
 
 ## Known Issues
-- Write ops (`createIssue`, `forkRepo`, `starRepo`) require a logged-in browser session — run `openweb browser start` and log in first
+- Write ops require a logged-in browser session — run `openweb browser start` and log in first
 - `graphqlQuery` has `write` permission since arbitrary mutations are possible via the query string
 - Rate limit: 60 requests/hour unauthenticated, 5000/hour authenticated
+- `closeIssue` and `reopenIssue` both PATCH the same endpoint (`/repos/{owner}/{repo}/issues/{issue_number}`) — `reopenIssue` uses a virtual path key with `actual_path` override
+- `deleteComment` requires the numeric `comment_id` (from `createComment` response `.id`), not the issue number

@@ -1,0 +1,13 @@
+{
+  "operation_id": "unwatchRepo",
+  "method": "delete",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": { "owner": "anthropics", "repo": "claude-code" },
+      "assertions": {
+        "status": 204
+      }
+    }
+  ]
+}

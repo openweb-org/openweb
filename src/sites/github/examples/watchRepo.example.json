@@ -1,0 +1,14 @@
+{
+  "operation_id": "watchRepo",
+  "method": "put",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": { "owner": "anthropics", "repo": "claude-code" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

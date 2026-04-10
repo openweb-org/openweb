@@ -1,0 +1,13 @@
+{
+  "operation_id": "deleteComment",
+  "method": "delete",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": { "owner": "anthropics", "repo": "claude-code", "comment_id": 1 },
+      "assertions": {
+        "status": 204
+      }
+    }
+  ]
+}

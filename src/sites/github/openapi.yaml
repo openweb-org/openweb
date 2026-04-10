@@ -218,6 +218,339 @@ paths:
                     type: string
                   html_url:
                     type: string
+  /repos/{owner}/{repo}/issues/{issue_number}:
+    patch:
+      operationId: closeIssue
+      summary: Close an issue (set state to closed)
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: gh0013
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: issue_number
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - state
+              properties:
+                state:
+                  type: string
+                  enum: [closed]
+                  default: closed
+                state_reason:
+                  type: string
+                  enum: [completed, not_planned]
+                  default: completed
+      responses:
+        '200':
+          description: Issue updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  number:
+                    type: integer
+                  title:
+                    type: string
+                  state:
+                    type: string
+                  html_url:
+                    type: string
+  /repos/{owner}/{repo}/issues/{issue_number}~reopen:
+    patch:
+      operationId: reopenIssue
+      summary: Reopen a closed issue (reverse of closeIssue)
+      x-openweb:
+        permission: write
+        safety: caution
+        actual_path: /repos/{owner}/{repo}/issues/{issue_number}
+        build:
+          stable_id: gh0014
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: issue_number
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - state
+              properties:
+                state:
+                  type: string
+                  enum: [open]
+                  default: open
+      responses:
+        '200':
+          description: Issue reopened.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  number:
+                    type: integer
+                  title:
+                    type: string
+                  state:
+                    type: string
+                  html_url:
+                    type: string
+  /repos/{owner}/{repo}/issues/{issue_number}/comments:
+    post:
+      operationId: createComment
+      summary: Create a comment on an issue or pull request
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: gh0015
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: issue_number
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - body
+              properties:
+                body:
+                  type: string
+      responses:
+        '201':
+          description: Comment created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  body:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      login:
+                        type: string
+                  html_url:
+                    type: string
+                  created_at:
+                    type: string
+  /repos/{owner}/{repo}/issues/comments/{comment_id}:
+    delete:
+      operationId: deleteComment
+      summary: Delete a comment on an issue (reverse of createComment)
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: gh0016
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: comment_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      responses:
+        '204':
+          description: Comment deleted (no content).
+  /repos/{owner}/{repo}/subscription:
+    put:
+      operationId: watchRepo
+      summary: Watch a repository (subscribe to notifications)
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: gh0017
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subscribed:
+                  type: boolean
+                  default: true
+                ignored:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Subscription set.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscribed:
+                    type: boolean
+                  ignored:
+                    type: boolean
+                  created_at:
+                    type: string
+                  url:
+                    type: string
+    delete:
+      operationId: unwatchRepo
+      summary: Unwatch a repository (reverse of watchRepo)
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: gh0018
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      responses:
+        '204':
+          description: Subscription deleted (no content).
   /search/repositories:
     get:
       operationId: searchRepos
@@ -602,6 +935,38 @@ paths:
         permission: write
         build:
           stable_id: gh0003
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/vnd.github+json
+      responses:
+        '204':
+          description: Success (no content).
+    delete:
+      operationId: unstarRepo
+      summary: Unstar a repository (reverse of starRepo)
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: gh0012
           tool_version: 1
           verified: false
           signals:

@@ -1,0 +1,14 @@
+{
+  "operation_id": "createComment",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": { "owner": "anthropics", "repo": "claude-code", "issue_number": 1, "body": "Test comment from openweb" },
+      "assertions": {
+        "status": 201,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
