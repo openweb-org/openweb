@@ -1,12 +1,12 @@
 {
-  "operation_id": "getVideoDetail",
+  "operation_id": "getUserVideos",
   "method": "get",
   "replay_safety": "safe_read",
   "cases": [
     {
       "input": {
         "username": "tiktok",
-        "videoId": "7626810027520593183"
+        "count": 10
       },
       "assertions": {
         "status": 200,

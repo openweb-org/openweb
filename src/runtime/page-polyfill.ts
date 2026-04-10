@@ -1,5 +1,18 @@
 import type { Page } from 'patchright'
 
+const POLYFILL_SCRIPT = `
+  if (typeof globalThis.__name === 'undefined') {
+    Object.defineProperty(globalThis, '__name', {
+      value: (target, value) => Object.defineProperty(target, 'name', { value, configurable: true }),
+      configurable: true,
+      writable: true,
+    });
+  }
+`
+
+/** Pages that already have the init-script registered. */
+const registered = new WeakSet<Page>()
+
 /**
  * Polyfill esbuild's `__name` helper in the browser page context.
  *
@@ -9,20 +22,16 @@ import type { Page } from 'patchright'
  * `page.evaluate()`. The browser context lacks the `__name` helper, so
  * those calls throw `ReferenceError: __name is not defined`.
  *
- * This function injects a minimal `__name` (matching esbuild's semantics)
- * into the page's global scope. It is idempotent — safe to call multiple
- * times on the same page.
+ * Registers an init script via `page.addInitScript()` so the polyfill
+ * survives `page.goto()` navigations. Also injects into the current
+ * document immediately. Idempotent — safe to call multiple times.
  *
  * Uses a string expression to avoid tsx transforming the polyfill itself.
  */
 export async function ensurePagePolyfills(page: Page): Promise<void> {
-  await page.evaluate(`
-    if (typeof globalThis.__name === 'undefined') {
-      Object.defineProperty(globalThis, '__name', {
-        value: (target, value) => Object.defineProperty(target, 'name', { value, configurable: true }),
-        configurable: true,
-        writable: true,
-      });
-    }
-  `)
+  if (!registered.has(page)) {
+    await page.addInitScript(POLYFILL_SCRIPT).catch(() => {})
+    registered.add(page)
+  }
+  await page.evaluate(POLYFILL_SCRIPT)
 }

@@ -1,12 +1,13 @@
 {
-  "operation_id": "getVideoDetail",
+  "operation_id": "getCommentReplies",
   "method": "get",
   "replay_safety": "safe_read",
   "cases": [
     {
       "input": {
-        "username": "tiktok",
-        "videoId": "7626810027520593183"
+        "item_id": "7626810027520593183",
+        "comment_id": "7626813820006859527",
+        "count": 5
       },
       "assertions": {
         "status": 200,

@@ -69,13 +69,13 @@ openweb tiktok exec searchVideos '{"keyword":"cooking"}'
 openweb tiktok exec searchVideos '{"keyword":"cooking","offset":12,"count":5}'
 
 # Get video details
-openweb tiktok exec getVideoDetail '{"username":"tiktok","videoId":"7345678901234567890"}'
+openweb tiktok exec getVideoDetail '{"username":"tiktok","videoId":"7626810027520593183"}'
 
 # Get user profile
 openweb tiktok exec getUserProfile '{"username":"charlidamelio"}'
 
 # Get video comments
-openweb tiktok exec getVideoComments '{"username":"tiktok","videoId":"7345678901234567890"}'
+openweb tiktok exec getVideoComments '{"username":"tiktok","videoId":"7626810027520593183"}'
 
 # Get trending/recommended videos
 openweb tiktok exec getHomeFeed '{}'
@@ -84,10 +84,10 @@ openweb tiktok exec getHomeFeed '{}'
 openweb tiktok exec getExplore '{}'
 
 # Like a video
-openweb tiktok exec likeVideo '{"videoId":"7345678901234567890"}'
+openweb tiktok exec likeVideo '{"videoId":"7626810027520593183"}'
 
 # Unlike a video
-openweb tiktok exec unlikeVideo '{"videoId":"7345678901234567890"}'
+openweb tiktok exec unlikeVideo '{"videoId":"7626810027520593183"}'
 
 # Follow a user (need numeric userId from getUserProfile)
 openweb tiktok exec followUser '{"userId":"107955"}'
@@ -96,16 +96,16 @@ openweb tiktok exec followUser '{"userId":"107955"}'
 openweb tiktok exec unfollowUser '{"userId":"107955"}'
 
 # Bookmark a video
-openweb tiktok exec bookmarkVideo '{"videoId":"7345678901234567890"}'
+openweb tiktok exec bookmarkVideo '{"videoId":"7626810027520593183"}'
 
 # Unbookmark a video
-openweb tiktok exec unbookmarkVideo '{"videoId":"7345678901234567890"}'
+openweb tiktok exec unbookmarkVideo '{"videoId":"7626810027520593183"}'
 
 # Post a comment
-openweb tiktok exec createComment '{"videoId":"7345678901234567890","text":"Great video!"}'
+openweb tiktok exec createComment '{"videoId":"7626810027520593183","text":"Great video!"}'
 
 # Delete a comment
-openweb tiktok exec deleteComment '{"videoId":"7345678901234567890","commentId":"7345678901234567891"}'
+openweb tiktok exec deleteComment '{"videoId":"7626810027520593183","commentId":"7345678901234567891"}'
 ```
 
 ---
@@ -117,38 +117,38 @@ Not needed for basic site usage.
 
 ### API Architecture
 - REST API at `www.tiktok.com/api/`
-- Search endpoint: `/api/search/general/full/`
-- Comment endpoint: `/api/comment/list/`
-- Recommend endpoint: `/api/recommend/item_list/`
-- Like/digg endpoint: `/api/commit/item/digg/`
-- Follow endpoint: `/api/commit/follow/user/`
-- Bookmark endpoint: `/api/commit/item/collect/`
-- Comment publish: `/api/comment/publish/`
-- Comment delete: `/api/comment/delete/`
-- Custom signing (X-Bogus, X-Gnarly, msToken) computed client-side — handled by page transport
+- 112+ endpoints discoverable from webpack module 47876 (endpoint registry)
+- Key endpoints:
+  - Read: `/api/item/detail/`, `/api/user/detail/`, `/api/comment/list/`, `/api/recommend/item_list/`, `/api/explore/item_list/`, `/api/search/general/full/`
+  - Write: `/api/commit/item/digg/`, `/api/commit/follow/user/`, `/api/item/collect/`, `/api/comment/publish/`, `/api/comment/delete/`
+- Signing (X-Bogus, X-Gnarly, msToken, ztca-dpop) computed by `byted_acrawler.frontierSign()` inside the fetch interceptor
 
 ### Auth
 - `cookie_session` — browser cookies required
-- Anti-bot signing (X-Bogus, X-Gnarly) generated automatically by page transport
-- No CSRF required for read operations
-- Write operations require authenticated session cookies; signing is computed client-side
+- `window.fetch` is monkey-patched (3505 chars) — automatically adds signing headers to every request
+- CSRF token available from webpack HTTP client module (source pattern: `csrfToken` + `runFetch` + `fetchData`)
+- Write ops inject `tt-csrf-token` header from webpack-extracted token
 
 ### Transport
-- `page` transport required — heavy bot detection blocks node transport
-- Browser auto-starts and manages signing
-- Adapter operations (getVideoDetail, getUserProfile, getVideoComments, getHomeFeed, getExplore) navigate to pages and extract from SSR data (`__UNIVERSAL_DATA_FOR_REHYDRATION__`) or intercept API responses
-- Write operations (like, follow, bookmark, comment) use in-browser `fetch` to call internal APIs with session cookies
+- `page` transport required — `byted_acrawler` signing runs client-side only
+- Read ops use API response interception (navigate to page → capture `/api/*` response)
+- Write ops use `page.evaluate(fetch(...))` — the fetch interceptor handles signing
+- SSR data at `__$UNIVERSAL_DATA$__.__DEFAULT_SCOPE__` used as thin fallback for getVideoDetail/getUserProfile only
+
+### Webpack Module System
+- Main app: 3787 modules in `__LOADABLE_LOADED_CHUNKS__` (injectable via `push([[Symbol()], {}, r => { req = r }])`)
+- Service classes: `this.fetch.post("/api/...")` pattern, organized by domain (module 16325: like/collect, 46644: user/follow, 54553: feeds, 22890: search)
+- Module IDs are per-deploy mangled — not stable across deployments
+- HTTP client singleton: module with `csrfToken` + `runFetch` + `fetchData` source signature
 
 ### Runtime Lanes
 - **searchVideos**: replay lane — direct API call via page transport
-- **getVideoDetail, getUserProfile**: adapter lane — SSR extraction from `__UNIVERSAL_DATA_FOR_REHYDRATION__.__DEFAULT_SCOPE__` with DOM fallback
-- **getVideoComments, getHomeFeed, getExplore**: adapter lane — API response interception with SSR/DOM fallback
-- **likeVideo, unlikeVideo, followUser, unfollowUser, bookmarkVideo, unbookmarkVideo, createComment, deleteComment**: adapter lane — in-browser fetch to internal API
+- **getVideoDetail, getUserProfile**: adapter lane — API intercept (`/api/item/detail/`, `/api/user/detail/`) with SSR fallback
+- **getVideoComments, getHomeFeed, getExplore**: adapter lane — API intercept
+- **write ops (like, follow, bookmark, comment)**: adapter lane — `page.evaluate(fetch(...))` with CSRF injection
 
 ### Known Issues
-- Heavy bot detection: X-Bogus, X-Gnarly, msToken are computed client-side
-- Write operations are best-effort — TikTok's bot protection may block API calls even with valid session cookies
-- SSR data structure varies: `__UNIVERSAL_DATA_FOR_REHYDRATION__` scopes include `webapp.video-detail`, `webapp.user-detail`
-- Large responses (~345KB) auto-spill to temp files
-- Comments may require scrolling to trigger lazy-loaded API calls
+- Write ops return HTTP 200 with non-zero `status_code` on failure — check `status_code === 0`
+- Browser connection fragility: sequential ops can crash CDP connection with stale browser state — restart browser before full verify run
+- getVideoDetail DRIFT: shape-diff false positive on empty `challenges[]` array
 - followUser/unfollowUser require numeric userId (from getUserProfile.id), not username

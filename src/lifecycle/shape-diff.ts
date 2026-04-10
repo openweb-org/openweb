@@ -155,15 +155,18 @@ export function diffShape(
   }
 
   // Phase 2: required fields missing from response
+  // Skip array-item paths (e.g. `challenges[].id`) when the response has no
+  // array items at that prefix — an empty array cannot exhibit item fields.
+  const responseHasArrayItems = Object.keys(responseFields).some((k) => k.includes('[]'))
   for (const path of requiredFields) {
     if (!(path in responseFields)) {
+      if (!responseHasArrayItems && path.includes('[]')) continue
       drifts.push({ kind: 'required_missing', path })
     }
   }
 
   // Phase 3: zero-overlap check — schema has fields but none appear in response
   // Exclude array-item paths when response has no array items (empty arrays are valid)
-  const responseHasArrayItems = Object.keys(responseFields).some((k) => k.includes('[]'))
   const effectiveSchemaKeys = responseHasArrayItems
     ? Object.keys(schemaFields)
     : Object.keys(schemaFields).filter((k) => !k.includes('[]'))

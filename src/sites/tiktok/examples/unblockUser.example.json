@@ -1,11 +1,11 @@
 {
-  "operation_id": "bookmarkVideo",
+  "operation_id": "unblockUser",
   "method": "post",
   "replay_safety": "unsafe_mutation",
   "cases": [
     {
       "input": {
-        "videoId": "7626810027520593183"
+        "userId": "107955"
       },
       "assertions": {
         "status": 200,

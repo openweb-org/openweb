@@ -304,7 +304,9 @@ paths:
                     type: string
                     description: Video caption/description
                   createTime:
-                    type: integer
+                    type:
+                      - integer
+                      - "null"
                     description: Unix timestamp of creation
                   video:
                     type: object
@@ -1144,3 +1146,593 @@ paths:
                   hasMore:
                     type: boolean
                     description: Whether more videos are available
+
+  /api/search/user/full/:
+    get:
+      operationId: searchUsers
+      summary: "Search users by keyword — username, nickname, follower count, verified status"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tk_searchUsers_v1
+          tool_version: 2
+      parameters:
+        - name: keyword
+          in: query
+          required: true
+          description: Search query string
+          schema:
+            type: string
+          example: charlidamelio
+        - name: count
+          in: query
+          required: false
+          description: "Number of results (default: 12)"
+          schema:
+            type: integer
+            default: 12
+          example: 12
+        - name: cursor
+          in: query
+          required: false
+          description: "Pagination cursor from previous response"
+          schema:
+            type: string
+            default: "0"
+          example: "0"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+                properties:
+                  user_list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user_info:
+                          type: object
+                          properties:
+                            uid:
+                              type: string
+                              description: User ID
+                            unique_id:
+                              type: string
+                              description: Username
+                            nickname:
+                              type: string
+                              description: Display name
+                            follower_count:
+                              type: integer
+                              description: Follower count
+                            signature:
+                              type: string
+                              description: User bio
+                  cursor:
+                    type: string
+                    description: Pagination cursor for next page
+                  has_more:
+                    type: integer
+                    description: "1 = more results available"
+
+  /internal/getUserVideos:
+    get:
+      operationId: getUserVideos
+      summary: "Get a user's published videos — video list with stats, sorted by recency"
+      x-openweb:
+        permission: read
+        adapter:
+          name: tiktok-web
+          operation: getUserVideos
+        build:
+          stable_id: tk_getUserVideos_v1
+          tool_version: 2
+      parameters:
+        - name: username
+          in: query
+          required: true
+          description: TikTok username (with or without @)
+          schema:
+            type: string
+          example: tiktok
+        - name: count
+          in: query
+          required: false
+          description: "Max number of videos to return (default: 30)"
+          schema:
+            type: integer
+            default: 30
+          example: 30
+      responses:
+        "200":
+          description: User's video list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                properties:
+                  items:
+                    type: array
+                    description: User's published videos
+                    items:
+                      type: object
+                      required:
+                        - id
+                      properties:
+                        id:
+                          type: string
+                          description: Video ID
+                        description:
+                          type: string
+                          description: Video caption
+                        createTime:
+                          type:
+                            - integer
+                            - "null"
+                          description: Unix timestamp of creation
+                        stats:
+                          type: object
+                          properties:
+                            diggCount:
+                              type: integer
+                            shareCount:
+                              type: integer
+                            commentCount:
+                              type: integer
+                            playCount:
+                              type: integer
+                            collectCount:
+                              type: integer
+                  hasMore:
+                    type: boolean
+                  cursor:
+                    type: string
+
+  /internal/likeComment:
+    post:
+      operationId: likeComment
+      summary: "Like a comment — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: likeComment
+        build:
+          stable_id: tk_likeComment_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+                - commentId
+              properties:
+                videoId:
+                  type: string
+                  description: Video ID the comment belongs to
+                commentId:
+                  type: string
+                  description: Comment ID to like
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  is_digg:
+                    type: integer
+                    description: "1 = liked"
+
+  /internal/unlikeComment:
+    post:
+      operationId: unlikeComment
+      summary: "Unlike a previously liked comment — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: unlikeComment
+        build:
+          stable_id: tk_unlikeComment_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+                - commentId
+              properties:
+                videoId:
+                  type: string
+                  description: Video ID the comment belongs to
+                commentId:
+                  type: string
+                  description: Comment ID to unlike
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  is_digg:
+                    type: integer
+                    description: "0 = unliked"
+
+  /api/comment/list/reply/:
+    get:
+      operationId: getCommentReplies
+      summary: "Get replies to a comment — threaded comment view"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tk_getCommentReplies_v1
+          tool_version: 2
+      parameters:
+        - name: item_id
+          in: query
+          required: true
+          description: Video ID
+          schema:
+            type: string
+          example: "7626810027520593183"
+        - name: comment_id
+          in: query
+          required: true
+          description: Parent comment ID
+          schema:
+            type: string
+          example: "7626813820006859527"
+        - name: count
+          in: query
+          required: false
+          description: "Number of replies (default: 20)"
+          schema:
+            type: integer
+            default: 20
+          example: 20
+        - name: cursor
+          in: query
+          required: false
+          description: Pagination cursor
+          schema:
+            type: integer
+            default: 0
+          example: 0
+      responses:
+        "200":
+          description: Comment replies.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        cid:
+                          type: string
+                          description: Reply comment ID
+                        text:
+                          type: string
+                          description: Reply text
+                        create_time:
+                          type: integer
+                          description: Unix timestamp
+                        digg_count:
+                          type: integer
+                          description: Number of likes on reply
+                        user:
+                          type: object
+                          properties:
+                            uid:
+                              type: string
+                            unique_id:
+                              type: string
+                            nickname:
+                              type: string
+                  cursor:
+                    type: integer
+                  has_more:
+                    type: integer
+                    description: "1 = more replies available"
+                  total:
+                    type: integer
+
+  /api/challenge/detail/:
+    get:
+      operationId: getHashtagDetail
+      summary: "Get hashtag/challenge details — description, video count, view count"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: tk_getHashtagDetail_v1
+          tool_version: 2
+      parameters:
+        - name: challengeName
+          in: query
+          required: true
+          description: Hashtag name (without #)
+          schema:
+            type: string
+          example: cooking
+      responses:
+        "200":
+          description: Hashtag detail.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+                properties:
+                  challengeInfo:
+                    type: object
+                    properties:
+                      challenge:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            description: Challenge/hashtag ID
+                          title:
+                            type: string
+                            description: Hashtag name
+                          desc:
+                            type: string
+                            description: Hashtag description
+                          isCommerce:
+                            type: boolean
+                      stats:
+                        type: object
+                        properties:
+                          videoCount:
+                            type: integer
+                          viewCount:
+                            type: integer
+                  status_code:
+                    type: integer
+
+  /internal/getHashtagVideos:
+    get:
+      operationId: getHashtagVideos
+      summary: "Get videos for a hashtag/challenge — browse by topic"
+      x-openweb:
+        permission: read
+        adapter:
+          name: tiktok-web
+          operation: getHashtagVideos
+        build:
+          stable_id: tk_getHashtagVideos_v1
+          tool_version: 2
+      parameters:
+        - name: hashtag
+          in: query
+          required: true
+          description: Hashtag name (without #)
+          schema:
+            type: string
+          example: cooking
+      responses:
+        "200":
+          description: Videos using this hashtag.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                      properties:
+                        id:
+                          type: string
+                        description:
+                          type: string
+                        createTime:
+                          type:
+                            - integer
+                            - "null"
+                        stats:
+                          type: object
+                          properties:
+                            diggCount:
+                              type: integer
+                            playCount:
+                              type: integer
+                  hasMore:
+                    type: boolean
+                  cursor:
+                    type: string
+
+  /internal/getRelatedVideos:
+    get:
+      operationId: getRelatedVideos
+      summary: "Get related/recommended videos for a given video"
+      x-openweb:
+        permission: read
+        adapter:
+          name: tiktok-web
+          operation: getRelatedVideos
+        build:
+          stable_id: tk_getRelatedVideos_v1
+          tool_version: 2
+      parameters:
+        - name: videoId
+          in: query
+          required: true
+          description: Source video ID
+          schema:
+            type: string
+          example: "7626810027520593183"
+        - name: username
+          in: query
+          required: true
+          description: Video author username
+          schema:
+            type: string
+          example: tiktok
+      responses:
+        "200":
+          description: Related videos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                      properties:
+                        id:
+                          type: string
+                        description:
+                          type: string
+
+  /internal/replyComment:
+    post:
+      operationId: replyComment
+      summary: "Reply to a comment — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: replyComment
+        build:
+          stable_id: tk_replyComment_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+                - commentId
+                - text
+              properties:
+                videoId:
+                  type: string
+                  description: Video ID
+                commentId:
+                  type: string
+                  description: Parent comment ID to reply to
+                text:
+                  type: string
+                  description: Reply text
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  commentId:
+                    type: string
+
+  /internal/blockUser:
+    post:
+      operationId: blockUser
+      summary: "Block a user — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: blockUser
+        build:
+          stable_id: tk_blockUser_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: User ID to block
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /internal/unblockUser:
+    post:
+      operationId: unblockUser
+      summary: "Unblock a previously blocked user — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: unblockUser
+        build:
+          stable_id: tk_unblockUser_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: User ID to unblock
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean

@@ -12,66 +12,49 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 const BASE = 'https://www.tiktok.com'
 
+/* ── shared: intercept helper ────────────────────────────────── */
+
 /**
- * Extract TikTok's SSR hydration data from __UNIVERSAL_DATA_FOR_REHYDRATION__.
- * This global contains pre-rendered page data including video details, user profiles, etc.
+ * Navigate to a URL and intercept the first API response matching a URL pattern.
+ * Returns the parsed JSON body, or null if no matching response within the deadline.
  */
-async function extractSSRData(page: Page, scope: string): Promise<Record<string, unknown> | null> {
-  return page.evaluate((s: string) => {
-    const w = window as Window & { __UNIVERSAL_DATA_FOR_REHYDRATION__?: Record<string, unknown> }
-    const root = w.__UNIVERSAL_DATA_FOR_REHYDRATION__
-    if (!root) return null
-    const defaultScope = root.__DEFAULT_SCOPE__ as Record<string, unknown> | undefined
-    if (!defaultScope) return null
-    return (defaultScope[s] as Record<string, unknown>) ?? null
-  }, scope)
-}
-
-/* ---------- getVideoDetail ---------- */
-
-async function getVideoDetail(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  const videoId = String(params.videoId || '')
-  if (!videoId) throw errors.missingParam('videoId')
-  const username = String(params.username || '')
-  if (!username) throw errors.missingParam('username')
-
-  const handle = username.startsWith('@') ? username : `@${username}`
-  const url = `${BASE}/${handle}/video/${videoId}`
-
-  await page.goto(url, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
-  await wait(3000)
-
-  // Try SSR data first
-  const ssrData = await extractSSRData(page, 'webapp.video-detail')
-  if (ssrData) {
-    const itemInfo = ssrData.itemInfo as Record<string, unknown> | undefined
-    const itemStruct = (itemInfo?.itemStruct ?? ssrData.itemStruct) as Record<string, unknown> | undefined
-    if (itemStruct) {
-      return normalizeVideoItem(itemStruct)
+async function interceptApi(
+  page: Page,
+  navigateUrl: string,
+  urlPatterns: string[],
+  opts?: { scroll?: boolean; deadline?: number },
+): Promise<Record<string, unknown> | null> {
+  let captured: unknown = null
+  const handler = async (resp: PwResponse) => {
+    if (captured) return
+    const rUrl = resp.url()
+    if (urlPatterns.some((p) => rUrl.includes(p))) {
+      try { captured = await resp.json() } catch { /* ignore */ }
     }
   }
 
-  // Fallback: extract from DOM + meta tags
-  return page.evaluate(() => {
-    const getMeta = (name: string) =>
-      document.querySelector(`meta[property="${name}"]`)?.getAttribute('content') ||
-      document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') || ''
+  page.on('response', handler)
+  try {
+    await page.goto(navigateUrl, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
+    await wait(3000)
 
-    return {
-      id: window.location.pathname.split('/video/')[1] || '',
-      description: getMeta('og:description') || document.querySelector('[data-e2e="browse-video-desc"]')?.textContent?.trim() || '',
-      title: getMeta('og:title') || '',
-      author: {
-        uniqueId: window.location.pathname.split('/')[1]?.replace('@', '') || '',
-        nickname: getMeta('og:title')?.split(' |')[0] || '',
-      },
-      video: {
-        cover: getMeta('og:image') || '',
-        url: getMeta('og:video:secure_url') || getMeta('og:video') || '',
-      },
+    if (opts?.scroll) {
+      await page.evaluate(() => window.scrollBy(0, 500)).catch(() => {})
+      await wait(2000)
     }
-  })
+
+    const deadline = Date.now() + (opts?.deadline ?? 15_000)
+    while (!captured && Date.now() < deadline) {
+      await wait(500)
+    }
+  } finally {
+    page.off('response', handler)
+  }
+
+  return captured as Record<string, unknown> | null
 }
+
+/* ── shared: normalizers ─────────────────────────────────────── */
 
 function normalizeVideoItem(item: Record<string, unknown>): Record<string, unknown> {
   const video = (item.video || {}) as Record<string, unknown>
@@ -83,7 +66,7 @@ function normalizeVideoItem(item: Record<string, unknown>): Record<string, unkno
   return {
     id: item.id || '',
     description: item.desc || '',
-    createTime: item.createTime || null,
+    createTime: item.createTime ? Number(item.createTime) || null : null,
     video: {
       id: video.id || '',
       height: video.height || 0,
@@ -111,11 +94,11 @@ function normalizeVideoItem(item: Record<string, unknown>): Record<string, unkno
       album: music.album || '',
     },
     stats: {
-      diggCount: stats.diggCount ?? stats.likeCount ?? 0,
-      shareCount: stats.shareCount ?? 0,
-      commentCount: stats.commentCount ?? 0,
-      playCount: stats.playCount ?? 0,
-      collectCount: stats.collectCount ?? 0,
+      diggCount: Number(stats.diggCount ?? stats.likeCount) || 0,
+      shareCount: Number(stats.shareCount) || 0,
+      commentCount: Number(stats.commentCount) || 0,
+      playCount: Number(stats.playCount) || 0,
+      collectCount: Number(stats.collectCount) || 0,
     },
     challenges: challenges.map((c) => ({
       id: c.id || '',
@@ -125,7 +108,84 @@ function normalizeVideoItem(item: Record<string, unknown>): Record<string, unkno
   }
 }
 
-/* ---------- getUserProfile ---------- */
+function normalizeComment(c: Record<string, unknown>): Record<string, unknown> {
+  const user = (c.user || {}) as Record<string, unknown>
+  const rawTime = c.create_time ?? c.createTime
+  return {
+    id: c.cid || c.id || '',
+    text: c.text || '',
+    createTime: rawTime ? Number(rawTime) || null : null,
+    diggCount: Number(c.digg_count ?? c.diggCount) || 0,
+    replyCount: Number(c.reply_comment_total ?? c.replyCount) || 0,
+    author: {
+      id: user.uid || user.id || '',
+      uniqueId: user.unique_id || user.uniqueId || '',
+      nickname: user.nickname || '',
+      avatarThumb: user.avatar_thumb?.url_list?.[0] || user.avatarThumb || '',
+    },
+  }
+}
+
+function normalizeUserDetail(data: Record<string, unknown>): Record<string, unknown> {
+  const userInfo = (data.userInfo || data) as Record<string, unknown>
+  const user = (userInfo.user || {}) as Record<string, unknown>
+  const stats = (userInfo.stats || {}) as Record<string, unknown>
+
+  return {
+    id: user.id || '',
+    uniqueId: user.uniqueId || '',
+    nickname: user.nickname || '',
+    avatarThumb: user.avatarThumb || '',
+    avatarMedium: user.avatarMedium || '',
+    signature: user.signature || '',
+    verified: user.verified || false,
+    privateAccount: user.privateAccount || false,
+    region: user.region || '',
+    stats: {
+      followerCount: Number(stats.followerCount) || 0,
+      followingCount: Number(stats.followingCount) || 0,
+      heartCount: Number(stats.heartCount ?? stats.heart) || 0,
+      videoCount: Number(stats.videoCount) || 0,
+      diggCount: Number(stats.diggCount) || 0,
+    },
+  }
+}
+
+/* ── read ops ────────────────────────────────────────────────── */
+
+async function getVideoDetail(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const videoId = String(params.videoId || '')
+  if (!videoId) throw errors.missingParam('videoId')
+  const username = String(params.username || '')
+  if (!username) throw errors.missingParam('username')
+
+  const handle = username.startsWith('@') ? username : `@${username}`
+  const url = `${BASE}/${handle}/video/${videoId}`
+
+  // Intercept /api/item/detail/ response triggered by page navigation
+  const data = await interceptApi(page, url, ['/api/item/detail/', '/api/related/item_list'])
+  if (data) {
+    // /api/item/detail/ wraps the item in itemInfo.itemStruct
+    const itemInfo = data.itemInfo as Record<string, unknown> | undefined
+    const item = (itemInfo?.itemStruct ?? data.itemStruct ?? data) as Record<string, unknown>
+    if (item.id || item.desc) return normalizeVideoItem(item)
+  }
+
+  // SSR fallback: TikTok pre-renders video data into __$UNIVERSAL_DATA$__
+  const ssrResult = await page.evaluate((vid: string) => {
+    const root = (window as Record<string, unknown>)['__$UNIVERSAL_DATA$__'] as Record<string, unknown> | undefined
+    const scope = (root?.['__DEFAULT_SCOPE__'] as Record<string, unknown>)?.[
+      'webapp.video-detail'
+    ] as Record<string, unknown> | undefined
+    if (!scope) return null
+    const info = scope.itemInfo as Record<string, unknown> | undefined
+    return (info?.itemStruct ?? scope.itemStruct ?? null) as Record<string, unknown> | null
+  }, videoId)
+
+  if (ssrResult) return normalizeVideoItem(ssrResult)
+
+  throw errors.retriable(`Video ${videoId} not found — no API response or SSR data`)
+}
 
 async function getUserProfile(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const username = String(params.username || '')
@@ -134,61 +194,25 @@ async function getUserProfile(page: Page, params: Record<string, unknown>, error
   const handle = username.startsWith('@') ? username : `@${username}`
   const url = `${BASE}/${handle}`
 
-  await page.goto(url, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
-  await wait(3000)
-
-  // Try SSR data
-  const ssrData = await extractSSRData(page, 'webapp.user-detail')
-  if (ssrData) {
-    const userInfo = (ssrData.userInfo || ssrData) as Record<string, unknown>
-    const user = (userInfo.user || {}) as Record<string, unknown>
-    const userStats = (userInfo.stats || {}) as Record<string, unknown>
-
-    return {
-      id: user.id || '',
-      uniqueId: user.uniqueId || '',
-      nickname: user.nickname || '',
-      avatarThumb: user.avatarThumb || '',
-      avatarMedium: user.avatarMedium || '',
-      signature: user.signature || '',
-      verified: user.verified || false,
-      privateAccount: user.privateAccount || false,
-      region: user.region || '',
-      stats: {
-        followerCount: userStats.followerCount ?? 0,
-        followingCount: userStats.followingCount ?? 0,
-        heartCount: userStats.heartCount ?? userStats.heart ?? 0,
-        videoCount: userStats.videoCount ?? 0,
-        diggCount: userStats.diggCount ?? 0,
-      },
-    }
+  // Intercept /api/user/detail/ response triggered by profile page load
+  const data = await interceptApi(page, url, ['/api/user/detail/'])
+  if (data) {
+    if (data.userInfo || data.user) return normalizeUserDetail(data)
   }
 
-  // Fallback: DOM extraction
-  return page.evaluate(() => {
-    const getMeta = (name: string) =>
-      document.querySelector(`meta[property="${name}"]`)?.getAttribute('content') ||
-      document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') || ''
-
-    const statEls = document.querySelectorAll('[data-e2e="followers-count"], [data-e2e="following-count"], [data-e2e="likes-count"]')
-    const statValues: string[] = [...statEls].map((el) => el.getAttribute('title') || el.textContent?.trim() || '0')
-
-    return {
-      uniqueId: window.location.pathname.replace(/^\/+@?/, '').replace(/\/+$/, ''),
-      nickname: getMeta('og:title')?.replace(/ \(@.*/, '') || '',
-      signature: document.querySelector('[data-e2e="user-bio"]')?.textContent?.trim() || getMeta('og:description') || '',
-      avatarThumb: getMeta('og:image') || '',
-      verified: !!document.querySelector('[data-e2e="verify-badge"]'),
-      stats: {
-        followerCount: statValues[0] || '0',
-        followingCount: statValues[1] || '0',
-        heartCount: statValues[2] || '0',
-      },
-    }
+  // SSR fallback: profile data embedded in page hydration
+  const ssrResult = await page.evaluate(() => {
+    const root = (window as Record<string, unknown>)['__$UNIVERSAL_DATA$__'] as Record<string, unknown> | undefined
+    const scope = (root?.['__DEFAULT_SCOPE__'] as Record<string, unknown>)?.[
+      'webapp.user-detail'
+    ] as Record<string, unknown> | undefined
+    return scope ?? null
   })
-}
 
-/* ---------- getVideoComments ---------- */
+  if (ssrResult) return normalizeUserDetail(ssrResult)
+
+  throw errors.retriable(`User @${username} not found — no API response or SSR data`)
+}
 
 async function getVideoComments(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const videoId = String(params.videoId || '')
@@ -199,50 +223,9 @@ async function getVideoComments(page: Page, params: Record<string, unknown>, err
   const handle = username.startsWith('@') ? username : `@${username}`
   const url = `${BASE}/${handle}/video/${videoId}`
 
-  // Intercept the comments API response
-  let captured: unknown = null
-  const handler = async (resp: PwResponse) => {
-    if (captured) return
-    const rUrl = resp.url()
-    if (rUrl.includes('/api/comment/list/') || rUrl.includes('/comment/list')) {
-      try { captured = await resp.json() } catch { /* ignore */ }
-    }
-  }
+  const data = await interceptApi(page, url, ['/api/comment/list/', '/comment/list'], { scroll: true })
+  if (!data) return { comments: [], total: 0, hasMore: false }
 
-  page.on('response', handler)
-  try {
-    await page.goto(url, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
-    await wait(4000)
-
-    // Scroll down to trigger comment loading if needed
-    await page.evaluate(() => window.scrollBy(0, 500)).catch(() => {})
-    await wait(3000)
-
-    const deadline = Date.now() + 15_000
-    while (!captured && Date.now() < deadline) {
-      await wait(500)
-    }
-  } finally {
-    page.off('response', handler)
-  }
-
-  if (!captured) {
-    // Fallback: try SSR data for comments
-    const ssrData = await extractSSRData(page, 'webapp.video-detail')
-    if (ssrData) {
-      const comments = ssrData.commentList as Array<Record<string, unknown>> | undefined
-      if (comments) {
-        return {
-          comments: comments.map(normalizeComment),
-          total: comments.length,
-          hasMore: false,
-        }
-      }
-    }
-    return { comments: [], total: 0, hasMore: false }
-  }
-
-  const data = captured as Record<string, unknown>
   const commentsList = (data.comments || []) as Array<Record<string, unknown>>
   return {
     comments: commentsList.map(normalizeComment),
@@ -252,101 +235,127 @@ async function getVideoComments(page: Page, params: Record<string, unknown>, err
   }
 }
 
-function normalizeComment(c: Record<string, unknown>): Record<string, unknown> {
-  const user = (c.user || {}) as Record<string, unknown>
+async function getHomeFeed(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
+  const data = await interceptApi(page, `${BASE}/foryou`, ['/api/recommend/item_list/', '/api/post/item_list/'])
+  if (!data) return { items: [], hasMore: false }
+
+  const items = (data.itemList || data.items || []) as Array<Record<string, unknown>>
   return {
-    id: c.cid || c.id || '',
-    text: c.text || '',
-    createTime: c.create_time || c.createTime || null,
-    diggCount: c.digg_count ?? c.diggCount ?? 0,
-    replyCount: c.reply_comment_total ?? c.replyCount ?? 0,
-    author: {
-      id: user.uid || user.id || '',
-      uniqueId: user.unique_id || user.uniqueId || '',
-      nickname: user.nickname || '',
-      avatarThumb: user.avatar_thumb?.url_list?.[0] || user.avatarThumb || '',
-    },
+    items: items.map(normalizeVideoItem),
+    hasMore: data.hasMore === true || data.has_more === 1,
   }
 }
 
-/* ---------- getHomeFeed ---------- */
+async function getExplore(page: Page, _params: Record<string, unknown>, _errors: Errors): Promise<unknown> {
+  const data = await interceptApi(page, `${BASE}/explore`, ['/api/explore/item_list/', '/api/recommend/item_list/'])
+  if (!data) return { items: [], hasMore: false }
 
-async function getHomeFeed(page: Page, _params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  // Intercept the recommend API response
-  let captured: unknown = null
-  const handler = async (resp: PwResponse) => {
-    if (captured) return
-    const rUrl = resp.url()
-    if (rUrl.includes('/api/recommend/item_list/') || rUrl.includes('/api/post/item_list/')) {
-      try { captured = await resp.json() } catch { /* ignore */ }
-    }
+  const items = (data.itemList || data.items || []) as Array<Record<string, unknown>>
+  return {
+    items: items.map(normalizeVideoItem),
+    hasMore: data.hasMore === true || data.has_more === 1,
   }
-
-  page.on('response', handler)
-  try {
-    await page.goto(`${BASE}/foryou`, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
-    await wait(4000)
-
-    const deadline = Date.now() + 15_000
-    while (!captured && Date.now() < deadline) {
-      await wait(500)
-    }
-  } finally {
-    page.off('response', handler)
-  }
-
-  if (captured) {
-    const data = captured as Record<string, unknown>
-    const items = (data.itemList || data.items || []) as Array<Record<string, unknown>>
-    return {
-      items: items.map(normalizeVideoItem),
-      hasMore: data.hasMore === true || data.has_more === 1,
-    }
-  }
-
-  // Fallback: SSR data
-  const ssrData = await extractSSRData(page, 'webapp.browse-detail')
-    ?? await extractSSRData(page, 'webapp.video-feed')
-    ?? await extractSSRData(page, 'webapp.recommend-detail')
-  if (ssrData) {
-    const itemList = (ssrData.itemList || ssrData.items || []) as Array<Record<string, unknown>>
-    return {
-      items: itemList.map(normalizeVideoItem),
-      hasMore: false,
-    }
-  }
-
-  // Final fallback: DOM extraction
-  const items = await page.evaluate(() => {
-    const videos: Array<Record<string, unknown>> = []
-    const cards = document.querySelectorAll('[data-e2e="recommend-list-item-container"], [class*="DivItemContainer"]')
-    for (const card of cards) {
-      const link = card.querySelector('a[href*="/video/"]') as HTMLAnchorElement | null
-      const desc = card.querySelector('[data-e2e="video-desc"], [class*="DivVideoCaption"]')?.textContent?.trim() || ''
-      const author = card.querySelector('[data-e2e="video-author-uniqueid"]')?.textContent?.trim() || ''
-      if (link) {
-        const href = link.getAttribute('href') || ''
-        const idMatch = href.match(/\/video\/(\d+)/)
-        videos.push({
-          id: idMatch?.[1] || '',
-          description: desc,
-          url: href,
-          author: { uniqueId: author },
-        })
-      }
-    }
-    return videos
-  })
-
-  return { items, hasMore: false }
 }
 
-/* ---------- write helpers ---------- */
+async function getUserVideos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const username = String(params.username || '')
+  if (!username) throw errors.missingParam('username')
+  const count = Number(params.count) || 30
+
+  const handle = username.startsWith('@') ? username : `@${username}`
+  const navUrl = `${BASE}/${handle}`
+
+  // Force a fresh navigation even if already on the same profile page
+  // (SPA won't re-fetch /api/post/item_list/ for same-URL navigation)
+  const current = page.url()
+  if (current.includes(handle)) {
+    await page.goto('about:blank').catch(() => {})
+    await wait(500)
+  }
+
+  const data = await interceptApi(page, navUrl, ['/api/post/item_list/', '/api/creator/item_list/'])
+  if (!data) return { items: [], hasMore: false }
+
+  const items = (data.itemList || data.items || []) as Array<Record<string, unknown>>
+  return {
+    items: items.slice(0, count).map(normalizeVideoItem),
+    hasMore: data.hasMore === true || data.has_more === 1,
+    cursor: data.cursor || '',
+  }
+}
+
+async function getHashtagVideos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const hashtag = String(params.hashtag || '')
+  if (!hashtag) throw errors.missingParam('hashtag')
+
+  const data = await interceptApi(page, `${BASE}/tag/${encodeURIComponent(hashtag)}`, ['/api/challenge/item_list/'])
+  if (!data) return { items: [], hasMore: false }
+
+  const items = (data.itemList || data.items || []) as Array<Record<string, unknown>>
+  return {
+    items: items.map(normalizeVideoItem),
+    hasMore: data.hasMore === true || data.has_more === 1,
+    cursor: data.cursor || '',
+  }
+}
+
+async function getRelatedVideos(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const videoId = String(params.videoId || '')
+  if (!videoId) throw errors.missingParam('videoId')
+  const username = String(params.username || '')
+  if (!username) throw errors.missingParam('username')
+
+  const handle = username.startsWith('@') ? username : `@${username}`
+  const data = await interceptApi(
+    page,
+    `${BASE}/${handle}/video/${videoId}`,
+    ['/api/related/item_list/'],
+    { scroll: true },
+  )
+  if (!data) return { items: [] }
+
+  const items = (data.itemList || data.items || []) as Array<Record<string, unknown>>
+  return { items: items.map(normalizeVideoItem) }
+}
+
+/* ── write helpers ───────────────────────────────────────────── */
 
 /**
- * Execute a TikTok internal API call via page context.
- * TikTok's signing (X-Bogus, X-Gnarly) is computed client-side,
- * so we must call from within the browser via fetch.
+ * Extract CSRF token from TikTok's HTTP client via webpack module walk.
+ * The HTTP client module contains `csrfToken`, `runFetch`, `fetchData` in source.
+ * Falls back to empty string if not found (write ops may still work without it).
+ */
+async function getCsrfToken(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    try {
+      const chunks = (window as Record<string, unknown>).__LOADABLE_LOADED_CHUNKS__ as unknown[]
+      if (!chunks) return ''
+      let req: ((id: string) => Record<string, unknown>) | null = null
+      ;(chunks as unknown[]).push([[Symbol()], {}, (r: unknown) => { req = r as (id: string) => Record<string, unknown> }])
+      if (!req) return ''
+      const moduleMap = (req as unknown as Record<string, unknown>).m as Record<string, unknown>
+      if (!moduleMap) return ''
+      for (const id of Object.keys(moduleMap)) {
+        const src = (moduleMap[id] as () => void).toString()
+        if (src.includes('csrfToken') && src.includes('runFetch') && src.includes('fetchData')) {
+          const mod = req(id) as Record<string, Record<string, unknown>>
+          for (const key of Object.keys(mod)) {
+            const val = mod[key]
+            if (val && typeof val === 'object' && typeof (val as Record<string, unknown>).csrfToken === 'string') {
+              return (val as Record<string, unknown>).csrfToken as string
+            }
+          }
+        }
+      }
+    } catch { /* best-effort */ }
+    return ''
+  })
+}
+
+/**
+ * Execute a TikTok internal API call via the page's patched fetch.
+ * The fetch interceptor automatically adds X-Bogus, X-Gnarly, msToken,
+ * ztca-dpop, and tt-ticket-guard headers — no manual signing needed.
  */
 async function internalApiCall(
   page: Page,
@@ -354,14 +363,18 @@ async function internalApiCall(
   body: Record<string, unknown>,
   errors: Errors,
 ): Promise<Record<string, unknown>> {
+  const csrfToken = await getCsrfToken(page)
+
   const result = await page.evaluate(
-    async (args: { url: string; body: string }) => {
+    async (args: { url: string; body: string; csrf: string }) => {
       const ctrl = new AbortController()
       const timer = setTimeout(() => ctrl.abort(), 15_000)
       try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' }
+        if (args.csrf) headers['tt-csrf-token'] = args.csrf
         const r = await fetch(args.url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          headers,
           credentials: 'include',
           body: args.body,
           signal: ctrl.signal,
@@ -372,7 +385,7 @@ async function internalApiCall(
         clearTimeout(timer)
       }
     },
-    { url, body: new URLSearchParams(body as Record<string, string>).toString() },
+    { url, body: new URLSearchParams(body as Record<string, string>).toString(), csrf: csrfToken },
   )
 
   if (result.status >= 400) throw errors.retriable(`HTTP ${result.status}`)
@@ -385,7 +398,6 @@ async function internalApiCall(
 
 /**
  * Ensure we're on a TikTok page so cookies/signing work for API calls.
- * Navigates to the video page if a videoId is provided, otherwise /foryou.
  */
 async function ensureTikTokPage(page: Page, videoId?: string): Promise<void> {
   const current = page.url()
@@ -395,111 +407,63 @@ async function ensureTikTokPage(page: Page, videoId?: string): Promise<void> {
   await wait(3000)
 }
 
-/* ---------- likeVideo / unlikeVideo ---------- */
+/* ── write ops ───────────────────────────────────────────────── */
 
 async function likeVideo(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const videoId = String(params.videoId || '')
   if (!videoId) throw errors.missingParam('videoId')
-
   await ensureTikTokPage(page, videoId)
-  const data = await internalApiCall(
-    page,
-    `${BASE}/api/commit/item/digg/?aid=1988`,
-    { aweme_id: videoId, type: '1' },
-    errors,
-  )
+  const data = await internalApiCall(page, `${BASE}/api/commit/item/digg/?aid=1988`, { aweme_id: videoId, type: '1' }, errors)
   return { success: data.status_code === 0, is_digg: 1, ...data }
 }
 
 async function unlikeVideo(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const videoId = String(params.videoId || '')
   if (!videoId) throw errors.missingParam('videoId')
-
   await ensureTikTokPage(page, videoId)
-  const data = await internalApiCall(
-    page,
-    `${BASE}/api/commit/item/digg/?aid=1988`,
-    { aweme_id: videoId, type: '0' },
-    errors,
-  )
+  const data = await internalApiCall(page, `${BASE}/api/commit/item/digg/?aid=1988`, { aweme_id: videoId, type: '0' }, errors)
   return { success: data.status_code === 0, is_digg: 0, ...data }
 }
-
-/* ---------- followUser / unfollowUser ---------- */
 
 async function followUser(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const userId = String(params.userId || '')
   if (!userId) throw errors.missingParam('userId')
-
   await ensureTikTokPage(page)
-  const data = await internalApiCall(
-    page,
-    `${BASE}/api/commit/follow/user/?aid=1988`,
-    { user_id: userId, type: '1' },
-    errors,
-  )
+  const data = await internalApiCall(page, `${BASE}/api/commit/follow/user/?aid=1988`, { user_id: userId, type: '1' }, errors)
   return { success: data.status_code === 0, follow_status: 1, ...data }
 }
 
 async function unfollowUser(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const userId = String(params.userId || '')
   if (!userId) throw errors.missingParam('userId')
-
   await ensureTikTokPage(page)
-  const data = await internalApiCall(
-    page,
-    `${BASE}/api/commit/follow/user/?aid=1988`,
-    { user_id: userId, type: '0' },
-    errors,
-  )
+  const data = await internalApiCall(page, `${BASE}/api/commit/follow/user/?aid=1988`, { user_id: userId, type: '0' }, errors)
   return { success: data.status_code === 0, follow_status: 0, ...data }
 }
-
-/* ---------- bookmarkVideo / unbookmarkVideo ---------- */
 
 async function bookmarkVideo(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const videoId = String(params.videoId || '')
   if (!videoId) throw errors.missingParam('videoId')
-
   await ensureTikTokPage(page, videoId)
-  const data = await internalApiCall(
-    page,
-    `${BASE}/api/commit/item/collect/?aid=1988`,
-    { aweme_id: videoId, type: '1' },
-    errors,
-  )
+  const data = await internalApiCall(page, `${BASE}/api/commit/item/collect/?aid=1988`, { aweme_id: videoId, type: '1' }, errors)
   return { success: data.status_code === 0, ...data }
 }
 
 async function unbookmarkVideo(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const videoId = String(params.videoId || '')
   if (!videoId) throw errors.missingParam('videoId')
-
   await ensureTikTokPage(page, videoId)
-  const data = await internalApiCall(
-    page,
-    `${BASE}/api/commit/item/collect/?aid=1988`,
-    { aweme_id: videoId, type: '0' },
-    errors,
-  )
+  const data = await internalApiCall(page, `${BASE}/api/commit/item/collect/?aid=1988`, { aweme_id: videoId, type: '0' }, errors)
   return { success: data.status_code === 0, ...data }
 }
-
-/* ---------- createComment / deleteComment ---------- */
 
 async function createComment(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
   const videoId = String(params.videoId || '')
   if (!videoId) throw errors.missingParam('videoId')
   const text = String(params.text || '')
   if (!text) throw errors.missingParam('text')
-
   await ensureTikTokPage(page, videoId)
-  const data = await internalApiCall(
-    page,
-    `${BASE}/api/comment/publish/?aid=1988`,
-    { aweme_id: videoId, text },
-    errors,
-  )
+  const data = await internalApiCall(page, `${BASE}/api/comment/publish/?aid=1988`, { aweme_id: videoId, text }, errors)
   return {
     success: data.status_code === 0,
     commentId: (data.comment as Record<string, unknown>)?.cid || '',
@@ -512,89 +476,73 @@ async function deleteComment(page: Page, params: Record<string, unknown>, errors
   if (!videoId) throw errors.missingParam('videoId')
   const commentId = String(params.commentId || '')
   if (!commentId) throw errors.missingParam('commentId')
-
   await ensureTikTokPage(page, videoId)
-  const data = await internalApiCall(
-    page,
-    `${BASE}/api/comment/delete/?aid=1988`,
-    { aweme_id: videoId, cid: commentId },
-    errors,
-  )
+  const data = await internalApiCall(page, `${BASE}/api/comment/delete/?aid=1988`, { aweme_id: videoId, cid: commentId }, errors)
   return { success: data.status_code === 0, ...data }
 }
 
-/* ---------- getExplore ---------- */
-
-async function getExplore(page: Page, _params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  let captured: unknown = null
-  const handler = async (resp: PwResponse) => {
-    if (captured) return
-    const rUrl = resp.url()
-    if (rUrl.includes('/api/explore/item_list/') || rUrl.includes('/api/recommend/item_list/')) {
-      try { captured = await resp.json() } catch { /* ignore */ }
-    }
-  }
-
-  page.on('response', handler)
-  try {
-    await page.goto(`${BASE}/explore`, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
-    await wait(4000)
-
-    const deadline = Date.now() + 15_000
-    while (!captured && Date.now() < deadline) {
-      await wait(500)
-    }
-  } finally {
-    page.off('response', handler)
-  }
-
-  if (captured) {
-    const data = captured as Record<string, unknown>
-    const items = (data.itemList || data.items || []) as Array<Record<string, unknown>>
-    return {
-      items: items.map(normalizeVideoItem),
-      hasMore: data.hasMore === true || data.has_more === 1,
-    }
-  }
-
-  // Fallback: SSR extraction
-  const ssrData = await extractSSRData(page, 'webapp.explore')
-    ?? await extractSSRData(page, 'webapp.discover')
-  if (ssrData) {
-    const itemList = (ssrData.itemList || ssrData.items || []) as Array<Record<string, unknown>>
-    return { items: itemList.map(normalizeVideoItem), hasMore: false }
-  }
-
-  // Final fallback: DOM extraction
-  const items = await page.evaluate(() => {
-    const videos: Array<Record<string, unknown>> = []
-    const cards = document.querySelectorAll('[data-e2e="explore-item"], [class*="DivItemContainer"], a[href*="/video/"]')
-    for (const card of cards) {
-      const link = card.closest('a[href*="/video/"]') || card.querySelector('a[href*="/video/"]')
-      if (!link) continue
-      const href = link.getAttribute('href') || ''
-      const idMatch = href.match(/\/video\/(\d+)/)
-      const desc = card.querySelector('[class*="Caption"], [class*="desc"]')?.textContent?.trim() || ''
-      const author = href.match(/@([^/]+)/)?.[1] || ''
-      videos.push({
-        id: idMatch?.[1] || '',
-        description: desc,
-        author: { uniqueId: author },
-      })
-    }
-    return videos
-  })
-
-  return { items, hasMore: false }
+async function likeComment(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const videoId = String(params.videoId || '')
+  if (!videoId) throw errors.missingParam('videoId')
+  const commentId = String(params.commentId || '')
+  if (!commentId) throw errors.missingParam('commentId')
+  await ensureTikTokPage(page, videoId)
+  const data = await internalApiCall(page, `${BASE}/api/comment/digg/?aid=1988`, { aweme_id: videoId, cid: commentId, type: '1' }, errors)
+  return { success: data.status_code === 0, is_digg: 1, ...data }
 }
 
-/* ---------- adapter export ---------- */
+async function unlikeComment(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const videoId = String(params.videoId || '')
+  if (!videoId) throw errors.missingParam('videoId')
+  const commentId = String(params.commentId || '')
+  if (!commentId) throw errors.missingParam('commentId')
+  await ensureTikTokPage(page, videoId)
+  const data = await internalApiCall(page, `${BASE}/api/comment/digg/?aid=1988`, { aweme_id: videoId, cid: commentId, type: '0' }, errors)
+  return { success: data.status_code === 0, is_digg: 0, ...data }
+}
+
+async function replyComment(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const videoId = String(params.videoId || '')
+  if (!videoId) throw errors.missingParam('videoId')
+  const commentId = String(params.commentId || '')
+  if (!commentId) throw errors.missingParam('commentId')
+  const text = String(params.text || '')
+  if (!text) throw errors.missingParam('text')
+  await ensureTikTokPage(page, videoId)
+  const data = await internalApiCall(page, `${BASE}/api/comment/publish/?aid=1988`, { aweme_id: videoId, text, reply_id: commentId }, errors)
+  return {
+    success: data.status_code === 0,
+    commentId: (data.comment as Record<string, unknown>)?.cid || '',
+    ...data,
+  }
+}
+
+async function blockUser(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const userId = String(params.userId || '')
+  if (!userId) throw errors.missingParam('userId')
+  await ensureTikTokPage(page)
+  const data = await internalApiCall(page, `${BASE}/api/user/block/?aid=1988`, { user_id: userId, source: '3', is_block: '1' }, errors)
+  return { success: data.status_code === 0, ...data }
+}
+
+async function unblockUser(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const userId = String(params.userId || '')
+  if (!userId) throw errors.missingParam('userId')
+  await ensureTikTokPage(page)
+  const data = await internalApiCall(page, `${BASE}/api/user/block/?aid=1988`, { user_id: userId, source: '3', is_block: '0' }, errors)
+  return { success: data.status_code === 0, ...data }
+}
+
+/* ── adapter export ──────────────────────────────────────────── */
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {
   getVideoDetail,
   getUserProfile,
   getVideoComments,
   getHomeFeed,
+  getUserVideos,
+  getHashtagVideos,
+  getRelatedVideos,
   likeVideo,
   unlikeVideo,
   followUser,
@@ -603,12 +551,17 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   unbookmarkVideo,
   createComment,
   deleteComment,
+  replyComment,
+  likeComment,
+  unlikeComment,
+  blockUser,
+  unblockUser,
   getExplore,
 }
 
 const adapter = {
   name: 'tiktok-web',
-  description: 'TikTok — read (detail, profile, comments, feed, explore) + write (like, follow, bookmark, comment) via page transport',
+  description: 'TikTok — reads via API intercept, writes via patched fetch (auto X-Bogus/X-Gnarly signing)',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('tiktok.com')

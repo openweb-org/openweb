@@ -1,11 +1,12 @@
 {
-  "operation_id": "bookmarkVideo",
+  "operation_id": "unlikeComment",
   "method": "post",
   "replay_safety": "unsafe_mutation",
   "cases": [
     {
       "input": {
-        "videoId": "7626810027520593183"
+        "videoId": "7626810027520593183",
+        "commentId": "7626810027520593000"
       },
       "assertions": {
         "status": 200,
