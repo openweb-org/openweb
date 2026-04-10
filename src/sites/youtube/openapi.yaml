@@ -718,6 +718,193 @@ paths:
                 type: object
                 description: "Empty confirmation object on success."
 
+  /youtubei/v1/subscription/unsubscribe:
+    post:
+      operationId: unsubscribeChannel
+      summary: "Unsubscribe from a channel (requires auth — sapisidhash). Reverses subscribeChannel"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: yt0013
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: key
+          in: query
+          required: true
+          description: "InnerTube API key."
+          schema:
+            type: string
+          example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
+        - name: prettyPrint
+          in: query
+          required: false
+          description: "Disable pretty-printing for smaller payloads."
+          schema:
+            type: string
+          example: "false"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - context
+                - channelIds
+              properties:
+                context:
+                  type: object
+                  description: "InnerTube client context — required on every request."
+                  properties:
+                    client:
+                      type: object
+                      description: "Client identification block."
+                      required:
+                        - clientName
+                        - clientVersion
+                      properties:
+                        clientName:
+                          type: string
+                          description: "Client name identifier."
+                          example: WEB
+                        clientVersion:
+                          type: string
+                          description: "Client version string (changes with YouTube deploys)."
+                          example: "2.20260325.08.00"
+                channelIds:
+                  type: array
+                  description: "Channel IDs to unsubscribe from."
+                  items:
+                    type: string
+                    description: "YouTube channel ID (e.g. UCsBjURrPoezykLs9EqgamOA)."
+      responses:
+        "200":
+          description: Unsubscribe confirmation.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: "Empty confirmation object on success."
+
+  /video/{videoId}/comment:
+    post:
+      operationId: addComment
+      summary: "Add a comment to a video (requires auth — sapisidhash). Reversible via deleteComment"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: yt0014
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: youtube-innertube
+          operation: addComment
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "YouTube video ID to comment on."
+          example: "dQw4w9WgXcQ"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  description: "Comment text content."
+                  example: "Great video!"
+      responses:
+        "200":
+          description: Created comment details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - videoId
+                  - commentId
+                  - text
+                properties:
+                  videoId:
+                    type: string
+                    description: "The video ID the comment was posted to."
+                  commentId:
+                    type: string
+                    description: "The created comment's unique identifier. Use with deleteComment to remove."
+                  text:
+                    type: string
+                    description: "The posted comment text."
+                  author:
+                    type: string
+                    description: "The authenticated user's display name."
+
+  /video/{videoId}/comment/{commentId}:
+    delete:
+      operationId: deleteComment
+      summary: "Delete own comment from a video (requires auth — sapisidhash). Reverses addComment"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: yt0015
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: youtube-innertube
+          operation: deleteComment
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "YouTube video ID the comment belongs to."
+          example: "dQw4w9WgXcQ"
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "Comment ID to delete. Get from addComment or getComments."
+          example: "UgzB1_kM5yz1Nv0nHdR4AaABAg"
+      responses:
+        "200":
+          description: Delete confirmation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - videoId
+                  - commentId
+                  - deleted
+                properties:
+                  videoId:
+                    type: string
+                    description: "The video ID."
+                  commentId:
+                    type: string
+                    description: "The deleted comment ID."
+                  deleted:
+                    type: boolean
+                    description: "true on successful deletion."
+
   /video/{videoId}/comments:
     get:
       operationId: getComments

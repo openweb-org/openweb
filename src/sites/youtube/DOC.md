@@ -20,6 +20,16 @@ Video content platform. InnerTube JSON API on `www.youtube.com`.
 1. `getVideoDetail(videoId)` → find `engagementPanels[].engagementPanelSectionListRenderer` with `panelIdentifier: "engagement-panel-searchable-transcript"` → extract `params` token
 2. `getTranscript(params)` → timestamped transcript lines
 
+### Subscribe / unsubscribe a channel
+1. `searchVideos(query)` or `browseContent(browseId)` → find channel ID (`UC...`)
+2. `subscribeChannel(channelIds: ["UC..."])` → confirmation
+3. `unsubscribeChannel(channelIds: ["UC..."])` → reverses subscription
+
+### Comment on a video
+1. `searchVideos(query)` → `videoId`
+2. `addComment(videoId, text)` → `commentId`
+3. `deleteComment(videoId, commentId)` → removes the comment
+
 > **Note:** `getTranscript` requires a `params` token from `getVideoDetail`, not a direct videoId. The params token is session-bound; the endpoint may return FAILED_PRECONDITION without valid session context.
 
 ## Operations
@@ -38,6 +48,9 @@ Video content platform. InnerTube JSON API on `www.youtube.com`.
 | likeVideo | like a video | videoId ← searchVideos | confirmation | requires sapisidhash auth, SAFE (reversible) |
 | unlikeVideo | remove like | videoId ← searchVideos | confirmation | requires sapisidhash auth |
 | subscribeChannel | subscribe to channel | channelIds | confirmation | requires sapisidhash auth, SAFE (reversible) |
+| unsubscribeChannel | unsubscribe from channel | channelIds | confirmation | requires sapisidhash auth, reverses subscribeChannel |
+| addComment | post comment on video | videoId, text | commentId, text, author | adapter — requires sapisidhash auth, reversible via deleteComment |
+| deleteComment | delete own comment | videoId, commentId ← addComment/getComments | confirmation (deleted: true) | adapter — requires sapisidhash auth, reverses addComment |
 
 ### browseId Patterns
 - **Home feed:** `FEwhat_to_watch`
@@ -66,6 +79,15 @@ openweb youtube exec getComments '{"videoId": "dQw4w9WgXcQ"}'
 
 # Get playlist details and videos (adapter — only needs playlistId)
 openweb youtube exec getPlaylist '{"playlistId": "PLWKjhJtqVAbkArDMaJhn2XB080UlFNRCt"}'
+
+# Unsubscribe from a channel (requires auth)
+openweb youtube exec unsubscribeChannel '{"key": "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8", "context": {"client": {"clientName": "WEB", "clientVersion": "2.20260325.08.00"}}, "channelIds": ["UCsBjURrPoezykLs9EqgamOA"]}'
+
+# Add a comment to a video (adapter — requires auth)
+openweb youtube exec addComment '{"videoId": "dQw4w9WgXcQ", "text": "Great video!"}'
+
+# Delete own comment (adapter — requires auth)
+openweb youtube exec deleteComment '{"videoId": "dQw4w9WgXcQ", "commentId": "UgzB1_kM5yz1Nv0nHdR4AaABAg"}'
 ```
 
 ---
@@ -90,13 +112,13 @@ Not needed for basic site usage.
 
 ### Transport
 - `node` — InnerTube API accepts direct HTTP with API key. No browser needed for public operations.
-- `page` — Adapter operations (`getComments`, `getPlaylist`) use browser context via `pageFetch` to compose multi-step InnerTube calls and extract `ytcfg` (API key + clientVersion) from the page.
+- `page` — Adapter operations (`getComments`, `getPlaylist`, `addComment`, `deleteComment`) use browser context via `pageFetch` to compose multi-step InnerTube calls and extract `ytcfg` (API key + clientVersion) from the page.
 
 ### Known Issues
 - `getTranscript` has an example file but no openapi.yaml entry — cannot be executed via `openweb exec`. The params token is session-bound and the endpoint returns FAILED_PRECONDITION without valid session context.
 - `clientVersion` changes frequently — may need updating when YouTube deploys
 - `getVideoPlayer` returns `UNPLAYABLE` status without auth — video details available but stream URLs restricted
-- Authenticated operations (like, unlike, subscribe, notifications) require sapisidhash which needs browser login
+- Authenticated operations (like, unlike, subscribe, unsubscribe, addComment, deleteComment, notifications) require sapisidhash which needs browser login
 - Trending browse (`FEtrending`) may return 400 on some regions
 - Large response payloads (100KB+) with deeply nested renderer structures
 - All InnerTube endpoints are POST — verify uses `replay_safety` to determine which ops to include

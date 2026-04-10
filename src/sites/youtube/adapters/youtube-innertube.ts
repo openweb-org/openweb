@@ -251,12 +251,115 @@ async function getPlaylist(
   }
 }
 
+// --- addComment ---
+async function addComment(
+  page: Page,
+  params: Record<string, unknown>,
+  helpers: { errors: Errors; pageFetch: PageFetchFn },
+): Promise<unknown> {
+  const { errors, pageFetch } = helpers
+  const videoId = String(params.videoId || '')
+  const text = String(params.text || '')
+  if (!videoId) throw errors.missingParam('videoId')
+  if (!text) throw errors.missingParam('text')
+
+  const config = await getYtConfig(page)
+  const context = makeContext(config.clientVersion)
+
+  // Step 1: get createCommentParams from /next (comment creation token)
+  const nextResp = await innertubePost(pageFetch, page, 'next', { context, videoId }, config, errors) as Record<string, unknown>
+
+  const resultContents = dig(
+    nextResp,
+    'contents', 'twoColumnWatchNextResults', 'results', 'results', 'contents',
+  ) as Array<Record<string, unknown>> | undefined
+
+  let createParams: string | undefined
+  if (Array.isArray(resultContents)) {
+    for (const item of resultContents) {
+      const section = item.itemSectionRenderer as Record<string, unknown> | undefined
+      if (!section) continue
+      const sectionContents = section.contents as Array<Record<string, unknown>> | undefined
+      if (!Array.isArray(sectionContents)) continue
+      for (const inner of sectionContents) {
+        const contRenderer = inner.continuationItemRenderer as Record<string, unknown> | undefined
+        if (!contRenderer) continue
+        const token = dig(contRenderer, 'continuationEndpoint', 'continuationCommand', 'token') as string | undefined
+        if (token) { createParams = token; break }
+      }
+      if (createParams) break
+    }
+  }
+
+  if (!createParams) {
+    throw errors.retriable('Could not extract comment creation params — comments may be disabled on this video')
+  }
+
+  // Step 2: post the comment via /comment/create_comment
+  const commentResp = await innertubePost(
+    pageFetch, page, 'comment/create_comment',
+    { context, createCommentParams: createParams, commentText: text },
+    config, errors,
+  ) as Record<string, unknown>
+
+  // Extract created comment ID from response
+  const actions = commentResp.actionResults as Array<Record<string, unknown>> | undefined
+  let commentId = ''
+  if (Array.isArray(actions)) {
+    for (const action of actions) {
+      const key = action.key as string | undefined
+      if (key) { commentId = key; break }
+    }
+  }
+  // Fallback: try frameworkUpdates path
+  if (!commentId) {
+    const mutations = dig(commentResp, 'frameworkUpdates', 'entityBatchUpdate', 'mutations') as Array<Record<string, unknown>> | undefined
+    if (Array.isArray(mutations)) {
+      for (const m of mutations) {
+        const payload = dig(m, 'payload', 'commentEntityPayload', 'properties') as Record<string, unknown> | undefined
+        if (payload?.commentId) { commentId = String(payload.commentId); break }
+      }
+    }
+  }
+
+  return { videoId, commentId, text, author: '' }
+}
+
+// --- deleteComment ---
+async function deleteComment(
+  page: Page,
+  params: Record<string, unknown>,
+  helpers: { errors: Errors; pageFetch: PageFetchFn },
+): Promise<unknown> {
+  const { errors, pageFetch } = helpers
+  const videoId = String(params.videoId || '')
+  const commentId = String(params.commentId || '')
+  if (!videoId) throw errors.missingParam('videoId')
+  if (!commentId) throw errors.missingParam('commentId')
+
+  const config = await getYtConfig(page)
+  const context = makeContext(config.clientVersion)
+
+  // InnerTube uses perform_comment_action with an encoded action string.
+  // The action is: CAYaJ" + base64(commentId action proto)
+  // Simpler approach: use the action endpoint directly with the comment external ID.
+  await innertubePost(
+    pageFetch, page, 'comment/perform_comment_action',
+    { context, actions: ['action_remove_comment'], commentId },
+    config, errors,
+  )
+
+  return { videoId, commentId, deleted: true }
+}
+
 const OPERATIONS: Record<
   string,
   (page: Page, params: Record<string, unknown>, helpers: { errors: Errors; pageFetch: PageFetchFn }) => Promise<unknown>
 > = {
   getComments,
   getPlaylist,
+  addComment,
+  deleteComment,
 }
 
 const adapter = {

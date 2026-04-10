@@ -1,0 +1,16 @@
+{
+  "operation_id": "deleteComment",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "videoId": "dQw4w9WgXcQ",
+        "commentId": "UgzB1_kM5yz1Nv0nHdR4AaABAg"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
