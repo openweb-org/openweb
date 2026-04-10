@@ -10,6 +10,14 @@ Tech news aggregator by Y Combinator. Pure server-rendered HTML — all data ext
 2. Feed stories don't carry item IDs — search by title or use HN search to get the ID
 3. `getStoryDetail(id)` → title, url, score, author, comments
 
+### Upvote a story
+1. Get the item ID (from `getStoryDetail` or HN search)
+2. `upvoteStory(id)` → upvotes the story (requires logged-in cookie session)
+
+### Comment on a story
+1. Get the item ID (story or comment to reply to)
+2. `addComment(parent, text)` → posts a comment (requires logged-in cookie session)
+
 ### Explore a user
 1. `getUserProfile(id)` → karma, created, about
 2. `getUserSubmissions(id)` → stories they posted
@@ -39,6 +47,8 @@ Tech news aggregator by Y Combinator. Pure server-rendered HTML — all data ext
 | getStoriesByDomain | stories from domain | site (e.g. "github.com") | title, score, author, age | adapter |
 | getUserSubmissions | user's stories | id ← getUserProfile | title, score, author, age | adapter |
 | getUserComments | user's comments | id ← getUserProfile | author, age, text, indent | adapter |
+| upvoteStory | upvote item | id (item ID) | ok, id | adapter, write, requires login |
+| addComment | post comment | parent (item ID), text | ok, parent | adapter, write, requires login |
 
 ## Quick Start
 
@@ -63,6 +73,12 @@ openweb hackernews exec getStoriesByDomain '{"site": "github.com"}'
 
 # Latest comments site-wide
 openweb hackernews exec getNewComments '{}'
+
+# Upvote a story (requires login)
+openweb hackernews exec upvoteStory '{"id": 42407357}'
+
+# Comment on a story (requires login)
+openweb hackernews exec addComment '{"parent": 42407357, "text": "Great article!"}'
 ```
 
 ---
@@ -77,11 +93,12 @@ openweb hackernews exec getNewComments '{}'
 - User pages: `<table>` with label/value rows
 
 ## Auth
-No auth required for all read operations. Cookie session declared at site level for transport consistency. Upvote/login write ops not implemented.
+No auth required for read operations. Write operations (`upvoteStory`, `addComment`) require a logged-in cookie session — the user must be authenticated in the browser before calling these ops. Cookie session declared at site level for transport consistency.
 
 ## Transport
 - `page` — browser-based extraction (DOM parsing requires rendered page)
-- All 14 ops use the adapter (`adapters/hackernews.ts`) for DOM extraction via `page.goto()` + `page.evaluate()`
+- All 16 ops use the adapter (`adapters/hackernews.ts`) for DOM extraction via `page.goto()` + `page.evaluate()`
+- Write ops (`upvoteStory`, `addComment`) use `page.evaluate()` with `fetch()` for form-based submission
 
 ## Known Issues
 - Last story on some feed pages may have null score/author (ad or announcement row)

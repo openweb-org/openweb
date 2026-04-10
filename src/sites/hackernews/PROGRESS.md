@@ -1,3 +1,22 @@
+## 2026-04-10: Add upvoteStory and addComment write ops
+
+**What changed:**
+- Added 2 write operations: `upvoteStory`, `addComment`
+- Both use adapter with form-based submission via `page.evaluate()` + `fetch()` in browser context
+- `upvoteStory` navigates to item page, extracts vote auth token from `#up_{id}` link href, issues GET
+- `addComment` navigates to item page, extracts HMAC from comment form hidden input, POSTs to `/comment`
+- Both set `permission: write`, `safety: caution`
+- Created 2 example JSON files with `replay_safety: unsafe_mutation`
+- Updated DOC.md with upvote/comment workflows, ops table, quick-start examples
+- Updated manifest.json operation count 14 → 16
+
+**Why:**
+- Agents need write capability — upvoting and commenting are the two primary HN write interactions
+
+**Verification:** `pnpm build` ✓, `pnpm --silent dev verify hackernews --browser` — 10/10 read ops PASS, write ops skipped by verify
+
+---
+
 ## 2026-03-31: Curate to 14 operations, page transport, DOC polish
 
 **What changed:**

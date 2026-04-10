@@ -656,6 +656,94 @@ paths:
                       type:
                         - string
                         - 'null'
+  /internal/upvoteStory:
+    post:
+      operationId: upvoteStory
+      summary: 'Upvote a story or comment — requires logged-in session'
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: hn0015
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: upvoteStory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: integer
+                  description: 'Hacker News item ID to upvote (story or comment).'
+      responses:
+        '200':
+          description: Upvote result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    description: Whether the upvote succeeded.
+                  id:
+                    type: integer
+                    description: The item ID that was upvoted.
+  /internal/addComment:
+    post:
+      operationId: addComment
+      summary: 'Post a comment on a story or reply to a comment — requires logged-in session'
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: hn0016
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: hackernews
+          operation: addComment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - parent
+                - text
+              properties:
+                parent:
+                  type: integer
+                  description: 'Parent item ID — a story ID for top-level comments, or a comment ID for replies.'
+                text:
+                  type: string
+                  description: 'Comment text (plain text, no markdown).'
+      responses:
+        '200':
+          description: Comment submission result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    description: Whether the comment was posted successfully.
+                  parent:
+                    type: integer
+                    description: The parent item ID.
   /internal/getUserComments:
     get:
       operationId: getUserComments
