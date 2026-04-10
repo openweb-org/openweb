@@ -257,6 +257,66 @@ async function sendMessage(page: Page, params: Readonly<Record<string, unknown>>
   }, { chatId, text })
 }
 
+async function deleteMessage(page: Page, params: Readonly<Record<string, unknown>>) {
+  const chatId = String(params.chatId)
+  const messageId = Number(params.messageId)
+  if (!chatId) throw makeError('chatId is required', 'fatal')
+  if (!messageId) throw makeError('messageId is required', 'fatal')
+
+  // Step 1: Navigate to the chat if not already there
+  const chatUrl = `https://web.telegram.org/a/#${chatId}`
+  const currentUrl = page.url()
+  if (!currentUrl.includes(chatId)) {
+    await page.goto(chatUrl, { waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(2000)
+  }
+
+  // Step 2: Find and right-click the target message
+  const msgSelector = `[data-message-id="${messageId}"]`
+  const found = await page.$(msgSelector)
+  if (!found) throw makeError(`Message ${messageId} not found in DOM`, 'retriable', true)
+
+  await found.click({ button: 'right' })
+  await page.waitForTimeout(500)
+
+  // Step 3: Click "Delete" in the context menu
+  const deleted = await page.evaluate(async (args: { messageId: number }) => {
+    // Find "Delete" menu item in the context menu
+    const menuItems = document.querySelectorAll('.MenuItem, .btn-menu-item, [role="menuitem"]')
+    let deleteBtn: HTMLElement | null = null
+    for (const item of menuItems) {
+      const text = (item as HTMLElement).innerText?.toLowerCase() ?? ''
+      if (text.includes('delete')) {
+        deleteBtn = item as HTMLElement
+        break
+      }
+    }
+    if (!deleteBtn) throw new Error('Delete menu item not found in context menu')
+    deleteBtn.click()
+
+    // Wait for confirmation dialog
+    await new Promise(r => setTimeout(r, 500))
+
+    // Click the confirm "Delete" button in the modal
+    const confirmBtns = document.querySelectorAll('.confirm-dialog-button, .Button.confirm, .btn-primary, .popup-button')
+    let confirmBtn: HTMLElement | null = null
+    for (const btn of confirmBtns) {
+      const text = (btn as HTMLElement).innerText?.toLowerCase() ?? ''
+      if (text.includes('delete')) {
+        confirmBtn = btn as HTMLElement
+        break
+      }
+    }
+    if (!confirmBtn) throw new Error('Delete confirm button not found')
+    confirmBtn.click()
+
+    await new Promise(r => setTimeout(r, 500))
+    return { success: true, chatId: '', messageId: args.messageId }
+  }, { messageId })
+
+  return { ...deleted, chatId }
+}
+
 // --- Adapter export ---
 
 const adapter: CodeAdapter = {
@@ -316,6 +376,7 @@ const adapter: CodeAdapter = {
         case 'getUserInfo': return await getUserInfo(page, params)
         case 'getMe': return await getMe(page)
         case 'sendMessage': return await sendMessage(page, params)
+        case 'deleteMessage': return await deleteMessage(page, params)
         default: throw makeError(`Unknown operation: ${operation}`, 'fatal')
       }
     } catch (error) {

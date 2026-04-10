@@ -321,3 +321,50 @@ paths:
                     type: string
                   text:
                     type: string
+
+  /internal/messages/delete:
+    post:
+      operationId: deleteMessage
+      summary: Delete a message from a chat — returns success, chatId, messageId
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: tg0007
+          tool_version: 2
+          verified: false
+          signals:
+            - adapter-manual
+        adapter:
+          name: telegram-protocol
+          operation: deleteMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatId:
+                  type: string
+                  description: Chat ID containing the message
+                messageId:
+                  type: integer
+                  description: ID of the message to delete
+              required:
+                - chatId
+                - messageId
+      responses:
+        '200':
+          description: Delete confirmation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  chatId:
+                    type: string
+                  messageId:
+                    type: integer

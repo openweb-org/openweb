@@ -1,0 +1,13 @@
+{
+  "operation_id": "deleteMessage",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": { "chatId": "+13098770290", "messageId": 1 },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

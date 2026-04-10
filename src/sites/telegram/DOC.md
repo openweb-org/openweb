@@ -21,6 +21,11 @@ Telegram Web A — messaging platform. L3 adapter-based extraction from teact gl
 1. `getChats` → pick chat → `chatId`
 2. `sendMessage(chatId, text)` → sends text message
 
+### Delete a message (CAUTION)
+1. `getChats` → pick chat → `chatId`
+2. `getMessages(chatId)` → find message → `messageId`
+3. `deleteMessage(chatId, messageId)` → deletes the message
+
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
@@ -31,6 +36,7 @@ Telegram Web A — messaging platform. L3 adapter-based extraction from teact gl
 | getUserInfo | view user profile | userId ← getMessages.senderId | firstName, username, status, isPremium | returns null if not found |
 | getMe | current user info | — | id, firstName, username | no params needed |
 | sendMessage | send text to chat | chatId ← getChats, text | success, chatId, text | write op, CAUTION |
+| deleteMessage | delete a message | chatId ← getChats, messageId ← getMessages | success, chatId, messageId | write op, CAUTION, reverse of sendMessage |
 
 ## Quick Start
 
@@ -52,6 +58,9 @@ openweb telegram exec getUserInfo '{"userId": "123456789"}'
 
 # Get your own profile
 openweb telegram exec getMe '{}'
+
+# Delete a message from a chat (requires chatId + messageId)
+openweb telegram exec deleteMessage '{"chatId": "-1001234567890", "messageId": 42}'
 ```
 
 ---
@@ -77,4 +86,5 @@ openweb telegram exec getMe '{}'
 ## Known Issues
 - **searchMessages only searches loaded messages** — Telegram Web A only stores recently-viewed messages in memory. For comprehensive search, the user must have scrolled through the target chats first.
 - **sendMessage uses DOM interaction** — types into the compose input and clicks send. The target chat must be the currently-open chat in the browser.
+- **deleteMessage uses DOM interaction** — right-clicks the message, selects "Delete" from the context menu, and confirms. The message must be visible in the current chat view. Only works on messages you have permission to delete.
 - **Module ID instability** — webpack module IDs change on every Telegram deploy. The adapter finds `getGlobal` dynamically by testing return shapes, but a breaking change to the global state structure would require adapter updates.
