@@ -28,6 +28,12 @@ Productivity and collaboration workspace. Enterprise archetype.
 1. Get `pageId` from search or prior create
 2. `updatePage(pageId, title, spaceId)` → updated page info
 
+### Delete a page
+1. Get `pageId` from search or prior create
+2. `deletePage(pageId, spaceId)` → `deleted: true`
+   - Moves page to trash — recoverable from Notion UI
+   - Reverse of `createPage`
+
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
@@ -37,6 +43,7 @@ Productivity and collaboration workspace. Enterprise archetype.
 | getPage | read page content | pageId | recordMap.block (page tree), cursor | paginated via chunkNumber |
 | queryDatabase | filter/sort database rows | collectionId, viewId | blockIds, recordMap.block (rows) | needs collectionId from search |
 | createPage | create page | title, spaceId, parentId? | pageId | write op — adapter-based |
+| deletePage | delete (trash) page | pageId, spaceId | deleted: true | write op — reverse of createPage |
 | updatePage | update page title | pageId, title, spaceId | updated: true | write op — adapter-based |
 
 ### Write Operations Safety
@@ -44,6 +51,7 @@ Productivity and collaboration workspace. Enterprise archetype.
 | Operation | Level | Notes |
 |-----------|-------|-------|
 | createPage | CAUTION | Creates a real page in workspace — delete manually if testing |
+| deletePage | CAUTION | Moves page to trash — recoverable from Notion UI |
 | updatePage | CAUTION | Overwrites page title — reversible by updating again |
 
 ## Quick Start
@@ -69,6 +77,9 @@ openweb notion exec createPage '{"x-notion-space-id":"<spaceId>","title":"Child 
 
 # Update a page's title
 openweb notion exec updatePage '{"x-notion-space-id":"<spaceId>","pageId":"<pageId>","title":"New Title"}'
+
+# Delete (trash) a page
+openweb notion exec deletePage '{"x-notion-space-id":"<spaceId>","pageId":"<pageId>"}'
 ```
 
 ---
@@ -90,7 +101,7 @@ openweb notion exec updatePage '{"x-notion-space-id":"<spaceId>","pageId":"<page
 ### Transport
 - `page` — Notion uses Cloudflare + requires browser context
 - Requests must include `x-notion-active-user-header` and `x-notion-space-id` headers
-- Write operations (createPage, updatePage) use an adapter that calls `submitTransaction` via `pageFetch`
+- Write operations (createPage, updatePage, deletePage) use an adapter that calls `submitTransaction` via `pageFetch`
 
 ### Known Issues
 - Cloudflare protection (light — browser handles it)

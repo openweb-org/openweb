@@ -159,14 +159,61 @@ async function updatePage(page: Page, params: Record<string, unknown>, helpers: 
   return { pageId, title, updated: true }
 }
 
+async function deletePage(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
+  const { errors } = helpers
+  const spaceId = String(params['x-notion-space-id'] || '')
+  const pageId = String(params.pageId || '')
+
+  if (!spaceId) throw errors.missingParam('x-notion-space-id')
+  if (!pageId) throw errors.missingParam('pageId')
+
+  const now = Date.now()
+  const txnId = uuid()
+
+  const operations = [
+    {
+      pointer: { table: 'block', id: pageId, spaceId },
+      command: 'update',
+      path: [],
+      args: { alive: false },
+    },
+    {
+      pointer: { table: 'block', id: pageId, spaceId },
+      command: 'update',
+      path: ['last_edited_time'],
+      args: now,
+    },
+  ]
+
+  const body = JSON.stringify({
+    requestId: txnId,
+    transactions: [{ id: txnId, spaceId, operations }],
+  })
+
+  const headers = await buildHeaders(page, spaceId)
+  const resp = await helpers.pageFetch(page, {
+    url: `${API_BASE}/submitTransaction`,
+    method: 'POST',
+    headers,
+    body,
+  })
+
+  if (resp.status !== 200) {
+    throw errors.fatal(`submitTransaction returned ${resp.status}: ${resp.text.slice(0, 200)}`)
+  }
+
+  return { pageId, deleted: true }
+}
+
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, helpers: Helpers) => Promise<unknown>> = {
   createPage,
   updatePage,
+  deletePage,
 }
 
 const adapter = {
   name: 'notion-api',
-  description: 'Notion — create and update pages via submitTransaction',
+  description: 'Notion — create, update, and delete pages via submitTransaction',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('notion.so')

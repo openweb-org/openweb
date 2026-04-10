@@ -613,6 +613,60 @@ paths:
                       - block
                     description: "Parent type — \"space\" for top-level, \"block\" for nested."
   /notion/pages/{pageId}:
+    delete:
+      operationId: deletePage
+      summary: Delete (trash) a page — moves it to trash, reversible from Notion UI
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: notion-api
+          operation: deletePage
+        build:
+          stable_id: notion_delete_page
+          tool_version: 2
+          verified: true
+          signals: [page-verified]
+      parameters:
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Page block ID to delete
+        - name: x-notion-space-id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Workspace space ID
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+            example: {}
+      responses:
+        "200":
+          description: Deleted page confirmation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - pageId
+                  - deleted
+                properties:
+                  pageId:
+                    type: string
+                    format: uuid
+                    description: "Page ID that was deleted."
+                  deleted:
+                    type: boolean
+                    description: "Whether the deletion succeeded."
     patch:
       operationId: updatePage
       summary: Update a page's title — returns updated page info
