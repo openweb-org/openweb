@@ -18,6 +18,12 @@ Kanban board task management. Productivity/collaboration archetype.
 2. `getLists boardId` ← boards[].id → `lists[].id`
 3. `createCard idList, name` ← lists[].id → new card
 
+### Archive or delete a card
+
+1. `getBoard boardId` or `getCards listId` → `cards[].id`
+2. `archiveCard cardId` ← cards[].id → soft-close (reversible in Trello UI)
+3. `deleteCard cardId` ← cards[].id → permanent deletion (irreversible)
+
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
@@ -26,7 +32,9 @@ Kanban board task management. Productivity/collaboration archetype.
 | getBoard | read | boardId ← getBoards | lists[], cards[] with labels/due | Full board snapshot |
 | getLists | read | boardId ← getBoards | lists[].id, name, pos | Open lists only |
 | getCards | read | listId ← getLists/getBoard | cards[].id, name, due, labels | Cards in one list |
-| createCard | write | idList ← getLists, name | card.id, url | Creates a card (reversible) |
+| createCard | write | idList ← getLists, name | card.id, url | Creates a card |
+| deleteCard | write | cardId ← getCards/getBoard | deleted: true | Permanent delete (caution) |
+| archiveCard | write | cardId ← getCards/getBoard | closed: true | Soft-close, reversible |
 
 ## Quick Start
 
@@ -42,6 +50,12 @@ openweb trello exec getCards '{"listId": "LIST_ID"}'
 
 # Create a card
 openweb trello exec createCard '{"idList": "LIST_ID", "name": "My task", "desc": "Details here"}'
+
+# Archive a card (soft-delete)
+openweb trello exec archiveCard '{"cardId": "CARD_ID"}'
+
+# Delete a card permanently
+openweb trello exec deleteCard '{"cardId": "CARD_ID"}'
 ```
 
 ## Site Internals
@@ -55,4 +69,5 @@ openweb trello exec createCard '{"idList": "LIST_ID", "name": "My task", "desc":
 
 - All operations require authentication. Run `openweb login trello` first.
 - Board/list/card IDs are opaque strings — always obtain from a prior operation.
-- createCard is a write operation; it creates real cards in the user's workspace.
+- `createCard`, `deleteCard`, and `archiveCard` are write operations with `safety: caution` — they modify real data in the user's workspace.
+- `deleteCard` is irreversible. Prefer `archiveCard` for recoverable removal.

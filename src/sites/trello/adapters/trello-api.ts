@@ -30,7 +30,7 @@ const API_BASE = 'https://api.trello.com/1'
 async function apiFetch(
   page: Page,
   helpers: { pageFetch: CodeAdapter['execute'] extends (p: Page, o: string, pa: unknown, h: infer H) => unknown ? H['pageFetch'] : never },
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
   query?: Record<string, string>,
   body?: Record<string, unknown>,
@@ -247,6 +247,42 @@ async function createCard(
   }
 }
 
+/* ---------- deleteCard ---------- */
+
+async function deleteCard(
+  page: Page,
+  params: Readonly<Record<string, unknown>>,
+  helpers: Parameters<CodeAdapter['execute']>[3],
+): Promise<unknown> {
+  const cardId = String(params.cardId ?? '')
+  if (!cardId) throw helpers.errors.missingParam('cardId')
+
+  await apiFetch(page, helpers, 'DELETE', `/cards/${cardId}`)
+
+  return { deleted: true, cardId }
+}
+
+/* ---------- archiveCard ---------- */
+
+async function archiveCard(
+  page: Page,
+  params: Readonly<Record<string, unknown>>,
+  helpers: Parameters<CodeAdapter['execute']>[3],
+): Promise<unknown> {
+  const cardId = String(params.cardId ?? '')
+  if (!cardId) throw helpers.errors.missingParam('cardId')
+
+  const card = (await apiFetch(page, helpers, 'PUT', `/cards/${cardId}`, undefined, { closed: true })) as Record<string, unknown>
+
+  return {
+    id: card.id,
+    name: card.name,
+    closed: card.closed ?? true,
+    url: card.url,
+    dateLastActivity: card.dateLastActivity || null,
+  }
+}
+
 /* ---------- adapter export ---------- */
 
 const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, unknown>>, helpers: Parameters<CodeAdapter['execute']>[3]) => Promise<unknown>> = {
@@ -255,6 +291,8 @@ const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, un
   getLists,
   getCards,
   createCard,
+  deleteCard,
+  archiveCard,
 }
 
 const adapter: CodeAdapter = {

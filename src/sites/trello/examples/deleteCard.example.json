@@ -1,0 +1,8 @@
+{
+  "operation_id": "deleteCard",
+  "replay_safety": "unsafe_mutation",
+  "cases": [{
+    "input": { "cardId": "PLACEHOLDER" },
+    "assertions": { "status": 200 }
+  }]
+}

@@ -361,3 +361,91 @@ paths:
                     type: boolean
                   dateLastActivity:
                     type: [string, 'null']
+
+  /internal/deleteCard:
+    post:
+      operationId: deleteCard
+      summary: Permanently delete a card — irreversible
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: trello-api
+          operation: deleteCard
+        build:
+          verified: true
+          stable_id: tr0006
+          tool_version: 1
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cardId]
+              properties:
+                cardId:
+                  type: string
+                  description: Card ID from getCards or getBoard.
+      responses:
+        '200':
+          description: Confirmation that the card was deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted, cardId]
+                properties:
+                  deleted:
+                    type: boolean
+                  cardId:
+                    type: string
+
+  /internal/archiveCard:
+    post:
+      operationId: archiveCard
+      summary: Archive (close) a card — reversible soft-delete
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: trello-api
+          operation: archiveCard
+        build:
+          verified: true
+          stable_id: tr0007
+          tool_version: 1
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cardId]
+              properties:
+                cardId:
+                  type: string
+                  description: Card ID from getCards or getBoard.
+      responses:
+        '200':
+          description: Archived card.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, closed]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  closed:
+                    type: boolean
+                  url:
+                    type: string
+                  dateLastActivity:
+                    type: [string, 'null']
