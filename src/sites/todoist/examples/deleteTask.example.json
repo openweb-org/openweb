@@ -1,0 +1,8 @@
+{
+  "operation_id": "deleteTask",
+  "replay_safety": "unsafe_mutation",
+  "cases": [{
+    "input": { "task_id": "PLACEHOLDER" },
+    "assertions": { "status": 204 }
+  }]
+}

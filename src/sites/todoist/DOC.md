@@ -17,6 +17,14 @@ Task management platform — productivity/personal-organization archetype.
 1. `getTasks(project_id)` → id, content
 2. `completeTask(task_id)` → success
 
+### Reopen a completed task
+1. `getTasks(filter: "completed")` or known task_id
+2. `uncompleteTask(task_id)` → success (reverse of completeTask)
+
+### Delete a task
+1. `getTasks(project_id)` → id, content
+2. `deleteTask(task_id)` → success (permanent, irreversible)
+
 ### Filter tasks by due date or priority
 1. `getTasks(filter: "today")` → tasks due today
 2. `getTasks(filter: "priority 1")` → urgent tasks
@@ -28,7 +36,9 @@ Task management platform — productivity/personal-organization archetype.
 | getProjects | list all projects | — | id, name, color, is_inbox_project | entry point for project IDs |
 | getTasks | tasks in a project | project_id ← getProjects | content, due, priority, labels | supports filter expressions |
 | createTask | create a new task | content, project_id ← getProjects | id, content, due, url | write op |
-| completeTask | mark task done | task_id ← getTasks | success | write op, irreversible for non-recurring |
+| completeTask | mark task done | task_id ← getTasks | success | write op, reverse: uncompleteTask |
+| uncompleteTask | reopen completed task | task_id ← getTasks | success | write op, reverse of completeTask |
+| deleteTask | permanently delete task | task_id ← getTasks | success | write op, irreversible |
 
 ## Quick Start
 
@@ -47,6 +57,12 @@ openweb todoist exec createTask '{"content":"Buy groceries","due_string":"tomorr
 
 # Complete a task
 openweb todoist exec completeTask '{"task_id":"7025654312"}'
+
+# Reopen a completed task
+openweb todoist exec uncompleteTask '{"task_id":"7025654312"}'
+
+# Delete a task permanently
+openweb todoist exec deleteTask '{"task_id":"7025654312"}'
 ```
 
 ---
@@ -55,7 +71,7 @@ openweb todoist exec completeTask '{"task_id":"7025654312"}'
 
 ## API Architecture
 - Public REST API v2 at `api.todoist.com/rest/v2/`
-- Standard CRUD endpoints: GET/POST with JSON bodies
+- Standard CRUD endpoints: GET/POST/DELETE with JSON bodies
 - Cross-origin: web app at `app.todoist.com`, API at `api.todoist.com`
 
 ## Auth

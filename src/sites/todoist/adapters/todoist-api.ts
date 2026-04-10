@@ -119,7 +119,7 @@ async function apiFetch(
 
 const adapter = {
   name: 'todoist-api',
-  description: 'Todoist REST API v2 — projects, tasks, create, complete',
+  description: 'Todoist REST API v2 — projects, tasks, create, complete, uncomplete, delete',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('todoist.com')
@@ -168,6 +168,18 @@ const adapter = {
         const taskId = params.task_id as string | undefined
         if (!taskId) throw errors.missingParam('task_id')
         return apiFetch(page, 'POST', `/tasks/${encodeURIComponent(taskId)}/close`, null, errors)
+      }
+
+      case 'uncompleteTask': {
+        const taskId = params.task_id as string | undefined
+        if (!taskId) throw errors.missingParam('task_id')
+        return apiFetch(page, 'POST', `/tasks/${encodeURIComponent(taskId)}/reopen`, null, errors)
+      }
+
+      case 'deleteTask': {
+        const taskId = params.task_id as string | undefined
+        if (!taskId) throw errors.missingParam('task_id')
+        return apiFetch(page, 'DELETE', `/tasks/${encodeURIComponent(taskId)}`, null, errors)
       }
 
       default:

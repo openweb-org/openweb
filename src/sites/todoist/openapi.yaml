@@ -241,6 +241,7 @@ paths:
       summary: "Mark a task as complete — closes the task by ID"
       x-openweb:
         permission: write
+        safety: caution
         build:
           stable_id: todoist_completeTask_v1
           tool_version: 2
@@ -262,3 +263,61 @@ paths:
       responses:
         "204":
           description: Task completed successfully (empty response)
+
+  /todoist/tasks/uncomplete:
+    post:
+      operationId: uncompleteTask
+      summary: "Reopen a completed task — marks it active again by ID"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: todoist_uncompleteTask_v1
+          tool_version: 2
+        adapter:
+          name: todoist-api
+          operation: uncompleteTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - task_id
+              properties:
+                task_id:
+                  type: string
+                  description: "Task ID to reopen (from getTasks)"
+      responses:
+        "204":
+          description: Task reopened successfully (empty response)
+
+  /todoist/tasks/delete:
+    post:
+      operationId: deleteTask
+      summary: "Permanently delete a task — removes it by ID"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: todoist_deleteTask_v1
+          tool_version: 2
+        adapter:
+          name: todoist-api
+          operation: deleteTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - task_id
+              properties:
+                task_id:
+                  type: string
+                  description: "Task ID to delete (from getTasks)"
+      responses:
+        "204":
+          description: Task deleted successfully (empty response)
