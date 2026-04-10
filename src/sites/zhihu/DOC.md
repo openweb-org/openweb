@@ -19,6 +19,11 @@ Chinese Q&A knowledge-sharing platform (Quora archetype). Users ask questions, w
 `getMember` → `followUser` (url_token from profile)
 `searchContent` → `followQuestion` (question ID from results)
 
+**Undo engagement (reverse write):**
+`cancelUpvote` — cancel a previous upvote (adapter-dispatched POST with type=neutral)
+`unfollowUser` — unfollow a previously followed user
+`unfollowQuestion` — stop following a question (returns 204)
+
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
@@ -37,6 +42,9 @@ Chinese Q&A knowledge-sharing platform (Quora archetype). Users ask questions, w
 | **upvoteAnswer** | Upvote an answer | `answer_id` ← searchContent | voting status | write/caution |
 | **followUser** | Follow a user | `url_token` ← getMember | is_following | write/caution |
 | **followQuestion** | Follow a question | `question_id` ← searchContent | is_following | write/caution |
+| **cancelUpvote** | Cancel an upvote | `answer_id` ← searchContent | voting, voteup_count | write/caution, adapter |
+| **unfollowUser** | Unfollow a user | `url_token` ← getMember | follower_count | write/caution |
+| **unfollowQuestion** | Unfollow a question | `question_id` ← searchContent | (empty, 204) | write/caution |
 
 ## Quick Start
 
@@ -78,10 +86,9 @@ openweb zhihu exec getMe '{}'
 - Some read endpoints return reduced data without login
 
 ### Transport
-- `transport: page` (L3 adapter) — all operations use browser-mediated fetch
-- API calls via `page.evaluate(fetch(...))` to inherit browser cookies
-- Browser JS handles request signing automatically
-- Adapter: `adapters/zhihu-web.ts`
+- `transport: node` — most operations use direct HTTP with cookie session auth
+- `cancelUpvote` uses adapter (`adapters/zhihu.ts`) — POSTs to voters endpoint with `{type: "neutral"}` via page context, since the same POST path is already used by upvoteAnswer
+- Browser needed for adapter ops and write verification
 
 ### Known Issues
 - No clean question detail API — question text is embedded in SSR page HTML

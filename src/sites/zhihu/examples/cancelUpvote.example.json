@@ -1,0 +1,16 @@
+{
+  "operation_id": "cancelUpvote",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "answer_id": "3606498689"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

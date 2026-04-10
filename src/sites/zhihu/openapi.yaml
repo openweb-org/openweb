@@ -4191,6 +4191,46 @@ paths:
                   - success
                   - voting
                   - voteup_count
+  /cancel-upvote/{answer_id}:
+    post:
+      operationId: cancelUpvote
+      summary: Cancel an upvote on an answer — POSTs type=neutral to voters endpoint
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: zhihu0014
+          tool_version: 1
+        adapter:
+          name: zhihu
+          operation: cancelUpvote
+      parameters:
+        - name: answer_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Answer ID to cancel upvote on (numeric string).
+      responses:
+        "200":
+          description: Vote cancelled.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  voting:
+                    type: integer
+                    description: "Current vote state after cancel: 0=neutral."
+                  voteup_count:
+                    type: integer
+                    description: Total upvote count after this action.
+                required:
+                  - success
+                  - voting
+                  - voteup_count
   /api/v4/members/{url_token}/followers:
     post:
       operationId: followUser
@@ -4222,6 +4262,35 @@ paths:
                   follower_count:
                     type: integer
                     description: User's follower count after following.
+                required:
+                  - follower_count
+    delete:
+      operationId: unfollowUser
+      summary: Unfollow a Zhihu user — returns updated follower count
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: zhihu0015
+          tool_version: 1
+      parameters:
+        - name: url_token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "User's url_token (e.g. 'excited-vczh')."
+      responses:
+        "200":
+          description: User unfollowed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  follower_count:
+                    type: integer
+                    description: User's follower count after unfollowing.
                 required:
                   - follower_count
   /api/v4/questions/{question_id}/followers:
@@ -4256,3 +4325,22 @@ paths:
                     type: boolean
                 required:
                   - is_following
+    delete:
+      operationId: unfollowQuestion
+      summary: Unfollow a question — stop receiving new answer notifications
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: zhihu0016
+          tool_version: 1
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Question ID to unfollow.
+      responses:
+        "204":
+          description: Question unfollowed. Empty response.

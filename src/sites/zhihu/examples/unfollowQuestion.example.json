@@ -1,0 +1,15 @@
+{
+  "operation_id": "unfollowQuestion",
+  "method": "delete",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "question_id": 19550225
+      },
+      "assertions": {
+        "status": 204
+      }
+    }
+  ]
+}

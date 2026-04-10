@@ -13,14 +13,17 @@
     "getMember → listMemberActivities": "getMember returns url_token used by listMemberActivities",
     "getMember → listMemberMutuals": "getMember returns url_token used by listMemberMutuals",
     "getMember → followUser": "getMember returns url_token used by followUser",
+    "getMember → unfollowUser": "getMember returns url_token used by unfollowUser",
     "searchContent → upvoteAnswer": "searchContent returns answer IDs used by upvoteAnswer",
-    "searchContent → followQuestion": "searchContent returns question IDs used by followQuestion"
+    "searchContent → cancelUpvote": "searchContent returns answer IDs used by cancelUpvote",
+    "searchContent → followQuestion": "searchContent returns question IDs used by followQuestion",
+    "searchContent → unfollowQuestion": "searchContent returns question IDs used by unfollowQuestion"
   },
   "stats": {
-    "operation_count": 14,
+    "operation_count": 17,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 14,
+    "l3_count": 17,
     "ws_count": 0
   },
   "last_verified": "2026-03-29T00:00:00.000Z"
