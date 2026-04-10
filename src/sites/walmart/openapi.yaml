@@ -281,3 +281,53 @@ paths:
                       imageUrl:
                         type: string
                         description: Product thumbnail URL.
+  /internal/removeFromCart:
+    post:
+      operationId: removeFromCart
+      summary: Remove product from cart — cartId, cartCount, removedItemId
+      x-openweb:
+        permission: write
+        safety: caution
+        transport: page
+        build:
+          stable_id: wm0006
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: walmart-cart
+          operation: removeFromCart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - usItemId
+              properties:
+                usItemId:
+                  type: string
+                  description: Walmart item ID to remove (e.g. "234440748").
+      responses:
+        '200':
+          description: Item removed from cart successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - cartId
+                  - cartCount
+                  - removedItemId
+                properties:
+                  cartId:
+                    type: string
+                    description: Cart identifier.
+                  cartCount:
+                    type: integer
+                    description: Total number of items remaining in cart.
+                  removedItemId:
+                    type: string
+                    description: The usItemId that was removed.

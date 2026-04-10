@@ -17,6 +17,9 @@ E-commerce. Walmart.com — product search, detail pages, pricing, and cart oper
 1. `searchProducts(q)` → browse results → `usItemId`
 2. `addToCart(usItemId, quantity)` → cartId, cartCount, item details
 
+### Remove from cart
+1. `removeFromCart(usItemId)` → cartId, cartCount, removedItemId
+
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
@@ -25,6 +28,7 @@ E-commerce. Walmart.com — product search, detail pages, pricing, and cart oper
 | getProductDetail | full product page | slug, itemId ← searchProducts | name, brand, priceInfo, averageRating, numberOfReviews, imageInfo | slug can be any string |
 | getProductPricing | focused pricing info | itemId ← searchProducts | currentPrice, wasPrice, savingsAmount, isPriceReduced | subset of product detail |
 | addToCart | add product to cart | usItemId ← searchProducts, quantity | cartId, cartCount, item | ⚠️ write op, adapter-based |
+| removeFromCart | remove product from cart | usItemId ← addToCart | cartId, cartCount, removedItemId | ⚠️ write op, reverses addToCart |
 
 ## Quick Start
 
@@ -40,6 +44,9 @@ openweb walmart exec getProductPricing '{"itemId": "5113175776"}'
 
 # Add to cart (requires browser page on walmart.com)
 openweb walmart exec addToCart '{"usItemId": "5113175776", "quantity": 1}'
+
+# Remove from cart (requires browser page on walmart.com)
+openweb walmart exec removeFromCart '{"usItemId": "5113175776"}'
 ```
 
 ---
@@ -53,8 +60,9 @@ openweb walmart exec addToCart '{"usItemId": "5113175776", "quantity": 1}'
 - All useful read data is embedded in `__NEXT_DATA__` within the SSR HTML
 - **Write ops (adapter)** — use persisted GraphQL mutations from browser context
   - `MergeAndGetCart` → get/create cart via `/orchestra/cartxo/graphql`
-  - `updateItems` → add/update items via `/orchestra/home/graphql`
-  - Adapter fetches product offerId from SSR data, then calls mutations
+  - `updateItems` → add/update/remove items via `/orchestra/home/graphql`
+  - Adapter fetches product offerId from SSR data for addToCart, then calls mutations
+  - removeFromCart sets quantity to 0 via the same `updateItems` mutation
 - Search and PDP pages have different pricing schemas:
   - Search: flat — `priceInfo.linePrice` (string like "$159.00"), `priceInfo.wasPrice`, `priceInfo.savings`
   - PDP: nested — `priceInfo.currentPrice.price` (number), `priceInfo.wasPrice.price`
@@ -79,7 +87,7 @@ openweb walmart exec addToCart '{"usItemId": "5113175776", "quantity": 1}'
 
 ## Known Issues
 - **PerimeterX bot detection** blocks all CDP-connected browsers for full page navigations (headless and non-headless). Navigating to any walmart.com URL in the managed browser redirects to `/blocked?url=...` ("Robot or human?" challenge). Initial page load typically succeeds; subsequent full navigations are blocked. SPA navigation and in-page fetch() calls work.
-- **addToCart requires open walmart.com page** — the adapter needs a browser tab on walmart.com. Open one manually before using addToCart.
+- **addToCart/removeFromCart require open walmart.com page** — the adapter needs a browser tab on walmart.com. Open one manually before using cart ops.
 - **Persisted query hashes** — the GraphQL mutation hashes are derived from query text and are stable across Walmart deploys, but could change if Walmart modifies the query schema.
 - **Search results cause persistent verify DRIFT** — different products returned each call, with varying field structures. Schema validation passes; only the fingerprint hash changes. Expected behavior for dynamic endpoints.
 - **`averageRating` nullable** — some search result items have `null` rating. Schema uses `type: [number, "null"]`.
