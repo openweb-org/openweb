@@ -130,13 +130,67 @@ async function addToCart(page: Page, params: Record<string, unknown>, helpers: H
   }
 }
 
+async function removeFromCart(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
+  const { errors } = helpers
+  const itemUuid = String(params.itemUuid || '')
+
+  if (!itemUuid) throw errors.missingParam('itemUuid')
+
+  // Navigate to UberEats home to access cart
+  await page.goto(`${BASE}/`, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
+  await page.waitForTimeout(3000)
+
+  // Open the cart by clicking the cart icon/button
+  const cartBtn = page.locator('[data-testid="cart-button"], [data-testid="view-carts-badge"], a[href*="/checkout"]').first()
+  try {
+    await cartBtn.waitFor({ state: 'visible', timeout: 8_000 })
+    await cartBtn.click({ timeout: 5000 })
+    await page.waitForTimeout(2000)
+  } catch {
+    throw errors.retriable('Cart button not found — cart may be empty or page not loaded')
+  }
+
+  // Look for the item in the cart and click its remove/delete button
+  // UberEats cart items have data-testid attributes with item UUIDs
+  const removeBtn = page.locator(`[data-testid="cart-item-${itemUuid}"] [data-testid="delete-button"], [data-testid="remove-button"]`).first()
+  try {
+    await removeBtn.waitFor({ state: 'visible', timeout: 8_000 })
+    await removeBtn.click({ timeout: 5000 })
+    await page.waitForTimeout(2000)
+  } catch {
+    // Fallback: try to find remove by scanning cart items for matching text/UUID
+    const fallbackRemove = page.locator('[data-testid="delete-button"], button[aria-label*="Remove"], button[aria-label*="Delete"]').first()
+    try {
+      await fallbackRemove.waitFor({ state: 'visible', timeout: 5_000 })
+      await fallbackRemove.click({ timeout: 5000 })
+      await page.waitForTimeout(2000)
+    } catch {
+      throw errors.retriable('Could not find remove button for item in cart')
+    }
+  }
+
+  // Check remaining cart count
+  const badgeText = await page.evaluate(() => {
+    const badge = document.querySelector('[data-testid="view-carts-badge"]')
+    return badge?.textContent || '0'
+  })
+  const cartCount = Number.parseInt(badgeText, 10) || 0
+
+  return {
+    success: true,
+    itemUuid,
+    cartCount,
+  }
+}
+
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, helpers: Helpers) => Promise<unknown>> = {
   addToCart,
+  removeFromCart,
 }
 
 const adapter = {
   name: 'uber-eats',
-  description: 'Uber Eats — add items to cart via browser interaction',
+  description: 'Uber Eats — cart operations via browser interaction',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('ubereats.com')

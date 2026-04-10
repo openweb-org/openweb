@@ -547,3 +547,53 @@ paths:
                   quantity:
                     type: integer
                     description: Number of items added.
+
+  /internal/removeFromCart:
+    post:
+      operationId: removeFromCart
+      summary: Remove an item from Uber Eats cart — requires item UUID from getRestaurantMenu
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: uber-eats
+          operation: removeFromCart
+        transport: page
+        build:
+          stable_id: ub0005
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - itemUuid
+              properties:
+                itemUuid:
+                  type: string
+                  description: Item UUID to remove (from getRestaurantMenu catalogItems or addToCart response).
+                  example: 6a7477ef-e958-5d7e-ad13-919222778971
+      responses:
+        '200':
+          description: Cart state after removing item.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the item was removed successfully.
+                  itemUuid:
+                    type: string
+                    description: Item UUID that was removed.
+                  cartCount:
+                    type: integer
+                    description: Remaining items in cart.

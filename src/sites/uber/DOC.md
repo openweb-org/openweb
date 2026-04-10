@@ -14,6 +14,9 @@ Ride-hailing + food delivery platform. Uber Eats (ubereats.com) REST API for res
 2. `getRestaurantMenu(storeUuid)` → get item `uuid` from `catalogSectionsMap` → `catalogItems`
 3. `addToCart(storeUuid, itemUuid)` → add item to cart (browser-based, page transport)
 
+### Remove item from cart
+1. `removeFromCart(itemUuid)` → remove item from cart (browser-based, page transport)
+
 ### Review past orders
 1. `getEatsOrderHistory()` → orders with store, items, prices, timestamps
 2. `getEatsOrderHistory(lastWorkflowUUID=nextCursor)` → next page
@@ -25,6 +28,7 @@ Ride-hailing + food delivery platform. Uber Eats (ubereats.com) REST API for res
 | searchRestaurants | search Eats restaurants by keyword | userQuery | storeUuid, name, rating, deliveryTime, deliveryFee | entry point |
 | getRestaurantMenu | get full restaurant menu | storeUuid | title, sections, catalogSectionsMap with categories and catalogItems (uuid, title, price, imageUrl) | uses getStoreV1 API |
 | addToCart | add item to Eats cart | storeUuid, itemUuid, quantity | success, cartCount | adapter; page transport; cart is client-side |
+| removeFromCart | remove item from Eats cart | itemUuid | success, cartCount | reverse of addToCart; adapter; page transport |
 | getEatsOrderHistory | list past Eats orders | lastWorkflowUUID (pagination) | uuid, storeName, totalPrice, items, completedAt, hasMore, nextCursor | entry point; paginated |
 
 ## Quick Start
@@ -38,6 +42,9 @@ openweb uber exec getRestaurantMenu '{"storeUuid":"8b2f2683-50d3-4e3f-8c2e-3d006
 
 # Add item to cart (use itemUuid from menu's catalogItems)
 openweb uber exec addToCart '{"storeUuid":"8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7","itemUuid":"6a7477ef-e958-5d7e-ad13-919222778971"}'
+
+# Remove item from cart
+openweb uber exec removeFromCart '{"itemUuid":"6a7477ef-e958-5d7e-ad13-919222778971"}'
 
 # Get past Eats orders (first page)
 openweb uber exec getEatsOrderHistory '{}'
@@ -54,7 +61,7 @@ openweb uber exec getEatsOrderHistory '{"lastWorkflowUUID":"<nextCursor>"}'
 - **Eats**: REST-style POST endpoints at `ubereats.com/_p/api/<operationName>`. Request body is JSON. Response wraps data in `{ status, data }`.
 - Both APIs accept `x-csrf-token: x` (static placeholder, not derived from cookies).
 - **Menu data**: `getStoreV1` returns the full menu via `catalogSectionsMap` → `standardItemsPayload` → `catalogItems`. Each item has `uuid`, `title`, `price` (cents), `imageUrl`, availability flags.
-- **Cart**: Client-side only (localStorage `ubereats.v2.cart`). No server API for add-to-cart — the adapter navigates to the item quickView modal and clicks "Add to order".
+- **Cart**: Client-side only (localStorage `ubereats.v2.cart`). No server API for cart mutations — the adapter navigates to the cart UI and interacts with add/remove buttons.
 
 ### Auth
 - **Type**: cookie_session
@@ -72,4 +79,5 @@ openweb uber exec getEatsOrderHistory '{"lastWorkflowUUID":"<nextCursor>"}'
 - **Eats search redirect**: Navigating to `ubereats.com/search?q=X` redirects through a `?next=` parameter. The `getSearchFeedV1` API call bypasses this.
 - **DataDome observed**: DataDome bot detection scripts are present on ubereats.com. Direct `page.evaluate(fetch)` may be intermittently blocked. The `_p/api` endpoints work reliably from node transport with session cookies.
 - **addToCart reliability**: The add-to-cart button click may not trigger reliably via programmatic interaction due to React event handling. The adapter makes a best-effort attempt.
+- **removeFromCart reliability**: Like addToCart, remove depends on browser interaction with cart UI elements. Data-testid selectors may change across UberEats deployments.
 - **Store UUID format**: Search results return full UUID format (e.g. `8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7`). URL slugs use base64url encoding of UUID bytes.
