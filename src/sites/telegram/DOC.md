@@ -1,7 +1,7 @@
-# Telegram Web A
+# Telegram
 
 ## Overview
-Telegram Web A — messaging platform. L3 adapter-based extraction from teact global state via webpack module walk.
+Telegram — messaging platform. L3 adapter reads via webpack `getGlobal()`, writes via `callApi()` to GramJS Web Worker. Zero DOM manipulation.
 
 ## Workflows
 
@@ -10,21 +10,31 @@ Telegram Web A — messaging platform. L3 adapter-based extraction from teact gl
 2. `getMessages(chatId, limit)` → messages with sender info
 
 ### Search for messages
-1. `searchMessages(query)` → matching messages across all chats
+1. `searchMessages(query)` → matching messages across all loaded chats
 2. `searchMessages(query, chatId)` → search within a specific chat
+
+### Send, edit, then delete
+1. `getChats` → pick chat → `chatId`
+2. `sendMessage(chatId, text)` → sends message
+3. `getMessages(chatId, limit: 1)` → get `messageId`
+4. `editMessage(chatId, messageId, newText)` → edits the message
+5. `deleteMessage(chatId, messageId)` → deletes it
+
+### Forward a message
+1. `getMessages(fromChatId)` → find message → `messageId`
+2. `forwardMessages(fromChatId, toChatId, [messageId])` → forwarded
+
+### Pin a message
+1. `getMessages(chatId)` → find message → `messageId`
+2. `pinMessage(chatId, messageId)` → pinned
+3. `unpinMessage(chatId, messageId)` → unpinned
 
 ### Look up a user
 1. `getChats` → find chat with user → note `senderId` from messages
 2. `getUserInfo(userId)` → full profile (username, status, premium)
 
-### Send a message (CAUTION)
-1. `getChats` → pick chat → `chatId`
-2. `sendMessage(chatId, text)` → sends text message
-
-### Delete a message (CAUTION)
-1. `getChats` → pick chat → `chatId`
-2. `getMessages(chatId)` → find message → `messageId`
-3. `deleteMessage(chatId, messageId)` → deletes the message
+### Browse contacts
+1. `getContacts` → full contact list with phone numbers and status
 
 ## Operations
 
@@ -33,10 +43,16 @@ Telegram Web A — messaging platform. L3 adapter-based extraction from teact gl
 | getChats | list conversations | limit? | id, title, type, membersCount | entry point |
 | getMessages | read chat history | chatId ← getChats, limit?, offsetId? | id, text, senderName, date | paginated via offsetId |
 | searchMessages | find messages by keyword | query, chatId? ← getChats | id, text, chatTitle, senderName | searches loaded messages only |
-| getUserInfo | view user profile | userId ← getMessages.senderId | firstName, username, status, isPremium | returns null if not found |
-| getMe | current user info | — | id, firstName, username | no params needed |
-| sendMessage | send text to chat | chatId ← getChats, text | success, chatId, text | write op, CAUTION |
-| deleteMessage | delete a message | chatId ← getChats, messageId ← getMessages | success, chatId, messageId | write op, CAUTION, reverse of sendMessage |
+| getUserInfo | view user profile | userId ← getMessages.senderId | firstName, username, status, isPremium | null if not found |
+| getMe | current user info | — | id, firstName, username | no params |
+| getContacts | list contacts | — | id, firstName, phoneNumber, status | reads from cached contacts |
+| sendMessage | send text to chat | chatId ← getChats, text | success, chatId, text | callApi write |
+| deleteMessage | delete a message | chatId ← getChats, messageId ← getMessages | success, chatId, messageId | callApi write, supports "latest" |
+| editMessage | edit message text | chatId, messageId ← getMessages, text | success, chatId, messageId, text | callApi write |
+| forwardMessages | forward messages | fromChatId, toChatId ← getChats, messageIds ← getMessages | success, fromChatId, toChatId | callApi write |
+| pinMessage | pin a message | chatId, messageId ← getMessages, silent? | success, chatId, messageId | callApi write |
+| unpinMessage | unpin a message | chatId, messageId | success, chatId, messageId | callApi write, reverse of pinMessage |
+| markAsRead | mark chat as read | chatId ← getChats | success, chatId | callApi write |
 
 ## Quick Start
 
@@ -45,22 +61,28 @@ Telegram Web A — messaging platform. L3 adapter-based extraction from teact gl
 openweb telegram exec getChats '{"limit": 20}'
 
 # Read messages from a chat
-openweb telegram exec getMessages '{"chatId": "-1001234567890", "limit": 30}'
+openweb telegram exec getMessages '{"chatId": "8259810574", "limit": 10}'
 
 # Search messages globally
 openweb telegram exec searchMessages '{"query": "hello", "limit": 10}'
 
-# Search within a specific chat
-openweb telegram exec searchMessages '{"query": "meeting", "chatId": "-1001234567890"}'
+# Get your contacts
+openweb telegram exec getContacts '{}'
 
-# Get a user's profile
-openweb telegram exec getUserInfo '{"userId": "123456789"}'
+# Send a message
+openweb telegram exec sendMessage '{"chatId": "8259810574", "text": "hello"}'
 
-# Get your own profile
-openweb telegram exec getMe '{}'
+# Edit a message
+openweb telegram exec editMessage '{"chatId": "8259810574", "messageId": 153, "text": "edited"}'
 
-# Delete a message from a chat (requires chatId + messageId)
-openweb telegram exec deleteMessage '{"chatId": "-1001234567890", "messageId": 42}'
+# Delete the latest outgoing message
+openweb telegram exec deleteMessage '{"chatId": "8259810574", "messageId": "latest"}'
+
+# Forward a message
+openweb telegram exec forwardMessages '{"fromChatId": "8259810574", "toChatId": "5527097202", "messageIds": [153]}'
+
+# Mark chat as read
+openweb telegram exec markAsRead '{"chatId": "8259810574"}'
 ```
 
 ---
@@ -68,23 +90,27 @@ openweb telegram exec deleteMessage '{"chatId": "-1001234567890", "messageId": 4
 ## Site Internals
 
 ## API Architecture
-- **No REST API** — all operations use `telegram-protocol` adapter
-- `/internal/*` paths are virtual — adapter reads from Telegram Web A's teact global state
-- Chat IDs are numeric strings (e.g. `-1001625429257`, private chats are positive)
-- The adapter walks `webpackChunktelegram_t` modules to find `getGlobal()`
-- Module IDs and export names are mangled and change per deploy — dynamic discovery required
+- **No REST/HTTP API** — all ops go through `telegram-protocol` adapter
+- `/internal/*` paths are virtual — adapter reads from teact global state or calls GramJS
+- Two data paths:
+  - **Reads**: `getGlobal()` — synchronous access to webpack-cached app state
+  - **Writes**: `callApi()` — async dispatch to GramJS Web Worker → MTProto → Telegram servers
+- Chat IDs are numeric strings (negative = groups/channels, positive = private chats)
+- Module IDs are mangled per deploy — adapter discovers `getGlobal`/`callApi` dynamically
 
 ## Auth
-- Requires Telegram Web A to be logged in (session in browser)
-- Auth is implicit — adapter reads from app's in-memory state, no explicit cookie/token auth
-- `getGlobal()` returns state only after successful login + app hydration
+- Requires Telegram Web A/K to be logged in (session in browser)
+- Auth is implicit — adapter reads from the app's in-memory state
+- `getGlobal().currentUserId` confirms authentication
+- chatId aliases: `"me"` → Saved Messages, `"+1234567890"` → phone lookup
 
 ## Transport
-- `page` — requires Telegram Web A (`web.telegram.org/a/`) loaded in a browser tab
-- Cannot use `node` transport — all data comes from in-memory SPA state
+- `page` — requires `web.telegram.org/a/` (or `/k/`) loaded in a browser tab
+- Supports both Web A (teact, `webpackChunktelegram_t`) and Web K (`webpackChunkwebk`)
+- Cannot use `node` transport — all data comes from in-memory SPA state + GramJS Worker
 
 ## Known Issues
-- **searchMessages only searches loaded messages** — Telegram Web A only stores recently-viewed messages in memory. For comprehensive search, the user must have scrolled through the target chats first.
-- **sendMessage uses DOM interaction** — types into the compose input and clicks send. The target chat must be the currently-open chat in the browser.
-- **deleteMessage uses DOM interaction** — right-clicks the message, selects "Delete" from the context menu, and confirms. The message must be visible in the current chat view. Only works on messages you have permission to delete.
-- **Module ID instability** — webpack module IDs change on every Telegram deploy. The adapter finds `getGlobal` dynamically by testing return shapes, but a breaking change to the global state structure would require adapter updates.
+- **searchMessages only searches loaded messages** — TG Web A caches recently-viewed messages. For comprehensive search, the user must have scrolled through target chats.
+- **getContacts reads cached contacts** — only returns contacts that TG Web A has loaded into state.
+- **Module ID instability** — webpack module IDs change on every TG deploy. The adapter finds `getGlobal`/`callApi` by testing return shapes and scanning source strings, not by ID.
+- **getChats DRIFT** — `membersCount` is absent for private chats, causing minor schema drift in verify.
