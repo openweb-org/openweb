@@ -1,0 +1,17 @@
+{
+  "operation_id": "createComment",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "thing_id": "t3_abc123",
+        "text": "Test comment from openweb"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

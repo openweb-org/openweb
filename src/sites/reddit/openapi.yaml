@@ -805,3 +805,396 @@ paths:
                     type: boolean
                   features:
                     type: object
+
+  /api/submit:
+    post:
+      operationId: createPost
+      summary: Create a new post (self or link) in a subreddit
+      servers:
+        - url: https://oauth.reddit.com
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: rd0011
+          tool_version: 1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sr
+                - title
+                - kind
+              properties:
+                sr:
+                  type: string
+                  description: Subreddit name without r/ prefix (e.g. "test")
+                title:
+                  type: string
+                  description: Post title
+                kind:
+                  type: string
+                  enum:
+                    - self
+                    - link
+                  description: "Post type: self (text post) or link (URL post)"
+                text:
+                  type: string
+                  description: Post body text (for self posts)
+                url:
+                  type: string
+                  description: URL to submit (for link posts)
+                nsfw:
+                  type: boolean
+                  description: Mark as NSFW
+                spoiler:
+                  type: boolean
+                  description: Mark as spoiler
+                flair_id:
+                  type: string
+                  description: Flair template ID
+                flair_text:
+                  type: string
+                  description: Flair text
+                resubmit:
+                  type: boolean
+                  description: Allow resubmitting an already-submitted URL
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  json:
+                    type: object
+                    properties:
+                      errors:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: string
+                      data:
+                        type: object
+                        properties:
+                          url:
+                            type: string
+                          drafts_count:
+                            type: integer
+                          id:
+                            type: string
+                          name:
+                            type: string
+                            description: Fullname of the created post (e.g. "t3_abc123")
+
+  /api/comment:
+    post:
+      operationId: createComment
+      summary: Create a comment on a post or reply to a comment
+      servers:
+        - url: https://oauth.reddit.com
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: rd0012
+          tool_version: 1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - thing_id
+                - text
+              properties:
+                thing_id:
+                  type: string
+                  description: "Fullname of the parent (post: t3_xxx, comment: t1_xxx)"
+                text:
+                  type: string
+                  description: Comment body (markdown supported)
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  json:
+                    type: object
+                    properties:
+                      errors:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: string
+                      data:
+                        type: object
+                        properties:
+                          things:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                kind:
+                                  type: string
+                                data:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: string
+                                    name:
+                                      type: string
+                                    author:
+                                      type: string
+                                    body:
+                                      type: string
+                                    parent_id:
+                                      type: string
+                                    created_utc:
+                                      type: number
+
+  /api/del:
+    post:
+      operationId: deleteThing
+      summary: Delete a post or comment by fullname
+      servers:
+        - url: https://oauth.reddit.com
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: rd0013
+          tool_version: 1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+                  description: "Fullname of the thing to delete (post: t3_xxx, comment: t1_xxx)"
+      responses:
+        "200":
+          description: Success (empty response on success).
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/subscribe:
+    post:
+      operationId: subscribe
+      summary: Subscribe or unsubscribe from a subreddit
+      servers:
+        - url: https://oauth.reddit.com
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: rd0014
+          tool_version: 1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+                - sr_name
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - sub
+                    - unsub
+                  description: "sub = subscribe, unsub = unsubscribe"
+                sr_name:
+                  type: string
+                  description: Subreddit name without r/ prefix (e.g. "programming")
+      responses:
+        "200":
+          description: Success (empty response on success).
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/unsave:
+    post:
+      operationId: unsavePost
+      summary: Remove a post or comment from saved/bookmarked items
+      servers:
+        - url: https://oauth.reddit.com
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: rd0015
+          tool_version: 1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+                  description: "Fullname of the thing to unsave (e.g. \"t3_abc123\")"
+      responses:
+        "200":
+          description: Success (empty response on success).
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/block_user:
+    post:
+      operationId: blockUser
+      summary: Block a user by account ID
+      servers:
+        - url: https://oauth.reddit.com
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: rd0016
+          tool_version: 1
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+              properties:
+                account_id:
+                  type: string
+                  description: "Reddit account ID (t2_xxx) of the user to block"
+                name:
+                  type: string
+                  description: Username of the user to block (alternative to account_id)
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /message/inbox.json:
+    get:
+      operationId: getNotifications
+      summary: >-
+        Get inbox notifications — comment replies, post replies, mentions,
+        messages with author, body, subject, context link
+      servers:
+        - url: https://oauth.reddit.com
+      x-openweb:
+        permission: read
+        build:
+          stable_id: rd0017
+          tool_version: 1
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of notifications to return (max 100)
+          example: 25
+        - name: after
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor — fullname of the last item
+        - name: mark
+          in: query
+          schema:
+            type: boolean
+          description: Whether to mark fetched messages as read (default true)
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  kind:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      after:
+                        type: string
+                        nullable: true
+                      dist:
+                        type: integer
+                      children:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            kind:
+                              type: string
+                              description: "t1 for comment replies, t4 for messages"
+                            data:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                name:
+                                  type: string
+                                author:
+                                  type: string
+                                subject:
+                                  type: string
+                                body:
+                                  type: string
+                                context:
+                                  type: string
+                                  description: Permalink to the context (comment thread)
+                                subreddit:
+                                  type: string
+                                  nullable: true
+                                was_comment:
+                                  type: boolean
+                                new:
+                                  type: boolean
+                                  description: Whether the notification is unread
+                                type:
+                                  type: string
+                                  description: "Notification type: comment_reply, post_reply, username_mention"
+                                created_utc:
+                                  type: number
+                                parent_id:
+                                  type: string
+                                  nullable: true
+                                dest:
+                                  type: string
+                                  description: Recipient username

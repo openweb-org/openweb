@@ -1,0 +1,17 @@
+{
+  "operation_id": "subscribe",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "action": "sub",
+        "sr_name": "programming"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

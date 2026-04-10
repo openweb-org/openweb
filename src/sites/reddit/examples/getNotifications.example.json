@@ -1,0 +1,15 @@
+{
+  "operation_id": "getNotifications",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "limit": 25
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "operation_id": "blockUser",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "account_id": "t2_abc123",
+        "name": "testuser"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

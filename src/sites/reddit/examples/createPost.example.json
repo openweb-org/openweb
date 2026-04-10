@@ -1,0 +1,19 @@
+{
+  "operation_id": "createPost",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "sr": "test",
+        "title": "Hello from openweb",
+        "kind": "self",
+        "text": "Testing post creation via openweb CLI"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
