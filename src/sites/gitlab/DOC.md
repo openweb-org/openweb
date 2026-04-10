@@ -16,6 +16,13 @@ GitLab REST API v4 — code hosting and DevOps platform (developer tools archety
 2. `listProjectIssues(projectId, state)` → open/closed issues
 3. `listProjectMergeRequests(projectId, state)` → open/merged MRs
 
+### File an issue and discuss
+1. `searchProjects(search)` → `projectId`
+2. `createIssue(projectId, title, description)` → new issue → `iid`
+3. `createComment(projectId, issueIid, body)` → add discussion
+4. `closeIssue(projectId, issueIid)` → close when resolved
+5. `deleteComment(projectId, issueIid, noteId)` → remove a comment
+
 ### Browse group projects
 1. `searchGroups(search)` → pick group → `groupId`
 2. `getGroup(groupId)` → group details
@@ -44,6 +51,10 @@ GitLab REST API v4 — code hosting and DevOps platform (developer tools archety
 | searchGroups | search groups | search | id, name, path, visibility | entry point |
 | getGroup | group detail | groupId ← searchGroups | name, description, visibility, full_path | |
 | listGroupProjects | group's projects | groupId ← searchGroups | id, name, path_with_namespace, star_count | paginated |
+| createIssue | create issue | projectId ← searchProjects, title, description | iid, title, state, web_url | write, CAUTION |
+| closeIssue | close issue | projectId ← searchProjects, issueIid ← listProjectIssues | iid, title, state | write, CAUTION |
+| createComment | comment on issue | projectId, issueIid ← listProjectIssues, body | id, body, author | write, CAUTION |
+| deleteComment | delete comment | projectId, issueIid, noteId ← createComment | (no content) | write, CAUTION |
 
 ## Quick Start
 
@@ -72,6 +83,18 @@ openweb gitlab exec listGroupProjects '{"groupId": 9970, "per_page": 5}'
 
 # Get a file from a repository (returns base64 content)
 openweb gitlab exec getProjectFile '{"projectId": 278964, "filePath": "README.md", "ref": "master"}'
+
+# Create an issue
+openweb gitlab exec createIssue '{"projectId": 278964, "title": "Bug report", "description": "Steps to reproduce..."}'
+
+# Close an issue
+openweb gitlab exec closeIssue '{"projectId": 278964, "issueIid": 1}'
+
+# Comment on an issue
+openweb gitlab exec createComment '{"projectId": 278964, "issueIid": 1, "body": "Confirmed on my end"}'
+
+# Delete a comment
+openweb gitlab exec deleteComment '{"projectId": 278964, "issueIid": 1, "noteId": 12345}'
 ```
 
 ---
@@ -96,7 +119,8 @@ Not needed for basic site usage.
 - `node` — all endpoints use direct HTTP; cookies extracted from browser automatically when needed for auth
 
 ## Known Issues
-- Write operations (starProject, unstarProject) require an active login session
+- Write operations (starProject, unstarProject, createIssue, closeIssue, createComment, deleteComment) require an active login session
+- All write ops require CSRF token (automatically resolved from meta tag)
 - `searchGroups` search parameter returns empty results without authentication; use `getGroup` with a known `groupId` instead
 - File path parameter must be URL-encoded (slashes become `%2F`, dots become `%2E`)
 - `getProjectFileRaw` removed — runtime does not support text/plain responses; use `getProjectFile` (returns base64 content) instead

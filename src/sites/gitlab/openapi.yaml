@@ -144,6 +144,69 @@ paths:
                   visibility:
                     type: string
   /api/v4/projects/{projectId}/issues:
+    post:
+      operationId: createIssue
+      summary: Create an issue in a project — returns iid, title, state, web_url
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: gl0015
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID or URL-encoded path of the project.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  description: Title of the issue.
+                description:
+                  type: string
+                  description: Description of the issue (Markdown supported).
+                labels:
+                  type: string
+                  description: Comma-separated label names.
+      responses:
+        '201':
+          description: Issue created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  iid:
+                    type: integer
+                  title:
+                    type: string
+                  state:
+                    type: string
+                  description:
+                    type:
+                      - string
+                      - 'null'
+                  web_url:
+                    type: string
+                  labels:
+                    type: array
+                    items:
+                      type: string
     get:
       operationId: listProjectIssues
       summary: List project issues — iid, title, state, labels, description, web_url
@@ -213,6 +276,157 @@ paths:
                       type: array
                       items:
                         type: string
+  /api/v4/projects/{projectId}/issues/{issueIid}:
+    put:
+      operationId: closeIssue
+      summary: Close an issue (set state_event to close) — returns iid, title, state, web_url
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: gl0016
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID or URL-encoded path of the project.
+        - name: issueIid
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The internal ID of the issue.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - state_event
+              properties:
+                state_event:
+                  type: string
+                  enum: [close]
+                  default: close
+      responses:
+        '200':
+          description: Issue closed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  iid:
+                    type: integer
+                  title:
+                    type: string
+                  state:
+                    type: string
+                  web_url:
+                    type: string
+  /api/v4/projects/{projectId}/issues/{issueIid}/notes:
+    post:
+      operationId: createComment
+      summary: Create a comment (note) on an issue — returns id, body, author, created_at
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: gl0017
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID or URL-encoded path of the project.
+        - name: issueIid
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The internal ID of the issue.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - body
+              properties:
+                body:
+                  type: string
+                  description: The content of the note/comment (Markdown supported).
+      responses:
+        '201':
+          description: Comment created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  body:
+                    type: string
+                  author:
+                    type: object
+                    properties:
+                      username:
+                        type: string
+                      name:
+                        type: string
+                  created_at:
+                    type: string
+  /api/v4/projects/{projectId}/issues/{issueIid}/notes/{noteId}:
+    delete:
+      operationId: deleteComment
+      summary: Delete a comment (note) on an issue (reverse of createComment)
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: gl0018
+          tool_version: 1
+          verified: false
+          signals:
+            - status-match
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID or URL-encoded path of the project.
+        - name: issueIid
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The internal ID of the issue.
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the note to delete.
+      responses:
+        '204':
+          description: Comment deleted (no content).
   /api/v4/projects/{projectId}/merge_requests:
     get:
       operationId: listProjectMergeRequests

@@ -1,0 +1,13 @@
+{
+  "operation_id": "deleteComment",
+  "method": "delete",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": { "projectId": 278964, "issueIid": 1, "noteId": 1 },
+      "assertions": {
+        "status": 204
+      }
+    }
+  ]
+}

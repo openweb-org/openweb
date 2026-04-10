@@ -1,0 +1,14 @@
+{
+  "operation_id": "closeIssue",
+  "method": "put",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": { "projectId": 278964, "issueIid": 1, "state_event": "close" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
