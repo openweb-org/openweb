@@ -10,11 +10,35 @@ User-facing sites focused on content consumption, social interaction, and commun
 
 ## Expected Operations
 
-**Social Media:** Feed/timeline (read, paginated), user profile (read), post/create (write), like/react (write), comment (write), search (read)
+**Social Media:**
+- Read: feed/timeline (paginated), user profile, search, explore/trending
+- Write (reversible pairs):
+  - createPost / deletePost
+  - reply / deleteReply
+  - like / unlike
+  - repost (retweet, reblog) / unrepost
+  - bookmark (save) / unbookmark (unsave)
+  - follow / unfollow
+  - comment / deleteComment
+- Write (one-way): quote-post (creates new post, delete to undo)
 
-**Messaging:** List conversations (read, paginated), read messages (read, paginated), send message (write), list contacts (read), search messages (read), WebSocket gateway for real-time events
+**Messaging:**
+- Read: list conversations (paginated), read messages (paginated), list contacts, search messages
+- Write (reversible pairs):
+  - sendMessage / deleteMessage
+  - addReaction / removeReaction
+  - pinMessage / unpinMessage
+- Write (one-way): markAsRead, editMessage
+- Real-time: WebSocket gateway for events
 
-**Content Platforms:** Feed/homepage (read, paginated), content detail (read, by ID), search (read), user/channel profile (read), comment/reply (write)
+**Content Platforms:**
+- Read: feed/homepage (paginated), content detail (by ID), search, user/channel profile, comments (paginated)
+- Write (reversible pairs):
+  - like / unlike
+  - subscribe / unsubscribe
+  - save / unsave (playlists, bookmarks)
+  - comment / deleteComment
+  - addToPlaylist / removeFromPlaylist (music/video)
 
 ## Typical Profile
 
@@ -45,13 +69,16 @@ User-facing sites focused on content consumption, social interaction, and commun
 - [ ] Feed returns real posts (not empty or login-gated)
 - [ ] Pagination works (cursor advances)
 - [ ] Write ops gated with `write` permission
+- [ ] Every write op has its reverse (like/unlike, follow/unfollow, etc.)
 - [ ] CSRF header present on mutations
 - [ ] Profile returns structured user data (not HTML)
+- [ ] deletePost/deleteComment test with content you created (not others')
 
 **Messaging:**
 - [ ] WebSocket gateway captured? Check asyncapi.yaml alongside openapi.yaml
 - [ ] Adapter correctly extracts from internal state (not DOM scraping)
 - [ ] Message send gated with `write` permission
+- [ ] deleteMessage works on own messages only
 - [ ] Conversation list paginated (not unbounded)
 
 **Content Platforms:**
@@ -59,3 +86,4 @@ User-facing sites focused on content consumption, social interaction, and commun
 - [ ] Content detail includes full text/body (not truncated)
 - [ ] Signed requests have correct hash computation
 - [ ] SSR extraction targets correct data path (e.g., `__NEXT_DATA__.props.pageProps`)
+- [ ] subscribe/unsubscribe pair both work

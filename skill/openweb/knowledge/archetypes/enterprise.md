@@ -12,13 +12,35 @@ Business tools, developer platforms, financial services, and productivity apps.
 
 ## Expected Operations
 
-**Productivity / Enterprise:** List documents/items (read, paginated), document/item detail (read), create (write), update (write), search (read), dashboard/overview (read)
+**Productivity / Enterprise:**
+- Read: list documents/items (paginated), document/item detail, search, dashboard/overview
+- Write (reversible pairs):
+  - createItem / deleteItem (or archiveItem)
+  - updateItem (reversible via re-update)
+  - completeTask / uncompleteTask
+- Write (one-way): assignItem, moveItem
 
-**Developer Tools:** List repos/projects (read, paginated), repo detail (read), list issues (read, paginated), create issue (write), search (read), user/org profile (read)
+**Developer Tools:**
+- Read: list repos/projects (paginated), repo detail, list issues (paginated), search, user/org profile
+- Write (reversible pairs):
+  - starRepo / unstarRepo
+  - createIssue / closeIssue (or deleteIssue)
+  - createComment / deleteComment
+- Write (one-way): forkRepo (creates new repo, no undo needed)
 
-**Finance / Banking:** Account/portfolio overview (read), stock/asset quote (read, by symbol), market data (read), transaction history (read, paginated), search securities (read), place order (transact -- deny by default)
+**Finance / Banking:**
+- Read: account/portfolio overview, stock/asset quote (by symbol), market data, transaction history (paginated), search securities
+- Write (reversible pairs):
+  - addToWatchlist / removeFromWatchlist
+- Transact (deny by default): placeOrder, transfer
 
-**Email & Cloud / Storage:** List inbox/files (read, paginated), read message/file metadata (read), send message/upload file (write), search (read)
+**Email & Cloud / Storage:**
+- Read: list inbox/files (paginated), read message/file metadata, search
+- Write (reversible pairs):
+  - starMessage / unstarMessage
+  - moveToFolder / moveBack
+  - archiveMessage / unarchiveMessage
+- Write (one-way): sendMessage (email), uploadFile, deleteFile
 
 ## Typical Profile
 
@@ -47,15 +69,19 @@ Business tools, developer platforms, financial services, and productivity apps.
 - [ ] CSRF token source identified and configured
 - [ ] Context IDs (org, team, project) documented in DOC.md
 - [ ] Write ops gated with `write` permission
+- [ ] create/delete and complete/uncomplete pairs both work
 
 **Developer Tools:**
 - [ ] Pagination type documented (link_header, cursor, offset)
 - [ ] Public vs authenticated endpoints distinguished
 - [ ] Rate limits documented (GitHub: 60/h unauth, 5000/h auth)
+- [ ] star/unstar pair both work
+- [ ] createIssue/closeIssue pair both work
 
 **Finance / Banking:**
 - [ ] Read-only market data separated from account operations
 - [ ] Order/trade operations gated with `transact` permission
+- [ ] addToWatchlist / removeFromWatchlist pair both work
 - [ ] Session tokens documented (short expiry common)
 - [ ] Sensitive data (account numbers, SSN) excluded from responses
 - [ ] Real-time quote data vs delayed data noted

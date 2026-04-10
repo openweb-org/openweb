@@ -10,11 +10,31 @@ Transaction-oriented sites where users browse, compare, and purchase goods or se
 
 ## Expected Operations
 
-**E-commerce:** Search products (read), product detail (read, by ID), add to cart (write), view cart (read), checkout (transact -- deny by default)
+**E-commerce:**
+- Read: search products, product detail (by ID), product reviews (paginated), price comparison
+- Write (reversible pairs):
+  - addToCart / removeFromCart
+  - updateCartQuantity (set to 0 = remove)
+  - saveItem (wishlist) / unsaveItem
+- Read: view cart
+- Transact (deny by default): checkout, placeOrder
 
-**Travel:** Search listings (read, paginated), listing detail (read, by ID), price/availability (read), book/reserve (transact -- deny by default)
+**Travel:**
+- Read: search listings (paginated), listing detail (by ID), price/availability, reviews
+- Write (reversible pairs):
+  - saveProperty (wishlist) / unsaveProperty
+- Transact (deny by default): book/reserve
 
-**Food Delivery:** Search restaurants (read, paginated), restaurant menu (read, by ID), add to cart (write), place order (transact -- deny by default)
+**Food Delivery:**
+- Read: search restaurants (paginated), restaurant menu (by ID), delivery estimate
+- Write (reversible pairs):
+  - addToCart / removeFromCart
+- Transact (deny by default): placeOrder
+
+**Job Boards:**
+- Read: search jobs, job detail, company profile, salary data, reviews
+- Write (reversible pairs):
+  - saveJob / unsaveJob
 
 ## Typical Profile
 
@@ -41,17 +61,20 @@ Transaction-oriented sites where users browse, compare, and purchase goods or se
 - [ ] Search returns structured product data (title, price, image -- not HTML)
 - [ ] Price fields use consistent format (check flat vs nested pricing)
 - [ ] SSR extraction path verified (e.g., `__NEXT_DATA__` actually contains product data)
-- [ ] Cart/checkout ops gated: `write` for add-to-cart, `transact` for checkout
+- [ ] addToCart / removeFromCart pair both work
+- [ ] Cart/checkout ops gated: `write` for cart, `transact` for checkout
 - [ ] Bot detection documented in DOC.md Known Issues
 
 **Travel:**
 - [ ] Search params map to user intent (location, dates, guests)
 - [ ] Price/availability data is real-time (not cached/stale)
+- [ ] saveProperty / unsaveProperty pair both work (if supported)
 - [ ] Booking ops gated with `transact` permission
 - [ ] Multi-step flows documented (search -> select -> book)
 
 **Food Delivery:**
 - [ ] Restaurant search is location-aware (lat/lng or zip)
 - [ ] Menu items include prices and availability
+- [ ] addToCart / removeFromCart pair both work
 - [ ] Order placement gated with `transact` permission
 - [ ] GraphQL persisted query hashes recorded if applicable
