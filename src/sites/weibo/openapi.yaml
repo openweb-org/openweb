@@ -1503,7 +1503,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               type: object
               required:
@@ -1951,7 +1951,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               type: object
               required:
@@ -2032,7 +2032,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          application/json:
             schema:
               type: object
               required:
@@ -2242,3 +2242,108 @@ paths:
                   favorited_time:
                     type: string
                     description: Timestamp when bookmarked.
+  /ajax/statuses/cancelLike:
+    post:
+      operationId: unlikePost
+      summary: Unlike a post — reverses likePost (setLike)
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: weibo0015
+          tool_version: 1
+        adapter:
+          name: weibo-web
+          operation: unlikePost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+                  description: Post ID (mid) to unlike.
+      responses:
+        "200":
+          description: Unlike result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: integer
+  /ajax/friendships/destroy:
+    post:
+      operationId: unfollowUser
+      summary: Unfollow a user — reverses followUser (friendships/create)
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: weibo0016
+          tool_version: 1
+        adapter:
+          name: weibo-web
+          operation: unfollowUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - friend_uid
+              properties:
+                friend_uid:
+                  type: string
+                  description: User ID (numeric) to unfollow.
+      responses:
+        "200":
+          description: Unfollowed user confirmation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: integer
+  /ajax/statuses/destroyFavorites:
+    post:
+      operationId: unbookmarkPost
+      summary: Remove bookmark — reverses bookmarkPost (createFavorites)
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: weibo0017
+          tool_version: 1
+        adapter:
+          name: weibo-web
+          operation: unbookmarkPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+                  description: Post ID (mid) to unbookmark.
+      responses:
+        "200":
+          description: Unbookmark result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: integer

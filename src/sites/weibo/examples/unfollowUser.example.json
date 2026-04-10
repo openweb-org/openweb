@@ -1,0 +1,16 @@
+{
+  "operation_id": "unfollowUser",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "friend_uid": "1926909715"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

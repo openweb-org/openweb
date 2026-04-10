@@ -189,6 +189,24 @@ async function bookmarkPost(page: Page, params: Record<string, unknown>, errors:
   return postForm(page, `${SITE}/ajax/statuses/createFavorites`, `id=${id}`)
 }
 
+async function unlikePost(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const id = String(params.id ?? '')
+  if (!id) throw errors.missingParam('id')
+  return postForm(page, `${SITE}/ajax/statuses/cancelLike`, `id=${id}`)
+}
+
+async function unfollowUser(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const uid = String(params.friend_uid ?? params.uid ?? '')
+  if (!uid) throw errors.missingParam('friend_uid')
+  return postForm(page, `${SITE}/ajax/friendships/destroy`, `friend_uid=${uid}`)
+}
+
+async function unbookmarkPost(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
+  const id = String(params.id ?? '')
+  if (!id) throw errors.missingParam('id')
+  return postForm(page, `${SITE}/ajax/statuses/destroyFavorites`, `id=${id}`)
+}
+
 /* ---------- adapter export ---------- */
 
 type OpHandler = (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>
@@ -213,6 +231,9 @@ const OPERATIONS: Record<string, OpHandler> = {
   repost,
   followUser,
   bookmarkPost,
+  unlikePost,
+  unfollowUser,
+  unbookmarkPost,
 }
 
 const adapter = {

@@ -14,10 +14,10 @@
     "getFriendsFeed → getPost": "home feed returns post mids usable by getPost"
   },
   "stats": {
-    "operation_count": 13,
+    "operation_count": 16,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 13,
+    "l3_count": 16,
     "ws_count": 0
   },
   "last_verified": "2026-03-29T06:26:04.728Z",

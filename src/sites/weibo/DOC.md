@@ -23,6 +23,11 @@ Chinese microblogging platform (social media). China's Twitter/X equivalent with
 4. `repost(id=mid, reason)` → repost with comment
 5. `bookmarkPost(id=mid)` → save to favorites
 
+### Undo actions
+1. `unlikePost(id=mid)` → remove like from post
+2. `unfollowUser(friend_uid=user.id)` → unfollow user
+3. `unbookmarkPost(id=mid)` → remove bookmark
+
 ### Follow a user from a post
 1. `getPost(id)` → post detail → `user.id`
 2. `followUser(friend_uid=user.id)` → follow the author
@@ -44,6 +49,9 @@ Chinese microblogging platform (social media). China's Twitter/X equivalent with
 | repost | repost/retweet | id ← getPost mid, reason | ok, statuses | SAFE: reversible (adapter) |
 | followUser | follow a user | friend_uid ← getPost user.id | ok, data (user) | SAFE: reversible (adapter) |
 | bookmarkPost | bookmark a post | id ← getPost mid | ok, favorited_time | SAFE: reversible (adapter) |
+| unlikePost | unlike a post | id ← getPost mid | ok | CAUTION: reverses likePost (adapter) |
+| unfollowUser | unfollow a user | friend_uid ← getPost user.id | ok | CAUTION: reverses followUser (adapter) |
+| unbookmarkPost | remove bookmark | id ← getPost mid | ok | CAUTION: reverses bookmarkPost (adapter) |
 
 ## Quick Start
 
@@ -91,7 +99,7 @@ openweb weibo exec listReposts '{"id": 5281762063682574, "page": 1, "count": 10}
 - `page` — node transport blocked by anti-bot (returns 403)
 - Requires managed browser with open weibo.com tab
 - All API calls execute via `page.evaluate(fetch(...))` in browser context
-- Write ops (repost, followUser, bookmarkPost) use adapter for CSRF + body encoding
+- Write ops (repost, followUser, bookmarkPost, unlikePost, unfollowUser, unbookmarkPost) use adapter for CSRF + body encoding
 
 ## Known Issues
 - **Login required** — all ops need an active Weibo session (SUB cookie)
