@@ -1,0 +1,17 @@
+{
+  "operation_id": "blockUser",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "userId": "4398626122"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ],
+  "operationId": "blockUser"
+}

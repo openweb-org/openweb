@@ -1,0 +1,18 @@
+{
+  "operation_id": "getUserLikes",
+  "method": "get",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "userId": "4398626122",
+        "count": 20
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ],
+  "operationId": "getUserLikes"
+}

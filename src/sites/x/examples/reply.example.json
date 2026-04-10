@@ -1,0 +1,18 @@
+{
+  "operation_id": "reply",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "tweet_id": "1234567890123456789",
+        "text": "Great thread, thanks for sharing!"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ],
+  "operationId": "reply"
+}

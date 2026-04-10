@@ -31,6 +31,13 @@ const OP_NAME: Record<string, string> = {
   deleteBookmark: 'DeleteBookmark',
   createRetweet: 'CreateRetweet',
   deleteRetweet: 'DeleteRetweet',
+  createTweet: 'CreateTweet',
+  deleteTweet: 'DeleteTweet',
+  reply: 'CreateTweet',
+  getNotifications: 'notifications/all',  // REST v2
+  getUserLikes: 'Likes',
+  getBookmarks: 'timeline/bookmark',  // REST v2
+  deleteDM: 'DMMessageDeleteMutation',
 }
 
 const BEARER = 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA'
@@ -155,6 +162,56 @@ async function graphqlPost(
     },
     { path, body: JSON.stringify(body), bearer: BEARER, signerModuleId: SIGNER_MODULE_ID },
   )
+}
+
+/** Make a REST API request (v1.1 form-urlencoded or v2 JSON). */
+async function restRequest(
+  page: Page,
+  method: string,
+  path: string,
+  contentType: string,
+  body: string,
+): Promise<unknown> {
+  return page.evaluate(
+    async (args: { method: string; path: string; contentType: string; body: string; bearer: string }) => {
+      const ct0 = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('ct0='))
+      const csrfToken = ct0 ? ct0.split('=')[1] : ''
+
+      const url = `https://x.com${args.path}`
+      const headers: Record<string, string> = {
+        Accept: 'application/json',
+        authorization: args.bearer,
+        'x-csrf-token': csrfToken,
+      }
+      if (args.method !== 'GET') headers['Content-Type'] = args.contentType
+
+      const opts: RequestInit = { method: args.method, headers, credentials: 'include' as RequestCredentials }
+      if (args.method !== 'GET' && args.body) opts.body = args.body
+
+      const resp = await fetch(url, opts)
+      const text = await resp.text()
+      return { status: resp.status, text }
+    },
+    { method, path, contentType, body, bearer: BEARER },
+  )
+}
+
+/** Execute a REST request with standard error handling. */
+async function executeRest(
+  page: Page,
+  method: string,
+  path: string,
+  contentType: string,
+  body: string,
+  errors: Errors,
+): Promise<unknown> {
+  const result = await restRequest(page, method, path, contentType, body) as { status: number; text: string }
+  if (result.status >= 400) throw errors.httpError(result.status)
+  try {
+    return JSON.parse(result.text)
+  } catch {
+    return result.text
+  }
 }
 
 type Errors = {
@@ -406,6 +463,155 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
     const source_tweet_id = String(params.source_tweet_id ?? '')
     if (!source_tweet_id) throw errors.missingParam('source_tweet_id')
     return executeGraphqlPost(page, 'DeleteRetweet', { source_tweet_id }, {}, errors)
+  },
+
+  createTweet: async (page, params, errors) => {
+    const text = String(params.text ?? '')
+    if (!text) throw errors.missingParam('text')
+    return executeGraphqlPost(page, 'CreateTweet', {
+      tweet_text: text,
+      dark_request: false,
+      media: { media_entities: [], possibly_sensitive: false },
+      semantic_annotation_ids: [],
+    }, DEFAULT_FEATURES, errors)
+  },
+
+  deleteTweet: async (page, params, errors) => {
+    const tweet_id = String(params.tweet_id ?? '')
+    if (!tweet_id) throw errors.missingParam('tweet_id')
+    return executeGraphqlPost(page, 'DeleteTweet', { tweet_id, dark_request: false }, {}, errors)
+  },
+
+  reply: async (page, params, errors) => {
+    const text = String(params.text ?? '')
+    const tweet_id = String(params.tweet_id ?? '')
+    if (!text) throw errors.missingParam('text')
+    if (!tweet_id) throw errors.missingParam('tweet_id')
+    return executeGraphqlPost(page, 'CreateTweet', {
+      tweet_text: text,
+      reply: { in_reply_to_tweet_id: tweet_id, exclude_reply_user_ids: [] },
+      dark_request: false,
+      media: { media_entities: [], possibly_sensitive: false },
+      semantic_annotation_ids: [],
+    }, DEFAULT_FEATURES, errors)
+  },
+
+  followUser: async (page, params, errors) => {
+    const userId = String(params.userId ?? '')
+    if (!userId) throw errors.missingParam('userId')
+    return executeRest(page, 'POST', '/i/api/1.1/friendships/create.json',
+      'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
+  },
+
+  unfollowUser: async (page, params, errors) => {
+    const userId = String(params.userId ?? '')
+    if (!userId) throw errors.missingParam('userId')
+    return executeRest(page, 'POST', '/i/api/1.1/friendships/destroy.json',
+      'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
+  },
+
+  blockUser: async (page, params, errors) => {
+    const userId = String(params.userId ?? '')
+    if (!userId) throw errors.missingParam('userId')
+    return executeRest(page, 'POST', '/i/api/1.1/blocks/create.json',
+      'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
+  },
+
+  unblockUser: async (page, params, errors) => {
+    const userId = String(params.userId ?? '')
+    if (!userId) throw errors.missingParam('userId')
+    return executeRest(page, 'POST', '/i/api/1.1/blocks/destroy.json',
+      'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
+  },
+
+  muteUser: async (page, params, errors) => {
+    const userId = String(params.userId ?? '')
+    if (!userId) throw errors.missingParam('userId')
+    return executeRest(page, 'POST', '/i/api/1.1/mutes/users/create.json',
+      'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
+  },
+
+  unmuteUser: async (page, params, errors) => {
+    const userId = String(params.userId ?? '')
+    if (!userId) throw errors.missingParam('userId')
+    return executeRest(page, 'POST', '/i/api/1.1/mutes/users/destroy.json',
+      'application/x-www-form-urlencoded', `user_id=${userId}`, errors)
+  },
+
+  hideReply: async (page, params, errors) => {
+    const tweet_id = String(params.tweet_id ?? '')
+    if (!tweet_id) throw errors.missingParam('tweet_id')
+    return executeRest(page, 'PUT', `/i/api/2/tweets/${tweet_id}/hidden`,
+      'application/json', JSON.stringify({ hidden: true }), errors)
+  },
+
+  unhideReply: async (page, params, errors) => {
+    const tweet_id = String(params.tweet_id ?? '')
+    if (!tweet_id) throw errors.missingParam('tweet_id')
+    return executeRest(page, 'PUT', `/i/api/2/tweets/${tweet_id}/hidden`,
+      'application/json', JSON.stringify({ hidden: false }), errors)
+  },
+
+  sendDM: async (page, params, errors) => {
+    const recipientId = String(params.recipientId ?? '')
+    const text = String(params.text ?? '')
+    if (!recipientId) throw errors.missingParam('recipientId')
+    if (!text) throw errors.missingParam('text')
+    const body = JSON.stringify({
+      recipient_ids: recipientId,
+      text,
+      cards_platform: 'Web-12',
+      include_cards: 1,
+      include_quote_count: true,
+      dm_secret_conversations_enabled: false,
+    })
+    return executeRest(page, 'POST', '/i/api/1.1/dm/new2.json',
+      'application/json', body, errors)
+  },
+
+  deleteDM: async (page, params, errors) => {
+    const messageId = String(params.messageId ?? '')
+    if (!messageId) throw errors.missingParam('messageId')
+    return executeGraphqlPost(page, 'DMMessageDeleteMutation', {
+      messageId,
+      requestId: `${Date.now()}`,
+    }, {}, errors)
+  },
+
+  getNotifications: async (page, params, errors) => {
+    const count = Number(params.count) || 20
+    return executeRest(page, 'GET',
+      `/i/api/2/notifications/all.json?count=${count}&include_profile_interstitial_type=1&skip_status=1&cards_platform=Web-12&include_cards=1&include_ext_alt_text=true&tweet_mode=extended&include_entities=true&include_user_entities=true`,
+      '', '', errors)
+  },
+
+  getUserLikes: async (page, params, errors) => {
+    const userId = String(params.userId ?? '')
+    if (!userId) throw errors.missingParam('userId')
+    return executeGraphqlGet(page, 'Likes', {
+      userId,
+      count: Number(params.count) || 20,
+      includePromotedContent: false,
+    }, DEFAULT_FEATURES, undefined, errors)
+  },
+
+  getBookmarks: async (page, params, errors) => {
+    // Operation name varies across Twitter deploys — discover dynamically
+    if (!cachedQueryIds) cachedQueryIds = await loadQueryIds(page)
+    const readOps = Object.keys(cachedQueryIds).filter(
+      k => /bookmark/i.test(k) && !/^(Create|Delete)/.test(k),
+    )
+    const opName = readOps.find(k => /timeline/i.test(k)) ?? readOps[0]
+    if (!opName) throw errors.fatal('No bookmark list operation found in Twitter bundle')
+    const variables: Record<string, unknown> = {
+      count: Number(params.count) || 20,
+      includePromotedContent: true,
+    }
+    if (/folder/i.test(opName)) variables.bookmark_collection_id = ''
+    return executeGraphqlGet(page, opName, variables, {
+      ...DEFAULT_FEATURES,
+      rweb_tipjar_consumption_enabled: false,
+    }, undefined, errors)
   },
 }
 

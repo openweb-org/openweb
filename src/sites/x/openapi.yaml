@@ -687,3 +687,590 @@ paths:
             application/json:
               schema:
                 type: object
+
+  /internal/createTweet:
+    post:
+      operationId: createTweet
+      summary: "Create a new tweet"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: a3b4c5d6e7f81920
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: createTweet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  description: Tweet text content (max 280 chars)
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  create_tweet:
+                    type: object
+                    properties:
+                      tweet_results:
+                        type: object
+                        properties:
+                          result:
+                            type: object
+                            properties:
+                              rest_id:
+                                type: string
+                              core:
+                                type: object
+                              legacy:
+                                type: object
+
+  /internal/deleteTweet:
+    post:
+      operationId: deleteTweet
+      summary: "Delete a tweet you own"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: b4c5d6e7f8a91021
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: deleteTweet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tweet_id
+              properties:
+                tweet_id:
+                  type: string
+                  description: ID of the tweet to delete (must be yours)
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  delete_tweet:
+                    type: object
+                    properties:
+                      tweet_results:
+                        type: object
+
+  /internal/reply:
+    post:
+      operationId: reply
+      summary: "Reply to a tweet"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: c5d6e7f8a9b01122
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: reply
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tweet_id
+                - text
+              properties:
+                tweet_id:
+                  type: string
+                  description: Tweet ID to reply to
+                text:
+                  type: string
+                  description: Reply text content (max 280 chars)
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  create_tweet:
+                    type: object
+                    properties:
+                      tweet_results:
+                        type: object
+                        properties:
+                          result:
+                            type: object
+                            properties:
+                              rest_id:
+                                type: string
+                              core:
+                                type: object
+                              legacy:
+                                type: object
+
+  /internal/followUser:
+    post:
+      operationId: followUser
+      summary: "Follow a user"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: d6e7f8a9b0c11223
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: followUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: "Numeric user ID to follow (from getUserByScreenName → rest_id)"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /internal/unfollowUser:
+    post:
+      operationId: unfollowUser
+      summary: "Unfollow a user"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: e7f8a9b0c1d21324
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: unfollowUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: "Numeric user ID to unfollow (from getUserByScreenName → rest_id)"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /internal/blockUser:
+    post:
+      operationId: blockUser
+      summary: "Block a user"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: f8a9b0c1d2e31425
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: blockUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: "Numeric user ID to block (from getUserByScreenName → rest_id)"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /internal/unblockUser:
+    post:
+      operationId: unblockUser
+      summary: "Unblock a user"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: a9b0c1d2e3f41526
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: unblockUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: "Numeric user ID to unblock (from getUserByScreenName → rest_id)"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /internal/muteUser:
+    post:
+      operationId: muteUser
+      summary: "Mute a user"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: b0c1d2e3f4a51627
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: muteUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: "Numeric user ID to mute (from getUserByScreenName → rest_id)"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /internal/unmuteUser:
+    post:
+      operationId: unmuteUser
+      summary: "Unmute a user"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: c1d2e3f4a5b61728
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: unmuteUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: "Numeric user ID to unmute (from getUserByScreenName → rest_id)"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /internal/hideReply:
+    post:
+      operationId: hideReply
+      summary: "Hide a reply to your tweet"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: d2e3f4a5b6c71829
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: hideReply
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tweet_id
+              properties:
+                tweet_id:
+                  type: string
+                  description: Reply tweet ID to hide (must be a reply to your tweet)
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hidden:
+                    type: boolean
+
+  /internal/unhideReply:
+    post:
+      operationId: unhideReply
+      summary: "Unhide a previously hidden reply"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: e3f4a5b6c7d81930
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: unhideReply
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tweet_id
+              properties:
+                tweet_id:
+                  type: string
+                  description: Reply tweet ID to unhide
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hidden:
+                    type: boolean
+
+  /internal/sendDM:
+    post:
+      operationId: sendDM
+      summary: "Send a direct message (approved contacts only)"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: f4a5b6c7d8e91a31
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: sendDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recipientId
+                - text
+              properties:
+                recipientId:
+                  type: string
+                  description: "Numeric user ID of recipient (from getUserByScreenName → rest_id). Recipient must allow DMs from you."
+                text:
+                  type: string
+                  description: Message text
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /internal/deleteDM:
+    post:
+      operationId: deleteDM
+      summary: "Delete a direct message"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: a5b6c7d8e9f01b32
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: deleteDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+              properties:
+                messageId:
+                  type: string
+                  description: DM message ID to delete
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /internal/getNotifications:
+    get:
+      operationId: getNotifications
+      summary: "Get notification timeline — mentions, likes, retweets, follows, replies"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: b6c7d8e9f0a11c33
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: getNotifications
+      parameters:
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of notifications to return
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /internal/getUserLikes:
+    get:
+      operationId: getUserLikes
+      summary: "Get tweets liked by a user"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: c7d8e9f0a1b21d34
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: getUserLikes
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Numeric user ID (from getUserByScreenName → rest_id)"
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of liked tweets to return
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /internal/getBookmarks:
+    get:
+      operationId: getBookmarks
+      summary: "Get your bookmarked tweets"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: d8e9f0a1b2c31e35
+          tool_version: 2
+          signals: [adapter-verified]
+        adapter:
+          name: x-graphql
+          operation: getBookmarks
+      parameters:
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Number of bookmarks to return
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object

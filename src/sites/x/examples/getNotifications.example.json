@@ -1,0 +1,17 @@
+{
+  "operation_id": "getNotifications",
+  "method": "get",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "count": 20
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ],
+  "operationId": "getNotifications"
+}
