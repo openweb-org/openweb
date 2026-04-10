@@ -7,6 +7,7 @@ Transaction-oriented sites where users browse, compare, and purchase goods or se
 - **E-commerce** — product search, detail, cart, checkout: Walmart, Best Buy, eBay
 - **Travel** — flights, hotels, listings, bookings: Airbnb, Booking.com, Expedia, Google Flights
 - **Food Delivery** — restaurants, menus, orders: DoorDash, Instacart, Starbucks
+- **Job Boards** — job search, company reviews, salaries: Indeed, LinkedIn Jobs, Glassdoor, Boss Zhipin
 
 ## Expected Operations
 

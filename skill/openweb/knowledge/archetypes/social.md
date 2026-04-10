@@ -11,34 +11,77 @@ User-facing sites focused on content consumption, social interaction, and commun
 ## Expected Operations
 
 **Social Media:**
-- Read: feed/timeline (paginated), user profile, search, explore/trending
-- Write (reversible pairs):
+- Read — core:
+  - feed / timeline (paginated)
+  - user profile
+  - search (posts, users)
+  - explore / discover feed (algorithmic recommendations)
+  - trending / popular
+  - notifications
+  - followers list / following list
+  - thread / conversation (full reply chain)
+- Read — media:
+  - reels / short-video feed (Instagram, TikTok)
+  - article / long-form content (X Articles, LinkedIn articles)
+  - stories (ephemeral, Instagram/Facebook)
+  - notes / status (Instagram Notes)
+  - download media (images, videos)
+- Write — content (reversible pairs):
   - createPost / deletePost
   - reply / deleteReply
+  - comment / deleteComment
+  - quote-post / deleteQuote
+- Write — engagement (reversible pairs):
   - like / unlike
   - repost (retweet, reblog) / unrepost
-  - bookmark (save) / unbookmark (unsave)
+  - bookmark / unbookmark
+  - save / unsave (collections)
+  - upvote / downvote / removeVote (Reddit-style)
+- Write — social graph (reversible pairs):
   - follow / unfollow
-  - comment / deleteComment
-- Write (one-way): quote-post (creates new post, delete to undo)
+  - block / unblock
+  - mute / unmute
+  - acceptFollowRequest (one-way, for private accounts)
+  - hideReply / unhideReply (X)
+- Write — messaging (reversible pairs):
+  - sendDM / deleteDM (private messages within social platforms)
 
 **Messaging:**
-- Read: list conversations (paginated), read messages (paginated), list contacts, search messages
+- Read:
+  - list conversations (paginated)
+  - read messages (paginated)
+  - list contacts
+  - search messages
+  - notifications
 - Write (reversible pairs):
   - sendMessage / deleteMessage
   - addReaction / removeReaction
   - pinMessage / unpinMessage
-- Write (one-way): markAsRead, editMessage
+- Write (one-way):
+  - markAsRead
+  - editMessage
 - Real-time: WebSocket gateway for events
 
 **Content Platforms:**
-- Read: feed/homepage (paginated), content detail (by ID), search, user/channel profile, comments (paginated)
-- Write (reversible pairs):
+- Read — core:
+  - feed / homepage (paginated)
+  - content detail (by ID)
+  - search
+  - user / channel profile
+  - comments (paginated)
+  - notifications
+  - explore / discover (recommendations)
+- Read — media:
+  - playlist / collection listing
+  - transcript / captions
+- Write — engagement (reversible pairs):
   - like / unlike
   - subscribe / unsubscribe
-  - save / unsave (playlists, bookmarks)
+  - save / unsave
   - comment / deleteComment
+- Write — library (reversible pairs):
   - addToPlaylist / removeFromPlaylist (music/video)
+  - createPlaylist / deletePlaylist
 
 ## Typical Profile
 
@@ -68,11 +111,16 @@ User-facing sites focused on content consumption, social interaction, and commun
 **Social Media:**
 - [ ] Feed returns real posts (not empty or login-gated)
 - [ ] Pagination works (cursor advances)
+- [ ] Explore/discover feed returns recommendations (not same as main feed)
+- [ ] Notifications returns structured items (not HTML)
+- [ ] Followers/following lists paginated
 - [ ] Write ops gated with `write` permission
-- [ ] Every write op has its reverse (like/unlike, follow/unfollow, etc.)
+- [ ] Every write op has its reverse (like/unlike, follow/unfollow, block/unblock, mute/unmute, save/unsave, etc.)
 - [ ] CSRF header present on mutations
 - [ ] Profile returns structured user data (not HTML)
 - [ ] deletePost/deleteComment test with content you created (not others')
+- [ ] DM ops test with approved contacts only
+- [ ] Reels/stories/notes: skip if platform doesn't have them
 
 **Messaging:**
 - [ ] WebSocket gateway captured? Check asyncapi.yaml alongside openapi.yaml
@@ -80,6 +128,7 @@ User-facing sites focused on content consumption, social interaction, and commun
 - [ ] Message send gated with `write` permission
 - [ ] deleteMessage works on own messages only
 - [ ] Conversation list paginated (not unbounded)
+- [ ] Reaction add/remove pair both work
 
 **Content Platforms:**
 - [ ] Search returns structured results (not HTML page)
@@ -87,3 +136,5 @@ User-facing sites focused on content consumption, social interaction, and commun
 - [ ] Signed requests have correct hash computation
 - [ ] SSR extraction targets correct data path (e.g., `__NEXT_DATA__.props.pageProps`)
 - [ ] subscribe/unsubscribe pair both work
+- [ ] addToPlaylist/removeFromPlaylist pair both work (if platform has playlists)
+- [ ] Notifications returns structured items

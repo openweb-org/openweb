@@ -13,19 +13,21 @@ Business tools, developer platforms, financial services, and productivity apps.
 ## Expected Operations
 
 **Productivity / Enterprise:**
-- Read: list documents/items (paginated), document/item detail, search, dashboard/overview
+- Read: list documents/items (paginated), document/item detail, search, dashboard/overview, notifications, activity feed
 - Write (reversible pairs):
-  - createItem / deleteItem (or archiveItem)
+  - createItem / deleteItem (or archiveItem / unarchiveItem)
   - updateItem (reversible via re-update)
   - completeTask / uncompleteTask
-- Write (one-way): assignItem, moveItem
+  - assignItem / unassignItem
+- Write (one-way): moveItem, addLabel, removeLabel
 
 **Developer Tools:**
-- Read: list repos/projects (paginated), repo detail, list issues (paginated), search, user/org profile
+- Read: list repos/projects (paginated), repo detail, list issues (paginated), search, user/org profile, notifications, activity feed
 - Write (reversible pairs):
   - starRepo / unstarRepo
-  - createIssue / closeIssue (or deleteIssue)
+  - createIssue / closeIssue (or reopenIssue)
   - createComment / deleteComment
+  - watchRepo / unwatchRepo
 - Write (one-way): forkRepo (creates new repo, no undo needed)
 
 **Finance / Banking:**
