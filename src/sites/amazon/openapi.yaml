@@ -448,6 +448,56 @@ paths:
                   subtotal:
                     type: string
 
+  /cart/remove:
+    post:
+      operationId: removeFromCart
+      summary: "Remove a product from the shopping cart by ASIN — returns updated cart count, subtotal"
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: amz_removeFromCart_v1
+          tool_version: 2
+        adapter:
+          name: amazon
+          operation: removeFromCart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - asin
+              properties:
+                asin:
+                  type: string
+                  description: "Amazon Standard Identification Number of the item to remove (10-char alphanumeric, e.g. B00MVWGQX0)"
+                  example: "B00MVWGQX0"
+      responses:
+        "200":
+          description: Remove-from-cart confirmation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                  cartCount:
+                    type: integer
+                  message:
+                    type: string
+                  removedItem:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                  subtotal:
+                    type: string
+
   /gp/cart/view.html:
     get:
       operationId: getCart

@@ -190,6 +190,57 @@ async function getCart(page: Page, _params: Record<string, unknown>) {
   `)
 }
 
+async function removeFromCart(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
+  const asin = String(params.asin || '')
+  if (!asin) throw errors.missingParam('asin')
+
+  await page.goto('https://www.amazon.com/gp/cart/view.html', { waitUntil: 'load', timeout: 30_000 })
+  await wait(3000)
+
+  // Find the cart item row by ASIN and click its delete button
+  const deleted = await page.evaluate(async (targetAsin: string) => {
+    const items = document.querySelectorAll('[data-asin][data-itemtype="active"]')
+    for (const el of items) {
+      if (el.getAttribute('data-asin') === targetAsin) {
+        const title = el.querySelector('.sc-product-title .a-truncate-full, .sc-item-title-content')?.textContent?.trim() || ''
+        const deleteBtn = el.querySelector<HTMLInputElement>('input[data-action="delete"], .sc-action-delete input, input[value="Delete"]')
+        if (deleteBtn) {
+          deleteBtn.click()
+          return { found: true, title }
+        }
+        return { found: true, title, noButton: true }
+      }
+    }
+    return { found: false }
+  }, asin)
+
+  if (!deleted.found) {
+    return { success: false, message: `Item ${asin} not found in cart` }
+  }
+  if (deleted.noButton) {
+    return { success: false, message: `Delete button not found for ${asin}` }
+  }
+
+  await wait(3000)
+
+  // Read updated cart state
+  const cartState = await page.evaluate(`
+    (() => {
+      const cartCount = document.querySelector('#nav-cart-count')?.textContent?.trim() || '0';
+      const subtotal = document.querySelector('#sc-subtotal-amount-activecart .sc-price')?.textContent?.trim() || '';
+      return { cartCount: parseInt(cartCount, 10) || 0, subtotal };
+    })()
+  `) as { cartCount: number; subtotal: string }
+
+  return {
+    success: true,
+    message: 'Removed from cart',
+    removedItem: { title: deleted.title || '' },
+    cartCount: cartState.cartCount,
+    subtotal: cartState.subtotal,
+  }
+}
+
 async function getBestSellers(page: Page, _params: Record<string, unknown>) {
   await page.goto('https://www.amazon.com/gp/bestsellers/', { waitUntil: 'load', timeout: 30_000 })
   await wait(3000)
@@ -241,6 +292,7 @@ const adapter = {
       case 'searchDeals': return searchDeals(page, { ...params })
       case 'getBestSellers': return getBestSellers(page, { ...params })
       case 'addToCart': return addToCart(page, { ...params }, errors)
+      case 'removeFromCart': return removeFromCart(page, { ...params }, errors)
       case 'getCart': return getCart(page, { ...params })
       default: throw errors.unknownOp(operation)
     }

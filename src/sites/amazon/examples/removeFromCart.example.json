@@ -1,0 +1,14 @@
+{
+  "operation_id": "removeFromCart",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": { "asin": "B00MVWGQX0" },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

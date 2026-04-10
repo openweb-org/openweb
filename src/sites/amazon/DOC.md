@@ -21,6 +21,7 @@ E-commerce marketplace — search products, view details, read reviews, browse d
 1. `searchProducts(k)` → find product `asin`
 2. `addToCart(asin)` → add product to cart (returns confirmation, cart count)
 3. `getCart` → view current cart contents (items, quantities, subtotal)
+4. `removeFromCart(asin)` → remove product from cart (reverse of addToCart)
 
 ## Operations
 
@@ -32,6 +33,7 @@ E-commerce marketplace — search products, view details, read reviews, browse d
 | searchDeals | browse active deals | startIndex, pageSize | asin, title, price, dealBadge, percentClaimed | JSON API; paginated (nextIndex) |
 | getBestSellers | view best sellers | — | title, price, rating, link | entry point |
 | addToCart | add product to cart | asin ← searchProducts, quantity? | success, cartCount, subtotal | write op; clicks Add to Cart button |
+| removeFromCart | remove product from cart | asin ← getCart | success, cartCount, subtotal | write op; reverse of addToCart; clicks Delete in cart |
 | getCart | view cart contents | — | items (asin, title, price, quantity), subtotal | reads cart page DOM |
 
 ## Quick Start
@@ -54,6 +56,9 @@ openweb amazon exec getBestSellers '{}'
 
 # Add product to cart
 openweb amazon exec addToCart '{"asin": "B00MVWGQX0"}'
+
+# Remove product from cart
+openweb amazon exec removeFromCart '{"asin": "B00MVWGQX0"}'
 
 # View cart
 openweb amazon exec getCart '{}'
@@ -85,6 +90,7 @@ Search results and reviews are extracted from the rendered DOM.
 - **getProductReviews**: `html_selector` — extracts from `[data-hook="review"]` DOM elements
 - **getBestSellers**: `html_selector` — extracts from `#gridItemRoot` DOM elements
 - **addToCart**: `adapter` — navigates to product page, clicks Add to Cart button, extracts confirmation
+- **removeFromCart**: `adapter` — navigates to cart page, finds item by ASIN, clicks Delete button, reads updated cart state
 - **getCart**: `adapter` — navigates to `/gp/cart/view.html`, extracts cart items from `[data-asin][data-itemtype="active"]`
 
 ## Known Issues
