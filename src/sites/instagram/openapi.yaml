@@ -831,6 +831,7 @@ paths:
       summary: "Like a post — toggle like on a media item (requires CSRF token)"
       x-openweb:
         permission: write
+        safety: caution
       parameters:
         - name: id
           in: path
@@ -862,5 +863,851 @@ paths:
                   status:
                     type: string
                     description: "API status — \"ok\" on success"
+                required:
+                  - status
+  /api/v1/web/likes/{id}/unlike/:
+    post:
+      operationId: unlikePost
+      summary: "Unlike a post — remove like from a media item"
+      x-openweb:
+        permission: write
+        safety: caution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "Numeric media PK. Get from getFeed items[].pk or getUserPosts items[].pk"
+          schema:
+            type: string
+          example: "3865890235180097425"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                required:
+                  - status
+  /api/v1/web/friendships/{id}/follow/:
+    post:
+      operationId: followUser
+      summary: "Follow a user — instant for public accounts, pending for private"
+      x-openweb:
+        permission: write
+        safety: caution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "User ID (numeric). Get from getUserProfile data.user.id"
+          schema:
+            type: string
+          example: "25025320"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  friendship_status:
+                    type: object
+                    properties:
+                      following:
+                        type: boolean
+                      outgoing_request:
+                        type: boolean
+                        description: "true if account is private and follow is pending"
+                  status:
+                    type: string
+                required:
+                  - status
+  /api/v1/web/friendships/{id}/unfollow/:
+    post:
+      operationId: unfollowUser
+      summary: "Unfollow a user — remove from following list"
+      x-openweb:
+        permission: write
+        safety: caution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "User ID (numeric). Get from getUserProfile data.user.id"
+          schema:
+            type: string
+          example: "25025320"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  friendship_status:
+                    type: object
+                    properties:
+                      following:
+                        type: boolean
+                  status:
+                    type: string
+                required:
+                  - status
+  /api/v1/web/save/{id}/save/:
+    post:
+      operationId: savePost
+      summary: "Save/bookmark a post to your saved collection"
+      x-openweb:
+        permission: write
+        safety: caution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "Numeric media PK. Get from getFeed items[].pk"
+          schema:
+            type: string
+          example: "3865890235180097425"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                required:
+                  - status
+  /api/v1/web/save/{id}/unsave/:
+    post:
+      operationId: unsavePost
+      summary: "Remove a post from your saved collection"
+      x-openweb:
+        permission: write
+        safety: caution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "Numeric media PK"
+          schema:
+            type: string
+          example: "3865890235180097425"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                required:
+                  - status
+  /api/v1/web/comments/{id}/add/:
+    post:
+      operationId: createComment
+      summary: "Add a comment to a post"
+      x-openweb:
+        permission: write
+        safety: caution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "Numeric media PK. Get from getFeed items[].pk"
+          schema:
+            type: string
+          example: "3865890235180097425"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comment_text
+              properties:
+                comment_text:
+                  type: string
+                  description: Comment text content
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comment:
+                    type: object
+                    properties:
+                      pk:
+                        type: string
+                        description: Comment primary key
+                      text:
+                        type: string
+                      created_at:
+                        type: integer
+                      user:
+                        type: object
+                        properties:
+                          pk:
+                            type: string
+                          username:
+                            type: string
+                  status:
+                    type: string
+                required:
+                  - status
+  /api/v1/web/comments/{media_id}/{comment_id}/delete/:
+    post:
+      operationId: deleteComment
+      summary: "Delete a comment from a post"
+      x-openweb:
+        permission: write
+        safety: caution
+      parameters:
+        - name: media_id
+          in: path
+          required: true
+          description: "Numeric media PK"
+          schema:
+            type: string
+          example: "3865890235180097425"
+        - name: comment_id
+          in: path
+          required: true
+          description: "Comment PK. Get from getPostComments comments[].pk"
+          schema:
+            type: string
+          example: "18042648274123456"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                required:
+                  - status
+  /api/v1/web/friendships/{id}/block/:
+    post:
+      operationId: blockUser
+      summary: "Block a user — prevent them from seeing your content or contacting you"
+      x-openweb:
+        permission: write
+        safety: caution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "User ID (numeric). Get from getUserProfile data.user.id"
+          schema:
+            type: string
+          example: "25025320"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  friendship_status:
+                    type: object
+                    properties:
+                      blocking:
+                        type: boolean
+                  status:
+                    type: string
+                required:
+                  - status
+  /api/v1/web/friendships/{id}/unblock/:
+    post:
+      operationId: unblockUser
+      summary: "Unblock a user — restore their ability to see your content"
+      x-openweb:
+        permission: write
+        safety: caution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "User ID (numeric). Get from getUserProfile data.user.id"
+          schema:
+            type: string
+          example: "25025320"
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  friendship_status:
+                    type: object
+                    properties:
+                      blocking:
+                        type: boolean
+                  status:
+                    type: string
+                required:
+                  - status
+  /user/{id}/mute:
+    post:
+      operationId: muteUser
+      summary: "Mute a user — hide their posts and stories from your feed"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: instagram-api
+          operation: muteUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "User ID (numeric). Get from getUserProfile data.user.id"
+          schema:
+            type: string
+          example: "25025320"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                required:
+                  - status
+  /user/{id}/unmute:
+    post:
+      operationId: unmuteUser
+      summary: "Unmute a user — restore their posts and stories in your feed"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: instagram-api
+          operation: unmuteUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "User ID (numeric)"
+          schema:
+            type: string
+          example: "25025320"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                required:
+                  - status
+  /api/v1/discover/web/explore_grid/:
+    get:
+      operationId: getExplore
+      summary: "Get Explore page — trending posts and suggested content grid"
+      x-openweb:
+        permission: read
+      parameters:
+        - name: max_id
+          in: query
+          required: false
+          description: Pagination cursor from previous response
+          schema:
+            type: string
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sectional_items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        layout_type:
+                          type: string
+                        feed_type:
+                          type: string
+                        layout_content:
+                          type: object
+                          properties:
+                            medias:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  media:
+                                    type: object
+                                    properties:
+                                      pk:
+                                        type: string
+                                      code:
+                                        type: string
+                                      media_type:
+                                        type: integer
+                                      like_count:
+                                        type: integer
+                                      caption:
+                                        type: object
+                                        properties:
+                                          text:
+                                            type: string
+                  more_available:
+                    type: boolean
+                  next_max_id:
+                    type: string
+                  status:
+                    type: string
+                required:
+                  - status
+  /api/v1/friendships/{id}/followers/:
+    get:
+      operationId: getFollowers
+      summary: "Get a user's followers list — usernames, profile pics, verification status"
+      x-openweb:
+        permission: read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "User ID (numeric). Get from getUserProfile data.user.id"
+          schema:
+            type: string
+          example: "25025320"
+        - name: count
+          in: query
+          required: false
+          description: Number of followers to return (default 12)
+          schema:
+            type: integer
+          example: 12
+        - name: max_id
+          in: query
+          required: false
+          description: Pagination cursor from previous response
+          schema:
+            type: string
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        pk:
+                          type: string
+                        username:
+                          type: string
+                        full_name:
+                          type: string
+                        is_private:
+                          type: boolean
+                        is_verified:
+                          type: boolean
+                        profile_pic_url:
+                          type: string
+                          format: uri
+                  next_max_id:
+                    type: string
+                  big_list:
+                    type: boolean
+                  status:
+                    type: string
+                required:
+                  - users
+                  - status
+  /api/v1/friendships/{id}/following/:
+    get:
+      operationId: getFollowing
+      summary: "Get accounts a user follows"
+      x-openweb:
+        permission: read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "User ID (numeric). Get from getUserProfile data.user.id"
+          schema:
+            type: string
+          example: "25025320"
+        - name: count
+          in: query
+          required: false
+          description: Number of following to return (default 12)
+          schema:
+            type: integer
+          example: 12
+        - name: max_id
+          in: query
+          required: false
+          description: Pagination cursor from previous response
+          schema:
+            type: string
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        pk:
+                          type: string
+                        username:
+                          type: string
+                        full_name:
+                          type: string
+                        is_private:
+                          type: boolean
+                        is_verified:
+                          type: boolean
+                        profile_pic_url:
+                          type: string
+                          format: uri
+                  next_max_id:
+                    type: string
+                  big_list:
+                    type: boolean
+                  status:
+                    type: string
+                required:
+                  - users
+                  - status
+  /user/{id}/reels:
+    get:
+      operationId: getReels
+      summary: "Get a user's Reels — short-form video content with play counts"
+      x-openweb:
+        permission: read
+        adapter:
+          name: instagram-api
+          operation: getReels
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "User ID (numeric). Get from getUserProfile data.user.id"
+          schema:
+            type: string
+          example: "25025320"
+        - name: count
+          in: query
+          required: false
+          description: Number of reels to return (default 12)
+          schema:
+            type: integer
+          example: 12
+        - name: max_id
+          in: query
+          required: false
+          description: Pagination cursor from previous response
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        media:
+                          type: object
+                          properties:
+                            pk:
+                              type: string
+                            code:
+                              type: string
+                            media_type:
+                              type: integer
+                            caption:
+                              type: object
+                              properties:
+                                text:
+                                  type: string
+                            like_count:
+                              type: integer
+                            play_count:
+                              type: integer
+                            user:
+                              type: object
+                              properties:
+                                pk:
+                                  type: string
+                                username:
+                                  type: string
+                  paging_info:
+                    type: object
+                    properties:
+                      max_id:
+                        type: string
+                      more_available:
+                        type: boolean
+                  status:
+                    type: string
+                required:
+                  - items
+                  - status
+  /api/v1/news/inbox/:
+    get:
+      operationId: getNotifications
+      summary: "Get activity notifications — likes, comments, follows, mentions"
+      x-openweb:
+        permission: read
+      parameters:
+        - name: x-ig-app-id
+          in: header
+          required: true
+          schema:
+            type: string
+            const: "936619743392459"
+        - name: x-requested-with
+          in: header
+          required: true
+          schema:
+            type: string
+            const: XMLHttpRequest
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  counts:
+                    type: object
+                    properties:
+                      relationships:
+                        type: integer
+                      usertags:
+                        type: integer
+                      comments:
+                        type: integer
+                      likes:
+                        type: integer
+                  new_stories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: integer
+                        args:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                            profile_id:
+                              type: string
+                            timestamp:
+                              type: string
+                  old_stories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: integer
+                        args:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                            profile_id:
+                              type: string
+                            timestamp:
+                              type: string
+                  status:
+                    type: string
                 required:
                   - status

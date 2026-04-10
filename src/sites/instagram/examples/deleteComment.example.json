@@ -1,11 +1,12 @@
 {
-  "operation_id": "likePost",
+  "operation_id": "deleteComment",
   "method": "post",
   "replay_safety": "unsafe_mutation",
   "cases": [
     {
       "input": {
-        "id": "3865890235180097425"
+        "media_id": "3865890235180097425",
+        "comment_id": "18042648274123456"
       },
       "assertions": {
         "status": 200,

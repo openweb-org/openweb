@@ -1,11 +1,12 @@
 {
-  "operation_id": "likePost",
-  "method": "post",
-  "replay_safety": "unsafe_mutation",
+  "operation_id": "getReels",
+  "method": "get",
+  "replay_safety": "safe_read",
   "cases": [
     {
       "input": {
-        "id": "3865890235180097425"
+        "id": "25025320",
+        "count": 12
       },
       "assertions": {
         "status": 200,

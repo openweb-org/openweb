@@ -1,11 +1,12 @@
 {
-  "operation_id": "likePost",
+  "operation_id": "createComment",
   "method": "post",
   "replay_safety": "unsafe_mutation",
   "cases": [
     {
       "input": {
-        "id": "3865890235180097425"
+        "id": "3865890235180097425",
+        "comment_text": "Great post!"
       },
       "assertions": {
         "status": 200,

@@ -42,6 +42,45 @@ async function fetchJson(pageFetch: PageFetchFn, page: Page, url: string, errors
   }
 }
 
+async function getCsrfToken(page: Page): Promise<string> {
+  const cookies = await page.context().cookies()
+  return cookies.find((c) => c.name === 'csrftoken')?.value || ''
+}
+
+async function postJson(
+  pageFetch: PageFetchFn,
+  page: Page,
+  url: string,
+  body: string,
+  errors: Errors,
+): Promise<unknown> {
+  const csrf = await getCsrfToken(page)
+  const headers: Record<string, string> = {
+    ...IG_HEADERS,
+    'content-type': 'application/x-www-form-urlencoded',
+  }
+  if (csrf) headers['x-csrftoken'] = csrf
+
+  const result = await pageFetch(page, {
+    url,
+    method: 'POST',
+    headers,
+    body,
+    credentials: 'include',
+  })
+  if (result.status === 401 || result.status === 403) {
+    throw errors.fatal(`Instagram returned ${result.status} — login required`)
+  }
+  if (result.status >= 400) {
+    throw errors.retriable(`Instagram returned HTTP ${result.status}`)
+  }
+  try {
+    return JSON.parse(result.text)
+  } catch {
+    throw errors.fatal('Response is not valid JSON')
+  }
+}
+
 async function getUserPosts(
   page: Page,
   params: Record<string, unknown>,
@@ -73,11 +112,73 @@ async function getUserPosts(
   }
 }
 
+async function muteUser(
+  page: Page,
+  params: Record<string, unknown>,
+  helpers: { errors: Errors; pageFetch: PageFetchFn },
+): Promise<unknown> {
+  const { errors, pageFetch } = helpers
+  const userId = String(params.id || '')
+  if (!userId) throw errors.missingParam('id')
+
+  return postJson(
+    pageFetch,
+    page,
+    'https://www.instagram.com/api/v1/friendships/mute_posts_or_story_from_follow/',
+    `target_posts_author_id=${userId}&target_reel_author_id=${userId}`,
+    errors,
+  )
+}
+
+async function unmuteUser(
+  page: Page,
+  params: Record<string, unknown>,
+  helpers: { errors: Errors; pageFetch: PageFetchFn },
+): Promise<unknown> {
+  const { errors, pageFetch } = helpers
+  const userId = String(params.id || '')
+  if (!userId) throw errors.missingParam('id')
+
+  return postJson(
+    pageFetch,
+    page,
+    'https://www.instagram.com/api/v1/friendships/unmute_posts_or_story_from_follow/',
+    `target_posts_author_id=${userId}&target_reel_author_id=${userId}`,
+    errors,
+  )
+}
+
+async function getReels(
+  page: Page,
+  params: Record<string, unknown>,
+  helpers: { errors: Errors; pageFetch: PageFetchFn },
+): Promise<unknown> {
+  const { errors, pageFetch } = helpers
+  const userId = String(params.id || '')
+  if (!userId) throw errors.missingParam('id')
+  const count = Number(params.count) || 12
+  const maxId = params.max_id ? String(params.max_id) : ''
+
+  let body = `target_user_id=${userId}&page_size=${count}`
+  if (maxId) body += `&max_id=${encodeURIComponent(maxId)}`
+
+  return postJson(
+    pageFetch,
+    page,
+    'https://www.instagram.com/api/v1/clips/user/',
+    body,
+    errors,
+  )
+}
+
 const OPERATIONS: Record<
   string,
   (page: Page, params: Record<string, unknown>, helpers: { errors: Errors; pageFetch: PageFetchFn }) => Promise<unknown>
 > = {
   getUserPosts,
+  muteUser,
+  unmuteUser,
+  getReels,
 }
 
 const adapter = {

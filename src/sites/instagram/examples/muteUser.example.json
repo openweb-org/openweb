@@ -1,11 +1,11 @@
 {
-  "operation_id": "likePost",
+  "operation_id": "muteUser",
   "method": "post",
   "replay_safety": "unsafe_mutation",
   "cases": [
     {
       "input": {
-        "id": "3865890235180097425"
+        "id": "25025320"
       },
       "assertions": {
         "status": 200,

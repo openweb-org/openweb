@@ -1,5 +1,5 @@
 {
-  "operation_id": "likePost",
+  "operation_id": "unlikePost",
   "method": "post",
   "replay_safety": "unsafe_mutation",
   "cases": [

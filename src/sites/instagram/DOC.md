@@ -30,9 +30,50 @@ Social media platform (Meta). Photo/video sharing, stories, reels.
 1. `getUserProfile(username)` → `id`
 2. `getStories(id)` → current stories via `reel` object (null if no active stories)
 
-### Like a post
+### Like / unlike a post
 1. `likePost(id)` → status confirmation
+2. `unlikePost(id)` → status confirmation
    - `id` is the numeric PK from `getFeed` or `getUserPosts` items (`items[].pk`)
+
+### Follow / unfollow a user
+1. `getUserProfile(username)` → `id`
+2. `followUser(id)` → friendship_status (following/outgoing_request)
+3. `unfollowUser(id)` → friendship_status
+
+### Save / unsave a post
+1. `savePost(id)` → status confirmation
+2. `unsavePost(id)` → status confirmation
+
+### Comment on a post
+1. `createComment(id, comment_text)` → created comment with pk, text, user
+2. `deleteComment(media_id, comment_id)` → status confirmation
+   - `comment_id` from `getPostComments` comments[].pk
+
+### Block / unblock a user
+1. `getUserProfile(username)` → `id`
+2. `blockUser(id)` → friendship_status (blocking)
+3. `unblockUser(id)` → friendship_status
+
+### Mute / unmute a user
+1. `getUserProfile(username)` → `id`
+2. `muteUser(id)` → status confirmation (hides posts + stories)
+3. `unmuteUser(id)` → status confirmation
+
+### Browse Explore page
+1. `getExplore()` → trending posts grid
+2. `getExplore(max_id)` → next page
+
+### View followers / following
+1. `getUserProfile(username)` → `id`
+2. `getFollowers(id, count)` → follower list with usernames, verification status
+3. `getFollowing(id, count)` → following list
+
+### View a user's Reels
+1. `getUserProfile(username)` → `id`
+2. `getReels(id, count)` → reels with play counts, captions
+
+### View notifications
+1. `getNotifications()` → activity feed (likes, comments, follows, mentions)
 
 ### Search for users
 1. `searchUsers(query)` → user list with usernames, full names, verification status
@@ -47,7 +88,23 @@ Social media platform (Meta). Photo/video sharing, stories, reels.
 | getFeed | browse user posts by ID | id (user ID) ← getUserProfile data.user.id | posts with pk, code, caption, like_count | paginated via next_max_id |
 | getPostComments | view post comments | id (numeric PK) ← getFeed items[].pk | comments with text, author, like counts | paginated via next_min_id |
 | getStories | view user stories | id (user ID) ← getUserProfile data.user.id | reel with story items, media URLs, expiration times | null reel if no active stories |
-| likePost | like a post | id (numeric PK) ← getFeed items[].pk | status | write op; requires CSRF |
+| likePost | like a post | id (numeric PK) ← getFeed items[].pk | status | write; CSRF |
+| unlikePost | unlike a post | id (numeric PK) ← getFeed items[].pk | status | write; CSRF |
+| followUser | follow a user | id (user ID) ← getUserProfile data.user.id | friendship_status | write; CSRF |
+| unfollowUser | unfollow a user | id (user ID) ← getUserProfile data.user.id | friendship_status | write; CSRF |
+| savePost | bookmark a post | id (numeric PK) ← getFeed items[].pk | status | write; CSRF |
+| unsavePost | remove bookmark | id (numeric PK) ← getFeed items[].pk | status | write; CSRF |
+| createComment | add comment | id (numeric PK), comment_text | comment with pk, text, user | write; CSRF; requestBody |
+| deleteComment | remove comment | media_id, comment_id ← getPostComments comments[].pk | status | write; CSRF |
+| blockUser | block a user | id (user ID) ← getUserProfile data.user.id | friendship_status | write; CSRF |
+| unblockUser | unblock a user | id (user ID) ← getUserProfile data.user.id | friendship_status | write; CSRF |
+| muteUser | mute a user | id (user ID) ← getUserProfile data.user.id | status | write; CSRF; adapter |
+| unmuteUser | unmute a user | id (user ID) ← getUserProfile data.user.id | status | write; CSRF; adapter |
+| getExplore | browse explore page | (none) | sectional_items with media grid | paginated via next_max_id |
+| getFollowers | list followers | id (user ID) ← getUserProfile data.user.id | users with username, is_verified | paginated via next_max_id |
+| getFollowing | list following | id (user ID) ← getUserProfile data.user.id | users with username, is_verified | paginated via next_max_id |
+| getReels | view user reels | id (user ID) ← getUserProfile data.user.id | reels with play_count, captions | adapter; paginated via paging_info |
+| getNotifications | activity feed | (none) | counts, new_stories, old_stories | — |
 | searchUsers | find users | query (search term) | users with username, full_name, is_verified, follower_count | entry point |
 
 ## Quick Start
@@ -71,8 +128,42 @@ openweb instagram exec getPostComments '{"id":"3865890235180097425"}'
 # Get a user's stories
 openweb instagram exec getStories '{"id":"25025320"}'
 
-# Like a post (write operation)
+# Like / unlike a post (write operations)
 openweb instagram exec likePost '{"id":"3865890235180097425"}'
+openweb instagram exec unlikePost '{"id":"3865890235180097425"}'
+
+# Follow / unfollow a user
+openweb instagram exec followUser '{"id":"25025320"}'
+openweb instagram exec unfollowUser '{"id":"25025320"}'
+
+# Save / unsave a post
+openweb instagram exec savePost '{"id":"3865890235180097425"}'
+openweb instagram exec unsavePost '{"id":"3865890235180097425"}'
+
+# Comment on a post
+openweb instagram exec createComment '{"id":"3865890235180097425","comment_text":"Great post!"}'
+openweb instagram exec deleteComment '{"media_id":"3865890235180097425","comment_id":"18042648274123456"}'
+
+# Block / unblock a user
+openweb instagram exec blockUser '{"id":"25025320"}'
+openweb instagram exec unblockUser '{"id":"25025320"}'
+
+# Mute / unmute a user (adapter — routes to correct endpoint)
+openweb instagram exec muteUser '{"id":"25025320"}'
+openweb instagram exec unmuteUser '{"id":"25025320"}'
+
+# Browse Explore page
+openweb instagram exec getExplore '{}'
+
+# Get followers / following
+openweb instagram exec getFollowers '{"id":"25025320","count":12}'
+openweb instagram exec getFollowing '{"id":"25025320","count":12}'
+
+# Get a user's Reels (adapter — POST to clips endpoint)
+openweb instagram exec getReels '{"id":"25025320","count":12}'
+
+# Get notifications
+openweb instagram exec getNotifications '{}'
 
 # Search users
 openweb instagram exec searchUsers '{"query":"nasa"}'
@@ -96,7 +187,7 @@ openweb instagram exec searchUsers '{"query":"nasa"}'
 ### Transport
 - `page` — Meta bot detection blocks direct node HTTP requests
 - Non-adapter ops: requests execute via page transport (browser-context fetch)
-- `getUserPosts`: adapter (`instagram-api`) composes profile lookup + feed fetch in browser context via `pageFetch`
+- Adapter ops: `getUserPosts` composes profile + feed; `muteUser`/`unmuteUser` route to mute endpoint; `getReels` POSTs to clips endpoint
 - Page URL: `https://www.instagram.com/`
 
 ### Known Issues
@@ -108,4 +199,6 @@ openweb instagram exec searchUsers '{"query":"nasa"}'
 - `searchUsers` `places` and `hashtags` arrays return empty — bare `type: object` item schemas cannot be enriched
 - `getStories` returns `reel: null` if user has no active stories
 - `getPostComments` `user.pk` is mixed type — integer for older accounts, string for newer ones
-- `likePost` is a write operation — verify skips it by default
+- Write operations are skipped by verify by default
+- `muteUser`/`unmuteUser` use internal mute_posts_or_story_from_follow endpoint (mutes both posts and stories)
+- `getReels` uses POST to `/api/v1/clips/user/` internally (adapter handles this)
