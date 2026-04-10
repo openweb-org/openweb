@@ -21,6 +21,24 @@ Short-video social platform. Content platform archetype.
 
 ### Discover trending content
 1. `getHomeFeed()` → recommended/trending videos from the For You page
+2. `getExplore()` → trending videos from the Explore/Discover page
+
+### Like / unlike a video
+1. `likeVideo(videoId)` → like a video
+2. `unlikeVideo(videoId)` → reverse the like
+
+### Follow / unfollow a user
+1. `getUserProfile(username)` → get the numeric `id`
+2. `followUser(userId)` → follow the user
+3. `unfollowUser(userId)` → reverse the follow
+
+### Bookmark / unbookmark a video
+1. `bookmarkVideo(videoId)` → add video to favorites
+2. `unbookmarkVideo(videoId)` → remove from favorites
+
+### Comment on a video
+1. `createComment(videoId, text)` → post a comment, returns `commentId`
+2. `deleteComment(videoId, commentId)` → delete own comment
 
 ## Operations
 
@@ -31,6 +49,15 @@ Short-video social platform. Content platform archetype.
 | getUserProfile | get user profile | username | followers, following, bio, video count, verified | SSR extraction from profile page |
 | getVideoComments | get comments on a video | username, videoId | comment text, author, likes, reply count | API interception from video page |
 | getHomeFeed | get trending/recommended videos | — | video details, stats, authors | API interception from For You feed |
+| getExplore | get explore/discover videos | — | video details, stats, authors | API interception from Explore page |
+| likeVideo | like a video | videoId | success, is_digg | write, caution — may be bot-blocked |
+| unlikeVideo | unlike a video | videoId | success, is_digg | write, caution — reverse of likeVideo |
+| followUser | follow a user | userId | success, follow_status | write, caution — may be bot-blocked |
+| unfollowUser | unfollow a user | userId | success, follow_status | write, caution — reverse of followUser |
+| bookmarkVideo | bookmark a video | videoId | success | write, caution — may be bot-blocked |
+| unbookmarkVideo | unbookmark a video | videoId | success | write, caution — reverse of bookmarkVideo |
+| createComment | post a comment | videoId, text | success, commentId | write, caution — may be bot-blocked |
+| deleteComment | delete a comment | videoId, commentId | success | write, caution — must be comment author |
 
 ## Quick Start
 
@@ -52,6 +79,33 @@ openweb tiktok exec getVideoComments '{"username":"tiktok","videoId":"7345678901
 
 # Get trending/recommended videos
 openweb tiktok exec getHomeFeed '{}'
+
+# Get explore page videos
+openweb tiktok exec getExplore '{}'
+
+# Like a video
+openweb tiktok exec likeVideo '{"videoId":"7345678901234567890"}'
+
+# Unlike a video
+openweb tiktok exec unlikeVideo '{"videoId":"7345678901234567890"}'
+
+# Follow a user (need numeric userId from getUserProfile)
+openweb tiktok exec followUser '{"userId":"107955"}'
+
+# Unfollow a user
+openweb tiktok exec unfollowUser '{"userId":"107955"}'
+
+# Bookmark a video
+openweb tiktok exec bookmarkVideo '{"videoId":"7345678901234567890"}'
+
+# Unbookmark a video
+openweb tiktok exec unbookmarkVideo '{"videoId":"7345678901234567890"}'
+
+# Post a comment
+openweb tiktok exec createComment '{"videoId":"7345678901234567890","text":"Great video!"}'
+
+# Delete a comment
+openweb tiktok exec deleteComment '{"videoId":"7345678901234567890","commentId":"7345678901234567891"}'
 ```
 
 ---
@@ -66,25 +120,35 @@ Not needed for basic site usage.
 - Search endpoint: `/api/search/general/full/`
 - Comment endpoint: `/api/comment/list/`
 - Recommend endpoint: `/api/recommend/item_list/`
+- Like/digg endpoint: `/api/commit/item/digg/`
+- Follow endpoint: `/api/commit/follow/user/`
+- Bookmark endpoint: `/api/commit/item/collect/`
+- Comment publish: `/api/comment/publish/`
+- Comment delete: `/api/comment/delete/`
 - Custom signing (X-Bogus, X-Gnarly, msToken) computed client-side — handled by page transport
 
 ### Auth
 - `cookie_session` — browser cookies required
 - Anti-bot signing (X-Bogus, X-Gnarly) generated automatically by page transport
 - No CSRF required for read operations
+- Write operations require authenticated session cookies; signing is computed client-side
 
 ### Transport
 - `page` transport required — heavy bot detection blocks node transport
 - Browser auto-starts and manages signing
-- Adapter operations (getVideoDetail, getUserProfile, getVideoComments, getHomeFeed) navigate to pages and extract from SSR data (`__UNIVERSAL_DATA_FOR_REHYDRATION__`) or intercept API responses
+- Adapter operations (getVideoDetail, getUserProfile, getVideoComments, getHomeFeed, getExplore) navigate to pages and extract from SSR data (`__UNIVERSAL_DATA_FOR_REHYDRATION__`) or intercept API responses
+- Write operations (like, follow, bookmark, comment) use in-browser `fetch` to call internal APIs with session cookies
 
 ### Runtime Lanes
 - **searchVideos**: replay lane — direct API call via page transport
 - **getVideoDetail, getUserProfile**: adapter lane — SSR extraction from `__UNIVERSAL_DATA_FOR_REHYDRATION__.__DEFAULT_SCOPE__` with DOM fallback
-- **getVideoComments, getHomeFeed**: adapter lane — API response interception with SSR/DOM fallback
+- **getVideoComments, getHomeFeed, getExplore**: adapter lane — API response interception with SSR/DOM fallback
+- **likeVideo, unlikeVideo, followUser, unfollowUser, bookmarkVideo, unbookmarkVideo, createComment, deleteComment**: adapter lane — in-browser fetch to internal API
 
 ### Known Issues
 - Heavy bot detection: X-Bogus, X-Gnarly, msToken are computed client-side
+- Write operations are best-effort — TikTok's bot protection may block API calls even with valid session cookies
 - SSR data structure varies: `__UNIVERSAL_DATA_FOR_REHYDRATION__` scopes include `webapp.video-detail`, `webapp.user-detail`
 - Large responses (~345KB) auto-spill to temp files
 - Comments may require scrolling to trigger lazy-loaded API calls
+- followUser/unfollowUser require numeric userId (from getUserProfile.id), not username

@@ -1,0 +1,16 @@
+{
+  "operation_id": "unbookmarkVideo",
+  "method": "post",
+  "replay_safety": "unsafe_mutation",
+  "cases": [
+    {
+      "input": {
+        "videoId": "7345678901234567890"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

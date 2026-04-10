@@ -742,3 +742,405 @@ paths:
                   hasMore:
                     type: boolean
                     description: Whether more videos are available
+
+  /internal/likeVideo:
+    post:
+      operationId: likeVideo
+      summary: "Like a video — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: likeVideo
+        build:
+          stable_id: tk_likeVideo_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+              properties:
+                videoId:
+                  type: string
+                  description: "Video ID to like"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  is_digg:
+                    type: integer
+                    description: "1 = liked"
+
+  /internal/unlikeVideo:
+    post:
+      operationId: unlikeVideo
+      summary: "Unlike a previously liked video — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: unlikeVideo
+        build:
+          stable_id: tk_unlikeVideo_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+              properties:
+                videoId:
+                  type: string
+                  description: "Video ID to unlike"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  is_digg:
+                    type: integer
+                    description: "0 = unliked"
+
+  /internal/followUser:
+    post:
+      operationId: followUser
+      summary: "Follow a user — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: followUser
+        build:
+          stable_id: tk_followUser_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: "User ID to follow (numeric, from getUserProfile)"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  follow_status:
+                    type: integer
+                    description: "1 = following"
+
+  /internal/unfollowUser:
+    post:
+      operationId: unfollowUser
+      summary: "Unfollow a user — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: unfollowUser
+        build:
+          stable_id: tk_unfollowUser_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: "User ID to unfollow (numeric, from getUserProfile)"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  follow_status:
+                    type: integer
+                    description: "0 = not following"
+
+  /internal/bookmarkVideo:
+    post:
+      operationId: bookmarkVideo
+      summary: "Bookmark (favorite) a video — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: bookmarkVideo
+        build:
+          stable_id: tk_bookmarkVideo_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+              properties:
+                videoId:
+                  type: string
+                  description: "Video ID to bookmark"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /internal/unbookmarkVideo:
+    post:
+      operationId: unbookmarkVideo
+      summary: "Remove bookmark from a video — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: unbookmarkVideo
+        build:
+          stable_id: tk_unbookmarkVideo_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+              properties:
+                videoId:
+                  type: string
+                  description: "Video ID to unbookmark"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /internal/createComment:
+    post:
+      operationId: createComment
+      summary: "Post a comment on a video — requires authenticated session"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: createComment
+        build:
+          stable_id: tk_createComment_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+                - text
+              properties:
+                videoId:
+                  type: string
+                  description: "Video ID to comment on"
+                text:
+                  type: string
+                  description: "Comment text"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  commentId:
+                    type: string
+                    description: "ID of the created comment"
+
+  /internal/deleteComment:
+    post:
+      operationId: deleteComment
+      summary: "Delete a comment — requires authenticated session, must be comment author"
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: tiktok-web
+          operation: deleteComment
+        build:
+          stable_id: tk_deleteComment_v1
+          tool_version: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - videoId
+                - commentId
+              properties:
+                videoId:
+                  type: string
+                  description: "Video ID the comment belongs to"
+                commentId:
+                  type: string
+                  description: "Comment ID to delete"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /internal/getExplore:
+    get:
+      operationId: getExplore
+      summary: "Get explore/discover page — trending videos by category"
+      x-openweb:
+        permission: read
+        adapter:
+          name: tiktok-web
+          operation: getExplore
+        build:
+          stable_id: tk_getExplore_v1
+          tool_version: 2
+      parameters: []
+      responses:
+        "200":
+          description: Explore page videos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                properties:
+                  items:
+                    type: array
+                    description: Trending/explore videos
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - author
+                      properties:
+                        id:
+                          type: string
+                          description: Video ID
+                        description:
+                          type: string
+                          description: Video caption
+                        createTime:
+                          type: integer
+                          description: Unix timestamp of creation
+                        video:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: Video asset ID
+                            cover:
+                              type: string
+                              format: uri
+                              description: Thumbnail URL
+                            playAddr:
+                              type: string
+                              format: uri
+                              description: Video playback URL
+                        author:
+                          type: object
+                          required:
+                            - uniqueId
+                          properties:
+                            id:
+                              type: string
+                              description: Author user ID
+                            uniqueId:
+                              type: string
+                              description: Author username
+                            nickname:
+                              type: string
+                              description: Author display name
+                            verified:
+                              type: boolean
+                              description: Whether the author is verified
+                        stats:
+                          type: object
+                          properties:
+                            diggCount:
+                              type: integer
+                              description: Number of likes
+                            shareCount:
+                              type: integer
+                              description: Number of shares
+                            commentCount:
+                              type: integer
+                              description: Number of comments
+                            playCount:
+                              type: integer
+                              description: Number of plays
+                  hasMore:
+                    type: boolean
+                    description: Whether more videos are available

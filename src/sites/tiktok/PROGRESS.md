@@ -1,3 +1,18 @@
+## 2026-04-10: Write ops + getExplore (9 new operations)
+
+**What changed:**
+- Added 8 write ops: likeVideo, unlikeVideo, followUser, unfollowUser, bookmarkVideo, unbookmarkVideo, createComment, deleteComment
+- Added 1 read op: getExplore — trending videos from Explore page
+- Write ops use `internalApiCall` helper — in-browser fetch to TikTok internal APIs with form-encoded bodies
+- All write ops: `permission: write`, `safety: caution`
+- Created 9 example JSON files (8 `unsafe_mutation` + 1 `safe_read`)
+- Updated DOC.md with new workflows, ops table, quick-start examples
+
+**Why:**
+- TikTok had only read ops — agents couldn't perform social interactions
+
+**Verification:** `pnpm build` PASS; getExplore PASS; write ops skipped by verify (unsafe_mutation); getUserProfile/getVideoDetail FAIL (pre-existing `__name` issue)
+
 ## 2026-04-06: Fix verify — add example fixtures and manifest
 
 **What changed:**
