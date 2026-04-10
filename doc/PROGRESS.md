@@ -1,3 +1,674 @@
+## 2026-04-10: Pinterest — 6 new ops (4 write + 2 read)
+
+**What changed:**
+- Added write ops: `savePin`, `unsavePin`, `followBoard`, `unfollowBoard` — all `permission: write`, `safety: caution`
+- Added read ops: `getHomeFeed` (personalized feed), `getNotifications` (activity feed)
+- Write ops use Pinterest resource API pattern: POST to `/resource/{ResourceName}/create/` or `/resource/{ResourceName}/delete/`
+- Write/reverse pairs: savePin↔unsavePin, followBoard↔unfollowBoard
+
+**Why:**
+- Pinterest had 5 read-only ops — agents couldn't save pins, follow boards, or browse their feed
+
+**Key files:**
+- `src/sites/pinterest/openapi.yaml` — 6 new paths (total: 11 ops)
+- `src/sites/pinterest/examples/` — 6 new example files
+- `src/sites/pinterest/DOC.md` — expanded workflows, ops table, quick-start
+- `src/sites/pinterest/summary.md` — process notes
+
+**Verification:** `pnpm build` PASS; `pnpm dev verify pinterest --browser` — PASS (7/7 read ops; 4 write ops skipped as unsafe_mutation)
+
+---
+
+## 2026-04-10: TikTok — 9 new ops (8 write + 1 read)
+
+**What changed:**
+- Added write ops: `likeVideo`, `unlikeVideo`, `followUser`, `unfollowUser`, `bookmarkVideo`, `unbookmarkVideo`, `createComment`, `deleteComment` — all `permission: write`, `safety: caution`
+- Added read op: `getExplore` — trending videos from the Explore/Discover page
+- Write ops use in-browser `fetch` to internal APIs (`/api/commit/item/digg/`, `/api/commit/follow/user/`, `/api/commit/item/collect/`, `/api/comment/publish/`, `/api/comment/delete/`) with `aid=1988`
+- Reverse ops share endpoints with forward ops, toggled by `type=1`/`type=0`
+- Best-effort: TikTok's bot protection (X-Bogus, X-Gnarly, msToken) may block write calls even with valid sessions
+
+**Why:**
+- TikTok had 5 read-only ops — agents couldn't interact (like, follow, comment, bookmark)
+
+**Key files:**
+- `src/sites/tiktok/openapi.yaml` — 9 new paths (total: 14 ops)
+- `src/sites/tiktok/adapters/tiktok-web.ts` — 10 new functions + `internalApiCall` helper
+- `src/sites/tiktok/examples/` — 9 new example files
+- `src/sites/tiktok/DOC.md` — expanded workflows, ops table, quick-start
+- `src/sites/tiktok/summary.md` — process notes
+
+**Verification:** `pnpm build` PASS; `pnpm dev verify tiktok --browser` — getExplore PASS, write ops skipped (unsafe_mutation). getUserProfile/getVideoDetail FAIL (pre-existing `__name` tsup issue)
+
+---
+
+## 2026-04-10: Xueqiu — 2 write ops (addToWatchlist, removeFromWatchlist)
+
+**What changed:**
+- Added `addToWatchlist` — add stock to user's watchlist via `POST /v5/stock/portfolio/stock/add.json`
+- Added `removeFromWatchlist` — remove stock from watchlist via `POST /v5/stock/portfolio/stock/delete.json`
+- Both ops use `permission: write`, `safety: caution`, `transport: page` (stock.xueqiu.com)
+- Write/reverse pair — agents can now manage watchlists, not just read them
+- Created 2 example JSON files with `replay_safety: unsafe_mutation`
+- Updated DOC.md with new workflow, ops table entries, quick-start examples
+
+**Why:**
+- Xueqiu had `getWatchlist` (read) but no way to add/remove stocks — agents could view but not manage watchlists
+
+**Key files:**
+- `src/sites/xueqiu/openapi.yaml` — 2 new paths (total: 12 ops)
+- `src/sites/xueqiu/examples/{addToWatchlist,removeFromWatchlist}.example.json`
+- `src/sites/xueqiu/DOC.md` — expanded workflows and ops table
+- `src/sites/xueqiu/summary.md` — process notes
+
+**Verification:** `pnpm build` PASS; `pnpm dev verify xueqiu --browser` — PASS (10/10 read ops; 2 write ops skipped as unsafe_mutation)
+
+---
+
+## 2026-04-10: Trello — 2 new reverse ops (deleteCard, archiveCard)
+
+**What changed:**
+- Added `deleteCard` — permanently deletes a card via `DELETE /cards/{cardId}` (irreversible)
+- Added `archiveCard` — soft-closes a card via `PUT /cards/{cardId}` with `{closed: true}` (reversible)
+- Both ops use `permission: write`, `safety: caution`
+- Extended adapter `apiFetch` method signature to support `PUT` and `DELETE`
+- Created 2 example JSON files with `replay_safety: unsafe_mutation`
+- Updated DOC.md with new workflow, ops table, quick-start examples
+
+**Why:**
+- Trello had create but no reverse ops — agents couldn't remove or archive cards
+
+**Key files:**
+- `src/sites/trello/openapi.yaml` — 2 new paths (total: 7 ops)
+- `src/sites/trello/adapters/trello-api.ts` — 2 new handlers + method type update
+- `src/sites/trello/examples/{deleteCard,archiveCard}.example.json`
+- `src/sites/trello/DOC.md` — expanded workflows and ops table
+- `src/sites/trello/summary.md` — process notes
+
+**Verification:** `pnpm build` PASS; `pnpm dev verify trello --browser` — FAIL (no Trello login session in managed Chrome, environment auth issue)
+
+---
+
+## 2026-04-10: Todoist — 2 new reverse ops (deleteTask, uncompleteTask)
+
+**What changed:**
+- Added `deleteTask` — permanently deletes a task via `DELETE /rest/v2/tasks/{id}`
+- Added `uncompleteTask` — reopens a completed task via `POST /rest/v2/tasks/{id}/reopen`
+- Added `safety: caution` to existing `completeTask` (was missing)
+- Both new ops use `permission: write`, `safety: caution`
+- Created 2 example JSON files with `replay_safety: unsafe_mutation`
+- Updated DOC.md with new workflows, ops table, quick-start examples
+
+**Why:**
+- Todoist had create/complete but no reverse ops — agents couldn't reopen completed tasks or delete tasks
+
+**Key files:**
+- `src/sites/todoist/openapi.yaml` — 2 new paths (total: 5 ops)
+- `src/sites/todoist/adapters/todoist-api.ts` — 2 new switch cases
+- `src/sites/todoist/examples/{deleteTask,uncompleteTask}.example.json`
+- `src/sites/todoist/DOC.md` — expanded workflows and ops table
+- `src/sites/todoist/summary.md` — process notes
+
+**Verification:** `pnpm build` PASS; `pnpm dev verify todoist --browser` — FAIL (no Todoist login session in managed Chrome, environment auth issue)
+
+---
+
+## 2026-04-10: Hacker News — 2 write ops (upvoteStory, addComment)
+
+**What changed:**
+- Added `upvoteStory` and `addComment` write ops to hackernews site package
+- Both ops use adapter with form-based submission via `page.evaluate()` + `fetch()`
+- `upvoteStory` extracts vote auth token from DOM link href; `addComment` extracts HMAC from hidden form field
+- Both set `permission: write`, `safety: caution`
+- Created 2 example JSON files with `replay_safety: unsafe_mutation`
+- Updated DOC.md with new workflows, ops table entries, quick-start examples
+
+**Why:**
+- Hackernews had 14 read-only ops — agents couldn't upvote or comment, the two most common write interactions
+
+**Key files:**
+- `src/sites/hackernews/openapi.yaml` — 2 new paths/operations (total: 16)
+- `src/sites/hackernews/adapters/hackernews.ts` — upvoteStory, addComment functions
+- `src/sites/hackernews/examples/*.example.json` — 2 new example files
+- `src/sites/hackernews/DOC.md` — expanded workflows and ops table
+- `src/sites/hackernews/summary.md` — process notes
+
+**Verification:** `pnpm build` PASS, `pnpm dev verify hackernews --browser` — 10/10 read ops PASS, write ops skipped (unsafe_mutation)
+
+---
+
+## 2026-04-10: Notion — deletePage reverse op
+
+**What changed:**
+- Added `deletePage` write op as reverse of `createPage`
+- Uses `submitTransaction` with `alive: false` to move page to trash (recoverable from Notion UI)
+- Permission: write, safety: caution
+- Added adapter handler in `notion-api.ts`, registered in OPERATIONS map
+- Created `deletePage.example.json` with `replay_safety: unsafe_mutation`
+- Updated DOC.md with delete workflow, ops table entry, safety table, quick-start example
+
+**Why:**
+- Notion had `createPage` but no reverse — agents couldn't clean up pages they created
+
+**Key files:**
+- `src/sites/notion/openapi.yaml` — new DELETE `/notion/pages/{pageId}` (total: 7 ops)
+- `src/sites/notion/adapters/notion-api.ts` — deletePage handler
+- `src/sites/notion/examples/deletePage.example.json`
+- `src/sites/notion/DOC.md` — expanded with deletePage workflow and examples
+- `src/sites/notion/summary.md` — site coverage summary
+
+**Verification:** `pnpm build` ✓, `pnpm dev verify notion --browser` — 4/4 read ops PASS, 3 write ops skipped (unsafe_mutation)
+
+---
+
+## 2026-04-10: Instagram — 16 new write & read ops
+
+**What changed:**
+- Added 11 write ops: `unlikePost`, `followUser`, `unfollowUser`, `savePost`, `unsavePost`, `createComment`, `deleteComment`, `blockUser`, `unblockUser`, `muteUser`, `unmuteUser`
+- Added 5 read ops: `getExplore`, `getFollowers`, `getFollowing`, `getReels`, `getNotifications`
+- Most write ops use direct REST v1 web endpoints (like existing `likePost` pattern)
+- `muteUser`/`unmuteUser` use adapter to route to `mute_posts_or_story_from_follow` endpoint
+- `getReels` uses adapter to POST to `/api/v1/clips/user/` (clips endpoint is POST-based)
+- Added `getCsrfToken` + `postJson` helpers to adapter for CSRF-authenticated POSTs
+- All write ops set `permission: write`, `safety: caution`
+- Created 16 example JSON files with `replay_safety: unsafe_mutation` (writes) / `safe_read` (reads)
+- Added `safety: caution` to existing `likePost` (was missing)
+
+**Why:**
+- Instagram had only 1 write op (likePost) — agents couldn't follow users, comment, save posts, or manage their social graph
+
+**Key files:**
+- `src/sites/instagram/openapi.yaml` — 16 new paths/operations (total: 24)
+- `src/sites/instagram/adapters/instagram-api.ts` — postJson, getCsrfToken, muteUser, unmuteUser, getReels
+- `src/sites/instagram/examples/*.example.json` — 16 new example files
+- `src/sites/instagram/DOC.md` — expanded workflows, ops table, quick-start examples
+- `src/sites/instagram/summary.md` — process notes
+
+**Verification:** `pnpm build` ✓, `pnpm dev verify instagram --browser` — 10/12 read ops PASS, getNotifications transient 500, getReels 403 (clips endpoint restricted), write ops skipped by verify
+
+---
+
+## 2026-04-10: Spotify — 5 new library & playlist write ops
+
+**What changed:**
+- Added 5 write ops to spotify site package: `likeTrack`, `unlikeTrack`, `addToPlaylist`, `removeFromPlaylist`, `createPlaylist`
+- Write ops use Spotify Web API REST endpoints (`api.spotify.com/v1/`) via the existing adapter's browser fetch, separate from the GraphQL pathfinder used by read ops
+- `likeTrack`/`unlikeTrack` use PUT/DELETE on `/v1/me/tracks`; playlist ops use POST/DELETE on `/v1/playlists/{id}/tracks`; `createPlaylist` fetches user ID from `/v1/me` first
+- All write ops set `permission: write`, `safety: caution`, `requires_auth: true`
+- Created 5 example JSON files with `replay_safety: unsafe_mutation` using real Spotify IDs
+- Updated DOC.md with library management and playlist curation workflows
+
+**Why:**
+- Spotify had 8 read-only ops — agents couldn't save tracks, manage playlists, or curate music libraries
+
+**Key files:**
+- `src/sites/spotify/openapi.yaml` — 5 new paths/operations (13 total)
+- `src/sites/spotify/adapters/spotify-pathfinder.ts` — `writeOperationFetch` + `spotifyApiFetch` helpers
+- `src/sites/spotify/examples/*.example.json` — 5 new example files
+- `src/sites/spotify/DOC.md` — new workflows, expanded ops table, quick-start examples
+- `src/sites/spotify/summary.md` — site summary with coverage and architecture
+
+**Verification:** `pnpm build` clean, `pnpm dev verify spotify --browser` — 8/8 read ops PASS, 5 write ops correctly skipped (unsafe_mutation). `pnpm dev spotify` shows 13 ops (read:8 write:5).
+
+---
+
+## 2026-04-10: YouTube — 3 new write/reverse ops
+
+**What changed:**
+- Added 3 write ops to youtube site package: `unsubscribeChannel`, `addComment`, `deleteComment`
+- `unsubscribeChannel` is a direct InnerTube POST (mirrors `subscribeChannel`)
+- `addComment` and `deleteComment` are adapter ops via `youtube-innertube` — compose multi-step InnerTube calls (extract comment params from `/next`, then post to `/comment/create_comment` or `/comment/perform_comment_action`)
+- All write ops set `permission: write`, `safety: caution`, stable_ids yt0013–yt0015
+- Created 3 example JSON files with `replay_safety: unsafe_mutation`
+- Updated DOC.md with new workflows, ops table entries, and quick-start examples
+
+**Why:**
+- YouTube had subscribe but no unsubscribe, and no comment write operations — agents couldn't participate in discussions or manage subscriptions bidirectionally
+
+**Key files:**
+- `src/sites/youtube/openapi.yaml` — 3 new paths/operations
+- `src/sites/youtube/adapters/youtube-innertube.ts` — addComment, deleteComment handlers
+- `src/sites/youtube/examples/*.example.json` — 3 new example files
+- `src/sites/youtube/DOC.md` — new workflows, expanded ops table, quick-start examples
+- `src/sites/youtube/summary.md` — process and pitfalls
+
+**Verification:** `pnpm build` clean, `pnpm dev verify youtube --browser` — 8/12 read ops PASS, write ops correctly require `--allow-write`, new ops excluded via `unsafe_mutation`
+
+---
+
+## 2026-04-10: GitLab — 4 new issue & comment write ops
+
+**What changed:**
+- Added 4 write ops to gitlab site package: `createIssue`, `closeIssue`, `createComment`, `deleteComment`
+- All use GitLab REST API v4 — pure openapi.yaml definitions, no adapters needed
+- `closeIssue` uses PUT with `state_event: close`; comments map to GitLab's "notes" API
+- All write ops set `permission: write`, `safety: caution`, stable_ids gl0015–gl0018
+- Created 4 example JSON files with `replay_safety: unsafe_mutation`
+- Updated manifest.json: operation_count 14→18
+
+**Why:**
+- GitLab had read-only coverage — agents couldn't file issues, close them, or participate in discussions
+
+**Key files:**
+- `src/sites/gitlab/openapi.yaml` — 4 new paths/operations
+- `src/sites/gitlab/examples/*.example.json` — 4 new example files
+- `src/sites/gitlab/manifest.json` — operation_count updated
+- `src/sites/gitlab/DOC.md` — new workflow, expanded ops table, quick-start examples
+- `src/sites/gitlab/summary.md` — process and pitfalls
+
+**Verification:** `pnpm build` ✓, `pnpm dev verify gitlab` — 10/10 read ops PASS, createIssue PASS, closeIssue/createComment timeout (CSRF page state), deleteComment 404 (placeholder noteId)
+
+---
+
+## 2026-04-10: X (Twitter) — 16 new write/read ops
+
+**What changed:**
+- Added 13 write ops + 3 read ops to X site package: `createTweet`, `deleteTweet`, `reply`, `followUser`, `unfollowUser`, `blockUser`, `unblockUser`, `muteUser`, `unmuteUser`, `hideReply`, `unhideReply`, `sendDM`, `deleteDM`, `getNotifications`, `getUserLikes`, `getBookmarks`
+- All ops route through `x-graphql` adapter — handles GraphQL, REST v1.1, and REST v2 endpoints
+- Added `restRequest`/`executeRest` helpers for REST calls (follow/block/mute use v1.1 form-urlencoded, hideReply uses v2 JSON PUT, sendDM uses v1.1 JSON POST)
+- GraphQL mutations for createTweet/deleteTweet/reply/deleteDM; GraphQL queries for getNotifications/getUserLikes/getBookmarks
+- All write ops set `permission: write`, `safety: caution`; new write ops use `requestBody` with `application/json`
+- 16 example JSON files (13 `unsafe_mutation`, 3 `safe_read`)
+- `getTrending` covered by `getExplorePage`; `getThread` covered by `getTweetDetail`
+
+**Why:**
+- X had limited write coverage (only like/unlike, bookmark, retweet) — agents couldn't post, reply, manage social graph, moderate replies, or message
+
+**Key files:**
+- `src/sites/x/openapi.yaml` — 16 new paths/operations
+- `src/sites/x/adapters/x-graphql.ts` — restRequest/executeRest helpers + 16 new operation handlers
+- `src/sites/x/examples/*.example.json` — 16 new example files
+- `src/sites/x/DOC.md` — new workflows, expanded ops table, quick start
+- `src/sites/x/summary.md` — process and pitfalls
+
+**Verification:** pnpm build, pnpm dev verify x --write --browser
+
+---
+
+## 2026-04-10: Reddit — 7 new write/read ops
+
+**What changed:**
+- Added 6 write ops + 1 read op to reddit site package: `createPost`, `createComment`, `deleteThing`, `subscribe`, `unsavePost`, `blockUser`, `getNotifications`
+- All new ops use `oauth.reddit.com` server override at operation level
+- `deleteThing` covers both post and comment deletion (same `/api/del` endpoint)
+- `subscribe` handles both sub/unsub via `action` enum field
+- All write ops set `permission: write`, `safety: caution`; `getNotifications` is `permission: read`
+- 7 example JSON files (6 `unsafe_mutation`, 1 read)
+- Total ops: 10 → 17
+
+**Why:**
+- Reddit had read-only coverage + 2 basic write ops (vote, savePost) — agents couldn't create content, manage subscriptions, or check notifications
+
+**Key files:**
+- `src/sites/reddit/openapi.yaml` — 7 new paths/operations (stable_ids rd0011–rd0017)
+- `src/sites/reddit/examples/*.example.json` — 7 new example files
+- `src/sites/reddit/DOC.md` — new workflows, expanded ops table, quick start
+- `src/sites/reddit/summary.md` — process and pitfalls
+
+**Verification:** `pnpm build` clean. `pnpm dev verify reddit --write --browser` — 8/15 PASS (all reads pass; 6 write ops correctly gated by permission; getNotifications schema mismatch without auth — expected).
+
+---
+
+## 2026-04-10: Bluesky — 13 new write/read ops
+
+**What changed:**
+- Added 12 write ops + 1 read op to bluesky site package: `createPost`, `deletePost`, `likePost`, `unlikePost`, `repost`, `unrepost`, `follow`, `unfollow`, `blockUser`, `unblockUser`, `muteUser`, `unmuteUser`, `getNotifications`
+- All new ops route through `bluesky-pds` adapter — PDS URL and JWT extracted from `localStorage` (`BSKY_STORAGE`)
+- Record-based ops use `com.atproto.repo.createRecord` / `deleteRecord`; mute/unmute use dedicated XRPC procedures
+- Adapter refactored: added `pdsPost`, `requireSession`, `createRecord`/`deleteRecord` helpers
+- All write ops set `permission: write`, `safety: caution`; `getNotifications` is `permission: read`
+- 13 example JSON files (12 `unsafe_mutation`, 1 `safe_read`)
+
+**Why:**
+- Bluesky had read-only coverage — agents couldn't post, engage, or manage social graph
+
+**Key files:**
+- `src/sites/bluesky/openapi.yaml` — 13 new paths/operations
+- `src/sites/bluesky/adapters/bluesky-pds.ts` — rewritten with POST support + 13 handlers
+- `src/sites/bluesky/examples/*.example.json` — 13 new example files
+- `src/sites/bluesky/manifest.json` — requires_browser/login → true
+- `src/sites/bluesky/DOC.md` — new workflows, expanded ops table
+- `src/sites/bluesky/summary.md` — process and pitfalls
+
+**Verification:** pnpm build, pnpm dev verify bluesky --write --browser
+
+---
+
+## 2026-04-10: GitHub — 7 new write/reverse ops
+
+**What changed:**
+- Added 7 write ops to github site package: `unstarRepo`, `closeIssue`, `reopenIssue`, `createComment`, `deleteComment`, `watchRepo`, `unwatchRepo`
+- All use GitHub REST API at `api.github.com` — no adapters needed, pure openapi.yaml definitions
+- `closeIssue` / `reopenIssue` both PATCH the same endpoint; `reopenIssue` uses virtual path key (`~reopen` suffix) with `x-openweb.actual_path` override
+- All write ops set `permission: write`, `safety: caution`, stable_ids gh0012–gh0018
+- Created 7 example JSON files with `replay_safety: unsafe_mutation`
+- Updated manifest.json: operation_count 11→18
+
+**Why:**
+- Write ops without reverse actions leave agents unable to undo — star without unstar, close without reopen
+
+**Key files:**
+- `src/sites/github/openapi.yaml` — 7 new paths/operations
+- `src/sites/github/examples/*.example.json` — 7 new example files
+- `src/sites/github/manifest.json` — op count bump
+- `src/sites/github/DOC.md` — new workflows, ops table, quick start, known issues
+- `src/sites/github/summary.md` — process and pitfalls
+
+**Verification:** pnpm build (96 sites, 915 files), pnpm dev verify github --write --browser (read ops pass; write ops correctly blocked by permission layer — expected without config grants)
+
+---
+
+## 2026-04-10: Uber reverse write op — removeFromCart
+
+**What changed:**
+- Added removeFromCart as reverse of addToCart to uber site package
+- Adapter-based (page transport): navigates to cart UI, clicks remove button
+- Input: `itemUuid` (from getRestaurantMenu catalogItems or addToCart response)
+- Set `x-openweb.permission: write`, `safety: caution`, stable_id ub0005
+- Uses `requestBody` with `application/json` for input params
+- Created example JSON with `replay_safety: unsafe_mutation`
+- Updated manifest.json: operation_count 4→5
+
+**Why:**
+- Write ops without reverse actions leave agents unable to undo — add without remove
+
+**Key files:**
+- `src/sites/uber/openapi.yaml` — new `/internal/removeFromCart` POST path
+- `src/sites/uber/adapters/uber-eats.ts` — removeFromCart handler
+- `src/sites/uber/examples/removeFromCart.example.json`
+- `src/sites/uber/manifest.json` — op count bump
+- `src/sites/uber/DOC.md` — workflow, ops table, quick start, known issues
+- `src/sites/uber/summary.md` — process and pitfalls
+
+**Verification:** pnpm build (96 sites, 908 files), pnpm dev verify uber --write --browser (removeFromCart correctly blocked by permission layer — expected for write ops without config grants)
+
+---
+
+## 2026-04-10: DoorDash reverse write op — removeFromCart
+
+**What changed:**
+- Added removeFromCart as reverse of addToCart to doordash site package
+- Uses `removeCartItemV2` GraphQL mutation at `/graphql/removeCartItem` — inline query in openapi.yaml, no adapter
+- Input: `orderCartId` (cart UUID) + `orderItemId` (from addToCart response)
+- Set `x-openweb.permission: write`, `safety: caution`, stable_id dd0005
+- Uses `requestBody` with `application/json` for input params
+- Created example JSON with `replay_safety: unsafe_mutation`
+- Updated manifest.json: operation_count 4→5
+
+**Why:**
+- Write ops without reverse actions leave agents unable to undo — add without remove
+
+**Key files:**
+- `src/sites/doordash/openapi.yaml` — new `/graphql/removeCartItem` POST path
+- `src/sites/doordash/examples/removeFromCart.example.json`
+- `src/sites/doordash/manifest.json` — op count bump
+- `src/sites/doordash/DOC.md` — workflow, ops table, quick start, known issues
+- `src/sites/doordash/summary.md` — process and pitfalls
+
+**Verification:** pnpm build (96 sites, 907 files), pnpm dev verify doordash --write --browser (removeFromCart correctly blocked by permission layer — expected for write ops without config grants)
+
+---
+
+## 2026-04-10: Best Buy reverse write op — removeFromCart
+
+**What changed:**
+- Added removeFromCart as reverse of addToCart to bestbuy site package
+- Standard REST POST to `/cart/api/v1/removeFromCart` — no adapter needed
+- Input keyed by `lineId` (from addToCart response), not `skuId`
+- Set `x-openweb.permission: write`, `safety: caution`, stable_id bb0005
+- Uses `requestBody` with `application/json` for input params
+- Created example JSON with `replay_safety: unsafe_mutation`
+- Updated manifest.json: operation_count 4→5
+
+**Why:**
+- Write ops without reverse actions leave agents unable to undo — add without remove
+
+**Key files:**
+- `src/sites/bestbuy/openapi.yaml` — new `/cart/api/v1/removeFromCart` POST path
+- `src/sites/bestbuy/examples/removeFromCart.example.json`
+- `src/sites/bestbuy/manifest.json` — op count
+- `src/sites/bestbuy/DOC.md` — workflow, ops table, quick start, known issues
+- `src/sites/bestbuy/summary.md` — process and pitfalls
+
+**Verification:** pnpm build (96 sites, 907 files), pnpm dev verify bestbuy --write --browser (3/4 read ops pass, removeFromCart correctly blocked by permission layer — expected for write ops without config grants)
+
+---
+
+## 2026-04-10: Target reverse write op — removeFromCart
+
+**What changed:**
+- Added removeFromCart as reverse of addToCart to target site package
+- L1 direct REST: DELETE to `/web_checkouts/v1/cart_items/{cart_item_id}` on `carts.target.com`
+- Set `x-openweb.permission: write`, `safety: caution`, stable_id tgt0005
+- Uses `requestBody` with `application/json` for input params
+- Created example JSON with `replay_safety: unsafe_mutation`
+- Updated manifest.json: operation_count 3→5, l1_count 3→5 (addToCart was uncounted before)
+
+**Why:**
+- Write ops without reverse actions leave agents unable to undo — add without remove
+
+**Key files:**
+- `src/sites/target/openapi.yaml` — new DELETE path on `/web_checkouts/v1/cart_items/{cart_item_id}`
+- `src/sites/target/examples/removeFromCart.example.json`
+- `src/sites/target/manifest.json` — op counts
+- `src/sites/target/DOC.md` — workflow, ops table, quick start, known issues
+- `src/sites/target/summary.md` — process and pitfalls
+
+**Verification:** pnpm build (96 sites, 907 files), pnpm dev verify target --write --browser (3/4 ops pass, removeFromCart correctly blocked by permission layer — expected for write ops without config grants)
+
+---
+
+## 2026-04-10: Walmart reverse write op — removeFromCart
+
+**What changed:**
+- Added removeFromCart as reverse of addToCart to walmart site package
+- L3 adapter-based: uses same `updateItems` persisted GraphQL mutation with `quantity: 0`
+- Set `x-openweb.permission: write`, `safety: caution`, stable_id wm0006
+- Uses `requestBody` with `application/json` for input params
+- Created example JSON with `replay_safety: unsafe_mutation`
+- Updated manifest.json: operation_count 3→5, l3_count 0→2
+
+**Why:**
+- Write ops without reverse actions leave agents unable to undo — add without remove
+
+**Key files:**
+- `src/sites/walmart/openapi.yaml` — new `/internal/removeFromCart` POST path
+- `src/sites/walmart/adapters/walmart-cart.ts` — removeFromCart handler + execute switch
+- `src/sites/walmart/examples/removeFromCart.example.json`
+- `src/sites/walmart/manifest.json` — op counts
+- `src/sites/walmart/DOC.md` — workflow, ops table, quick start, known issues
+- `src/sites/walmart/summary.md` — process and pitfalls
+
+**Verification:** pnpm build (96 sites, 904 files), pnpm dev verify walmart --write --browser (3/3 read ops pass, removeFromCart correctly blocked by permission layer — expected for write ops without config grants)
+
+---
+
+## 2026-04-10: WhatsApp reverse write op — deleteMessage
+
+**What changed:**
+- Added deleteMessage as reverse of sendMessage to whatsapp site package
+- L3 adapter-based: DOM interaction (open chat, hover message, dropdown arrow, context menu "Delete", confirm "Delete for me")
+- Set `x-openweb.permission: write`, `safety: caution`, stable_id wa0008
+- Created example JSON with `replay_safety: unsafe_mutation`, test contact +1 347-222-5726
+- Updated manifest.json: operation_count 7->8, l3_count 7->8
+
+**Why:**
+- Write ops without reverse actions leave agents unable to undo — send without delete
+
+**Key files:**
+- `src/sites/whatsapp/openapi.yaml` — new `/internal/messages/delete` POST path
+- `src/sites/whatsapp/adapters/whatsapp-modules.ts` — deleteMessage handler + execute switch
+- `src/sites/whatsapp/examples/deleteMessage.example.json`
+- `src/sites/whatsapp/manifest.json` — op counts
+- `src/sites/whatsapp/DOC.md` — workflow, ops table, quick start, known issues
+- `src/sites/whatsapp/summary.md` — process and pitfalls
+
+**Verification:** pnpm build succeeds, 3/3 read ops pass. deleteMessage adapter runs but example uses synthetic message ID — live verification requires real send+delete flow.
+
+---
+
+## 2026-04-10: Amazon reverse write op — removeFromCart
+
+**What changed:**
+- Added removeFromCart as reverse of addToCart to amazon site package
+- L3 adapter-based: navigates to cart page, finds item by ASIN, clicks Delete button
+- Set `x-openweb.permission: write`, `safety: caution`, stable_id amz_removeFromCart_v1
+- Created example JSON with `replay_safety: unsafe_mutation`
+
+**Why:**
+- Write ops without reverse actions leave agents unable to undo — add without remove
+
+**Key files:**
+- `src/sites/amazon/openapi.yaml` — new `/cart/remove` POST path
+- `src/sites/amazon/adapters/amazon.ts` — removeFromCart handler + execute switch
+- `src/sites/amazon/examples/removeFromCart.example.json`
+- `src/sites/amazon/DOC.md` — workflow, ops table, quick start, extraction notes
+- `src/sites/amazon/summary.md` — process and pitfalls
+
+**Verification:** pnpm build (96 sites, 904 files), pnpm dev verify amazon --write --browser (6/8 ops pass, 2 write ops correctly require auth permission)
+
+---
+
+## 2026-04-10: Telegram reverse write op — deleteMessage
+
+**What changed:**
+- Added deleteMessage as reverse of sendMessage to telegram site package
+- L3 adapter-based: DOM interaction (right-click message, context menu "Delete", confirm)
+- Set `x-openweb.permission: write`, `safety: caution`, stable_id tg0007
+- Created example JSON with `replay_safety: unsafe_mutation`
+- Updated manifest.json: operation_count 6->7, l3_count 6->7
+
+**Why:**
+- Write ops without reverse actions leave agents unable to undo — send without delete
+
+**Key files:**
+- `src/sites/telegram/openapi.yaml` — new `/internal/messages/delete` POST path
+- `src/sites/telegram/adapters/telegram-protocol.ts` — deleteMessage handler + execute switch
+- `src/sites/telegram/examples/deleteMessage.example.json`
+- `src/sites/telegram/manifest.json` — op counts
+- `src/sites/telegram/DOC.md` — workflow, ops table, quick start, known issues
+- `src/sites/telegram/summary.md` — process and pitfalls
+
+**Verification:** pnpm build succeeds, 5/5 read ops pass. deleteMessage adapter NOT live-verified — DOM selectors need validation against actual Telegram Web A context menu.
+
+---
+
+## 2026-04-10: Medium reverse write ops — unfollowWriter, unsaveArticle
+
+**What changed:**
+- Added 2 reverse write operations to medium: unfollowWriter (unfollow via GraphQL `unfollowUser` mutation), unsaveArticle (remove from reading list via `removeFromPredefinedCatalog` mutation)
+- Both use POST method at virtual paths `/user/{userId}/unfollow` and `/post/{postId}/unsave`
+- Set `x-openweb.permission: write`, `safety: caution` on each new op
+- Created example JSON files with `replay_safety: unsafe_mutation`
+- Updated manifest.json: operation_count 12→14, l3_count 12→14
+
+**Why:**
+- Write ops without reverse actions leave agents unable to undo — follow without unfollow, save without unsave
+
+**Key files:**
+- `src/sites/medium/openapi.yaml` — 2 new POST ops (stable IDs md0015–md0016)
+- `src/sites/medium/adapters/queries.ts` — UNFOLLOW_USER_MUTATION, UNSAVE_ARTICLE_MUTATION
+- `src/sites/medium/adapters/medium-graphql.ts` — unfollowWriter, unsaveArticle handlers
+- `src/sites/medium/examples/unfollowWriter.example.json`, `unsaveArticle.example.json`
+- `src/sites/medium/manifest.json` — op count updated
+- `src/sites/medium/summary.md` — process, pitfalls, patterns
+
+**Verification:** pnpm build (96 sites, 901 files), pnpm dev verify medium --write --browser (9/14 read ops pass, write ops correctly require auth permission)
+
+---
+
+## 2026-04-10: Discord write ops — deleteMessage, removeReaction, createServer, createChannel
+
+**What changed:**
+- Added 4 write operations to discord: deleteMessage (DELETE message), removeReaction (DELETE own reaction), createServer (POST new guild), createChannel (POST new channel in guild)
+- `deleteMessage` and `removeReaction` are reverse ops for `sendMessage` and `addReaction`
+- `createServer` and `createChannel` are new creation ops
+- All use `x-openweb.permission: write`, `safety: caution`
+- Created example JSON files with `replay_safety: unsafe_mutation`
+- `removeReaction` DELETE merged into same path block as `addReaction` PUT; `createChannel` POST merged with `listGuildChannels` GET
+
+**Why:**
+- Write/reverse pairs are an archetype expectation — agents need undo capability
+- Server/channel creation enables full lifecycle management from agents
+
+**Key files:**
+- `src/sites/discord/openapi.yaml` — 4 new ops (2 DELETE reverse, 2 POST create)
+- `src/sites/discord/examples/{deleteMessage,removeReaction,createServer,createChannel}.example.json`
+- `src/sites/discord/DOC.md` — new workflows, ops table, quick start
+- `src/sites/discord/summary.md` — process, patterns, pitfalls
+
+**Verification:** pnpm build, pnpm dev verify discord
+
+---
+
+## 2026-04-10: Zhihu reverse write ops — cancelUpvote, unfollowUser, unfollowQuestion
+
+**What changed:**
+- Added 3 reverse write operations to zhihu: cancelUpvote (DELETE voters), unfollowUser (DELETE followers), unfollowQuestion (DELETE followers)
+- All use DELETE method on the same paths as their POST counterparts (standard REST reverse pattern)
+- Set `x-openweb.permission: write`, `safety: caution` on each new op
+- Created example JSON files with `replay_safety: unsafe_mutation`
+- Updated manifest.json: operation_count 14→17, added dependency edges
+
+**Why:**
+- Write ops without reverse actions leave agents unable to undo — follow without unfollow, upvote without cancel
+
+**Key files:**
+- `src/sites/zhihu/openapi.yaml` — 3 new DELETE ops (stable IDs zhihu0014–zhihu0016)
+- `src/sites/zhihu/examples/cancelUpvote.example.json`, `unfollowUser.example.json`, `unfollowQuestion.example.json`
+- `src/sites/zhihu/manifest.json` — op count, dependency edges
+- `src/sites/zhihu/summary.md` — process, pitfalls, patterns
+
+**Verification:** pnpm build (96 sites, 890 files), pnpm dev verify zhihu (10/10 read ops pass, write ops correctly skipped)
+
+---
+
+## 2026-04-10: Bilibili reverse write ops — unlikeVideo, removeFromFavorites, unfollowUploader
+
+**What changed:**
+- Added 3 reverse write operations: `unlikeVideo` (like=2), `removeFromFavorites` (del_media_ids), `unfollowUploader` (act=2)
+- Each mirrors its forward op at a virtual path with `permission: write`, `safety: caution`
+- Adapter functions in `bilibili-web.ts` — `unlikeVideo` and `unfollowUploader` delegate to forward ops with param override; `removeFromFavorites` is standalone (forward op requires `add_media_ids`)
+- Fixed all 6 write ops' requestBody from `application/x-www-form-urlencoded` to `application/json` — `getRequestBodySchema()` only reads `application/json`, so form-urlencoded caused "Unknown parameter(s)" errors
+- Added example files with `replay_safety: unsafe_mutation` for all 3 reverse ops
+- Updated DOC.md with reverse op workflows, operations table entries, and quick-start examples
+- Operation count 11 → 14
+
+**Why:**
+- Write/reverse pairs are an archetype expectation — agents need undo capability for all reversible actions
+
+**Key files:**
+- `src/sites/bilibili/openapi.yaml` — 3 new path entries (virtual paths to avoid OpenAPI duplicate POST) + content-type fix on all 6 write ops
+- `src/sites/bilibili/adapters/bilibili-web.ts` — 3 new functions + OPERATIONS map
+- `src/sites/bilibili/examples/{unlikeVideo,removeFromFavorites,unfollowUploader}.example.json`
+- `src/sites/bilibili/DOC.md` — reverse ops documented in workflows, table, quick start
+- `src/sites/bilibili/summary.md` — process notes and pitfalls
+
+**Verification:** `pnpm build` (96 sites, 893 files), `pnpm dev verify bilibili` (8/8 read PASS), `pnpm dev verify bilibili --write --ops unlikeVideo,removeFromFavorites,unfollowUploader --browser` (3/3 write PASS)
+
+---
+
+## 2026-04-10: Weibo reverse write ops — unlikePost, unfollowUser, unbookmarkPost
+
+**What changed:**
+- Added 3 reverse write operations: `unlikePost` (cancelLike), `unfollowUser` (friendships/destroy), `unbookmarkPost` (destroyFavorites)
+- Each mirrors its forward op's request schema with `permission: write` and `replay_safety: unsafe_mutation` in examples
+- Adapter functions added to `weibo-web.ts` using existing `postForm` CSRF helper
+- Operation count 13 → 16
+
+**Why:**
+- Write/reverse pairs are an archetype expectation — agents need undo capability for all reversible actions
+
+**Key files:**
+- `src/sites/weibo/openapi.yaml` — 3 new path entries
+- `src/sites/weibo/adapters/weibo-web.ts` — 3 new functions
+- `src/sites/weibo/examples/{unlikePost,unfollowUser,unbookmarkPost}.example.json`
+- `src/sites/weibo/summary.md` — process notes and pitfalls
+
+**Verification:** `pnpm build` (96 sites), `pnpm dev verify weibo --browser` (8/8 read PASS, write ops correctly gated)
+
+---
+
 ## 2026-04-09: Add Sites Sprint — 63→96 sites, 470→634 ops
 
 **What changed:**
