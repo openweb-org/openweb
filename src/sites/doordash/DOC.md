@@ -1,7 +1,7 @@
 # DoorDash
 
 ## Overview
-Food delivery marketplace — search restaurants, browse menus, view order history, add to cart.
+Food delivery marketplace — search restaurants, browse menus, view order history, manage cart.
 
 ## Workflows
 
@@ -9,10 +9,11 @@ Food delivery marketplace — search restaurants, browse menus, view order histo
 1. `searchRestaurants(query)` → pick restaurant → `storeId`
 2. `getRestaurantMenu(storeId)` → browse categories and items
 
-### Add to cart
+### Add to cart then remove
 1. `searchRestaurants(query)` → `storeId`
 2. `getRestaurantMenu(storeId)` → pick item → `itemId`
-3. `addToCart(storeId, itemId)` → cart confirmation
+3. `addToCart(storeId, itemId)` → cart confirmation → `cartId`, `orderItemId`
+4. `removeFromCart(orderCartId, orderItemId)` → updated cart
 
 ### Review past orders
 1. `getOrderHistory(limit)` → order list with items, totals, timestamps
@@ -25,6 +26,7 @@ Food delivery marketplace — search restaurants, browse menus, view order histo
 | getRestaurantMenu | get store detail + full menu | storeId ← searchRestaurants | storeHeader, menuBook, itemLists (id, name, displayPrice) | optional: menuId, fulfillmentType |
 | getOrderHistory | list past orders | limit, offset | orders (store, items, grandTotal, timestamps) | paginated; requires auth |
 | addToCart | add menu item to cart | storeId ← searchRestaurants, itemId ← getRestaurantMenu | success, cartId, subtotal, items | write op; optional: quantity, specialInstructions |
+| removeFromCart | remove item from cart | orderCartId ← addToCart, orderItemId ← addToCart | updated cart, remaining items | write op; reverse of addToCart |
 
 ## Quick Start
 
@@ -40,6 +42,9 @@ openweb doordash exec getOrderHistory '{"limit": 5}'
 
 # Add item to cart
 openweb doordash exec addToCart '{"storeId": "245613", "itemId": "12345", "quantity": 1}'
+
+# Remove item from cart (use cartId and orderItemId from addToCart response)
+openweb doordash exec removeFromCart '{"orderCartId": "cart-uuid", "orderItemId": "order-item-id"}'
 ```
 
 ---
@@ -71,3 +76,4 @@ openweb doordash exec addToCart '{"storeId": "245613", "itemId": "12345", "quant
 - `formattedAddress` in order history is often null
 - Search results include non-store items (grocery suggestions) — use `resultType` to filter
 - No bot detection observed for authenticated sessions
+- removeFromCart requires `orderCartId` and `orderItemId` from a prior addToCart response — these are ephemeral cart identifiers

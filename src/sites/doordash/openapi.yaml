@@ -739,3 +739,131 @@ paths:
                                         type: string
                                       price:
                                         type: integer
+
+  /graphql/removeCartItem:
+    post:
+      operationId: removeFromCart
+      summary: Remove an item from DoorDash cart — returns updated cart with remaining items
+      x-openweb:
+        permission: write
+        safety: caution
+        unwrap: data
+        wrap: variables
+        build:
+          stable_id: dd0005
+          tool_version: 2
+          verified: true
+      parameters:
+        - name: operation
+          in: query
+          required: true
+          schema:
+            type: string
+            const: removeCartItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - removeCartItemInput
+              properties:
+                operationName:
+                  type: string
+                  const: removeCartItem
+                query:
+                  type: string
+                  const: |-
+                    mutation removeCartItem($removeCartItemInput: RemoveCartItemInput!) {
+                      removeCartItemV2(removeCartItemInput: $removeCartItemInput) {
+                        id
+                        subtotal
+                        currencyCode
+                        fulfillmentType
+                        restaurant { id name slug }
+                        orders {
+                          id
+                          orderItems {
+                            id
+                            quantity
+                            singlePrice
+                            priceDisplayString
+                            item { id name imageUrl price }
+                          }
+                        }
+                      }
+                    }
+                removeCartItemInput:
+                  type: object
+                  required:
+                    - orderCartId
+                    - orderItemId
+                  properties:
+                    orderCartId:
+                      type: string
+                      description: Cart UUID (from addToCart response id).
+                    orderItemId:
+                      type: string
+                      description: Order item ID to remove (from addToCart response orders[].orderItems[].id).
+      responses:
+        '200':
+          description: Updated cart after removal.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removeCartItemV2:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Cart UUID.
+                      subtotal:
+                        type: integer
+                        description: Cart subtotal in cents.
+                      currencyCode:
+                        type: string
+                      fulfillmentType:
+                        type: string
+                      restaurant:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          slug:
+                            type: string
+                      orders:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            orderItems:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  quantity:
+                                    type: integer
+                                  singlePrice:
+                                    type: integer
+                                  priceDisplayString:
+                                    type: string
+                                  item:
+                                    type: object
+                                    properties:
+                                      id:
+                                        type: string
+                                      name:
+                                        type: string
+                                      imageUrl:
+                                        type: string
+                                      price:
+                                        type: integer
