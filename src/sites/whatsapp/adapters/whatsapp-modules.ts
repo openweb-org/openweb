@@ -150,6 +150,9 @@ export default {
         case 'sendMessage':
           return sendMessage(page, params.chatId as string, params.message as string)
 
+        case 'deleteMessage':
+          return deleteMessage(page, params.chatId as string, params.messageId as string)
+
         case 'markAsRead':
           return page.evaluate(
             (args: { chatId: string; read: boolean }) => {
@@ -240,4 +243,72 @@ async function sendMessage(
       timestamp: (last.t as number) ?? 0,
     }
   }, chatId)
+}
+
+// ── deleteMessage ──────────────────────────────────────────────
+// Reverse of sendMessage. Opens the chat, hovers over the target message
+// to reveal the dropdown arrow, clicks it, selects "Delete message",
+// and confirms via the "Delete for me" button.
+
+async function deleteMessage(
+  page: Page,
+  chatId: string,
+  messageId: string,
+): Promise<{ success: boolean }> {
+  // 1. Open the chat
+  await page.evaluate((id: string) => {
+    const req = (window as Record<string, unknown>).require as (m: string) => Record<string, unknown>
+    const col = req('WAWebChatCollection').ChatCollection as {
+      getModelsArray: () => Array<Record<string, unknown>>
+    }
+    const chat = col.getModelsArray().find(
+      (c) => (c.id as Record<string, unknown>)?._serialized === id,
+    )
+    if (!chat) throw new Error(`Chat not found: ${id}`)
+    const cmd = req('WAWebCmd') as { Cmd: { openChatBottom: (opts: { chat: unknown }) => void } }
+    cmd.Cmd.openChatBottom({ chat })
+  }, chatId)
+
+  await page.waitForTimeout(1000)
+
+  // 2. Find the target message element by data-id attribute
+  const msgSelector = `div.message-out[data-id="${messageId}"], div.message-in[data-id="${messageId}"]`
+  const msgEl = await page.waitForSelector(msgSelector, { timeout: 5000 })
+  if (!msgEl) throw new Error(`Message element not found: ${messageId}`)
+
+  // 3. Hover over message to reveal the dropdown arrow
+  await msgEl.hover()
+  await page.waitForTimeout(300)
+
+  // 4. Click the dropdown arrow (appears on hover)
+  const arrowSelector = `div.message-out[data-id="${messageId}"] span[data-icon="down-context"], div.message-in[data-id="${messageId}"] span[data-icon="down-context"]`
+  const arrow = await page.waitForSelector(arrowSelector, { timeout: 3000 })
+  if (!arrow) throw new Error('Dropdown arrow not found')
+  await arrow.click()
+  await page.waitForTimeout(300)
+
+  // 5. Click "Delete message" in the context menu
+  const menuItems = await page.$$('div[role="application"] li[data-animate-dropdown-item="true"]')
+  let deleteItem: Awaited<ReturnType<typeof page.$>> = null
+  for (const item of menuItems) {
+    const text = await item.textContent()
+    if (text?.includes('Delete')) {
+      deleteItem = item
+      break
+    }
+  }
+  if (!deleteItem) throw new Error('"Delete" option not found in context menu')
+  await deleteItem.click()
+  await page.waitForTimeout(500)
+
+  // 6. Click "Delete for me" confirmation button
+  const confirmBtn = await page.waitForSelector(
+    'div[data-animate-modal-popup="true"] div[role="button"]:has-text("Delete for me")',
+    { timeout: 3000 },
+  )
+  if (!confirmBtn) throw new Error('"Delete for me" button not found')
+  await confirmBtn.click()
+  await page.waitForTimeout(1000)
+
+  return { success: true }
 }

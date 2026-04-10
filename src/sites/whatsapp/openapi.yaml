@@ -312,6 +312,50 @@ paths:
                   required:
                     - id
                     - name
+  /internal/messages/delete:
+    post:
+      operationId: deleteMessage
+      summary: Delete a message from a chat (reverse of sendMessage)
+      x-openweb:
+        permission: write
+        safety: caution
+        build:
+          stable_id: wa0008
+          tool_version: 1
+          verified: true
+          signals:
+            - adapter-verified
+        adapter:
+          name: whatsapp-modules
+          operation: deleteMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatId:
+                  type: string
+                  description: Chat ID (e.g. 1234567890@c.us)
+                messageId:
+                  type: string
+                  description: Message ID (from getMessages response)
+              required:
+                - chatId
+                - messageId
+      responses:
+        '200':
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
   /internal/chats/read:
     post:
       operationId: markAsRead
