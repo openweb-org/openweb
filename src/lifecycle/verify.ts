@@ -182,6 +182,11 @@ export async function verifySite(
     } catch { /* warm-up is best-effort — don't fail verify */ }
   }
 
+  // When --write is enabled, auto-approve write/delete so executor doesn't prompt-gate
+  const opDeps: ExecuteDependencies | undefined = options?.includeWrite
+    ? { ...deps, permissionsConfig: { defaults: { read: 'allow', write: 'allow', delete: 'allow', transact: 'deny' } } }
+    : deps
+
   const examplesDir = path.join(siteRoot, 'examples')
   let exampleFiles: string[]
   try {
@@ -245,7 +250,7 @@ export async function verifySite(
             testCase,
             asyncapi,
             wsPool,
-            deps,
+            opDeps,
           ),
           testFile.operation_id,
           opTimeoutMs,
@@ -257,7 +262,7 @@ export async function verifySite(
     }
 
     for (const testCase of testFile.cases) {
-      const effectiveDeps = loginAttempted ? { ...deps, skipLoginCascade: true } : deps
+      const effectiveDeps = loginAttempted ? { ...opDeps, skipLoginCascade: true } : opDeps
       const result = await withOpTimeout(
         verifyOperation(
           site,

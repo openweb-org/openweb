@@ -63,7 +63,10 @@ export async function verifyCommand(opts: VerifyCommandOptions): Promise<void> {
     keepAlive = setInterval(() => touchLastUsed().catch(() => {}), 60_000)
   }
 
-  const deps = browser ? { browser } : undefined
+  const permissionsConfig = opts.write
+    ? { defaults: { read: 'allow' as const, write: 'allow' as const, delete: 'allow' as const, transact: 'deny' as const } }
+    : undefined
+  const deps = browser || permissionsConfig ? { ...browser && { browser }, ...permissionsConfig && { permissionsConfig } } : undefined
   const verifyOpts: VerifyOptions | undefined = (opts.write || opts.ops)
     ? { includeWrite: opts.write, ops: opts.ops }
     : undefined
