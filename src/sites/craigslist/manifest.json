@@ -1,10 +1,10 @@
 {
   "name": "craigslist",
   "display_name": "Craigslist",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "spec_version": "2.0",
   "site_url": "https://sfbay.craigslist.org",
-  "description": "Classic US classifieds — search listings, view details, browse categories via DOM extraction",
+  "description": "Classic US classifieds — search listings, view details, browse categories via node fetch + HTML parse",
   "requires_auth": false,
   "dependencies": {},
   "stats": {

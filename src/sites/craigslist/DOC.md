@@ -55,22 +55,22 @@ openweb craigslist exec getCategories '{"city": "sfbay"}'
 
 ## API Architecture
 - **Pure server-rendered HTML** — no client-side framework, no JSON APIs.
-- All data extracted from the DOM using CSS selectors.
+- Craigslist serves identical HTML to Node.js and browsers — no bot detection, no JS required.
 - City is a subdomain parameter (sfbay, newyork, losangeles, etc.), not a path.
 
 ## Auth
 No auth required. All operations are public read.
 
 ## Transport
-- **`page` transport** — all operations use browser DOM extraction.
+- **`node` transport** — all operations use direct HTTP fetch + regex HTML parsing. Zero browser dependency.
 - City subdomains: sfbay, newyork, losangeles, chicago, seattle, boston, washingtondc, etc.
 
 ## Extraction
-- **searchListings**: Multi-strategy DOM extraction — tries `.cl-search-result`, `.cl-static-search-result`, and legacy `.result-row` selectors for resilience across Craigslist redesigns.
-- **getListing**: Title from `.postingtitletext`, price from `.price`, body from `#postingbody`, images from `#thumbs`, attributes from `.attrgroup`, coordinates from `#map` data attributes.
-- **getCategories**: Parses category links (`/search/{code}`) from the homepage.
+- **searchListings**: Regex parsing of `.cl-search-result` / `.result-row` HTML patterns — extracts title, price, URL, postId.
+- **getListing**: Regex extraction of title, price, body, images, attributes, coordinates from raw HTML.
+- **getCategories**: Regex parsing of category links (`/search/{code}`) from homepage HTML.
 
 ## Known Issues
 - City subdomains must be known in advance (sfbay, newyork, etc.) — no discovery API.
 - Listing URLs include a slug that may change; the numeric post ID is the stable identifier.
-- Craigslist's HTML structure varies slightly across redesign phases; the adapter uses fallback selectors.
+- Regex-based parsing depends on Craigslist HTML structure — major redesigns may require adapter updates.

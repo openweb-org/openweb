@@ -9,7 +9,7 @@ info:
 servers:
   - url: https://sfbay.craigslist.org
     x-openweb:
-      transport: page
+      transport: node
 paths:
   /search/{category}:
     get:
@@ -24,7 +24,7 @@ paths:
           signals:
             - adapter-verified
         adapter:
-          name: craigslist-dom
+          name: craigslist
           operation: searchListings
       parameters:
         - name: category
@@ -103,7 +103,7 @@ paths:
           signals:
             - adapter-verified
         adapter:
-          name: craigslist-dom
+          name: craigslist
           operation: getListing
       parameters:
         - name: category
@@ -118,15 +118,15 @@ paths:
           required: true
           schema:
             type: string
-          description: URL slug from the listing link (e.g. "sunny-2br-apt-in-mission").
-          example: sunny-2br-apt-in-mission
+          description: URL slug from the listing link (e.g. "berkeley-wood-style-flooring-workspaces").
+          example: berkeley-wood-style-flooring-workspaces
         - name: id
           in: path
           required: true
           schema:
             type: string
-          description: Craigslist post ID (e.g. "7891234567").
-          example: '7891234567'
+          description: Craigslist post ID (e.g. "7922522225").
+          example: '7922522225'
         - name: city
           in: query
           required: false
@@ -194,7 +194,7 @@ paths:
           signals:
             - adapter-verified
         adapter:
-          name: craigslist-dom
+          name: craigslist
           operation: getCategories
       parameters:
         - name: city
