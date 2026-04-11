@@ -1,11 +1,16 @@
 import type { Page } from 'patchright'
 
 /**
- * Uber Eats adapter — add-to-cart via browser navigation + click.
+ * Uber Eats adapter — cart operations via API validation + minimal DOM clicks.
  *
- * UberEats manages cart state client-side (localStorage). There is no server
- * API for adding items. This adapter navigates to the store page, opens the
- * item quickView modal, and clicks "Add to order".
+ * Probe findings (2026-04-11):
+ * - Cart state is managed client-side in React state (NOT localStorage, NOT server)
+ * - No server-side cart mutation API exists (verified via network capture + 35+ endpoint probes)
+ * - fetch is NOT patched (native), no webpack chunks, no SSR globals
+ * - Stable selectors: data-testid="add-to-cart-button", data-testid="quick-add-button"
+ * - Cart does NOT persist across page sessions — each exec gets a fresh page
+ *
+ * Architecture: API calls for validation, minimal DOM for unavoidable cart mutations.
  */
 
 type Errors = {
@@ -21,6 +26,7 @@ type Helpers = {
 }
 
 const BASE = 'https://www.ubereats.com'
+const API_HEADERS = { 'content-type': 'application/json', 'x-csrf-token': 'x' }
 
 /** Convert full UUID to base64url slug used in UberEats URLs. */
 function uuidToSlug(uuid: string): string {
@@ -33,6 +39,44 @@ function uuidToSlug(uuid: string): string {
   return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
+/** Call a UberEats /_p/api/ endpoint via pageFetch. */
+async function apiCall(page: Page, helpers: Helpers, endpoint: string, body: unknown): Promise<any> {
+  const resp = await helpers.pageFetch(page, {
+    url: `${BASE}/_p/api/${endpoint}`,
+    method: 'POST',
+    headers: API_HEADERS,
+    body: JSON.stringify(body),
+    timeout: 10_000,
+  })
+  if (resp.status !== 200) {
+    throw helpers.errors.fatal(`${endpoint} returned ${resp.status}`)
+  }
+  const data = JSON.parse(resp.text)
+  if (data.status !== 'success') {
+    throw helpers.errors.fatal(`${endpoint}: ${data.data?.message || 'unknown error'}`)
+  }
+  return data.data
+}
+
+/** Ensure page is on ubereats.com (navigate if needed). */
+async function ensureUberEatsPage(page: Page): Promise<void> {
+  if (!page.url().includes('ubereats.com')) {
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
+    await page.waitForTimeout(3000)
+  }
+}
+
+/** Read cart badge count from DOM. */
+async function readCartBadge(page: Page): Promise<number> {
+  const text = await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="view-carts-badge"]')
+    if (!el) return '0'
+    const match = el.textContent?.match(/\d+/)
+    return match ? match[0] : '0'
+  })
+  return Number.parseInt(text, 10) || 0
+}
+
 async function addToCart(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
   const { errors } = helpers
   const storeUuid = String(params.storeUuid || '')
@@ -42,28 +86,18 @@ async function addToCart(page: Page, params: Record<string, unknown>, helpers: H
   if (!storeUuid) throw errors.missingParam('storeUuid')
   if (!itemUuid) throw errors.missingParam('itemUuid')
 
-  // First get the store slug from getStoreV1 to build navigation URL
-  const storeResp = await helpers.pageFetch(page, {
-    url: `${BASE}/_p/api/getStoreV1`,
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-csrf-token': 'x' },
-    body: JSON.stringify({ storeUuid }),
-  })
+  await ensureUberEatsPage(page)
 
-  if (storeResp.status !== 200) {
-    throw errors.fatal(`getStoreV1 returned ${storeResp.status}`)
-  }
-
-  const storeData = JSON.parse(storeResp.text)
-  const slug = storeData.data?.slug || ''
+  // Step 1: Validate store + resolve slug via API
+  const storeData = await apiCall(page, helpers, 'getStoreV1', { storeUuid })
+  const slug = storeData.slug
   if (!slug) throw errors.fatal('Could not resolve store slug')
+  if (!storeData.isOpen) throw errors.retriable('Store is currently closed')
 
-  const storeSlug = uuidToSlug(storeUuid)
-
-  // Find the item's section and subsection UUIDs from the menu
+  // Step 2: Find item in catalog and resolve section/subsection UUIDs
   let sectionUuid = ''
   let subsectionUuid = ''
-  const catalog = storeData.data?.catalogSectionsMap
+  const catalog = storeData.catalogSectionsMap
   if (catalog) {
     for (const [, groups] of Object.entries(catalog)) {
       if (sectionUuid) break
@@ -78,26 +112,35 @@ async function addToCart(page: Page, params: Record<string, unknown>, helpers: H
       }
     }
   }
+  if (!sectionUuid) throw errors.fatal(`Item ${itemUuid} not found in store menu`)
 
-  // Build quickView URL to open the item modal directly
-  const modctx = encodeURIComponent(JSON.stringify({
+  // Step 3: Validate item via getMenuItemV1 API
+  const menuItem = await apiCall(page, helpers, 'getMenuItemV1', {
+    itemRequestType: 'ITEM',
     storeUuid,
     sectionUuid,
     subsectionUuid,
-    itemUuid,
-  }))
+    menuItemUuid: itemUuid,
+    cbType: 'EATER_ENDORSED',
+    includeCheaperAlternatives: false,
+    contextReferences: [{ type: 'GROUP_ITEMS', payload: { type: 'groupItemsContextReferencePayload', groupItemsContextReferencePayload: {} }, pageContext: 'UNKNOWN' }],
+  })
+  if (!menuItem) throw errors.fatal(`Menu item ${itemUuid} not found or unavailable`)
+
+  // Step 4: Navigate to quickView URL — opens item modal directly
+  const storeSlug = uuidToSlug(storeUuid)
+  const modctx = JSON.stringify({ storeUuid, sectionUuid, subsectionUuid, itemUuid })
   const quickViewUrl = `${BASE}/store/${slug}/${storeSlug}?mod=quickView&modctx=${encodeURIComponent(modctx)}`
 
-  // Navigate to store with quickView modal
-  await page.goto(quickViewUrl, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
-  await page.waitForTimeout(3000)
+  await page.goto(quickViewUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
+  await page.waitForTimeout(4000)
 
-  // Wait for add-to-cart button
+  // Step 5: Click "Add to order" — stable data-testid selector
   const addBtn = page.locator('[data-testid="add-to-cart-button"]')
   try {
     await addBtn.waitFor({ state: 'visible', timeout: 10_000 })
   } catch {
-    throw errors.retriable('Add to cart button not found — item modal may not have loaded')
+    throw errors.retriable('Add to cart button not found — store may be closed or item unavailable')
   }
 
   // Set quantity if > 1
@@ -109,17 +152,11 @@ async function addToCart(page: Page, params: Record<string, unknown>, helpers: H
     }
   }
 
-  // Click add to cart
   await addBtn.click({ timeout: 5000 })
   await page.waitForTimeout(3000)
 
-  // Check if cart badge updated
-  const badgeText = await page.evaluate(() => {
-    const badge = document.querySelector('[data-testid="view-carts-badge"]')
-    return badge?.textContent || '0'
-  })
-
-  const cartCount = Number.parseInt(badgeText, 10) || 0
+  // Step 6: Verify via cart badge
+  const cartCount = await readCartBadge(page)
 
   return {
     success: cartCount > 0,
@@ -136,45 +173,72 @@ async function removeFromCart(page: Page, params: Record<string, unknown>, helpe
 
   if (!itemUuid) throw errors.missingParam('itemUuid')
 
-  // Navigate to UberEats home to access cart
-  await page.goto(`${BASE}/`, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
+  // Navigate to UberEats home
+  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
   await page.waitForTimeout(3000)
 
-  // Open the cart by clicking the cart icon/button
-  const cartBtn = page.locator('[data-testid="cart-button"], [data-testid="view-carts-badge"], a[href*="/checkout"]').first()
-  try {
-    await cartBtn.waitFor({ state: 'visible', timeout: 8_000 })
-    await cartBtn.click({ timeout: 5000 })
-    await page.waitForTimeout(2000)
-  } catch {
-    throw errors.retriable('Cart button not found — cart may be empty or page not loaded')
+  // Check cart badge — if empty, nothing to remove
+  const beforeCount = await readCartBadge(page)
+  if (beforeCount === 0) {
+    throw errors.retriable('Cart is empty — UberEats cart is in-memory only and does not persist across browser sessions')
   }
 
-  // Look for the item in the cart and click its remove/delete button
-  // UberEats cart items have data-testid attributes with item UUIDs
-  const removeBtn = page.locator(`[data-testid="cart-item-${itemUuid}"] [data-testid="delete-button"], [data-testid="remove-button"]`).first()
-  try {
-    await removeBtn.waitFor({ state: 'visible', timeout: 8_000 })
-    await removeBtn.click({ timeout: 5000 })
-    await page.waitForTimeout(2000)
-  } catch {
-    // Fallback: try to find remove by scanning cart items for matching text/UUID
-    const fallbackRemove = page.locator('[data-testid="delete-button"], button[aria-label*="Remove"], button[aria-label*="Delete"]').first()
+  // Open the cart by clicking the parent button of the cart badge
+  const cartClicked = await page.evaluate(() => {
+    const badge = document.querySelector('[data-testid="view-carts-badge"]')
+    if (!badge) return false
+    let el: Element | null = badge
+    while (el) {
+      if (el.tagName === 'BUTTON' || el.tagName === 'A') {
+        (el as HTMLElement).click()
+        return true
+      }
+      el = el.parentElement
+    }
+    (badge as HTMLElement).click()
+    return true
+  })
+
+  if (!cartClicked) throw errors.retriable('Cart button not found')
+  await page.waitForTimeout(3000)
+
+  // Navigate to checkout if not already there
+  if (!page.url().includes('/checkout')) {
+    await page.goto(`${BASE}/checkout`, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => {})
+    await page.waitForTimeout(3000)
+  }
+
+  // Look for remove/delete/decrease buttons
+  const selectors = [
+    '[data-testid="cart-item-delete-button"]',
+    '[data-testid="delete-button"]',
+    '[data-testid="remove-button"]',
+    '[data-testid="quantity-selector-decrease"]',
+    '[data-testid*="delete"]',
+    '[data-testid*="remove"]',
+    'button[aria-label*="Remove"]',
+    'button[aria-label*="Delete"]',
+  ]
+
+  let clicked = false
+  for (const sel of selectors) {
+    const btn = page.locator(sel).first()
     try {
-      await fallbackRemove.waitFor({ state: 'visible', timeout: 5_000 })
-      await fallbackRemove.click({ timeout: 5000 })
+      await btn.waitFor({ state: 'visible', timeout: 2_000 })
+      await btn.click({ timeout: 5000 })
+      clicked = true
       await page.waitForTimeout(2000)
+      break
     } catch {
-      throw errors.retriable('Could not find remove button for item in cart')
+      continue
     }
   }
 
-  // Check remaining cart count
-  const badgeText = await page.evaluate(() => {
-    const badge = document.querySelector('[data-testid="view-carts-badge"]')
-    return badge?.textContent || '0'
-  })
-  const cartCount = Number.parseInt(badgeText, 10) || 0
+  if (!clicked) {
+    throw errors.retriable('Could not find remove button — cart UI may have changed')
+  }
+
+  const cartCount = await readCartBadge(page)
 
   return {
     success: true,
@@ -190,10 +254,15 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, h
 
 const adapter = {
   name: 'uber-eats',
-  description: 'Uber Eats — cart operations via browser interaction',
+  description: 'Uber Eats — cart operations via API validation + minimal DOM',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('ubereats.com')
+  },
+
+  async isAuthenticated(page: Page): Promise<boolean> {
+    const cookies = await page.context().cookies()
+    return cookies.some(c => c.name === 'sid' || c.name === 'csid' || c.name === 'jwt-session')
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Helpers): Promise<unknown> {

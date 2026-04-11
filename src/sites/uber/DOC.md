@@ -60,8 +60,8 @@ openweb uber exec getEatsOrderHistory '{"lastWorkflowUUID":"<nextCursor>"}'
 ### API Architecture
 - **Eats**: REST-style POST endpoints at `ubereats.com/_p/api/<operationName>`. Request body is JSON. Response wraps data in `{ status, data }`.
 - Both APIs accept `x-csrf-token: x` (static placeholder, not derived from cookies).
-- **Menu data**: `getStoreV1` returns the full menu via `catalogSectionsMap` → `standardItemsPayload` → `catalogItems`. Each item has `uuid`, `title`, `price` (cents), `imageUrl`, availability flags.
-- **Cart**: Client-side only (localStorage `ubereats.v2.cart`). No server API for cart mutations — the adapter navigates to the cart UI and interacts with add/remove buttons.
+- **Cart**: Managed in client-side React state (in-memory only). No server-side cart mutation API. `ubereats.v2.cart` in localStorage stores payment preferences, NOT items. `getCartsViewForEaterUuidV1` and `getDraftOrdersByEaterUuidV1` are server-side cart/order read APIs but return empty after client-side add-to-cart.
+- **Menu data**: `getStoreV1` returns the full menu via `catalogSectionsMap` → `standardItemsPayload` → `catalogItems`. Each item has `uuid`, `title`, `price` (cents), `imageUrl`, availability flags. `getMenuItemV1` validates individual items and returns customization details.
 
 ### Auth
 - **Type**: cookie_session
@@ -70,14 +70,16 @@ openweb uber exec getEatsOrderHistory '{"lastWorkflowUUID":"<nextCursor>"}'
 
 ### Transport
 - `transport: node` — read operations use server-side HTTP with cookie_session auth
-- `transport: page` — addToCart uses browser adapter (cart is client-side)
+- `transport: page` — write operations (addToCart, removeFromCart) use browser adapter with API validation + minimal DOM clicks
 - No browser required for read ops; cookies sourced from 4-tier cache cascade
+- No server-side cart mutation API exists — cart is client-side React state only
 
 ### Known Issues
-- **Ride history not available**: The `getRideHistory` operation was in the original capture plan but is not implemented in the adapter — only Eats operations are supported currently.
-- **Ride price estimate not captured**: The fare estimation GraphQL operation requires entering pickup + dropoff addresses via the m.uber.com SPA with custom React components (no standard attributes), making automated interaction difficult.
-- **Eats search redirect**: Navigating to `ubereats.com/search?q=X` redirects through a `?next=` parameter. The `getSearchFeedV1` API call bypasses this.
-- **DataDome observed**: DataDome bot detection scripts are present on ubereats.com. Direct `page.evaluate(fetch)` may be intermittently blocked. The `_p/api` endpoints work reliably from node transport with session cookies.
-- **addToCart reliability**: The add-to-cart button click may not trigger reliably via programmatic interaction due to React event handling. The adapter makes a best-effort attempt.
-- **removeFromCart reliability**: Like addToCart, remove depends on browser interaction with cart UI elements. Data-testid selectors may change across UberEats deployments.
+- **Cart is in-memory only**: UberEats cart state lives in React state (not localStorage, not server-side). Cart items do NOT persist across browser sessions. removeFromCart only works within the same session as addToCart.
+- **Items with customizations**: Meals/combos requiring customization options (drink choice, sides) may not add successfully — the "Add to order" button requires filling options first. Simple items (individual items, condiments) work reliably.
+- **Store must be open**: addToCart validates store availability via API and fails fast if closed. Previous approach navigated blindly.
+- **Ride history not available**: Only Eats operations are supported currently.
+- **DataDome observed**: DataDome bot detection scripts are present on ubereats.com. The `_p/api` endpoints work reliably from node transport with session cookies.
+- **addToCart reliability**: Uses stable `data-testid="add-to-cart-button"` selector. Item existence validated via `getMenuItemV1` API before navigation.
+- **removeFromCart reliability**: Depends on browser interaction with cart UI elements. Cart must have items from the current browser session.
 - **Store UUID format**: Search results return full UUID format (e.g. `8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7`). URL slugs use base64url encoding of UUID bytes.
