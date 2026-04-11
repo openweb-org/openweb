@@ -763,6 +763,17 @@ paths:
       summary: Get authenticated user profile via OAuth
       servers:
         - url: https://oauth.reddit.com
+          x-openweb:
+            transport: node
+            auth:
+              type: exchange_chain
+              steps:
+                - call: https://www.reddit.com
+                  extract: token_v2
+                  extract_from: cookie
+              inject:
+                header: Authorization
+                prefix: 'Bearer '
       x-openweb:
         permission: read
         build:
@@ -812,6 +823,17 @@ paths:
       summary: Create a new post (self or link) in a subreddit
       servers:
         - url: https://oauth.reddit.com
+          x-openweb:
+            transport: node
+            auth:
+              type: exchange_chain
+              steps:
+                - call: https://www.reddit.com
+                  extract: token_v2
+                  extract_from: cookie
+              inject:
+                header: Authorization
+                prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -822,7 +844,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
@@ -848,6 +870,9 @@ paths:
                 url:
                   type: string
                   description: URL to submit (for link posts)
+                api_type:
+                  type: string
+                  const: json
                 nsfw:
                   type: boolean
                   description: Mark as NSFW
@@ -899,6 +924,17 @@ paths:
       summary: Create a comment on a post or reply to a comment
       servers:
         - url: https://oauth.reddit.com
+          x-openweb:
+            transport: node
+            auth:
+              type: exchange_chain
+              steps:
+                - call: https://www.reddit.com
+                  extract: token_v2
+                  extract_from: cookie
+              inject:
+                header: Authorization
+                prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -909,7 +945,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
@@ -971,6 +1007,17 @@ paths:
       summary: Delete a post or comment by fullname
       servers:
         - url: https://oauth.reddit.com
+          x-openweb:
+            transport: node
+            auth:
+              type: exchange_chain
+              steps:
+                - call: https://www.reddit.com
+                  extract: token_v2
+                  extract_from: cookie
+              inject:
+                header: Authorization
+                prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -981,7 +1028,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
@@ -1004,6 +1051,17 @@ paths:
       summary: Subscribe or unsubscribe from a subreddit
       servers:
         - url: https://oauth.reddit.com
+          x-openweb:
+            transport: node
+            auth:
+              type: exchange_chain
+              steps:
+                - call: https://www.reddit.com
+                  extract: token_v2
+                  extract_from: cookie
+              inject:
+                header: Authorization
+                prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -1014,7 +1072,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
@@ -1044,6 +1102,17 @@ paths:
       summary: Remove a post or comment from saved/bookmarked items
       servers:
         - url: https://oauth.reddit.com
+          x-openweb:
+            transport: node
+            auth:
+              type: exchange_chain
+              steps:
+                - call: https://www.reddit.com
+                  extract: token_v2
+                  extract_from: cookie
+              inject:
+                header: Authorization
+                prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -1054,7 +1123,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
@@ -1077,6 +1146,17 @@ paths:
       summary: Block a user by account ID
       servers:
         - url: https://oauth.reddit.com
+          x-openweb:
+            transport: node
+            auth:
+              type: exchange_chain
+              steps:
+                - call: https://www.reddit.com
+                  extract: token_v2
+                  extract_from: cookie
+              inject:
+                header: Authorization
+                prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -1087,7 +1167,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               type: object
               required:
@@ -1115,6 +1195,17 @@ paths:
         messages with author, body, subject, context link
       servers:
         - url: https://oauth.reddit.com
+          x-openweb:
+            transport: node
+            auth:
+              type: exchange_chain
+              steps:
+                - call: https://www.reddit.com
+                  extract: token_v2
+                  extract_from: cookie
+              inject:
+                header: Authorization
+                prefix: 'Bearer '
       x-openweb:
         permission: read
         build:

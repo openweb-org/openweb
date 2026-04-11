@@ -5,8 +5,8 @@
   "cases": [
     {
       "input": {
-        "account_id": "t2_abc123",
-        "name": "testuser"
+        "account_id": "t2_7nrrqa0t",
+        "name": "imoonkey"
       },
       "assertions": {
         "status": 200,

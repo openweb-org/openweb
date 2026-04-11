@@ -163,11 +163,13 @@ const mockResolveAllParameters = vi.fn<() => unknown[]>()
 const mockSubstitutePath = vi.fn<() => string>()
 const mockBuildHeaderParams = vi.fn<() => Record<string, string>>()
 const mockBuildJsonRequestBody = vi.fn<() => string | undefined>()
+const mockBuildFormRequestBody = vi.fn<() => string | undefined>()
 vi.mock('./request-builder.js', () => ({
   resolveAllParameters: (...a: unknown[]) => mockResolveAllParameters(...a),
   substitutePath: (...a: unknown[]) => mockSubstitutePath(...a),
   buildHeaderParams: (...a: unknown[]) => mockBuildHeaderParams(...a),
   buildJsonRequestBody: (...a: unknown[]) => mockBuildJsonRequestBody(...a),
+  buildFormRequestBody: (...a: unknown[]) => mockBuildFormRequestBody(...a),
 }))
 
 // Mock response-unwrap

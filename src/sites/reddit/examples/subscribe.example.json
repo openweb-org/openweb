@@ -6,7 +6,7 @@
     {
       "input": {
         "action": "sub",
-        "sr_name": "programming"
+        "sr_name": "test"
       },
       "assertions": {
         "status": 200,

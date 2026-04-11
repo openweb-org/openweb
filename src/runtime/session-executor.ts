@@ -15,7 +15,7 @@ import { listCandidatePages } from './page-candidates.js'
 import { resolveAuth, resolveCsrf, resolveSigning } from './primitives/index.js'
 import type { BrowserHandle } from './primitives/types.js'
 import { fetchWithRedirects } from './redirect.js'
-import { buildHeaderParams, buildJsonRequestBody, buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
+import { buildHeaderParams, buildJsonRequestBody, buildFormRequestBody, buildTargetUrl, resolveAllParameters, substitutePath } from './request-builder.js'
 import { applyResponseUnwrap } from './response-unwrap.js'
 import { ensurePagePolyfills } from './page-polyfill.js'
 
@@ -228,9 +228,9 @@ export async function executeSessionHttp(
     const target = buildTargetUrl(serverUrl, resolvedPath, allParams, inputParams, authResult?.queryParams)
 
     const upperMethod = method.toUpperCase()
-    let jsonBody: string | undefined
+    let requestBody: string | undefined
     if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
-      jsonBody = buildJsonRequestBody(operation, inputParams)
+      requestBody = buildFormRequestBody(operation, inputParams) ?? buildJsonRequestBody(operation, inputParams)
     }
 
     const serverOrigin = new URL(serverUrl).origin
@@ -240,7 +240,9 @@ export async function executeSessionHttp(
       Referer: `${serverOrigin}/`,
       ...buildHeaderParams(allParams, inputParams),
     }
-    if (jsonBody && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
+    if (requestBody && !headers['Content-Type']) {
+      headers['Content-Type'] = buildFormRequestBody(operation, inputParams) ? 'application/x-www-form-urlencoded' : 'application/json'
+    }
 
     let cookieString: string | undefined
     if (authResult) {
@@ -271,7 +273,7 @@ export async function executeSessionHttp(
     if (cookieString) headers.Cookie = cookieString
 
     // 5. Fetch with redirects
-    const response = await fetchWithRedirects(target, upperMethod, headers, jsonBody, { fetchImpl, ssrfValidator })
+    const response = await fetchWithRedirects(target, upperMethod, headers, requestBody, { fetchImpl, ssrfValidator })
 
     if (!response.ok) {
       const httpFailure = getHttpFailure(response.status)

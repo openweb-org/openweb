@@ -5,7 +5,7 @@
   "cases": [
     {
       "input": {
-        "recipientId": "4398626122",
+        "recipientId": "4211243893",
         "text": "Hey, just wanted to follow up on our conversation."
       },
       "assertions": {

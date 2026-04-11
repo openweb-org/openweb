@@ -189,6 +189,16 @@ export function getResponseSchema(operation: OpenApiOperation): JsonSchema | und
 
 export function getRequestBodySchema(operation: OpenApiOperation): JsonSchema | undefined {
   return operation.requestBody?.content?.['application/json']?.schema
+    ?? operation.requestBody?.content?.['application/x-www-form-urlencoded']?.schema
+}
+
+/** Returns the first declared request body content type (json or form-urlencoded). */
+export function getRequestBodyContentType(operation: OpenApiOperation): string | undefined {
+  const content = operation.requestBody?.content
+  if (!content) return undefined
+  if (content['application/json']) return 'application/json'
+  if (content['application/x-www-form-urlencoded']) return 'application/x-www-form-urlencoded'
+  return undefined
 }
 
 export function getSchemaTypes(schema: JsonSchema | undefined): string[] {

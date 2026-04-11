@@ -31,7 +31,7 @@ import { withHttpRetry } from './http-retry.js'
 import { executeNodeSsr } from './node-ssr-executor.js'
 import { getServerXOpenWeb, resolveTransport } from './operation-context.js'
 import { fetchWithRedirects } from './redirect.js'
-import { buildHeaderParams, buildJsonRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
+import { buildHeaderParams, buildJsonRequestBody, buildFormRequestBody, resolveAllParameters, substitutePath } from './request-builder.js'
 import { applyResponseUnwrap } from './response-unwrap.js'
 import {
   type AutoNavigateResult,
@@ -387,13 +387,18 @@ export async function executeOperation(
       const url = buildQueryUrl(serverUrl, resolvedPath, allParams, inputParams)
       const requestHeaders = buildHeaderParams(allParams, inputParams)
       const upperMethod = operationRef.method.toUpperCase()
-      const jsonBody = upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH'
-        ? buildJsonRequestBody(operationRef.operation, inputParams)
-        : undefined
-      if (jsonBody && !requestHeaders['Content-Type']) {
-        requestHeaders['Content-Type'] = 'application/json'
+      let requestBody: string | undefined
+      if (upperMethod === 'POST' || upperMethod === 'PUT' || upperMethod === 'PATCH') {
+        const formBody = buildFormRequestBody(operationRef.operation, inputParams)
+        if (formBody) {
+          requestBody = formBody
+          if (!requestHeaders['Content-Type']) requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded'
+        } else {
+          requestBody = buildJsonRequestBody(operationRef.operation, inputParams)
+          if (requestBody && !requestHeaders['Content-Type']) requestHeaders['Content-Type'] = 'application/json'
+        }
       }
-      const response = await fetchWithRedirects(url, upperMethod, { 'Accept': 'application/json', 'User-Agent': DEFAULT_USER_AGENT, ...requestHeaders }, jsonBody, {
+      const response = await fetchWithRedirects(url, upperMethod, { 'Accept': 'application/json', 'User-Agent': DEFAULT_USER_AGENT, ...requestHeaders }, requestBody, {
         fetchImpl: deps.fetchImpl ?? fetch,
         ssrfValidator: deps.ssrfValidator ?? validateSSRF,
       })

@@ -3,6 +3,7 @@ import {
   type OpenApiOperation,
   type OpenApiParameter,
   type OpenApiSpec,
+  getRequestBodyContentType,
   getRequestBodyParameters,
   getRequestBodySchema,
   isObjectSchema,
@@ -150,6 +151,25 @@ export function buildJsonRequestBody(operation: OpenApiOperation, params: Record
   }
 
   return JSON.stringify(body)
+}
+
+/** Build form-urlencoded request body when spec declares that content type. Returns undefined if not form-encoded. */
+export function buildFormRequestBody(operation: OpenApiOperation, params: Record<string, unknown>): string | undefined {
+  if (getRequestBodyContentType(operation) !== 'application/x-www-form-urlencoded') return undefined
+  const bodySchema = getRequestBodySchema(operation)
+  if (!isObjectSchema(bodySchema)) return undefined
+
+  const bodyParams = getRequestBodyParameters(operation)
+  const entries: [string, string][] = []
+  for (const param of bodyParams) {
+    const value = params[param.name]
+    if (value !== undefined) {
+      entries.push([param.name, String(value)])
+    } else if (param.schema?.const !== undefined) {
+      entries.push([param.name, String(param.schema.const)])
+    }
+  }
+  return entries.length > 0 ? new URLSearchParams(entries).toString() : undefined
 }
 
 /** Collect parameters from operation + $ref components resolution */

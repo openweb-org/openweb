@@ -4,7 +4,7 @@
   "replay_safety": "unsafe_mutation",
   "cases": [
     {
-      "input": { "owner": "anthropics", "repo": "claude-code", "issue_number": 1, "state": "open" },
+      "input": { "owner": "imoonkey", "repo": "openweb-test", "issue_number": 1, "state": "open" },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

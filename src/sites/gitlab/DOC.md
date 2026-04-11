@@ -85,16 +85,16 @@ openweb gitlab exec listGroupProjects '{"groupId": 9970, "per_page": 5}'
 openweb gitlab exec getProjectFile '{"projectId": 278964, "filePath": "README.md", "ref": "master"}'
 
 # Create an issue
-openweb gitlab exec createIssue '{"projectId": 278964, "title": "Bug report", "description": "Steps to reproduce..."}'
+openweb gitlab exec createIssue '{"projectId": 81206763, "title": "Bug report", "description": "Steps to reproduce..."}'
 
 # Close an issue
-openweb gitlab exec closeIssue '{"projectId": 278964, "issueIid": 1}'
+openweb gitlab exec closeIssue '{"projectId": 81206763, "issueIid": 1}'
 
 # Comment on an issue
-openweb gitlab exec createComment '{"projectId": 278964, "issueIid": 1, "body": "Confirmed on my end"}'
+openweb gitlab exec createComment '{"projectId": 81206763, "issueIid": 1, "body": "Confirmed on my end"}'
 
 # Delete a comment
-openweb gitlab exec deleteComment '{"projectId": 278964, "issueIid": 1, "noteId": 12345}'
+openweb gitlab exec deleteComment '{"projectId": 81206763, "issueIid": 1, "noteId": 12345}'
 ```
 
 ---

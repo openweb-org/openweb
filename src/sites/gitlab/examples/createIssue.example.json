@@ -4,7 +4,7 @@
   "replay_safety": "unsafe_mutation",
   "cases": [
     {
-      "input": { "projectId": 278964, "title": "Test issue from openweb", "description": "Automated test" },
+      "input": { "projectId": 81206763, "title": "Test issue from openweb", "description": "Automated test" },
       "assertions": {
         "status": 201,
         "response_schema_valid": true

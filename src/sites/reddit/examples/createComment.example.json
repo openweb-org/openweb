@@ -5,7 +5,7 @@
   "cases": [
     {
       "input": {
-        "thing_id": "t3_abc123",
+        "thing_id": "t3_1si747w",
         "text": "Test comment from openweb"
       },
       "assertions": {

@@ -72,18 +72,18 @@ openweb github exec listIssues '{"owner":"anthropics","repo":"claude-code","per_
 openweb github exec getUserProfile '{"username":"anthropics"}'
 
 # Close an issue
-openweb github exec closeIssue '{"owner":"anthropics","repo":"claude-code","issue_number":1,"state":"closed"}'
+openweb github exec closeIssue '{"owner":"imoonkey","repo":"openweb-test","issue_number":1,"state":"closed"}'
 
 # Comment on an issue
-openweb github exec createComment '{"owner":"anthropics","repo":"claude-code","issue_number":1,"body":"Looks good!"}'
+openweb github exec createComment '{"owner":"imoonkey","repo":"openweb-test","issue_number":1,"body":"Looks good!"}'
 
 # Star / unstar a repo
-openweb github exec starRepo '{"owner":"anthropics","repo":"claude-code"}'
-openweb github exec unstarRepo '{"owner":"anthropics","repo":"claude-code"}'
+openweb github exec starRepo '{"owner":"imoonkey","repo":"openweb-test"}'
+openweb github exec unstarRepo '{"owner":"imoonkey","repo":"openweb-test"}'
 
 # Watch / unwatch a repo
-openweb github exec watchRepo '{"owner":"anthropics","repo":"claude-code"}'
-openweb github exec unwatchRepo '{"owner":"anthropics","repo":"claude-code"}'
+openweb github exec watchRepo '{"owner":"imoonkey","repo":"openweb-test"}'
+openweb github exec unwatchRepo '{"owner":"imoonkey","repo":"openweb-test"}'
 ```
 
 ---
