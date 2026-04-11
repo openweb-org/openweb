@@ -2,6 +2,21 @@ import type { Page } from 'patchright'
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+/** Fetch cart items via Amazon's JSON API. Returns [{asin, merchantId, quantity, cartType}]. */
+async function fetchCartItems(page: Page): Promise<Array<{ asin: string; merchantId: string; quantity: number; cartType: string }>> {
+  return page.evaluate(async () => {
+    try {
+      const r = await fetch('/cart/add-to-cart/get-cart-items?clientName=SiteWideActionExecutor', {
+        credentials: 'same-origin',
+      })
+      if (!r.ok) return []
+      return r.json()
+    } catch {
+      return []
+    }
+  })
+}
+
 async function searchProducts(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
   const k = String(params.k || '')
   if (!k) throw errors.missingParam('k')
@@ -127,6 +142,10 @@ async function addToCart(page: Page, params: Record<string, unknown>, errors: { 
   if (!asin) throw errors.missingParam('asin')
   const quantity = Number(params.quantity) || 1
 
+  // Snapshot cart before add
+  const cartBefore = await fetchCartItems(page)
+  const qtyBefore = cartBefore.find(i => i.asin === asin)?.quantity ?? 0
+
   // Navigate to product page
   await page.goto(`https://www.amazon.com/dp/${asin}`, { waitUntil: 'load', timeout: 30_000 })
   await wait(3000)
@@ -139,55 +158,63 @@ async function addToCart(page: Page, params: Record<string, unknown>, errors: { 
     }, quantity)
   }
 
-  // Click "Add to Cart" button
+  // Click "Add to Cart" button via patchright (triggers Amazon's JS properly)
   const addBtn = page.locator('#add-to-cart-button')
   await addBtn.click({ timeout: 10_000 })
   await wait(3000)
 
-  // Extract confirmation from the post-add page or side panel
-  return page.evaluate(`
-    (() => {
-      // Side-sheet confirmation (most common)
-      const cartCount = document.querySelector('#nav-cart-count')?.textContent?.trim() || '';
-      const confirmMsg = document.querySelector('#NATC_SMART_WAGON_CONF_MSG_SUCCESS, #huc-v2-order-row-confirm-text, [data-csa-c-content-id="sw-atc-confirmation"]')?.textContent?.trim() || '';
-      const subtotal = document.querySelector('#sc-subtotal-amount-activecart .sc-price, #sw-subtotal .a-color-price, #hlb-subcart .a-color-price')?.textContent?.trim() || '';
-      const itemTitle = document.querySelector('#huc-v2-order-row-title, .sw-atc-item-title, #productTitle')?.textContent?.trim() || '';
-      const itemPrice = document.querySelector('#huc-v2-order-row-price, .sw-atc-item-price')?.textContent?.trim() || '';
-      return {
-        success: true,
-        cartCount: cartCount ? parseInt(cartCount, 10) : null,
-        message: confirmMsg || 'Added to cart',
-        item: { title: itemTitle, price: itemPrice },
-        subtotal,
-      };
-    })()
-  `)
+  // Read cart state from JSON API instead of fragile DOM selectors
+  const cartAfter = await fetchCartItems(page)
+  const totalQty = cartAfter.reduce((sum, i) => sum + i.quantity, 0)
+  const itemAfter = cartAfter.find(i => i.asin === asin)
+
+  return {
+    success: !!itemAfter && itemAfter.quantity > qtyBefore,
+    cartCount: totalQty,
+    message: itemAfter ? 'Added to cart' : 'Add to cart may have failed',
+    item: { asin, quantity: itemAfter?.quantity ?? 0 },
+    subtotal: '', // not available from JSON API
+  }
 }
 
 async function getCart(page: Page, _params: Record<string, unknown>) {
+  // Navigate to cart page for DOM enrichment (title, price, image)
   await page.goto('https://www.amazon.com/gp/cart/view.html', { waitUntil: 'load', timeout: 30_000 })
   await wait(3000)
 
-  return page.evaluate(`
-    (() => {
-      const cartItems = document.querySelectorAll('[data-asin][data-itemtype="active"]');
-      const subtotal = document.querySelector('#sc-subtotal-amount-activecart .sc-price')?.textContent?.trim() || '';
-      const cartCount = document.querySelector('#nav-cart-count')?.textContent?.trim() || '0';
-      return {
-        cartCount: parseInt(cartCount, 10) || 0,
-        subtotal,
-        items: [...cartItems].map(el => {
-          const asin = el.getAttribute('data-asin') || '';
-          const title = el.querySelector('.sc-product-title .a-truncate-full, .sc-item-title-content')?.textContent?.trim() || '';
-          const price = el.querySelector('.sc-product-price, .sc-item-price .a-offscreen')?.textContent?.trim() || '';
-          const quantity = el.querySelector('.a-dropdown-prompt, .sc-quantity-textfield')?.textContent?.trim()
-            || el.querySelector('input[name="quantity"]')?.value || '1';
-          const image = el.querySelector('.sc-product-image img, .sc-item-image img')?.getAttribute('src') || '';
-          return { asin, title, price, quantity: parseInt(quantity, 10) || 1, image };
-        }).filter(i => i.asin),
-      };
-    })()
-  `)
+  // Primary: JSON API for definitive item list (asin + quantity)
+  const apiItems = await fetchCartItems(page)
+
+  // Enrich with DOM data attributes (title, price, image) — data-* attrs are more stable than class selectors
+  const domData = await page.evaluate(() => {
+    const cartItems = document.querySelectorAll('[data-asin][data-itemtype="active"]')
+    const subtotal = document.querySelector('#sc-subtotal-amount-activecart .sc-price')?.textContent?.trim() || ''
+    const map: Record<string, { title: string; price: string; image: string }> = {}
+    for (const el of cartItems) {
+      const asin = el.getAttribute('data-asin') || ''
+      if (!asin) continue
+      const price = el.getAttribute('data-price') || ''
+      map[asin] = {
+        title: el.querySelector('.sc-product-title .a-truncate-full, .sc-item-title-content')?.textContent?.trim() || '',
+        price: price ? `$${Number(price).toFixed(2)}` : el.querySelector('.a-offscreen')?.textContent?.trim() || '',
+        image: (el.querySelector('img.sc-product-image') as HTMLImageElement)?.src
+          || el.querySelector('.sc-product-image img, .sc-item-image img')?.getAttribute('src') || '',
+      }
+    }
+    return { subtotal, map }
+  }) as { subtotal: string; map: Record<string, { title: string; price: string; image: string }> }
+
+  return {
+    cartCount: apiItems.reduce((sum, i) => sum + i.quantity, 0),
+    subtotal: domData.subtotal,
+    items: apiItems.map(i => ({
+      asin: i.asin,
+      title: domData.map[i.asin]?.title || '',
+      price: domData.map[i.asin]?.price || '',
+      quantity: i.quantity,
+      image: domData.map[i.asin]?.image || '',
+    })),
+  }
 }
 
 async function removeFromCart(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
@@ -197,47 +224,40 @@ async function removeFromCart(page: Page, params: Record<string, unknown>, error
   await page.goto('https://www.amazon.com/gp/cart/view.html', { waitUntil: 'load', timeout: 30_000 })
   await wait(3000)
 
-  // Find the cart item row by ASIN and click its delete button
-  const deleted = await page.evaluate(async (targetAsin: string) => {
+  // Find the delete button for this ASIN via DOM — need the data-action locator
+  const btnSelector = await page.evaluate((targetAsin: string) => {
     const items = document.querySelectorAll('[data-asin][data-itemtype="active"]')
     for (const el of items) {
       if (el.getAttribute('data-asin') === targetAsin) {
-        const title = el.querySelector('.sc-product-title .a-truncate-full, .sc-item-title-content')?.textContent?.trim() || ''
-        const deleteBtn = el.querySelector<HTMLInputElement>('input[data-action="delete"], .sc-action-delete input, input[value="Delete"]')
-        if (deleteBtn) {
-          deleteBtn.click()
-          return { found: true, title }
-        }
-        return { found: true, title, noButton: true }
+        const deleteBtn = el.querySelector<HTMLInputElement>('input[data-action="delete-active"]')
+        if (deleteBtn?.name) return deleteBtn.name
       }
     }
-    return { found: false }
+    return null
   }, asin)
 
-  if (!deleted.found) {
+  if (!btnSelector) {
     return { success: false, message: `Item ${asin} not found in cart` }
   }
-  if (deleted.noButton) {
-    return { success: false, message: `Delete button not found for ${asin}` }
-  }
 
+  // Use patchright native click — triggers Amazon's JS event handlers properly
+  // (DOM .click() from page.evaluate doesn't trigger Amazon's AJAX delete)
+  const escapedName = btnSelector.replace(/\./g, '\\.')
+  const deleteBtn = page.locator(`input[name="${escapedName}"]`)
+  await deleteBtn.click({ timeout: 10_000 })
   await wait(3000)
 
-  // Read updated cart state
-  const cartState = await page.evaluate(`
-    (() => {
-      const cartCount = document.querySelector('#nav-cart-count')?.textContent?.trim() || '0';
-      const subtotal = document.querySelector('#sc-subtotal-amount-activecart .sc-price')?.textContent?.trim() || '';
-      return { cartCount: parseInt(cartCount, 10) || 0, subtotal };
-    })()
-  `) as { cartCount: number; subtotal: string }
+  // Verify removal via JSON API
+  const cartAfter = await fetchCartItems(page)
+  const stillInCart = cartAfter.some(i => i.asin === asin)
+  const totalQty = cartAfter.reduce((sum, i) => sum + i.quantity, 0)
 
   return {
-    success: true,
-    message: 'Removed from cart',
-    removedItem: { title: deleted.title || '' },
-    cartCount: cartState.cartCount,
-    subtotal: cartState.subtotal,
+    success: !stillInCart,
+    message: stillInCart ? 'Remove may have failed' : 'Removed from cart',
+    removedItem: { asin },
+    cartCount: totalQty,
+    subtotal: '',
   }
 }
 

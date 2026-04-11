@@ -28,13 +28,13 @@ E-commerce marketplace — search products, view details, read reviews, browse d
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | searchProducts | search products by keyword | k (query) | asin, title, price, rating | entry point; paginated (page param) |
-| getProductDetail | view full product info | asin ← searchProducts | name, price, brand, description, rating, reviewCount | JSON-LD extraction |
+| getProductDetail | view full product info | asin ← searchProducts | name, price, brand, description, rating, reviewCount | DOM selector extraction |
 | getProductReviews | read customer reviews | asin ← searchProducts | rating, title, body, author, date | paginated (pageNumber); sortBy: recent/helpful |
 | searchDeals | browse active deals | startIndex, pageSize | asin, title, price, dealBadge, percentClaimed | JSON API; paginated (nextIndex) |
 | getBestSellers | view best sellers | — | title, price, rating, link | entry point |
-| addToCart | add product to cart | asin ← searchProducts, quantity? | success, cartCount, subtotal | write op; clicks Add to Cart button |
+| addToCart | add product to cart | asin ← searchProducts, quantity? | success, cartCount, subtotal | write op; clicks Add to Cart, verifies via cart JSON API |
 | removeFromCart | remove product from cart | asin ← getCart | success, cartCount, subtotal | write op; reverse of addToCart; clicks Delete in cart |
-| getCart | view cart contents | — | items (asin, title, price, quantity), subtotal | reads cart page DOM |
+| getCart | view cart contents | — | items (asin, title, price, quantity), subtotal | JSON API + DOM enrichment |
 
 ## Quick Start
 
@@ -86,12 +86,12 @@ Search results and reviews are extracted from the rendered DOM.
 
 ## Extraction
 - **searchProducts**: `html_selector` — extracts from `[data-component-type="s-search-result"]` DOM elements
-- **getProductDetail**: `script_json` — parses `<script type="application/ld+json">` (Schema.org Product)
+- **getProductDetail**: `html_selector` — extracts from `#productTitle`, `.a-price`, `#bylineInfo`, `#feature-bullets` DOM elements
 - **getProductReviews**: `html_selector` — extracts from `[data-hook="review"]` DOM elements
 - **getBestSellers**: `html_selector` — extracts from `#gridItemRoot` DOM elements
-- **addToCart**: `adapter` — navigates to product page, clicks Add to Cart button, extracts confirmation
+- **addToCart**: `adapter` — navigates to product page, clicks Add to Cart button, verifies via `/cart/add-to-cart/get-cart-items` JSON API cart diff
 - **removeFromCart**: `adapter` — navigates to cart page, finds item by ASIN, clicks Delete button, reads updated cart state
-- **getCart**: `adapter` — navigates to `/gp/cart/view.html`, extracts cart items from `[data-asin][data-itemtype="active"]`
+- **getCart**: `adapter` — calls `/cart/add-to-cart/get-cart-items` JSON API for item list (asin, quantity), enriches with DOM data attributes (`data-price`) and selectors (title, image) from cart page
 
 ## Known Issues
 - **Akamai Bot Manager**: Node transport fails (403 with invalid `_abck` cookie). Must use page transport.
