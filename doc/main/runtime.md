@@ -81,9 +81,11 @@ All HTTP executors share the same path/query/header/body binding pipeline.
 ```
 
 Path/query/header parameters come from OpenAPI `parameters[]`.
-Body parameters come from `requestBody.content['application/json'].schema.properties`.
+Body parameters come from `requestBody.content['application/json'].schema.properties` (or `application/x-www-form-urlencoded` — see below).
 Defaults apply before binding, including body defaults. Body fields are validated against their declared schema types before request construction, and only fields declared in `requestBody` are serialized into the JSON body. Auth-injected query params (for example YouTube's `key`) are merged into the input map before URL construction; `buildTargetUrl()` deduplicates spec-declared params via a `seen` set and appends any remaining auth params via `extraQueryParams`, preventing double-append.
 If an object `requestBody` is marked `required: true`, the runtime sends `{}` even when no explicit body fields are supplied, so the request still includes a JSON body.
+
+**Form-encoded bodies:** When a spec declares `requestBody.content['application/x-www-form-urlencoded']`, the runtime serializes body params as `URLSearchParams` instead of JSON and sets `Content-Type: application/x-www-form-urlencoded`. This is needed for APIs that reject JSON bodies (e.g., Reddit's `/api/submit`). The `buildFormRequestBody()` function takes priority over `buildJsonRequestBody()` when the spec declares form-encoded content.
 
 -> See: `src/runtime/session-executor.ts`, `src/runtime/request-builder.ts` — `resolveAllParameters()`, `substitutePath()`, `buildHeaderParams()`; `src/runtime/executor.ts` — direct HTTP reuse
 

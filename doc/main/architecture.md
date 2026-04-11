@@ -209,6 +209,7 @@ Token cache at `$OPENWEB_HOME/vault.json` stores cookies + localStorage + sessio
 | Hacker News | L2 | — | — | — | html_selector | node |
 | Discord | L2 | webpack_module_walk | — | — | — | page |
 | ChatGPT | L2 | exchange_chain | — | — | — | node |
+| Reddit | L2 | exchange_chain (write ops) | — | — | — | node |
 | LinkedIn | L2 | cookie_session | cookie_to_header | — | — | node |
 | WhatsApp | L3 | adapter | — | — | adapter | adapter (L3) |
 | Telegram | L3 | adapter | — | — | adapter | adapter (L3) |

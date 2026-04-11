@@ -1,3 +1,31 @@
+## 2026-04-10: Retarget write op examples to owned repos/accounts + Reddit OAuth
+
+**What changed:**
+- Write op examples across 7 sites retargeted from third-party resources to project-owner-owned accounts
+  - GitHub/GitLab: created `imoonkey/openweb-test` repos with seed issues
+  - X, Instagram, TikTok, YouTube, Reddit: examples now use project owner's user IDs and content
+- Reddit write ops fixed: added `exchange_chain` auth (cookie `token_v2` → Bearer token) for `oauth.reddit.com` endpoints
+- Runtime: added `application/x-www-form-urlencoded` body support (`buildFormRequestBody` in request-builder, wired into http-executor and session-executor)
+- Reddit write op specs changed from `application/json` to `application/x-www-form-urlencoded` (Reddit's API rejects JSON bodies)
+
+**Why:**
+- Write examples were targeting real public repos/accounts (gitlab-org/gitlab-foss project 278964, anthropics/claude-code, random social media users), causing unintended issues/comments when verify --write ran. A GitLab community contributor flagged the issue.
+- Reddit write ops were completely broken (no auth config, wrong content type)
+
+**Key files:**
+- `src/lib/spec-loader.ts` — `getRequestBodyContentType()`, extended `getRequestBodySchema()` for form-urlencoded
+- `src/runtime/request-builder.ts` — `buildFormRequestBody()`
+- `src/runtime/http-executor.ts`, `src/runtime/session-executor.ts` — form-encoding dispatch
+- `src/sites/reddit/openapi.yaml` — exchange_chain auth + form-urlencoded for 8 oauth endpoints
+- 41 example files across github, gitlab, x, instagram, tiktok, youtube, reddit
+
+**Verification:** `pnpm build` PASS; `pnpm test` 874/919 pass (45 pre-existing failures from page-polyfill mock); Reddit `createPost` verified working via `pnpm dev reddit exec createPost`
+**Commit:** `30b2000`
+**Next:** Instagram/TikTok content-targeting ops still point to others' posts (no create-content API for photos/videos) — needs manual content creation
+**Blockers:** None
+
+---
+
 ## 2026-04-10: Pinterest — 6 new ops (4 write + 2 read)
 
 **What changed:**
