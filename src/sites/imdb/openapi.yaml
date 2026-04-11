@@ -19,11 +19,11 @@ paths:
         permission: read
         build:
           stable_id: imdb0001
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
-            - ssr_next_data
+            - graphql_api
         adapter:
           name: imdb
           operation: searchTitles
@@ -124,11 +124,11 @@ paths:
         permission: read
         build:
           stable_id: imdb0002
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
-            - ssr_next_data
+            - graphql_api
         adapter:
           name: imdb
           operation: getTitleDetail
@@ -281,10 +281,11 @@ paths:
         permission: read
         build:
           stable_id: imdb0003
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
+            - graphql_api
             - ssr_next_data
         adapter:
           name: imdb
@@ -344,17 +345,16 @@ paths:
   /title/{imdbId}/cast:
     get:
       operationId: getCast
-      summary: 'Cast and crew — directors, writers, and actors from credits and LD+JSON'
+      summary: 'Cast and crew — directors, writers, and actors from GraphQL principalCredits'
       x-openweb:
         permission: read
         build:
           stable_id: imdb0004
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
-            - ssr_next_data
-            - ld_json
+            - graphql_api
         adapter:
           name: imdb
           operation: getCast

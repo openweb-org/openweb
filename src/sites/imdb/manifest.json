@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.imdb.com",
-  "description": "IMDB — search titles, detail, ratings, and cast via SSR extraction",
+  "description": "IMDB — search titles, detail, ratings, and cast via GraphQL API",
   "requires_auth": false,
   "dependencies": {},
   "stats": {

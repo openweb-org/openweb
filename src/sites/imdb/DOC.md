@@ -1,7 +1,7 @@
 # IMDB
 
 ## Overview
-IMDB is the world's most popular movie and TV database. All data extracted from SSR (`__NEXT_DATA__` and LD+JSON) — no public API.
+IMDB is the world's most popular movie and TV database. Data fetched via GraphQL API (`api.graphql.imdb.com`) — no auth required. Ratings histogram from SSR fallback.
 
 ## Workflows
 
@@ -21,10 +21,10 @@ IMDB is the world's most popular movie and TV database. All data extracted from 
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchTitles | search movies/TV by keyword | q | imdbId, title, year, rating, genres, plot | entry point |
-| getTitleDetail | full title info | imdbId ← searchTitles | title, plot, runtime, genres, credits, rating | SSR extraction |
-| getRatings | ratings breakdown | imdbId ← searchTitles | aggregateRating, histogram (1-10) | separate page |
-| getCast | cast and crew | imdbId ← searchTitles | credits, actors, directors, creators | SSR + LD+JSON |
+| searchTitles | search movies/TV by keyword | q | imdbId, title, year, rating, genres, plot | GraphQL mainSearch |
+| getTitleDetail | full title info | imdbId ← searchTitles | title, plot, runtime, genres, credits, rating | GraphQL title() |
+| getRatings | ratings breakdown | imdbId ← searchTitles | aggregateRating, histogram (1-10) | GraphQL + SSR histogram |
+| getCast | cast and crew | imdbId ← searchTitles | credits, actors, directors, creators | GraphQL principalCredits |
 
 ## Quick Start
 
@@ -47,30 +47,29 @@ openweb imdb exec getCast '{"imdbId": "tt0111161"}'
 ## Site Internals
 
 ### API Architecture
-- No public JSON API — IMDB uses Next.js SSR with `__NEXT_DATA__` embedded in every page
-- `__NEXT_DATA__` contains `aboveTheFoldData` (title, rating, genres, credits, plot) and `mainColumnData` (reviews, awards, ratings breakdown)
-- LD+JSON (`application/ld+json`) provides schema.org Movie/TVSeries data with actor/director lists
-- Search results are in `__NEXT_DATA__` → `pageProps.titleResults.results`
-- Ratings page has `contentData.histogramData.histogramValues` for vote distribution
-- GraphQL API exists at `api.graphql.imdb.com` (persisted queries) but SSR extraction is simpler and more stable
+- **GraphQL API** at `api.graphql.imdb.com` — open, no auth, no signing, no bot detection from Node.js
+- `title(id)` query returns full title data: text, type, year, rating, runtime, genres, plot, credits, keywords, awards
+- `mainSearch(first, options: {searchTerm, type: TITLE})` returns search results with inline `... on Title` fragment
+- Schema introspection blocked — field names discovered via error message suggestions
+- Ratings histogram (per-rating 1-10 vote count) NOT available via GraphQL — only in `__NEXT_DATA__` SSR
 
 ### Auth
 No auth required. All operations are public read-only.
 
 ### Transport
-- `page` — browser required (Cloudflare `cf_clearance` cookies present)
-- All 4 ops use the adapter (`adapters/imdb.ts`) for SSR extraction via `page.goto()` + `page.evaluate()`
-- `domcontentloaded` wait strategy with 3s hydration wait
+- `page` — browser required by framework for adapter execution
+- 3/4 ops use `fetch()` to GraphQL API directly (zero DOM, zero page dependency)
+- 1/4 ops (getRatings) uses GraphQL + `page.goto()` for histogram from `__NEXT_DATA__`
 
 ### Extraction
-- **searchTitles**: `__NEXT_DATA__` → `pageProps.titleResults.results[].listItem`
-- **getTitleDetail**: `__NEXT_DATA__` → `pageProps.aboveTheFoldData` + `mainColumnData`
-- **getRatings**: `__NEXT_DATA__` → `pageProps.contentData.histogramData`
-- **getCast**: `__NEXT_DATA__` → `pageProps.aboveTheFoldData.principalCreditsV2` + LD+JSON actors/directors
+- **searchTitles**: GraphQL `mainSearch` → `edges[].node.entity` (Title fragment)
+- **getTitleDetail**: GraphQL `title(id)` → full fields including `principalCredits`, `keywords`, `reviews`, `nominations`
+- **getRatings**: GraphQL `title(id).ratingsSummary` + SSR `pageProps.contentData.histogramData.histogramValues`
+- **getCast**: GraphQL `title(id).principalCredits` → category-based extraction (Stars, Director, Writers)
 
 ### Known Issues
-- Cloudflare bot detection — requires headed browser with valid session
-- `__NEXT_DATA__` is large (~700KB on title pages), extraction is fast since it's parsed once
-- Search results limited to ~25 per page (no pagination param exposed)
-- Cast from `__NEXT_DATA__` is limited to principal credits (top 3 per category); LD+JSON provides more actors
-- Runtime is in seconds in raw data, converted to minutes in output
+- Cloudflare blocks Node.js HTML requests to `www.imdb.com` (returns 202) — only GraphQL API endpoint is unrestricted
+- GraphQL introspection forbidden — incremental field probing required
+- `principalCredits` limited to ~10 per category (top credits only)
+- Histogram is the sole remaining SSR dependency — if `__NEXT_DATA__` is removed, only histogram breaks
+- `prestigiousAwardSummary.wins` returns major awards only (e.g., Oscars), not all wins

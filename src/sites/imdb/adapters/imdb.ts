@@ -1,103 +1,136 @@
 import type { Page } from 'patchright'
 
-const IMDB_ORIGIN = 'https://www.imdb.com'
+const GQL_URL = 'https://api.graphql.imdb.com/'
 
-async function navigateAndExtract(page: Page, url: string): Promise<Record<string, unknown>> {
-  try {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25_000 })
-  } catch {
-    // Navigation may time out on slow IMDB pages — continue if DOM is available
-  }
-  // Wait for __NEXT_DATA__ to appear (SSR-rendered script tag)
-  try {
-    await page.waitForSelector('#__NEXT_DATA__', { timeout: 10_000 })
-  } catch {
-    // fall through — evaluate will check
-  }
-  const nd = await page.evaluate(() => {
-    const el = document.querySelector('#__NEXT_DATA__')
-    if (!el?.textContent) return null
-    try {
-      return JSON.parse(el.textContent)
-    } catch {
-      return null
-    }
+// ── GraphQL helpers ─────────────────────────────────
+
+async function gql<T = Record<string, unknown>>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  const res = await fetch(GQL_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(variables ? { query, variables } : { query }),
   })
-  if (!nd) throw new Error('Failed to extract page data')
-  return nd as Record<string, unknown>
+  const json = await res.json() as { data?: T; errors?: Array<{ message: string }> }
+  if (json.errors?.length) throw new Error(`IMDb GraphQL: ${json.errors[0].message}`)
+  if (!json.data) throw new Error('IMDb GraphQL: empty response')
+  return json.data
 }
 
-async function searchTitles(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+// ── Fragments ───────────────────────────────────────
+
+const TITLE_CORE_FIELDS = `
+  id
+  titleText { text }
+  originalTitleText { text }
+  titleType { text id }
+  releaseYear { year endYear }
+  ratingsSummary { aggregateRating voteCount }
+  runtime { seconds displayableProperty { value { plainText } } }
+  certificate { rating }
+  genres { genres { text } }
+  plot { plotText { plainText } }
+  primaryImage { url }
+`
+
+const TITLE_DETAIL_FIELDS = `
+  ${TITLE_CORE_FIELDS}
+  releaseDate { day month year }
+  keywords(first: 20) { edges { node { text } } }
+  principalCredits {
+    category { text }
+    credits(limit: 10) {
+      name { id nameText { text } }
+    }
+  }
+  reviews(first: 0) { total }
+  nominations(first: 0) { total }
+  prestigiousAwardSummary { wins nominations }
+`
+
+// ── Operations ──────────────────────────────────────
+
+async function searchTitles(_page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const q = String(params.q ?? '')
   if (!q) throw new Error('q parameter is required')
 
-  const nd = await navigateAndExtract(page, `${IMDB_ORIGIN}/find/?q=${encodeURIComponent(q)}&s=tt`)
-  const pp = (nd as any).props?.pageProps
-  const results = pp?.titleResults?.results ?? []
+  const data = await gql<{ mainSearch: { edges: Array<{ node: { entity: Record<string, any> } }> } }>(`
+    query SearchTitles($term: String!) {
+      mainSearch(first: 20, options: { searchTerm: $term, type: TITLE }) {
+        edges { node { entity { ... on Title { ${TITLE_CORE_FIELDS} } } } }
+      }
+    }
+  `, { term: q })
+
+  const results = data.mainSearch.edges
+    .map(e => e.node.entity)
+    .filter(e => e.id) // filter out non-title entities
 
   return {
     query: q,
     resultCount: results.length,
-    results: results.map((r: any) => {
-      const item = r.listItem ?? {}
-      return {
-        imdbId: r.index ?? item.titleId ?? null,
-        title: item.titleText ?? item.originalTitleText ?? null,
-        year: item.releaseYear ?? null,
-        type: item.titleType?.text || item.titleType?.id || null,
-        genres: item.genres ?? [],
-        plot: item.plot ?? null,
-        rating: item.ratingSummary?.aggregateRating ?? null,
-        voteCount: item.ratingSummary?.voteCount ?? null,
-        runtime: item.runtime ? Math.round(item.runtime / 60) : null,
-        certificate: item.certificate ?? null,
-        image: item.primaryImage?.url ?? null,
-      }
-    }),
+    results: results.map(t => ({
+      imdbId: t.id,
+      title: t.titleText?.text ?? null,
+      year: t.releaseYear?.year ?? null,
+      type: t.titleType?.text || t.titleType?.id || null,
+      genres: (t.genres?.genres ?? []).map((g: any) => g.text),
+      plot: t.plot?.plotText?.plainText ?? null,
+      rating: t.ratingsSummary?.aggregateRating ?? null,
+      voteCount: t.ratingsSummary?.voteCount ?? null,
+      runtime: t.runtime?.seconds ? Math.round(t.runtime.seconds / 60) : null,
+      certificate: t.certificate?.rating ?? null,
+      image: t.primaryImage?.url ?? null,
+    })),
   }
 }
 
-async function getTitleDetail(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getTitleDetail(_page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const imdbId = String(params.imdbId ?? '')
   if (!imdbId) throw new Error('imdbId parameter is required')
 
-  const nd = await navigateAndExtract(page, `${IMDB_ORIGIN}/title/${encodeURIComponent(imdbId)}/`)
-  const pp = (nd as any).props?.pageProps
-  const atf = pp?.aboveTheFoldData
-  const mc = pp?.mainColumnData
-  if (!atf) throw new Error('No title data found')
+  const data = await gql<{ title: Record<string, any> }>(`
+    query TitleDetail($id: ID!) {
+      title(id: $id) { ${TITLE_DETAIL_FIELDS} }
+    }
+  `, { id: imdbId })
 
-  const credits = (atf.principalCreditsV2 ?? []).map((c: any) => ({
-    category: c.grouping?.text ?? c.category?.text ?? null,
+  const t = data.title
+  if (!t) throw new Error('No title data found')
+
+  const credits = (t.principalCredits ?? []).map((c: any) => ({
+    category: c.category?.text ?? null,
     names: (c.credits ?? []).map((cr: any) => ({
       name: cr.name?.nameText?.text ?? null,
       id: cr.name?.id ?? null,
     })),
   }))
 
+  const rd = t.releaseDate
+  const releaseDate = rd?.day
+    ? `${rd.year}-${String(rd.month).padStart(2, '0')}-${String(rd.day).padStart(2, '0')}`
+    : null
+
   return {
-    imdbId: atf.id ?? imdbId,
-    title: atf.titleText?.text ?? null,
-    originalTitle: atf.originalTitleText?.text ?? null,
-    type: atf.titleType?.text ?? null,
-    year: atf.releaseYear?.year ?? null,
-    endYear: atf.releaseYear?.endYear ?? null,
-    rating: atf.ratingsSummary?.aggregateRating ?? null,
-    voteCount: atf.ratingsSummary?.voteCount ?? null,
-    runtime: atf.runtime?.seconds ? Math.round(atf.runtime.seconds / 60) : null,
-    runtimeDisplay: atf.runtime?.displayableProperty?.value?.plainText ?? null,
-    certificate: atf.certificate?.rating ?? null,
-    genres: (atf.genres?.genres ?? []).map((g: any) => g.text),
-    plot: atf.plot?.plotText?.plainText ?? null,
-    image: atf.primaryImage?.url ?? null,
-    releaseDate: atf.releaseDate?.day
-      ? `${atf.releaseDate.year}-${String(atf.releaseDate.month).padStart(2, '0')}-${String(atf.releaseDate.day).padStart(2, '0')}`
-      : null,
-    keywords: atf.keywords?.edges?.map((e: any) => e.node?.text) ?? [],
+    imdbId: t.id ?? imdbId,
+    title: t.titleText?.text ?? null,
+    originalTitle: t.originalTitleText?.text ?? null,
+    type: t.titleType?.text ?? null,
+    year: t.releaseYear?.year ?? null,
+    endYear: t.releaseYear?.endYear ?? null,
+    rating: t.ratingsSummary?.aggregateRating ?? null,
+    voteCount: t.ratingsSummary?.voteCount ?? null,
+    runtime: t.runtime?.seconds ? Math.round(t.runtime.seconds / 60) : null,
+    runtimeDisplay: t.runtime?.displayableProperty?.value?.plainText ?? null,
+    certificate: t.certificate?.rating ?? null,
+    genres: (t.genres?.genres ?? []).map((g: any) => g.text),
+    plot: t.plot?.plotText?.plainText ?? null,
+    image: t.primaryImage?.url ?? null,
+    releaseDate,
+    keywords: t.keywords?.edges?.map((e: any) => e.node?.text) ?? [],
     credits,
-    reviewCount: atf.reviews?.total ?? null,
-    wins: mc?.wins?.total ?? null,
-    nominations: mc?.nominationsExcludeWins?.total ?? null,
+    reviewCount: t.reviews?.total ?? null,
+    wins: t.prestigiousAwardSummary?.wins ?? null,
+    nominations: t.nominations?.total ?? null,
   }
 }
 
@@ -105,75 +138,110 @@ async function getRatings(page: Page, params: Readonly<Record<string, unknown>>)
   const imdbId = String(params.imdbId ?? '')
   if (!imdbId) throw new Error('imdbId parameter is required')
 
-  const nd = await navigateAndExtract(page, `${IMDB_ORIGIN}/title/${encodeURIComponent(imdbId)}/ratings/`)
-  const pp = (nd as any).props?.pageProps
-  const cd = pp?.contentData
-  if (!cd) throw new Error('No ratings data found')
+  // GraphQL: aggregate rating + vote count
+  const data = await gql<{ title: Record<string, any> }>(`
+    query TitleRatings($id: ID!) {
+      title(id: $id) {
+        id
+        titleText { text }
+        ratingsSummary { aggregateRating voteCount }
+      }
+    }
+  `, { id: imdbId })
 
-  const entity = cd.entityMetadata ?? {}
-  const histogram = cd.histogramData?.histogramValues ?? []
+  const t = data.title
+  if (!t) throw new Error('No title data found')
+
+  // Histogram: only available from __NEXT_DATA__ on the ratings page
+  let histogram: Array<{ rating: number; voteCount: number }> = []
+  try {
+    await page.goto(`https://www.imdb.com/title/${encodeURIComponent(imdbId)}/ratings/`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 20_000,
+    })
+    await page.waitForSelector('#__NEXT_DATA__', { timeout: 8_000 }).catch(() => {})
+    const hist = await page.evaluate(() => {
+      const el = document.querySelector('#__NEXT_DATA__')
+      if (!el?.textContent) return null
+      try {
+        const nd = JSON.parse(el.textContent)
+        return nd.props?.pageProps?.contentData?.histogramData?.histogramValues ?? null
+      } catch { return null }
+    })
+    if (Array.isArray(hist)) {
+      histogram = hist.map((h: any) => ({ rating: h.rating, voteCount: h.voteCount }))
+    }
+  } catch {
+    // Histogram unavailable — return GraphQL data without it
+  }
 
   return {
-    imdbId: entity.id ?? imdbId,
-    title: entity.titleText?.text ?? null,
-    aggregateRating: entity.ratingsSummary?.aggregateRating ?? null,
-    voteCount: entity.ratingsSummary?.voteCount ?? null,
-    histogram: histogram.map((h: any) => ({
-      rating: h.rating,
-      voteCount: h.voteCount,
-    })),
+    imdbId: t.id ?? imdbId,
+    title: t.titleText?.text ?? null,
+    aggregateRating: t.ratingsSummary?.aggregateRating ?? null,
+    voteCount: t.ratingsSummary?.voteCount ?? null,
+    histogram,
   }
 }
 
-async function getCast(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getCast(_page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const imdbId = String(params.imdbId ?? '')
   if (!imdbId) throw new Error('imdbId parameter is required')
 
-  const nd = await navigateAndExtract(page, `${IMDB_ORIGIN}/title/${encodeURIComponent(imdbId)}/`)
-  const pp = (nd as any).props?.pageProps
-  const atf = pp?.aboveTheFoldData
+  const data = await gql<{ title: Record<string, any> }>(`
+    query TitleCast($id: ID!) {
+      title(id: $id) {
+        id
+        titleText { text }
+        principalCredits {
+          category { text }
+          credits(limit: 10) {
+            name { id nameText { text } }
+          }
+        }
+        directors: principalCredits {
+          category { text }
+          credits(limit: 10) {
+            name { id nameText { text } }
+          }
+        }
+      }
+    }
+  `, { id: imdbId })
 
-  const credits = (atf?.principalCreditsV2 ?? []).map((c: any) => ({
-    category: c.grouping?.text ?? c.category?.text ?? null,
+  const t = data.title
+  if (!t) throw new Error('No title data found')
+
+  const credits = (t.principalCredits ?? []).map((c: any) => ({
+    category: c.category?.text ?? null,
     names: (c.credits ?? []).map((cr: any) => ({
       name: cr.name?.nameText?.text ?? null,
       id: cr.name?.id ?? null,
     })),
   }))
 
-  // LD+JSON has actor/director data too
-  const ldJson = await page.evaluate(() => {
-    const el = document.querySelector('script[type="application/ld+json"]')
-    if (!el?.textContent) return null
-    try {
-      return JSON.parse(el.textContent)
-    } catch {
-      return null
-    }
-  })
+  // Extract actors, directors, creators from principalCredits
+  const findCategory = (cats: any[], ...names: string[]) =>
+    cats.find((c: any) => names.some(n => c.category?.text?.toLowerCase().includes(n.toLowerCase())))
 
-  const actors = (ldJson?.actor ?? []).map((a: any) => ({
-    name: a.name ?? null,
-    url: a.url ?? null,
-  }))
+  const creditsRaw = t.principalCredits ?? []
+  const actorCredits = findCategory(creditsRaw, 'star', 'actor', 'cast')
+  const directorCredits = findCategory(creditsRaw, 'director')
+  const writerCredits = findCategory(creditsRaw, 'writer', 'creator')
 
-  const directors = (ldJson?.director ?? []).map((d: any) => ({
-    name: d.name ?? null,
-    url: d.url ?? null,
-  }))
-
-  const creators = (ldJson?.creator ?? []).filter((c: any) => c['@type'] === 'Person').map((c: any) => ({
-    name: c.name ?? null,
-    url: c.url ?? null,
-  }))
+  const toPersonList = (entry: any) =>
+    (entry?.credits ?? []).map((cr: any) => ({
+      name: cr.name?.nameText?.text ?? null,
+      url: cr.name?.id ? `/name/${cr.name.id}/` : null,
+    }))
 
   return {
-    imdbId: atf?.id ?? imdbId,
-    title: atf?.titleText?.text ?? null,
+    imdbId: t.id ?? imdbId,
+    title: t.titleText?.text ?? null,
     credits,
-    actors,
-    directors,
-    creators,
+    actors: toPersonList(actorCredits),
+    directors: toPersonList(directorCredits),
+    creators: toPersonList(writerCredits),
   }
 }
 
@@ -186,7 +254,7 @@ const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, un
 
 const adapter = {
   name: 'imdb',
-  description: 'IMDB SSR extraction — search titles, detail, ratings, and cast via __NEXT_DATA__ and LD+JSON',
+  description: 'IMDb GraphQL API — search titles, detail, ratings, and cast via api.graphql.imdb.com',
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()
