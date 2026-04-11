@@ -1,17 +1,16 @@
 # Hacker News
 
 ## Overview
-Tech news aggregator by Y Combinator. Pure server-rendered HTML — all data extracted from DOM.
+Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase API (node-direct). Writes via browser page context.
 
 ## Workflows
 
 ### Browse and read a story
-1. `getTopStories` (or any feed op) → pick story → note title
-2. Feed stories don't carry item IDs — search by title or use HN search to get the ID
-3. `getStoryDetail(id)` → title, url, score, author, comments
+1. `getTopStories` → pick story → note `objectID`
+2. `getStoryDetail(id)` → title, url, points, author, nested comment tree
 
 ### Upvote a story
-1. Get the item ID (from `getStoryDetail` or HN search)
+1. Get the item ID (from `getStoryDetail` or feed `objectID`)
 2. `upvoteStory(id)` → upvotes the story (requires logged-in cookie session)
 
 ### Comment on a story
@@ -31,38 +30,38 @@ Tech news aggregator by Y Combinator. Pure server-rendered HTML — all data ext
 
 ## Operations
 
-| Operation | Intent | Key Input | Key Output | Notes |
-|-----------|--------|-----------|------------|-------|
-| getTopStories | browse top stories | — | title, score, author, age | entry point |
-| getNewestStories | browse newest stories | — | title, score, author, age | entry point |
-| getBestStories | browse highest-voted | — | title, score, author, age | entry point |
-| getAskStories | browse Ask HN | — | title, score, author, age | entry point |
-| getShowStories | browse Show HN | — | title, score, author, age | entry point |
-| getJobPostings | browse jobs | — | title, age | no score/author |
-| getFrontPageStories | time-based front page | — | title, score, author, age | entry point |
-| getStoryDetail | view story + comments | id (item ID) | title, url, score, commentCount, comments | adapter |
-| getStoryComments | get comment thread | id (item ID), limit? | storyId, commentCount, comments | adapter, default limit 50 |
-| getUserProfile | view user profile | id ← known username | user, karma, created, about | adapter |
-| getNewComments | newest comments | — | author, age, text, indent | entry point, adapter |
-| getStoriesByDomain | stories from domain | site (e.g. "github.com") | title, score, author, age | adapter |
-| getUserSubmissions | user's stories | id ← getUserProfile | title, score, author, age | adapter |
-| getUserComments | user's comments | id ← getUserProfile | author, age, text, indent | adapter |
-| upvoteStory | upvote item | id (item ID) | ok, id | adapter, write, requires login |
-| addComment | post comment | parent (item ID), text | ok, parent | adapter, write, requires login |
+| Operation | Intent | Key Input | Key Output | Transport |
+|-----------|--------|-----------|------------|-----------|
+| getTopStories | browse top stories | — | objectID, title, url, author, points, num_comments | L1 node (Algolia) |
+| getNewestStories | browse newest | — | same as above | L1 node (Algolia) |
+| getBestStories | browse highest-voted | — | same as above | L1 node (Algolia) |
+| getAskStories | browse Ask HN | — | same as above | L1 node (Algolia) |
+| getShowStories | browse Show HN | — | same as above | L1 node (Algolia) |
+| getJobPostings | browse jobs | — | objectID, title, url, created_at | L1 node (Algolia) |
+| getFrontPageStories | time-based front page | — | same as feeds | L1 node (Algolia) |
+| getStoryDetail | story + comment tree | id (item ID) | id, title, url, points, children[] | L1 node (Algolia) |
+| getUserProfile | user profile | id (username) | id, karma, created, about | L1 node (Firebase) |
+| getNewComments | newest comments | — | objectID, author, comment_text, story_title | L1 node (Algolia) |
+| getStoryComments | comment thread | id, limit? | storyId, commentCount, comments[] | adapter (Algolia) |
+| getStoriesByDomain | domain stories | site | objectID, title, url, author, points | adapter (Algolia) |
+| getUserSubmissions | user's stories | id (username) | objectID, title, url, author, points | adapter (Algolia) |
+| getUserComments | user's comments | id (username) | objectID, author, comment_text | adapter (Algolia) |
+| upvoteStory | upvote item | id | ok, id | adapter (page) |
+| addComment | post comment | parent, text | ok, parent | adapter (page) |
 
 ## Quick Start
 
 ```bash
-# Browse top stories
+# Browse top stories (node-direct, no browser needed)
 openweb hackernews exec getTopStories '{}'
 
-# Get story detail with comments
+# Get story detail with full comment tree
 openweb hackernews exec getStoryDetail '{"id": 42407357}'
 
-# Get just the comments (limited)
+# Get comments for a story (with limit)
 openweb hackernews exec getStoryComments '{"id": 42407357, "limit": 10}'
 
-# Look up a user
+# Look up a user (Firebase API)
 openweb hackernews exec getUserProfile '{"id": "pg"}'
 
 # User's submitted stories
@@ -74,10 +73,10 @@ openweb hackernews exec getStoriesByDomain '{"site": "github.com"}'
 # Latest comments site-wide
 openweb hackernews exec getNewComments '{}'
 
-# Upvote a story (requires login)
+# Upvote a story (requires browser + login)
 openweb hackernews exec upvoteStory '{"id": 42407357}'
 
-# Comment on a story (requires login)
+# Comment on a story (requires browser + login)
 openweb hackernews exec addComment '{"parent": 42407357, "text": "Great article!"}'
 ```
 
@@ -86,23 +85,21 @@ openweb hackernews exec addComment '{"parent": 42407357, "text": "Great article!
 ## Site Internals
 
 ## API Architecture
-- No JSON API — all data is server-rendered HTML
-- Single server: `news.ycombinator.com`
-- Feed pages share identical DOM (`.athing` rows with `.titleline`, `.score`, `.hnuser`, `.age`)
-- Item pages: story header + `.comtr` comment rows with indent via `.ind img[width]`
-- User pages: `<table>` with label/value rows
+- **Reads**: Two public APIs, no auth required:
+  - **Algolia** (`hn.algolia.com/api/v1/`): search, feeds, story detail with nested comments
+  - **Firebase** (`hacker-news.firebaseio.com/v0/`): item detail, user profiles
+- **Writes**: Form-based submission to `news.ycombinator.com` — no public write API
 
 ## Auth
-No auth required for read operations. Write operations (`upvoteStory`, `addComment`) require a logged-in cookie session — the user must be authenticated in the browser before calling these ops. Cookie session declared at site level for transport consistency.
+No auth for reads. Write operations (`upvoteStory`, `addComment`) require a logged-in cookie session in the browser. Vote link href contains auth token; comment form contains HMAC token.
 
 ## Transport
-- `page` — browser-based extraction (DOM parsing requires rendered page)
-- All 16 ops use the adapter (`adapters/hackernews.ts`) for DOM extraction via `page.goto()` + `page.evaluate()`
-- Write ops (`upvoteStory`, `addComment`) use `page.evaluate()` with `fetch()` for form-based submission
+- **10 L1 node ops**: Direct HTTP to Algolia/Firebase — no browser, no DOM
+- **4 adapter read ops**: Node.js `fetch` to Algolia from adapter (needs browser for adapter pipeline, but zero DOM)
+- **2 adapter write ops**: `page.evaluate(fetch(...))` with DOM extraction for auth tokens
 
 ## Known Issues
-- Last story on some feed pages may have null score/author (ad or announcement row)
-- Comment indent calculated from `.ind img[width]` attribute (40px per level)
-- No bot detection — DOM extraction is reliable
-- Feed ops don't return item IDs — only title, score, author, age
-- `getNewComments` always returns indent=0 (newcomments page shows flat list)
+- Algolia data has ~30s delay from HN (near-real-time, not instant)
+- Firebase `user.submitted` returns all IDs (can be thousands) — Algolia is more efficient for user activity
+- No bot detection from any API
+- Write ops still need DOM for auth token extraction (no alternative)

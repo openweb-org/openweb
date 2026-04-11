@@ -1,0 +1,14 @@
+{
+  "operation_id": "getStoriesByDomain",
+  "cases": [
+    {
+      "input": {
+        "site": "github.com"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

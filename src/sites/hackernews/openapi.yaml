@@ -1,34 +1,42 @@
 openapi: '3.1.0'
 info:
   title: Hacker News
-  version: '2.1'
+  version: '3.0'
   x-openweb:
     spec_version: '2.0'
 servers:
-  - url: https://news.ycombinator.com
+  - url: https://hn.algolia.com
     x-openweb:
-      transport: page
-      auth:
-        type: cookie_session
+      transport: node
 paths:
-  /news:
+  # ═══ L1 Node — Algolia search feeds (no adapter, no browser) ═══
+
+  /search~getTopStories:
     get:
       operationId: getTopStories
-      summary: 'Top stories from the front page — title, score, author, age'
+      summary: 'Top stories from the front page — title, url, author, points, comments'
       x-openweb:
         permission: read
+        actual_path: /api/v1/search
+        unwrap: hits
         build:
           stable_id: hn0001
-          tool_version: 2
+          tool_version: 3
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: hackernews
-          operation: getTopStories
+      parameters:
+        - name: tags
+          in: query
+          schema:
+            type: string
+            default: front_page
+        - name: hitsPerPage
+          in: query
+          schema:
+            type: integer
+            default: 30
       responses:
         '200':
-          description: Array of top stories (typically 30 per page).
+          description: Array of top stories from Algolia search API.
           content:
             application/json:
               schema:
@@ -36,41 +44,62 @@ paths:
                 items:
                   type: object
                   properties:
+                    objectID:
+                      type: string
+                      description: Item ID (numeric string).
                     title:
                       type:
                         - string
                         - 'null'
-                      description: Story title text.
-                    score:
+                      description: Story title.
+                    url:
                       type:
                         - string
                         - 'null'
-                      description: 'Point count, e.g. "305 points".'
+                      description: Link URL. Null for text posts.
                     author:
-                      type:
-                        - string
-                        - 'null'
+                      type: string
                       description: Submitter username.
-                    age:
+                    points:
                       type:
-                        - string
+                        - integer
                         - 'null'
-                      description: 'Relative time, e.g. "2 hours ago".'
-  /newest:
+                      description: Score (upvotes).
+                    num_comments:
+                      type:
+                        - integer
+                        - 'null'
+                      description: Total comment count.
+                    created_at:
+                      type: string
+                      description: 'ISO 8601 timestamp, e.g. "2026-04-10T22:36:40.000Z".'
+                    created_at_i:
+                      type: integer
+                      description: Unix timestamp (seconds).
+
+  /search_by_date~getNewestStories:
     get:
       operationId: getNewestStories
-      summary: 'Newest stories sorted by submission time — title, score, author, age'
+      summary: 'Newest stories sorted by submission time'
       x-openweb:
         permission: read
+        actual_path: /api/v1/search_by_date
+        unwrap: hits
         build:
           stable_id: hn0002
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: hackernews
-          operation: getNewestStories
+      parameters:
+        - name: tags
+          in: query
+          schema:
+            type: string
+            default: story
+        - name: hitsPerPage
+          in: query
+          schema:
+            type: integer
+            default: 30
       responses:
         '200':
           description: Array of newest stories.
@@ -81,41 +110,54 @@ paths:
                 items:
                   type: object
                   properties:
+                    objectID:
+                      type: string
                     title:
                       type:
                         - string
                         - 'null'
-                      description: Story title text.
-                    score:
+                    url:
                       type:
                         - string
                         - 'null'
-                      description: 'Point count, e.g. "305 points".'
                     author:
+                      type: string
+                    points:
                       type:
-                        - string
+                        - integer
                         - 'null'
-                      description: Submitter username.
-                    age:
+                    num_comments:
                       type:
-                        - string
+                        - integer
                         - 'null'
-                      description: 'Relative time, e.g. "2 hours ago".'
-  /best:
+                    created_at:
+                      type: string
+                    created_at_i:
+                      type: integer
+
+  /search~getBestStories:
     get:
       operationId: getBestStories
-      summary: 'Highest-voted stories — title, score, author, age'
+      summary: 'Highest-voted stories sorted by relevance'
       x-openweb:
         permission: read
+        actual_path: /api/v1/search
+        unwrap: hits
         build:
           stable_id: hn0003
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: hackernews
-          operation: getBestStories
+      parameters:
+        - name: tags
+          in: query
+          schema:
+            type: string
+            default: story
+        - name: hitsPerPage
+          in: query
+          schema:
+            type: integer
+            default: 30
       responses:
         '200':
           description: Array of highest-voted stories.
@@ -126,41 +168,54 @@ paths:
                 items:
                   type: object
                   properties:
+                    objectID:
+                      type: string
                     title:
                       type:
                         - string
                         - 'null'
-                      description: Story title text.
-                    score:
+                    url:
                       type:
                         - string
                         - 'null'
-                      description: 'Point count, e.g. "305 points".'
                     author:
+                      type: string
+                    points:
                       type:
-                        - string
+                        - integer
                         - 'null'
-                      description: Submitter username.
-                    age:
+                    num_comments:
                       type:
-                        - string
+                        - integer
                         - 'null'
-                      description: 'Relative time, e.g. "2 hours ago".'
-  /ask:
+                    created_at:
+                      type: string
+                    created_at_i:
+                      type: integer
+
+  /search~getAskStories:
     get:
       operationId: getAskStories
-      summary: 'Ask HN posts — title, score, author, age'
+      summary: 'Ask HN posts'
       x-openweb:
         permission: read
+        actual_path: /api/v1/search
+        unwrap: hits
         build:
           stable_id: hn0004
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: hackernews
-          operation: getAskStories
+      parameters:
+        - name: tags
+          in: query
+          schema:
+            type: string
+            default: ask_hn
+        - name: hitsPerPage
+          in: query
+          schema:
+            type: integer
+            default: 30
       responses:
         '200':
           description: Array of Ask HN posts.
@@ -171,41 +226,54 @@ paths:
                 items:
                   type: object
                   properties:
+                    objectID:
+                      type: string
                     title:
                       type:
                         - string
                         - 'null'
-                      description: Story title text.
-                    score:
+                    url:
                       type:
                         - string
                         - 'null'
-                      description: 'Point count, e.g. "305 points".'
                     author:
+                      type: string
+                    points:
                       type:
-                        - string
+                        - integer
                         - 'null'
-                      description: Submitter username.
-                    age:
+                    num_comments:
                       type:
-                        - string
+                        - integer
                         - 'null'
-                      description: 'Relative time, e.g. "2 hours ago".'
-  /show:
+                    created_at:
+                      type: string
+                    created_at_i:
+                      type: integer
+
+  /search~getShowStories:
     get:
       operationId: getShowStories
-      summary: 'Show HN posts — title, score, author, age'
+      summary: 'Show HN posts'
       x-openweb:
         permission: read
+        actual_path: /api/v1/search
+        unwrap: hits
         build:
           stable_id: hn0005
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: hackernews
-          operation: getShowStories
+      parameters:
+        - name: tags
+          in: query
+          schema:
+            type: string
+            default: show_hn
+        - name: hitsPerPage
+          in: query
+          schema:
+            type: integer
+            default: 30
       responses:
         '200':
           description: Array of Show HN posts.
@@ -216,44 +284,57 @@ paths:
                 items:
                   type: object
                   properties:
+                    objectID:
+                      type: string
                     title:
                       type:
                         - string
                         - 'null'
-                      description: Story title text.
-                    score:
+                    url:
                       type:
                         - string
                         - 'null'
-                      description: 'Point count, e.g. "305 points".'
                     author:
+                      type: string
+                    points:
                       type:
-                        - string
+                        - integer
                         - 'null'
-                      description: Submitter username.
-                    age:
+                    num_comments:
                       type:
-                        - string
+                        - integer
                         - 'null'
-                      description: 'Relative time, e.g. "2 hours ago".'
-  /jobs:
+                    created_at:
+                      type: string
+                    created_at_i:
+                      type: integer
+
+  /search_by_date~getJobPostings:
     get:
       operationId: getJobPostings
-      summary: 'Job postings — title, age (no score or author)'
+      summary: 'Job postings sorted by date'
       x-openweb:
         permission: read
+        actual_path: /api/v1/search_by_date
+        unwrap: hits
         build:
           stable_id: hn0006
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: hackernews
-          operation: getJobPostings
+      parameters:
+        - name: tags
+          in: query
+          schema:
+            type: string
+            default: job
+        - name: hitsPerPage
+          in: query
+          schema:
+            type: integer
+            default: 30
       responses:
         '200':
-          description: Array of job postings. Jobs have no score or author.
+          description: Array of job postings. Jobs typically have null points.
           content:
             application/json:
               schema:
@@ -261,91 +342,113 @@ paths:
                 items:
                   type: object
                   properties:
+                    objectID:
+                      type: string
                     title:
                       type:
                         - string
                         - 'null'
-                      description: Job title and company.
-                    age:
+                    url:
                       type:
                         - string
                         - 'null'
-                      description: 'Relative time, e.g. "2 hours ago".'
-  /front:
-    get:
-      operationId: getFrontPageStories
-      summary: 'Time-based front page stories — title, score, author, age'
-      x-openweb:
-        permission: read
-        build:
-          stable_id: hn0007
-          tool_version: 1
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: hackernews
-          operation: getFrontPageStories
-      responses:
-        '200':
-          description: Array of front page stories (time-sorted view).
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    title:
-                      type:
-                        - string
-                        - 'null'
-                      description: Story title text.
-                    score:
-                      type:
-                        - string
-                        - 'null'
-                      description: 'Point count, e.g. "305 points".'
                     author:
                       type:
                         - string
                         - 'null'
-                      description: Submitter username.
-                    age:
+                    created_at:
+                      type: string
+                    created_at_i:
+                      type: integer
+
+  /search_by_date~getFrontPageStories:
+    get:
+      operationId: getFrontPageStories
+      summary: 'Front page stories sorted by time'
+      x-openweb:
+        permission: read
+        actual_path: /api/v1/search_by_date
+        unwrap: hits
+        build:
+          stable_id: hn0007
+          tool_version: 2
+          verified: true
+      parameters:
+        - name: tags
+          in: query
+          schema:
+            type: string
+            default: front_page
+        - name: hitsPerPage
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        '200':
+          description: Array of front page stories sorted by time.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    objectID:
+                      type: string
+                    title:
                       type:
                         - string
                         - 'null'
-                      description: 'Relative time, e.g. "2 hours ago".'
-  /internal/getStoryDetail:
+                    url:
+                      type:
+                        - string
+                        - 'null'
+                    author:
+                      type: string
+                    points:
+                      type:
+                        - integer
+                        - 'null'
+                    num_comments:
+                      type:
+                        - integer
+                        - 'null'
+                    created_at:
+                      type: string
+                    created_at_i:
+                      type: integer
+
+  # ═══ L1 Node — Algolia items (story detail with comment tree) ═══
+
+  /api/v1/items/{id}:
     get:
       operationId: getStoryDetail
-      summary: 'Story metadata and comments — title, url, score, author, commentCount, comments'
+      summary: 'Story metadata and full comment tree'
       x-openweb:
         permission: read
         build:
           stable_id: hn0008
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: hackernews
-          operation: getStoryDetail
       parameters:
         - name: id
-          in: query
+          in: path
           required: true
           schema:
             type: integer
           description: 'Hacker News item ID (numeric, e.g. 42407357).'
       responses:
         '200':
-          description: Story detail with comment list.
+          description: Story detail with nested comment tree.
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  id:
+                    type: integer
+                    description: Item ID.
                   title:
                     type:
                       - string
@@ -355,43 +458,32 @@ paths:
                     type:
                       - string
                       - 'null'
-                    description: Link URL. Null for Ask HN / text posts.
-                  site:
-                    type:
-                      - string
-                      - 'null'
-                    description: 'Domain of the linked URL, e.g. "github.com".'
-                  score:
-                    type:
-                      - string
-                      - 'null'
-                    description: 'Point count, e.g. "305 points".'
+                    description: Link URL. Null for text posts.
                   author:
                     type:
                       - string
                       - 'null'
-                    description: Username who submitted the story.
-                  age:
+                    description: Submitter username.
+                  points:
                     type:
-                      - string
+                      - integer
                       - 'null'
-                    description: 'Relative time, e.g. "3 hours ago".'
-                  commentCount:
+                    description: Score (upvotes).
+                  created_at:
+                    type: string
+                    description: ISO 8601 timestamp.
+                  created_at_i:
                     type: integer
-                    description: Total number of comments on the page.
-                  comments:
+                    description: Unix timestamp.
+                  children:
                     type: array
-                    description: Comment tree (flattened with indent level).
+                    description: Nested comment tree. Each comment may have its own children.
                     items:
                       type: object
                       properties:
                         id:
-                          type: string
+                          type: integer
                         author:
-                          type:
-                            - string
-                            - 'null'
-                        age:
                           type:
                             - string
                             - 'null'
@@ -399,71 +491,135 @@ paths:
                           type:
                             - string
                             - 'null'
-                        indent:
+                        created_at:
+                          type: string
+                        parent_id:
                           type: integer
-                          description: Nesting level (0 = top-level, higher = deeper reply).
-  /internal/getUserProfile:
+
+  # ═══ L1 Node — Firebase (user profile) ═══
+
+  /v0/user/{id}.json:
     get:
       operationId: getUserProfile
       summary: 'User profile — username, karma, created date, about text'
+      servers:
+        - url: https://hacker-news.firebaseio.com
+          x-openweb:
+            transport: node
       x-openweb:
         permission: read
         build:
           stable_id: hn0009
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: hackernews
-          operation: getUserProfile
       parameters:
         - name: id
-          in: query
+          in: path
           required: true
           schema:
             type: string
           description: 'Hacker News username (case-sensitive, e.g. "pg").'
       responses:
         '200':
-          description: User profile info.
+          description: User profile from Firebase API.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  user:
-                    type:
-                      - string
-                      - 'null'
+                  id:
+                    type: string
                     description: Username.
                   created:
-                    type:
-                      - string
-                      - 'null'
-                    description: 'Account creation date, e.g. "January 1, 2007".'
+                    type: integer
+                    description: Account creation as Unix timestamp.
                   karma:
-                    type:
-                      - string
-                      - 'null'
-                    description: Karma score as displayed string.
+                    type: integer
+                    description: Karma score.
                   about:
                     type:
                       - string
                       - 'null'
-                    description: User bio / about text (may contain HTML).
+                    description: User bio (may contain HTML entities).
+
+  # ═══ L1 Node — Algolia search (new comments) ═══
+
+  /search_by_date~getNewComments:
+    get:
+      operationId: getNewComments
+      summary: 'Newest comments across all stories'
+      x-openweb:
+        permission: read
+        actual_path: /api/v1/search_by_date
+        unwrap: hits
+        build:
+          stable_id: hn0011
+          tool_version: 2
+          verified: true
+      parameters:
+        - name: tags
+          in: query
+          schema:
+            type: string
+            default: comment
+        - name: hitsPerPage
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Array of newest comments site-wide.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    objectID:
+                      type: string
+                      description: Comment ID.
+                    author:
+                      type:
+                        - string
+                        - 'null'
+                    comment_text:
+                      type:
+                        - string
+                        - 'null'
+                      description: Comment body (may contain HTML).
+                    created_at:
+                      type: string
+                    created_at_i:
+                      type: integer
+                    parent_id:
+                      type: integer
+                    story_id:
+                      type: integer
+                    story_title:
+                      type:
+                        - string
+                        - 'null'
+
+  # ═══ Adapter ops — parameterized Algolia reads (page transport) ═══
+
   /internal/getStoryComments:
     get:
       operationId: getStoryComments
-      summary: 'Comment thread for a story — storyId, commentCount, comments with indent'
+      summary: 'Comment thread for a story via Algolia search'
+      servers:
+        - url: https://news.ycombinator.com
+          x-openweb:
+            transport: page
+            auth:
+              type: cookie_session
       x-openweb:
         permission: read
         build:
           stable_id: hn0010
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
         adapter:
           name: hackernews
           operation: getStoryComments
@@ -494,84 +650,48 @@ paths:
                     description: The item ID of the story.
                   commentCount:
                     type: integer
-                    description: Total comments on the page (before limit).
+                    description: Total comments matching this story.
                   comments:
                     type: array
-                    description: Comments in DOM order with indent level.
+                    description: Comments sorted by date (newest first).
                     items:
                       type: object
                       properties:
-                        id:
+                        objectID:
                           type: string
                         author:
                           type:
                             - string
                             - 'null'
-                        age:
+                        comment_text:
                           type:
                             - string
                             - 'null'
-                        text:
-                          type:
-                            - string
-                            - 'null'
-                        indent:
+                        created_at:
+                          type: string
+                        created_at_i:
                           type: integer
-                          description: Nesting level (0 = top-level, higher = deeper reply).
-  /internal/getNewComments:
-    get:
-      operationId: getNewComments
-      summary: 'Newest comments across all stories — author, age, text, indent'
-      x-openweb:
-        permission: read
-        build:
-          stable_id: hn0011
-          tool_version: 1
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: hackernews
-          operation: getNewComments
-      responses:
-        '200':
-          description: Array of newest comments site-wide.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    author:
-                      type:
-                        - string
-                        - 'null'
-                    age:
-                      type:
-                        - string
-                        - 'null'
-                    text:
-                      type:
-                        - string
-                        - 'null'
-                    indent:
-                      type: integer
-                      description: Nesting level (0 = top-level, higher = deeper reply).
+                        parent_id:
+                          type: integer
+                        story_id:
+                          type: integer
+
   /internal/getStoriesByDomain:
     get:
       operationId: getStoriesByDomain
-      summary: 'Stories submitted from a specific domain — title, score, author, age'
+      summary: 'Stories submitted from a specific domain'
+      servers:
+        - url: https://news.ycombinator.com
+          x-openweb:
+            transport: page
+            auth:
+              type: cookie_session
       x-openweb:
         permission: read
         build:
           stable_id: hn0012
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
         adapter:
           name: hackernews
           operation: getStoriesByDomain
@@ -592,34 +712,47 @@ paths:
                 items:
                   type: object
                   properties:
+                    objectID:
+                      type: string
                     title:
                       type:
                         - string
                         - 'null'
-                    score:
+                    url:
                       type:
                         - string
                         - 'null'
                     author:
+                      type: string
+                    points:
                       type:
-                        - string
+                        - integer
                         - 'null'
-                    age:
+                    num_comments:
                       type:
-                        - string
+                        - integer
                         - 'null'
+                    created_at:
+                      type: string
+                    created_at_i:
+                      type: integer
+
   /internal/getUserSubmissions:
     get:
       operationId: getUserSubmissions
-      summary: "User's submitted stories — title, score, author, age"
+      summary: "User's submitted stories"
+      servers:
+        - url: https://news.ycombinator.com
+          x-openweb:
+            transport: page
+            auth:
+              type: cookie_session
       x-openweb:
         permission: read
         build:
           stable_id: hn0013
-          tool_version: 1
+          tool_version: 2
           verified: true
-          signals:
-            - adapter-verified
         adapter:
           name: hackernews
           operation: getUserSubmissions
@@ -640,26 +773,102 @@ paths:
                 items:
                   type: object
                   properties:
+                    objectID:
+                      type: string
                     title:
                       type:
                         - string
                         - 'null'
-                    score:
+                    url:
                       type:
                         - string
                         - 'null'
                     author:
+                      type: string
+                    points:
+                      type:
+                        - integer
+                        - 'null'
+                    num_comments:
+                      type:
+                        - integer
+                        - 'null'
+                    created_at:
+                      type: string
+                    created_at_i:
+                      type: integer
+
+  /internal/getUserComments:
+    get:
+      operationId: getUserComments
+      summary: "User's comment history"
+      servers:
+        - url: https://news.ycombinator.com
+          x-openweb:
+            transport: page
+            auth:
+              type: cookie_session
+      x-openweb:
+        permission: read
+        build:
+          stable_id: hn0014
+          tool_version: 2
+          verified: true
+        adapter:
+          name: hackernews
+          operation: getUserComments
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 'Hacker News username (case-sensitive, e.g. "pg").'
+      responses:
+        '200':
+          description: Comments posted by the user.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    objectID:
+                      type: string
+                    author:
                       type:
                         - string
                         - 'null'
-                    age:
+                    comment_text:
                       type:
                         - string
                         - 'null'
+                    created_at:
+                      type: string
+                    created_at_i:
+                      type: integer
+                    parent_id:
+                      type: integer
+                    story_id:
+                      type: integer
+                    story_title:
+                      type:
+                        - string
+                        - 'null'
+
+  # ═══ Adapter ops — write (page transport, needs auth) ═══
+
   /internal/upvoteStory:
     post:
       operationId: upvoteStory
       summary: 'Upvote a story or comment — requires logged-in session'
+      servers:
+        - url: https://news.ycombinator.com
+          x-openweb:
+            transport: page
+            auth:
+              type: cookie_session
       x-openweb:
         permission: write
         safety: caution
@@ -694,14 +903,19 @@ paths:
                 properties:
                   ok:
                     type: boolean
-                    description: Whether the upvote succeeded.
                   id:
                     type: integer
-                    description: The item ID that was upvoted.
+
   /internal/addComment:
     post:
       operationId: addComment
       summary: 'Post a comment on a story or reply to a comment — requires logged-in session'
+      servers:
+        - url: https://news.ycombinator.com
+          x-openweb:
+            transport: page
+            auth:
+              type: cookie_session
       x-openweb:
         permission: write
         safety: caution
@@ -740,56 +954,5 @@ paths:
                 properties:
                   ok:
                     type: boolean
-                    description: Whether the comment was posted successfully.
                   parent:
                     type: integer
-                    description: The parent item ID.
-  /internal/getUserComments:
-    get:
-      operationId: getUserComments
-      summary: "User's comment history — author, age, text, indent"
-      x-openweb:
-        permission: read
-        build:
-          stable_id: hn0014
-          tool_version: 1
-          verified: true
-          signals:
-            - adapter-verified
-        adapter:
-          name: hackernews
-          operation: getUserComments
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-          description: 'Hacker News username (case-sensitive, e.g. "pg").'
-      responses:
-        '200':
-          description: Comments posted by the user.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    author:
-                      type:
-                        - string
-                        - 'null'
-                    age:
-                      type:
-                        - string
-                        - 'null'
-                    text:
-                      type:
-                        - string
-                        - 'null'
-                    indent:
-                      type: integer
-                      description: Nesting level (0 = top-level, higher = deeper reply).
