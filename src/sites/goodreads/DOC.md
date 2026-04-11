@@ -45,33 +45,29 @@ openweb goodreads exec getAuthor '{"authorId": "58.Frank_Herbert"}'
 ## Site Internals
 
 ### API Architecture
-Traditional Rails SSR application. No SPA framework (no Next.js, no React SSR).
-Book detail pages include LD+JSON (`schema.org/Book`) with structured metadata.
-An AWS AppSync GraphQL API exists (used for reviews, genres, similar books) but
-is secondary to the SSR HTML. All data is extractable from the rendered DOM.
+Traditional Rails SSR application for search and author pages. Book detail pages use Next.js
+with Apollo GraphQL SSR — `__NEXT_DATA__` contains full `apolloState` with Book, Work,
+Contributor, Series, Review, and User entities. No SPA client-side loading needed for data.
+
+An autocomplete JSON endpoint exists at `/book/auto_complete?format=json&q=...` (5 results,
+rich data) but the full search page (20 results/page) is used instead.
 
 ### Auth
-No auth required for public data. `cookie_session` configured at server level
-for future write operations. Session cookie `_session_id2` is present but not
-needed for reads.
+No auth required for public data.
 
 ### Transport
-`page` transport required for all operations. Heavy bot detection:
-- Cloudflare (cf_clearance cookies)
-- DataDome (datadome cookie)
-- PerimeterX (_px3 cookie)
-
-Node transport will fail. Browser must be headed with a real Chrome profile.
+`node` transport — all operations use direct HTTP fetch. No browser needed.
+No bot detection on any endpoint (Cloudflare/DataDome/PerimeterX present but
+do not challenge standard User-Agent requests).
 
 ### Extraction
-All operations except getReviews use `page_global_data` extraction with inline JavaScript:
-- **searchBooks**: Parses `tr[itemtype="http://schema.org/Book"]` microdata rows
-- **getBook**: Combines LD+JSON (`script[type="application/ld+json"]`) with DOM selectors for genres, description, series
-- **getReviews**: Adapter (`adapters/goodreads.ts`) — reviews load asynchronously via GraphQL, requiring waitForSelector before DOM extraction
-- **getAuthor**: Parses author page DOM with schema.org microdata for bibliography
+All operations use the adapter (`adapters/goodreads.ts`) with node fetch + parsing:
+- **searchBooks**: HTML regex parse of Rails search page (schema.org microdata rows)
+- **getBook**: `__NEXT_DATA__` → `apolloState` JSON parse (Book + Work + Contributor entities)
+- **getReviews**: `__NEXT_DATA__` → `apolloState` JSON parse (30 Review + User entities in SSR)
+- **getAuthor**: HTML regex parse of Rails author page (schema.org microdata)
 
 ### Known Issues
-- Heavy bot detection may occasionally trigger challenges on rapid sequential requests
-- Reviews extracted from initial page load only (no pagination/infinite scroll)
 - Author page shows top ~10 books; full bibliography requires pagination
 - Search returns 20 results per page; total result count shown in header but not extracted
+- Bio text may be truncated on author pages with long biographies

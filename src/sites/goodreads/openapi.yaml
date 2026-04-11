@@ -9,9 +9,7 @@ info:
 servers:
   - url: https://www.goodreads.com
     x-openweb:
-      transport: page
-      auth:
-        type: cookie_session
+      transport: node
 paths:
   /search:
     get:
@@ -23,36 +21,12 @@ paths:
           verified: true
           stable_id: gr0001
           signature_id: gr0001s
-          tool_version: 1
+          tool_version: 2
           signals:
-            - extraction_detected
-        extraction:
-          type: page_global_data
-          page_url: /search
-          expression: |
-            (() => {
-              const rows = document.querySelectorAll('tr[itemtype="http://schema.org/Book"]');
-              const items = [...rows].map(row => {
-                const titleEl = row.querySelector('a.bookTitle');
-                const title = (titleEl?.querySelector('span[itemprop="name"]') || titleEl)?.textContent?.trim() || '';
-                const bookUrl = titleEl?.getAttribute('href') || '';
-                const bookId = bookUrl.match(/\/book\/show\/(\d+)/)?.[1] || '';
-                const author = row.querySelector('a.authorName span[itemprop="name"]')?.textContent?.trim() || '';
-                const authorUrl = row.querySelector('a.authorName')?.getAttribute('href') || '';
-                const authorId = authorUrl.match(/\/author\/show\/(\d+)/)?.[1] || '';
-                const minirating = row.querySelector('.minirating')?.textContent?.trim() || '';
-                const ratingMatch = minirating.match(/([\d.]+)\s*avg rating/);
-                const ratingsMatch = minirating.match(/([\d,]+)\s*ratings/);
-                const coverImg = row.querySelector('img.bookCover')?.src || '';
-                return {
-                  bookId, title, author, authorId,
-                  averageRating: ratingMatch ? parseFloat(ratingMatch[1]) : null,
-                  ratingsCount: ratingsMatch ? parseInt(ratingsMatch[1].replace(/,/g, ''), 10) : null,
-                  coverImageUrl: coverImg || null,
-                };
-              });
-              return { resultCount: items.length, items };
-            })()
+            - adapter-verified
+        adapter:
+          name: goodreads
+          operation: searchBooks
       parameters:
         - name: q
           in: query
@@ -119,46 +93,12 @@ paths:
           verified: true
           stable_id: gr0002
           signature_id: gr0002s
-          tool_version: 1
+          tool_version: 2
           signals:
-            - extraction_detected
-        extraction:
-          type: page_global_data
-          page_url: /book/show/{bookId}
-          expression: |
-            (() => {
-              const ld = document.querySelector('script[type="application/ld+json"]');
-              let ldData = {};
-              if (ld) { try { ldData = JSON.parse(ld.textContent); } catch {} }
-              const title = document.querySelector('h1.Text__title1')?.textContent?.trim() || ldData.name || '';
-              const series = document.querySelector('h3.Text__title3 a')?.textContent?.trim() || null;
-              const author = document.querySelector('.ContributorLinksList .ContributorLink__name')?.textContent?.trim() || ldData.author?.[0]?.name || '';
-              const authorUrl = document.querySelector('.ContributorLinksList a.ContributorLink')?.getAttribute('href') || '';
-              const authorId = authorUrl.match(/\/author\/show\/(\d+)/)?.[1] || '';
-              const ratingValue = parseFloat(document.querySelector('.RatingStatistics__rating')?.textContent?.trim()) || ldData.aggregateRating?.ratingValue || null;
-              const ratingsText = document.querySelector('[data-testid="ratingsCount"]')?.textContent?.trim() || '';
-              const reviewsText = document.querySelector('[data-testid="reviewsCount"]')?.textContent?.trim() || '';
-              const ratingsCount = parseInt(ratingsText.replace(/[^\d]/g, ''), 10) || ldData.aggregateRating?.ratingCount || null;
-              const reviewsCount = parseInt(reviewsText.replace(/[^\d]/g, ''), 10) || ldData.aggregateRating?.reviewCount || null;
-              const descEl = document.querySelector('[data-testid="description"]');
-              const description = descEl?.textContent?.trim() || null;
-              const genreEls = document.querySelectorAll('[data-testid="genresList"] .Button__labelItem');
-              const genres = [...genreEls].map(e => e.textContent.trim()).filter(t => t && t !== '...more');
-              const pagesFormat = document.querySelector('[data-testid="pagesFormat"]')?.textContent?.trim() || '';
-              const pageCount = ldData.numberOfPages || parseInt(pagesFormat) || null;
-              const format = ldData.bookFormat || pagesFormat.replace(/^\d+\s*pages,?\s*/, '') || null;
-              const publishDate = document.querySelector('[data-testid="publicationInfo"]')?.textContent?.trim() || null;
-              const isbn = ldData.isbn || null;
-              const language = ldData.inLanguage || null;
-              const awards = ldData.awards || null;
-              const coverImageUrl = document.querySelector('.BookPage__bookCover img, img.ResponsiveImage')?.src || ldData.image || null;
-              return {
-                title, series, author, authorId,
-                ratingValue, ratingsCount, reviewsCount,
-                description, genres, pageCount, format,
-                publishDate, isbn, language, awards, coverImageUrl,
-              };
-            })()
+            - adapter-verified
+        adapter:
+          name: goodreads
+          operation: getBook
       parameters:
         - name: bookId
           in: path
@@ -212,7 +152,7 @@ paths:
                     description: 'Book format (e.g. Hardcover, Paperback, Kindle Edition).'
                   publishDate:
                     type: [string, 'null']
-                    description: 'Publication date string (e.g. "First published June 1, 1965").'
+                    description: 'Publication date string (e.g. "First published 1965-06-01").'
                   isbn:
                     type: [string, 'null']
                     description: ISBN-13 identifier.
@@ -235,13 +175,12 @@ paths:
           verified: true
           stable_id: gr0003
           signature_id: gr0003s
-          tool_version: 1
+          tool_version: 2
           signals:
-            - extraction_detected
+            - adapter-verified
         adapter:
           name: goodreads
           operation: getReviews
-        transport: page
       parameters:
         - name: bookId
           in: path
@@ -294,40 +233,12 @@ paths:
           verified: true
           stable_id: gr0004
           signature_id: gr0004s
-          tool_version: 1
+          tool_version: 2
           signals:
-            - extraction_detected
-        extraction:
-          type: page_global_data
-          page_url: /author/show/{authorId}
-          expression: |
-            (() => {
-              const name = document.querySelector('h1.authorName span')?.textContent?.trim() || '';
-              const image = document.querySelector('.authorLeftContainer img')?.src || null;
-              const bioEl = document.querySelector('.aboutAuthorInfo span[id*="freeText"]');
-              const bio = bioEl?.textContent?.trim() || null;
-              const born = document.querySelector('[itemprop="birthDate"]')?.textContent?.trim() || null;
-              const died = document.querySelector('[itemprop="deathDate"]')?.textContent?.trim() || null;
-              const website = document.querySelector('a[itemprop="url"]')?.href || null;
-              const genres = [...document.querySelectorAll('.dataItem a[href*="/genres/"]')].map(e => e.textContent.trim());
-              const avgRating = document.querySelector('.authorContentProfile .authorRating, [itemprop="ratingValue"]')?.textContent?.trim() || '';
-              const ratingValue = parseFloat(avgRating) || null;
-              const bookRows = document.querySelectorAll('tr[itemtype="http://schema.org/Book"]');
-              const books = [...bookRows].map(row => {
-                const title = row.querySelector('.bookTitle span[itemprop="name"]')?.textContent?.trim() || '';
-                const bookUrl = row.querySelector('a.bookTitle')?.getAttribute('href') || '';
-                const bookId = bookUrl.match(/\/book\/show\/(\d+)/)?.[1] || '';
-                const minirating = row.querySelector('.minirating')?.textContent?.trim() || '';
-                const rm = minirating.match(/([\d.]+)\s*avg rating/);
-                const rc = minirating.match(/([\d,]+)\s*ratings/);
-                return {
-                  bookId, title,
-                  averageRating: rm ? parseFloat(rm[1]) : null,
-                  ratingsCount: rc ? parseInt(rc[1].replace(/,/g, ''), 10) : null,
-                };
-              });
-              return { name, image, bio, born, died, website, genres, ratingValue, booksCount: books.length, books };
-            })()
+            - adapter-verified
+        adapter:
+          name: goodreads
+          operation: getAuthor
       parameters:
         - name: authorId
           in: path
