@@ -3,6 +3,6 @@
   "replay_safety": "unsafe_mutation",
   "cases": [{
     "input": { "task_id": "PLACEHOLDER" },
-    "assertions": { "status": 204 }
+    "assertions": { "status": 200 }
   }]
 }

@@ -261,8 +261,15 @@ paths:
                   type: string
                   description: "Task ID to complete (from getTasks)"
       responses:
-        "204":
-          description: Task completed successfully (empty response)
+        "200":
+          description: Task completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
 
   /todoist/tasks/uncomplete:
     post:
@@ -290,8 +297,15 @@ paths:
                   type: string
                   description: "Task ID to reopen (from getTasks)"
       responses:
-        "204":
-          description: Task reopened successfully (empty response)
+        "200":
+          description: Task reopened successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
 
   /todoist/tasks/delete:
     post:
@@ -319,5 +333,12 @@ paths:
                   type: string
                   description: "Task ID to delete (from getTasks)"
       responses:
-        "204":
-          description: Task deleted successfully (empty response)
+        "200":
+          description: Task deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
