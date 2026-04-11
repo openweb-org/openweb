@@ -9,7 +9,7 @@ info:
 servers:
   - url: https://m.douban.com
     x-openweb:
-      transport: page
+      transport: node
       auth:
         type: cookie_session
 paths:
@@ -25,6 +25,7 @@ paths:
           stable_id: search_movie_001
           tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: q
           in: query
           required: true
@@ -100,6 +101,7 @@ paths:
           stable_id: movie_detail_001
           tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: id
           in: path
           required: true
@@ -204,6 +206,7 @@ paths:
           stable_id: movie_reviews_001
           tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: id
           in: path
           required: true
@@ -283,6 +286,7 @@ paths:
           stable_id: movie_celebrities_001
           tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: id
           in: path
           required: true
@@ -345,35 +349,38 @@ paths:
                             large:
                               type: string
 
-  /movie/{id}/photos:
+  /rexxar/api/v2/movie/{id}/photos:
     get:
       operationId: getMoviePhotos
-      summary: "Get movie photo gallery — stills, posters, behind the scenes images"
+      summary: "Get movie photo gallery — stills, posters, behind the scenes images with dimensions"
       x-openweb:
         permission: read
         build:
           stable_id: db0004
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: douban-dom
-          operation: getMoviePhotos
+          tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: id
           in: path
           required: true
           schema:
-            type: string
+            type: integer
           description: "Douban movie subject ID"
-          example: "1292052"
-        - name: type
+          example: 1292052
+        - name: count
           in: query
           required: false
           schema:
-            type: string
-            default: S
-          description: "Photo type: S (stills), R (posters), W (wallpapers)"
+            type: integer
+          description: "Number of photos to return (default 20)"
+          example: 10
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Pagination offset"
+          example: 0
       responses:
         "200":
           description: Photo gallery for the movie.
@@ -382,37 +389,60 @@ paths:
               schema:
                 type: object
                 properties:
-                  subjectId:
-                    type: string
+                  count:
+                    type: integer
+                  start:
+                    type: integer
+                  total:
+                    type: integer
                   photos:
                     type: array
                     items:
                       type: object
                       properties:
-                        imageUrl:
+                        id:
                           type: string
-                        pageUrl:
+                        image:
+                          type: object
+                          properties:
+                            large:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                            normal:
+                              type: object
+                              properties:
+                                url:
+                                  type: string
+                                width:
+                                  type: integer
+                                height:
+                                  type: integer
+                        description:
                           type: string
-                        info:
+                        create_time:
                           type: string
-                  totalPhotos:
-                    type: integer
+                        comments_count:
+                          type: integer
+                        likers_count:
+                          type: integer
 
-  /top250:
+  /rexxar/api/v2/subject_collection/movie_top250/items:
     get:
       operationId: getTop250
-      summary: "Get Douban Top 250 movies — rank, title, rating, quote, paginated by 25"
+      summary: "Get Douban Top 250 movies — rank, title, rating, cover, paginated by 25"
       x-openweb:
         permission: read
         build:
           stable_id: db0005
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: douban-dom
-          operation: getTop250
+          tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: start
           in: query
           required: false
@@ -420,6 +450,13 @@ paths:
             type: integer
             default: 0
           description: "Pagination offset (0, 25, 50, ...). Each page returns 25 movies."
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+          description: "Number of movies per page (default 25)"
       responses:
         "200":
           description: Top 250 movies page.
@@ -428,31 +465,53 @@ paths:
               schema:
                 type: object
                 properties:
-                  movies:
+                  count:
+                    type: integer
+                  start:
+                    type: integer
+                  total:
+                    type: integer
+                  subject_collection:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                  subject_collection_items:
                     type: array
                     items:
                       type: object
                       properties:
-                        rank:
-                          type: integer
-                        subjectId:
+                        id:
                           type: string
                         title:
                           type: string
-                        rating:
-                          type: string
-                        ratingCount:
+                        rank:
                           type: integer
-                        quote:
+                        rank_value:
+                          type: integer
+                        rating:
+                          type: object
+                          properties:
+                            count:
+                              type: integer
+                            value:
+                              type: number
+                            star_count:
+                              type: number
+                        cover_url:
                           type: string
-                        info:
+                        card_subtitle:
+                          type: string
+                        description:
+                          type: string
+                        type:
                           type: string
                         url:
                           type: string
-                  start:
-                    type: integer
-                  pageSize:
-                    type: integer
+                        uri:
+                          type: string
 
   # ── Books ───────────────────────────────────────────────────────────
 
@@ -466,6 +525,7 @@ paths:
           stable_id: search_book_001
           tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: q
           in: query
           required: true
@@ -541,6 +601,7 @@ paths:
           stable_id: book_detail_001
           tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: id
           in: path
           required: true
@@ -609,6 +670,7 @@ paths:
           stable_id: book_reviews_001
           tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: id
           in: path
           required: true
@@ -678,9 +740,9 @@ paths:
                         status:
                           type: string
 
-  # ── Music (adapter-only, desktop DOM extraction) ────────────────────
+  # ── Music (mobile JSON API) ─────────────────────────────────────────
 
-  /search/music:
+  /rexxar/api/v2/search/music:
     get:
       operationId: searchMusic
       summary: "Search music/albums by keyword — titles, artists, ratings, covers"
@@ -688,19 +750,29 @@ paths:
         permission: read
         build:
           stable_id: db0009
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: douban-dom
-          operation: searchMusic
+          tool_version: 2
       parameters:
-        - name: query
+        - $ref: '#/components/parameters/Referer'
+        - name: q
           in: query
           required: true
           schema:
             type: string
           description: "Search keyword (e.g., \"周杰伦\", \"Beatles\")"
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Number of results to return (default 20, max 50)"
+          example: 20
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Pagination offset (default 0)"
+          example: 0
       responses:
         "200":
           description: Music search results.
@@ -709,27 +781,43 @@ paths:
               schema:
                 type: object
                 properties:
-                  results:
+                  count:
+                    type: integer
+                  start:
+                    type: integer
+                  total:
+                    type: integer
+                  items:
                     type: array
                     items:
                       type: object
                       properties:
-                        subjectId:
+                        target_id:
                           type: string
-                        title:
+                        target:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            title:
+                              type: string
+                            rating:
+                              type: object
+                              properties:
+                                count:
+                                  type: integer
+                                value:
+                                  type: number
+                            cover_url:
+                              type: string
+                            card_subtitle:
+                              type: string
+                            uri:
+                              type: string
+                        target_type:
                           type: string
-                        rating:
-                          type: string
-                        meta:
-                          type: string
-                        url:
-                          type: string
-                        coverImage:
-                          type: string
-                  totalResults:
-                    type: integer
 
-  /music/{id}:
+  /rexxar/api/v2/music/{id}:
     get:
       operationId: getMusicDetail
       summary: "Get album detail — rating, artist, tracklist, genre, release date, publisher"
@@ -737,20 +825,16 @@ paths:
         permission: read
         build:
           stable_id: db0010
-          tool_version: 1
-          signals:
-            - adapter-verified
-        adapter:
-          name: douban-dom
-          operation: getMusicDetail
+          tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: id
           in: path
           required: true
           schema:
-            type: string
-          description: "Douban music subject ID (e.g., \"1401853\" for Jay Chou's 七里香)"
-          example: "1401853"
+            type: integer
+          description: "Douban music subject ID (e.g., 1401853 for Jay Chou's 七里香)"
+          example: 1401853
       responses:
         "200":
           description: Full album detail.
@@ -759,34 +843,72 @@ paths:
               schema:
                 type: object
                 properties:
-                  subjectId:
+                  id:
                     type: string
                   title:
                     type: string
                   rating:
-                    type: string
-                  ratingCount:
-                    type: integer
-                  poster:
-                    type: string
-                  artist:
-                    type: string
-                  genre:
-                    type: string
-                  albumType:
-                    type: string
-                  medium:
-                    type: string
-                  releaseDate:
-                    type: string
-                  publisher:
-                    type: string
-                  alias:
-                    type: string
-                  tracks:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      max:
+                        type: integer
+                      value:
+                        type: number
+                      star_count:
+                        type: number
+                  singer:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                  genres:
                     type: array
                     items:
                       type: string
+                  pubdate:
+                    type: array
+                    items:
+                      type: string
+                  publisher:
+                    type: array
+                    items:
+                      type: string
+                  media:
+                    type: array
+                    items:
+                      type: string
+                  songs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                  intro:
+                    type: string
+                  cover_url:
+                    type: string
+                  pic:
+                    type: object
+                    properties:
+                      large:
+                        type: string
+                      normal:
+                        type: string
+                  card_subtitle:
+                    type: string
+                  review_count:
+                    type: integer
+                  comment_count:
+                    type: integer
+                  url:
+                    type: string
+                  uri:
+                    type: string
 
   # ── Trending / Discovery ────────────────────────────────────────────
 
@@ -800,6 +922,7 @@ paths:
           stable_id: recent_hot_movie_001
           tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: limit
           in: query
           required: false
@@ -865,6 +988,7 @@ paths:
           stable_id: recent_hot_tv_001
           tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: limit
           in: query
           required: false
@@ -932,6 +1056,7 @@ paths:
           stable_id: now_showing_001
           tool_version: 2
       parameters:
+        - $ref: '#/components/parameters/Referer'
         - name: count
           in: query
           required: false
@@ -1007,3 +1132,13 @@ paths:
                           type: string
                         uri:
                           type: string
+
+components:
+  parameters:
+    Referer:
+      name: Referer
+      in: header
+      required: false
+      schema:
+        type: string
+        default: "https://m.douban.com/"

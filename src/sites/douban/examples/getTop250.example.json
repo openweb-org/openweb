@@ -1,0 +1,16 @@
+{
+  "operation_id": "getTop250",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "start": 0,
+        "count": 5
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

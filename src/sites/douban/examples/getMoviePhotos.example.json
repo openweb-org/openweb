@@ -1,0 +1,16 @@
+{
+  "operation_id": "getMoviePhotos",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": 1292052,
+        "count": 5
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

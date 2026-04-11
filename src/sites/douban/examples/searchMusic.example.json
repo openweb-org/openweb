@@ -1,0 +1,16 @@
+{
+  "operation_id": "searchMusic",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "q": "周杰伦",
+        "count": 5
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

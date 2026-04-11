@@ -1,0 +1,15 @@
+{
+  "operation_id": "getMusicDetail",
+  "method": "get",
+  "cases": [
+    {
+      "input": {
+        "id": 1401853
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
