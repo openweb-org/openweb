@@ -4,6 +4,9 @@
  * WhatsApp Web uses Meta's proprietary module system (__d/__w/require).
  * Data lives in Backbone-style collections accessible via require('WAWeb*').
  * No REST/GraphQL API exists — all data goes through internal modules.
+ *
+ * Write ops use WAWebSendTextMsgChatAction.sendTextMsgToChat (send) and
+ * chat.deleteMessages() (delete) — zero DOM, zero selectors.
  */
 import type { Page } from 'patchright'
 
@@ -185,69 +188,42 @@ export default {
 }
 
 // ── sendMessage ─────────────────────────────────────────────────
-// Uses Playwright keyboard to type into the compose box and press Enter.
-// Store-level addAndSendMsgToChat silently drops messages in the adapter
-// execution context, so DOM interaction is the reliable approach.
-
-const COMPOSE_SELECTOR = 'div[contenteditable="true"][data-tab="10"]'
+// Uses WAWebSendTextMsgChatAction.sendTextMsgToChat — direct internal
+// module call via page.evaluate. Zero DOM, zero selectors.
+// Returns {messageSendResult, t} from the internal WS round-trip.
 
 async function sendMessage(
   page: Page,
   chatId: string,
   message: string,
 ): Promise<{ success: boolean; timestamp: number }> {
-  // 1. Open the chat via internal command
-  await page.evaluate((id: string) => {
-    const req = (window as Record<string, unknown>).require as (m: string) => Record<string, unknown>
-    const col = req('WAWebChatCollection').ChatCollection as {
-      getModelsArray: () => Array<Record<string, unknown>>
-    }
-    const chat = col.getModelsArray().find(
-      (c) => (c.id as Record<string, unknown>)?._serialized === id,
-    )
-    if (!chat) throw new Error(`Chat not found: ${id}`)
-    const cmd = req('WAWebCmd') as { Cmd: { openChatBottom: (opts: { chat: unknown }) => void } }
-    cmd.Cmd.openChatBottom({ chat })
-  }, chatId)
+  return page.evaluate(
+    (args: { chatId: string; message: string }) => {
+      const req = (window as Record<string, unknown>).require as (m: string) => Record<string, unknown>
+      const col = req('WAWebChatCollection').ChatCollection as {
+        getModelsArray: () => Array<Record<string, unknown>>
+      }
+      const chat = col.getModelsArray().find(
+        (c) => (c.id as Record<string, unknown>)?._serialized === args.chatId,
+      )
+      if (!chat) throw new Error(`Chat not found: ${args.chatId}`)
 
-  // 2. Wait for compose box
-  await page.waitForSelector(COMPOSE_SELECTOR, { timeout: 5000 })
-  await page.click(COMPOSE_SELECTOR)
-  await page.waitForTimeout(200)
+      const sendMod = req('WAWebSendTextMsgChatAction') as {
+        sendTextMsgToChat: (chat: unknown, text: string, opts: Record<string, unknown>) => Promise<{ messageSendResult: string; t: number }>
+      }
 
-  // 3. Type message and send
-  await page.keyboard.type(message, { delay: 20 })
-  await page.waitForTimeout(200)
-  await page.keyboard.press('Enter')
-
-  // 4. Wait for WS round-trip
-  await page.waitForTimeout(2000)
-
-  // 5. Verify via Store
-  return page.evaluate((id: string) => {
-    const req = (window as Record<string, unknown>).require as (m: string) => Record<string, unknown>
-    const col = req('WAWebChatCollection').ChatCollection as {
-      getModelsArray: () => Array<Record<string, unknown>>
-    }
-    const chat = col.getModelsArray().find(
-      (c) => (c.id as Record<string, unknown>)?._serialized === id,
-    )
-    if (!chat) return { success: false, timestamp: 0 }
-    const msgs = (chat.msgs as { getModelsArray: () => Array<Record<string, unknown>> }).getModelsArray()
-    const last = msgs.at(-1)
-    if (!last || !(last.id as Record<string, unknown>)?.fromMe) {
-      return { success: false, timestamp: 0 }
-    }
-    return {
-      success: true,
-      timestamp: (last.t as number) ?? 0,
-    }
-  }, chatId)
+      return sendMod.sendTextMsgToChat(chat, args.message, {}).then((result) => ({
+        success: result.messageSendResult === 'OK',
+        timestamp: result.t ?? 0,
+      }))
+    },
+    { chatId, message },
+  )
 }
 
 // ── deleteMessage ──────────────────────────────────────────────
-// Reverse of sendMessage. Uses internal chat.deleteMessages() which
-// calls deleteMsgsPartial → msg.delete() under the hood ("delete for me").
+// Uses internal chat.deleteMessages() which calls deleteMsgsPartial →
+// msg.delete() under the hood ("delete for me").
 
 async function deleteMessage(
   page: Page,

@@ -31,7 +31,7 @@ Messaging platform — L3 adapter accessing Meta's internal module system via `r
 | getContacts | list contacts | limit | id, name, isMe | entry point |
 | searchChats | find chats by name | query | id, name, isGroup | client-side filter |
 | getChatById | chat detail | chatId ← getChats | archived, pinned, muted, lastMessage | |
-| sendMessage | send text | chatId ← getChats, message | success, timestamp | write — uses DOM keyboard input |
+| sendMessage | send text | chatId ← getChats, message | success, timestamp | write — internal module `sendTextMsgToChat` |
 | deleteMessage | delete message | chatId ← getChats, messageId ← getMessages | success | write/caution — internal module `chat.deleteMessages()` |
 | markAsRead | mark read/unread | chatId ← getChats, read | success | write |
 
@@ -77,6 +77,10 @@ All data access goes through Meta's Metro-style module system (`require('WAWeb*'
 | `WAWebCollections` | Master store: Chat, Msg, Contact, Presence, Label |
 | `WAWebCmd` | UI commands (openChat, sendStar) |
 | `WAWebChatSeenBridge` | Mark read/unread |
+| `WAWebSendTextMsgChatAction` | `sendTextMsgToChat` — send text message via internal WS |
+| `WAWebSendMsgChatAction` | `addAndSendMsgToChat` — lower-level send (raw msg object) |
+| `WAWebMsgKey` | Message key utilities |
+| `WAWebMsgCollection` | Message collection model |
 
 ## Auth
 QR code scan in headed browser. Session persists in browser profile. No standard auth primitive — adapter checks `ChatCollection.length > 0` to verify auth.
@@ -87,7 +91,7 @@ QR code scan in headed browser. Session persists in browser profile. No standard
 ## Known Issues
 - **QR scan required**: User must scan QR code in managed browser before operations work.
 - **Binary WS**: Standard capture produces 0 usable API samples — adapter-only site.
-- **sendMessage uses DOM input**: Store-level `addAndSendMsgToChat` silently drops messages in adapter context. Compose box keyboard input is the reliable approach.
+- **All write ops use internal modules**: `sendTextMsgToChat` for sending, `chat.deleteMessages()` for deleting, `markConversationSeen` for read status. Zero DOM interaction.
 - **Messages decrypted in memory only**: IndexedDB stores empty message bodies — messages only exist decrypted in the in-memory Store.
 - **Module names may change**: Meta can rename `WAWeb*` module IDs in updates.
 - **deleteMessage uses internal module**: Uses `chat.deleteMessages([id])` for "delete for me" — no DOM interaction, stable across UI updates.
