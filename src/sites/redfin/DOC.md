@@ -17,9 +17,9 @@ Real estate marketplace — search homes for sale, view property details, and ch
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchHomes | Search homes by city | regionId, state, city | listings with price, address, sqft | Entry point; ~40 listings per page |
-| getPropertyDetails | Full property detail | state, city, address, propertyId ← URL from searchHomes | beds, baths, sqft, price, amenities, photos | JSON-LD extraction |
-| getMarketData | Housing market stats | regionId, state, city | median price, homes sold, days on market | Housing market page |
+| searchHomes | Search homes by city | regionId, state, city | listings with price, address, sqft | Stingray GIS API; 20 homes per page |
+| getPropertyDetails | Full property detail | state, city, address, propertyId ← URL from searchHomes | beds, baths, sqft, price, amenities, photos | JSON-LD from fetched HTML |
+| getMarketData | Housing market stats | regionId, state, city | median price, homes sold, days on market | HTML text regex extraction |
 
 ## Quick Start
 
@@ -39,19 +39,20 @@ openweb redfin exec getMarketData '{"regionId":"16163","state":"WA","city":"Seat
 ## Site Internals
 
 ## API Architecture
-- **Fully SSR-rendered** — all data baked into initial HTML, not fetched via XHR/fetch.
-- Internal `/stingray/api/*` endpoints exist but are minor supporting utilities only.
-- **JSON-LD structured data** (`<script type="application/ld+json">`) is the primary extraction source for search and property details.
-- Housing market pages use text content from the rendered DOM.
+- **Stingray API** (`/stingray/api/*`) is Redfin's internal API layer. Responses use `{}&&{JSON}` JSONP protection prefix.
+- **GIS endpoint** (`/stingray/api/gis`) returns rich search results: MLS ID, price, beds, baths, sqft, lot size, year built, lat/long, photos, days on market.
+- **Property detail APIs** (`belowTheFold`, `aboveTheFold`) are CloudFront WAF-blocked. Only `avm` and `descriptiveParagraph` are accessible.
+- **JSON-LD structured data** in property page HTML provides the most complete property details.
+- **No market data API** exists — housing market stats are SSR-rendered text only.
 
 ## Auth
 No auth required. All operations use public listing data.
 
 ## Transport
-- **`page` transport** — all data comes from rendered pages via DOM extraction.
-- Requires an open `www.redfin.com` page.
+- **`page` transport** with `pageFetch` — adapter calls APIs and fetches HTML via `page.evaluate(fetch(...))`. No DOM rendering or selectors.
+- Zero DOM operations: no querySelector, no click, no keyboard input.
 
 ## Known Issues
-- **No bot detection** — headless Chrome works without issues.
-- **DOM-dependent**: JSON-LD uses standard schema.org types (more stable than CSS selectors), but market data parsing depends on Redfin's text formatting.
+- **No bot detection** observed on API or HTML page requests. All data accessible from Node.js.
 - **Region IDs**: Must know the Redfin region ID for search (e.g., Seattle = 16163, San Francisco = 17151). Not discoverable via API.
+- **Market data fragility**: Regex text extraction depends on Redfin's text formatting. Price displayed as "$850K" not "$850,000".

@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.redfin.com",
-  "description": "Real estate search, property details, and housing market data via browser DOM/JSON-LD extraction",
+  "description": "Real estate search, property details, and housing market data via Stingray API + HTML fetch",
   "requires_auth": false,
   "dependencies": {},
   "stats": {

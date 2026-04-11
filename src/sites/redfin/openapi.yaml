@@ -23,7 +23,7 @@ paths:
           signals:
             - adapter-verified
         adapter:
-          name: redfin-dom
+          name: redfin
           operation: searchHomes
       parameters:
         - name: regionId
@@ -115,7 +115,7 @@ paths:
           signals:
             - adapter-verified
         adapter:
-          name: redfin-dom
+          name: redfin
           operation: getPropertyDetails
       parameters:
         - name: state
@@ -223,7 +223,7 @@ paths:
           signals:
             - adapter-verified
         adapter:
-          name: redfin-dom
+          name: redfin
           operation: getMarketData
       parameters:
         - name: regionId
