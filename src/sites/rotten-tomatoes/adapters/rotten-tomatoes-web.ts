@@ -1,196 +1,268 @@
 import type { Page } from 'patchright'
 
 /**
- * Rotten Tomatoes adapter — extracts movie search results, detail, and
- * Tomatometer scores from DOM elements and LD+JSON.
+ * Rotten Tomatoes adapter — node-native HTML parsing.
  *
- * Data sources:
- * - Search: `search-page-media-row` web component attributes + inner links
- * - Detail: LD+JSON (schema.org Movie) + `media-scorecard` web component
- * - Tomatometer: `media-scorecard` slots (critics + audience scores)
+ * All data is server-rendered (SSR) and extractable via plain HTTP fetch.
+ * No browser needed: search results live in `search-page-media-row` element
+ * attributes, detail pages embed LD+JSON (schema.org Movie) + `media-scorecard`
+ * web component slots with score data in the HTML source.
+ *
+ * Uses Node.js native fetch — the Page parameter is unused but required by
+ * the adapter interface.
  */
+
+const UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+
+async function fetchHtml(url: string): Promise<string> {
+  const resp = await fetch(url, {
+    headers: { 'User-Agent': UA, Accept: 'text/html' },
+  })
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${url}`)
+  return resp.text()
+}
+
+/** Extract an HTML attribute value from an element string. */
+function attr(el: string, name: string): string | null {
+  const m = el.match(new RegExp(`${name}="([^"]*)"`, 's'))
+  return m ? m[1] : null
+}
+
+/** Decode common HTML entities. */
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+}
 
 /* ---------- searchMovies ---------- */
 
 async function searchMovies(
-  page: Page,
+  _page: Page,
   params: Record<string, unknown>,
 ): Promise<unknown> {
   const query = String(params.query || '')
   if (!query) throw new Error('query is required')
 
   const url = `https://www.rottentomatoes.com/search?search=${encodeURIComponent(query)}`
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
-  await page
-    .waitForSelector('search-page-media-row', { timeout: 10_000 })
-    .catch(() => {})
+  const html = await fetchHtml(url)
 
-  return page.evaluate(() => {
-    const rows = document.querySelectorAll(
-      'search-page-result[type="movie"] search-page-media-row',
-    )
-    const movies: unknown[] = []
-    for (const row of rows) {
-      const link = row.querySelector('a[href*="/m/"]') as HTMLAnchorElement | null
-      const img = row.querySelector('img') as HTMLImageElement | null
-      movies.push({
-        title: img?.alt || link?.textContent?.trim() || null,
-        url: link?.href || null,
-        slug: link?.href?.match(/\/m\/([^/?]+)/)?.[1] || null,
-        year: row.getAttribute('release-year') || null,
-        tomatometerScore: row.getAttribute('tomatometer-score') || null,
-        tomatometerSentiment: row.getAttribute('tomatometer-sentiment') || null,
-        isCertifiedFresh:
-          row.getAttribute('tomatometer-is-certified') === 'true',
-        cast: row.getAttribute('cast') || null,
-        thumbnail: img?.src || null,
-      })
+  // Isolate the movie results section
+  const movieSectionMatch = html.match(
+    /<search-page-result[^>]*type="movie"[^>]*>([\s\S]*?)<\/search-page-result>/,
+  )
+  const section = movieSectionMatch?.[1] ?? ''
+
+  // Extract each search-page-media-row element
+  const rowRegex = /<search-page-media-row\s+([\s\S]*?)>([\s\S]*?)<\/search-page-media-row>/g
+  const movies: unknown[] = []
+  let m: RegExpExecArray | null
+  while ((m = rowRegex.exec(section)) !== null) {
+    const attrs = m[1]
+    const inner = m[2]
+
+    // Title from img alt or link text
+    const imgAlt = inner.match(/<img[^>]*alt="([^"]*)"/)
+    const linkText = inner.match(/<a[^>]*href="[^"]*\/m\/[^"]*"[^>]*>([\s\S]*?)<\/a>/)
+    const title = imgAlt?.[1] || linkText?.[1]?.replace(/<[^>]*>/g, '').trim() || null
+
+    // URL — the href may be absolute or relative
+    const hrefMatch = inner.match(/href="([^"]*\/m\/[^"]*)"/)
+    let movieUrl: string | null = null
+    let slug: string | null = null
+    if (hrefMatch) {
+      const href = hrefMatch[1]
+      movieUrl = href.startsWith('http') ? href : `https://www.rottentomatoes.com${href}`
+      slug = href.match(/\/m\/([^/?]+)/)?.[1] || null
     }
-    return { count: movies.length, movies }
-  })
+
+    // Thumbnail
+    const imgSrc = inner.match(/<img[^>]*src="([^"]*)"/)
+
+    movies.push({
+      title: title ? decodeEntities(title) : null,
+      url: movieUrl,
+      slug,
+      year: attr(attrs, 'release-year') || null,
+      tomatometerScore: attr(attrs, 'tomatometer-score') || null,
+      tomatometerSentiment: attr(attrs, 'tomatometer-sentiment') || null,
+      isCertifiedFresh: attr(attrs, 'tomatometer-is-certified') === 'true',
+      cast: attr(attrs, 'cast') || null,
+      thumbnail: imgSrc?.[1] || null,
+    })
+  }
+
+  return { count: movies.length, movies }
 }
 
 /* ---------- getMovieDetail ---------- */
 
 async function getMovieDetail(
-  page: Page,
+  _page: Page,
   params: Record<string, unknown>,
 ): Promise<unknown> {
   const slug = String(params.slug || '')
   if (!slug) throw new Error('slug is required')
 
   const url = `https://www.rottentomatoes.com/m/${encodeURIComponent(slug)}`
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
-  await page
-    .waitForSelector('media-scorecard', { timeout: 10_000 })
-    .catch(() => {})
+  const html = await fetchHtml(url)
 
-  return page.evaluate(() => {
-    // LD+JSON extraction
-    const ldEl = document.querySelector('script[type="application/ld+json"]')
-    let ld: Record<string, unknown> = {}
-    if (ldEl?.textContent) {
-      try {
-        ld = JSON.parse(ldEl.textContent)
-      } catch {}
-    }
+  // LD+JSON extraction
+  const ldMatch = html.match(
+    /<script type="application\/ld\+json">([\s\S]*?)<\/script>/,
+  )
+  let ld: Record<string, unknown> = {}
+  if (ldMatch) {
+    try {
+      ld = JSON.parse(ldMatch[1])
+    } catch { /* ignore */ }
+  }
 
-    // Scores from media-scorecard
-    const scorecard = document.querySelector('media-scorecard')
-    const criticsScoreEl = scorecard?.querySelector('[slot=critics-score]')
-    const audienceScoreEl = scorecard?.querySelector('[slot=audience-score]')
-    const criticsIcon = scorecard?.querySelector('score-icon-critics')
-    const audienceIcon = scorecard?.querySelector('score-icon-audience')
-    const criticsReviewsEl = scorecard?.querySelector(
-      'rt-link[href*="/reviews"]',
-    )
+  // Scores from the first (main) media-scorecard
+  const scorecardMatch = html.match(
+    /<media-scorecard[\s\S]*?<\/media-scorecard>/,
+  )
+  const sc = scorecardMatch?.[0] ?? ''
 
-    // Synopsis
-    const synopsisEl = document.querySelector('[data-qa=synopsis-value]')
-      || document.querySelector('[data-qa="movie-info-synopsis"]')
+  const criticsScore = sc.match(/slot="critics-score"[^>]*>\s*(\d+%)/)?.[1] ?? null
+  const criticsIcon = sc.match(/<score-icon-critics([^>]*)>/)?.[1] ?? ''
+  const audienceScore = sc.match(/slot="audience-score"[^>]*>\s*(\d+%)/)?.[1] ?? null
 
-    // Cast from LD+JSON
-    const actors = Array.isArray(ld.actor)
-      ? (ld.actor as Array<Record<string, unknown>>).map((a) => ({
-          name: a.name ?? null,
-          url: a.sameAs ?? null,
-        }))
-      : []
+  // Review count from rt-link with /reviews path
+  const reviewLink = sc.match(
+    /href="[^"]*\/reviews[^"]*"[^>]*>\s*([\d,]+)\s*Reviews/,
+  )
+  const reviewCount = reviewLink
+    ? Number(reviewLink[1].replace(/,/g, ''))
+    : null
 
-    const directors = Array.isArray(ld.director)
-      ? (ld.director as Array<Record<string, unknown>>).map((d) => ({
-          name: d.name ?? null,
-          url: d.sameAs ?? null,
-        }))
-      : []
+  // Synopsis
+  const synopsisMatch = html.match(
+    /data-qa="synopsis-value"[^>]*>([\s\S]*?)<\//,
+  )
+  const synopsis = synopsisMatch
+    ? decodeEntities(synopsisMatch[1].trim())
+    : (ld.description as string) || null
 
-    const rating = ld.aggregateRating as Record<string, unknown> | undefined
+  // Cast from LD+JSON
+  const actors = Array.isArray(ld.actor)
+    ? (ld.actor as Array<Record<string, unknown>>).map((a) => ({
+        name: (a.name as string) ?? null,
+        url: (a.sameAs as string) ?? null,
+      }))
+    : []
 
-    return {
-      title: (ld.name as string) || document.title.replace(/ \| Rotten Tomatoes$/, '') || null,
-      url: (ld.url as string) || window.location.href,
-      synopsis:
-        synopsisEl?.textContent?.trim()
-        || (ld.description as string)
-        || null,
-      contentRating: (ld.contentRating as string) || null,
-      releaseDate: (ld.dateCreated as string) || null,
-      genre: Array.isArray(ld.genre) ? ld.genre : [],
-      poster: (ld.image as string) || null,
-      tomatometerScore: criticsScoreEl?.textContent?.trim() || null,
-      tomatometerSentiment: criticsIcon?.getAttribute('sentiment') || null,
-      isCertifiedFresh: criticsIcon?.getAttribute('certified') === 'true',
-      criticsReviewCount:
-        Number(rating?.ratingCount) || Number(criticsReviewsEl?.textContent?.match(/(\d+)/)?.[1]) || null,
-      audienceScore: audienceScoreEl?.textContent?.trim() || null,
-      audienceSentiment: audienceIcon?.getAttribute('sentiment') || null,
-      cast: actors,
-      directors,
-    }
-  })
+  const directors = Array.isArray(ld.director)
+    ? (ld.director as Array<Record<string, unknown>>).map((d) => ({
+        name: (d.name as string) ?? null,
+        url: (d.sameAs as string) ?? null,
+      }))
+    : []
+
+  const rating = ld.aggregateRating as Record<string, unknown> | undefined
+
+  // Certified fresh: boolean attribute (presence = true)
+  const isCertified =
+    /\bcertified\b/.test(criticsIcon) &&
+    !criticsIcon.includes('certified="false"')
+
+  return {
+    title: (ld.name as string) || null,
+    url: (ld.url as string) || url,
+    synopsis,
+    contentRating: (ld.contentRating as string) || null,
+    releaseDate: (ld.dateCreated as string) || null,
+    genre: Array.isArray(ld.genre) ? ld.genre : [],
+    poster: (ld.image as string) || null,
+    tomatometerScore: criticsScore,
+    tomatometerSentiment:
+      attr(criticsIcon, 'sentiment')?.toUpperCase() || null,
+    isCertifiedFresh: isCertified,
+    criticsReviewCount: Number(rating?.ratingCount) || reviewCount,
+    audienceScore,
+    audienceSentiment:
+      attr(sc.match(/<score-icon-audience([^>]*)>/)?.[1] ?? '', 'sentiment')?.toUpperCase() || null,
+    cast: actors,
+    directors,
+  }
 }
 
 /* ---------- getTomatoMeter ---------- */
 
 async function getTomatoMeter(
-  page: Page,
+  _page: Page,
   params: Record<string, unknown>,
 ): Promise<unknown> {
   const slug = String(params.slug || '')
   if (!slug) throw new Error('slug is required')
 
   const url = `https://www.rottentomatoes.com/m/${encodeURIComponent(slug)}`
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
-  await page
-    .waitForSelector('media-scorecard', { timeout: 10_000 })
-    .catch(() => {})
+  const html = await fetchHtml(url)
 
-  return page.evaluate(() => {
-    const scorecard = document.querySelector('media-scorecard')
-    const criticsScoreEl = scorecard?.querySelector('[slot=critics-score]')
-    const criticsTypeEl = scorecard?.querySelector('[slot=critics-score-type]')
-    const criticsIcon = scorecard?.querySelector('score-icon-critics')
-    const criticsReviewsEl = scorecard?.querySelector(
-      'rt-link[href*="/reviews"]',
+  // Title from page title
+  const titleMatch = html.match(/<title>([^<]*)<\/title>/)
+  const title = titleMatch
+    ? decodeEntities(titleMatch[1].replace(/ \| Rotten Tomatoes$/, ''))
+    : null
+
+  // Main scorecard
+  const scorecardMatch = html.match(
+    /<media-scorecard[\s\S]*?<\/media-scorecard>/,
+  )
+  const sc = scorecardMatch?.[0] ?? ''
+
+  const criticsScore = sc.match(/slot="critics-score"[^>]*>\s*(\d+%)/)?.[1] ?? null
+  const criticsType = sc.match(/slot="critics-score-type"[^>]*>([^<]+)/)?.[1]?.trim() ?? null
+  const criticsIcon = sc.match(/<score-icon-critics([^>]*)>/)?.[1] ?? ''
+  const isCertified =
+    /\bcertified\b/.test(criticsIcon) &&
+    !criticsIcon.includes('certified="false"')
+
+  const audienceScore = sc.match(/slot="audience-score"[^>]*>\s*(\d+%)/)?.[1] ?? null
+  const audienceType = sc.match(/slot="audience-score-type"[^>]*>([^<]+)/)?.[1]?.trim() ?? null
+  const audienceIcon = sc.match(/<score-icon-audience([^>]*)>/)?.[1] ?? ''
+
+  // Review count from LD+JSON aggregateRating or rt-link
+  const ldMatch = html.match(
+    /<script type="application\/ld\+json">([\s\S]*?)<\/script>/,
+  )
+  let ratingCount: number | null = null
+  if (ldMatch) {
+    try {
+      const ld = JSON.parse(ldMatch[1])
+      ratingCount = Number(ld.aggregateRating?.ratingCount) || null
+    } catch { /* ignore */ }
+  }
+  if (!ratingCount) {
+    const reviewLink = sc.match(
+      /href="[^"]*\/reviews[^"]*"[^>]*>\s*([\d,]+)\s*Reviews/,
     )
+    ratingCount = reviewLink
+      ? Number(reviewLink[1].replace(/,/g, ''))
+      : null
+  }
 
-    const audienceScoreEl = scorecard?.querySelector('[slot=audience-score]')
-    const audienceTypeEl = scorecard?.querySelector('[slot=audience-score-type]')
-    const audienceIcon = scorecard?.querySelector('score-icon-audience')
-
-    // LD+JSON for aggregate rating
-    const ldEl = document.querySelector('script[type="application/ld+json"]')
-    let rating: Record<string, unknown> = {}
-    if (ldEl?.textContent) {
-      try {
-        const ld = JSON.parse(ldEl.textContent)
-        rating = (ld.aggregateRating as Record<string, unknown>) || {}
-      } catch {}
-    }
-
-    return {
-      title:
-        document.title.replace(/ \| Rotten Tomatoes$/, '') || null,
-      url: window.location.href,
-      tomatometer: {
-        score: criticsScoreEl?.textContent?.trim() || null,
-        label: criticsTypeEl?.textContent?.trim() || null,
-        sentiment: criticsIcon?.getAttribute('sentiment') || null,
-        isCertifiedFresh: criticsIcon?.getAttribute('certified') === 'true',
-        reviewCount:
-          Number(rating.ratingCount)
-          || Number(
-            criticsReviewsEl?.textContent?.match(/(\d+)/)?.[1],
-          )
-          || null,
-      },
-      audienceScore: {
-        score: audienceScoreEl?.textContent?.trim() || null,
-        label: audienceTypeEl?.textContent?.trim() || null,
-        sentiment: audienceIcon?.getAttribute('sentiment') || null,
-      },
-    }
-  })
+  return {
+    title,
+    url,
+    tomatometer: {
+      score: criticsScore,
+      label: criticsType,
+      sentiment: attr(criticsIcon, 'sentiment')?.toUpperCase() || null,
+      isCertifiedFresh: isCertified,
+      reviewCount: ratingCount,
+    },
+    audienceScore: {
+      score: audienceScore,
+      label: audienceType,
+      sentiment: attr(audienceIcon, 'sentiment')?.toUpperCase() || null,
+    },
+  }
 }
 
 /* ---------- Adapter export ---------- */
@@ -207,10 +279,10 @@ const OPERATIONS: Record<
 const adapter = {
   name: 'rotten-tomatoes-web',
   description:
-    'Rotten Tomatoes — extracts movie data, Tomatometer, and audience scores from DOM and LD+JSON',
+    'Rotten Tomatoes — node-native SSR HTML parsing (LD+JSON + element attributes)',
 
-  async init(page: Page): Promise<boolean> {
-    return page.url().includes('rottentomatoes.com')
+  async init(_page: Page): Promise<boolean> {
+    return true // No browser init needed — uses native fetch
   },
 
   async isAuthenticated(_page: Page): Promise<boolean> {

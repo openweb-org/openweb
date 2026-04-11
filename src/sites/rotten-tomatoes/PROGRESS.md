@@ -1,3 +1,28 @@
+## 2026-04-11: Transport upgrade — DOM extraction → node-native HTML parsing
+
+**What changed:**
+- Rewrote `rotten-tomatoes-web.ts` adapter: replaced all `page.goto()` + `page.evaluate(DOM)` with Node.js native `fetch()` + regex HTML parsing
+- All 3 ops (searchMovies, getMovieDetail, getTomatoMeter) now parse raw SSR HTML
+- Zero DOM dependency: no `querySelector`, no `waitForSelector`, no web component rendering
+- Updated DOC.md to reflect new architecture
+- Added summary.md with full probe → discover → upgrade record
+
+**Probe findings:**
+- No internal JSON API — all data is SSR HTML
+- No webpack, no patched fetch, no client-side signing
+- `__RT__` global has only feature flags, not data
+- `/cnapi/` endpoints found (videos, sidebar, suggestions) but none for search/movie data
+- Node.js fetch returns full SSR HTML with no bot detection
+
+**Why:**
+- DOM extraction (querySelector on rendered web components) is the most fragile tier
+- All needed data lives in SSR HTML: `search-page-media-row` attributes, LD+JSON, `media-scorecard` slots
+- Node-native fetch eliminates dependency on browser rendering
+
+**Verification:** `pnpm --silent dev verify rotten-tomatoes --browser` → 3/3 PASS
+
+---
+
 ## 2026-04-09: Polish — docs, schema, examples
 
 **What changed:**

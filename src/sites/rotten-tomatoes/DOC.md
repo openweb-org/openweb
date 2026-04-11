@@ -21,7 +21,7 @@ Movie review aggregator. Search movies, get details with Tomatometer and audienc
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | searchMovies | search for movies | query | title, slug, year, tomatometerScore, isCertifiedFresh, cast | entry point, movies only (filters out TV/celebrity) |
-| getMovieDetail | get full movie details | slug ← searchMovies | title, synopsis, tomatometerScore, audienceScore, cast, directors, genre | LD+JSON + DOM extraction |
+| getMovieDetail | get full movie details | slug ← searchMovies | title, synopsis, tomatometerScore, audienceScore, cast, directors, genre | LD+JSON + scorecard HTML parsing |
 | getTomatoMeter | get scores only | slug ← searchMovies | tomatometer (score, sentiment, reviewCount), audienceScore (score, sentiment) | lightweight score-focused view |
 
 ## Quick Start
@@ -42,9 +42,10 @@ openweb rotten-tomatoes exec getTomatoMeter '{"slug":"inception"}'
 ## Site Internals
 
 ### API Architecture
-- No public API — all data is server-rendered HTML
+- No public API — all data is server-rendered HTML (SSR)
 - Search results use `search-page-media-row` custom web components with data in element attributes
 - Movie detail pages embed LD+JSON (schema.org Movie) and use `media-scorecard` web components for scores
+- All data extractable via plain HTTP fetch + HTML parsing — no browser rendering needed
 - `__RT__` global exists but contains only feature flags and utility functions, not data
 
 ### Auth
@@ -52,14 +53,15 @@ openweb rotten-tomatoes exec getTomatoMeter '{"slug":"inception"}'
 - `requires_auth: false`
 
 ### Transport
-- `page` — DOM extraction requires browser rendering
-- Adapter navigates to target URL, waits for web components, extracts via `page.evaluate()`
-- No bot detection observed (no Akamai, PerimeterX, or DataDome challenges during probe)
+- `page` transport with adapter — but adapter uses Node.js native `fetch()` internally
+- No DOM dependency: parses raw SSR HTML (element attributes + LD+JSON + scorecard slots)
+- No bot detection observed — pure node fetch returns full SSR HTML
+- No webpack, no patched fetch, no client-side signing
 
 ### Extraction
-- **Search:** DOM attributes from `search-page-media-row` (tomatometer-score, release-year, cast, etc.)
-- **Detail:** LD+JSON for structured data (cast, director, rating, genre) + `media-scorecard` slots for live scores
-- **Scores:** `media-scorecard` component with `score-icon-critics` and `score-icon-audience` sub-components
+- **Search:** HTML attributes from `search-page-media-row` elements (tomatometer-score, release-year, cast, etc.)
+- **Detail:** LD+JSON for structured data (cast, director, rating, genre) + `media-scorecard` score slots in HTML
+- **Scores:** `media-scorecard` HTML with `score-icon-critics` and `score-icon-audience` attributes + slot content
 
 ### Known Issues
 - Search returns only the first page of results (no pagination API discovered)
