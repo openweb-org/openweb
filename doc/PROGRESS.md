@@ -1,3 +1,409 @@
+## 2026-04-11: Rotten Tomatoes — Transport upgrade (DOM → node-native HTML parsing)
+
+**What changed:** Rewrote `rotten-tomatoes-web.ts` adapter: all 3 ops (searchMovies, getMovieDetail, getTomatoMeter) now use Node.js native `fetch()` + regex instead of `page.goto()` + DOM extraction.
+
+**Probe findings:**
+- No internal JSON API found — all data is SSR HTML
+- No webpack, no patched fetch, no bot detection on node fetch
+- `/cnapi/` endpoints exist (videos, sidebar) but none for search/movie data
+- SSR HTML contains all needed data: `search-page-media-row` attributes, LD+JSON (schema.org Movie), `media-scorecard` slots
+
+**Decision:** Node-native HTML parsing. Highest stability achievable for a site with no JSON API.
+
+**Verification:** `verify rotten-tomatoes --browser` → 3/3 PASS
+
+**Key files:** `src/sites/rotten-tomatoes/summary.md` — full probe record.
+
+---
+
+## 2026-04-11: Wayfair — Transport upgrade probe (BLOCKED by PerimeterX + DataDome)
+
+**What changed:** No code changes. Probe completed, documented in `src/sites/wayfair/summary.md`.
+
+**Probe findings:**
+- Discovered `/federation/graphql` — Wayfair uses federated GraphQL as its main data API. Homepage load showed 200/429 mixed responses (aggressive rate limiting).
+- Also found `/favorites/graphql`, `/a/core_funnel/core_funnel_data/*` session endpoints.
+- **Dual-layer bot protection**: PerimeterX (`prx.wayfair.com/px/`) + DataDome (`api-js.datadome.co`). Both active simultaneously.
+- IP banned after initial probe attempts — all subsequent requests returned "Access to this page has been denied".
+- Could not complete fetch probe, webpack probe, or GraphQL operation capture.
+
+**Decision:** Skip. Bot detection blocks probe. Current DOM adapter (`wayfair-web.ts`) remains — fragile but functional when accessed from a warm session with solved CAPTCHA.
+
+**Upgrade path (when IP access restored):** `page.evaluate(fetch)` to `/federation/graphql` — structured GraphQL responses would replace all DOM regex parsing (price `$X.XX` patterns, review text splitting, 12-level DOM walk for card containers).
+
+**Key file:** `src/sites/wayfair/summary.md` — full probe record.
+
+---
+
+## 2026-04-11: Etsy — Transport upgrade probe (NO UPGRADE — pure SSR, no APIs)
+
+**What changed:** No code changes. Probe completed, documented in `src/sites/etsy/summary.md`.
+
+**Probe findings:**
+- Network capture: zero API/XHR/fetch calls across search, listing, shop pages + scroll. Etsy is pure SSR.
+- `window.fetch` native (34 chars) — not patched.
+- No webpack detected — no module walk possible.
+- No SSR globals (`__NEXT_DATA__`, `__INITIAL_STATE__`, etc.) — nothing on window.
+- Node direct fetch: 403 Forbidden — Cloudflare + PerimeterX + DataDome triple bot detection.
+- DOC.md assessment confirmed: "No usable JSON data APIs" is accurate.
+
+**Decision:** No upgrade path exists. Current adapter (LD+JSON + DOM extraction via page transport) is already the optimal approach. LD+JSON covers 3/4 ops (listing detail, reviews, shop); search uses DOM with semantic `data-listing-id` attributes (reasonably stable).
+
+**Key file:** `src/sites/etsy/summary.md` — full probe record.
+
+---
+
+## 2026-04-11: Goodreads — Transport upgrade (page DOM → node fetch, all 4 ops)
+
+**What changed:**
+- All 4 ops upgraded from `page` transport (DOM selectors + page_global_data) to `node` transport (HTTP fetch + HTML/JSON parse).
+- `searchBooks`: HTML regex parse of Rails search page (schema.org microdata rows).
+- `getBook`: `__NEXT_DATA__` → `apolloState` JSON parse (Book + Work + Contributor entities).
+- `getReviews`: `__NEXT_DATA__` → `apolloState` JSON parse (30 Review + User entities in SSR). Removed async `waitForSelector` + 1s delay — reviews are pre-rendered.
+- `getAuthor`: HTML regex parse of Rails author page (schema.org microdata).
+- New adapter `goodreads.ts` handles all 4 ops — replaces 3 inline extraction expressions + 1 DOM adapter.
+- Zero browser dependency. No Chrome process needed.
+
+**Why (probe results):**
+- Network probe: zero content API calls during page loads (only `/weblab` A/B testing). All data is in SSR HTML.
+- Node fetch probe: all 4 page types return 200 with full data using standard User-Agent. Zero bot detection despite Cloudflare/DataDome/PerimeterX cookies being present.
+- `__NEXT_DATA__` on book pages contains `apolloState` with 73 entities — richer than DOM extraction (includes awards, characters, places, ISBN-13, like counts).
+- `window.fetch` is native (34 chars) — no client-side signing.
+- Search and author pages are old Rails SSR (not Next.js).
+- Original DOC.md claim "Node transport will fail" was incorrect.
+
+**Key files:**
+- `src/sites/goodreads/adapters/goodreads.ts` — new adapter (node fetch + HTML/JSON parse)
+- `src/sites/goodreads/summary.md` — full probe → discover → decision → implementation record
+
+**Verification:** 4/4 ops PASS via `verify goodreads`.
+
+---
+
+## 2026-04-11: Bloomberg — Transport upgrade probe (BLOCKED by PerimeterX)
+
+**What changed:** No code changes. Probe completed, documented in `src/sites/bloomberg/summary.md`.
+
+**Probe findings:**
+- Homepage `__NEXT_DATA__` (8.3 MB) works fine for getTickerBar, getNewsHeadlines, getLatestNews.
+- Discovered `lineup-next/api/*` internal REST APIs (topicsStories, stories, liveblog) — succeed during page lifecycle but PerimeterX blocks all requests we initiate.
+- `window.fetch` patched by NewRelic APM (monitoring only, not auto-signing).
+- Webpack: 1322 modules (standard Next.js, no exploitable API client).
+- **All sub-page access blocked**: page.goto(), page.evaluate(fetch()), _next/data endpoints — all return 403 "Are you a robot?".
+- PerimeterX fingerprints request origin — even same-origin page.evaluate(fetch) gets blocked.
+
+**Decision:** No upgrade possible. Current `ssr_next_data` + `page_global_data` is the best available transport. Sub-page ops (getCompanyProfile, getStockChart, getMarketOverview, searchBloomberg) remain limited to pre-opened tabs.
+
+**Key file:** `src/sites/bloomberg/summary.md` — full probe record.
+
+---
+
+## 2026-04-11: Booking.com — Transport upgrade (DOM → Apollo SSR cache + GraphQL page.evaluate)
+
+**What changed:**
+- searchHotels upgraded from DOM `[data-testid="property-card"]` selectors to Apollo SSR cache extraction — 512KB inline JSON with full search results.
+- getHotelReviews upgraded from DOM `[data-testid="review-*"]` selectors to GraphQL `page.evaluate(fetch('/dml/graphql'))` with `ReviewScoresQuery`.
+- getHotelPrices upgraded from DOM `table.hprt-table` selectors to GraphQL `page.evaluate(fetch('/dml/graphql'))` with `RoomDetailQuery`.
+- getHotelDetail unchanged (LD+JSON `@type: Hotel` — already structured and stable).
+- searchFlights unchanged (DOM — flights API returns 403, no alternative found).
+- New adapter `booking.ts` replaces `booking-web.ts` — 3/5 ops zero DOM.
+- All GraphQL ops have DOM fallback for resilience.
+
+**Why (probe results):**
+- Booking.com uses Apollo Client with SSR-hydrated cache in inline `<script type="application/json">`. Search results contain `ROOT_QUERY.searchQueries.search({...}).results[]` with structured property data (names, prices, ratings, lat/lng, room configs).
+- `/dml/graphql` endpoint accepts arbitrary queries — `ReviewScoresQuery` returns category scores, `RoomDetailQuery` returns room details/beds/facilities.
+- `window.fetch` is native (not patched) — no client-side signing needed for GraphQL calls.
+- PerimeterX blocks all node HTTP requests — page transport required.
+- Flights REST API (`flights.booking.com/api/flights/`) returns 403 from all contexts except initial page render.
+
+**Key files:**
+- `src/sites/booking/adapters/booking.ts` — new adapter (Apollo cache + GraphQL + LD+JSON + DOM)
+- `src/sites/booking/summary.md` — full probe → discover → decision → implementation record
+
+**Verification:** 5/5 ops PASS via `verify booking --browser`.
+**Trade-offs:** Room-level pricing (price per room) not available via GraphQL (requires separate availability API); DOM fallback provides price extraction when available.
+
+---
+
+## 2026-04-11: Zillow — Transport upgrade (SSR __NEXT_DATA__ → GraphQL page.evaluate)
+
+**What changed:**
+- 3/4 adapter ops (getPropertyDetail, getZestimate, getNeighborhood) upgraded from `__NEXT_DATA__` SSR extraction to GraphQL persisted query via `page.evaluate(fetch('/graphql'))`.
+- Zero per-property page navigation — all 3 adapter ops query GraphQL from any zillow.com page.
+- Zero DOM: no querySelector, no waitForSelector, no `__NEXT_DATA__` script tag parsing.
+- Removed fragile 3-path property search (gdpClientCache → componentProps → deep recursive zpid match).
+- Single GraphQL call returns 85+ fields per property: address, price, zestimate, schools, nearbyHomes, taxHistory, resoFacts, etc.
+- CSRF resolved by `x-caller-id: openweb` header.
+
+**Why (probe results):**
+- Zillow's `/graphql` endpoint uses Apollo persisted queries (sha256 hash). The property detail query (hash `3b51e213...`) returns 44KB / 85 fields per property — richer than `__NEXT_DATA__` extraction.
+- Node fetch blocked by PerimeterX on ALL endpoints (403, `x-px-blocked: 1`). Node transport not possible.
+- `window.fetch` lightly patched (189 chars) — no auto-signing. CSRF requires `x-caller-id` header.
+- `webpackChunk_N_E` has 260 modules — no heavy service classes worth walking.
+- Cross-property GraphQL queries work from any zillow.com page — no per-property navigation needed.
+
+**Key files:**
+- `src/sites/zillow/adapters/zillow-detail.ts` — rewritten from __NEXT_DATA__ to GraphQL page.evaluate(fetch)
+- `src/sites/zillow/summary.md` — full probe → discover → decision → implementation record
+
+**Verification:** 4/4 ops PASS via `verify zillow --browser`.
+**Trade-offs:** pageViewCount, favoriteCount, walkScore/transitScore/bikeScore, zestimateHistory return null (not in GraphQL response; schema allows null).
+
+---
+
+## 2026-04-11: Airbnb — Transport upgrade (script_json + GraphQL intercept → Node fetch + direct API)
+
+**What changed:**
+- 2 ops (searchListings, getListingDetail) upgraded from `script_json` (browser SSR) to Node.js HTML fetch + SSR parsing. Zero browser navigation needed.
+- 2 ops (getListingReviews, getListingAvailability) upgraded from GraphQL response interception (navigate + scroll + `page.on('response')` with 25s timeout) to direct GraphQL API calls via Node.js `fetch()`. Zero browser interaction.
+- getHostProfile stays on browser page navigation — host profile page triggers bot detection from Node.js.
+- New adapter `airbnb.ts` replaces `airbnb-web.ts` — handles all 5 ops (4 via Node fetch, 1 via browser).
+- Eliminated page navigation, scroll-to-trigger-GraphQL, response interception, and timeout polling for 4/5 ops.
+
+**Why (probe results):**
+- Airbnb uses persisted GraphQL queries at `/api/v3/{OperationName}/{hash}` — reviews and calendar APIs work from Node.js with just API key + platform headers, no cookies/signing needed.
+- Search and listing detail HTML served without bot detection — SSR data in `#data-deferred-state-0` parseable from raw HTML.
+- API key `d306zoyjsyarp7ifhu67rjxn52tv0t20` is public, same for all users.
+- Platform headers (`X-Airbnb-GraphQL-Platform-Client: minimalist-niobe`, `X-Airbnb-GraphQL-Platform: web`) are mandatory — without them, queries return ValidationError.
+- No webpack modules (custom module system), no client-side signing (patched fetch is tracking only).
+
+**Key files:**
+- `src/sites/airbnb/adapters/airbnb.ts` — new adapter, 4/5 ops zero browser
+- `src/sites/airbnb/openapi.yaml` — all ops use adapter, version 1.2.0
+- `src/sites/airbnb/summary.md` — full probe → discover → decision → implementation record
+
+**Verification:** 5/5 ops PASS via `verify airbnb --browser`.
+**Blockers:** GraphQL hashes are deployment-specific — will break if Airbnb changes persisted query hashes.
+
+---
+
+## 2026-04-11: IMDb — Transport upgrade (SSR extraction → GraphQL API)
+
+**What changed:**
+- 3/4 ops (searchTitles, getTitleDetail, getCast) upgraded from `__NEXT_DATA__` SSR extraction to direct GraphQL API calls via `api.graphql.imdb.com`.
+- getRatings uses GraphQL for aggregate rating + SSR `__NEXT_DATA__` fallback for histogram (per-rating vote breakdown not in public GraphQL).
+- Zero DOM operations for 3/4 ops — no `page.goto()`, no `page.evaluate()`, no `querySelector`. Pure `fetch()` to GraphQL endpoint.
+- Adapter rewritten with typed GraphQL helper and shared query fragments.
+
+**Why (probe results):**
+- IMDb's GraphQL API at `api.graphql.imdb.com` is completely open — no auth, no signing, no bot detection from Node.js.
+- Schema introspection is blocked, but field names discoverable via error suggestions ("Did you mean X?").
+- `title(id)` and `mainSearch(first, options)` provide all data needed for 3/4 ops.
+- Ratings histogram is the one gap — only available in SSR `__NEXT_DATA__` on the ratings page.
+- Node HTML fetch to `www.imdb.com` returns 202 (Cloudflare block) — only GraphQL endpoint is unrestricted.
+
+**Key files:**
+- `src/sites/imdb/adapters/imdb.ts` — rewritten from SSR extraction to GraphQL API calls
+- `src/sites/imdb/openapi.yaml` — signals updated to `graphql_api`, tool_version bumped to 2
+- `src/sites/imdb/DOC.md` — updated architecture docs
+- `src/sites/imdb/summary.md` — full probe → discover → decision → implementation record
+
+**Verification:** 4/4 ops PASS via `verify imdb --browser`.
+**Stability:** 3/4 ops moved from SSR global variable to API call level. 1/4 ops partial SSR dependency (histogram only).
+
+---
+
+## 2026-04-11: eBay — Transport probe (cannot upgrade) + robustness fixes
+
+**What changed:**
+- Full CDP probe: network capture, fetch/webpack analysis, window.SRP inspection, node fetch test.
+- Fixed broken image extraction: `.s-card__image img` → `card.querySelector('img')`. Images now return 85/85 (was 0/85).
+- Added `data-listingid` attribute for itemId extraction (more stable than href regex).
+- Extracted shipping/returns/brand/model from LD+JSON instead of DOM selectors.
+- Parameterized `page.evaluate` calls (was string interpolation — injection risk).
+
+**Why (probe results — cannot upgrade):**
+- eBay is fully server-rendered (Marko.js) with no client-side JSON APIs for search, item, or seller data.
+- Node fetch blocked by Radware StormCaster bot detection ("Pardon Our Interruption...").
+- No webpack modules — not a traditional SPA.
+- `window.SRP` contains only metrics/monitoring, not item data.
+- `___srp.tl` values are tracking metadata (trackableId, pageci), not item data.
+- LD+JSON `@type: Product` on item pages is the best (and only) structured data source — already used.
+- Site stays at DOM parsing + LD+JSON level. Transport remains `page` with adapter.
+
+**Key files:**
+- `src/sites/ebay/adapters/ebay.ts` — robustness improvements
+- `src/sites/ebay/openapi.yaml` — added brand/model fields, updated extraction expressions
+- `src/sites/ebay/summary.md` — full probe → discover → decision record
+
+**Verification:** 3/3 ops PASS via `verify ebay --browser`.
+**Blockers:** None. Transport upgrade blocked by architecture (no APIs) + bot detection (no node).
+
+---
+
+## 2026-04-11: Redfin — Transport upgrade (DOM → pageFetch + Stingray API)
+
+**What changed:**
+- searchHomes upgraded from JSON-LD DOM scraping to Stingray GIS API (`/stingray/api/gis`) via `pageFetch`. Returns 20 homes with MLS ID, days on market, lot size, year built — much richer than JSON-LD.
+- getPropertyDetails upgraded from DOM `querySelectorAll` to HTML string fetch + JSON-LD regex parsing. Same data, no DOM rendering needed.
+- getMarketData upgraded from `document.body.innerText` to HTML string fetch + regex. Improved median price regex to capture "$850K" format.
+- Zero DOM operations in the entire adapter — no querySelector, no click, no evaluate for DOM.
+- New adapter `redfin.ts` replaces `redfin-dom.ts`.
+
+**Why:**
+- Transport upgrade sprint: Redfin was P1 (all 3 ops using DOM parsing/JSON-LD via rendered page).
+- Probe discovered Stingray GIS API returns full search results as JSON from node — no auth, no signing, no bot detection.
+- Property detail Stingray APIs (`belowTheFold`, `aboveTheFold`) are CloudFront WAF-blocked (403), but AVM and descriptiveParagraph work. JSON-LD from fetched HTML is still the best single source for property details.
+- No market data API exists — SSR HTML text extraction is the only option.
+- All data accessible from Node.js, but framework adapter pattern requires browser page → using pageFetch for clean framework integration.
+
+**Key files:**
+- `src/sites/redfin/adapters/redfin.ts` — new adapter, zero DOM
+- `src/sites/redfin/openapi.yaml` — adapter reference updated to `redfin`
+- `src/sites/redfin/summary.md` — full probe → discover → decision → implementation record
+
+**Verification:** 3/3 ops PASS via `verify redfin --browser`. All returning real data.
+**Blockers:** None.
+
+---
+
+## 2026-04-11: WhatsApp — Transport upgrade (sendMessage: DOM keyboard → internal module)
+
+**What changed:**
+- sendMessage upgraded from DOM keyboard automation (type into compose box + Enter) to direct internal module call via `WAWebSendTextMsgChatAction.sendTextMsgToChat()`.
+- Zero DOM selectors, zero keyboard events, zero artificial waits.
+- Function reduced from 48 lines (multi-step DOM + verify) to 18 lines (single `page.evaluate`).
+- ~2.5s latency eliminated (200ms + 200ms + 2000ms waits + typing time).
+- All 8 ops now use internal module walk — zero DOM in the entire adapter.
+
+**Why:**
+- Transport upgrade sprint: WhatsApp sendMessage was P0 (DOM keyboard input, fragile selector `div[contenteditable="true"][data-tab="10"]`).
+- Probe discovered `WAWebSendTextMsgChatAction` module with `sendTextMsgToChat(chat, text, {})` — high-level async function that builds the message internally and returns `{messageSendResult: "OK", t}` after WS round-trip.
+- Previous developer tried `addAndSendMsgToChat` (from `WAWebSendMsgChatAction`) which requires pre-built message protobuf objects — that's why it "silently dropped messages." The text-specific function works perfectly.
+- deleteMessage already proved internal module write ops work in adapter context.
+
+**Key files:**
+- `src/sites/whatsapp/adapters/whatsapp-modules.ts` — sendMessage rewritten, COMPOSE_SELECTOR removed
+- `src/sites/whatsapp/summary.md` — full probe → discover → decision → implementation record
+- `src/sites/whatsapp/DOC.md` — updated module table, removed DOM known issue
+
+**Verification:** 8/8 ops PASS. `verify whatsapp --write --browser`: 4/4 PASS.
+**Blockers:** None.
+
+---
+
+## 2026-04-11: Douban — Transport upgrade (page → node, adapter retired)
+
+**What changed:**
+- All 14 ops upgraded from page transport to node transport. Zero browser dependency.
+- 4 adapter ops (getMoviePhotos, getTop250, searchMusic, getMusicDetail) replaced with direct mobile API endpoints — `douban-dom.ts` adapter fully retired.
+- Response schemas updated to match richer API responses (e.g., photo dimensions, structured singer/songs, rank_value).
+- `Referer: https://m.douban.com/` header added via shared component parameter.
+- Manifest: `l1_count: 10, l3_count: 4` → `l1_count: 14, l3_count: 0`.
+
+**Why:**
+- Transport upgrade sprint: Douban was P1 (all 14 ops on page transport, 4 using DOM extraction adapter).
+- Probe discovered: The mobile API (`m.douban.com/rexxar/api/v2/*`) works from node with just a Referer header. Previous DOC incorrectly claimed "node transport returns 400/403."
+- All 4 adapter ops have API equivalents — music endpoints exist despite no public documentation.
+- Node transport is optimal: no browser startup, no CDP, no selector fragility, faster execution.
+
+**Key files:**
+- `src/sites/douban/openapi.yaml` — transport: node, all adapter refs removed, new API paths
+- `src/sites/douban/summary.md` — full probe → discover → decision → implementation record
+- `src/sites/douban/DOC.md` — updated architecture docs
+
+**Verification:** 14/14 ops PASS via `verify douban`. All returning real data.
+**Blockers:** None.
+
+---
+
+## 2026-04-11: Craigslist — Transport upgrade (DOM → node fetch + HTML parse)
+
+**What changed:**
+- All 3 ops (searchListings, getListing, getCategories) upgraded from page-transport DOM extraction to node-direct via `fetch()` + regex HTML parsing.
+- New adapter `craigslist.ts` (140 lines) replaces `craigslist-dom.ts` (253 lines). Zero browser dependency.
+- Transport changed from `page` to `node` in openapi.yaml.
+- Example data updated from fake values to real Craigslist listings.
+- Manifest bumped to v2.0.0.
+
+**Why:**
+- Transport upgrade sprint: Craigslist was P1 (all 3 ops used DOM extraction).
+- Probe confirmed: Craigslist serves identical static HTML to Node.js fetch and browsers. No bot detection, no auth, no JavaScript needed.
+- Node direct is the optimal transport — eliminates browser startup (~5s/op), no CDP connection, no selector fragility.
+
+**Key files:**
+- `src/sites/craigslist/adapters/craigslist.ts` — new node adapter (fetch + regex)
+- `src/sites/craigslist/openapi.yaml` — transport: node, adapter: craigslist
+- `src/sites/craigslist/summary.md` — full probe → discover → decision → implementation record
+
+**Verification:** 3/3 ops PASS. Response quality verified: 289 search results, rich listing details (price, body, coordinates, timestamps, attributes, images), 139 categories across 8 sections.
+**Blockers:** None.
+
+---
+
+## 2026-04-11: Uber — Transport upgrade probe (DOM → API validation + minimal DOM)
+
+**What changed:**
+- addToCart upgraded: added `getMenuItemV1` API pre-validation before any browser navigation. Store/item existence and availability checked via API before clicking.
+- Added `isAuthenticated` method to adapter (checks for `sid`/`csid`/`jwt-session` cookies).
+- Added `ensureUberEatsPage` helper, `readCartBadge` helper, `apiCall` helper for cleaner code.
+- Comprehensive probe documented in `summary.md`: 35+ cart mutation endpoint names tested, all returned 404. Cart is confirmed client-side React state only.
+
+**Why:**
+- Transport upgrade sprint: Uber was P0 (DOM click sequences for addToCart/removeFromCart).
+- Probe confirmed: No server-side cart mutation API exists. `fetch` is native (not patched), no webpack, no SSR globals.
+- Cannot descend below page transport for writes — cart mutations require browser interaction.
+- Upgraded validation layer: API calls (getStoreV1, getMenuItemV1) catch bad inputs before navigation.
+
+**Key files:**
+- `src/sites/uber/adapters/uber-eats.ts` — rewritten: API validation + minimal DOM clicks
+- `src/sites/uber/summary.md` — full probe → discover → decision → implementation record
+
+**Verification:** `pnpm build` PASS; 3/3 read ops PASS; addToCart PASS with real data (McDonald's Hash Browns)
+**Blockers:** Cart is in-memory React state — removeFromCart only works within same browser session as addToCart.
+
+---
+
+## 2026-04-11: Hacker News — Transport upgrade (DOM → Algolia/Firebase node-direct)
+
+**What changed:**
+- 10 of 16 ops upgraded from page-transport DOM extraction to L1 node-direct via Algolia Search API and Firebase API.
+- 4 parameterized read ops (getStoryComments, getStoriesByDomain, getUserSubmissions, getUserComments) upgraded from DOM extraction to Algolia API calls via adapter (Node.js `fetch`).
+- 2 write ops (upvoteStory, addComment) unchanged — still page transport with DOM auth token extraction.
+- Response data upgraded from DOM text strings ("305 points", "2 hours ago") to structured API data (integer scores, ISO timestamps, URLs, comment counts).
+- Adapter reduced from 308 lines / 16 ops to 120 lines / 6 ops.
+- Zero CSS selectors for reads (previously 15+). Only 2 selectors remain for write ops.
+
+**Why:**
+- Transport upgrade sprint: HN was identified as P0 (DOM form submission + HMAC extraction for write ops).
+- Probe found: HN has no internal APIs (pure server-rendered HTML), but two public APIs — Algolia (search, full-text) and Firebase (item/user detail) — serve all the same data with no auth, no bot detection.
+- Algolia returns full structured data in single requests (vs DOM extraction requiring browser + page load).
+- Firebase provides clean user profile and item detail endpoints.
+
+**Key files:**
+- `src/sites/hackernews/openapi.yaml` — restructured: 10 L1 node ops (Algolia/Firebase) + 6 L3 adapter ops
+- `src/sites/hackernews/adapters/hackernews.ts` — rewritten: 4 Algolia fetch ops + 2 page write ops
+- `src/sites/hackernews/manifest.json` — v3.0.0, l1_count: 10, l3_count: 6
+- `src/sites/hackernews/summary.md` — full probe → discover → decision → implementation record
+
+**Verification:** `pnpm build` PASS; `verify hackernews --browser` 14/14 PASS
+**Blockers:** None
+
+---
+
+## 2026-04-11: Amazon — Transport upgrade (cart API + patchright clicks)
+
+**What changed:**
+- `getCart` upgraded to hybrid: JSON API (`/cart/add-to-cart/get-cart-items`) for reliable item list + DOM enrichment for title/price/image. Cart item list is now API-driven instead of pure DOM parsing.
+- `addToCart` response verification switched from fragile confirmation DOM selectors to JSON API cart diff (snapshot before → compare after).
+- `removeFromCart` switched from `page.evaluate(() => deleteBtn.click())` to patchright native `.click()` for proper Amazon JS event triggering, plus JSON API verification.
+- `getCart` DOM enrichment uses `data-price` attribute instead of fragile `.sc-product-price` class selector.
+
+**Why:**
+- Transport upgrade sprint: Amazon was identified as P0 (DOM click sequences for cart ops — most fragile tier).
+- Probe found: Akamai blocks `page.evaluate(fetch)` for cart mutations (403), but `/cart/add-to-cart/get-cart-items` JSON API works for reads.
+- No SPA framework, no webpack, no SSR globals, no JSON-LD — Amazon is pure SSR HTML with Akamai protection.
+- Node transport blocked by Akamai Bot Manager. Read ops must stay as DOM extraction (no JSON APIs for product data).
+
+**Key files:**
+- `src/sites/amazon/adapters/amazon.ts` — `fetchCartItems()` helper, hybrid `getCart`, API-verified `addToCart`/`removeFromCart`
+- `src/sites/amazon/summary.md` — full probe → discover → decision → implementation record
+
+**Verification:** `pnpm build` PASS; `verify amazon --browser --write` 8/8 PASS
+**Blockers:** None
+
+---
+
 ## 2026-04-10: Retarget write op examples to owned repos/accounts + Reddit OAuth
 
 **What changed:**
