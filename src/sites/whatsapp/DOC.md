@@ -32,7 +32,7 @@ Messaging platform — L3 adapter accessing Meta's internal module system via `r
 | searchChats | find chats by name | query | id, name, isGroup | client-side filter |
 | getChatById | chat detail | chatId ← getChats | archived, pinned, muted, lastMessage | |
 | sendMessage | send text | chatId ← getChats, message | success, timestamp | write — uses DOM keyboard input |
-| deleteMessage | delete message | chatId ← getChats, messageId ← getMessages | success | write/caution — DOM hover+menu |
+| deleteMessage | delete message | chatId ← getChats, messageId ← getMessages | success | write/caution — internal module `chat.deleteMessages()` |
 | markAsRead | mark read/unread | chatId ← getChats, read | success | write |
 
 ## Quick Start
@@ -90,4 +90,4 @@ QR code scan in headed browser. Session persists in browser profile. No standard
 - **sendMessage uses DOM input**: Store-level `addAndSendMsgToChat` silently drops messages in adapter context. Compose box keyboard input is the reliable approach.
 - **Messages decrypted in memory only**: IndexedDB stores empty message bodies — messages only exist decrypted in the in-memory Store.
 - **Module names may change**: Meta can rename `WAWeb*` module IDs in updates.
-- **deleteMessage uses DOM interaction**: Hovers over message to reveal dropdown arrow, clicks through context menu. Selectors may change with WhatsApp Web updates. Uses "Delete for me" (not "Delete for everyone").
+- **deleteMessage uses internal module**: Uses `chat.deleteMessages([id])` for "delete for me" — no DOM interaction, stable across UI updates.
