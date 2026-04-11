@@ -1,14 +1,14 @@
 # Booking.com
 
 ## Overview
-Travel platform — hotel search, property details, reviews, room pricing, and flight search via browser DOM/LD+JSON extraction.
+Travel platform — hotel search, property details, reviews, room pricing, and flight search via Apollo SSR cache + LD+JSON + GraphQL page.evaluate + DOM.
 
 ## Workflows
 
 ### Find a hotel and check prices
 1. `searchHotels(ss, checkin, checkout)` → pick hotel → `url` contains `/hotel/{country}/{slug}.html`
 2. `getHotelDetail(country, slug)` → name, rating, address, description
-3. `getHotelPrices(slug)` → room types, beds, prices (requires hotel page open)
+3. `getHotelPrices(slug)` → room types, beds, sizes, facilities (requires hotel page open)
 4. `getHotelReviews(slug)` → score, subscores, featured reviews (requires hotel page open)
 
 ### Search flights
@@ -51,11 +51,12 @@ Everything below is for discover/compile operators and deep debugging.
 Not needed for basic site usage.
 
 ## API Architecture
+- **Apollo SSR cache** on search results pages: inline `<script type="application/json">` with `ROOT_QUERY.searchQueries` — full structured search results (512KB)
+- **GraphQL at /dml/graphql** — `ReviewScoresQuery` for review category scores, `RoomDetailQuery` for room details/beds/facilities
 - **LD+JSON Hotel schema** on property detail pages: name, aggregateRating, description, address, image, priceRange
-- **GraphQL at /dml/graphql** — used internally but not stable; not exposed as operations
-- Search results use **data-testid** property cards with structured DOM
-- Property details combine LD+JSON with DOM extraction for reviews, rooms
-- Flights on **flights.booking.com** subdomain with **data-testid** flight cards
+- Search results use Apollo cache (primary) with DOM `data-testid` property cards (fallback)
+- Property details combine LD+JSON with GraphQL for reviews and room data
+- Flights on **flights.booking.com** subdomain with **data-testid** flight cards (DOM-only)
 - Images hosted on **cf.bstatic.com** CDN
 
 ## Auth
@@ -63,18 +64,23 @@ No auth required for public browsing and search.
 
 ## Transport
 - `transport: page` — browser-only access required
-- Bot detection (likely PerimeterX) blocks direct HTTP requests
-- All operations use the `booking-web` adapter for DOM/LD+JSON extraction
+- Bot detection (PerimeterX) blocks direct HTTP requests from node
+- `window.fetch` is native (not patched) — no client-side signing
+- GraphQL queries via `page.evaluate(fetch('/dml/graphql'))` work cleanly
 - Flights require navigating to flights.booking.com subdomain
 
 ## Extraction
-- All operations use the `booking-web` adapter (`adapters/booking-web.ts`)
-- Hotel detail uses LD+JSON `@type: Hotel` schema embedded in the page
-- Search results, reviews, prices, and flights use CSS selector-based DOM extraction (`data-testid` attributes)
+- **searchHotels**: Apollo SSR cache extraction from inline JSON → zero DOM selectors
+- **getHotelDetail**: LD+JSON `@type: Hotel` schema → zero DOM selectors
+- **getHotelReviews**: GraphQL `ReviewScoresQuery` via page.evaluate(fetch) → zero DOM (with DOM fallback)
+- **getHotelPrices**: GraphQL `RoomDetailQuery` via page.evaluate(fetch) → zero DOM (with DOM fallback)
+- **searchFlights**: DOM extraction via `[data-testid]` selectors (flights API returns 403)
 
 ## Known Issues
-- **All ops require pre-navigation** — the adapter extracts from the current page DOM; the browser must already be on the correct URL (search results page for searchHotels, hotel detail page for getHotelDetail/getHotelReviews/getHotelPrices, flights page for searchFlights)
+- **PerimeterX bot detection** — all node HTTP requests blocked; page transport required
+- **Flights API gated** — `flights.booking.com/api/flights/` returns 403 from all contexts
 - **Dynamic pricing** — prices change based on dates, currency, and user session
 - **Search results are first page only** — no pagination via adapter
 - **Flights on separate subdomain** — flights.booking.com requires cross-domain navigation from www.booking.com
-- **Review text partial** — featured reviews show excerpt; full text requires clicking "Read more"
+- **Room-level pricing** — GraphQL `RoomDetailQuery` returns room types/beds/facilities but not per-room prices (requires separate availability API); DOM fallback provides price when available
+- **Localization** — Apollo cache and LD+JSON return localized data based on browser language

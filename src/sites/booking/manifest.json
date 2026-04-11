@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "spec_version": "2.0",
   "site_url": "https://www.booking.com",
-  "description": "Hotel search, hotel details, reviews, room pricing, and flight search via browser DOM/LD+JSON extraction",
+  "description": "Hotel search, hotel details, reviews, room pricing, and flight search via Apollo SSR cache + LD+JSON + GraphQL + DOM",
   "requires_auth": false,
   "dependencies": {},
   "stats": {
