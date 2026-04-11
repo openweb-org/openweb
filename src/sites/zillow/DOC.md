@@ -58,24 +58,25 @@ openweb zillow exec getNeighborhood '{"zpid":"15076238","slug":"1000-Fell-St-San
 ## Site Internals
 
 ### API Architecture
-- Next.js SSR app — primary data delivered via `__NEXT_DATA__` (418KB)
+- Next.js SSR app with GraphQL API at `/graphql` using Apollo persisted queries
+- Property detail query (hash `3b51e213...`) returns 85+ fields per property via GraphQL
 - `PUT /async-create-search-page-state` is the SPA search API
-- Property detail pages embed all data in `__NEXT_DATA__` (no separate API call needed)
-- GraphQL endpoint at `/zg-graph` (used for user profile, not search)
+- Cross-property GraphQL queries work from any zillow.com page — no per-property navigation needed
 
 ### Auth
-- `cookie_session` — PerimeterX requires a valid browser session; search API returns 403 without one
+- `cookie_session` — PerimeterX requires a valid browser session; all endpoints return 403 without one
 - Login via `openweb login zillow`, then `openweb browser restart`
-- No CSRF required for search or detail pages
+- CSRF: `x-caller-id: openweb` header required for GraphQL
 
 ### Transport
-- `page` — PerimeterX bot detection blocks all node HTTP
+- `page` — PerimeterX bot detection blocks all node HTTP (403, `x-px-blocked: 1`)
 - Must use headed browser with real Chrome profile
-- Detail operations use adapter with page navigation to `/homedetails/{slug}/{zpid}_zpid/`
+- Adapter ops (getPropertyDetail, getZestimate, getNeighborhood) use `page.evaluate(fetch('/graphql'))` — zero per-property navigation
+- searchProperties uses `page.evaluate(fetch('/async-create-search-page-state'))` or SSR parsing
 
 ### Known Issues
-- **PerimeterX**: CAPTCHA challenge on headless browsers. Use `openweb browser restart --no-headless`, solve the CAPTCHA, then retry
+- **PerimeterX**: Aggressive CAPTCHA on all requests. Sessions degrade after ~10 minutes of inactivity. Use headed browser, solve CAPTCHA manually, then retry.
 - Response is ~200KB+ per search — auto-spills to temp file
 - `regionId` is required but not easily discoverable — use known IDs or the autocomplete API
-- Property detail `__NEXT_DATA__` can be 200KB+ — adapter extracts only relevant fields
+- GraphQL `pageViewCount`, `favoriteCount`, `walkScore/transitScore/bikeScore` return null (not in persisted query response)
 - `slug` parameter is optional for detail ops — use `"_"` if unknown, Zillow redirects to correct URL

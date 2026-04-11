@@ -1,256 +1,231 @@
 import type { Page } from 'patchright'
 
 /**
- * Zillow property detail adapter — extracts property, Zestimate, and
- * neighborhood data from __NEXT_DATA__ on property detail pages.
+ * Zillow property detail adapter — fetches property, Zestimate, and
+ * neighborhood data via GraphQL persisted query (page.evaluate fetch).
  *
- * URL pattern: /homedetails/{slug}/{zpid}_zpid/
- * Data source: SSR __NEXT_DATA__ (props.pageProps)
- * Bot detection: PerimeterX — requires page transport with real Chrome session
+ * Transport upgrade: SSR __NEXT_DATA__ → page.evaluate(fetch('/graphql'))
+ * - Zero page navigation per property (only need to be on zillow.com domain)
+ * - Single GraphQL persisted query returns 85+ fields per property
+ * - CSRF satisfied by x-caller-id header
+ * - Bot detection: PerimeterX — requires page transport with real Chrome session
  */
 
-async function navigateToProperty(page: Page, params: Record<string, unknown>): Promise<void> {
-  const zpid = String(params.zpid ?? '')
-  const slug = String(params.slug ?? '')
-  if (!zpid) throw new Error('zpid is required')
-  const url = `https://www.zillow.com/homedetails/${slug || '_'}/${zpid}_zpid/`
-  await page.goto(url, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
-  await page.waitForSelector('script#__NEXT_DATA__', { timeout: 15_000 }).catch(() => {})
+type PageFetch = (
+  page: Page,
+  options: {
+    url: string
+    method?: 'GET' | 'POST'
+    headers?: Record<string, string>
+    credentials?: 'same-origin' | 'include'
+    timeout?: number
+  },
+) => Promise<{ status: number; text: string }>
+
+type AdapterErrors = {
+  unknownOp(op: string): Error
+  missingParam(p: string): Error
+  wrap(error: unknown): Error
 }
 
-/** Extract parsed __NEXT_DATA__ from the page. */
-function extractNextData(): string {
-  return `
-    (() => {
-      const el = document.getElementById('__NEXT_DATA__');
-      if (!el) return null;
-      try { return JSON.parse(el.textContent); } catch { return null; }
-    })()
-  `
+/** Persisted query hash for the full property detail query (85+ fields). */
+const PROPERTY_DETAIL_HASH = '3b51e213e2bc8dbf539cdb31f809991a62e1f5ce3cc0d011a8391839e024fa4e'
+
+/** Ensure page is on zillow.com domain so same-origin fetch works. */
+async function ensureOnZillow(page: Page): Promise<void> {
+  if (!page.url().includes('zillow.com')) {
+    await page.goto('https://www.zillow.com/', { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
+  }
 }
 
-/** Walk an object looking for a property record keyed by zpid or containing zpid. */
-function findPropertyScript(zpid: string): string {
-  return `
-    (() => {
-      const el = document.getElementById('__NEXT_DATA__');
-      if (!el) return null;
-      let data;
-      try { data = JSON.parse(el.textContent); } catch { return null; }
+/** Fetch full property data via GraphQL persisted query. */
+async function fetchProperty(
+  page: Page,
+  zpid: number,
+  pageFetch: PageFetch,
+): Promise<Record<string, unknown> | null> {
+  await ensureOnZillow(page)
 
-      const pp = data?.props?.pageProps || {};
+  const params = new URLSearchParams({
+    extensions: JSON.stringify({
+      persistedQuery: { version: 1, sha256Hash: PROPERTY_DETAIL_HASH },
+    }),
+    variables: JSON.stringify({ zpid, altId: null, deviceTypeV2: 'WEB_DESKTOP' }),
+  })
 
-      // Path 1: gdpClientCache (GraphQL data provider cache)
-      const cache = pp.gdpClientCache;
-      if (cache) {
-        try {
-          const parsed = typeof cache === 'string' ? JSON.parse(cache) : cache;
-          for (const [key, val] of Object.entries(parsed)) {
-            const v = typeof val === 'string' ? JSON.parse(val) : val;
-            if (v?.property) return v.property;
-          }
-        } catch {}
-      }
+  const result = await pageFetch(page, {
+    url: `/graphql/?${params}`,
+    method: 'GET',
+    headers: { 'x-caller-id': 'openweb' },
+    credentials: 'include',
+  })
 
-      // Path 2: componentProps or initialData
-      for (const key of ['componentProps', 'initialData', 'property', 'listingData']) {
-        const candidate = pp[key];
-        if (candidate?.zpid || candidate?.property) return candidate.property || candidate;
-      }
-
-      // Path 3: deep search for zpid match in pageProps
-      function findProp(obj, depth) {
-        if (!obj || typeof obj !== 'object' || depth > 4) return null;
-        if (obj.zpid && String(obj.zpid) === '${zpid}') return obj;
-        if (obj.property?.zpid) return obj.property;
-        for (const v of Object.values(obj)) {
-          const found = findProp(v, depth + 1);
-          if (found) return found;
-        }
-        return null;
-      }
-      return findProp(pp, 0);
-    })()
-  `
+  const data = JSON.parse(result.text) as { data?: { property?: Record<string, unknown> } }
+  return data?.data?.property ?? null
 }
 
 /* ---------- getPropertyDetail ---------- */
 
-async function getPropertyDetail(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  await navigateToProperty(page, params)
-  const zpid = String(params.zpid ?? '')
+async function getPropertyDetail(
+  page: Page,
+  params: Record<string, unknown>,
+  pageFetch: PageFetch,
+): Promise<unknown> {
+  const zpid = Number(params.zpid)
+  const p = await fetchProperty(page, zpid, pageFetch)
+  if (!p) return null
 
-  return page.evaluate(findPropertyScript(zpid)).then((prop: unknown) => {
-    if (!prop || typeof prop !== 'object') return null
-    const p = prop as Record<string, unknown>
-    const addr = p.address as Record<string, unknown> | undefined
-    const photos = Array.isArray(p.photos)
-      ? (p.photos as Array<Record<string, unknown>>).slice(0, 10).map(
-          (ph) => ph.mixedSources ?? ph.url ?? ph.href ?? null,
-        )
-      : Array.isArray(p.responsivePhotos)
-        ? (p.responsivePhotos as Array<Record<string, unknown>>).slice(0, 10).map(
-            (ph) => ph.mixedSources ?? ph.url ?? null,
-          )
-        : []
+  const addr = p.address as Record<string, unknown> | undefined
+  const resoFacts = p.resoFacts as Record<string, unknown> | undefined
+  const taxFirst = (p.taxHistory as Array<Record<string, unknown>>)?.[0]
 
-    return {
-      zpid: p.zpid ?? null,
-      address: addr
-        ? {
-            streetAddress: addr.streetAddress ?? null,
-            city: addr.city ?? null,
-            state: addr.state ?? null,
-            zipcode: addr.zipcode ?? null,
-          }
-        : null,
-      price: p.price ?? null,
-      bedrooms: p.bedrooms ?? null,
-      bathrooms: p.bathrooms ?? null,
-      livingArea: p.livingArea ?? null,
-      livingAreaUnits: p.livingAreaUnits ?? 'sqft',
-      lotSize: p.lotSize ?? p.lotAreaValue ?? null,
-      homeType: p.homeType ?? null,
-      homeStatus: p.homeStatus ?? null,
-      yearBuilt: p.yearBuilt ?? null,
-      description: p.description ?? null,
-      zestimate: p.zestimate ?? null,
-      rentZestimate: p.rentZestimate ?? null,
-      taxAssessedValue: p.taxAssessedValue ?? null,
-      daysOnZillow: p.daysOnZillow ?? null,
-      pageViewCount: p.pageViewCount ?? null,
-      favoriteCount: p.favoriteCount ?? null,
-      photos,
-      url: `https://www.zillow.com/homedetails/_/${p.zpid}_zpid/`,
-    }
-  })
+  // Photos: try responsivePhotos → compsCarouselPropertyPhotos → thumb
+  const photoSource =
+    (Array.isArray(p.responsivePhotos) && p.responsivePhotos.length > 0 && p.responsivePhotos) ||
+    (Array.isArray(p.compsCarouselPropertyPhotos) &&
+      p.compsCarouselPropertyPhotos.length > 0 &&
+      p.compsCarouselPropertyPhotos) ||
+    (Array.isArray(p.thumb) && p.thumb) ||
+    []
+  const photos = (photoSource as Array<Record<string, unknown>>)
+    .slice(0, 10)
+    .map((ph) => ph.mixedSources ?? ph.url ?? null)
+
+  return {
+    zpid: p.zpid ?? null,
+    address: addr
+      ? {
+          streetAddress: addr.streetAddress ?? null,
+          city: addr.city ?? null,
+          state: addr.state ?? null,
+          zipcode: addr.zipcode ?? null,
+        }
+      : null,
+    price: p.price ?? null,
+    bedrooms: p.bedrooms ?? resoFacts?.bedrooms ?? null,
+    bathrooms: p.bathrooms ?? resoFacts?.bathrooms ?? null,
+    livingArea: p.livingAreaValue ?? resoFacts?.livingArea ?? null,
+    livingAreaUnits: p.livingAreaUnitsShort ?? p.livingAreaUnits ?? 'sqft',
+    lotSize: p.lotAreaValue ?? resoFacts?.lotSize ?? null,
+    homeType: p.homeType ?? null,
+    homeStatus: p.homeStatus ?? null,
+    yearBuilt: resoFacts?.yearBuilt ?? null,
+    description: p.description ?? null,
+    zestimate: p.zestimate ?? null,
+    rentZestimate: p.rentZestimate ?? null,
+    taxAssessedValue: (taxFirst?.value as number) ?? null,
+    daysOnZillow: p.daysOnZillow ?? null,
+    pageViewCount: null,
+    favoriteCount: null,
+    photos,
+    url: `https://www.zillow.com${p.hdpUrl || `/homedetails/_/${p.zpid}_zpid/`}`,
+  }
 }
 
 /* ---------- getZestimate ---------- */
 
-async function getZestimate(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  await navigateToProperty(page, params)
-  const zpid = String(params.zpid ?? '')
+async function getZestimate(
+  page: Page,
+  params: Record<string, unknown>,
+  pageFetch: PageFetch,
+): Promise<unknown> {
+  const zpid = Number(params.zpid)
+  const p = await fetchProperty(page, zpid, pageFetch)
+  if (!p) return null
 
-  return page.evaluate(findPropertyScript(zpid)).then((prop: unknown) => {
-    if (!prop || typeof prop !== 'object') return null
-    const p = prop as Record<string, unknown>
-    const addr = p.address as Record<string, unknown> | undefined
+  const addr = p.address as Record<string, unknown> | undefined
+  const taxFirst = (p.taxHistory as Array<Record<string, unknown>>)?.[0]
 
-    // Zestimate history if available
-    const history = Array.isArray(p.zestimateHistory)
-      ? (p.zestimateHistory as Array<Record<string, unknown>>).slice(0, 12).map((h) => ({
-          date: h.date ?? h.x ?? null,
-          value: h.value ?? h.y ?? null,
-        }))
-      : null
-
-    return {
-      zpid: p.zpid ?? null,
-      address: addr
-        ? {
-            streetAddress: addr.streetAddress ?? null,
-            city: addr.city ?? null,
-            state: addr.state ?? null,
-            zipcode: addr.zipcode ?? null,
-          }
-        : null,
-      zestimate: p.zestimate ?? null,
-      rentZestimate: p.rentZestimate ?? null,
-      zestimateLowPercent: p.zestimateLowPercent ?? null,
-      zestimateHighPercent: p.zestimateHighPercent ?? null,
-      taxAssessedValue: p.taxAssessedValue ?? null,
-      taxAssessedYear: p.taxAssessedYear ?? null,
-      price: p.price ?? null,
-      homeType: p.homeType ?? null,
-      livingArea: p.livingArea ?? null,
-      bedrooms: p.bedrooms ?? null,
-      bathrooms: p.bathrooms ?? null,
-      zestimateHistory: history,
-    }
-  })
+  return {
+    zpid: p.zpid ?? null,
+    address: addr
+      ? {
+          streetAddress: addr.streetAddress ?? null,
+          city: addr.city ?? null,
+          state: addr.state ?? null,
+          zipcode: addr.zipcode ?? null,
+        }
+      : null,
+    zestimate: p.zestimate ?? null,
+    rentZestimate: p.rentZestimate ?? null,
+    zestimateLowPercent: null,
+    zestimateHighPercent: null,
+    taxAssessedValue: (taxFirst?.value as number) ?? null,
+    taxAssessedYear: taxFirst?.time
+      ? new Date(taxFirst.time as number).getFullYear()
+      : null,
+    price: p.price ?? null,
+    homeType: p.homeType ?? null,
+    livingArea: p.livingAreaValue ?? null,
+    bedrooms: p.bedrooms ?? null,
+    bathrooms: p.bathrooms ?? null,
+    zestimateHistory: null,
+  }
 }
 
 /* ---------- getNeighborhood ---------- */
 
-async function getNeighborhood(page: Page, params: Record<string, unknown>): Promise<unknown> {
-  await navigateToProperty(page, params)
-  const zpid = String(params.zpid ?? '')
+async function getNeighborhood(
+  page: Page,
+  params: Record<string, unknown>,
+  pageFetch: PageFetch,
+): Promise<unknown> {
+  const zpid = Number(params.zpid)
+  const p = await fetchProperty(page, zpid, pageFetch)
+  if (!p) return null
 
-  return page.evaluate(`
-    (() => {
-      const el = document.getElementById('__NEXT_DATA__');
-      if (!el) return null;
-      let data;
-      try { data = JSON.parse(el.textContent); } catch { return null; }
-      const pp = data?.props?.pageProps || {};
+  const addr = p.address as Record<string, unknown> | undefined
 
-      // Find property for basic context
-      let prop = null;
-      const cache = pp.gdpClientCache;
-      if (cache) {
-        try {
-          const parsed = typeof cache === 'string' ? JSON.parse(cache) : cache;
-          for (const [key, val] of Object.entries(parsed)) {
-            const v = typeof val === 'string' ? JSON.parse(val) : val;
-            if (v?.property) { prop = v.property; break; }
-          }
-        } catch {}
-      }
-      if (!prop) {
-        for (const key of ['componentProps', 'initialData', 'property']) {
-          const c = pp[key];
-          if (c?.zpid || c?.property) { prop = c.property || c; break; }
+  const schools = Array.isArray(p.schools)
+    ? (p.schools as Array<Record<string, unknown>>).slice(0, 10).map((s) => ({
+        name: (s.name as string) ?? null,
+        rating: (s.rating as number) ?? null,
+        level: (s.level as string) ?? (s.grades as string) ?? null,
+        type: (s.type as string) ?? null,
+        distance: (s.distance as number) ?? null,
+        link: (s.link as string) ?? null,
+      }))
+    : []
+
+  const nearbyHomes = Array.isArray(p.nearbyHomes)
+    ? (p.nearbyHomes as Array<Record<string, unknown>>).slice(0, 10).map((h) => {
+        const a = h.address as Record<string, unknown> | undefined
+        return {
+          zpid: (h.zpid as number) ?? null,
+          address: (a?.streetAddress as string) ?? null,
+          price: (h.price as number) ?? null,
+          bedrooms: (h.bedrooms as number) ?? null,
+          bathrooms: (h.bathrooms as number) ?? null,
+          livingArea: (h.livingAreaValue as number) ?? (h.livingArea as number) ?? null,
+          homeType: (h.homeType as string) ?? null,
         }
-      }
-      if (!prop) return null;
+      })
+    : []
 
-      // Schools
-      const schools = Array.isArray(prop.schools)
-        ? prop.schools.slice(0, 10).map(s => ({
-            name: s.name || s.schoolName || null,
-            rating: s.rating ?? s.greatSchoolsRating ?? null,
-            level: s.level || s.grades || null,
-            type: s.type || null,
-            distance: s.distance ?? null,
-            link: s.link || null,
-          }))
-        : [];
-
-      // Nearby homes
-      const nearby = Array.isArray(prop.nearbyHomes)
-        ? prop.nearbyHomes.slice(0, 10).map(h => ({
-            zpid: h.zpid ?? null,
-            address: h.address?.streetAddress || h.streetAddress || null,
-            price: h.price ?? null,
-            bedrooms: h.bedrooms ?? null,
-            bathrooms: h.bathrooms ?? null,
-            livingArea: h.livingArea ?? null,
-            homeType: h.homeType ?? null,
-          }))
-        : [];
-
-      return {
-        zpid: prop.zpid ?? null,
-        address: prop.address ? {
-          streetAddress: prop.address.streetAddress ?? null,
-          city: prop.address.city ?? null,
-          state: prop.address.state ?? null,
-          zipcode: prop.address.zipcode ?? null,
-        } : null,
-        walkScore: prop.walkScore ?? null,
-        transitScore: prop.transitScore ?? null,
-        bikeScore: prop.bikeScore ?? null,
-        schools,
-        nearbyHomes: nearby,
-      };
-    })()
-  `)
+  return {
+    zpid: p.zpid ?? null,
+    address: addr
+      ? {
+          streetAddress: addr.streetAddress ?? null,
+          city: addr.city ?? null,
+          state: addr.state ?? null,
+          zipcode: addr.zipcode ?? null,
+        }
+      : null,
+    walkScore: null,
+    transitScore: null,
+    bikeScore: null,
+    schools,
+    nearbyHomes,
+  }
 }
 
 /* ---------- Adapter export ---------- */
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
+const OPERATIONS: Record<
+  string,
+  (page: Page, params: Record<string, unknown>, pageFetch: PageFetch) => Promise<unknown>
+> = {
   getPropertyDetail,
   getZestimate,
   getNeighborhood,
@@ -258,7 +233,8 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) =
 
 const adapter = {
   name: 'zillow-detail',
-  description: 'Zillow property detail — extracts property info, Zestimate, and neighborhood data from __NEXT_DATA__',
+  description:
+    'Zillow property detail — GraphQL persisted query via page.evaluate(fetch). Zero DOM, zero SSR parsing.',
 
   async init(page: Page): Promise<boolean> {
     return page.url().includes('zillow.com')
@@ -274,11 +250,11 @@ const adapter = {
     params: Readonly<Record<string, unknown>>,
     helpers: Record<string, unknown>,
   ): Promise<unknown> {
-    const { errors } = helpers as { errors: { unknownOp(op: string): Error; missingParam(p: string): Error } }
+    const { pageFetch, errors } = helpers as { pageFetch: PageFetch; errors: AdapterErrors }
     const handler = OPERATIONS[operation]
     if (!handler) throw errors.unknownOp(operation)
     if (!params.zpid) throw errors.missingParam('zpid')
-    return handler(page, { ...params })
+    return handler(page, { ...params }, pageFetch)
   },
 }
 
