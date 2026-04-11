@@ -18,8 +18,8 @@ eBay — world's largest auction and marketplace platform. E-commerce archetype.
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchItems | search listings by keyword | keywords | itemId, title, price, condition | entry point, paginated |
-| getItemDetail | full item details | itemId <- searchItems | title, price, condition, seller, shipping, images | LD+JSON Product schema |
+| searchItems | search listings by keyword | keywords | itemId, title, price, condition, image | entry point, paginated |
+| getItemDetail | full item details | itemId <- searchItems | title, price, condition, seller, shipping, returns, brand, model, images | LD+JSON Product schema |
 | getSellerProfile | seller reputation | username <- getItemDetail.seller.storeSlug | storeName, positiveFeedback, itemsSold, followers | uses /str/ URL |
 
 ## Quick Start
@@ -40,27 +40,26 @@ openweb ebay exec getSellerProfile '{"username": "freegeekportland"}'
 ## Site Internals
 
 ### API Architecture
-- No public JSON APIs — all data extracted from DOM
-- Item detail pages have LD+JSON `@type: Product` schema (structured price, condition, images)
-- Search results use `.s-card` component classes
+- No internal JSON APIs — eBay is fully server-rendered (Marko.js)
+- Item detail pages have LD+JSON `@type: Product` schema (structured price, condition, images, shipping, returns, brand, model)
+- Search results use `.s-card` elements with `data-listingid` attribute
 - Store pages at `/str/{storeName}` use `.str-seller-card` classes
 
 ### Auth
 No auth required for public read operations.
 
 ### Transport
-- `page` transport with adapter — heavy bot detection blocks direct HTTP
+- `page` transport with adapter — Radware StormCaster bot detection blocks all non-browser requests
 - Adapter: `adapters/ebay.ts`
-- All operations navigate to real eBay pages and extract data from DOM/LD+JSON
+- Node transport not possible (returns "Pardon Our Interruption..." captcha)
 
 ### Extraction
-- **Search**: DOM extraction from `.s-card` elements (title, price, condition, itemId from link)
-- **Item detail**: LD+JSON `@type: Product` with DOM fallback for seller info
-- **Seller profile**: DOM extraction from `.str-seller-card` on store page
+- **Search**: DOM extraction from `.s-card` elements; `data-listingid` for item ID, `.s-card__title`/`.s-card__price`/`.s-card__subtitle` for data
+- **Item detail**: LD+JSON `@type: Product` (primary) — extracts price, condition, availability, images, shipping, returns, brand, model. DOM fallback for seller card info only.
+- **Seller profile**: DOM extraction from `.str-seller-card`; regex parsing of feedback text for stats
 
 ### Known Issues
-- Heavy bot detection (Cloudflare, Akamai, PerimeterX, DataDome) — requires real browser with page transport
-- Search result images often empty due to lazy loading
-- Promoted/sponsored results (itemId "123456") are filtered out
+- Heavy bot detection (Radware StormCaster) — requires real browser with page transport
+- Promoted/sponsored results (href contains `/itm/123456`) are filtered out
 - Item pages vary between auction and buy-it-now layouts
 - Seller profile requires store slug (from `/str/` URL), not display name

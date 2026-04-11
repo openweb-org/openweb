@@ -38,18 +38,20 @@ paths:
                 const link = card.querySelector('a[href*="/itm/"]');
                 if (!link) continue;
                 const href = link.getAttribute('href') || '';
-                const match = href.match(/\/itm\/(\d+)/);
-                if (!match || match[1] === '123456') continue;
+                const hrefMatch = href.match(/\/itm\/(\d+)/);
+                if (hrefMatch && hrefMatch[1] === '123456') continue;
+                const itemId = card.getAttribute('data-listingid') || (hrefMatch ? hrefMatch[1] : '');
+                if (!itemId) continue;
                 const title = card.querySelector('.s-card__title')?.textContent?.trim() || '';
                 const price = card.querySelector('.s-card__price')?.textContent?.trim() || '';
                 const subtitle = card.querySelector('.s-card__subtitle')?.textContent?.trim() || '';
-                const img = card.querySelector('.s-card__image img');
+                const img = card.querySelector('img');
                 const image = img?.getAttribute('src') || '';
                 results.push({
-                  itemId: match[1],
+                  itemId,
                   title: title.replace(/Opens in a new window or tab$/i, '').trim(),
                   price, condition: subtitle, image,
-                  link: 'https://www.ebay.com/itm/' + match[1],
+                  link: 'https://www.ebay.com/itm/' + itemId,
                 });
               }
               return { resultCount: results.length, items: results };
@@ -238,6 +240,12 @@ paths:
                   returns:
                     type: string
                     description: Return policy text.
+                  brand:
+                    type: string
+                    description: Product brand name (from LD+JSON when available).
+                  model:
+                    type: string
+                    description: Product model name (from LD+JSON when available).
 
   /str/{username}:
     get:
