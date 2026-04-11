@@ -25,7 +25,7 @@ interface CodeAdapter {
   ): Promise<unknown>
 }
 
-const API_BASE = 'https://api.trello.com/1'
+const API_BASE = 'https://trello.com/1'
 
 async function apiFetch(
   page: Page,
@@ -42,11 +42,21 @@ async function apiFetch(
     }
   }
 
+  // Trello's same-origin proxy requires the dsc cookie value in the body for mutations
+  let requestBody: string | undefined
+  let requestHeaders: Record<string, string> | undefined
+  if (method !== 'GET') {
+    const dsc = await page.evaluate(() => document.cookie.match(/dsc=([^;]+)/)?.[1] ?? '')
+    const merged = { ...body, dsc }
+    requestBody = JSON.stringify(merged)
+    requestHeaders = { 'Content-Type': 'application/json' }
+  }
+
   const result = await helpers.pageFetch(page, {
     url: url.toString(),
     method,
-    body: body ? JSON.stringify(body) : undefined,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: requestBody,
+    headers: requestHeaders,
     timeout: 15_000,
   })
 

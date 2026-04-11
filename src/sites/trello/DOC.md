@@ -60,9 +60,9 @@ openweb trello exec deleteCard '{"cardId": "CARD_ID"}'
 
 ## Site Internals
 
-- **API Architecture:** REST API at `api.trello.com/1/`. All operations are standard REST endpoints with JSON responses.
-- **Auth:** Cookie session from trello.com webapp. Cookies are set on `.trello.com` and shared with `api.trello.com`. Cookies extracted automatically via page transport.
-- **Transport:** `page` — browser context required to forward session cookies cross-origin to `api.trello.com`. All operations use an adapter that calls the API via `pageFetch`.
+- **API Architecture:** REST API at `trello.com/1/` (same-origin proxy). All operations are standard REST endpoints with JSON responses. Note: `api.trello.com` is blocked by CORS when called from `trello.com` page context.
+- **Auth:** Cookie session from trello.com webapp. Session cookies authenticate API calls via same-origin proxy.
+- **Transport:** `page` — browser context required for cookie-authenticated API calls. All operations use an adapter that calls the API via `pageFetch`.
 - **Adapter:** `trello-api` — translates operation params to Trello REST API calls. Uses `helpers.pageFetch()` for browser-context requests with cookie auth.
 
 ## Known Issues
