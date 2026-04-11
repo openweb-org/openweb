@@ -1,10 +1,10 @@
 openapi: '3.1.0'
 info:
   title: Airbnb
-  version: '1.1.0'
+  version: '1.2.0'
   x-openweb:
     spec_version: '2.0'
-    compiled_at: '2026-04-06T01:00:00Z'
+    compiled_at: '2026-04-11T00:00:00Z'
     requires_auth: false
 servers:
   - url: https://www.airbnb.com
@@ -21,15 +21,12 @@ paths:
           verified: true
           stable_id: ab0001
           signature_id: ab0001s
-          tool_version: 1
+          tool_version: 2
           signals:
-            - extraction_detected
-            - script_json
-        extraction:
-          type: script_json
-          page_url: /s/homes
-          selector: '#data-deferred-state-0'
-          path: niobeClientData.0.1.data.presentation.staysSearch.results
+            - adapter-verified
+        adapter:
+          name: airbnb
+          operation: searchListings
       parameters:
         - name: query
           in: query
@@ -98,7 +95,7 @@ paths:
           example: Entire home/apt
       responses:
         '200':
-          description: Search results from embedded SSR data.
+          description: Search results from SSR HTML fetch.
           content:
             application/json:
               schema:
@@ -149,15 +146,12 @@ paths:
           verified: true
           stable_id: ab0002
           signature_id: ab0002s
-          tool_version: 1
+          tool_version: 2
           signals:
-            - extraction_detected
-            - script_json
-        extraction:
-          type: script_json
-          page_url: /rooms/{id}
-          selector: '#data-deferred-state-0'
-          path: niobeClientData.0.1.data.presentation.stayProductDetailPage
+            - adapter-verified
+        adapter:
+          name: airbnb
+          operation: getListingDetail
       parameters:
         - name: id
           in: path
@@ -190,7 +184,7 @@ paths:
           example: 2
       responses:
         '200':
-          description: Listing detail page data from embedded SSR data.
+          description: Listing detail page data from SSR HTML fetch.
           content:
             application/json:
               schema:
@@ -227,12 +221,12 @@ paths:
         permission: read
         build:
           stable_id: ab0003
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
         adapter:
-          name: airbnb-web
+          name: airbnb
           operation: getListingReviews
       parameters:
         - name: id
@@ -244,7 +238,7 @@ paths:
           example: '20713816'
       responses:
         '200':
-          description: Reviews from GraphQL interception with SSR fallback.
+          description: Reviews from direct GraphQL API call (zero browser).
           content:
             application/json:
               schema:
@@ -310,12 +304,12 @@ paths:
         permission: read
         build:
           stable_id: ab0004
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
         adapter:
-          name: airbnb-web
+          name: airbnb
           operation: getListingAvailability
       parameters:
         - name: id
@@ -341,7 +335,7 @@ paths:
           example: '2026-06-05'
       responses:
         '200':
-          description: Calendar availability data from GraphQL interception.
+          description: Calendar availability from direct GraphQL API call (zero browser).
           content:
             application/json:
               schema:
@@ -409,12 +403,12 @@ paths:
         permission: read
         build:
           stable_id: ab0005
-          tool_version: 1
+          tool_version: 2
           verified: true
           signals:
             - adapter-verified
         adapter:
-          name: airbnb-web
+          name: airbnb
           operation: getHostProfile
       parameters:
         - name: hostId
@@ -426,7 +420,7 @@ paths:
           example: '70270073'
       responses:
         '200':
-          description: Host profile data from SSR extraction.
+          description: Host profile data from browser SSR extraction.
           content:
             application/json:
               schema:

@@ -1,7 +1,7 @@
 # Airbnb
 
 ## Overview
-Travel marketplace — accommodation search, listing details, reviews, availability, and host profiles via browser SSR extraction.
+Travel marketplace — accommodation search, listing details, reviews, availability, and host profiles via Node fetch + direct GraphQL API.
 
 ## Workflows
 
@@ -22,9 +22,9 @@ Travel marketplace — accommodation search, listing details, reviews, availabil
 |-----------|--------|-----------|------------|-------|
 | searchListings | find places to stay | query, checkin, checkout, adults | id, title, price, rating, photos | entry point; 18 results per page |
 | getListingDetail | full listing info | id ← searchListings | title, description, overallRating, host, amenities | requires listing ID |
-| getListingReviews | guest reviews | id ← searchListings | reviews[], reviewsCount, overallRating, ratings | adapter; GraphQL interception |
-| getListingAvailability | pricing and availability | id, check_in, check_out | calendarMonths[] (date, available, price) | adapter; GraphQL interception |
-| getHostProfile | host info | hostId ← getListingDetail | profile (superhost, response rate, about, listings) | adapter; SSR from /users/show/{hostId} |
+| getListingReviews | guest reviews | id ← searchListings | reviews[], reviewsCount, overallRating, ratings | adapter; direct GraphQL API |
+| getListingAvailability | pricing and availability | id, check_in, check_out | calendarMonths[] (date, available, price) | adapter; direct GraphQL API |
+| getHostProfile | host info | hostId ← getListingDetail | profile (superhost, response rate, about, listings) | adapter; browser SSR from /users/show/{hostId} |
 
 ## Quick Start
 
@@ -52,30 +52,30 @@ openweb airbnb exec getHostProfile '{"hostId":"70270073"}'
 Everything below is for discover/compile operators and deep debugging.
 
 ### API Architecture
-- **No JSON APIs** — all data is SSR-delivered via `<script id="data-deferred-state-0" type="application/json">`
-- Data path: `niobeClientData[0][1].data.presentation.staysSearch` (search) / `stayProductDetailPage` (detail)
+- **Dual transport**: 4/5 ops use Node.js fetch directly (zero browser); 1 op (getHostProfile) requires browser SSR
+- **Search/Detail**: Node fetch to `www.airbnb.com` pages → parse SSR JSON from `<script id="data-deferred-state-0">`
+- **Reviews/Availability**: Direct GraphQL API calls to `/api/v3/` with persisted query hashes, API key `d306zoyjsyarp7ifhu67rjxn52tv0t20`
+- **Host Profile**: Browser SSR extraction (bot detection blocks Node fetch to `/users/show/`)
 - Search results contain 18 listings per page with cursor-based pagination
-- Listing IDs are base64-encoded in `demandStayListing.id` (format: `DemandStayListing:<numeric_id>`)
-- Detail pages use a section-based architecture with 33 sections (REVIEWS_DEFAULT, LOCATION_DEFAULT, etc.)
+- GraphQL requires platform headers: `X-Airbnb-GraphQL-Platform-Client: minimalist-niobe`, `X-Airbnb-GraphQL-Platform: web`
 
 ### Auth
 No auth required for public browsing and search.
 
 ### Transport
-- `transport: page` — browser-only access required
-- All data is embedded in the initial SSR HTML; no separate API calls to intercept
-- Search and detail use declarative `script_json` extraction
-- Reviews, availability, and host profile use the `airbnb-web` adapter (`adapters/airbnb-web.ts`) for section filtering
+- **4/5 ops**: Node fetch — zero browser dependency (search, detail, reviews, availability)
+- **1/5 ops**: Browser SSR — getHostProfile requires page transport (bot detection on `/users/show/`)
+- Adapter (`adapters/airbnb.ts`) handles all 5 ops with transport auto-detection
 
 ### Extraction
-- **Search/Detail:** declarative `script_json` extraction from `#data-deferred-state-0`
-- **Reviews:** adapter intercepts `StaysPdpReviewsQuery` GraphQL response (triggered by scroll); SSR fallback
-- **Availability:** adapter intercepts `PdpAvailabilityCalendar` GraphQL response (fires on page load); SSR fallback
-- **Host profile:** adapter navigates to `/users/show/{hostId}`, extracts full SSR presentation data
+- **Search/Detail:** Node fetch HTML → parse `#data-deferred-state-0` JSON (data path: `niobeClientData[0][1].data.presentation.staysSearch`)
+- **Reviews:** Direct GraphQL API call (`StaysPdpReviewsQuery` persisted query hash)
+- **Availability:** Direct GraphQL API call (`PdpAvailabilityCalendar` persisted query hash)
+- **Host profile:** Browser SSR extraction from `/users/show/{hostId}`
 
 ### Known Issues
-- **SSR-only data** — no JSON APIs; all data comes from embedded script tags
+- **Persisted query hashes** are deployment-specific — may break if Airbnb rotates them
 - **No pagination support** — only first page of results (18 listings) is returned
 - **Dynamic pricing** — prices vary by dates, currency, and user session
 - **Listing IDs** — extracted from base64-encoded `demandStayListing.id`; `propertyId` field is null in search results
-- **Reviews limited** — adapter returns SSR-embedded reviews (typically first 6-10); full reviews load via GraphQL modal
+- **Reviews limited** — returns first page of reviews via API (typically 7); full set requires pagination
