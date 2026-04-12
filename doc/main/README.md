@@ -1,7 +1,7 @@
 # OpenWeb Documentation
 
 > Entry point and navigation guide for the codebase.
-> Last updated: 2026-04-09 (add-sites sprint: 63→96 sites, 470→634 ops)
+> Last updated: 2026-04-12 (infrastructure improvements: adapter helpers, knowledge docs, archetypes merge)
 
 ## Quick Start
 
@@ -39,10 +39,10 @@ doc/main/
 └── security.md            # SSRF protection, redirect safety, error model
 
 skill/openweb/                     # Agent-facing operator guide (separate deliverable)
-├── SKILL.md               # Router: exec flow, intent routing, load discipline
+├── SKILL.md               # Router: 3 routes (use / add-expand-upgrade / fix)
 ├── add-site/              # Contributor workflow (10-step: probe-first)
 ├── references/            # Lookup: CLI, x-openweb schema, troubleshooting
-└── knowledge/             # Pattern library: archetypes, auth, bot-detection, etc.
+└── knowledge/             # Pattern library: archetypes, auth, bot-detection, transport-upgrade, adapter-recipes
 ```
 
 The project ships two deliverables: **code** (`src/`) and **skill** (`skill/openweb/`). The skill is the agent-facing interface — it defines how agents discover, use, and extend OpenWeb. These docs (`doc/main/`) describe the internals; the skill docs describe the operator workflow. Both derive from source code and must stay accurate with it.
@@ -216,15 +216,19 @@ These principles govern all skill doc authoring and maintenance:
 
 ```
 skill/openweb/
-├── SKILL.md                   # Router + exec flow + load discipline
+├── SKILL.md                   # Router: 3 routes (use / add-expand-upgrade / fix)
 ├── add-site/                  # Contributor workflow (10-step: probe-first)
-│   ├── guide.md               # Unified flow entry (probe → route → build)
+│   ├── guide.md               # Unified flow entry (probe → route → build) + mode hint
 │   ├── probe.md               # CDP probe protocol (Step 2)
 │   ├── capture.md, review.md  # Step-specific docs
 │   ├── curate-operations.md, curate-runtime.md, curate-schemas.md
-│   ├── verify.md, document.md
+│   ├── verify.md, document.md # Document step defines 3-file model (SKILL.md, DOC.md, PROGRESS.md)
 ├── references/                # Lookup (CLI, x-openweb, troubleshooting)
-└── knowledge/                 # Pattern library (archetypes, auth, bot-detection, etc.)
+└── knowledge/                 # Pattern library
+    ├── archetypes.md          # Expected operations by category (merged from 5 files)
+    ├── transport-upgrade.md   # Stability ladder, node feasibility, GraphQL discovery
+    ├── adapter-recipes.md     # 5 canonical adapter patterns with code templates
+    ├── auth-routing.md, auth-primitives.md, bot-detection.md, extraction.md, graphql.md
 ```
 
 Three loading patterns: `add-site/` is sequential workflow, `references/` is independent lookup, `knowledge/` is decision-point pattern library.

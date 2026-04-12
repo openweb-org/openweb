@@ -77,7 +77,7 @@ Hotel/travel and e-commerce sites often embed structured data using schema.org v
 - **Detection:** `<script type="application/ld+json">` with `@type` field matching a known schema.org type
 - **Stability:** More stable than DOM extraction -- LD+JSON is maintained for SEO and changes less frequently than CSS classes or data-testid attributes
 - **Action:** Parse all LD+JSON blocks, filter by `@type`, extract fields. Include a DOM fallback for resilience.
-- **Examples:** Booking.com hotel detail (`@type: "Hotel"`), Expedia (`@type: "ItemList"` containing Hotel objects)
+- **Examples:** e.g. hotel/travel sites often embed `@type: "Hotel"` or `@type: "ItemList"`, e-commerce sites embed `@type: "Product"`
 
 ## data-testid DOM Extraction
 
@@ -87,7 +87,7 @@ Many modern SPAs use `data-testid` attributes for test automation. More stable t
 - **Detection:** Elements with `data-testid="property-card"`, `data-testid="searchresults_card"`, etc.
 - **Stability:** Semantic (test-oriented) rather than visual (style-oriented) selectors
 - **Action:** Enumerate `data-testid` values to discover extraction targets
-- **Examples:** Booking.com (`data-testid="property-card"` for search, `data-testid="review-score-component"` for reviews)
+- **Examples:** e.g. travel sites (`data-testid="property-card"` for search results, `data-testid="review-score-component"` for reviews)
 
 ## General Principles
 

@@ -25,7 +25,7 @@ Jump to the matching category. Most failures match a known pattern.
 2. `openweb browser status` — is Chrome running?
 3. Set `"debug": true` in `~/.openweb/config.json`, re-run
 4. Check site's `openapi.yaml` — endpoint/auth correct?
-5. Compare with a working site of the same archetype (`knowledge/archetypes/index.md`)
+5. Compare with a working site of the same archetype (`knowledge/archetypes.md`)
 
 ### Step 4: Fix and verify
 

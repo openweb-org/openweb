@@ -1,13 +1,13 @@
 # L3 Adapter Framework
 
 > CodeAdapter interface, loading, and execution lifecycle for sites that defy declarative modeling.
-> Last updated: 2026-04-06 (adapter normalization — helpers injection, self-contained constraint)
+> Last updated: 2026-04-12 (infrastructure improvements — interceptResponse, nodeFetch, Page|null path)
 
 ## Overview
 
-L3 adapters are the escape hatch. When a site's internal API is too complex for L2 primitives — proprietary module systems, custom serialization, non-HTTP protocols — you write a CodeAdapter: arbitrary JS that runs in the browser via Patchright (Playwright fork with CDP detection bypass).
+L3 adapters are the escape hatch. When a site's internal API is too complex for L2 primitives — proprietary module systems, custom serialization, non-HTTP protocols — you write a CodeAdapter: arbitrary JS that runs in the browser via Patchright (Playwright fork with CDP detection bypass), or in Node.js for sites that don't need a browser.
 
-Adapters must be **self-contained** — they cannot import from `src/`. After packaging, adapters load from the compile cache (`$OPENWEB_HOME/sites/<site>/adapters/`), where relative imports break. Shared utilities (`pageFetch`, `graphqlFetch`, error factories) are injected by the runtime via the `execute()` 4th parameter.
+Adapters must be **self-contained** — they cannot import from `src/`. After packaging, adapters load from the compile cache (`$OPENWEB_HOME/sites/<site>/adapters/`), where relative imports break. Shared utilities (`pageFetch`, `graphqlFetch`, `interceptResponse`, error factories) are injected by the runtime via the `execute()` 4th parameter. For node-transport adapters, import `nodeFetch` directly from `src/lib/adapter-helpers.ts`.
 
 -> See: `src/runtime/adapter-executor.ts`
 
@@ -26,11 +26,13 @@ interface CodeAdapter {
   readonly name: string
   readonly description: string
 
-  init(page: Page): Promise<boolean>
-  isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown>
+  init(page: Page | null): Promise<boolean>
+  isAuthenticated(page: Page | null): Promise<boolean>
+  execute(page: Page | null, operation: string, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown>
 }
 ```
+
+When `page` is `null`, the adapter is running in node transport mode — no browser is available. The adapter must use `nodeFetch()` (imported directly) instead of `pageFetch`/`graphqlFetch` (which require a Page).
 
 -> See: `src/types/adapter.ts`, `src/lib/adapter-helpers.ts`
 
@@ -63,6 +65,8 @@ interface CodeAdapter {
 ```
 
 **Key properties:**
+- When `page` is non-null: full browser lifecycle (polyfills, warmSession, bot detection)
+- When `page` is null (transport: node): adapter runs without browser — `init()`, `isAuthenticated()`, `warmSession()`, and `detectPageBotBlock()` are all skipped
 - Adapter result is **not validated** against response schema (unlike L1/L2)
 - Adapters are **cached** by `siteRoot:adapterName` (cleared via `clearAdapterCache()`)
 - Adapter name is validated against path traversal
@@ -153,7 +157,7 @@ src/runtime/
 └── response-unwrap.ts        # applyResponseUnwrap (used by all HTTP executors)
 
 src/lib/
-└── adapter-helpers.ts        # pageFetch, graphqlFetch (injected into adapters)
+└── adapter-helpers.ts        # pageFetch, graphqlFetch, interceptResponse, nodeFetch
 
 src/types/
 └── adapter.ts                # CodeAdapter, AdapterHelpers, AdapterErrorHelpers

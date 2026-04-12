@@ -28,6 +28,16 @@ flowchart TD
 
 ## Pre-flight Decisions
 
+### Mode
+
+Your scope determines which steps to skip:
+
+- **New site:** Run all steps.
+- **Adding ops to existing site:** Skip Capture/Compile for families that already have working ops. Read existing DOC.md first.
+- **Upgrading transport/stability:** Skip Framing (intents already exist). Focus on Probe with fresh eyes — see knowledge/transport-upgrade.md.
+
+When in doubt, don't skip — run the step. Skipping a probe is more expensive than running an unnecessary one.
+
 ### Incremental Mode (Existing Site)
 
 Read `DOC.md` + `openapi.yaml` from `src/sites/<site>/` or
@@ -40,8 +50,8 @@ chain dependencies. Do not hardcode IDs — execute a list op for fresh ones.
 
 Read these knowledge files in order. Each produces a concrete decision.
 
-1. **`knowledge/archetypes/index.md`** — identify archetype, read profile.
-   **Decision:** Target operations, expected auth/transport.
+1. **`knowledge/archetypes.md`** — identify archetype, read expected operations.
+   **Decision:** Target operations for discovery.
 
 2. **`knowledge/bot-detection.md`** — check for site or vertical.
    **Decision:** Real Chrome profile needed? Short sessions?
@@ -428,18 +438,26 @@ it syncs FROM `src/sites/` TO cache/dist, overwriting cache edits.
 
 ## Step 10: Document
 
-Read `add-site/document.md` for DOC.md template, PROGRESS.md format, and
-knowledge update criteria.
+Read `add-site/document.md` for the three-file model, templates, and knowledge
+update criteria.
 
-- Finalize DOC.md with verified workflows and data-flow documentation.
-- Clean up `## Internal: Probe Results` — final DOC.md retains only the
-  settled transport/lane conclusions, not the raw probe matrix.
+Update all three per-site doc files:
+
+1. **SKILL.md** — Finalize user-facing doc: overview, workflows with cross-op
+   data flow, operations table, quick start commands, known limitations.
+2. **DOC.md** — Finalize developer doc: auth, transport decisions and evidence,
+   adapter patterns, known issues. Clean up probe results to settled
+   conclusions only.
+3. **PROGRESS.md** — Append entry with context, changes, verification results,
+   key discoveries, and pitfalls encountered.
+4. **manifest.json** — Verify site metadata is current.
+
 - Document family lanes used by the site, transport limits, bot-detection
-  constraints, and why compile was skipped for any family.
+  constraints, and why compile was skipped for any family (in DOC.md).
 - If you learned something that generalizes across sites, write to
   `knowledge/`.
 - If you hit pipeline friction (not site-specific), write
-  `src/sites/<site>/pipeline-gaps.md` — see `add-site/document.md` for format.
+  `src/sites/<site>/pipeline-gaps.md`.
 
-**Exit criteria:** DOC.md finalized. Knowledge updated if applicable.
-Pipeline gaps documented if any. PROGRESS.md updated.
+**Exit criteria:** SKILL.md, DOC.md, and PROGRESS.md finalized per templates.
+Knowledge updated if applicable. Pipeline gaps documented if any.

@@ -307,3 +307,7 @@ await page.waitForSelector('.content', { timeout: 10000 }).catch(() => {})
 
 5. **Extraction when an API exists.** If the site makes XHR/fetch calls, use
    the API directly. Extraction is for SSR-only data.
+
+6. **`replay_safety` placed in spec `x-openweb` instead of `example.json`.** The spec
+   uses `safety` (values: `safe`, `caution`). The `example.json` uses `replay_safety`
+   (values: `safe_read`, `unsafe_mutation`).

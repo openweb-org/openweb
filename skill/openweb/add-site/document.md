@@ -2,31 +2,35 @@
 
 Write per-site documentation and update knowledge after any add-site workflow.
 
-Two outputs:
-1. **DOC.md** — per-site skill doc (what can I do here, how do operations connect?)
-2. **PROGRESS.md** — append-only history trace (what happened and when)
+Three outputs per site:
+
+| File | Audience | Purpose | Update mode |
+|------|----------|---------|-------------|
+| **SKILL.md** | Users / agents | How to use — overview, operations, workflows, quick start, known limitations | In-place, follows /skill-creator format |
+| **DOC.md** | Developers / maintainers | How it works internally — architecture, transport decisions, probe evidence, adapter patterns, pitfalls | In-place, always reflects current implementation |
+| **PROGRESS.md** | Developers / maintainers | What happened — chronological entries, discovery journey, verification results | Append-only |
 
 Optionally update **knowledge/** if you learned something general.
 
 ---
 
-## DOC.md — Per-Site Skill Doc
+## SKILL.md — Per-Site User Doc
 
-DOC.md is for the agent (or human) *using* the site — not the developer who
-compiled it. It answers: "what can I do here, and how do operations connect?"
+SKILL.md is for the agent (or human) *using* the site. It answers: "what can I
+do here, and how do operations connect?"
 
 ### Layering with openapi.yaml
 
-DOC.md and `openapi.yaml` serve different roles — avoid duplication:
+SKILL.md and `openapi.yaml` serve different roles — avoid duplication:
 
 | Layer | Carries |
 |---|---|
 | **openapi.yaml** | Structural truth — params, types, schemas, endpoints (machine-readable) |
-| **DOC.md** | Semantic truth — intent, workflows, cross-op data flow, gotchas (agent-readable) |
+| **SKILL.md** | Semantic truth — intent, workflows, cross-op data flow, gotchas (agent-readable) |
 
-DOC.md covers only what `openapi.yaml` cannot express:
+SKILL.md covers only what `openapi.yaml` cannot express:
 
-1. **Cross-operation data flow** — `channelId ← listGuildChannels` (OpenAPI has no concept of this)
+1. **Cross-operation data flow** — `channelId <- listGuildChannels` (OpenAPI has no concept of this)
 2. **Intent mapping** — what each operation is for, when to use it
 3. **Workflows** — multi-step sequences connecting operations
 4. **Non-obvious behavior** — rate limits, required login, response quirks
@@ -34,10 +38,6 @@ DOC.md covers only what `openapi.yaml` cannot express:
 For full param lists, types, and response schemas: `openweb <site> <op>`.
 
 ### Template
-
-The divider (`---`) separates user-facing content (above) from operator
-internals (below). An agent using the site reads above the line. An agent
-debugging or expanding the site reads below.
 
 ```markdown
 # <Site Name>
@@ -50,21 +50,21 @@ One-liner: what this site is, what archetype (e-commerce, social, etc.)
 Common multi-step flows showing cross-operation data flow:
 
 ### [Workflow name, e.g., "Find and read messages"]
-1. `listGuilds` → pick guild → `guildId`
-2. `listGuildChannels(guildId)` → pick channel → `channelId`
-3. `getChannelMessages(channelId, limit)` → messages
+1. `listGuilds` -> pick guild -> `guildId`
+2. `listGuildChannels(guildId)` -> pick channel -> `channelId`
+3. `getChannelMessages(channelId, limit)` -> messages
 
 ### [Another workflow]
-1. `searchProducts(query)` → results with `productId`
-2. `getProductDetail(productId)` → full product info
+1. `searchProducts(query)` -> results with `productId`
+2. `getProductDetail(productId)` -> full product info
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
 | listGuilds | list my servers | — | id, name, icon | entry point |
-| listGuildChannels | channels in server | guildId ← listGuilds | id, name, type | |
-| getChannelMessages | read messages | channelId ← listGuildChannels | id, content, author | paginated |
+| listGuildChannels | channels in server | guildId <- listGuilds | id, name, type | |
+| getChannelMessages | read messages | channelId <- listGuildChannels | id, content, author | paginated |
 
 ## Quick Start
 
@@ -76,11 +76,45 @@ openweb <site> exec <op> '<full JSON params>'
 openweb <site> exec <op> '<full JSON params>'
 \```
 
+## Known Limitations
+- [User-facing limitations: rate limits, missing operations, auth requirements]
+```
+
+### Column guide for Operations table
+
+- **Operation**: operationId from openapi.yaml
+- **Intent**: what this achieves (short phrase)
+- **Key Input**: main params + source (`<- source_operation`). Omit trivial params
+- **Key Output**: key response fields the user cares about (not full schema)
+- **Notes**: pagination, rate limits, gotchas. Mark entry points (no input dependencies)
+
+The `<- source` annotations are the soul of this table — they turn a flat list
+into a directed graph so the agent knows where to get each param.
+
+### Required vs optional sections
+
+**Required:** Overview, Workflows, Operations, Quick Start. If a required
+section has nothing interesting (e.g., single-operation site), a one-liner is
+enough.
+
+**Optional:** Known Limitations — include when there are user-visible
+constraints worth documenting.
+
 ---
 
-## Site Internals
+## DOC.md — Per-Site Developer Doc
 
-Everything below is for discover/compile operators and deep debugging.
+DOC.md is for the developer or maintainer working on the site package. It
+answers: "how does this site work internally, and what should I know before
+changing it?"
+
+This file consolidates what was previously split across old DOC.md internals
+and summary.md.
+
+### Template
+
+```markdown
+# <Site Name> — Internals
 
 ## API Architecture
 - REST / GraphQL / SSR / hybrid?
@@ -96,63 +130,94 @@ Everything below is for discover/compile operators and deep debugging.
 - node, page, or adapter? Why?
 - If mixed: which ops use which transport and why?
 - If adapter: name the file (`adapters/<site>.ts`)
+- Key decisions and evidence (from probe)
 
 ## Extraction
 - How data is extracted (direct JSON, ssr_next_data, html_selector, page_global, adapter)
 - Parsing quirks
 
+## Adapter Patterns
+- [If applicable] Key patterns used in adapter code
+- Helper functions, data transformations
+
 ## Known Issues
 - Bot detection? (DataDome, PerimeterX, etc.)
 - Rate limiting?
 - Dynamic fields causing verify DRIFT?
+- Pitfalls encountered during implementation
+
+## Probe Results
+- [Settled conclusions only — not the raw probe matrix]
+- Transport hypothesis and final outcome per family
 ```
-
-### Column guide for Operations table
-
-- **Operation**: operationId from openapi.yaml
-- **Intent**: what this achieves (short phrase)
-- **Key Input**: main params + source (`← source_operation`). Omit trivial params
-- **Key Output**: key response fields the user cares about (not full schema)
-- **Notes**: pagination, rate limits, gotchas. Mark entry points (no input dependencies)
-
-The `← source` annotations are the soul of this table — they turn a flat list
-into a directed graph so the agent knows where to get each param.
 
 ### Required vs optional sections
 
-**Required:** Overview, Workflows, Operations, Quick Start, Auth, Transport,
-Known Issues. If a required section has nothing interesting (e.g., Auth for a
-public API), a one-liner is enough: `No auth required.`
+**Required:** Auth, Transport, Known Issues. If a section has nothing
+interesting, a one-liner is enough: `No auth required.`
 
-**Optional:** API Architecture, Extraction — include when non-obvious. The
-divider and "Site Internals" heading are always present.
+**Optional:** API Architecture, Extraction, Adapter Patterns, Probe Results —
+include when non-obvious.
 
 ---
 
 ## PROGRESS.md — History Trace
 
-Append-only log. Each entry records what changed, why, and what was verified.
+Append-only log. Each entry records what happened, why, and what was verified.
 
-### Entry format
+### Entry template
 
 ```markdown
-## YYYY-MM-DD: [Short title]
+## YYYY-MM-DD — [Activity Type]
 
-**What changed:**
-- [Key changes]
+**Context:** [Why this work was done]
+**Changes:** [What changed]
+**Verification:** [Results]
+**Key discovery:** [Optional — non-obvious finding worth preserving]
+**Pitfalls encountered:** [Optional — mistakes or dead ends worth documenting]
+```
 
-**Why:**
-- [Motivation]
+Example:
 
-**Verification:** [what was verified — API-level, content-level, build]
-**Commit:** [short hash]
+```markdown
+## 2026-04-11 — Transport Upgrade
+
+**Context:** Probe discovered open GraphQL API at api.graphql.imdb.com
+**Changes:** 3/4 ops migrated from SSR __NEXT_DATA__ to node GraphQL
+**Verification:** 4/4 PASS
+**Key discovery:** Introspection disabled, but error messages expose schema
+**Pitfalls encountered:** ratings histogram only in __NEXT_DATA__, not GraphQL
 ```
 
 ### When to write
 
-- After initial add-site workflow → first entry
+- After initial add-site workflow -> first entry
 - After any site update (new operations, auth fix, transport change)
 - After knowledge learned during troubleshooting
+
+---
+
+## Migration from Existing Files
+
+New sites use the three-file model directly. Old sites migrate on next touch —
+no bulk migration.
+
+### Migration mapping
+
+| Existing content | New home |
+|------------------|----------|
+| DOC.md: Overview, Workflows, Operations table, Quick Start | -> SKILL.md |
+| DOC.md: Site Internals, Probe Results, Known Issues (dev) | -> DOC.md (keep) |
+| summary.md: Architecture, Decision, Key Patterns, Pitfalls | -> DOC.md |
+| summary.md: Discovery Journey, Verification results | -> PROGRESS.md |
+
+### Steps
+
+1. Create `SKILL.md` from DOC.md above-the-divider content
+2. Keep DOC.md below-the-divider content, merge in summary.md architecture/patterns
+3. Create or extend `PROGRESS.md` with summary.md discovery/verification entries
+4. Delete `summary.md` after migration
+5. Remove the `---` divider convention from DOC.md (no longer needed — the split is file-level)
 
 ---
 
@@ -178,9 +243,9 @@ it's general. If it only matters for *this* site, it's site-specific.
 
 Before saving to knowledge/, verify the learning is durable:
 
-1. **Will this still be true in 6 months?** If no → site-specific DOC.md only
-2. **Is this already captured by the code?** If yes → don't save
-3. **Does this change how an agent should behave?** If no → not worth saving
+1. **Will this still be true in 6 months?** If no -> site-specific DOC.md only
+2. **Is this already captured by the code?** If yes -> don't save
+3. **Does this change how an agent should behave?** If no -> not worth saving
 
 ### Principles
 
@@ -197,7 +262,7 @@ Which knowledge file does it belong to? Search existing files first.
 |------|-------|
 | `knowledge/auth-routing.md` | Auth family identification signals |
 | `knowledge/auth-primitives.md` | Auth, CSRF, signing config and gotchas |
-| `knowledge/archetypes/index.md` | Site categories and expected behaviors |
+| `knowledge/archetypes.md` | Expected operations by site category |
 | `knowledge/bot-detection.md` | Detection systems, transport impact, capture strategy |
 | `knowledge/extraction.md` | SSR data, DOM, page globals, adapter extraction |
 | `knowledge/graphql.md` | Persisted queries, batching, introspection, schema |
@@ -238,10 +303,11 @@ After writing, check file size. If a knowledge file exceeds 200 lines:
 
 Before marking the Document step complete:
 
-- [ ] DOC.md written with all required sections
-- [ ] Operations table has `← source` annotations for cross-op data flow
+- [ ] SKILL.md written with all required sections (Overview, Workflows, Operations, Quick Start)
+- [ ] Operations table has `<- source` annotations for cross-op data flow
 - [ ] Workflows section covers common multi-step intents
 - [ ] Quick Start has copy-paste commands
-- [ ] PROGRESS.md has at least one entry
+- [ ] DOC.md written with all required sections (Auth, Transport, Known Issues)
+- [ ] PROGRESS.md has at least one entry using the entry template
 - [ ] Knowledge update: scope decision made (site-specific / general / both / nothing new)
 - [ ] If general knowledge: persistence test passed, written to correct knowledge file

@@ -82,21 +82,13 @@ If the table above doesn't resolve it, read references/troubleshooting.md.
 
 Site doesn't exist or lacks needed operations? Read add-site/guide.md.
 
-## Add or Expand a Site
+## Add / Expand / Upgrade Site
 
 Read add-site/guide.md
 
 ## Fix a Problem
 
 Read references/troubleshooting.md
-
-## CLI Reference
-
-Read references/cli.md
-
-## x-openweb Field Reference
-
-Read references/x-openweb.md
 
 ## File Map
 
@@ -128,12 +120,7 @@ All paths relative to `skill/openweb/`.
 
 | File | Load when |
 |---|---|
-| `knowledge/archetypes/index.md` | Identify site type, then load one profile |
-| `knowledge/archetypes/social.md` | Social/messaging/content sites |
-| `knowledge/archetypes/commerce.md` | E-commerce/travel/food sites |
-| `knowledge/archetypes/enterprise.md` | Enterprise/dev-tools/finance sites |
-| `knowledge/archetypes/data-apis.md` | Public data APIs |
-| `knowledge/archetypes/chinese-web.md` | Chinese web (cross-cutting patterns) |
+| `knowledge/archetypes.md` | Expected operations by site category |
 | `knowledge/auth-routing.md` | Auth type unknown — signal-to-family lookup |
 | `knowledge/auth-primitives.md` | Configuring auth — config and gotchas |
 | `knowledge/bot-detection.md` | Transport/capture decisions |

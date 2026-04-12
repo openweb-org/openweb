@@ -10,7 +10,7 @@ The client sends a hash instead of the full query string. The server looks up th
 - **Impact:** Cannot construct new queries -- only pre-registered hashes work. Site package must store the exact hash per operation.
 - **Capture:** Record the hash + variables for each operation. The hash is the operation identity.
 - **Modeling:** Store hash in `x-persisted-query-hash` extension in openapi.yaml.
-- **Hash rotation:** Some sites (e.g., X/Twitter) rotate persisted query hashes on every deploy. For these, hardcoding hashes is fragile. Use an L3 adapter that extracts hashes at runtime from the site's JS bundle: `page.evaluate(() => fetch(mainBundleUrl).then(text => regex-parse queryId+operationName pairs))`.
+- **Hash rotation:** Some sites rotate persisted query hashes on every deploy. For these, hardcoding hashes is fragile. Use an L3 adapter that extracts hashes at runtime from the site's JS bundle: `page.evaluate(() => fetch(mainBundleUrl).then(text => regex-parse queryId+operationName pairs))`.
 
 ## Query Hashing (Client-Side)
 
@@ -39,9 +39,63 @@ The `__schema` / `__type` introspection queries are blocked.
 - **Workaround:** Capture real traffic and build schema from observed request/response shapes. Some sites expose a schema file at a predictable path (`/graphql/schema.json`, `/api/schema.graphql`).
 - **Capture:** Interact with as many features as possible to observe diverse queries and response shapes.
 
+## GraphQL API Discovery
+
+Five-step flow for discovering GraphQL operations on a target site.
+
+### 1. CDP Capture
+
+Record network traffic while browsing the site. Filter for GraphQL endpoints:
+
+- **Path patterns:** `/graphql`, `/gql`, `/api/graphql`, `/graphql/{operationName}`
+- **Request shape:** `POST` with `Content-Type: application/json` containing `operationName`, `query`, or `variables` fields
+- **Batched requests:** Watch for JSON arrays — each element is a separate operation
+
+Browse diverse site features (search, navigation, account pages) to surface as many operations as possible.
+
+### 2. Introspection Attempt
+
+Send the `__schema` introspection query against each discovered endpoint:
+
+```graphql
+{ __schema { types { name fields { name type { name kind ofType { name } } } } } }
+```
+
+- Many production sites disable introspection — expect rejection
+- If it works, the full type graph is available; export and use it directly
+- Try both authenticated and unauthenticated — some sites gate introspection behind auth
+
+### 3. Error-Message Reversal
+
+Send intentionally malformed queries. GraphQL servers often leak schema details in error responses:
+
+- **Unknown field:** `Cannot query field "foo" on type "Query". Did you mean "fooBar", "fooBaz"?` — reveals valid field names
+- **Type mismatch:** `Expected type "Int!", found "abc"` — reveals argument types
+- **Missing required args:** `Field "search" argument "query" of type "String!" is required` — reveals required arguments
+
+Iterate: use revealed names to construct progressively more complete queries.
+
+### 4. Persisted Hash Extraction
+
+Look for `sha256Hash` in `extensions.persistedQuery` within captured requests. Sites using APQ (Automatic Persisted Queries) embed operation hashes:
+
+- Extract and catalog each hash alongside its `operationName` and `variables` shape
+- Try sending a hash without a `query` field — if the server resolves it, the operation uses persisted queries
+- Check the site's JS bundles for hash↔query mappings (some bundle the full query text alongside the hash)
+
+### 5. Auth Test
+
+Test each discovered operation with and without auth cookies to classify access requirements:
+
+- **Public:** Returns data without cookies — model as unauthenticated
+- **Authenticated:** Returns 401/403 or empty data without cookies — mark as requiring auth
+- **Mixed:** Returns partial data without auth, full data with auth — note the difference in DOC.md
+
+This classification drives `x-openweb.auth` settings in the site package.
+
 ## Ephemeral queryId / doc_id Hashes
 
-Some sites (notably Meta/Facebook, Instagram) use ephemeral `doc_id` or `queryId` parameters instead of standard Apollo persisted-query hashes.
+Some sites use ephemeral `doc_id` or `queryId` parameters instead of standard Apollo persisted-query hashes.
 
 **Key difference from Apollo persisted queries:**
 - Apollo hashes are SHA-256 of the query text -- deterministic and reproducible
@@ -136,7 +190,7 @@ paths:
 - **`wrap: variables`**: user-supplied params (`query`, `limit`) are wrapped under `variables` on the wire; `const` fields (`operationName`, `extensions`) stay at root
 - **`unwrap: data`**: response `{ data: { ... }, errors: [] }` → extracts `data`
 - **`schema.const`**: fixed headers (Client-Id) and body fields (operationName, hash) are invisible to callers
-- **Path-differentiated GraphQL** (e.g. DoorDash `/graphql/{operationName}`): use real paths, no `actual_path` needed
+- **Path-differentiated GraphQL** (e.g. `/graphql/{operationName}`): use real paths, no `actual_path` needed
 
 ## Common Pitfalls
 

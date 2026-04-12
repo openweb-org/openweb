@@ -146,6 +146,7 @@ Inspect:
 - **Intercepted request headers** for `Authorization`, CSRF-like cookie-to-header patterns
 - **Per-request headers or params** for rotation between intercepted requests (signing signal)
 - **Bot-detection cookies:** `botCookies.length > 0` means `page_required` even if browser-side fetch works (Node will likely fail)
+- **Monkey-patched fetch (signing signal):** Run `await page.evaluate(() => window.fetch.toString().length)`. Native `fetch.toString()` is short (~40 chars). If length > ~100, `fetch` is monkey-patched — the site injects signing/header logic into every request. This means node transport cannot bypass the signing layer; route to `adapter_required` or `intercept_required`.
 
 ### 2g. Record Transport Hypothesis
 
@@ -158,6 +159,8 @@ Based on all evidence from 2a-2f, record one hypothesis per family:
 | `adapter_required` | Family needs browser interaction or logic beyond direct replay |
 | `intercept_required` | Site's own JS can fetch data but programmatic replay cannot |
 | `extraction` | SSR/JSON/DOM is the simplest stable path |
+
+> **Transport decision guidance:** Before committing to a transport hypothesis, run the **Node Feasibility Quick-Check** in [`knowledge/transport-upgrade.md`](../knowledge/transport-upgrade.md) §Node Feasibility Quick-Check — a 3-step curl-based test that validates whether node transport is actually viable for each family.
 
 ### 2h. Persist the Probe Matrix
 
@@ -205,6 +208,7 @@ These values are consumed by agents reading the guide to make routing decisions,
 | Browser fetch returns different shape than intercepted response | Per-request signing, token rotation, or server-side session binding | Route to adapter/intercept lane; do not force replay |
 | CORS error on browser fetch | API is cross-origin; failure is CORS policy, not signing | Navigate to API origin first and re-test; do not classify as `intercept_required` from CORS alone |
 | Rate limit during probe (429, throttle page) | Too many probe requests in short session | Stop escalating, record what you have, route conservatively based on partial evidence |
+| DOC.md claims site needs browser, but probe suggests node is viable | Stale transport assessment in existing docs | Do not trust old docs — verify against [`knowledge/transport-upgrade.md`](../knowledge/transport-upgrade.md) §Disproved Assumptions Pattern. Probe evidence overrides historical DOC.md claims. |
 
 ---
 
@@ -215,3 +219,4 @@ These values are consumed by agents reading the guide to make routing decisions,
 - `knowledge/auth-routing.md` -- auth family routing patterns
 - `knowledge/bot-detection.md` -- bot-detection signals and mitigation
 - `knowledge/extraction.md` -- extraction lane details
+- `knowledge/transport-upgrade.md` -- node feasibility quick-check, stability ladder, disproved assumptions

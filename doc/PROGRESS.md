@@ -1,3 +1,28 @@
+## 2026-04-12: Infrastructure Improvements — Skill Docs + Adapter Helpers
+
+**What changed:**
+- **Knowledge docs:** New `transport-upgrade.md` (stability ladder, node feasibility, GraphQL discovery) and `adapter-recipes.md` (5 canonical patterns with code templates)
+- **Archetypes merge:** 5 archetype files → 1 `archetypes.md` (493→197 lines), kept only Expected Operations
+- **Adapter helpers:** `interceptResponse()` (shared response interception before navigation) and `nodeFetch()` (SSRF-validated node-context fetch with UA default)
+- **Node adapter path:** `executeAdapter` accepts `Page|null`. When `transport:node` in x-openweb, executor skips `ensureBrowser()` entirely
+- **Site migrations:** IMDb (3/4 ops → node GraphQL via `nodeFetch`), Rotten Tomatoes (3/3 ops → node HTML parse via `nodeFetch`)
+- **Validation:** `replay_safety` misplacement hint in `validator.ts` — detects wrong field placement and suggests correct location
+- **Skill doc updates:** SKILL.md → 3 routes, guide.md → mode hint, document.md → three-file model (SKILL.md/DOC.md/PROGRESS.md), probe.md → transport-upgrade cross-refs, verify.md + curate-runtime.md → replay_safety checklist
+- **Site ref cleanup:** Stripped authoritative site-specific claims from 6 knowledge files — mechanisms only, generic examples with caveats
+
+**Why:**
+- Transport-upgrade and add-sites sprints exposed undocumented framework contracts, duplicated adapter patterns, and missing methodology docs
+- 5+ adapters independently implemented response interception and node HTML parsing — needed shared helpers
+- Knowledge docs contained stale site-specific claims that misled agents
+
+**Key files:** `src/lib/adapter-helpers.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/http-executor.ts`, `src/types/validator.ts`, `skill/openweb/knowledge/{transport-upgrade,adapter-recipes,archetypes}.md`
+**Verification:** `pnpm build` passes. 0 new lint errors. 22/22 validator tests pass. IMDb 3 ops + RT 3 ops have `transport:node`.
+**Design:** `doc/todo/infra-improvements/final/design_aligned.md`
+**Next:** npm publish (release gate), per-site three-file doc migration on next touch
+**Blockers:** None
+
+---
+
 ## 2026-04-11: Rotten Tomatoes — Transport upgrade (DOM → node-native HTML parsing)
 
 **What changed:** Rewrote `rotten-tomatoes-web.ts` adapter: all 3 ops (searchMovies, getMovieDetail, getTomatoMeter) now use Node.js native `fetch()` + regex instead of `page.goto()` + DOM extraction.

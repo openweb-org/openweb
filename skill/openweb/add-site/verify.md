@@ -158,6 +158,7 @@ those standards.
 | **Schemas** | No bare `type: object` for ops returning structured JSON |
 | **No PII** | No real user data in parameter examples or fixtures |
 | **Write ops** | Permission set, safety level documented, `replay_safety = unsafe_mutation` |
+| **replay_safety** | `replay_safety` in `x-openweb` → spec MUST NOT contain; field belongs in `examples/*.example.json` only. Use `safety` (`safe`/`caution`) in the spec's `x-openweb` block |
 | **Extraction** | Complex expressions (>5 lines) extracted to adapter files |
 
 ### Merge Integrity (existing packages only)

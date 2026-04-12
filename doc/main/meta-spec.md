@@ -187,7 +187,7 @@ AJV validates two things. Spec validation runs automatically at load time (`load
 validateXOpenWebSpec(spec: object): ValidationResult
 ```
 
-Validates server-level `x-openweb` (transport, auth, CSRF, signing) and operation-level `x-openweb` (permission, pagination, extraction, adapter).
+Validates server-level `x-openweb` (transport, auth, CSRF, signing) and operation-level `x-openweb` (permission, pagination, extraction, adapter). Also detects misplaced fields (e.g., `replay_safety` in x-openweb) and emits targeted hints directing to the correct location.
 
 ### 2. Manifest Validation
 

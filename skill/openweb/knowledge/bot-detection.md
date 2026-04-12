@@ -19,7 +19,7 @@ How major bot detection systems work, their impact on transport and capture stra
 - **Symptoms:** `403` with empty or generic error body, `_abck` cookie with `~0~` (invalid sensor), request succeeds in browser but fails in Node
 - **Transport impact:** Node transport almost never works. Must use `page` transport with real browser.
 - **Capture strategy:** Record in a real browser session. The `_abck` cookie refreshes frequently -- keep capture sessions short.
-- **Adapter pattern:** For Akamai-protected sites like Amazon, most content is SSR HTML (not JSON APIs). Use adapter transport with `page.goto()` + DOM extraction via `page.evaluate()` string expressions. Avoid TypeScript function callbacks in `page.evaluate()` -- tsx transpilation injects `__name` helpers that fail in the browser context.
+- **Adapter pattern:** For Akamai-protected sites, content is often SSR HTML (not JSON APIs). Use adapter transport with `page.goto()` + DOM extraction via `page.evaluate()` string expressions. Avoid TypeScript function callbacks in `page.evaluate()` -- tsx transpilation injects `__name` helpers that fail in the browser context.
 
 ### PerimeterX (HUMAN Security)
 
@@ -28,7 +28,7 @@ How major bot detection systems work, their impact on transport and capture stra
 - **Symptoms:** `403` with JSON `{"appId":"PX...","vid":"...","uuid":"..."}`, block page HTML with `/captcha/` path
 - **Transport impact:** Node transport fails. `page` transport works if the browser has solved the initial challenge.
 - **Capture strategy:** Real browser, short sessions.
-- **CDP tab closure:** Some PX-heavy sites (e.g., GoodRx) close browser tabs after 1-2 sequential `page.goto()` calls via Playwright CDP. Workaround: for adapter-only sites, skip capture->compile and write the adapter directly.
+- **CDP tab closure:** Some PX-heavy sites close browser tabs after 1-2 sequential `page.goto()` calls via Playwright CDP. Workaround: for adapter-only sites, skip capture->compile and write the adapter directly.
 
 ### DataDome
 
@@ -38,19 +38,56 @@ How major bot detection systems work, their impact on transport and capture stra
 - **Transport impact:** Very aggressive -- even `page` transport can fail if the browser profile looks automated. Best results with a real Chrome profile (managed browser auto-copies user's profile).
 - **Capture strategy:** Browser auto-starts with real Chrome profile. For manual control, use `openweb browser start --profile <dir>`. Solve any CAPTCHA. Keep sessions short.
 
+### Radware StormCaster
+
+- **How it works:** Client-side sensor script sets `ry_ry-*` cookies (pattern: `ry_ry-<hash>`). Block page displays "Pardon Our Interruption" when sensor fails.
+- **Detection signals:** `ry_ry-*` cookie prefix in captured traffic, "Pardon Our Interruption" in page title or body
+- **Symptoms:** `403` with "Pardon Our Interruption" block page, short-lived `ry_ry-*` cookies that expire quickly
+- **Transport impact:** Node transport fails -- cookies are short-lived and require JS sensor execution. Must use `page` transport.
+- **Capture strategy:** Real browser, solve initial challenge. Short sessions due to aggressive cookie expiry.
+
+### Multi-Layer Stacking
+
+When a site deploys two or more detection systems simultaneously, each layer must be satisfied independently.
+
+- **Detection signals:** Presence of 2+ vendor cookies from different systems (e.g., `_abck` + `datadome`, `_px3` + `cf_clearance`, `ry_ry-*` + `_abck`)
+- **Impact:** Detection surfaces compound -- passing one layer's challenge does not satisfy the other. Even `page.evaluate(fetch)` may fail because each system fingerprints different aspects of the request.
+- **Transport impact:** Assume page transport mandatory. Node transport and `page.evaluate(fetch)` are both unreliable.
+- **Warm-up requirement:** The browser warm-up phase must trigger all sensors. Wait for all vendor cookies to be set before executing operations.
+- **Action:** Document all detected layers in the site's DOC.md. Don't attempt node transport unless probe evidence contradicts.
+
+### Custom Signing Spectrum
+
+Detection of client-side request signing via monkey-patched browser APIs.
+
+- **Detection signal:** `window.fetch.toString().length > 100` in browser console means `fetch` has been monkey-patched (native `fetch.toString()` is short). This indicates the site injects custom signing logic into every fetch call.
+- **Impact:** `page.evaluate(fetch(...))` inherits the signing because it runs through the patched `fetch`. Node `fetch` does not have the patch and will fail.
+- **Transport impact:** When signing is present, `page.evaluate(fetch)` works but node transport does not (missing signatures → 403 or invalid response). This is a positive signal for Tier 5 transport.
+- **Verification:** Must verify via probe -- check `fetch.toString().length` in browser devtools before deciding transport. The monkey-patch may also exist on `XMLHttpRequest`.
+- **Not all patches are signing:** Some patches are analytics/telemetry. Verify by comparing responses: if `page.evaluate(fetch)` succeeds but `node fetch` with identical headers fails, the patch adds required signing.
+
+### "Try Before Assuming" Rule
+
+DOC.md claims about bot detection may be outdated. Always probe before deciding transport.
+
+- **Principle:** Treat DOC.md and historical claims as hypotheses, not facts. Bot detection configurations change without notice -- a site that needed page transport last month may have relaxed its detection, or vice versa.
+- **Action:** Before accepting any transport decision based on documentation, run the [Node Feasibility Quick-Check](#node-feasibility-quick-check) in this document and cross-reference the [Disproved Assumptions](transport-upgrade.md#disproved-assumptions-pattern) table in transport-upgrade.md.
+- **Common outdated claims:** "Site uses Akamai" (may have switched vendors), "API requires browser" (may have been opened), "Bot detection blocks everything" (may only block specific endpoints).
+- **Evidence-based decisions:** Document actual probe results (HTTP status, response headers, cookie presence) in the site's DOC.md. Never propagate a transport claim without fresh evidence.
+
 ## Site-Specific Detection
 
 Some sites roll their own detection in addition to (or instead of) commercial solutions:
 
 | Pattern | Examples | Signal |
 |---------|----------|--------|
-| Custom request signing | Amazon, LinkedIn, X/Twitter | `x-amzn-*`, custom HMAC, or `x-client-transaction-id` headers computed client-side |
-| Custom required headers | Pinterest, Instagram | Requires `x-requested-with: XMLHttpRequest`, `x-pinterest-appstate` (Pinterest) or `x-ig-app-id` (Instagram) -- 400/403 without |
-| Encrypted payloads | Google, Facebook | Request body/params are base64/protobuf -- can't be replayed without the encoder |
+| Custom request signing | e.g. some e-commerce, social media sites | `x-amzn-*`-style headers, custom HMAC, or per-request transaction ID headers computed client-side |
+| Custom required headers | e.g. some social media, image-sharing sites | Requires `x-requested-with: XMLHttpRequest` or site-specific app ID headers -- 400/403 without |
+| Encrypted payloads | e.g. some search engines, social platforms | Request body/params are base64/protobuf -- can't be replayed without the encoder |
 | Rate-based blocking | Most APIs | `429` or silent empty responses after N requests/minute |
-| Rate-based redirect loops | LinkedIn | Rapid sequential node requests trigger redirect loops (>5 redirects) |
+| Rate-based redirect loops | e.g. some professional networks | Rapid sequential node requests trigger redirect loops (>5 redirects) |
 | Referrer/origin validation | Many sites | Requests without proper `Referer` or `Origin` header get `403` |
-| Cookie chaining | Banking, ticket sites | Multi-step cookie flow -- must visit specific pages in order |
+| Cookie chaining | e.g. banking, ticket sites | Multi-step cookie flow -- must visit specific pages in order |
 
 ## Transport Selection Decision Tree
 
@@ -94,10 +131,10 @@ await page.goto('https://example.com/s/keyword', { waitUntil: 'load' })
 while (!captured) await wait(500)
 ```
 
-This works because the site's own bundled JS carries valid Akamai `_abck` sensor
+This works because the site's own bundled JS carries valid sensor
 data that programmatic fetch cannot replicate.
 
--> See: `src/sites/homedepot/adapters/homedepot-web.ts` (real example)
+-> See: adapter-recipes.md § Response Interception for the general pattern
 
 ## Capture Strategy by Detection Level
 
@@ -143,8 +180,8 @@ If any signal matches, `adapter.execute()` result is discarded and `bot_blocked`
 Adapters can detect site-specific bot patterns using the `errors.botBlocked(msg)` helper:
 
 ```ts
-// Example: Redfin rate-limit redirect
-if (page.url().includes('ratelimited.')) throw errors.botBlocked('Rate limited by Redfin')
+// Example: rate-limit redirect detection
+if (page.url().includes('ratelimited.')) throw errors.botBlocked('Rate limited')
 ```
 
 Use this for patterns that are **unique to a site** and not covered by the generic layer (e.g., custom rate-limit subdomains, site-specific block pages).
@@ -154,4 +191,4 @@ Use this for patterns that are **unique to a site** and not covered by the gener
 - **Generic layer:** Only add patterns that are (a) from a well-known vendor, or (b) confirmed on a real page during testing. Never guess selectors or title strings.
 - **Site layer:** Preferred for site-specific patterns. Check page URL or title inside the adapter's operation handler or `navigateTo()`.
 
--> See: `src/runtime/bot-detect.ts` (generic), `src/sites/redfin/adapters/redfin-dom.ts` (site-specific example)
+-> See: `src/runtime/bot-detect.ts` (generic layer implementation)

@@ -16,8 +16,8 @@ Quick lookup: site signals -> expected auth family -> which section of [auth-pri
 | sessionStorage key matching `msal.token.keys.*` | sessionStorage_msal | Auth |
 | POST to token endpoint returns bearer token used in subsequent requests | exchange_chain | Auth |
 | Token found in `webpackChunk*` module cache | webpack_module_walk | Auth |
-| Auth data in JS global variable (e.g., `window.ytcfg`) | page_global | Auth |
-| `SAPISIDHASH` in request headers (Google properties) | sapisidhash | Signing |
+| Auth data in JS global variable (e.g., `window.ytcfg`-style) | page_global | Auth |
+| `SAPISIDHASH` in request headers | sapisidhash | Signing |
 | Per-request computed params (X-Bogus, x-client-transaction-id) that don't match any stored value | custom_signing | Pattern (adapter) |
 
 ## Per-Operation Override
@@ -42,7 +42,7 @@ Does the site need auth at all?
        ├─ Token exchange flow -> exchange_chain
        ├─ Token in webpack -> webpack_module_walk
        ├─ Token in JS global -> page_global
-       └─ Google property -> sapisidhash signing
+       └─ SAPISIDHASH in headers -> sapisidhash signing
 ```
 
 For detailed detection, config, and gotchas per primitive -> [auth-primitives.md](auth-primitives.md)
