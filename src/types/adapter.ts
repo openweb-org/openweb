@@ -26,5 +26,5 @@ export interface CodeAdapter {
 
   init(page: Page): Promise<boolean>
   isAuthenticated(page: Page): Promise<boolean>
-  execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown>
+  execute(page: Page | null, operation: string, params: Readonly<Record<string, unknown>>, helpers: AdapterHelpers): Promise<unknown>
 }

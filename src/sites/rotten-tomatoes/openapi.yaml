@@ -19,6 +19,7 @@ paths:
         cast, thumbnail
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: rt0001
           tool_version: 2
@@ -90,6 +91,7 @@ paths:
         directors, genre, content rating, release date
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: rt0002
           tool_version: 2
@@ -191,6 +193,7 @@ paths:
         status, review count, audience score, sentiment
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: rt0003
           tool_version: 2

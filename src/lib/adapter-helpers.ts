@@ -1,6 +1,16 @@
-import type { Page } from 'patchright'
+import type { Page, Response as PwResponse } from 'patchright'
 
+import { DEFAULT_USER_AGENT } from './config.js'
 import { OpenWebError, getHttpFailure } from './errors.js'
+import { validateSSRF } from './ssrf.js'
+
+export interface InterceptOptions {
+  readonly urlMatch: string | RegExp
+  readonly navigateUrl: string
+  readonly timeout?: number
+  readonly waitUntil?: 'load' | 'domcontentloaded' | 'networkidle'
+  readonly useLocationHref?: boolean
+}
 
 export interface PageFetchOptions {
   readonly url: string
@@ -14,6 +24,14 @@ export interface PageFetchOptions {
 export interface PageFetchResult {
   readonly status: number
   readonly text: string
+}
+
+export interface NodeFetchOptions {
+  readonly url: string
+  readonly method?: 'GET' | 'POST'
+  readonly body?: string
+  readonly headers?: Record<string, string>
+  readonly timeout?: number
 }
 
 export interface GraphqlFetchOptions {
@@ -84,6 +102,45 @@ export async function pageFetch(page: Page, options: PageFetchOptions): Promise<
 }
 
 /**
+ * Node-context fetch for adapters that don't need a browser page.
+ * SSRF-validated, timeout-guarded. Returns raw { status, text }.
+ * Throws OpenWebError on network failure or blocked URL.
+ */
+export async function nodeFetch(options: NodeFetchOptions): Promise<PageFetchResult> {
+  await validateSSRF(options.url)
+
+  const timeout = options.timeout ?? DEFAULT_TIMEOUT
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const resp = await fetch(options.url, {
+      method: options.method ?? 'GET',
+      headers: { 'User-Agent': DEFAULT_USER_AGENT, ...options.headers },
+      body: options.body,
+      signal: controller.signal,
+    })
+    const text = await resp.text()
+    return { status: resp.status, text }
+  } catch (err) {
+    if (err instanceof OpenWebError) throw err
+    const message = (err as Error).name === 'AbortError'
+      ? 'Request timed out'
+      : String(err)
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `nodeFetch failed: ${message}`,
+      action: 'Check network connectivity and URL.',
+      retriable: true,
+      failureClass: 'retriable',
+    })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
  * GraphQL fetch via pageFetch. Builds the request body (APQ hash or query),
  * calls pageFetch, checks for errors array, returns the `data` field.
  * Throws OpenWebError on GraphQL errors or HTTP failure.
@@ -146,4 +203,59 @@ export async function graphqlFetch(page: Page, options: GraphqlFetchOptions): Pr
   }
 
   return gqlResponse.data
+}
+
+/**
+ * Navigate to a URL and intercept a matching network response.
+ * Registers the listener BEFORE navigation so early responses are not missed.
+ * Returns the parsed JSON body of the first matching response.
+ */
+export async function interceptResponse(page: Page, options: InterceptOptions): Promise<unknown> {
+  const timeout = options.timeout ?? DEFAULT_TIMEOUT
+  const waitUntil = options.waitUntil ?? 'load'
+
+  let captured: unknown = null
+  const match = options.urlMatch
+
+  const handler = async (resp: PwResponse) => {
+    if (captured) return
+    const url = resp.url()
+    const matched = typeof match === 'string' ? url.includes(match) : match.test(url)
+    if (matched) {
+      try { captured = await resp.json() } catch { /* ignore parse errors */ }
+    }
+  }
+
+  page.on('response', handler)
+
+  try {
+    if (options.useLocationHref) {
+      await Promise.all([
+        page.waitForNavigation({ waitUntil, timeout: timeout + 5_000 }),
+        page.evaluate((u: string) => { window.location.href = u }, options.navigateUrl),
+      ])
+    } else {
+      await page.goto(options.navigateUrl, { waitUntil, timeout: timeout + 5_000 }).catch(() => {})
+    }
+
+    const deadline = Date.now() + timeout
+    while (!captured && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 500))
+    }
+  } finally {
+    page.off('response', handler)
+  }
+
+  if (!captured) {
+    throw new OpenWebError({
+      error: 'execution_failed',
+      code: 'EXECUTION_FAILED',
+      message: `interceptResponse: no response matched ${String(match)} within ${timeout}ms`,
+      action: 'Check URL pattern and page load behavior.',
+      retriable: true,
+      failureClass: 'retriable',
+    })
+  }
+
+  return captured
 }

@@ -1,5 +1,7 @@
 import type { Page } from 'patchright'
 
+import { nodeFetch } from '../../../lib/adapter-helpers.js'
+
 /**
  * Rotten Tomatoes adapter — node-native HTML parsing.
  *
@@ -7,20 +9,15 @@ import type { Page } from 'patchright'
  * No browser needed: search results live in `search-page-media-row` element
  * attributes, detail pages embed LD+JSON (schema.org Movie) + `media-scorecard`
  * web component slots with score data in the HTML source.
- *
- * Uses Node.js native fetch — the Page parameter is unused but required by
- * the adapter interface.
  */
 
-const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-
 async function fetchHtml(url: string): Promise<string> {
-  const resp = await fetch(url, {
-    headers: { 'User-Agent': UA, Accept: 'text/html' },
+  const result = await nodeFetch({
+    url,
+    headers: { Accept: 'text/html' },
   })
-  if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${url}`)
-  return resp.text()
+  if (result.status >= 400) throw new Error(`HTTP ${result.status} fetching ${url}`)
+  return result.text
 }
 
 /** Extract an HTML attribute value from an element string. */
@@ -43,7 +40,7 @@ function decodeEntities(s: string): string {
 /* ---------- searchMovies ---------- */
 
 async function searchMovies(
-  _page: Page,
+  _page: Page | null,
   params: Record<string, unknown>,
 ): Promise<unknown> {
   const query = String(params.query || '')
@@ -103,7 +100,7 @@ async function searchMovies(
 /* ---------- getMovieDetail ---------- */
 
 async function getMovieDetail(
-  _page: Page,
+  _page: Page | null,
   params: Record<string, unknown>,
 ): Promise<unknown> {
   const slug = String(params.slug || '')
@@ -195,7 +192,7 @@ async function getMovieDetail(
 /* ---------- getTomatoMeter ---------- */
 
 async function getTomatoMeter(
-  _page: Page,
+  _page: Page | null,
   params: Record<string, unknown>,
 ): Promise<unknown> {
   const slug = String(params.slug || '')
@@ -269,7 +266,7 @@ async function getTomatoMeter(
 
 const OPERATIONS: Record<
   string,
-  (page: Page, params: Record<string, unknown>) => Promise<unknown>
+  (page: Page | null, params: Record<string, unknown>) => Promise<unknown>
 > = {
   searchMovies,
   getMovieDetail,
@@ -281,16 +278,16 @@ const adapter = {
   description:
     'Rotten Tomatoes — node-native SSR HTML parsing (LD+JSON + element attributes)',
 
-  async init(_page: Page): Promise<boolean> {
+  async init(_page: Page | null): Promise<boolean> {
     return true // No browser init needed — uses native fetch
   },
 
-  async isAuthenticated(_page: Page): Promise<boolean> {
+  async isAuthenticated(_page: Page | null): Promise<boolean> {
     return true // All operations are publicly accessible
   },
 
   async execute(
-    page: Page,
+    page: Page | null,
     operation: string,
     params: Readonly<Record<string, unknown>>,
     helpers: Record<string, unknown>,

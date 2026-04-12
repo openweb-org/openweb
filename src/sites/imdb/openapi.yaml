@@ -17,6 +17,7 @@ paths:
       summary: 'Search movies and TV shows by keyword — returns title, year, rating, genres, plot'
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: imdb0001
           tool_version: 2
@@ -122,6 +123,7 @@ paths:
       summary: 'Full title details — plot, cast, rating, year, genres, runtime, credits'
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: imdb0002
           tool_version: 2
@@ -348,6 +350,7 @@ paths:
       summary: 'Cast and crew — directors, writers, and actors from GraphQL principalCredits'
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: imdb0004
           tool_version: 2

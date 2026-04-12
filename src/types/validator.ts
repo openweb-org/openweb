@@ -59,6 +59,26 @@ interface OpenApiLike {
   >
 }
 
+/** Fields valid elsewhere but commonly misplaced into x-openweb. */
+const MISPLACED_FIELD_HINTS: Readonly<Record<string, string>> = {
+  replay_safety: [
+    '"replay_safety" is not a valid x-openweb field.',
+    'Hint: Did you mean to put it in examples/*.example.json instead?',
+    '  - In openapi.yaml x-openweb: use "safety" (values: safe, caution)',
+    '  - In example.json: use "replay_safety" (values: safe_read, unsafe_mutation)',
+  ].join('\n'),
+}
+
+function checkMisplacedFields(ext: unknown, basePath: string): ValidationError[] {
+  if (typeof ext !== 'object' || ext === null) return []
+  const errors: ValidationError[] = []
+  for (const key of Object.keys(ext as Record<string, unknown>)) {
+    const hint = MISPLACED_FIELD_HINTS[key]
+    if (hint) errors.push({ path: `${basePath}.${key}`, message: hint })
+  }
+  return errors
+}
+
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head'] as const
 
 /**
@@ -81,6 +101,7 @@ export function validateXOpenWebSpec(spec: OpenApiLike): ValidationResult {
     const ext = server['x-openweb']
     if (ext == null) continue
 
+    errors.push(...checkMisplacedFields(ext, `servers[${i}].x-openweb`))
     if (!validateServerExt(ext)) {
       errors.push(...formatErrors(validateServerExt.errors, `servers[${i}].x-openweb`))
     }
@@ -98,6 +119,7 @@ export function validateXOpenWebSpec(spec: OpenApiLike): ValidationResult {
       const ext = op['x-openweb']
       if (ext == null) continue
 
+      errors.push(...checkMisplacedFields(ext, `paths["${path}"].${method}.x-openweb`))
       if (!validateOperationExt(ext)) {
         errors.push(
           ...formatErrors(validateOperationExt.errors, `paths["${path}"].${method}.x-openweb`),

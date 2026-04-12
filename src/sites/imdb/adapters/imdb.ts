@@ -1,16 +1,19 @@
 import type { Page } from 'patchright'
 
+import { nodeFetch } from '../../../lib/adapter-helpers.js'
+
 const GQL_URL = 'https://api.graphql.imdb.com/'
 
 // ── GraphQL helpers ─────────────────────────────────
 
 async function gql<T = Record<string, unknown>>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  const res = await fetch(GQL_URL, {
+  const result = await nodeFetch({
+    url: GQL_URL,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(variables ? { query, variables } : { query }),
   })
-  const json = await res.json() as { data?: T; errors?: Array<{ message: string }> }
+  const json = JSON.parse(result.text) as { data?: T; errors?: Array<{ message: string }> }
   if (json.errors?.length) throw new Error(`IMDb GraphQL: ${json.errors[0].message}`)
   if (!json.data) throw new Error('IMDb GraphQL: empty response')
   return json.data
@@ -49,7 +52,7 @@ const TITLE_DETAIL_FIELDS = `
 
 // ── Operations ──────────────────────────────────────
 
-async function searchTitles(_page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function searchTitles(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const q = String(params.q ?? '')
   if (!q) throw new Error('q parameter is required')
 
@@ -84,7 +87,7 @@ async function searchTitles(_page: Page, params: Readonly<Record<string, unknown
   }
 }
 
-async function getTitleDetail(_page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getTitleDetail(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const imdbId = String(params.imdbId ?? '')
   if (!imdbId) throw new Error('imdbId parameter is required')
 
@@ -134,7 +137,7 @@ async function getTitleDetail(_page: Page, params: Readonly<Record<string, unkno
   }
 }
 
-async function getRatings(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getRatings(page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const imdbId = String(params.imdbId ?? '')
   if (!imdbId) throw new Error('imdbId parameter is required')
 
@@ -152,10 +155,11 @@ async function getRatings(page: Page, params: Readonly<Record<string, unknown>>)
   const t = data.title
   if (!t) throw new Error('No title data found')
 
-  // Histogram: only available from __NEXT_DATA__ on the ratings page
+  // Histogram: only available from __NEXT_DATA__ on the ratings page (requires browser)
   let histogram: Array<{ rating: number; voteCount: number }> = []
-  try {
-    await page.goto(`https://www.imdb.com/title/${encodeURIComponent(imdbId)}/ratings/`, {
+  if (page) {
+    try {
+      await page.goto(`https://www.imdb.com/title/${encodeURIComponent(imdbId)}/ratings/`, {
       waitUntil: 'domcontentloaded',
       timeout: 20_000,
     })
@@ -174,6 +178,7 @@ async function getRatings(page: Page, params: Readonly<Record<string, unknown>>)
   } catch {
     // Histogram unavailable — return GraphQL data without it
   }
+  }
 
   return {
     imdbId: t.id ?? imdbId,
@@ -184,7 +189,7 @@ async function getRatings(page: Page, params: Readonly<Record<string, unknown>>)
   }
 }
 
-async function getCast(_page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getCast(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const imdbId = String(params.imdbId ?? '')
   if (!imdbId) throw new Error('imdbId parameter is required')
 
@@ -245,7 +250,7 @@ async function getCast(_page: Page, params: Readonly<Record<string, unknown>>): 
   }
 }
 
-const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, unknown>>) => Promise<unknown>> = {
+const OPERATIONS: Record<string, (page: Page | null, params: Readonly<Record<string, unknown>>) => Promise<unknown>> = {
   searchTitles,
   getTitleDetail,
   getRatings,
@@ -256,7 +261,8 @@ const adapter = {
   name: 'imdb',
   description: 'IMDb GraphQL API — search titles, detail, ratings, and cast via api.graphql.imdb.com',
 
-  async init(page: Page): Promise<boolean> {
+  async init(page: Page | null): Promise<boolean> {
+    if (!page) return true
     const url = page.url()
     return url.includes('imdb.com') || url === 'about:blank'
   },
@@ -266,7 +272,7 @@ const adapter = {
   },
 
   async execute(
-    page: Page,
+    page: Page | null,
     operation: string,
     params: Readonly<Record<string, unknown>>,
     helpers: { errors: { unknownOp(op: string): Error } },

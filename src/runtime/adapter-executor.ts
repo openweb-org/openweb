@@ -111,12 +111,18 @@ export interface AdapterExecOptions {
  * 3. Execute operation
  */
 export async function executeAdapter(
-  page: Page,
+  page: Page | null,
   adapter: CodeAdapter,
   operation: string,
   params: Readonly<Record<string, unknown>>,
   options?: AdapterExecOptions,
 ): Promise<unknown> {
+  // When page is null (transport:node), skip all browser-dependent steps
+  if (!page) {
+    const result = await adapter.execute(null, operation, params, { pageFetch, graphqlFetch, errors: adapterErrors })
+    return result
+  }
+
   await ensurePagePolyfills(page)
   let ready = await adapter.init(page)
   if (!ready) {

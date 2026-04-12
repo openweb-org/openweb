@@ -132,6 +132,12 @@ export async function executeOperation(
 
     /** Single adapter attempt: acquire browser → find/create page → execute */
     const adapterAttempt = async (): Promise<unknown> => {
+      // transport:node — skip browser entirely, pass null page to adapter
+      if (transport === 'node') {
+        const adapter = await loadAdapter(siteRoot, adapterRef.name)
+        return await executeAdapter(null, adapter, adapterRef.operation, adapterParams, { requiresAuth })
+      }
+
       const handle = deps.browser ? undefined : await ensureBrowser(deps.cdpEndpoint)
       const browser = deps.browser ?? handle?.browser
       if (!browser) throw new Error('No browser available — ensureBrowser returned an invalid handle')

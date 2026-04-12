@@ -223,6 +223,40 @@ describe('validateXOpenWebSpec', () => {
     expect(result.valid).toBe(true)
   })
 
+  it('rejects replay_safety in x-openweb with hint about examples/*.example.json', () => {
+    const spec = {
+      paths: {
+        '/test': {
+          get: {
+            operationId: 'test',
+            'x-openweb': { replay_safety: 'safe_read' },
+          },
+        },
+      },
+    }
+    const result = validateXOpenWebSpec(spec)
+    expect(result.valid).toBe(false)
+    const hint = result.errors.find((e) => e.message.includes('replay_safety'))
+    expect(hint).toBeDefined()
+    expect(hint?.message).toContain('examples/*.example.json')
+    expect(hint?.message).toContain('safety')
+  })
+
+  it('rejects replay_safety at server level with hint', () => {
+    const spec = {
+      servers: [
+        {
+          url: 'https://example.com',
+          'x-openweb': { transport: 'node', replay_safety: 'safe_read' },
+        },
+      ],
+      paths: {},
+    }
+    const result = validateXOpenWebSpec(spec)
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.message.includes('replay_safety'))).toBe(true)
+  })
+
   it('validates csrf with scope at server level', () => {
     const spec = {
       servers: [
