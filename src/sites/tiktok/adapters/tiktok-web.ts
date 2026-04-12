@@ -173,8 +173,8 @@ async function getVideoDetail(page: Page, params: Record<string, unknown>, error
 
   // SSR fallback: TikTok pre-renders video data into __$UNIVERSAL_DATA$__
   const ssrResult = await page.evaluate((vid: string) => {
-    const root = (window as Record<string, unknown>)['__$UNIVERSAL_DATA$__'] as Record<string, unknown> | undefined
-    const scope = (root?.['__DEFAULT_SCOPE__'] as Record<string, unknown>)?.[
+    const root = (window as Record<string, unknown>).__$UNIVERSAL_DATA$__ as Record<string, unknown> | undefined
+    const scope = (root?.__DEFAULT_SCOPE__ as Record<string, unknown>)?.[
       'webapp.video-detail'
     ] as Record<string, unknown> | undefined
     if (!scope) return null
@@ -202,8 +202,8 @@ async function getUserProfile(page: Page, params: Record<string, unknown>, error
 
   // SSR fallback: profile data embedded in page hydration
   const ssrResult = await page.evaluate(() => {
-    const root = (window as Record<string, unknown>)['__$UNIVERSAL_DATA$__'] as Record<string, unknown> | undefined
-    const scope = (root?.['__DEFAULT_SCOPE__'] as Record<string, unknown>)?.[
+    const root = (window as Record<string, unknown>).__$UNIVERSAL_DATA$__ as Record<string, unknown> | undefined
+    const scope = (root?.__DEFAULT_SCOPE__ as Record<string, unknown>)?.[
       'webapp.user-detail'
     ] as Record<string, unknown> | undefined
     return scope ?? null

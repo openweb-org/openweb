@@ -33,7 +33,6 @@ async function getFbDtsg(page: Page, errors: Errors): Promise<string> {
   const token = await page.evaluate(() => {
     // Method 1: DTSGInitData require module
     try {
-      // biome-ignore lint/suspicious/noExplicitAny: Facebook internal globals
       const w = window as any
       if (w.require) {
         const dtsg = w.require('DTSGInitData')
@@ -44,7 +43,6 @@ async function getFbDtsg(page: Page, errors: Errors): Promise<string> {
     }
     // Method 2: __eqmc global
     try {
-      // biome-ignore lint/suspicious/noExplicitAny: Facebook internal globals
       const eqmc = (window as any).__eqmc
       if (eqmc?.f) return eqmc.f as string
     } catch {
@@ -86,7 +84,6 @@ async function discoverDocId(
       }
     }
     // Also check async-loaded script bundles via preloaded relay queries
-    // biome-ignore lint/suspicious/noExplicitAny: Facebook internal globals
     const relay = (window as any).__relay_require
     if (typeof relay === 'function') {
       try {

@@ -15,7 +15,7 @@ async function fetchHtml(url: string, errors: AdapterErrors): Promise<string> {
 }
 
 /** Unescape basic HTML entities. */
-function unescape(s: string): string {
+function unescapeHtml(s: string): string {
   return s
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x27;/g, "'")
@@ -36,11 +36,11 @@ async function searchListings(_page: Page, params: Record<string, unknown>, erro
   // Parse cl-static-search-result elements (server-rendered, always present without JS)
   const resultRe = /class="cl-static-search-result"[^>]*title="([^"]*)">\s*<a href="([^"]*)">\s*<div class="title">([^<]*)<\/div>\s*<div class="details">\s*(?:<div class="price">([^<]*)<\/div>)?\s*(?:<div class="location">\s*([^<]*?)\s*<\/div>)?/g
   let m: RegExpExecArray | null
-  while ((m = resultRe.exec(html)) !== null) {
+  for (m = resultRe.exec(html); m !== null; m = resultRe.exec(html)) {
     const url = m[2]
     const idMatch = url.match(/\/(\d+)\.html/)
     listings.push({
-      title: unescape(m[3].trim()),
+      title: unescapeHtml(m[3].trim()),
       url,
       price: m[4]?.trim() || null,
       location: m[5]?.trim() || null,
@@ -64,7 +64,7 @@ async function getListing(_page: Page, params: Record<string, unknown>, errors: 
 
   // Title
   const titleMatch = html.match(/id="titletextonly">([^<]+)/)
-  const title = titleMatch ? unescape(titleMatch[1].trim()) : ''
+  const title = titleMatch ? unescapeHtml(titleMatch[1].trim()) : ''
 
   // Price
   const priceMatch = html.match(/class="price">([^<]+)/)
@@ -84,13 +84,13 @@ async function getListing(_page: Page, params: Record<string, unknown>, errors: 
         .replace(/<[^>]+>/g, '')
         .replace(/\n{3,}/g, '\n\n')
         .trim()
-      body = unescape(body)
+      body = unescapeHtml(body)
     }
   }
 
   // Location
   const mapAddrMatch = html.match(/class="mapaddress">([^<]+)/)
-  const location = mapAddrMatch ? unescape(mapAddrMatch[1].trim()) : null
+  const location = mapAddrMatch ? unescapeHtml(mapAddrMatch[1].trim()) : null
 
   // Coordinates
   const latMatch = html.match(/data-latitude="([^"]+)"/)
@@ -103,7 +103,7 @@ async function getListing(_page: Page, params: Record<string, unknown>, errors: 
   let updatedAt: string | null = null
   const timeRe = /<p class="postinginfo[^"]*">([^<]*)<time[^>]*datetime="([^"]+)"/g
   let tm: RegExpExecArray | null
-  while ((tm = timeRe.exec(html)) !== null) {
+  for (tm = timeRe.exec(html); tm !== null; tm = timeRe.exec(html)) {
     const label = tm[1]
     const dt = tm[2]
     if (label.includes('posted')) postedAt = dt
@@ -114,9 +114,9 @@ async function getListing(_page: Page, params: Record<string, unknown>, errors: 
   const attributes: string[] = []
   const attrRe = /class="valu">\s*(?:<a[^>]*>)?([^<]+)/g
   let am: RegExpExecArray | null
-  while ((am = attrRe.exec(html)) !== null) {
+  for (am = attrRe.exec(html); am !== null; am = attrRe.exec(html)) {
     const text = am[1].trim()
-    if (text) attributes.push(unescape(text))
+    if (text) attributes.push(unescapeHtml(text))
   }
 
   // Images — from thumbs links (full-size href)
@@ -126,7 +126,7 @@ async function getListing(_page: Page, params: Record<string, unknown>, errors: 
   if (thumbsMatch) {
     const hrefRe = /href="(https:\/\/images\.craigslist\.org[^"]+_600x450\.jpg)"/g
     let im: RegExpExecArray | null
-    while ((im = hrefRe.exec(thumbsMatch[1])) !== null) {
+    for (im = hrefRe.exec(thumbsMatch[1]); im !== null; im = hrefRe.exec(thumbsMatch[1])) {
       images.push(im[1])
     }
   }
@@ -147,9 +147,9 @@ async function getCategories(_page: Page, params: Record<string, unknown>, error
   // Match all <a data-cat="xxx"><span class="txt">Name elements, detect section by looking for <h3 before the <a
   const catRe = /<a[^>]*data-cat="(\w+)"[^>]*><span class="txt">([^<]+)/g
   let lm: RegExpExecArray | null
-  while ((lm = catRe.exec(html)) !== null) {
+  for (lm = catRe.exec(html); lm !== null; lm = catRe.exec(html)) {
     const code = lm[1]
-    const rawName = unescape(lm[2].trim())
+    const rawName = unescapeHtml(lm[2].trim())
     // Check if this <a> is inside an <h3> by looking at preceding 40 chars
     const preceding = html.substring(Math.max(0, lm.index - 40), lm.index)
     const isSection = /<h3[^>]*>\s*$/.test(preceding)

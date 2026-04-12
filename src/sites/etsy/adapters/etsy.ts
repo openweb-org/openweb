@@ -29,7 +29,7 @@ async function getLdJson(page: Page): Promise<Record<string, unknown>> {
     const result: Record<string, unknown> = {}
     for (const s of document.querySelectorAll('script[type="application/ld+json"]')) {
       try {
-        const d = JSON.parse(s.textContent!)
+        const d = JSON.parse(s.textContent ?? '')
         if (d['@type']) result[d['@type']] = d
       } catch { /* skip malformed */ }
     }
@@ -80,7 +80,7 @@ async function searchListings(page: Page, params: Record<string, unknown>, error
         currency: 'USD',
         image: img?.src || '',
         shopName: shopMatch ? shopMatch[1] : '',
-        rating: ratingMatch ? parseFloat(ratingMatch[1]) : null,
+        rating: ratingMatch ? Number.parseFloat(ratingMatch[1]) : null,
         reviewCount: ratingMatch ? ratingMatch[2] : null,
         freeShipping: text.includes('Free shipping'),
       })
@@ -202,7 +202,7 @@ async function getShop(page: Page, params: Record<string, unknown>, errors: Erro
     const itemCount = document.querySelectorAll('[data-listing-id]').length
     return {
       sales: salesMatch ? salesMatch[1] : null,
-      yearsOnEtsy: yearsMatch ? parseInt(yearsMatch[1]) : null,
+      yearsOnEtsy: yearsMatch ? Number.parseInt(yearsMatch[1]) : null,
       itemCount,
     }
   })

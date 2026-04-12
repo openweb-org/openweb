@@ -62,7 +62,7 @@ async function getToday(page: Page, _params: Readonly<Record<string, unknown>>):
   await page.waitForTimeout(3000)
 
   const cache = await extractApolloCache(page)
-  const root = cache['ROOT_QUERY']
+  const root = cache.ROOT_QUERY
   if (!root) return []
 
   const todayKey = Object.keys(root).find(
@@ -96,7 +96,7 @@ async function getPosts(page: Page, params: Readonly<Record<string, unknown>>): 
   await page.waitForTimeout(3000)
 
   const cache = await extractApolloCache(page)
-  const root = cache['ROOT_QUERY']
+  const root = cache.ROOT_QUERY
   if (!root) return []
 
   const feedKey = Object.keys(root).find(
@@ -215,7 +215,7 @@ async function searchProducts(page: Page, params: Readonly<Record<string, unknow
   await page.waitForTimeout(3000)
 
   const cache = await extractApolloCache(page)
-  const root = cache['ROOT_QUERY']
+  const root = cache.ROOT_QUERY
   if (!root) return []
 
   // Find productSearch key

@@ -21,8 +21,8 @@ async function getDeveloperToken(page: Page, errors: Errors): Promise<string> {
 async function apiGet(
   page: Page,
   path: string,
-  params: Record<string, unknown> = {},
   errors: Errors,
+  params: Record<string, unknown> = {},
 ): Promise<unknown> {
   const token = await getDeveloperToken(page, errors)
   const url = new URL(`${AMP_API}${path}`)
@@ -58,7 +58,7 @@ const DEFAULT_TYPES = 'podcasts,podcast-channels,podcast-episodes,categories,edi
 /* ---------- operations ---------- */
 
 async function searchPodcasts(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  return apiGet(page, '/v1/catalog/us/search/groups', {
+  return apiGet(page, '/v1/catalog/us/search/groups', errors, {
     term: params.term,
     platform: 'web',
     types: params.types ?? DEFAULT_TYPES,
@@ -66,7 +66,7 @@ async function searchPodcasts(page: Page, params: Record<string, unknown>, error
     l: params.l ?? 'en-US',
     limit: params.limit ?? '25',
     extend: params.extend,
-  }, errors)
+  })
 }
 
 async function getPodcast(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
@@ -78,26 +78,26 @@ async function getPodcast(page: Page, params: Record<string, unknown>, errors: E
   if (params.include) queryParams.include = params.include
   if (params['limit[episodes]']) queryParams['limit[episodes]'] = params['limit[episodes]']
 
-  return apiGet(page, `/v1/catalog/us/podcasts/${id}`, queryParams, errors)
+  return apiGet(page, `/v1/catalog/us/podcasts/${id}`, errors, queryParams)
 }
 
 async function getSearchSuggestions(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  return apiGet(page, '/v1/catalog/us/search/suggestions', {
+  return apiGet(page, '/v1/catalog/us/search/suggestions', errors, {
     term: params.term,
     platform: 'web',
     kinds: params.kinds ?? 'terms,topResults',
     types: params.types ?? DEFAULT_TYPES,
     l: params.l ?? 'en-US',
-  }, errors)
+  })
 }
 
 async function getTopCharts(page: Page, params: Record<string, unknown>, errors: Errors): Promise<unknown> {
-  return apiGet(page, '/v1/editorial/us/groupings', {
+  return apiGet(page, '/v1/editorial/us/groupings', errors, {
     name: params.name ?? 'search-landing',
     platform: 'web',
     l: params.l ?? 'en-US',
     with: params.with,
-  }, errors)
+  })
 }
 
 const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, errors: Errors) => Promise<unknown>> = {

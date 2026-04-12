@@ -59,7 +59,7 @@ async function searchMovies(
   const rowRegex = /<search-page-media-row\s+([\s\S]*?)>([\s\S]*?)<\/search-page-media-row>/g
   const movies: unknown[] = []
   let m: RegExpExecArray | null
-  while ((m = rowRegex.exec(section)) !== null) {
+  for (m = rowRegex.exec(section); m !== null; m = rowRegex.exec(section)) {
     const attrs = m[1]
     const inner = m[2]
 

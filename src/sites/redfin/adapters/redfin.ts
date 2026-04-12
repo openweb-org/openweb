@@ -76,7 +76,7 @@ async function getPropertyDetails(
   // Parse JSON-LD blocks from raw HTML
   const jsonLdRegex = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g
   let match: RegExpExecArray | null
-  while ((match = jsonLdRegex.exec(result.text)) !== null) {
+  for (match = jsonLdRegex.exec(result.text); match !== null; match = jsonLdRegex.exec(result.text)) {
     try {
       const data = JSON.parse(match[1])
       if (!data['@type'] || !Array.isArray(data['@type'])) continue

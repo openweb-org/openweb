@@ -14,7 +14,7 @@ async function fetchHtml(url: string, errors: AdapterErrors): Promise<string> {
   return html
 }
 
-function unescape(s: string): string {
+function unescapeHtml(s: string): string {
   return s
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x27;/g, "'")
@@ -52,15 +52,15 @@ async function searchBooks(_page: Page, params: Record<string, unknown>, errors:
   const items: Record<string, unknown>[] = []
   const rowRe = /<tr[^>]*itemtype="http:\/\/schema\.org\/Book"[\s\S]*?<\/tr>/g
   let rm: RegExpExecArray | null
-  while ((rm = rowRe.exec(html)) !== null) {
+  for (rm = rowRe.exec(html); rm !== null; rm = rowRe.exec(html)) {
     const row = rm[0]
     const titleMatch = row.match(/<a class="bookTitle"[^>]*href="([^"]*)"[\s\S]*?itemprop=["']name["'][^>]*>([^<]*)</)
     const bookUrl = titleMatch?.[1] ?? ''
-    const title = titleMatch ? unescape(titleMatch[2].trim()) : ''
+    const title = titleMatch ? unescapeHtml(titleMatch[2].trim()) : ''
     const bookId = bookUrl.match(/\/book\/show\/(\d+)/)?.[1] ?? ''
     const authorMatch = row.match(/<a class="authorName"[^>]*href="([^"]*)"[^>]*>[\s\S]*?itemprop=["']name["'][^>]*>([^<]*)</)
     const authorUrl = authorMatch?.[1] ?? ''
-    const author = authorMatch ? unescape(authorMatch[2].trim()) : ''
+    const author = authorMatch ? unescapeHtml(authorMatch[2].trim()) : ''
     const authorId = authorUrl.match(/\/author\/show\/(\d+)/)?.[1] ?? ''
     const miniratingRaw = row.match(/class="minirating">([\s\S]*?ratings[\s\S]*?)<\/span>/)?.[1] ?? ''
     const ratingText = miniratingRaw.replace(/<[^>]+>/g, '') // strip inner star spans
@@ -93,8 +93,10 @@ async function getBook(_page: Page, params: Record<string, unknown>, errors: Ada
   if (!state) throw errors.wrap(new Error('No __NEXT_DATA__ found on book page'))
 
   const keys = Object.keys(state)
-  const bookEntry = state[keys.find(k => k.startsWith('Book:'))!]
-  const workEntry = state[keys.find(k => k.startsWith('Work:'))!]
+  const bookKey = keys.find(k => k.startsWith('Book:'))
+  const workKey = keys.find(k => k.startsWith('Work:'))
+  const bookEntry = bookKey ? state[bookKey] : undefined
+  const workEntry = workKey ? state[workKey] : undefined
   if (!bookEntry) throw errors.wrap(new Error('No Book entry in Apollo state'))
 
   const contributor = resolve(state, bookEntry.primaryContributorEdge?.node)
@@ -179,7 +181,7 @@ async function getAuthor(_page: Page, params: Record<string, unknown>, errors: A
   const html = await fetchHtml(`https://www.goodreads.com/author/show/${encodeURIComponent(authorId)}`, errors)
 
   const nameMatch = html.match(/<h1 class="authorName">\s*<span itemprop="name">([^<]+)<\/span>/)
-  const name = nameMatch ? unescape(nameMatch[1].trim()) : ''
+  const name = nameMatch ? unescapeHtml(nameMatch[1].trim()) : ''
 
   const imgMatch = html.match(/class="[^"]*authorLeftContainer"[\s\S]*?<img[^>]*src="([^"]*)"/)
   const image = imgMatch?.[1] ?? null
@@ -193,9 +195,9 @@ async function getAuthor(_page: Page, params: Record<string, unknown>, errors: A
   }
 
   const bornMatch = html.match(/itemprop=['"]birthDate['"][^>]*>([\s\S]*?)</)
-  const born = bornMatch ? unescape(bornMatch[1].trim()) : null
+  const born = bornMatch ? unescapeHtml(bornMatch[1].trim()) : null
   const diedMatch = html.match(/itemprop=['"]deathDate['"][^>]*>([\s\S]*?)</)
-  const died = diedMatch ? unescape(diedMatch[1].trim()) : null
+  const died = diedMatch ? unescapeHtml(diedMatch[1].trim()) : null
 
   const websiteMatch = html.match(/<a[^>]*itemprop="url"[^>]*href="([^"]*)"/)
   const website = websiteMatch?.[1] ?? null
@@ -204,8 +206,8 @@ async function getAuthor(_page: Page, params: Record<string, unknown>, errors: A
   const genres: string[] = []
   const genreRe = /href="[^"]*\/genres\/[^"]*">([^<]+)/g
   let gm: RegExpExecArray | null
-  while ((gm = genreRe.exec(html)) !== null) {
-    const g = unescape(gm[1].trim())
+  for (gm = genreRe.exec(html); gm !== null; gm = genreRe.exec(html)) {
+    const g = unescapeHtml(gm[1].trim())
     if (g && !genres.includes(g)) genres.push(g)
   }
 
@@ -217,11 +219,11 @@ async function getAuthor(_page: Page, params: Record<string, unknown>, errors: A
   const books: Record<string, unknown>[] = []
   const bookRowRe = /<tr[^>]*itemtype="http:\/\/schema\.org\/Book"[\s\S]*?<\/tr>/g
   let bm: RegExpExecArray | null
-  while ((bm = bookRowRe.exec(html)) !== null) {
+  for (bm = bookRowRe.exec(html); bm !== null; bm = bookRowRe.exec(html)) {
     const row = bm[0]
     const titleMatch = row.match(/class="bookTitle"[^>]*href="([^"]*)"[\s\S]*?itemprop=["']name["'][^>]*>([^<]*)/)
     const bUrl = titleMatch?.[1] ?? ''
-    const bTitle = titleMatch ? unescape(titleMatch[2].trim()) : ''
+    const bTitle = titleMatch ? unescapeHtml(titleMatch[2].trim()) : ''
     const bId = bUrl.match(/\/book\/show\/(\d+)/)?.[1] ?? ''
     const miniratingRaw2 = row.match(/class="minirating">([\s\S]*?ratings[\s\S]*?)<\/span>/)?.[1] ?? ''
     const ratingText2 = miniratingRaw2.replace(/<[^>]+>/g, '')

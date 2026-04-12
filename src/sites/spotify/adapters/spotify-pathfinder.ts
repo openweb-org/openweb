@@ -229,14 +229,14 @@ async function writeOperationFetch(
   switch (operation) {
     case 'likeTrack': {
       const trackId = params.trackId as string
-      const url = `https://api.spotify.com/v1/me/tracks`
+      const url = 'https://api.spotify.com/v1/me/tracks'
       result = await spotifyApiFetch(page, 'PUT', url, accessToken, JSON.stringify({ ids: [trackId] }))
       if (result.status >= 400) throw errors.httpError(result.status)
       return { success: true }
     }
     case 'unlikeTrack': {
       const trackId = params.trackId as string
-      const url = `https://api.spotify.com/v1/me/tracks`
+      const url = 'https://api.spotify.com/v1/me/tracks'
       result = await spotifyApiFetch(page, 'DELETE', url, accessToken, JSON.stringify({ ids: [trackId] }))
       if (result.status >= 400) throw errors.httpError(result.status)
       return { success: true }
@@ -335,16 +335,17 @@ const adapter = {
     }
 
     // Merge default variables with user params
-    const variables = { ...config!.defaultVariables, ...params }
+    if (!config) throw errors.unknownOp(operation)
+    const variables = { ...config.defaultVariables, ...params }
 
     try {
-      return await pathfinderFetch(page, config!, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
+      return await pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
     } catch (err) {
       // If auth expired (401/403), retry with fresh token
       const failureClass = (err as { payload?: { failureClass?: string } }).payload?.failureClass
       if (failureClass === 'needs_login') {
         cachedTokens = await extractToken(page, errors)
-        return pathfinderFetch(page, config!, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
+        return pathfinderFetch(page, config, variables, cachedTokens.accessToken, cachedTokens.clientToken, errors)
       }
       throw err
     }

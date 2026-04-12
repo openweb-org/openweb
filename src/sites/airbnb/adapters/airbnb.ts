@@ -71,7 +71,7 @@ async function searchListings(_page: Page, params: Record<string, unknown>): Pro
   if (params['room_types[]']) qp.set('room_types[]', String(params['room_types[]']))
 
   const qs = qp.toString()
-  const url = `https://www.airbnb.com/s/${encodeURIComponent(query)}/homes${qs ? '?' + qs : ''}`
+  const url = `https://www.airbnb.com/s/${encodeURIComponent(query)}/homes${qs ? `?${qs}` : ''}`
 
   const resp = await fetch(url, {
     headers: { ...NODE_HEADERS, Accept: 'text/html,application/xhtml+xml' },
@@ -93,7 +93,7 @@ async function getListingDetail(_page: Page, params: Record<string, unknown>): P
   if (params.adults) qp.set('adults', String(params.adults))
 
   const qs = qp.toString()
-  const url = `https://www.airbnb.com/rooms/${encodeURIComponent(id)}${qs ? '?' + qs : ''}`
+  const url = `https://www.airbnb.com/rooms/${encodeURIComponent(id)}${qs ? `?${qs}` : ''}`
 
   const resp = await fetch(url, {
     headers: { ...NODE_HEADERS, Accept: 'text/html,application/xhtml+xml' },
@@ -234,7 +234,7 @@ async function getHostProfile(page: Page, params: Record<string, unknown>): Prom
     // Strategy 3: any large application/json script
     for (const script of document.querySelectorAll('script[type="application/json"]')) {
       if ((script.textContent ?? '').length > 200) {
-        try { return JSON.parse(script.textContent!) } catch { /* continue */ }
+        try { return JSON.parse(script.textContent ?? '') } catch { /* continue */ }
       }
     }
     return null

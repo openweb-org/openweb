@@ -498,8 +498,8 @@ describe('handleLoginRequired', () => {
     expect(retryFn.mock.calls.length).toBeGreaterThanOrEqual(3)
 
     if (callTimes.length >= 3) {
-      const gap1 = callTimes[1]! - callTimes[0]!
-      const gap2 = callTimes[2]! - callTimes[1]!
+      const gap1 = (callTimes[1] ?? 0) - (callTimes[0] ?? 0)
+      const gap2 = (callTimes[2] ?? 0) - (callTimes[1] ?? 0)
       expect(gap2).toBeGreaterThan(gap1)
     }
 

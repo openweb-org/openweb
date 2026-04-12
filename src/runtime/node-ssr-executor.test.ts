@@ -94,7 +94,7 @@ describe('executeNodeSsr', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1)
     const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('https://example.com/page')
-    expect((init.headers as Record<string, string>)['Accept']).toContain('text/html')
+    expect((init.headers as Record<string, string>).Accept).toContain('text/html')
     expect((init.headers as Record<string, string>)['User-Agent']).toBeDefined()
   })
 

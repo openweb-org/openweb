@@ -77,7 +77,7 @@ async function getItemDetail(
       let ldProduct: any = null
       for (const s of ldScripts) {
         try {
-          const d = JSON.parse(s.textContent!)
+          const d = JSON.parse(s.textContent ?? '')
           if (d['@type'] === 'Product') {
             ldProduct = d
             break
@@ -196,7 +196,7 @@ async function getSellerProfile(
   return page.evaluate(
     (user) => {
       const notFound = document.querySelector('.page-notice--attention')
-      if (notFound && notFound.textContent?.includes('not found')) {
+      if (notFound?.textContent?.includes('not found')) {
         return { error: 'Seller not found', username: user }
       }
 

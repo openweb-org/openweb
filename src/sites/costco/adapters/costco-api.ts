@@ -72,8 +72,8 @@ const PRODUCT_QUERY = `query {
 async function getJson(
   page: Page,
   url: string,
-  extraHeaders: Record<string, string> = {},
   errors: Errors,
+  extraHeaders: Record<string, string> = {},
 ): Promise<unknown> {
   const resp = await page.request.fetch(url, {
     method: 'GET',
@@ -96,8 +96,8 @@ async function postJson(
   page: Page,
   url: string,
   body: unknown,
-  extraHeaders: Record<string, string> = {},
   errors: Errors,
+  extraHeaders: Record<string, string> = {},
 ): Promise<unknown> {
   const resp = await page.request.fetch(url, {
     method: 'POST',
@@ -144,12 +144,12 @@ async function searchProducts(page: Page, params: Record<string, unknown>, error
     userInfo: { userId: '0' },
   }
 
-  const resp = (await postJson(page, SEARCH_URL, body, {
+  const resp = (await postJson(page, SEARCH_URL, body, errors, {
     'client-identifier': SEARCH_CLIENT_ID,
     client_id: 'USBC',
     locale: 'en-US',
     searchresultprovider: 'GRS',
-  }, errors)) as Record<string, unknown>
+  })) as Record<string, unknown>
 
   const searchResult = resp.searchResult as Record<string, unknown>
   const results = (searchResult?.results ?? []) as Array<Record<string, unknown>>
@@ -184,11 +184,11 @@ async function getProductDetail(page: Page, params: Record<string, unknown>, err
   if (!itemNumber) throw errors.missingParam('itemNumber')
 
   const query = PRODUCT_QUERY.replace('ITEM_NUMBERS', `"${itemNumber}"`)
-  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query }, {
+  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query }, errors, {
     'client-identifier': PRODUCT_CLIENT_ID,
     'costco.env': 'ecom',
     'costco.service': 'restProduct',
-  }, errors)) as Record<string, unknown>
+  })) as Record<string, unknown>
 
   const data = resp.data as Record<string, unknown>
   const products = data?.products as Record<string, unknown>
@@ -317,10 +317,10 @@ async function findWarehouses(page: Page, params: Record<string, unknown>, error
   const limit = Number(params.limit ?? 10)
 
   const url = `${WAREHOUSE_LOCATOR_URL}?latitude=${latitude}&longitude=${longitude}&limit=${limit}`
-  const resp = (await getJson(page, url, {
+  const resp = (await getJson(page, url, errors, {
     'client-identifier': WAREHOUSE_CLIENT_ID,
     'Accept-Language': 'en-us',
-  }, errors)) as Record<string, unknown>
+  })) as Record<string, unknown>
 
   const salesLocations = (resp.salesLocations ?? []) as Array<Record<string, unknown>>
 
@@ -409,12 +409,12 @@ async function searchSuggestions(page: Page, params: Record<string, unknown>, er
     userInfo: { userId: '0' },
   }
 
-  const resp = (await postJson(page, SEARCH_TYPEAHEAD_URL, body, {
+  const resp = (await postJson(page, SEARCH_TYPEAHEAD_URL, body, errors, {
     'client-identifier': SEARCH_CLIENT_ID,
     client_id: 'USBC',
     locale: 'en-US',
     searchresultprovider: 'GRS',
-  }, errors)) as Record<string, unknown>
+  })) as Record<string, unknown>
 
   const searchResult = resp.searchResult as Record<string, unknown>
   const results = (searchResult?.results ?? []) as Array<Record<string, unknown>>
@@ -439,11 +439,11 @@ async function getMultipleProducts(page: Page, params: Record<string, unknown>, 
 
   const quotedItems = itemNumbers.map((n) => `"${n}"`).join(', ')
   const query = PRODUCT_QUERY.replace('ITEM_NUMBERS', quotedItems)
-  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query }, {
+  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query }, errors, {
     'client-identifier': PRODUCT_CLIENT_ID,
     'costco.env': 'ecom',
     'costco.service': 'restProduct',
-  }, errors)) as Record<string, unknown>
+  })) as Record<string, unknown>
 
   const data = resp.data as Record<string, unknown>
   const products = data?.products as Record<string, unknown>
@@ -506,12 +506,12 @@ async function browseCategory(page: Page, params: Record<string, unknown>, error
     userInfo: { userId: '0' },
   }
 
-  const resp = (await postJson(page, SEARCH_URL, body, {
+  const resp = (await postJson(page, SEARCH_URL, body, errors, {
     'client-identifier': SEARCH_CLIENT_ID,
     client_id: 'USBC',
     locale: 'en-US',
     searchresultprovider: 'GRS',
-  }, errors)) as Record<string, unknown>
+  })) as Record<string, unknown>
 
   const searchResult = resp.searchResult as Record<string, unknown>
   const results = (searchResult?.results ?? []) as Array<Record<string, unknown>>
@@ -578,11 +578,11 @@ async function getDeliveryOptions(page: Page, params: Record<string, unknown>, e
     }
   }`
 
-  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query: deliveryQuery }, {
+  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query: deliveryQuery }, errors, {
     'client-identifier': PRODUCT_CLIENT_ID,
     'costco.env': 'ecom',
     'costco.service': 'restProduct',
-  }, errors)) as Record<string, unknown>
+  })) as Record<string, unknown>
 
   const data = resp.data as Record<string, unknown>
   const products = data?.products as Record<string, unknown>
@@ -750,11 +750,11 @@ async function checkWarehouseStock(page: Page, params: Record<string, unknown>, 
     }
   }`
 
-  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query: stockQuery }, {
+  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query: stockQuery }, errors, {
     'client-identifier': PRODUCT_CLIENT_ID,
     'costco.env': 'ecom',
     'costco.service': 'restProduct',
-  }, errors)) as Record<string, unknown>
+  })) as Record<string, unknown>
 
   const data = resp.data as Record<string, unknown>
   const products = data?.products as Record<string, unknown>
@@ -795,11 +795,11 @@ async function compareProducts(page: Page, params: Record<string, unknown>, erro
 
   const quotedItems = itemNumbers.map((n) => `"${n}"`).join(', ')
   const query = PRODUCT_QUERY.replace('ITEM_NUMBERS', quotedItems)
-  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query }, {
+  const resp = (await postJson(page, PRODUCT_GRAPHQL_URL, { query }, errors, {
     'client-identifier': PRODUCT_CLIENT_ID,
     'costco.env': 'ecom',
     'costco.service': 'restProduct',
-  }, errors)) as Record<string, unknown>
+  })) as Record<string, unknown>
 
   const data = resp.data as Record<string, unknown>
   const products = data?.products as Record<string, unknown>

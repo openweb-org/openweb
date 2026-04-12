@@ -863,7 +863,7 @@ describe('executeOperation — node transport request building', () => {
     await executeOperation('test-site', 'testOp', { name: 'test' })
 
     const callArgs = mockFetchWithRedirects.mock.calls[0]
-    const headers = callArgs![2] as Record<string, string>
+    const headers = callArgs?.[2] as Record<string, string>
     expect(headers['Content-Type']).toBe('application/json')
   })
 
@@ -876,7 +876,7 @@ describe('executeOperation — node transport request building', () => {
     await executeOperation('test-site', 'testOp', {})
 
     const callArgs = mockFetchWithRedirects.mock.calls[0]
-    const headers = callArgs![2] as Record<string, string>
+    const headers = callArgs?.[2] as Record<string, string>
     expect(headers['Content-Type']).toBeUndefined()
   })
 

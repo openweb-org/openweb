@@ -230,7 +230,7 @@ async function removeFromCart(page: Page, params: Record<string, unknown>, helpe
       await page.waitForTimeout(2000)
       break
     } catch {
-      continue
+      /* retry next selector */
     }
   }
 

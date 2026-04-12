@@ -295,7 +295,7 @@ export async function browserStartCommand(options: { headless?: boolean; port?: 
 
   // macOS: headed Chrome may re-exec, causing the original PID to die.
   // Discover the real PID from the port and update the PID file.
-  if (!isProcessAlive(child.pid!)) {
+  if (!child.pid || !isProcessAlive(child.pid)) {
     const actualPid = await discoverPidFromPort(port)
     if (actualPid) {
       await writeFile(PID_FILE(), String(actualPid), { mode: 0o600 })
