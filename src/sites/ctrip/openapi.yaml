@@ -382,8 +382,7 @@ paths:
                           type: string
                         type:
                           type: string
-                required:
-                - travelTipsList
+                required: []
   /restapi/soa2/20400/getGsHotSearchForTripOnline:
     post:
       operationId: getHotDestinations
@@ -894,8 +893,6 @@ paths:
                                   type: string
                                 imageUrl:
                                   type: string
-                required:
-                - data
   /restapi/soa2/28181/json/getByScenesCode:
     post:
       operationId: searchAttractions

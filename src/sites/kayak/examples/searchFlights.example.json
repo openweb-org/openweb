@@ -1,0 +1,17 @@
+{
+  "operation_id": "searchFlights",
+  "replay_safety": "safe_read",
+  "cases": [
+    {
+      "input": {
+        "origin": "SFO",
+        "destination": "NYC",
+        "departureDate": "2026-06-15"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}

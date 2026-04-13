@@ -424,8 +424,6 @@ paths:
                         salaryCount:
                           type: string
 
-                required:
-                - salaries
   /autocomplete/job-title:
     get:
       operationId: autocompleteJobTitle

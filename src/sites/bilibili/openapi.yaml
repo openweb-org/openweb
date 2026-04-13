@@ -11562,22 +11562,8 @@ paths:
                                     description: Publish timestamp (Unix seconds).
                                   description:
                                     type: string
-                                required:
-                                  - bvid
-                                  - title
-                                  - author
-                                  - mid
-                                  - pic
-                                  - play
-                                  - danmaku
-                                  - like
-                                  - favorites
-                                  - duration
-                                  - pubdate
-                                  - description
                           required:
                             - result_type
-                            - data
                     required:
                       - numResults
                       - page

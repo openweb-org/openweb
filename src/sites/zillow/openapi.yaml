@@ -31,6 +31,9 @@ paths:
           verified: true
           signals:
             - page-verified
+        adapter:
+          name: zillow-detail
+          operation: searchProperties
       requestBody:
         required: true
         content:
