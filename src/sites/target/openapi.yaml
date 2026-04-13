@@ -122,18 +122,30 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     type: object
+                    required:
+                      - search
                     properties:
                       search:
                         type: object
+                        required:
+                          - search_response
+                          - products
                         properties:
                           search_response:
                             type: object
+                            required:
+                              - metadata
                             properties:
                               metadata:
                                 type: object
+                                required:
+                                  - total_results
+                                  - keyword
                                 properties:
                                   count:
                                     type: integer
@@ -157,6 +169,7 @@ paths:
                                 type: array
                                 items:
                                   type: object
+                                  required: [name, value]
                                   properties:
                                     name:
                                       type: string
@@ -166,15 +179,21 @@ paths:
                             type: array
                             items:
                               type: object
+                              required:
+                                - tcin
                               properties:
                                 tcin:
                                   type: string
                                   description: Target item ID.
                                 item:
                                   type: object
+                                  required:
+                                    - product_description
                                   properties:
                                     product_description:
                                       type: object
+                                      required:
+                                        - title
                                       properties:
                                         title:
                                           type: string
@@ -184,16 +203,22 @@ paths:
                                             type: string
                                     enrichment:
                                       type: object
+                                      required:
+                                        - buy_url
                                       properties:
                                         buy_url:
                                           type: string
                                         images:
                                           type: object
+                                          required:
+                                            - primary_image_url
                                           properties:
                                             primary_image_url:
                                               type: string
                                 price:
                                   type: object
+                                  required:
+                                    - formatted_current_price
                                   properties:
                                     current_retail:
                                       type: number
@@ -209,9 +234,13 @@ paths:
                                       type: number
                                 ratings_and_reviews:
                                   type: object
+                                  required:
+                                    - statistics
                                   properties:
                                     statistics:
                                       type: object
+                                      required:
+                                        - rating
                                       properties:
                                         rating:
                                           type: object
@@ -294,20 +323,30 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     type: object
+                    required:
+                      - product
                     properties:
                       product:
                         type: object
+                        required:
+                          - tcin
                         properties:
                           tcin:
                             type: string
                           item:
                             type: object
+                            required:
+                              - product_description
                             properties:
                               product_description:
                                 type: object
+                                required:
+                                  - title
                                 properties:
                                   title:
                                     type: string
@@ -319,11 +358,15 @@ paths:
                                       type: string
                               enrichment:
                                 type: object
+                                required:
+                                  - buy_url
                                 properties:
                                   buy_url:
                                     type: string
                                   images:
                                     type: object
+                                    required:
+                                      - primary_image_url
                                     properties:
                                       primary_image_url:
                                         type: string
@@ -333,11 +376,15 @@ paths:
                                           type: string
                                   brand_info:
                                     type: object
+                                    required:
+                                      - brand_name
                                     properties:
                                       brand_name:
                                         type: string
                           price:
                             type: object
+                            required:
+                              - formatted_current_price
                             properties:
                               formatted_current_price:
                                 type: string
@@ -351,9 +398,13 @@ paths:
                                 type: string
                           ratings_and_reviews:
                             type: object
+                            required:
+                              - statistics
                             properties:
                               statistics:
                                 type: object
+                                required:
+                                  - rating
                                 properties:
                                   rating:
                                     type: object
@@ -380,27 +431,39 @@ paths:
                             description: Product variants (colors, sizes).
                             items:
                               type: object
+                              required:
+                                - tcin
                               properties:
                                 tcin:
                                   type: string
                                 item:
                                   type: object
+                                  required:
+                                    - product_description
                                   properties:
                                     product_description:
                                       type: object
+                                      required:
+                                        - title
                                       properties:
                                         title:
                                           type: string
                                     enrichment:
                                       type: object
+                                      required:
+                                        - images
                                       properties:
                                         images:
                                           type: object
+                                          required:
+                                            - primary_image_url
                                           properties:
                                             primary_image_url:
                                               type: string
                                 price:
                                   type: object
+                                  required:
+                                    - formatted_current_price
                                   properties:
                                     formatted_current_price:
                                       type: string
@@ -484,12 +547,19 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
                   data:
                     type: object
+                    required:
+                      - fulfillment_fiats
                     properties:
                       fulfillment_fiats:
                         type: object
+                        required:
+                          - product_id
+                          - locations
                         properties:
                           product_id:
                             type: string
@@ -497,6 +567,8 @@ paths:
                             type: array
                             items:
                               type: object
+                              required:
+                                - location_id
                               properties:
                                 location_id:
                                   type: string
@@ -508,6 +580,8 @@ paths:
                                   description: Distance in miles from the requested zip.
                                 order_pickup:
                                   type: object
+                                  required:
+                                    - availability_status
                                   properties:
                                     pickup_date:
                                       type: string
@@ -519,11 +593,15 @@ paths:
                                       description: IN_STOCK, OUT_OF_STOCK, etc.
                                 in_store_only:
                                   type: object
+                                  required:
+                                    - availability_status
                                   properties:
                                     availability_status:
                                       type: string
                                 curbside:
                                   type: object
+                                  required:
+                                    - availability_status
                                   properties:
                                     pickup_date:
                                       type: string
@@ -531,6 +609,9 @@ paths:
                                       type: string
                                 store:
                                   type: object
+                                  required:
+                                    - store_id
+                                    - location_name
                                   properties:
                                     store_id:
                                       type: string
@@ -635,6 +716,10 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - cart_id
+                  - cart_item_id
+                  - tcin
                 properties:
                   cart_id:
                     type: string
@@ -659,6 +744,8 @@ paths:
                     type: number
                   fulfillment:
                     type: object
+                    required:
+                      - type
                     properties:
                       type:
                         type: string
@@ -726,6 +813,9 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - cart_id
+                  - removed_cart_item_id
                 properties:
                   cart_id:
                     type: string

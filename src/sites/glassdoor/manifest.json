@@ -1,0 +1,19 @@
+{
+  "name": "glassdoor",
+  "display_name": "Glassdoor",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.glassdoor.com",
+  "description": "Glassdoor — page transport adapters for company search, reviews, salaries, and interviews via Next.js SSR and DOM extraction",
+  "requires_auth": false,
+  "dependencies": {
+    "searchCompanies → getReviews/getSalaries/getInterviews": "searchCompanies returns employerId used by all detail operations"
+  },
+  "stats": {
+    "operation_count": 4,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 4,
+    "ws_count": 0
+  }
+}

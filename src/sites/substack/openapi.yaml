@@ -7,9 +7,9 @@ info:
     compiled_at: '2026-04-01T00:00:00Z'
     requires_auth: false
 servers:
-  - url: https://substack.com
-    x-openweb:
-      transport: page
+- url: https://substack.com
+  x-openweb:
+    transport: page
 paths:
   /search/posts:
     get:
@@ -24,19 +24,19 @@ paths:
           name: substack-api
           operation: searchPosts
       parameters:
-        - name: query
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search keyword (e.g. "artificial intelligence", "climate change").
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Page number for pagination (0-indexed).
+      - name: query
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search keyword (e.g. "artificial intelligence", "climate change").
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Page number for pagination (0-indexed).
       responses:
         '200':
           description: Search results with matching posts.
@@ -88,6 +88,8 @@ paths:
                           type: string
                   more:
                     type: boolean
+                required:
+                - results
   /publication/{subdomain}/archive:
     get:
       operationId: getArchive
@@ -101,40 +103,40 @@ paths:
           name: substack-api
           operation: getArchive
       parameters:
-        - name: subdomain
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Publication subdomain (e.g. "astralcodexten", "platformer", "mattstoller").
-        - name: sort
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [new, top]
-            default: new
-          description: Sort order — "new" (chronological) or "top" (by popularity).
-        - name: search
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Search keyword to filter posts within this publication.
-        - name: offset
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Pagination offset.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 12
-          description: Number of posts to return (max ~50).
+      - name: subdomain
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Publication subdomain (e.g. "astralcodexten", "platformer", "mattstoller").
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [new, top]
+          default: new
+        description: Sort order — "new" (chronological) or "top" (by popularity).
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Search keyword to filter posts within this publication.
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Pagination offset.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 12
+        description: Number of posts to return (max ~50).
       responses:
         '200':
           description: List of posts from the publication.
@@ -181,6 +183,10 @@ paths:
                             type: integer
                           name:
                             type: string
+                  required:
+                  - id
+                  - slug
+                  - description
   /publication/{subdomain}/posts/{slug}:
     get:
       operationId: getPost
@@ -194,18 +200,18 @@ paths:
           name: substack-api
           operation: getPost
       parameters:
-        - name: subdomain
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Publication subdomain (e.g. "astralcodexten").
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Post slug from archive or search results (e.g. "against-the-concept-of-telescopic").
+      - name: subdomain
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Publication subdomain (e.g. "astralcodexten").
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Post slug from archive or search results (e.g. "against-the-concept-of-telescopic").
       responses:
         '200':
           description: Full post details.
@@ -259,6 +265,10 @@ paths:
                           type: [string, 'null']
                         photo_url:
                           type: [string, 'null']
+                required:
+                - id
+                - slug
+                - description
   /publication/{subdomain}/post/{postId}/comments:
     get:
       operationId: getPostComments
@@ -272,33 +282,33 @@ paths:
           name: substack-api
           operation: getPostComments
       parameters:
-        - name: subdomain
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Publication subdomain.
-        - name: postId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Post numeric ID (from getArchive or getPost response).
-        - name: all_comments
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: true
-          description: If true, return all comments including replies.
-        - name: sort
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [best_first, newest_first, oldest_first]
-            default: best_first
-          description: Comment sort order.
+      - name: subdomain
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Publication subdomain.
+      - name: postId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Post numeric ID (from getArchive or getPost response).
+      - name: all_comments
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: If true, return all comments including replies.
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [best_first, newest_first, oldest_first]
+          default: best_first
+        description: Comment sort order.
       responses:
         '200':
           description: Comments on the post.
@@ -345,6 +355,8 @@ paths:
                                 type: [string, 'null']
                               reaction_count:
                                 type: integer
+                required:
+                - comments
   /trending:
     get:
       operationId: getTrending
@@ -358,13 +370,13 @@ paths:
           name: substack-api
           operation: getTrending
       parameters:
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 25
-          description: Number of trending posts to return.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 25
+        description: Number of trending posts to return.
       responses:
         '200':
           description: Trending posts.
@@ -410,3 +422,5 @@ paths:
                                 type: integer
                               name:
                                 type: string
+                required:
+                - posts

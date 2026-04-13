@@ -7,9 +7,9 @@ info:
     compiled_at: "2026-04-01T18:05:10.904Z"
     requires_auth: false
 servers:
-  - url: https://www.indeed.com
-    x-openweb:
-      transport: page
+- url: https://www.indeed.com
+  x-openweb:
+    transport: page
 paths:
   /jobs:
     get:
@@ -24,25 +24,25 @@ paths:
           name: indeed-web
           operation: searchJobs
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Job search query (e.g. \"software engineer\", \"nurse\")."
-        - name: l
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Location (e.g. \"San Francisco, CA\", \"Remote\")."
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: "Pagination offset (results per page ~15, use 0, 10, 20, ...)."
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Job search query (e.g. \"software engineer\", \"nurse\")."
+      - name: l
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Location (e.g. \"San Francisco, CA\", \"Remote\")."
+      - name: start
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: "Pagination offset (results per page ~15, use 0, 10, 20, ...)."
       responses:
         "200":
           description: Job search results.
@@ -101,6 +101,8 @@ paths:
                         newJob:
                           type: boolean
 
+                required:
+                - jobs
   /viewjob:
     get:
       operationId: getJobDetail
@@ -114,12 +116,12 @@ paths:
           name: indeed-web
           operation: getJobDetail
       parameters:
-        - name: jk
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Job key from searchJobs results."
+      - name: jk
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Job key from searchJobs results."
       responses:
         "200":
           description: Full job posting details.
@@ -184,6 +186,9 @@ paths:
                     type: boolean
                     description: Whether direct apply is available.
 
+                required:
+                - title
+                - description
   /career/{title}/salaries:
     get:
       operationId: getSalary
@@ -197,18 +202,18 @@ paths:
           name: indeed-web
           operation: getSalary
       parameters:
-        - name: title
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Job title (e.g. \"software engineer\", \"data scientist\")."
-        - name: location
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Location URL segment (e.g. \"San-Francisco--CA\"). Use autocompleteLocation."
+      - name: title
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Job title (e.g. \"software engineer\", \"data scientist\")."
+      - name: location
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Location URL segment (e.g. \"San-Francisco--CA\"). Use autocompleteLocation."
       responses:
         "200":
           description: Salary data from Next.js __NEXT_DATA__.
@@ -250,6 +255,8 @@ paths:
                     type: object
                     description: Related job titles with salary data.
 
+                required:
+                - titleInfo
   /cmp/{company}:
     get:
       operationId: getCompanyOverview
@@ -263,12 +270,12 @@ paths:
           name: indeed-web
           operation: getCompanyOverview
       parameters:
-        - name: company
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Company slug (e.g. \"Google\", \"Amazon.com\", \"Meta\")."
+      - name: company
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Company slug (e.g. \"Google\", \"Amazon.com\", \"Meta\")."
       responses:
         "200":
           description: Company overview from _initialData.
@@ -310,6 +317,8 @@ paths:
                     type: object
                     description: LD+JSON LocalBusiness data.
 
+                required:
+                - companyName
   /cmp/{company}/reviews:
     get:
       operationId: getCompanyReviews
@@ -323,18 +332,18 @@ paths:
           name: indeed-web
           operation: getCompanyReviews
       parameters:
-        - name: company
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Company slug (e.g. \"Google\", \"Amazon.com\")."
-        - name: filter
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Filter query (e.g. \"fcountry=US&floc=Mountain+View%2C+CA\")."
+      - name: company
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Company slug (e.g. \"Google\", \"Amazon.com\")."
+      - name: filter
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Filter query (e.g. \"fcountry=US&floc=Mountain+View%2C+CA\")."
       responses:
         "200":
           description: Company reviews from DOM extraction.
@@ -372,6 +381,8 @@ paths:
                     type: object
                     description: Structured aggregate rating from LD+JSON.
 
+                required:
+                - reviews
   /cmp/{company}/salaries:
     get:
       operationId: getCompanySalaries
@@ -385,12 +396,12 @@ paths:
           name: indeed-web
           operation: getCompanySalaries
       parameters:
-        - name: company
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Company slug (e.g. \"Google\", \"Amazon.com\")."
+      - name: company
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Company slug (e.g. \"Google\", \"Amazon.com\")."
       responses:
         "200":
           description: Company salary data from DOM.
@@ -413,6 +424,8 @@ paths:
                         salaryCount:
                           type: string
 
+                required:
+                - salaries
   /autocomplete/job-title:
     get:
       operationId: autocompleteJobTitle
@@ -426,19 +439,19 @@ paths:
           name: indeed-web
           operation: autocompleteJobTitle
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Partial job title query (e.g. \"softw\", \"data sci\")."
-        - name: country
-          in: query
-          required: false
-          schema:
-            type: string
-            default: US
-          description: "Country code (e.g. \"US\", \"GB\", \"CA\")."
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Partial job title query (e.g. \"softw\", \"data sci\")."
+      - name: country
+        in: query
+        required: false
+        schema:
+          type: string
+          default: US
+        description: "Country code (e.g. \"US\", \"GB\", \"CA\")."
       responses:
         "200":
           description: Job title suggestions.
@@ -462,19 +475,19 @@ paths:
           name: indeed-web
           operation: autocompleteLocation
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Partial location query (e.g. \"San Fran\", \"New Y\")."
-        - name: country
-          in: query
-          required: false
-          schema:
-            type: string
-            default: US
-          description: "Country code (e.g. \"US\", \"GB\", \"CA\")."
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Partial location query (e.g. \"San Fran\", \"New Y\")."
+      - name: country
+        in: query
+        required: false
+        schema:
+          type: string
+          default: US
+        description: "Country code (e.g. \"US\", \"GB\", \"CA\")."
       responses:
         "200":
           description: Location suggestions.

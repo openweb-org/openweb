@@ -7,9 +7,9 @@ info:
     compiled_at: '2026-03-24T00:00:00Z'
     requires_auth: false
 servers:
-  - url: https://leetcode.com
-    x-openweb:
-      transport: page
+- url: https://leetcode.com
+  x-openweb:
+    transport: page
 paths:
   /problems/search:
     get:
@@ -23,31 +23,31 @@ paths:
           signature_id: lc0001s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: searchProblems
       parameters:
-        - name: keyword
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search keyword (e.g. "binary search", "two sum", "dynamic programming").
-        - name: skip
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Number of results to skip (pagination offset).
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 50
-          description: Maximum number of results to return.
+      - name: keyword
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search keyword (e.g. "binary search", "two sum", "dynamic programming").
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Number of results to skip (pagination offset).
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+        description: Maximum number of results to return.
       responses:
         '200':
           description: Search results with problems matching the keyword.
@@ -94,6 +94,8 @@ paths:
                     type: integer
                   hasMore:
                     type: boolean
+                required:
+                - questions
   /problems/list:
     get:
       operationId: getProblemList
@@ -106,38 +108,38 @@ paths:
           signature_id: lc0002s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: getProblemList
       parameters:
-        - name: skip
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Number of results to skip.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 50
-          description: Maximum number of results.
-        - name: difficulty
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [EASY, MEDIUM, HARD]
-          description: Filter by difficulty level.
-        - name: topicSlug
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Filter by topic tag slug (e.g. "array", "dynamic-programming", "tree").
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Number of results to skip.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+        description: Maximum number of results.
+      - name: difficulty
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [EASY, MEDIUM, HARD]
+        description: Filter by difficulty level.
+      - name: topicSlug
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter by topic tag slug (e.g. "array", "dynamic-programming", "tree").
       responses:
         '200':
           description: Paginated problem list.
@@ -184,6 +186,8 @@ paths:
                     type: integer
                   hasMore:
                     type: boolean
+                required:
+                - questions
   /daily-challenge:
     get:
       operationId: getDailyChallenge
@@ -196,7 +200,7 @@ paths:
           signature_id: lc0003s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: getDailyChallenge
@@ -241,6 +245,8 @@ paths:
                               type: string
                             slug:
                               type: string
+                required:
+                - link
   /user/{username}/profile:
     get:
       operationId: getUserProfile
@@ -253,17 +259,17 @@ paths:
           signature_id: lc0004s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: getUserProfile
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: LeetCode username (e.g. "lee215", "votrubac").
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+        description: LeetCode username (e.g. "lee215", "votrubac").
       responses:
         '200':
           description: User public profile.
@@ -320,6 +326,8 @@ paths:
                           type: string
                       reputation:
                         type: integer
+                required:
+                - username
   /user/{username}/contest-ranking:
     get:
       operationId: getUserContestRanking
@@ -332,17 +340,17 @@ paths:
           signature_id: lc0005s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: getUserContestRanking
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: LeetCode username.
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+        description: LeetCode username.
       responses:
         '200':
           description: User contest ranking and history.
@@ -395,6 +403,8 @@ paths:
                               type: string
                             startTime:
                               type: integer
+                required:
+                - userContestRankingHistory
   /problems/{questionSlug}/submissions:
     get:
       operationId: getSubmissions
@@ -407,31 +417,31 @@ paths:
           signature_id: lc0006s
           tool_version: 1
           signals:
-            - auth-required
+          - auth-required
         adapter:
           name: leetcode-graphql
           operation: getSubmissions
       parameters:
-        - name: questionSlug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Problem slug (e.g. "two-sum", "binary-search").
-        - name: offset
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Pagination offset.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of submissions to return.
+      - name: questionSlug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Problem slug (e.g. "two-sum", "binary-search").
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Pagination offset.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of submissions to return.
       responses:
         '200':
           description: Submission list (empty if not logged in).
@@ -471,6 +481,8 @@ paths:
                           type: string
                         url:
                           type: string
+                required:
+                - submissions
   /problems/{questionSlug}/solutions:
     get:
       operationId: getSolutionArticles
@@ -483,39 +495,39 @@ paths:
           signature_id: lc0007s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: getSolutionArticles
       parameters:
-        - name: questionSlug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Problem slug (e.g. "two-sum").
-        - name: skip
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Pagination offset.
-        - name: first
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 15
-          description: Number of articles to return.
-        - name: orderBy
-          in: query
-          required: false
-          schema:
-            type: string
-            default: HOT
-            enum: [HOT, NEWEST, OLDEST, MOST_VOTES]
-          description: Sort order for articles.
+      - name: questionSlug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Problem slug (e.g. "two-sum").
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Pagination offset.
+      - name: first
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 15
+        description: Number of articles to return.
+      - name: orderBy
+        in: query
+        required: false
+        schema:
+          type: string
+          default: HOT
+          enum: [HOT, NEWEST, OLDEST, MOST_VOTES]
+        description: Sort order for articles.
       responses:
         '200':
           description: Solution articles for the problem.
@@ -579,6 +591,8 @@ paths:
                                 type: string
                               slug:
                                 type: string
+                required:
+                - articles
   /contests/upcoming:
     get:
       operationId: getUpcomingContests
@@ -591,7 +605,7 @@ paths:
           signature_id: lc0008s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: getUpcomingContests
@@ -635,25 +649,25 @@ paths:
           signature_id: lc0009s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: getContestHistory
       parameters:
-        - name: skip
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Pagination offset.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 10
-          description: Number of contests to return.
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Pagination offset.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+        description: Number of contests to return.
       responses:
         '200':
           description: Past contest list.
@@ -681,6 +695,8 @@ paths:
                           type: integer
                         totalQuestions:
                           type: integer
+                required:
+                - contests
   /contests/{contestSlug}/questions:
     get:
       operationId: getContestQuestions
@@ -693,17 +709,17 @@ paths:
           signature_id: lc0010s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: getContestQuestions
       parameters:
-        - name: contestSlug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Contest slug (e.g. "weekly-contest-438", "biweekly-contest-150").
+      - name: contestSlug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Contest slug (e.g. "weekly-contest-438", "biweekly-contest-150").
       responses:
         '200':
           description: Contest questions.
@@ -739,24 +755,24 @@ paths:
           signature_id: lc0011s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: getRecentSubmissions
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: LeetCode username.
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 15
-          description: Number of submissions to return.
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+        description: LeetCode username.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 15
+        description: Number of submissions to return.
       responses:
         '200':
           description: Recent accepted submissions.
@@ -792,24 +808,24 @@ paths:
           signature_id: lc0012s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: leetcode-graphql
           operation: getContestRanking
       parameters:
-        - name: contestSlug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Contest slug (e.g. "weekly-contest-438").
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number (25 results per page).
+      - name: contestSlug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Contest slug (e.g. "weekly-contest-438").
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Page number (25 results per page).
       responses:
         '200':
           description: Contest leaderboard page.
@@ -839,3 +855,5 @@ paths:
                           description: Unix timestamp of last submission.
                         avatarUrl:
                           type: string
+                required:
+                - rankings

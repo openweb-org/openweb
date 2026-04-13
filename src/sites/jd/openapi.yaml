@@ -6,9 +6,9 @@ info:
     spec_version: '2.0'
     requires_auth: false
 servers:
-  - url: https://jd.com
-    x-openweb:
-      transport: page
+- url: https://jd.com
+  x-openweb:
+    transport: page
 paths:
   /internal/searchProducts:
     get:
@@ -21,24 +21,24 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: jd-global-api
           operation: searchProducts
       parameters:
-        - name: keyword
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search keyword (Chinese or English).
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number (30 results per page).
+      - name: keyword
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search keyword (Chinese or English).
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Page number (30 results per page).
       responses:
         '200':
           description: Search results with product listings.
@@ -76,6 +76,8 @@ paths:
                         image:
                           type: ['string', 'null']
                           description: Product image URL.
+                required:
+                - products
   /internal/getProductDetail:
     get:
       operationId: getProductDetail
@@ -87,17 +89,17 @@ paths:
           tool_version: 2
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: jd-global-api
           operation: getProductDetail
       parameters:
-        - name: skuId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: JD product SKU ID.
+      - name: skuId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JD product SKU ID.
       responses:
         '200':
           description: Full product detail from api.m.jd.com wareBusiness API.
@@ -158,17 +160,17 @@ paths:
           tool_version: 2
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: jd-global-api
           operation: getProductReviews
       parameters:
-        - name: skuId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: JD product SKU ID.
+      - name: skuId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JD product SKU ID.
       responses:
         '200':
           description: Product reviews from getLegoWareDetailComment API.
@@ -204,6 +206,8 @@ paths:
                         score:
                           type: integer
                           description: Review score (1-5).
+                required:
+                - reviews
   /internal/getProductPrice:
     get:
       operationId: getProductPrice
@@ -215,17 +219,17 @@ paths:
           tool_version: 2
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: jd-global-api
           operation: getProductPrice
       parameters:
-        - name: skuId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: JD product SKU ID.
+      - name: skuId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: JD product SKU ID.
       responses:
         '200':
           description: Product pricing information.
@@ -251,3 +255,6 @@ paths:
                     type: ['array', 'null']
                     items:
                       type: string
+                required:
+                - currency
+                - inStock

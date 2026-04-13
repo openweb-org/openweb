@@ -7,9 +7,9 @@ info:
     compiled_at: "2026-04-01T22:30:47.588Z"
     requires_auth: false
 servers:
-  - url: https://site.api.espn.com
-    x-openweb:
-      transport: node
+- url: https://site.api.espn.com
+  x-openweb:
+    transport: node
 paths:
   /apis/site/v2/sports/{sport}/{league}/scoreboard:
     get:
@@ -21,29 +21,29 @@ paths:
           stable_id: espn_getScoreboard_v1
           tool_version: 2
       parameters:
-        - name: sport
-          in: path
-          required: true
-          schema:
-            type: string
-            enum: [football, basketball, baseball, hockey, soccer]
-          description: "Sport category (e.g., football, basketball, baseball)"
-          example: football
-        - name: league
-          in: path
-          required: true
-          schema:
-            type: string
-            enum: [nfl, nba, mlb, nhl, eng.1, usa.1]
-          description: "League identifier (e.g., nfl, nba, mlb)"
-          example: nfl
-        - name: dates
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Date filter in YYYYMMDD format (e.g., 20260401)"
-          example: "20260401"
+      - name: sport
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [football, basketball, baseball, hockey, soccer]
+        description: "Sport category (e.g., football, basketball, baseball)"
+        example: football
+      - name: league
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [nfl, nba, mlb, nhl, eng.1, usa.1]
+        description: "League identifier (e.g., nfl, nba, mlb)"
+        example: nfl
+      - name: dates
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Date filter in YYYYMMDD format (e.g., 20260401)"
+        example: "20260401"
       responses:
         "200":
           description: Success.
@@ -211,27 +211,27 @@ paths:
           stable_id: espn_getTeam_v1
           tool_version: 2
       parameters:
-        - name: sport
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Sport category"
-          example: football
-        - name: league
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "League identifier"
-          example: nfl
-        - name: teamId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Team ID (numeric, e.g., 17 for New England Patriots)"
-          example: "17"
+      - name: sport
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Sport category"
+        example: football
+      - name: league
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "League identifier"
+        example: nfl
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Team ID (numeric, e.g., 17 for New England Patriots)"
+        example: "17"
       responses:
         "200":
           description: Success.
@@ -328,20 +328,20 @@ paths:
           stable_id: espn_getTeams_v1
           tool_version: 2
       parameters:
-        - name: sport
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Sport category"
-          example: football
-        - name: league
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "League identifier"
-          example: nfl
+      - name: sport
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Sport category"
+        example: football
+      - name: league
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "League identifier"
+        example: nfl
       responses:
         "200":
           description: Success.
@@ -408,6 +408,8 @@ paths:
                                               height:
                                                 type: integer
                                       required: [id, displayName, abbreviation]
+                required:
+                - sports
 
   /apis/v2/sports/{sport}/{league}/standings:
     get:
@@ -419,20 +421,20 @@ paths:
           stable_id: espn_getStandings_v1
           tool_version: 2
       parameters:
-        - name: sport
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Sport category"
-          example: football
-        - name: league
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "League identifier"
-          example: nfl
+      - name: sport
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Sport category"
+        example: football
+      - name: league
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "League identifier"
+        example: nfl
       responses:
         "200":
           description: Success.
@@ -504,6 +506,9 @@ paths:
                                         displayValue:
                                           type: string
 
+                required:
+                - id
+                - name
   /apis/site/v2/sports/{sport}/{league}/news:
     get:
       operationId: getNews
@@ -514,20 +519,20 @@ paths:
           stable_id: espn_getNews_v1
           tool_version: 2
       parameters:
-        - name: sport
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Sport category"
-          example: football
-        - name: league
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "League identifier"
-          example: nfl
+      - name: sport
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Sport category"
+        example: football
+      - name: league
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "League identifier"
+        example: nfl
       responses:
         "200":
           description: Success.
@@ -670,28 +675,28 @@ paths:
           stable_id: espn_searchPlayers_v1
           tool_version: 2
       parameters:
-        - name: query
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Search query (e.g., player name, team name)"
-          example: Patrick Mahomes
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Max results to return (default 5)"
-          example: 5
-        - name: type
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [player, team]
-          description: "Filter by result type — required to get results (player or team)"
-          example: player
+      - name: query
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Search query (e.g., player name, team name)"
+        example: Patrick Mahomes
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Max results to return (default 5)"
+        example: 5
+      - name: type
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [player, team]
+        description: "Filter by result type — required to get results (player or team)"
+        example: player
       responses:
         "200":
           description: Success.
@@ -732,4 +737,4 @@ paths:
                       required: [id, displayName, type]
                 required: [items]
       servers:
-        - url: https://site.web.api.espn.com
+      - url: https://site.web.api.espn.com

@@ -6,11 +6,11 @@ info:
     spec_version: '2.0'
     requires_auth: false
 servers:
-  - url: https://us.trip.com
-    x-openweb:
-      transport: page
-      auth:
-        type: cookie_session
+- url: https://us.trip.com
+  x-openweb:
+    transport: page
+    auth:
+      type: cookie_session
 paths:
   /restapi/soa2/27015/FlightListSearch:
     post:
@@ -32,8 +32,8 @@ paths:
             schema:
               type: object
               required:
-                - searchCriteria
-                - Head
+              - searchCriteria
+              - Head
               properties:
                 mode:
                   type: integer
@@ -41,9 +41,9 @@ paths:
                 searchCriteria:
                   type: object
                   required:
-                    - tripType
-                    - journeyInfoTypes
-                    - passengerInfoType
+                  - tripType
+                  - journeyInfoTypes
+                  - passengerInfoType
                   properties:
                     grade:
                       type: integer
@@ -75,9 +75,9 @@ paths:
                       items:
                         type: object
                         required:
-                          - departDate
-                          - departCode
-                          - arriveCode
+                        - departDate
+                        - departCode
+                        - arriveCode
                         properties:
                           journeyNo:
                             type: integer
@@ -114,10 +114,10 @@ paths:
                 Head:
                   type: object
                   required:
-                    - Locale
-                    - Currency
-                    - Group
-                    - Source
+                  - Locale
+                  - Currency
+                  - Group
+                  - Source
                   properties:
                     Locale:
                       type: string
@@ -197,6 +197,8 @@ paths:
                         type: string
                       retMsg:
                         type: string
+                required:
+                - data
   /restapi/soa2/14427/BatchGetFlightComfort:
     post:
       operationId: getFlightComfort
@@ -217,17 +219,17 @@ paths:
             schema:
               type: object
               required:
-                - FlightSegmentList
+              - FlightSegmentList
               properties:
                 FlightSegmentList:
                   type: array
                   items:
                     type: object
                     required:
-                      - dCity
-                      - aCity
-                      - dDate
-                      - flightNo
+                    - dCity
+                    - aCity
+                    - dDate
+                    - flightNo
                     properties:
                       dCity:
                         type: string
@@ -287,6 +289,8 @@ paths:
                           type: boolean
                         hasPower:
                           type: boolean
+                required:
+                - flightComfortList
   /restapi/soa2/27501/getGeneralInfo:
     post:
       operationId: getGeneralInfo
@@ -378,6 +382,8 @@ paths:
                           type: string
                         type:
                           type: string
+                required:
+                - travelTipsList
   /restapi/soa2/20400/getGsHotSearchForTripOnline:
     post:
       operationId: getHotDestinations
@@ -385,9 +391,9 @@ paths:
         Get trending travel destinations — city name, district ID, type,
         travel guide URL, total count
       servers:
-        - url: https://www.trip.com
-          x-openweb:
-            transport: page
+      - url: https://www.trip.com
+        x-openweb:
+          transport: page
       x-openweb:
         permission: read
         build:
@@ -457,6 +463,8 @@ paths:
                           type: string
                   total:
                     type: integer
+                required:
+                - data
   /restapi/soa2/31699/searchListForWeb:
     post:
       operationId: searchTrains
@@ -542,6 +550,8 @@ paths:
                         type: string
                       msg:
                         type: string
+                required:
+                - data
   /restapi/soa2/36040/loadStationList:
     post:
       operationId: getTrainStations
@@ -603,6 +613,8 @@ paths:
                         type: string
                       msg:
                         type: string
+                required:
+                - data
   /restapi/soa2/14427/poiSearch:
     post:
       operationId: searchPOI
@@ -623,7 +635,7 @@ paths:
             schema:
               type: object
               required:
-                - key
+              - key
               properties:
                 key:
                   type: string
@@ -682,6 +694,8 @@ paths:
                   key:
                     type: string
                     nullable: true
+                required:
+                - results
   /restapi/soa2/23044/getDestinationPageInfo.json:
     post:
       operationId: getDestinationInfo
@@ -689,9 +703,9 @@ paths:
         Get travel guide for a destination — recommended sights, hotels,
         restaurants, related districts, hot comments
       servers:
-        - url: https://www.trip.com
-          x-openweb:
-            transport: page
+      - url: https://www.trip.com
+        x-openweb:
+          transport: page
       x-openweb:
         permission: read
         build:
@@ -706,7 +720,7 @@ paths:
             schema:
               type: object
               required:
-                - districtId
+              - districtId
               properties:
                 districtId:
                   type: string
@@ -880,6 +894,8 @@ paths:
                                   type: string
                                 imageUrl:
                                   type: string
+                required:
+                - data
   /restapi/soa2/28181/json/getByScenesCode:
     post:
       operationId: searchAttractions
@@ -887,9 +903,9 @@ paths:
         Search attractions and things-to-do by city — attraction name, rating,
         price, image, category, sort options
       servers:
-        - url: https://www.trip.com
-          x-openweb:
-            transport: page
+      - url: https://www.trip.com
+        x-openweb:
+          transport: page
       x-openweb:
         permission: read
         build:
@@ -1012,6 +1028,8 @@ paths:
                         type: string
                       errorMessage:
                         type: string
+                required:
+                - list
   /restapi/soa2/14427/getFlightFilters:
     post:
       operationId: getFlightFilters
@@ -1032,7 +1050,7 @@ paths:
             schema:
               type: object
               required:
-                - token
+              - token
               properties:
                 token:
                   type: string
@@ -1081,6 +1099,8 @@ paths:
                                 type: string
                               count:
                                 type: integer
+                required:
+                - filterList
   /restapi/soa2/28181/json/getDetailV2:
     post:
       operationId: getAttractionDetail
@@ -1088,9 +1108,9 @@ paths:
         Get attraction detail page — description, photos, reviews summary,
         ticket options, opening hours, location
       servers:
-        - url: https://www.trip.com
-          x-openweb:
-            transport: page
+      - url: https://www.trip.com
+        x-openweb:
+          transport: page
       x-openweb:
         permission: read
         build:
@@ -1105,7 +1125,7 @@ paths:
             schema:
               type: object
               required:
-                - productId
+              - productId
               properties:
                 productId:
                   type: integer
@@ -1175,6 +1195,8 @@ paths:
                     properties:
                       success:
                         type: boolean
+                required:
+                - description
   /restapi/soa2/36040/getTrainCalendar:
     post:
       operationId: getTrainCalendar
@@ -1195,9 +1217,9 @@ paths:
             schema:
               type: object
               required:
-                - departStation
-                - arriveStation
-                - month
+              - departStation
+              - arriveStation
+              - month
               properties:
                 departStation:
                   type: string
@@ -1247,6 +1269,8 @@ paths:
                         type: string
                       msg:
                         type: string
+                required:
+                - data
   /restapi/soa2/23044/getCityList:
     post:
       operationId: getCityList
@@ -1254,9 +1278,9 @@ paths:
         Get popular cities/districts for a country — city name, district ID,
         image URL, for destination browsing and trip planning
       servers:
-        - url: https://www.trip.com
-          x-openweb:
-            transport: page
+      - url: https://www.trip.com
+        x-openweb:
+          transport: page
       x-openweb:
         permission: read
         build:
@@ -1307,3 +1331,5 @@ paths:
                               type: string
                             imageUrl:
                               type: string
+                required:
+                - data

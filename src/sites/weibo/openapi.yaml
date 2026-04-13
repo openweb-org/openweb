@@ -4,18 +4,18 @@ info:
   version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-03-29T06:26:04.728Z
+    compiled_at: 2026-03-29T06:26:04.728000Z
     requires_auth: true
 servers:
-  - url: https://weibo.com
-    x-openweb:
-      transport: page
-      auth:
-        type: cookie_session
-      csrf:
-        type: cookie_to_header
-        cookie: XSRF-TOKEN
-        header: x-xsrf-token
+- url: https://weibo.com
+  x-openweb:
+    transport: page
+    auth:
+      type: cookie_session
+    csrf:
+      type: cookie_to_header
+      cookie: XSRF-TOKEN
+      header: x-xsrf-token
 paths:
   /ajax/feed/friendstimeline:
     get:
@@ -27,33 +27,33 @@ paths:
           stable_id: a3645dc7d9c37028
           tool_version: 2
       parameters:
-        - name: list_id
-          in: query
-          required: true
-          schema:
-            type: string
-          example: my_follow_all
-          description: Feed group ID (my_follow_all for all followed users)
-        - name: refresh
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 4
-        - name: since_id
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 0
-          description: Cursor for pagination (use 0 for first page)
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 25
-          description: Number of posts to return (max 25)
+      - name: list_id
+        in: query
+        required: true
+        schema:
+          type: string
+        example: my_follow_all
+        description: Feed group ID (my_follow_all for all followed users)
+      - name: refresh
+        in: query
+        required: false
+        schema:
+          type: integer
+        example: 4
+      - name: since_id
+        in: query
+        required: false
+        schema:
+          type: integer
+        example: 0
+        description: Cursor for pagination (use 0 for first page)
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+        example: 25
+        description: Number of posts to return (max 25)
       responses:
         "200":
           description: Home feed posts.
@@ -250,12 +250,14 @@ paths:
                               type: integer
                   since_id:
                     oneOf:
-                      - type: string
-                      - type: integer
+                    - type: string
+                    - type: integer
                   max_id:
                     oneOf:
-                      - type: string
-                      - type: integer
+                    - type: string
+                    - type: integer
+                required:
+                - statuses
   /ajax/feed/hottimeline:
     get:
       operationId: getHotFeed
@@ -266,51 +268,51 @@ paths:
           stable_id: 7d7bf2fbf50c4d9f
           tool_version: 2
       parameters:
-        - name: group_id
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 102803
-          description: Group ID for hot feed (102803 = default hot)
-        - name: containerid
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 102803
-          description: Container ID (same as group_id)
-        - name: since_id
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 0
-        - name: max_id
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 0
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 10
-        - name: refresh
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 0
-        - name: extparam
-          in: query
-          required: true
-          schema:
-            type: string
-          example: discover|new_feed
-          description: Feed type parameter (discover|new_feed = discovery feed)
+      - name: group_id
+        in: query
+        required: true
+        schema:
+          type: integer
+        example: 102803
+        description: Group ID for hot feed (102803 = default hot)
+      - name: containerid
+        in: query
+        required: true
+        schema:
+          type: integer
+        example: 102803
+        description: Container ID (same as group_id)
+      - name: since_id
+        in: query
+        required: false
+        schema:
+          type: integer
+        example: 0
+      - name: max_id
+        in: query
+        required: false
+        schema:
+          type: integer
+        example: 0
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+        example: 10
+      - name: refresh
+        in: query
+        required: false
+        schema:
+          type: integer
+        example: 0
+      - name: extparam
+        in: query
+        required: true
+        schema:
+          type: string
+        example: discover|new_feed
+        description: Feed type parameter (discover|new_feed = discovery feed)
       responses:
         "200":
           description: Hot timeline posts.
@@ -512,12 +514,14 @@ paths:
                     type: integer
                   since_id:
                     oneOf:
-                      - type: string
-                      - type: integer
+                    - type: string
+                    - type: integer
                   max_id:
                     oneOf:
-                      - type: string
-                      - type: integer
+                    - type: string
+                    - type: integer
+                required:
+                - statuses
   /ajax/side/hotSearch:
     get:
       operationId: getHotSearch
@@ -536,8 +540,8 @@ paths:
               schema:
                 type: object
                 required:
-                  - ok
-                  - data
+                - ok
+                - data
                 properties:
                   ok:
                     type: integer
@@ -589,19 +593,19 @@ paths:
           stable_id: 254bd0dfa3f12586
           tool_version: 2
       parameters:
-        - name: uid
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1918530507
-          description: User ID (numeric)
-        - name: scene
-          in: query
-          required: false
-          schema:
-            type: string
-          example: profile
+      - name: uid
+        in: query
+        required: true
+        schema:
+          type: integer
+        example: 1918530507
+        description: User ID (numeric)
+      - name: scene
+        in: query
+        required: false
+        schema:
+          type: string
+        example: profile
       responses:
         "200":
           description: User profile.
@@ -610,8 +614,8 @@ paths:
               schema:
                 type: object
                 required:
-                  - ok
-                  - data
+                - ok
+                - data
                 properties:
                   ok:
                     type: integer
@@ -687,13 +691,13 @@ paths:
           stable_id: f5a6b7c8d9e01234
           tool_version: 2
       parameters:
-        - name: uid
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1918530507
-          description: User ID (numeric)
+      - name: uid
+        in: query
+        required: true
+        schema:
+          type: integer
+        example: 1918530507
+        description: User ID (numeric)
       responses:
         "200":
           description: User detail.
@@ -702,8 +706,8 @@ paths:
               schema:
                 type: object
                 required:
-                  - ok
-                  - data
+                - ok
+                - data
                 properties:
                   ok:
                     type: integer
@@ -740,33 +744,33 @@ paths:
           stable_id: 5cbe6a8939f65367
           tool_version: 2
       parameters:
-        - name: uid
-          in: query
-          required: true
-          schema:
-            type: integer
-          example: 1918530507
-          description: User ID (numeric)
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 1
-          description: Page number (starts at 1)
-        - name: feature
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 0
-          description: Filter type (0=all, 1=original, 2=pictures, 3=video, 4=music)
-        - name: since_id
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Pagination cursor.
+      - name: uid
+        in: query
+        required: true
+        schema:
+          type: integer
+        example: 1918530507
+        description: User ID (numeric)
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+        example: 1
+        description: Page number (starts at 1)
+      - name: feature
+        in: query
+        required: false
+        schema:
+          type: integer
+        example: 0
+        description: Filter type (0=all, 1=original, 2=pictures, 3=video, 4=music)
+      - name: since_id
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Pagination cursor.
       responses:
         "200":
           description: User timeline.
@@ -775,22 +779,29 @@ paths:
               schema:
                 type: object
                 required:
-                  - ok
-                  - data
+                - ok
+                - data
                 properties:
                   ok:
                     type: integer
                   data:
                     type: object
+                    required:
+                    - list
                     properties:
                       since_id:
                         oneOf:
-                          - type: string
-                          - type: integer
+                        - type: string
+                        - type: integer
                       list:
                         type: array
                         items:
                           type: object
+                          required:
+                          - id
+                          - idstr
+                          - mid
+                          - text
                           properties:
                             id:
                               type: integer
@@ -815,6 +826,10 @@ paths:
                               description: Client source (e.g. '微博网页版').
                             user:
                               type: object
+                              required:
+                              - id
+                              - idstr
+                              - screen_name
                               properties:
                                 id:
                                   type: integer
@@ -878,9 +893,13 @@ paths:
                               type: object
                               additionalProperties:
                                 type: object
+                                required:
+                                - pic_id
                                 properties:
                                   thumbnail:
                                     type: object
+                                    required:
+                                    - url
                                     properties:
                                       url:
                                         type: string
@@ -890,6 +909,8 @@ paths:
                                         type: integer
                                   bmiddle:
                                     type: object
+                                    required:
+                                    - url
                                     properties:
                                       url:
                                         type: string
@@ -899,6 +920,8 @@ paths:
                                         type: integer
                                   large:
                                     type: object
+                                    required:
+                                    - url
                                     properties:
                                       url:
                                         type: string
@@ -908,6 +931,8 @@ paths:
                                         type: integer
                                   original:
                                     type: object
+                                    required:
+                                    - url
                                     properties:
                                       url:
                                         type: string
@@ -925,6 +950,10 @@ paths:
                             retweeted_status:
                               type: object
                               description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                              required:
+                              - id
+                              - idstr
+                              - mid
                               properties:
                                 id:
                                   type: integer
@@ -946,22 +975,26 @@ paths:
                                   type: string
                                 user:
                                   oneOf:
-                                    - type: object
-                                      properties:
-                                        id:
-                                          type: integer
-                                        idstr:
-                                          type: string
-                                        screen_name:
-                                          type: string
-                                          description: Display name.
-                                        profile_image_url:
-                                          type: string
-                                        verified:
-                                          type: boolean
-                                        avatar_hd:
-                                          type: string
-                                    - type: 'null'
+                                  - type: object
+                                    required:
+                                    - id
+                                    - idstr
+                                    - screen_name
+                                    properties:
+                                      id:
+                                        type: integer
+                                      idstr:
+                                        type: string
+                                      screen_name:
+                                        type: string
+                                        description: Display name.
+                                      profile_image_url:
+                                        type: string
+                                      verified:
+                                        type: boolean
+                                      avatar_hd:
+                                        type: string
+                                  - type: 'null'
                                 reposts_count:
                                   type: integer
                                 comments_count:
@@ -987,26 +1020,26 @@ paths:
           stable_id: 2defa3b7e0a39a48
           tool_version: 2
       parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-          example: Qyj0ifs0m
-          description: Post ID (alphanumeric, e.g. 'Qyj0ifs0m')
-        - name: isGetLongText
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: true
-          description: Include full long text content.
-        - name: locale
-          in: query
-          required: false
-          schema:
-            type: string
-          example: zh-CN
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+        example: Qyj0ifs0m
+        description: Post ID (alphanumeric, e.g. 'Qyj0ifs0m')
+      - name: isGetLongText
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+        description: Include full long text content.
+      - name: locale
+        in: query
+        required: false
+        schema:
+          type: string
+        example: zh-CN
       responses:
         "200":
           description: Post detail (WeiboPost with optional longText).
@@ -1038,6 +1071,10 @@ paths:
                     description: Client source (e.g. '微博网页版').
                   user:
                     type: object
+                    required:
+                    - id
+                    - idstr
+                    - screen_name
                     properties:
                       id:
                         type: integer
@@ -1101,9 +1138,13 @@ paths:
                     type: object
                     additionalProperties:
                       type: object
+                      required:
+                      - pic_id
                       properties:
                         thumbnail:
                           type: object
+                          required:
+                          - url
                           properties:
                             url:
                               type: string
@@ -1113,6 +1154,8 @@ paths:
                               type: integer
                         bmiddle:
                           type: object
+                          required:
+                          - url
                           properties:
                             url:
                               type: string
@@ -1122,6 +1165,8 @@ paths:
                               type: integer
                         large:
                           type: object
+                          required:
+                          - url
                           properties:
                             url:
                               type: string
@@ -1131,6 +1176,8 @@ paths:
                               type: integer
                         original:
                           type: object
+                          required:
+                          - url
                           properties:
                             url:
                               type: string
@@ -1148,6 +1195,10 @@ paths:
                   retweeted_status:
                     type: object
                     description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                    required:
+                    - id
+                    - idstr
+                    - mid
                     properties:
                       id:
                         type: integer
@@ -1169,6 +1220,10 @@ paths:
                         type: string
                       user:
                         type: object
+                        required:
+                        - id
+                        - idstr
+                        - screen_name
                         properties:
                           id:
                             type: integer
@@ -1196,6 +1251,9 @@ paths:
                           type: string
                       pic_num:
                         type: integer
+                required:
+                - id
+                - text
   /ajax/statuses/longtext:
     get:
       operationId: getLongtext
@@ -1206,13 +1264,13 @@ paths:
           stable_id: a6b7c8d9e0f12345
           tool_version: 2
       parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-          example: Qyj0ifs0m
-          description: Post ID (alphanumeric)
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+        example: Qyj0ifs0m
+        description: Post ID (alphanumeric)
       responses:
         "200":
           description: Long text content.
@@ -1221,13 +1279,15 @@ paths:
               schema:
                 type: object
                 required:
-                  - ok
-                  - data
+                - ok
+                - data
                 properties:
                   ok:
                     type: integer
                   data:
                     type: object
+                    required:
+                    - longTextContent
                     properties:
                       longTextContent:
                         type: string
@@ -1239,6 +1299,8 @@ paths:
                         type: array
                         items:
                           type: object
+                          required:
+                          - ori_url
                           properties:
                             url_title:
                               type: string
@@ -1264,24 +1326,24 @@ paths:
           stable_id: b7c8d9e0f1a23456
           tool_version: 2
       parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: integer
-          description: Post numeric ID
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 1
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-          example: 10
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Post numeric ID
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+        example: 1
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+        example: 10
       responses:
         "200":
           description: Reposts list.
@@ -1290,7 +1352,8 @@ paths:
               schema:
                 type: object
                 required:
-                  - ok
+                - ok
+                - data
                 properties:
                   ok:
                     type: integer
@@ -1298,6 +1361,11 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                      - id
+                      - idstr
+                      - mid
+                      - text
                       properties:
                         id:
                           type: integer
@@ -1322,6 +1390,10 @@ paths:
                           description: Client source (e.g. '微博网页版').
                         user:
                           type: object
+                          required:
+                          - id
+                          - idstr
+                          - screen_name
                           properties:
                             id:
                               type: integer
@@ -1385,9 +1457,13 @@ paths:
                           type: object
                           additionalProperties:
                             type: object
+                            required:
+                            - pic_id
                             properties:
                               thumbnail:
                                 type: object
+                                required:
+                                - url
                                 properties:
                                   url:
                                     type: string
@@ -1397,6 +1473,8 @@ paths:
                                     type: integer
                               bmiddle:
                                 type: object
+                                required:
+                                - url
                                 properties:
                                   url:
                                     type: string
@@ -1406,6 +1484,8 @@ paths:
                                     type: integer
                               large:
                                 type: object
+                                required:
+                                - url
                                 properties:
                                   url:
                                     type: string
@@ -1415,6 +1495,8 @@ paths:
                                     type: integer
                               original:
                                 type: object
+                                required:
+                                - url
                                 properties:
                                   url:
                                     type: string
@@ -1432,6 +1514,10 @@ paths:
                         retweeted_status:
                           type: object
                           description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                          required:
+                          - id
+                          - idstr
+                          - mid
                           properties:
                             id:
                               type: integer
@@ -1453,22 +1539,26 @@ paths:
                               type: string
                             user:
                               oneOf:
-                                - type: object
-                                  properties:
-                                    id:
-                                      type: integer
-                                    idstr:
-                                      type: string
-                                    screen_name:
-                                      type: string
-                                      description: Display name.
-                                    profile_image_url:
-                                      type: string
-                                    verified:
-                                      type: boolean
-                                    avatar_hd:
-                                      type: string
-                                - type: 'null'
+                              - type: object
+                                required:
+                                - id
+                                - idstr
+                                - screen_name
+                                properties:
+                                  id:
+                                    type: integer
+                                  idstr:
+                                    type: string
+                                  screen_name:
+                                    type: string
+                                    description: Display name.
+                                  profile_image_url:
+                                    type: string
+                                  verified:
+                                    type: boolean
+                                  avatar_hd:
+                                    type: string
+                              - type: 'null'
                             reposts_count:
                               type: integer
                             comments_count:
@@ -1486,8 +1576,8 @@ paths:
                     type: integer
                   max_page:
                     oneOf:
-                      - type: integer
-                      - type: 'null'
+                    - type: integer
+                    - type: 'null'
                   next_cursor:
                     type: integer
   /ajax/statuses/setLike:
@@ -1507,7 +1597,7 @@ paths:
             schema:
               type: object
               required:
-                - id
+              - id
               properties:
                 id:
                   type: string
@@ -1519,6 +1609,9 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - ok
+                - id
                 properties:
                   ok:
                     type: integer
@@ -1530,6 +1623,10 @@ paths:
                     description: Attitude type (e.g. 'heart').
                   status:
                     type: object
+                    required:
+                    - id
+                    - idstr
+                    - mid
                     properties:
                       id:
                         type: integer
@@ -1554,6 +1651,10 @@ paths:
                         description: Client source (e.g. '微博网页版').
                       user:
                         type: object
+                        required:
+                        - id
+                        - idstr
+                        - screen_name
                         properties:
                           id:
                             type: integer
@@ -1617,9 +1718,13 @@ paths:
                         type: object
                         additionalProperties:
                           type: object
+                          required:
+                          - pic_id
                           properties:
                             thumbnail:
                               type: object
+                              required:
+                              - url
                               properties:
                                 url:
                                   type: string
@@ -1629,6 +1734,8 @@ paths:
                                   type: integer
                             bmiddle:
                               type: object
+                              required:
+                              - url
                               properties:
                                 url:
                                   type: string
@@ -1638,6 +1745,8 @@ paths:
                                   type: integer
                             large:
                               type: object
+                              required:
+                              - url
                               properties:
                                 url:
                                   type: string
@@ -1647,6 +1756,8 @@ paths:
                                   type: integer
                             original:
                               type: object
+                              required:
+                              - url
                               properties:
                                 url:
                                   type: string
@@ -1664,6 +1775,10 @@ paths:
                       retweeted_status:
                         type: object
                         description: "Reposted/quoted post (cycle-broken: does not nest further)."
+                        required:
+                        - id
+                        - idstr
+                        - mid
                         properties:
                           id:
                             type: integer
@@ -1685,6 +1800,10 @@ paths:
                             type: string
                           user:
                             type: object
+                            required:
+                            - id
+                            - idstr
+                            - screen_name
                             properties:
                               id:
                                 type: integer
@@ -1732,7 +1851,7 @@ paths:
             schema:
               type: object
               required:
-                - id
+              - id
               properties:
                 id:
                   type: string
@@ -1955,7 +2074,7 @@ paths:
             schema:
               type: object
               required:
-                - friend_uid
+              - friend_uid
               properties:
                 friend_uid:
                   type: string
@@ -2036,7 +2155,7 @@ paths:
             schema:
               type: object
               required:
-                - id
+              - id
               properties:
                 id:
                   type: string
@@ -2262,7 +2381,7 @@ paths:
             schema:
               type: object
               required:
-                - id
+              - id
               properties:
                 id:
                   type: string
@@ -2297,7 +2416,7 @@ paths:
             schema:
               type: object
               required:
-                - friend_uid
+              - friend_uid
               properties:
                 friend_uid:
                   type: string
@@ -2332,7 +2451,7 @@ paths:
             schema:
               type: object
               required:
-                - id
+              - id
               properties:
                 id:
                   type: string

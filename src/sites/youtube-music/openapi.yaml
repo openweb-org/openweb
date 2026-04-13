@@ -7,9 +7,9 @@ info:
     compiled_at: "2026-04-01T00:00:00Z"
     requires_auth: false
 servers:
-  - url: https://music.youtube.com
-    x-openweb:
-      transport: node
+- url: https://music.youtube.com
+  x-openweb:
+    transport: node
 paths:
   /youtubei/v1/search:
     post:
@@ -21,18 +21,18 @@ paths:
           stable_id: ytm_search_v1
           tool_version: 2
       parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
-        - name: prettyPrint
-          in: query
-          required: true
-          schema:
-            type: boolean
-            const: false
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+          const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+      - name: prettyPrint
+        in: query
+        required: true
+        schema:
+          type: boolean
+          const: false
       requestBody:
         required: true
         content:
@@ -40,7 +40,7 @@ paths:
             schema:
               type: object
               required:
-                - query
+              - query
               properties:
                 context:
                   type: object
@@ -76,6 +76,8 @@ paths:
                             items:
                               type: object
 
+                required:
+                - contents
   /browse/album:
     post:
       operationId: getAlbum
@@ -87,18 +89,18 @@ paths:
           stable_id: ytm_album_v1
           tool_version: 2
       parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
-        - name: prettyPrint
-          in: query
-          required: true
-          schema:
-            type: boolean
-            const: false
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+          const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+      - name: prettyPrint
+        in: query
+        required: true
+        schema:
+          type: boolean
+          const: false
       requestBody:
         required: true
         content:
@@ -106,7 +108,7 @@ paths:
             schema:
               type: object
               required:
-                - browseId
+              - browseId
               properties:
                 context:
                   type: object
@@ -142,6 +144,9 @@ paths:
                       musicThumbnailRenderer:
                         type: object
 
+                required:
+                - contents
+                - background
   /browse/playlist:
     post:
       operationId: getPlaylist
@@ -153,18 +158,18 @@ paths:
           stable_id: ytm_playlist_v1
           tool_version: 2
       parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
-        - name: prettyPrint
-          in: query
-          required: true
-          schema:
-            type: boolean
-            const: false
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+          const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+      - name: prettyPrint
+        in: query
+        required: true
+        schema:
+          type: boolean
+          const: false
       requestBody:
         required: true
         content:
@@ -172,7 +177,7 @@ paths:
             schema:
               type: object
               required:
-                - browseId
+              - browseId
               properties:
                 context:
                   type: object
@@ -208,6 +213,9 @@ paths:
                       musicThumbnailRenderer:
                         type: object
 
+                required:
+                - contents
+                - background
   /browse/artist:
     post:
       operationId: getArtist
@@ -219,18 +227,18 @@ paths:
           stable_id: ytm_artist_v1
           tool_version: 2
       parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
-        - name: prettyPrint
-          in: query
-          required: true
-          schema:
-            type: boolean
-            const: false
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+          const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+      - name: prettyPrint
+        in: query
+        required: true
+        schema:
+          type: boolean
+          const: false
       requestBody:
         required: true
         content:
@@ -238,7 +246,7 @@ paths:
             schema:
               type: object
               required:
-                - browseId
+              - browseId
               properties:
                 context:
                   type: object
@@ -285,6 +293,9 @@ paths:
                       singleColumnBrowseResultsRenderer:
                         type: object
 
+                required:
+                - header
+                - contents
   /youtubei/v1/player:
     post:
       operationId: getSong
@@ -295,18 +306,18 @@ paths:
           stable_id: ytm_player_v1
           tool_version: 2
       parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
-        - name: prettyPrint
-          in: query
-          required: true
-          schema:
-            type: boolean
-            const: false
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+          const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+      - name: prettyPrint
+        in: query
+        required: true
+        schema:
+          type: boolean
+          const: false
       requestBody:
         required: true
         content:
@@ -314,7 +325,7 @@ paths:
             schema:
               type: object
               required:
-                - videoId
+              - videoId
               properties:
                 context:
                   type: object
@@ -362,6 +373,9 @@ paths:
                     type: object
                     description: "Playback status (OK, UNPLAYABLE, LOGIN_REQUIRED)"
 
+                required:
+                - videoDetails
+                - playabilityStatus
   /youtubei/v1/next:
     post:
       operationId: getUpNext
@@ -372,18 +386,18 @@ paths:
           stable_id: ytm_next_v1
           tool_version: 2
       parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
-        - name: prettyPrint
-          in: query
-          required: true
-          schema:
-            type: boolean
-            const: false
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+          const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+      - name: prettyPrint
+        in: query
+        required: true
+        schema:
+          type: boolean
+          const: false
       requestBody:
         required: true
         content:
@@ -391,7 +405,7 @@ paths:
             schema:
               type: object
               required:
-                - videoId
+              - videoId
               properties:
                 context:
                   type: object
@@ -430,6 +444,9 @@ paths:
                           videoId:
                             type: string
 
+                required:
+                - contents
+                - currentVideoEndpoint
   /youtubei/v1/music/get_search_suggestions:
     post:
       operationId: getSearchSuggestions
@@ -440,18 +457,18 @@ paths:
           stable_id: ytm_suggestions_v1
           tool_version: 2
       parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
-        - name: prettyPrint
-          in: query
-          required: true
-          schema:
-            type: boolean
-            const: false
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+          const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+      - name: prettyPrint
+        in: query
+        required: true
+        schema:
+          type: boolean
+          const: false
       requestBody:
         required: true
         content:
@@ -459,7 +476,7 @@ paths:
             schema:
               type: object
               required:
-                - input
+              - input
               properties:
                 context:
                   type: object
@@ -491,6 +508,8 @@ paths:
                         searchSuggestionsSectionRenderer:
                           type: object
 
+                required:
+                - contents
   /browse/home:
     post:
       operationId: browseHome
@@ -502,18 +521,18 @@ paths:
           stable_id: ytm_home_v1
           tool_version: 2
       parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
-        - name: prettyPrint
-          in: query
-          required: true
-          schema:
-            type: boolean
-            const: false
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+          const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+      - name: prettyPrint
+        in: query
+        required: true
+        schema:
+          type: boolean
+          const: false
       requestBody:
         required: true
         content:
@@ -553,6 +572,9 @@ paths:
                       musicThumbnailRenderer:
                         type: object
 
+                required:
+                - contents
+                - background
   /browse/charts:
     post:
       operationId: browseCharts
@@ -564,18 +586,18 @@ paths:
           stable_id: ytm_charts_v1
           tool_version: 2
       parameters:
-        - name: key
-          in: query
-          required: true
-          schema:
-            type: string
-            const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
-        - name: prettyPrint
-          in: query
-          required: true
-          schema:
-            type: boolean
-            const: false
+      - name: key
+        in: query
+        required: true
+        schema:
+          type: string
+          const: AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30
+      - name: prettyPrint
+        in: query
+        required: true
+        schema:
+          type: boolean
+          const: false
       requestBody:
         required: true
         content:
@@ -614,3 +636,6 @@ paths:
                     properties:
                       musicHeaderRenderer:
                         type: object
+                required:
+                - contents
+                - header

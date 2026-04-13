@@ -7,11 +7,11 @@ info:
     compiled_at: 2026-03-29T12:00:00Z
     requires_auth: false
 servers:
-  - url: https://m.douban.com
-    x-openweb:
-      transport: node
-      auth:
-        type: cookie_session
+- url: https://m.douban.com
+  x-openweb:
+    transport: node
+    auth:
+      type: cookie_session
 paths:
   # ── Movies ──────────────────────────────────────────────────────────
 
@@ -25,28 +25,28 @@ paths:
           stable_id: search_movie_001
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Search keyword (e.g., movie title, actor name)"
-          example: "肖申克的救赎"
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Number of results to return (default 20, max 50)"
-          example: 20
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Pagination offset (default 0)"
-          example: 0
+      - $ref: '#/components/parameters/Referer'
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Search keyword (e.g., movie title, actor name)"
+        example: "肖申克的救赎"
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Number of results to return (default 20, max 50)"
+        example: 20
+      - name: start
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Pagination offset (default 0)"
+        example: 0
       responses:
         "200":
           description: Success.
@@ -91,6 +91,8 @@ paths:
                         target_type:
                           type: string
 
+                required:
+                - items
   /rexxar/api/v2/movie/{id}:
     get:
       operationId: getMovie
@@ -101,14 +103,14 @@ paths:
           stable_id: movie_detail_001
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: "Douban movie subject ID (e.g., 1292052 for Shawshank Redemption)"
-          example: 1292052
+      - $ref: '#/components/parameters/Referer'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: "Douban movie subject ID (e.g., 1292052 for Shawshank Redemption)"
+        example: 1292052
       responses:
         "200":
           description: Success.
@@ -196,6 +198,10 @@ paths:
                   uri:
                     type: string
 
+                required:
+                - id
+                - title
+                - actors
   /rexxar/api/v2/movie/{id}/interests:
     get:
       operationId: getMovieReviews
@@ -206,28 +212,28 @@ paths:
           stable_id: movie_reviews_001
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: "Douban movie subject ID"
-          example: 1292052
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Number of reviews to return (default 10)"
-          example: 10
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Pagination offset"
-          example: 0
+      - $ref: '#/components/parameters/Referer'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: "Douban movie subject ID"
+        example: 1292052
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Number of reviews to return (default 10)"
+        example: 10
+      - name: start
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Pagination offset"
+        example: 0
       responses:
         "200":
           description: Success.
@@ -276,6 +282,8 @@ paths:
                         status:
                           type: string
 
+                required:
+                - interests
   /rexxar/api/v2/movie/{id}/celebrities:
     get:
       operationId: getMovieCelebrities
@@ -286,14 +294,14 @@ paths:
           stable_id: movie_celebrities_001
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: "Douban movie subject ID"
-          example: 1292052
+      - $ref: '#/components/parameters/Referer'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: "Douban movie subject ID"
+        example: 1292052
       responses:
         "200":
           description: Success.
@@ -349,6 +357,8 @@ paths:
                             large:
                               type: string
 
+                required:
+                - actors
   /rexxar/api/v2/movie/{id}/photos:
     get:
       operationId: getMoviePhotos
@@ -359,28 +369,28 @@ paths:
           stable_id: db0004
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: "Douban movie subject ID"
-          example: 1292052
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Number of photos to return (default 20)"
-          example: 10
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Pagination offset"
-          example: 0
+      - $ref: '#/components/parameters/Referer'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: "Douban movie subject ID"
+        example: 1292052
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Number of photos to return (default 20)"
+        example: 10
+      - name: start
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Pagination offset"
+        example: 0
       responses:
         "200":
           description: Photo gallery for the movie.
@@ -432,6 +442,8 @@ paths:
                         likers_count:
                           type: integer
 
+                required:
+                - photos
   /rexxar/api/v2/subject_collection/movie_top250/items:
     get:
       operationId: getTop250
@@ -442,21 +454,21 @@ paths:
           stable_id: db0005
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: "Pagination offset (0, 25, 50, ...). Each page returns 25 movies."
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 25
-          description: "Number of movies per page (default 25)"
+      - $ref: '#/components/parameters/Referer'
+      - name: start
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: "Pagination offset (0, 25, 50, ...). Each page returns 25 movies."
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 25
+        description: "Number of movies per page (default 25)"
       responses:
         "200":
           description: Top 250 movies page.
@@ -515,6 +527,8 @@ paths:
 
   # ── Books ───────────────────────────────────────────────────────────
 
+                required:
+                - subject_collection_items
   /rexxar/api/v2/search/book:
     get:
       operationId: searchBooks
@@ -525,28 +539,28 @@ paths:
           stable_id: search_book_001
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Search keyword (e.g., book title, author name)"
-          example: "三体"
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Number of results to return (default 20, max 50)"
-          example: 20
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Pagination offset (default 0)"
-          example: 0
+      - $ref: '#/components/parameters/Referer'
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Search keyword (e.g., book title, author name)"
+        example: "三体"
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Number of results to return (default 20, max 50)"
+        example: 20
+      - name: start
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Pagination offset (default 0)"
+        example: 0
       responses:
         "200":
           description: Success.
@@ -591,6 +605,8 @@ paths:
                         target_type:
                           type: string
 
+                required:
+                - items
   /rexxar/api/v2/book/{id}:
     get:
       operationId: getBook
@@ -601,14 +617,14 @@ paths:
           stable_id: book_detail_001
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: "Douban book subject ID (e.g., 2567698 for Three-Body Problem)"
-          example: 2567698
+      - $ref: '#/components/parameters/Referer'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: "Douban book subject ID (e.g., 2567698 for Three-Body Problem)"
+        example: 2567698
       responses:
         "200":
           description: Success.
@@ -660,6 +676,9 @@ paths:
                   uri:
                     type: string
 
+                required:
+                - id
+                - title
   /rexxar/api/v2/book/{id}/interests:
     get:
       operationId: getBookReviews
@@ -670,28 +689,28 @@ paths:
           stable_id: book_reviews_001
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: "Douban book subject ID"
-          example: 2567698
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Number of reviews to return (default 10)"
-          example: 10
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Pagination offset"
-          example: 0
+      - $ref: '#/components/parameters/Referer'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: "Douban book subject ID"
+        example: 2567698
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Number of reviews to return (default 10)"
+        example: 10
+      - name: start
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Pagination offset"
+        example: 0
       responses:
         "200":
           description: Success.
@@ -742,6 +761,8 @@ paths:
 
   # ── Music (mobile JSON API) ─────────────────────────────────────────
 
+                required:
+                - interests
   /rexxar/api/v2/search/music:
     get:
       operationId: searchMusic
@@ -752,27 +773,27 @@ paths:
           stable_id: db0009
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Search keyword (e.g., \"周杰伦\", \"Beatles\")"
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Number of results to return (default 20, max 50)"
-          example: 20
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Pagination offset (default 0)"
-          example: 0
+      - $ref: '#/components/parameters/Referer'
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Search keyword (e.g., \"周杰伦\", \"Beatles\")"
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Number of results to return (default 20, max 50)"
+        example: 20
+      - name: start
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Pagination offset (default 0)"
+        example: 0
       responses:
         "200":
           description: Music search results.
@@ -817,6 +838,8 @@ paths:
                         target_type:
                           type: string
 
+                required:
+                - items
   /rexxar/api/v2/music/{id}:
     get:
       operationId: getMusicDetail
@@ -827,14 +850,14 @@ paths:
           stable_id: db0010
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: "Douban music subject ID (e.g., 1401853 for Jay Chou's 七里香)"
-          example: 1401853
+      - $ref: '#/components/parameters/Referer'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: "Douban music subject ID (e.g., 1401853 for Jay Chou's 七里香)"
+        example: 1401853
       responses:
         "200":
           description: Full album detail.
@@ -912,6 +935,9 @@ paths:
 
   # ── Trending / Discovery ────────────────────────────────────────────
 
+                required:
+                - id
+                - title
   /rexxar/api/v2/subject/recent_hot/movie:
     get:
       operationId: getRecentHotMovies
@@ -922,14 +948,14 @@ paths:
           stable_id: recent_hot_movie_001
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Number of movies to return (default 50)"
-          example: 20
+      - $ref: '#/components/parameters/Referer'
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Number of movies to return (default 50)"
+        example: 20
       responses:
         "200":
           description: Success.
@@ -978,6 +1004,8 @@ paths:
                         uri:
                           type: string
 
+                required:
+                - items
   /rexxar/api/v2/subject/recent_hot/tv:
     get:
       operationId: getRecentHotTv
@@ -988,14 +1016,14 @@ paths:
           stable_id: recent_hot_tv_001
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Number of TV shows to return (default 50)"
-          example: 20
+      - $ref: '#/components/parameters/Referer'
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Number of TV shows to return (default 50)"
+        example: 20
       responses:
         "200":
           description: Success.
@@ -1046,6 +1074,8 @@ paths:
                         uri:
                           type: string
 
+                required:
+                - items
   /rexxar/api/v2/subject_collection/movie_showing/items:
     get:
       operationId: getNowShowingMovies
@@ -1056,21 +1086,21 @@ paths:
           stable_id: now_showing_001
           tool_version: 2
       parameters:
-        - $ref: '#/components/parameters/Referer'
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Number of movies to return (default 20)"
-          example: 20
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Pagination offset"
-          example: 0
+      - $ref: '#/components/parameters/Referer'
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Number of movies to return (default 20)"
+        example: 20
+      - name: start
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Pagination offset"
+        example: 0
       responses:
         "200":
           description: Success.
@@ -1133,6 +1163,8 @@ paths:
                         uri:
                           type: string
 
+                required:
+                - subject_collection_items
 components:
   parameters:
     Referer:

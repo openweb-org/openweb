@@ -6,9 +6,9 @@ info:
     spec_version: '2.0'
     requires_auth: false
 servers:
-  - url: https://www.google.com
-    x-openweb:
-      transport: page
+- url: https://www.google.com
+  x-openweb:
+    transport: page
 paths:
   /travel/flights/search:
     get:
@@ -21,25 +21,25 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-flights
           operation: searchFlights
       parameters:
-        - name: tfs
-          in: query
-          required: true
-          schema:
-            type: string
-          description: >-
-            Encoded flight search parameters (origin, destination, dates).
-            Navigate to the Google Flights search page with this parameter set.
-        - name: tfu
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Additional flight UI parameters.
+      - name: tfs
+        in: query
+        required: true
+        schema:
+          type: string
+        description: >-
+          Encoded flight search parameters (origin, destination, dates).
+          Navigate to the Google Flights search page with this parameter set.
+      - name: tfu
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Additional flight UI parameters.
       responses:
         '200':
           description: Flight search results extracted from the page.
@@ -48,9 +48,9 @@ paths:
               schema:
                 type: object
                 required:
-                  - origin
-                  - destination
-                  - flights
+                - origin
+                - destination
+                - flights
                 properties:
                   origin:
                     type: string
@@ -110,23 +110,23 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-flights
           operation: getFlightOverview
       parameters:
-        - name: tfs
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Encoded flight route parameters (origin, destination).
-        - name: tfu
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Additional flight UI parameters.
+      - name: tfs
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Encoded flight route parameters (origin, destination).
+      - name: tfu
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Additional flight UI parameters.
       responses:
         '200':
           description: Flight overview with cheapest options for a route.
@@ -161,6 +161,9 @@ paths:
                   nonstopFrequency:
                     type: string
                     description: How often nonstop flights operate.
+                required:
+                - origin
+                - destination
   /travel/flights/booking:
     get:
       operationId: getFlightBookingDetails
@@ -172,17 +175,17 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-flights
           operation: getFlightBookingDetails
       parameters:
-        - name: tfs
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Encoded itinerary parameters.
+      - name: tfs
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Encoded itinerary parameters.
       responses:
         '200':
           description: Booking details for a specific flight itinerary.
@@ -226,6 +229,8 @@ paths:
                   bookWith:
                     type: string
                     description: Airlines to book with.
+                required:
+                - legs
   /travel/explore:
     get:
       operationId: exploreDestinations
@@ -237,25 +242,25 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-flights
           operation: exploreDestinations
       parameters:
-        - name: tfs
-          in: query
-          required: false
-          schema:
-            type: string
-          description: >-
-            Encoded explore parameters (origin, trip type, filters).
-            Navigate to the Google Flights explore page with origin set.
-        - name: tfu
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Additional explore UI parameters.
+      - name: tfs
+        in: query
+        required: false
+        schema:
+          type: string
+        description: >-
+          Encoded explore parameters (origin, trip type, filters).
+          Navigate to the Google Flights explore page with origin set.
+      - name: tfu
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Additional explore UI parameters.
       responses:
         '200':
           description: Destination cards with flight prices and suggested dates.
@@ -294,6 +299,8 @@ paths:
                           type: integer
                           nullable: true
                           description: Estimated hotel price per night in USD.
+                required:
+                - origin
   /travel/flights/search/insights:
     get:
       operationId: getPriceInsights
@@ -305,19 +312,19 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-flights
           operation: getPriceInsights
       parameters:
-        - name: tfs
-          in: query
-          required: true
-          schema:
-            type: string
-          description: >-
-            Encoded flight search parameters (origin, destination).
-            Navigate to the Google Flights search page with this parameter set.
+      - name: tfs
+        in: query
+        required: true
+        schema:
+          type: string
+        description: >-
+          Encoded flight search parameters (origin, destination).
+          Navigate to the Google Flights search page with this parameter set.
       responses:
         '200':
           description: Price insights including trends, cheapest months, and popular airlines.
@@ -375,3 +382,6 @@ paths:
                         fromPrice:
                           type: integer
                           description: Starting price in USD.
+                required:
+                - origin
+                - destination

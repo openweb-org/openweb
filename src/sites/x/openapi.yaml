@@ -4,12 +4,12 @@ info:
   version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-04-01T17:02:13.234Z
+    compiled_at: 2026-04-01T17:02:13.234000Z
     requires_auth: true
 servers:
-  - url: https://x.com
-    x-openweb:
-      transport: page
+- url: https://x.com
+  x-openweb:
+    transport: page
 paths:
   /internal/getHomeTimeline:
     get:
@@ -25,13 +25,13 @@ paths:
           name: x-graphql
           operation: getHomeTimeline
       parameters:
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of tweets to return
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of tweets to return
       responses:
         "200":
           description: Success.
@@ -67,6 +67,8 @@ paths:
                           metadata:
                             type: object
 
+                required:
+                - home
   /internal/getTweetDetail:
     get:
       operationId: getTweetDetail
@@ -81,12 +83,12 @@ paths:
           name: x-graphql
           operation: getTweetDetail
       parameters:
-        - name: focalTweetId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Tweet ID to get detail for
+      - name: focalTweetId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Tweet ID to get detail for
       responses:
         "200":
           description: Success.
@@ -119,6 +121,8 @@ paths:
                       metadata:
                         type: object
 
+                required:
+                - threaded_conversation_with_injections_v2
   /internal/getUserByScreenName:
     get:
       operationId: getUserByScreenName
@@ -133,13 +137,13 @@ paths:
           name: x-graphql
           operation: getUserByScreenName
       parameters:
-        - name: screen_name
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Twitter screen name (without @)
-          example: openai
+      - name: screen_name
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Twitter screen name (without @)
+        example: openai
       responses:
         "200":
           description: Success.
@@ -192,6 +196,8 @@ paths:
                               verified_type:
                                 type: string
 
+                required:
+                - user
   /internal/searchTweets:
     get:
       operationId: searchTweets
@@ -206,28 +212,28 @@ paths:
           name: x-graphql
           operation: searchTweets
       parameters:
-        - name: rawQuery
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query
-          example: openai
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of results
-        - name: product
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [Top, Latest, People, Photos, Videos]
-            default: Top
-          description: Search result type
+      - name: rawQuery
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query
+        example: openai
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of results
+      - name: product
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [Top, Latest, People, Photos, Videos]
+          default: Top
+        description: Search result type
       responses:
         "200":
           description: Success.
@@ -266,6 +272,8 @@ paths:
                               responseObjects:
                                 type: object
 
+                required:
+                - search_by_raw_query
   /internal/getUserFollowers:
     get:
       operationId: getUserFollowers
@@ -280,19 +288,19 @@ paths:
           name: x-graphql
           operation: getUserFollowers
       parameters:
-        - name: userId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Numeric user ID (from getUserByScreenName → rest_id)"
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of followers to return
+      - name: userId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Numeric user ID (from getUserByScreenName → rest_id)"
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of followers to return
       responses:
         "200":
           description: Success.
@@ -334,6 +342,8 @@ paths:
                                               content:
                                                 type: object
 
+                required:
+                - user
   /internal/getUserFollowing:
     get:
       operationId: getUserFollowing
@@ -348,19 +358,19 @@ paths:
           name: x-graphql
           operation: getUserFollowing
       parameters:
-        - name: userId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Numeric user ID (from getUserByScreenName → rest_id)"
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of following to return
+      - name: userId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Numeric user ID (from getUserByScreenName → rest_id)"
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of following to return
       responses:
         "200":
           description: Success.
@@ -402,6 +412,8 @@ paths:
                                               content:
                                                 type: object
 
+                required:
+                - user
   /internal/getUserTweets:
     get:
       operationId: getUserTweets
@@ -416,19 +428,19 @@ paths:
           name: x-graphql
           operation: getUserTweets
       parameters:
-        - name: userId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Numeric user ID (from getUserByScreenName → rest_id)"
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of tweets to return
+      - name: userId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Numeric user ID (from getUserByScreenName → rest_id)"
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of tweets to return
       responses:
         "200":
           description: Success.
@@ -470,6 +482,8 @@ paths:
                                               content:
                                                 type: object
 
+                required:
+                - user
   /internal/getExplorePage:
     get:
       operationId: getExplorePage
@@ -484,12 +498,12 @@ paths:
           name: x-graphql
           operation: getExplorePage
       parameters:
-        - name: cursor
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Pagination cursor
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Pagination cursor
       responses:
         "200":
           description: Success.
@@ -520,6 +534,8 @@ paths:
                                 timeline:
                                   type: object
 
+                required:
+                - explore_page
   /internal/likeTweet:
     post:
       operationId: likeTweet
@@ -534,12 +550,12 @@ paths:
           name: x-graphql
           operation: likeTweet
       parameters:
-        - name: tweet_id
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Tweet ID to like
+      - name: tweet_id
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Tweet ID to like
       responses:
         "200":
           description: Success.
@@ -562,12 +578,12 @@ paths:
           name: x-graphql
           operation: unlikeTweet
       parameters:
-        - name: tweet_id
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Tweet ID to unlike
+      - name: tweet_id
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Tweet ID to unlike
       responses:
         "200":
           description: Success.
@@ -590,12 +606,12 @@ paths:
           name: x-graphql
           operation: createBookmark
       parameters:
-        - name: tweet_id
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Tweet ID to bookmark
+      - name: tweet_id
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Tweet ID to bookmark
       responses:
         "200":
           description: Success.
@@ -618,12 +634,12 @@ paths:
           name: x-graphql
           operation: deleteBookmark
       parameters:
-        - name: tweet_id
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Tweet ID to unbookmark
+      - name: tweet_id
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Tweet ID to unbookmark
       responses:
         "200":
           description: Success.
@@ -646,12 +662,12 @@ paths:
           name: x-graphql
           operation: createRetweet
       parameters:
-        - name: tweet_id
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Tweet ID to retweet
+      - name: tweet_id
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Tweet ID to retweet
       responses:
         "200":
           description: Success.
@@ -674,12 +690,12 @@ paths:
           name: x-graphql
           operation: deleteRetweet
       parameters:
-        - name: source_tweet_id
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Original tweet ID to un-retweet
+      - name: source_tweet_id
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Original tweet ID to un-retweet
       responses:
         "200":
           description: Success.
@@ -709,7 +725,7 @@ paths:
             schema:
               type: object
               required:
-                - text
+              - text
               properties:
                 text:
                   type: string
@@ -759,7 +775,7 @@ paths:
             schema:
               type: object
               required:
-                - tweet_id
+              - tweet_id
               properties:
                 tweet_id:
                   type: string
@@ -799,8 +815,8 @@ paths:
             schema:
               type: object
               required:
-                - tweet_id
-                - text
+              - tweet_id
+              - text
               properties:
                 tweet_id:
                   type: string
@@ -853,7 +869,7 @@ paths:
             schema:
               type: object
               required:
-                - userId
+              - userId
               properties:
                 userId:
                   type: string
@@ -887,7 +903,7 @@ paths:
             schema:
               type: object
               required:
-                - userId
+              - userId
               properties:
                 userId:
                   type: string
@@ -921,7 +937,7 @@ paths:
             schema:
               type: object
               required:
-                - userId
+              - userId
               properties:
                 userId:
                   type: string
@@ -955,7 +971,7 @@ paths:
             schema:
               type: object
               required:
-                - userId
+              - userId
               properties:
                 userId:
                   type: string
@@ -989,7 +1005,7 @@ paths:
             schema:
               type: object
               required:
-                - userId
+              - userId
               properties:
                 userId:
                   type: string
@@ -1023,7 +1039,7 @@ paths:
             schema:
               type: object
               required:
-                - userId
+              - userId
               properties:
                 userId:
                   type: string
@@ -1057,7 +1073,7 @@ paths:
             schema:
               type: object
               required:
-                - tweet_id
+              - tweet_id
               properties:
                 tweet_id:
                   type: string
@@ -1094,7 +1110,7 @@ paths:
             schema:
               type: object
               required:
-                - tweet_id
+              - tweet_id
               properties:
                 tweet_id:
                   type: string
@@ -1131,8 +1147,8 @@ paths:
             schema:
               type: object
               required:
-                - recipientId
-                - text
+              - recipientId
+              - text
               properties:
                 recipientId:
                   type: string
@@ -1169,7 +1185,7 @@ paths:
             schema:
               type: object
               required:
-                - messageId
+              - messageId
               properties:
                 messageId:
                   type: string
@@ -1196,13 +1212,13 @@ paths:
           name: x-graphql
           operation: getNotifications
       parameters:
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of notifications to return
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of notifications to return
       responses:
         "200":
           description: Success.
@@ -1225,19 +1241,19 @@ paths:
           name: x-graphql
           operation: getUserLikes
       parameters:
-        - name: userId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Numeric user ID (from getUserByScreenName → rest_id)"
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of liked tweets to return
+      - name: userId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Numeric user ID (from getUserByScreenName → rest_id)"
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of liked tweets to return
       responses:
         "200":
           description: Success.
@@ -1260,13 +1276,13 @@ paths:
           name: x-graphql
           operation: getBookmarks
       parameters:
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of bookmarks to return
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of bookmarks to return
       responses:
         "200":
           description: Success.

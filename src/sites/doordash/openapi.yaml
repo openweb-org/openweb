@@ -70,14 +70,21 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - autocompleteFacetFeed
                 properties:
                   autocompleteFacetFeed:
                     type: object
+                    required:
+                      - body
                     properties:
                       body:
                         type: array
                         items:
                           type: object
+                          required:
+                            - id
+                            - body
                           properties:
                             id:
                               type: [string, 'null']
@@ -85,6 +92,9 @@ paths:
                               type: array
                               items:
                                 type: object
+                                required:
+                                  - id
+                                  - name
                                 properties:
                                   id:
                                     type: string
@@ -92,6 +102,8 @@ paths:
                                     type: [string, 'null']
                                   text:
                                     type: object
+                                    required:
+                                      - title
                                     properties:
                                       title:
                                         type: [string, 'null']
@@ -105,9 +117,13 @@ paths:
                                         description: Cuisine/category tags.
                                   images:
                                     type: [object, 'null']
+                                    required:
+                                      - main
                                     properties:
                                       main:
                                         type: [object, 'null']
+                                        required:
+                                          - uri
                                         properties:
                                           uri:
                                             type: string
@@ -117,6 +133,8 @@ paths:
                                     description: JSON string with store_id and result_type.
                                   component:
                                     type: object
+                                    required:
+                                      - id
                                     properties:
                                       id:
                                         type: string
@@ -124,9 +142,13 @@ paths:
                                         type: string
                       page:
                         type: object
+                        required:
+                          - next
                         properties:
                           next:
                             type: [object, 'null']
+                            required:
+                              - name
                             properties:
                               name:
                                 type: [string, 'null']
@@ -221,6 +243,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - storepageFeed
                 properties:
                   storepageFeed:
                     type: object
@@ -260,6 +284,8 @@ paths:
                             type: string
                           address:
                             type: object
+                            required:
+                              - displayAddress
                             properties:
                               lat:
                                 type: string
@@ -276,6 +302,9 @@ paths:
                                 description: Full display address.
                           ratings:
                             type: object
+                            required:
+                              - averageRating
+                              - numRatings
                             properties:
                               numRatings:
                                 type: integer
@@ -289,9 +318,14 @@ paths:
                                 type: boolean
                           status:
                             type: object
+                            required:
+                              - delivery
+                              - pickup
                             properties:
                               delivery:
                                 type: object
+                                required:
+                                  - isAvailable
                                 properties:
                                   isAvailable:
                                     type: boolean
@@ -302,6 +336,8 @@ paths:
                                     type: [string, 'null']
                               pickup:
                                 type: object
+                                required:
+                                  - isAvailable
                                 properties:
                                   isAvailable:
                                     type: boolean
@@ -311,6 +347,8 @@ paths:
                                     type: [string, 'null']
                           deliveryFeeLayout:
                             type: object
+                            required:
+                              - title
                             properties:
                               title:
                                 type: string
@@ -320,6 +358,8 @@ paths:
                             type: array
                             items:
                               type: object
+                              required:
+                                - name
                               properties:
                                 name:
                                   type: string
@@ -327,6 +367,10 @@ paths:
                                   type: string
                       menuBook:
                         type: object
+                        required:
+                          - id
+                          - name
+                          - menuCategories
                         properties:
                           id:
                             type: string
@@ -390,6 +434,8 @@ paths:
                                     type: array
                                     items:
                                       type: object
+                                      required:
+                                        - type
                                       properties:
                                         type:
                                           type: string
@@ -403,9 +449,14 @@ paths:
                                     type: [string, 'null']
                       reviewPreview:
                         type: object
+                        required:
+                          - consumerReviewData
                         properties:
                           consumerReviewData:
                             type: object
+                            required:
+                              - avgRating
+                              - numRatings
                             properties:
                               avgRating:
                                 type: number
@@ -480,6 +531,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - getConsumerOrdersWithDetails
                 properties:
                   getConsumerOrdersWithDetails:
                     type: array
@@ -522,6 +575,9 @@ paths:
                               type: string
                             business:
                               type: object
+                              required:
+                                - id
+                                - name
                               properties:
                                 id:
                                   type: string
@@ -531,6 +587,9 @@ paths:
                           type: array
                           items:
                             type: object
+                            required:
+                              - id
+                              - items
                             properties:
                               id:
                                 type: string
@@ -569,6 +628,8 @@ paths:
                               description: Formatted total (e.g. "$24.99").
                         deliveryAddress:
                           type: [object, 'null']
+                          required:
+                            - id
                           properties:
                             id:
                               type: string
@@ -685,9 +746,14 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - addCartItemV2
                 properties:
                   addCartItemV2:
                     type: object
+                    required:
+                      - id
+                      - orders
                     properties:
                       id:
                         type: string
@@ -701,6 +767,9 @@ paths:
                         type: string
                       restaurant:
                         type: object
+                        required:
+                          - id
+                          - name
                         properties:
                           id:
                             type: string
@@ -712,6 +781,9 @@ paths:
                         type: array
                         items:
                           type: object
+                          required:
+                            - id
+                            - orderItems
                           properties:
                             id:
                               type: string
@@ -719,6 +791,9 @@ paths:
                               type: array
                               items:
                                 type: object
+                                required:
+                                  - id
+                                  - quantity
                                 properties:
                                   id:
                                     type: string
@@ -730,6 +805,9 @@ paths:
                                     type: string
                                   item:
                                     type: object
+                                    required:
+                                      - id
+                                      - name
                                     properties:
                                       id:
                                         type: string
@@ -813,9 +891,14 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - removeCartItemV2
                 properties:
                   removeCartItemV2:
                     type: object
+                    required:
+                      - id
+                      - orders
                     properties:
                       id:
                         type: string
@@ -829,6 +912,9 @@ paths:
                         type: string
                       restaurant:
                         type: object
+                        required:
+                          - id
+                          - name
                         properties:
                           id:
                             type: string
@@ -840,6 +926,9 @@ paths:
                         type: array
                         items:
                           type: object
+                          required:
+                            - id
+                            - orderItems
                           properties:
                             id:
                               type: string
@@ -847,6 +936,9 @@ paths:
                               type: array
                               items:
                                 type: object
+                                required:
+                                  - id
+                                  - quantity
                                 properties:
                                   id:
                                     type: string
@@ -858,6 +950,9 @@ paths:
                                     type: string
                                   item:
                                     type: object
+                                    required:
+                                      - id
+                                      - name
                                     properties:
                                       id:
                                         type: string

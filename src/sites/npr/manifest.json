@@ -1,0 +1,17 @@
+{
+  "name": "npr",
+  "display_name": "NPR",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.npr.org",
+  "description": "NPR news via Algolia — article search, full text, top stories",
+  "requires_auth": false,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 3,
+    "l1_count": 3,
+    "l2_count": 0,
+    "l3_count": 0,
+    "ws_count": 0
+  }
+}

@@ -5,9 +5,9 @@ info:
   x-openweb:
     spec_version: '2.0'
 servers:
-  - url: https://web.whatsapp.com
-    x-openweb:
-      transport: page
+- url: https://web.whatsapp.com
+  x-openweb:
+    transport: page
 paths:
   /internal/chats:
     get:
@@ -20,17 +20,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: whatsapp-modules
           operation: getChats
       parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 50
-          description: Max chats to return
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+        description: Max chats to return
       responses:
         '200':
           description: Array of chat objects
@@ -51,11 +51,11 @@ paths:
                       type: integer
                     timestamp:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                   required:
-                    - id
-                    - name
+                  - id
+                  - name
   /internal/chats/search:
     get:
       operationId: searchChats
@@ -67,23 +67,23 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: whatsapp-modules
           operation: searchChats
       parameters:
-        - name: query
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search term (matches chat name or ID)
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-          description: Max results
+      - name: query
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search term (matches chat name or ID)
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+        description: Max results
       responses:
         '200':
           description: Array of matching chat objects
@@ -100,15 +100,18 @@ paths:
                       type: string
                     isGroup:
                       type:
-                        - boolean
-                        - 'null'
+                      - boolean
+                      - 'null'
                     unreadCount:
                       type: integer
                     timestamp:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                   additionalProperties: true
+                  required:
+                  - id
+                  - name
   /internal/chats/{chatId}:
     get:
       operationId: getChatById
@@ -120,17 +123,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: whatsapp-modules
           operation: getChatById
       parameters:
-        - name: chatId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Chat ID (e.g. 1234567890@c.us)
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Chat ID (e.g. 1234567890@c.us)
       responses:
         '200':
           description: Chat detail object
@@ -149,8 +152,8 @@ paths:
                     type: integer
                   timestamp:
                     type:
-                      - integer
-                      - 'null'
+                    - integer
+                    - 'null'
                   archived:
                     type: boolean
                   pinned:
@@ -159,8 +162,8 @@ paths:
                     type: boolean
                   lastMessage:
                     type:
-                      - object
-                      - 'null'
+                    - object
+                    - 'null'
                     properties:
                       body:
                         type: string
@@ -168,11 +171,11 @@ paths:
                         type: boolean
                       timestamp:
                         type:
-                          - integer
-                          - 'null'
+                        - integer
+                        - 'null'
                 required:
-                  - id
-                  - name
+                - id
+                - name
   /internal/messages:
     get:
       operationId: getMessages
@@ -184,23 +187,23 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: whatsapp-modules
           operation: getMessages
       parameters:
-        - name: chatId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Chat ID (e.g. 1234567890@c.us)
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 50
-          description: Max messages to return
+      - name: chatId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Chat ID (e.g. 1234567890@c.us)
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+        description: Max messages to return
       responses:
         '200':
           description: Array of message objects
@@ -219,13 +222,13 @@ paths:
                       type: string
                     timestamp:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     type:
                       type: string
                   required:
-                    - id
-                    - body
+                  - id
+                  - body
     post:
       operationId: sendMessage
       summary: Send a text message to a chat
@@ -236,7 +239,7 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: whatsapp-modules
           operation: sendMessage
@@ -254,8 +257,8 @@ paths:
                   type: string
                   description: Message text to send
               required:
-                - chatId
-                - message
+              - chatId
+              - message
       responses:
         '200':
           description: Send result
@@ -269,8 +272,8 @@ paths:
                   timestamp:
                     type: integer
                 required:
-                  - success
-                  - timestamp
+                - success
+                - timestamp
   /internal/contacts:
     get:
       operationId: getContacts
@@ -282,17 +285,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: whatsapp-modules
           operation: getContacts
       parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 100
-          description: Max contacts to return
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 100
+        description: Max contacts to return
       responses:
         '200':
           description: Array of contact objects
@@ -310,8 +313,8 @@ paths:
                     isMe:
                       type: boolean
                   required:
-                    - id
-                    - name
+                  - id
+                  - name
   /internal/messages/delete:
     post:
       operationId: deleteMessage
@@ -324,7 +327,7 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: whatsapp-modules
           operation: deleteMessage
@@ -342,8 +345,8 @@ paths:
                   type: string
                   description: Message ID (from getMessages response)
               required:
-                - chatId
-                - messageId
+              - chatId
+              - messageId
       responses:
         '200':
           description: Delete result
@@ -355,7 +358,7 @@ paths:
                   success:
                     type: boolean
                 required:
-                  - success
+                - success
   /internal/chats/read:
     post:
       operationId: markAsRead
@@ -367,7 +370,7 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: whatsapp-modules
           operation: markAsRead
@@ -386,7 +389,7 @@ paths:
                   default: true
                   description: True to mark read, false to mark unread
               required:
-                - chatId
+              - chatId
       responses:
         '200':
           description: Result
@@ -398,4 +401,4 @@ paths:
                   success:
                     type: boolean
                 required:
-                  - success
+                - success

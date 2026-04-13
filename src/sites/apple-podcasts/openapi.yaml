@@ -4,12 +4,12 @@ info:
   version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-04-01T23:02:37.299Z
+    compiled_at: 2026-04-01T23:02:37.299000Z
     requires_auth: true
 servers:
-  - url: https://podcasts.apple.com
-    x-openweb:
-      transport: page
+- url: https://podcasts.apple.com
+  x-openweb:
+    transport: page
 paths:
   /v1/catalog/us/search/groups:
     get:
@@ -24,31 +24,31 @@ paths:
           name: apple-podcasts-api
           operation: searchPodcasts
       parameters:
-        - name: term
-          in: query
-          required: true
-          description: Search query string
-          schema:
+      - name: term
+        in: query
+        required: true
+        description: Search query string
+        schema:
+          type: string
+        example: technology
+      - name: l
+        in: query
+        required: false
+        description: Locale code
+        schema:
+          type: string
+        example: en-US
+      - name: extend
+        in: query
+        required: false
+        description: Additional fields to include (editorialArtwork, feedUrl)
+        schema:
+          type: array
+          items:
             type: string
-          example: technology
-        - name: l
-          in: query
-          required: false
-          description: Locale code
-          schema:
-            type: string
-          example: en-US
-        - name: extend
-          in: query
-          required: false
-          description: Additional fields to include (editorialArtwork, feedUrl)
-          schema:
-            type: array
-            items:
-              type: string
-          example:
-            - editorialArtwork
-            - feedUrl
+        example:
+        - editorialArtwork
+        - feedUrl
       responses:
         "200":
           description: Search results grouped by type (top, shows, episodes).
@@ -80,6 +80,8 @@ paths:
                                     type: string
                                   attributes:
                                     type: object
+                required:
+                - results
   /v1/catalog/us/podcasts/{id}:
     get:
       operationId: getPodcast
@@ -93,49 +95,49 @@ paths:
           name: apple-podcasts-api
           operation: getPodcast
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: Apple Podcasts numeric ID
-          schema:
+      - name: id
+        in: path
+        required: true
+        description: Apple Podcasts numeric ID
+        schema:
+          type: string
+        example: "917918570"
+      - name: extend
+        in: query
+        required: false
+        description: "Additional fields: editorialArtwork, feedUrl, userRating, availableEpisodeCount"
+        schema:
+          type: array
+          items:
             type: string
-          example: "917918570"
-        - name: extend
-          in: query
-          required: false
-          description: "Additional fields: editorialArtwork, feedUrl, userRating, availableEpisodeCount"
-          schema:
-            type: array
-            items:
-              type: string
-          example:
-            - editorialArtwork
-            - feedUrl
-            - userRating
-        - name: include
-          in: query
-          required: false
-          description: "Related resources: episodes, channel"
-          schema:
-            type: array
-            items:
-              type: string
-          example:
-            - episodes
-        - name: l
-          in: query
-          required: false
-          description: Locale code
-          schema:
+        example:
+        - editorialArtwork
+        - feedUrl
+        - userRating
+      - name: include
+        in: query
+        required: false
+        description: "Related resources: episodes, channel"
+        schema:
+          type: array
+          items:
             type: string
-          example: en-US
-        - name: limit[episodes]
-          in: query
-          required: false
-          description: Max episodes to include (default 20)
-          schema:
-            type: integer
-          example: 20
+        example:
+        - episodes
+      - name: l
+        in: query
+        required: false
+        description: Locale code
+        schema:
+          type: string
+        example: en-US
+      - name: limit[episodes]
+        in: query
+        required: false
+        description: Max episodes to include (default 20)
+        schema:
+          type: integer
+        example: 20
       responses:
         "200":
           description: Podcast detail with optional related resources.
@@ -192,6 +194,8 @@ paths:
                     type: array
                     items:
                       type: object
+                required:
+                - data
   /v1/catalog/us/search/suggestions:
     get:
       operationId: getSearchSuggestions
@@ -205,20 +209,20 @@ paths:
           name: apple-podcasts-api
           operation: getSearchSuggestions
       parameters:
-        - name: term
-          in: query
-          required: true
-          description: Partial search query for autocomplete
-          schema:
-            type: string
-          example: tech
-        - name: l
-          in: query
-          required: false
-          description: Locale code
-          schema:
-            type: string
-          example: en-US
+      - name: term
+        in: query
+        required: true
+        description: Partial search query for autocomplete
+        schema:
+          type: string
+        example: tech
+      - name: l
+        in: query
+        required: false
+        description: Locale code
+        schema:
+          type: string
+        example: en-US
       responses:
         "200":
           description: Search suggestions.
@@ -241,6 +245,8 @@ paths:
                               type: string
                             displayTerm:
                               type: string
+                required:
+                - results
   /v1/editorial/us/groupings:
     get:
       operationId: getTopCharts
@@ -254,20 +260,20 @@ paths:
           name: apple-podcasts-api
           operation: getTopCharts
       parameters:
-        - name: name
-          in: query
-          required: false
-          description: "Grouping name (search-landing for main charts)"
-          schema:
-            type: string
-          example: search-landing
-        - name: l
-          in: query
-          required: false
-          description: Locale code
-          schema:
-            type: string
-          example: en-US
+      - name: name
+        in: query
+        required: false
+        description: "Grouping name (search-landing for main charts)"
+        schema:
+          type: string
+        example: search-landing
+      - name: l
+        in: query
+        required: false
+        description: Locale code
+        schema:
+          type: string
+        example: en-US
       responses:
         "200":
           description: Editorial groupings with curated podcast lists.
@@ -294,3 +300,5 @@ paths:
                               type: array
                               items:
                                 type: string
+                required:
+                - data

@@ -5,9 +5,9 @@ info:
   x-openweb:
     spec_version: '2.0'
 servers:
-  - url: https://hn.algolia.com
-    x-openweb:
-      transport: node
+- url: https://hn.algolia.com
+  x-openweb:
+    transport: node
 paths:
   # ═══ L1 Node — Algolia search feeds (no adapter, no browser) ═══
 
@@ -24,16 +24,16 @@ paths:
           tool_version: 3
           verified: true
       parameters:
-        - name: tags
-          in: query
-          schema:
-            type: string
-            default: front_page
-        - name: hitsPerPage
-          in: query
-          schema:
-            type: integer
-            default: 30
+      - name: tags
+        in: query
+        schema:
+          type: string
+          default: front_page
+      - name: hitsPerPage
+        in: query
+        schema:
+          type: integer
+          default: 30
       responses:
         '200':
           description: Array of top stories from Algolia search API.
@@ -49,26 +49,26 @@ paths:
                       description: Item ID (numeric string).
                     title:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                       description: Story title.
                     url:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                       description: Link URL. Null for text posts.
                     author:
                       type: string
                       description: Submitter username.
                     points:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                       description: Score (upvotes).
                     num_comments:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                       description: Total comment count.
                     created_at:
                       type: string
@@ -77,6 +77,9 @@ paths:
                       type: integer
                       description: Unix timestamp (seconds).
 
+                  required:
+                  - objectID
+                  - title
   /search_by_date~getNewestStories:
     get:
       operationId: getNewestStories
@@ -90,16 +93,16 @@ paths:
           tool_version: 2
           verified: true
       parameters:
-        - name: tags
-          in: query
-          schema:
-            type: string
-            default: story
-        - name: hitsPerPage
-          in: query
-          schema:
-            type: integer
-            default: 30
+      - name: tags
+        in: query
+        schema:
+          type: string
+          default: story
+      - name: hitsPerPage
+        in: query
+        schema:
+          type: integer
+          default: 30
       responses:
         '200':
           description: Array of newest stories.
@@ -114,27 +117,30 @@ paths:
                       type: string
                     title:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     url:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     author:
                       type: string
                     points:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     num_comments:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     created_at:
                       type: string
                     created_at_i:
                       type: integer
 
+                  required:
+                  - objectID
+                  - title
   /search~getBestStories:
     get:
       operationId: getBestStories
@@ -148,16 +154,16 @@ paths:
           tool_version: 2
           verified: true
       parameters:
-        - name: tags
-          in: query
-          schema:
-            type: string
-            default: story
-        - name: hitsPerPage
-          in: query
-          schema:
-            type: integer
-            default: 30
+      - name: tags
+        in: query
+        schema:
+          type: string
+          default: story
+      - name: hitsPerPage
+        in: query
+        schema:
+          type: integer
+          default: 30
       responses:
         '200':
           description: Array of highest-voted stories.
@@ -172,27 +178,30 @@ paths:
                       type: string
                     title:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     url:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     author:
                       type: string
                     points:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     num_comments:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     created_at:
                       type: string
                     created_at_i:
                       type: integer
 
+                  required:
+                  - objectID
+                  - title
   /search~getAskStories:
     get:
       operationId: getAskStories
@@ -206,16 +215,16 @@ paths:
           tool_version: 2
           verified: true
       parameters:
-        - name: tags
-          in: query
-          schema:
-            type: string
-            default: ask_hn
-        - name: hitsPerPage
-          in: query
-          schema:
-            type: integer
-            default: 30
+      - name: tags
+        in: query
+        schema:
+          type: string
+          default: ask_hn
+      - name: hitsPerPage
+        in: query
+        schema:
+          type: integer
+          default: 30
       responses:
         '200':
           description: Array of Ask HN posts.
@@ -230,27 +239,30 @@ paths:
                       type: string
                     title:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     url:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     author:
                       type: string
                     points:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     num_comments:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     created_at:
                       type: string
                     created_at_i:
                       type: integer
 
+                  required:
+                  - objectID
+                  - title
   /search~getShowStories:
     get:
       operationId: getShowStories
@@ -264,16 +276,16 @@ paths:
           tool_version: 2
           verified: true
       parameters:
-        - name: tags
-          in: query
-          schema:
-            type: string
-            default: show_hn
-        - name: hitsPerPage
-          in: query
-          schema:
-            type: integer
-            default: 30
+      - name: tags
+        in: query
+        schema:
+          type: string
+          default: show_hn
+      - name: hitsPerPage
+        in: query
+        schema:
+          type: integer
+          default: 30
       responses:
         '200':
           description: Array of Show HN posts.
@@ -288,27 +300,30 @@ paths:
                       type: string
                     title:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     url:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     author:
                       type: string
                     points:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     num_comments:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     created_at:
                       type: string
                     created_at_i:
                       type: integer
 
+                  required:
+                  - objectID
+                  - title
   /search_by_date~getJobPostings:
     get:
       operationId: getJobPostings
@@ -322,16 +337,16 @@ paths:
           tool_version: 2
           verified: true
       parameters:
-        - name: tags
-          in: query
-          schema:
-            type: string
-            default: job
-        - name: hitsPerPage
-          in: query
-          schema:
-            type: integer
-            default: 30
+      - name: tags
+        in: query
+        schema:
+          type: string
+          default: job
+      - name: hitsPerPage
+        in: query
+        schema:
+          type: integer
+          default: 30
       responses:
         '200':
           description: Array of job postings. Jobs typically have null points.
@@ -346,21 +361,24 @@ paths:
                       type: string
                     title:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     url:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     author:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     created_at:
                       type: string
                     created_at_i:
                       type: integer
 
+                  required:
+                  - objectID
+                  - title
   /search_by_date~getFrontPageStories:
     get:
       operationId: getFrontPageStories
@@ -374,16 +392,16 @@ paths:
           tool_version: 2
           verified: true
       parameters:
-        - name: tags
-          in: query
-          schema:
-            type: string
-            default: front_page
-        - name: hitsPerPage
-          in: query
-          schema:
-            type: integer
-            default: 30
+      - name: tags
+        in: query
+        schema:
+          type: string
+          default: front_page
+      - name: hitsPerPage
+        in: query
+        schema:
+          type: integer
+          default: 30
       responses:
         '200':
           description: Array of front page stories sorted by time.
@@ -398,22 +416,22 @@ paths:
                       type: string
                     title:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     url:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     author:
                       type: string
                     points:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     num_comments:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     created_at:
                       type: string
                     created_at_i:
@@ -421,6 +439,9 @@ paths:
 
   # ═══ L1 Node — Algolia items (story detail with comment tree) ═══
 
+                  required:
+                  - objectID
+                  - title
   /api/v1/items/{id}:
     get:
       operationId: getStoryDetail
@@ -432,12 +453,12 @@ paths:
           tool_version: 2
           verified: true
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: 'Hacker News item ID (numeric, e.g. 42407357).'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: 'Hacker News item ID (numeric, e.g. 42407357).'
       responses:
         '200':
           description: Story detail with nested comment tree.
@@ -451,23 +472,23 @@ paths:
                     description: Item ID.
                   title:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Story title.
                   url:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Link URL. Null for text posts.
                   author:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Submitter username.
                   points:
                     type:
-                      - integer
-                      - 'null'
+                    - integer
+                    - 'null'
                     description: Score (upvotes).
                   created_at:
                     type: string
@@ -485,12 +506,12 @@ paths:
                           type: integer
                         author:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                         text:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                         created_at:
                           type: string
                         parent_id:
@@ -498,14 +519,18 @@ paths:
 
   # ═══ L1 Node — Firebase (user profile) ═══
 
+                required:
+                - id
+                - title
+                - children
   /v0/user/{id}.json:
     get:
       operationId: getUserProfile
       summary: 'User profile — username, karma, created date, about text'
       servers:
-        - url: https://hacker-news.firebaseio.com
-          x-openweb:
-            transport: node
+      - url: https://hacker-news.firebaseio.com
+        x-openweb:
+          transport: node
       x-openweb:
         permission: read
         build:
@@ -513,12 +538,12 @@ paths:
           tool_version: 2
           verified: true
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: 'Hacker News username (case-sensitive, e.g. "pg").'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: 'Hacker News username (case-sensitive, e.g. "pg").'
       responses:
         '200':
           description: User profile from Firebase API.
@@ -538,12 +563,14 @@ paths:
                     description: Karma score.
                   about:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: User bio (may contain HTML entities).
 
   # ═══ L1 Node — Algolia search (new comments) ═══
 
+                required:
+                - id
   /search_by_date~getNewComments:
     get:
       operationId: getNewComments
@@ -557,16 +584,16 @@ paths:
           tool_version: 2
           verified: true
       parameters:
-        - name: tags
-          in: query
-          schema:
-            type: string
-            default: comment
-        - name: hitsPerPage
-          in: query
-          schema:
-            type: integer
-            default: 50
+      - name: tags
+        in: query
+        schema:
+          type: string
+          default: comment
+      - name: hitsPerPage
+        in: query
+        schema:
+          type: integer
+          default: 50
       responses:
         '200':
           description: Array of newest comments site-wide.
@@ -582,12 +609,12 @@ paths:
                       description: Comment ID.
                     author:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     comment_text:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                       description: Comment body (may contain HTML).
                     created_at:
                       type: string
@@ -599,21 +626,23 @@ paths:
                       type: integer
                     story_title:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
 
   # ═══ Adapter ops — parameterized Algolia reads (page transport) ═══
 
+                  required:
+                  - objectID
   /internal/getStoryComments:
     get:
       operationId: getStoryComments
       summary: 'Comment thread for a story via Algolia search'
       servers:
-        - url: https://news.ycombinator.com
-          x-openweb:
-            transport: page
-            auth:
-              type: cookie_session
+      - url: https://news.ycombinator.com
+        x-openweb:
+          transport: page
+          auth:
+            type: cookie_session
       x-openweb:
         permission: read
         build:
@@ -624,19 +653,19 @@ paths:
           name: hackernews
           operation: getStoryComments
       parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: integer
-          description: 'Hacker News item ID (numeric, e.g. 42407357).'
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 50
-          description: Maximum number of comments to return.
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: 'Hacker News item ID (numeric, e.g. 42407357).'
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+        description: Maximum number of comments to return.
       responses:
         '200':
           description: Comment thread for the story.
@@ -661,12 +690,12 @@ paths:
                           type: string
                         author:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                         comment_text:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                         created_at:
                           type: string
                         created_at_i:
@@ -676,16 +705,19 @@ paths:
                         story_id:
                           type: integer
 
+                required:
+                - storyId
+                - comments
   /internal/getStoriesByDomain:
     get:
       operationId: getStoriesByDomain
       summary: 'Stories submitted from a specific domain'
       servers:
-        - url: https://news.ycombinator.com
-          x-openweb:
-            transport: page
-            auth:
-              type: cookie_session
+      - url: https://news.ycombinator.com
+        x-openweb:
+          transport: page
+          auth:
+            type: cookie_session
       x-openweb:
         permission: read
         build:
@@ -696,12 +728,12 @@ paths:
           name: hackernews
           operation: getStoriesByDomain
       parameters:
-        - name: site
-          in: query
-          required: true
-          schema:
-            type: string
-          description: 'Domain name to filter by (e.g. "github.com").'
+      - name: site
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'Domain name to filter by (e.g. "github.com").'
       responses:
         '200':
           description: Stories from the given domain.
@@ -716,37 +748,40 @@ paths:
                       type: string
                     title:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     url:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     author:
                       type: string
                     points:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     num_comments:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     created_at:
                       type: string
                     created_at_i:
                       type: integer
 
+                  required:
+                  - objectID
+                  - title
   /internal/getUserSubmissions:
     get:
       operationId: getUserSubmissions
       summary: "User's submitted stories"
       servers:
-        - url: https://news.ycombinator.com
-          x-openweb:
-            transport: page
-            auth:
-              type: cookie_session
+      - url: https://news.ycombinator.com
+        x-openweb:
+          transport: page
+          auth:
+            type: cookie_session
       x-openweb:
         permission: read
         build:
@@ -757,12 +792,12 @@ paths:
           name: hackernews
           operation: getUserSubmissions
       parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-          description: 'Hacker News username (case-sensitive, e.g. "pg").'
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'Hacker News username (case-sensitive, e.g. "pg").'
       responses:
         '200':
           description: Stories submitted by the user.
@@ -777,37 +812,40 @@ paths:
                       type: string
                     title:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     url:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     author:
                       type: string
                     points:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     num_comments:
                       type:
-                        - integer
-                        - 'null'
+                      - integer
+                      - 'null'
                     created_at:
                       type: string
                     created_at_i:
                       type: integer
 
+                  required:
+                  - objectID
+                  - title
   /internal/getUserComments:
     get:
       operationId: getUserComments
       summary: "User's comment history"
       servers:
-        - url: https://news.ycombinator.com
-          x-openweb:
-            transport: page
-            auth:
-              type: cookie_session
+      - url: https://news.ycombinator.com
+        x-openweb:
+          transport: page
+          auth:
+            type: cookie_session
       x-openweb:
         permission: read
         build:
@@ -818,12 +856,12 @@ paths:
           name: hackernews
           operation: getUserComments
       parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-          description: 'Hacker News username (case-sensitive, e.g. "pg").'
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'Hacker News username (case-sensitive, e.g. "pg").'
       responses:
         '200':
           description: Comments posted by the user.
@@ -838,12 +876,12 @@ paths:
                       type: string
                     author:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     comment_text:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     created_at:
                       type: string
                     created_at_i:
@@ -854,21 +892,23 @@ paths:
                       type: integer
                     story_title:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
 
   # ═══ Adapter ops — write (page transport, needs auth) ═══
 
+                  required:
+                  - objectID
   /internal/upvoteStory:
     post:
       operationId: upvoteStory
       summary: 'Upvote a story or comment — requires logged-in session'
       servers:
-        - url: https://news.ycombinator.com
-          x-openweb:
-            transport: page
-            auth:
-              type: cookie_session
+      - url: https://news.ycombinator.com
+        x-openweb:
+          transport: page
+          auth:
+            type: cookie_session
       x-openweb:
         permission: write
         safety: caution
@@ -877,7 +917,7 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: hackernews
           operation: upvoteStory
@@ -888,7 +928,7 @@ paths:
             schema:
               type: object
               required:
-                - id
+              - id
               properties:
                 id:
                   type: integer
@@ -911,11 +951,11 @@ paths:
       operationId: addComment
       summary: 'Post a comment on a story or reply to a comment — requires logged-in session'
       servers:
-        - url: https://news.ycombinator.com
-          x-openweb:
-            transport: page
-            auth:
-              type: cookie_session
+      - url: https://news.ycombinator.com
+        x-openweb:
+          transport: page
+          auth:
+            type: cookie_session
       x-openweb:
         permission: write
         safety: caution
@@ -924,7 +964,7 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: hackernews
           operation: addComment
@@ -935,8 +975,8 @@ paths:
             schema:
               type: object
               required:
-                - parent
-                - text
+              - parent
+              - text
               properties:
                 parent:
                   type: integer

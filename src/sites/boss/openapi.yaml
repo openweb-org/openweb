@@ -7,9 +7,9 @@ info:
     compiled_at: '2026-04-01T00:00:00Z'
     requires_auth: false
 servers:
-  - url: https://www.zhipin.com
-    x-openweb:
-      transport: page
+- url: https://www.zhipin.com
+  x-openweb:
+    transport: page
 paths:
   /web/geek/job:
     get:
@@ -23,30 +23,30 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
         adapter:
           name: boss-web
           operation: searchJobs
       parameters:
-        - name: query
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Job search keyword (e.g. "Java", "产品经理", "数据分析").
-        - name: city
-          in: query
-          required: true
-          schema:
-            type: string
-          description: City code (e.g. "101010100" for Beijing, "101020100" for Shanghai, "101280600" for Shenzhen).
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number for pagination.
+      - name: query
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Job search keyword (e.g. "Java", "产品经理", "数据分析").
+      - name: city
+        in: query
+        required: true
+        schema:
+          type: string
+        description: City code (e.g. "101010100" for Beijing, "101020100" for Shanghai, "101280600" for Shenzhen).
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Page number for pagination.
       responses:
         '200':
           description: Job search results.
@@ -97,6 +97,8 @@ paths:
                         bossTitle:
                           type: string
 
+                required:
+                - jobs
   /job_detail/{jobId}:
     get:
       operationId: getJobDetail
@@ -109,17 +111,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
         adapter:
           name: boss-web
           operation: getJobDetail
       parameters:
-        - name: jobId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Job ID or path from searchJobs jobLink (e.g. "/job_detail/xxx.html" or the path segment).
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Job ID or path from searchJobs jobLink (e.g. "/job_detail/xxx.html" or the path segment).
       responses:
         '200':
           description: Full job posting details.
@@ -169,6 +171,8 @@ paths:
                   address:
                     type: string
 
+                required:
+                - jobName
   /gongsi/{companyId}:
     get:
       operationId: getCompanyProfile
@@ -181,17 +185,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
         adapter:
           name: boss-web
           operation: getCompanyProfile
       parameters:
-        - name: companyId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Company ID from getJobDetail company.link (e.g. "v-_eCFU5ERlU~.html").
+      - name: companyId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Company ID from getJobDetail company.link (e.g. "v-_eCFU5ERlU~.html").
       responses:
         '200':
           description: Company profile data.
@@ -226,6 +230,9 @@ paths:
                         link:
                           type: string
 
+                required:
+                - name
+                - description
   /web/geek/salary:
     get:
       operationId: getSalary
@@ -238,23 +245,23 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
         adapter:
           name: boss-web
           operation: getSalary
       parameters:
-        - name: query
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Job title or keyword to get salary data for (e.g. "Java", "产品经理").
-        - name: city
-          in: query
-          required: true
-          schema:
-            type: string
-          description: City code (e.g. "101010100" for Beijing, "101020100" for Shanghai).
+      - name: query
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Job title or keyword to get salary data for (e.g. "Java", "产品经理").
+      - name: city
+        in: query
+        required: true
+        schema:
+          type: string
+        description: City code (e.g. "101010100" for Beijing, "101020100" for Shanghai).
       responses:
         '200':
           description: Aggregated salary statistics from job listings.
@@ -306,6 +313,8 @@ paths:
                         salary:
                           type: string
 
+                required:
+                - salaryCount
   /wapi/zpCommon/data/city.json:
     get:
       operationId: getCities
@@ -319,7 +328,7 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       responses:
         '200':
           description: City list with codes.
@@ -367,6 +376,8 @@ paths:
                                   name:
                                     type: string
 
+                required:
+                - zpData
   /wapi/zpCommon/data/industry.json:
     get:
       operationId: getIndustries
@@ -380,7 +391,7 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       responses:
         '200':
           description: Industry list.
@@ -412,6 +423,8 @@ paths:
                               name:
                                 type: string
 
+                required:
+                - zpData
   /wapi/zpgeek/pc/all/filter/conditions.json:
     get:
       operationId: getFilterConditions
@@ -425,7 +438,7 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       responses:
         '200':
           description: Filter condition lists.
@@ -498,3 +511,5 @@ paths:
                               type: integer
                             name:
                               type: string
+                required:
+                - zpData

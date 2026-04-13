@@ -66,6 +66,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - itemNumber
+                        - title
                       properties:
                         itemNumber:
                           type: string
@@ -144,6 +147,8 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - term
                       properties:
                         term:
                           type: string
@@ -180,11 +185,16 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - product
                 properties:
                   product:
                     type:
                       - object
                       - 'null'
+                    required:
+                      - itemNumber
+                      - title
                     properties:
                       itemNumber:
                         type: string
@@ -279,6 +289,8 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - itemNumber
                       properties:
                         itemNumber:
                           type: string
@@ -346,6 +358,8 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - itemNumber
                       properties:
                         itemNumber:
                           type: string
@@ -411,6 +425,10 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - productId
+                  - totalReviews
+                  - reviews
                 properties:
                   productId:
                     type: string
@@ -429,6 +447,9 @@ paths:
                     description: Breakdown of ratings by star count.
                     items:
                       type: object
+                      required:
+                        - key
+                        - count
                       properties:
                         key:
                           type: integer
@@ -510,6 +531,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - type
+                        - available
                       properties:
                         type:
                           type: string
@@ -577,6 +601,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - itemNumber
+                        - title
                       properties:
                         itemNumber:
                           type: string
@@ -606,6 +633,8 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - name
                       properties:
                         name:
                           type: [string, 'null']
@@ -655,6 +684,9 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - totalCount
+                  - warehouses
                 properties:
                   totalCount:
                     type: integer
@@ -662,6 +694,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - warehouseId
+                        - name
                       properties:
                         warehouseId:
                           type: string
@@ -673,6 +708,11 @@ paths:
                             - 'null'
                         address:
                           type: object
+                          required:
+                            - street
+                            - city
+                            - state
+                            - zipCode
                           properties:
                             street:
                               type: string
@@ -747,11 +787,16 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - warehouse
                 properties:
                   warehouse:
                     type:
                       - object
                       - 'null'
+                    required:
+                      - warehouseId
+                      - name
                     properties:
                       warehouseId:
                         type: string
@@ -763,6 +808,11 @@ paths:
                           - 'null'
                       address:
                         type: object
+                        required:
+                          - street
+                          - city
+                          - state
+                          - zipCode
                         properties:
                           street:
                             type: string
@@ -787,6 +837,9 @@ paths:
                         type: array
                         items:
                           type: object
+                          required:
+                            - name
+                            - code
                           properties:
                             name:
                               type: string
@@ -917,6 +970,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -954,6 +1009,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -992,6 +1049,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean

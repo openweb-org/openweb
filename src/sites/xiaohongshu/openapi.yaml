@@ -51,6 +51,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - noteId
+                        - type
                       properties:
                         noteId:
                           type: string
@@ -71,6 +74,9 @@ paths:
                           description: Note title (absent for some results).
                         user:
                           type: object
+                          required:
+                            - userId
+                            - nickname
                           properties:
                             userId:
                               type: string
@@ -134,6 +140,12 @@ paths:
                     type:
                       - object
                       - 'null'
+                    required:
+                      - noteId
+                      - title
+                      - type
+                      - user
+                      - interactInfo
                     properties:
                       noteId:
                         type: string
@@ -151,6 +163,9 @@ paths:
                         type: integer
                       user:
                         type: object
+                        required:
+                          - userId
+                          - nickname
                         properties:
                           userId:
                             type: string
@@ -160,6 +175,11 @@ paths:
                             type: string
                       interactInfo:
                         type: object
+                        required:
+                          - likedCount
+                          - collectedCount
+                          - commentCount
+                          - shareCount
                         properties:
                           likedCount:
                             type: string
@@ -173,6 +193,9 @@ paths:
                         type: array
                         items:
                           type: object
+                          required:
+                            - id
+                            - name
                           properties:
                             id:
                               type: string
@@ -186,6 +209,10 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - id
+                        - content
+                        - user
                       properties:
                         id:
                           type: string
@@ -206,6 +233,9 @@ paths:
                             - integer
                         user:
                           type: object
+                          required:
+                            - userId
+                            - nickname
                           properties:
                             userId:
                               type: string
@@ -213,6 +243,9 @@ paths:
                               type: string
                             avatar:
                               type: string
+                required:
+                - note
+                - comments
   /internal/getUserProfile:
     get:
       operationId: getUserProfile
@@ -278,6 +311,10 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - type
+                        - name
+                        - count
                       properties:
                         type:
                           type: string
@@ -291,12 +328,17 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - name
+                        - tagType
                       properties:
                         name:
                           type: string
                         tagType:
                           type: string
                           description: "Tag type: info, location, college."
+                required:
+                - userId
   /internal/getUserNotes:
     get:
       operationId: getUserNotes
@@ -336,6 +378,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - noteId
+                        - type
                       properties:
                         noteId:
                           type: string
@@ -350,6 +395,9 @@ paths:
                           type: string
                         user:
                           type: object
+                          required:
+                            - userId
+                            - nickname
                           properties:
                             userId:
                               type: string
@@ -405,6 +453,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - noteId
+                        - type
                       properties:
                         noteId:
                           type: string
@@ -419,6 +470,9 @@ paths:
                           type: string
                         user:
                           type: object
+                          required:
+                            - userId
+                            - nickname
                           properties:
                             userId:
                               type: string
@@ -476,6 +530,10 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - noteId
+                  - liked
+                  - action
                 properties:
                   noteId:
                     type: string
@@ -523,6 +581,10 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - noteId
+                  - bookmarked
+                  - action
                 properties:
                   noteId:
                     type: string
@@ -568,6 +630,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - keyword
+                        - rank
                       properties:
                         keyword:
                           type: string
@@ -631,6 +696,10 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - id
+                        - content
+                        - user
                       properties:
                         id:
                           type: string
@@ -652,6 +721,9 @@ paths:
                           description: Number of replies to this comment.
                         user:
                           type: object
+                          required:
+                            - userId
+                            - nickname
                           properties:
                             userId:
                               type: string
@@ -698,6 +770,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - noteId
+                        - type
                       properties:
                         noteId:
                           type: string
@@ -712,6 +787,9 @@ paths:
                           type: string
                         user:
                           type: object
+                          required:
+                            - userId
+                            - nickname
                           properties:
                             userId:
                               type: string
@@ -773,6 +851,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - noteId
+                        - type
                       properties:
                         noteId:
                           type: string
@@ -787,6 +868,9 @@ paths:
                           type: string
                         user:
                           type: object
+                          required:
+                            - userId
+                            - nickname
                           properties:
                             userId:
                               type: string
@@ -854,6 +938,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - noteId
+                        - type
                       properties:
                         noteId:
                           type: string
@@ -870,6 +957,9 @@ paths:
                           type: string
                         user:
                           type: object
+                          required:
+                            - userId
+                            - nickname
                           properties:
                             userId:
                               type: string
@@ -921,6 +1011,10 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - userId
+                  - followed
+                  - action
                 properties:
                   userId:
                     type: string
@@ -974,6 +1068,9 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - noteId
+                  - action
                 properties:
                   noteId:
                     type: string

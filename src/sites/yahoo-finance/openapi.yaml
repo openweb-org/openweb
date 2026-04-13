@@ -7,7 +7,7 @@ info:
     compiled_at: '2026-03-24T00:00:00Z'
     requires_auth: false
 servers:
-  - url: https://query1.finance.yahoo.com
+- url: https://query1.finance.yahoo.com
 paths:
   /v1/finance/search:
     get:
@@ -22,40 +22,40 @@ paths:
           signature_id: yf0001s
           tool_version: 1
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query string (e.g. "AAPL", "Apple", "tech ETF").
-        - name: quotesCount
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 6
-          description: Number of quote results to return.
-        - name: newsCount
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 4
-          description: Number of news results to return.
-        - name: lang
-          in: query
-          required: false
-          schema:
-            type: string
-            default: en-US
-          description: Language code.
-        - name: region
-          in: query
-          required: false
-          schema:
-            type: string
-            default: US
-          description: Region code.
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query string (e.g. "AAPL", "Apple", "tech ETF").
+      - name: quotesCount
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 6
+        description: Number of quote results to return.
+      - name: newsCount
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 4
+        description: Number of news results to return.
+      - name: lang
+        in: query
+        required: false
+        schema:
+          type: string
+          default: en-US
+        description: Language code.
+      - name: region
+        in: query
+        required: false
+        schema:
+          type: string
+          default: US
+        description: Region code.
       responses:
         '200':
           description: Success.
@@ -126,65 +126,65 @@ paths:
           signature_id: yf0003s
           tool_version: 1
       parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Ticker symbol (e.g. "AAPL").
-        - name: interval
-          in: query
-          required: false
-          schema:
-            type: string
-            default: 1d
-          description: Data interval (1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo).
-        - name: period1
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: Start date as Unix timestamp.
-        - name: period2
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: End date as Unix timestamp.
-        - name: range
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Predefined range (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max). Alternative to period1/period2.
-        - name: events
-          in: query
-          required: false
-          schema:
-            type: string
-            default: div,splits,capitalGains
-          description: Comma-separated event types to include.
-        - name: includePrePost
-          in: query
-          required: false
-          schema:
-            type: string
-            default: 'false'
-          description: Include pre/post market data.
-        - name: lang
-          in: query
-          required: false
-          schema:
-            type: string
-            default: en-US
-          description: Language code.
-        - name: region
-          in: query
-          required: false
-          schema:
-            type: string
-            default: US
-          description: Region code.
+      - name: symbol
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Ticker symbol (e.g. "AAPL").
+      - name: interval
+        in: query
+        required: false
+        schema:
+          type: string
+          default: 1d
+        description: Data interval (1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo).
+      - name: period1
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Start date as Unix timestamp.
+      - name: period2
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: End date as Unix timestamp.
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Predefined range (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max). Alternative to period1/period2.
+      - name: events
+        in: query
+        required: false
+        schema:
+          type: string
+          default: div,splits,capitalGains
+        description: Comma-separated event types to include.
+      - name: includePrePost
+        in: query
+        required: false
+        schema:
+          type: string
+          default: 'false'
+        description: Include pre/post market data.
+      - name: lang
+        in: query
+        required: false
+        schema:
+          type: string
+          default: en-US
+        description: Language code.
+      - name: region
+        in: query
+        required: false
+        schema:
+          type: string
+          default: US
+        description: Region code.
       responses:
         '200':
           description: Success.
@@ -287,40 +287,40 @@ paths:
           signature_id: yf0004s
           tool_version: 1
       parameters:
-        - name: symbols
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Comma-separated ticker symbols.
-        - name: range
-          in: query
-          required: false
-          schema:
-            type: string
-            default: 1d
-          description: Time range (1d, 5d, 1mo, 3mo, 6mo, 1y, 5y).
-        - name: interval
-          in: query
-          required: false
-          schema:
-            type: string
-            default: 5m
-          description: Data interval.
-        - name: indicators
-          in: query
-          required: false
-          schema:
-            type: string
-            default: close
-          description: Indicators to include.
-        - name: includeTimestamps
-          in: query
-          required: false
-          schema:
-            type: string
-            default: 'true'
-          description: Whether to include timestamps.
+      - name: symbols
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Comma-separated ticker symbols.
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          default: 1d
+        description: Time range (1d, 5d, 1mo, 3mo, 6mo, 1y, 5y).
+      - name: interval
+        in: query
+        required: false
+        schema:
+          type: string
+          default: 5m
+        description: Data interval.
+      - name: indicators
+        in: query
+        required: false
+        schema:
+          type: string
+          default: close
+        description: Indicators to include.
+      - name: includeTimestamps
+        in: query
+        required: false
+        schema:
+          type: string
+          default: 'true'
+        description: Whether to include timestamps.
       responses:
         '200':
           description: Success.
@@ -394,66 +394,66 @@ paths:
           signature_id: yf0005s
           tool_version: 1
       parameters:
-        - name: scrIds
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Screener ID (e.g. "most_actives", "day_gainers", "day_losers").
-        - name: count
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 25
-          description: Number of results to return.
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Result offset for pagination.
-        - name: fields
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Comma-separated fields to return.
-        - name: formatted
-          in: query
-          required: false
-          schema:
-            type: string
-            default: 'true'
-          description: Whether to return formatted values.
-        - name: sortField
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Field to sort by.
-        - name: sortType
-          in: query
-          required: false
-          schema:
-            type: string
-            default: DESC
-          description: Sort direction (ASC or DESC).
-        - name: lang
-          in: query
-          required: false
-          schema:
-            type: string
-            default: en-US
-          description: Language code.
-        - name: region
-          in: query
-          required: false
-          schema:
-            type: string
-            default: US
-          description: Region code.
+      - name: scrIds
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Screener ID (e.g. "most_actives", "day_gainers", "day_losers").
+      - name: count
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 25
+        description: Number of results to return.
+      - name: start
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Result offset for pagination.
+      - name: fields
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Comma-separated fields to return.
+      - name: formatted
+        in: query
+        required: false
+        schema:
+          type: string
+          default: 'true'
+        description: Whether to return formatted values.
+      - name: sortField
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Field to sort by.
+      - name: sortType
+        in: query
+        required: false
+        schema:
+          type: string
+          default: DESC
+        description: Sort direction (ASC or DESC).
+      - name: lang
+        in: query
+        required: false
+        schema:
+          type: string
+          default: en-US
+        description: Language code.
+      - name: region
+        in: query
+        required: false
+        schema:
+          type: string
+          default: US
+        description: Region code.
       responses:
         '200':
           description: Success.
@@ -542,26 +542,26 @@ paths:
           signature_id: yf0006s
           tool_version: 1
       parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Ticker symbol (e.g. "AAPL").
-        - name: lang
-          in: query
-          required: false
-          schema:
-            type: string
-            default: en-US
-          description: Language code.
-        - name: region
-          in: query
-          required: false
-          schema:
-            type: string
-            default: US
-          description: Region code.
+      - name: symbol
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Ticker symbol (e.g. "AAPL").
+      - name: lang
+        in: query
+        required: false
+        schema:
+          type: string
+          default: en-US
+        description: Language code.
+      - name: region
+        in: query
+        required: false
+        schema:
+          type: string
+          default: US
+        description: Region code.
       responses:
         '200':
           description: Success.
@@ -671,6 +671,8 @@ paths:
                         type: [string, 'null']
                       pt_current:
                         type: [integer, 'null']
+                required:
+                - dir
   /ws/insights/v3/finance/insights:
     get:
       operationId: getInsights
@@ -684,33 +686,33 @@ paths:
           signature_id: yf0007s
           tool_version: 1
       parameters:
-        - name: symbols
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Ticker symbol (e.g. "AAPL").
-        - name: reportsCount
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 4
-          description: Number of research reports to return.
-        - name: lang
-          in: query
-          required: false
-          schema:
-            type: string
-            default: en-US
-          description: Language code.
-        - name: region
-          in: query
-          required: false
-          schema:
-            type: string
-            default: US
-          description: Region code.
+      - name: symbols
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Ticker symbol (e.g. "AAPL").
+      - name: reportsCount
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 4
+        description: Number of research reports to return.
+      - name: lang
+        in: query
+        required: false
+        schema:
+          type: string
+          default: en-US
+        description: Language code.
+      - name: region
+        in: query
+        required: false
+        schema:
+          type: string
+          default: US
+        description: Region code.
       responses:
         '200':
           description: Success.
@@ -837,7 +839,7 @@ paths:
                       error:
                         type: ['null', string]
       servers:
-        - url: https://query2.finance.yahoo.com
+      - url: https://query2.finance.yahoo.com
   /ws/fundamentals-timeseries/v1/finance/timeseries/{symbol}:
     get:
       operationId: getTimeSeries
@@ -851,51 +853,51 @@ paths:
           signature_id: yf0008s
           tool_version: 1
       parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Ticker symbol (e.g. "AAPL").
-        - name: type
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Comma-separated metric types (e.g. "annualTotalRevenue,annualNetIncome,annualBasicEPS").
-        - name: period1
-          in: query
-          required: true
-          schema:
-            type: integer
-          description: Start date as Unix timestamp.
-        - name: period2
-          in: query
-          required: true
-          schema:
-            type: integer
-          description: End date as Unix timestamp.
-        - name: padTimeSeries
-          in: query
-          required: false
-          schema:
-            type: string
-            default: 'true'
-          description: Pad missing time series data.
-        - name: lang
-          in: query
-          required: false
-          schema:
-            type: string
-            default: en-US
-          description: Language code.
-        - name: region
-          in: query
-          required: false
-          schema:
-            type: string
-            default: US
-          description: Region code.
+      - name: symbol
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Ticker symbol (e.g. "AAPL").
+      - name: type
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Comma-separated metric types (e.g. "annualTotalRevenue,annualNetIncome,annualBasicEPS").
+      - name: period1
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Start date as Unix timestamp.
+      - name: period2
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: End date as Unix timestamp.
+      - name: padTimeSeries
+        in: query
+        required: false
+        schema:
+          type: string
+          default: 'true'
+        description: Pad missing time series data.
+      - name: lang
+        in: query
+        required: false
+        schema:
+          type: string
+          default: en-US
+        description: Language code.
+      - name: region
+        in: query
+        required: false
+        schema:
+          type: string
+          default: US
+        description: Region code.
       responses:
         '200':
           description: Success.
@@ -955,7 +957,7 @@ paths:
                       error:
                         type: ['null', string]
       servers:
-        - url: https://query2.finance.yahoo.com
+      - url: https://query2.finance.yahoo.com
   /ws/screeners/v1/finance/calendar-events:
     get:
       operationId: getCalendarEvents
@@ -969,27 +971,27 @@ paths:
           signature_id: yf0009s
           tool_version: 1
       parameters:
-        - name: countPerDay
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 10
-          description: Number of events per day.
-        - name: lang
-          in: query
-          required: false
-          schema:
-            type: string
-            default: en-US
-          description: Language code.
-        - name: region
-          in: query
-          required: false
-          schema:
-            type: string
-            default: US
-          description: Region code.
+      - name: countPerDay
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+        description: Number of events per day.
+      - name: lang
+        in: query
+        required: false
+        schema:
+          type: string
+          default: en-US
+        description: Language code.
+      - name: region
+        in: query
+        required: false
+        schema:
+          type: string
+          default: US
+        description: Region code.
       responses:
         '200':
           description: Success.
@@ -1076,8 +1078,10 @@ paths:
                                         type: string
                                       optionableDate:
                                         type: string
+                required:
+                - finance
       servers:
-        - url: https://query2.finance.yahoo.com
+      - url: https://query2.finance.yahoo.com
   /v1/finance/quoteType/:
     get:
       operationId: getQuoteType
@@ -1091,26 +1095,26 @@ paths:
           signature_id: yf0010s
           tool_version: 1
       parameters:
-        - name: symbol
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Ticker symbol (e.g. "AAPL").
-        - name: lang
-          in: query
-          required: false
-          schema:
-            type: string
-            default: en-US
-          description: Language code.
-        - name: region
-          in: query
-          required: false
-          schema:
-            type: string
-            default: US
-          description: Region code.
+      - name: symbol
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Ticker symbol (e.g. "AAPL").
+      - name: lang
+        in: query
+        required: false
+        schema:
+          type: string
+          default: en-US
+        description: Language code.
+      - name: region
+        in: query
+        required: false
+        schema:
+          type: string
+          default: US
+        description: Region code.
       responses:
         '200':
           description: Success.
@@ -1147,4 +1151,4 @@ paths:
                       error:
                         type: ['null', string]
       servers:
-        - url: https://query2.finance.yahoo.com
+      - url: https://query2.finance.yahoo.com

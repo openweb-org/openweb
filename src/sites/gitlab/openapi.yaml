@@ -5,20 +5,20 @@ info:
   x-openweb:
     spec_version: '2.0'
 servers:
-  - url: https://gitlab.com
-    x-openweb:
-      transport: node
-      auth:
-        type: cookie_session
-      csrf:
-        type: meta_tag
-        name: csrf-token
-        header: X-CSRF-Token
-        scope:
-          - PUT
-          - POST
-          - PATCH
-          - DELETE
+- url: https://gitlab.com
+  x-openweb:
+    transport: node
+    auth:
+      type: cookie_session
+    csrf:
+      type: meta_tag
+      name: csrf-token
+      header: X-CSRF-Token
+      scope:
+      - PUT
+      - POST
+      - PATCH
+      - DELETE
 paths:
   /api/v4/projects:
     get:
@@ -33,35 +33,35 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: search
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Search query string.
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of results per page (max 100).
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number.
-        - name: order_by
-          in: query
-          required: false
-          schema:
-            type: string
-            default: created_at
-          description: 'Order by: created_at, updated_at, name, path, last_activity_at.'
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Search query string.
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of results per page (max 100).
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Page number.
+      - name: order_by
+        in: query
+        required: false
+        schema:
+          type: string
+          default: created_at
+        description: 'Order by: created_at, updated_at, name, path, last_activity_at.'
       responses:
         '200':
           description: Success.
@@ -80,8 +80,8 @@ paths:
                       type: string
                     description:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     web_url:
                       type: string
                     star_count:
@@ -90,10 +90,14 @@ paths:
                       type: integer
                     default_branch:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     visibility:
                       type: string
+                  required:
+                  - id
+                  - name
+                  - description
   /api/v4/projects/{projectId}:
     get:
       operationId: getProject
@@ -105,14 +109,14 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
       responses:
         '200':
           description: Success.
@@ -129,8 +133,8 @@ paths:
                     type: string
                   description:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   web_url:
                     type: string
                   star_count:
@@ -139,10 +143,14 @@ paths:
                     type: integer
                   default_branch:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   visibility:
                     type: string
+                required:
+                - id
+                - name
+                - description
   /api/v4/projects/{projectId}/issues:
     post:
       operationId: createIssue
@@ -155,14 +163,14 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
       requestBody:
         required: true
         content:
@@ -170,7 +178,7 @@ paths:
             schema:
               type: object
               required:
-                - title
+              - title
               properties:
                 title:
                   type: string
@@ -199,8 +207,8 @@ paths:
                     type: string
                   description:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   web_url:
                     type: string
                   labels:
@@ -219,35 +227,35 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
-        - name: state
-          in: query
-          required: false
-          schema:
-            type: string
-            default: opened
-          description: 'Filter by state: opened, closed, all.'
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of results per page (max 100).
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+          default: opened
+        description: 'Filter by state: opened, closed, all.'
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of results per page (max 100).
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Page number.
       responses:
         '200':
           description: Success.
@@ -268,14 +276,18 @@ paths:
                       type: string
                     description:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     web_url:
                       type: string
                     labels:
                       type: array
                       items:
                         type: string
+                  required:
+                  - id
+                  - title
+                  - description
   /api/v4/projects/{projectId}/issues/{issueIid}:
     put:
       operationId: closeIssue
@@ -288,20 +300,20 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
-        - name: issueIid
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The internal ID of the issue.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
+      - name: issueIid
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The internal ID of the issue.
       requestBody:
         required: true
         content:
@@ -309,7 +321,7 @@ paths:
             schema:
               type: object
               required:
-                - state_event
+              - state_event
               properties:
                 state_event:
                   type: string
@@ -345,20 +357,20 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
-        - name: issueIid
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The internal ID of the issue.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
+      - name: issueIid
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The internal ID of the issue.
       requestBody:
         required: true
         content:
@@ -366,7 +378,7 @@ paths:
             schema:
               type: object
               required:
-                - body
+              - body
               properties:
                 body:
                   type: string
@@ -404,26 +416,26 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
-        - name: issueIid
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The internal ID of the issue.
-        - name: noteId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID of the note to delete.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
+      - name: issueIid
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The internal ID of the issue.
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID of the note to delete.
       responses:
         '204':
           description: Comment deleted (no content).
@@ -440,35 +452,35 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
-        - name: state
-          in: query
-          required: false
-          schema:
-            type: string
-            default: opened
-          description: 'Filter by state: opened, closed, merged, all.'
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of results per page (max 100).
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+          default: opened
+        description: 'Filter by state: opened, closed, merged, all.'
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of results per page (max 100).
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Page number.
       responses:
         '200':
           description: Success.
@@ -489,14 +501,18 @@ paths:
                       type: string
                     description:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     web_url:
                       type: string
                     source_branch:
                       type: string
                     target_branch:
                       type: string
+                  required:
+                  - id
+                  - title
+                  - description
   /api/v4/projects/{projectId}/pipelines:
     get:
       operationId: listProjectPipelines
@@ -510,28 +526,28 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of results per page (max 100).
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of results per page (max 100).
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Page number.
       responses:
         '200':
           description: Success.
@@ -558,6 +574,8 @@ paths:
                       type: string
                     web_url:
                       type: string
+                  required:
+                  - id
   /api/v4/projects/{projectId}/repository/branches:
     get:
       operationId: listProjectBranches
@@ -571,34 +589,34 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
-        - name: search
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Filter branches by name substring.
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of results per page (max 100).
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter branches by name substring.
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of results per page (max 100).
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Page number.
       responses:
         '200':
           description: Success.
@@ -619,6 +637,8 @@ paths:
                       type: boolean
                     web_url:
                       type: string
+                  required:
+                  - name
   /api/v4/projects/{projectId}/repository/files/{filePath}:
     get:
       operationId: getProjectFile
@@ -630,26 +650,26 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
-        - name: filePath
-          in: path
-          required: true
-          schema:
-            type: string
-          description: URL-encoded full path to the file (e.g. README%2Emd).
-        - name: ref
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Branch name, tag, or commit SHA.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
+      - name: filePath
+        in: path
+        required: true
+        schema:
+          type: string
+        description: URL-encoded full path to the file (e.g. README%2Emd).
+      - name: ref
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Branch name, tag, or commit SHA.
       responses:
         '200':
           description: Success.
@@ -676,6 +696,8 @@ paths:
                     type: string
                   content:
                     type: string
+                required:
+                - content
   /api/v4/users:
     get:
       operationId: searchUsers
@@ -689,34 +711,34 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: username
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Exact username to look up.
-        - name: search
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Search users by name or username.
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of results per page (max 100).
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number.
+      - name: username
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Exact username to look up.
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Search users by name or username.
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of results per page (max 100).
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Page number.
       responses:
         '200':
           description: Success.
@@ -739,6 +761,9 @@ paths:
                       type: string
                     web_url:
                       type: string
+                  required:
+                  - id
+                  - username
   /api/v4/projects/{projectId}/star:
     post:
       operationId: starProject
@@ -750,14 +775,14 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
       responses:
         '201':
           description: Project starred successfully.
@@ -789,14 +814,14 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the project.
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the project.
       responses:
         '200':
           description: Project unstarred successfully.
@@ -830,28 +855,28 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: search
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Search query string.
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of results per page (max 100).
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number.
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Search query string.
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of results per page (max 100).
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Page number.
       responses:
         '200':
           description: Success.
@@ -870,12 +895,16 @@ paths:
                       type: string
                     description:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     web_url:
                       type: string
                     visibility:
                       type: string
+                  required:
+                  - id
+                  - name
+                  - description
   /api/v4/groups/{groupId}:
     get:
       operationId: getGroup
@@ -887,14 +916,14 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the group.
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the group.
       responses:
         '200':
           description: Success.
@@ -911,14 +940,18 @@ paths:
                     type: string
                   description:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   web_url:
                     type: string
                   visibility:
                     type: string
                   full_path:
                     type: string
+                required:
+                - id
+                - name
+                - description
   /api/v4/groups/{groupId}/projects:
     get:
       operationId: listGroupProjects
@@ -932,28 +965,28 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID or URL-encoded path of the group.
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Number of results per page (max 100).
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Page number.
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: The ID or URL-encoded path of the group.
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Number of results per page (max 100).
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Page number.
       responses:
         '200':
           description: Success.
@@ -972,8 +1005,8 @@ paths:
                       type: string
                     description:
                       type:
-                        - string
-                        - 'null'
+                      - string
+                      - 'null'
                     web_url:
                       type: string
                     star_count:
@@ -982,3 +1015,7 @@ paths:
                       type: integer
                     visibility:
                       type: string
+                  required:
+                  - id
+                  - name
+                  - description

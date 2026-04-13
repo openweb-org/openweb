@@ -6,9 +6,9 @@ info:
     spec_version: '2.0'
     requires_auth: false
 servers:
-  - url: https://www.redfin.com
-    x-openweb:
-      transport: page
+- url: https://www.redfin.com
+  x-openweb:
+    transport: page
 paths:
   /city/{regionId}/{state}/{city}:
     get:
@@ -21,29 +21,29 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: redfin
           operation: searchHomes
       parameters:
-        - name: regionId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Redfin region ID (e.g. "16163" for Seattle).
-        - name: state
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Two-letter state code (e.g. "WA").
-        - name: city
-          in: path
-          required: true
-          schema:
-            type: string
-          description: City name (e.g. "Seattle").
+      - name: regionId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Redfin region ID (e.g. "16163" for Seattle).
+      - name: state
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Two-letter state code (e.g. "WA").
+      - name: city
+        in: path
+        required: true
+        schema:
+          type: string
+        description: City name (e.g. "Seattle").
       responses:
         '200':
           description: Home listings extracted from the Redfin search page.
@@ -52,8 +52,8 @@ paths:
               schema:
                 type: object
                 required:
-                  - resultCount
-                  - listings
+                - resultCount
+                - listings
                 properties:
                   resultCount:
                     type: integer
@@ -79,24 +79,24 @@ paths:
                           type: string
                         latitude:
                           type:
-                            - number
-                            - 'null'
+                          - number
+                          - 'null'
                         longitude:
                           type:
-                            - number
-                            - 'null'
+                          - number
+                          - 'null'
                         rooms:
                           type:
-                            - integer
-                            - 'null'
+                          - integer
+                          - 'null'
                         sqft:
                           type:
-                            - integer
-                            - 'null'
+                          - integer
+                          - 'null'
                         price:
                           type:
-                            - number
-                            - 'null'
+                          - number
+                          - 'null'
                           description: Listing price in USD.
                         currency:
                           type: string
@@ -113,35 +113,35 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: redfin
           operation: getPropertyDetails
       parameters:
-        - name: state
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Two-letter state code (e.g. "WA").
-        - name: city
-          in: path
-          required: true
-          schema:
-            type: string
-          description: City name (e.g. "Seattle").
-        - name: address
-          in: path
-          required: true
-          schema:
-            type: string
-          description: URL-formatted address (e.g. "3412-NW-56th-St-98107").
-        - name: propertyId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Redfin property ID (e.g. "200910046").
+      - name: state
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Two-letter state code (e.g. "WA").
+      - name: city
+        in: path
+        required: true
+        schema:
+          type: string
+        description: City name (e.g. "Seattle").
+      - name: address
+        in: path
+        required: true
+        schema:
+          type: string
+        description: URL-formatted address (e.g. "3412-NW-56th-St-98107").
+      - name: propertyId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Redfin property ID (e.g. "200910046").
       responses:
         '200':
           description: Property details extracted from the listing page.
@@ -150,7 +150,7 @@ paths:
               schema:
                 type: object
                 required:
-                  - name
+                - name
                 properties:
                   name:
                     type: string
@@ -170,34 +170,34 @@ paths:
                     type: string
                   latitude:
                     type:
-                      - number
-                      - 'null'
+                    - number
+                    - 'null'
                   longitude:
                     type:
-                      - number
-                      - 'null'
+                    - number
+                    - 'null'
                   bedrooms:
                     type:
-                      - integer
-                      - 'null'
+                    - integer
+                    - 'null'
                   bathrooms:
                     type:
-                      - number
-                      - 'null'
+                    - number
+                    - 'null'
                   sqft:
                     type:
-                      - integer
-                      - 'null'
+                    - integer
+                    - 'null'
                   yearBuilt:
                     type:
-                      - integer
-                      - 'null'
+                    - integer
+                    - 'null'
                   propertyType:
                     type: string
                   price:
                     type:
-                      - number
-                      - 'null'
+                    - number
+                    - 'null'
                   currency:
                     type: string
                   availability:
@@ -221,29 +221,29 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: redfin
           operation: getMarketData
       parameters:
-        - name: regionId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Redfin region ID (e.g. "16163" for Seattle).
-        - name: state
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Two-letter state code (e.g. "WA").
-        - name: city
-          in: path
-          required: true
-          schema:
-            type: string
-          description: City name (e.g. "Seattle").
+      - name: regionId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Redfin region ID (e.g. "16163" for Seattle).
+      - name: state
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Two-letter state code (e.g. "WA").
+      - name: city
+        in: path
+        required: true
+        schema:
+          type: string
+        description: City name (e.g. "Seattle").
       responses:
         '200':
           description: Housing market data for the specified area.
@@ -256,20 +256,20 @@ paths:
                     type: string
                   medianSalePrice:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   homesSold:
                     type:
-                      - integer
-                      - 'null'
+                    - integer
+                    - 'null'
                   medianDaysOnMarket:
                     type:
-                      - integer
-                      - 'null'
+                    - integer
+                    - 'null'
                   yoyChange:
                     type:
-                      - object
-                      - 'null'
+                    - object
+                    - 'null'
                     properties:
                       direction:
                         type: string
@@ -277,21 +277,23 @@ paths:
                         type: number
                   saleToListPercent:
                     type:
-                      - number
-                      - 'null'
+                    - number
+                    - 'null'
                   competitiveness:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   neighborhood:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   marketType:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   summary:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
+                required:
+                - location

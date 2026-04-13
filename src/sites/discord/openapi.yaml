@@ -4,20 +4,20 @@ info:
   version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-03-31T15:22:35.791Z
+    compiled_at: 2026-03-31T15:22:35.791000Z
     requires_auth: true
 servers:
-  - url: https://discord.com
-    x-openweb:
-      transport: page
-      auth:
-        type: webpack_module_walk
-        chunk_global: webpackChunkdiscord_app
-        module_test: getToken
-        call: getToken
-        app_path: /channels/@me
-        inject:
-          header: Authorization
+- url: https://discord.com
+  x-openweb:
+    transport: page
+    auth:
+      type: webpack_module_walk
+      chunk_global: webpackChunkdiscord_app
+      module_test: getToken
+      call: getToken
+      app_path: /channels/@me
+      inject:
+        header: Authorization
 paths:
   /api/v9/users/@me:
     get:
@@ -39,9 +39,9 @@ paths:
               schema:
                 type: object
                 required:
-                  - id
-                  - username
-                  - discriminator
+                - id
+                - username
+                - discriminator
                 properties:
                   id:
                     type: string
@@ -51,13 +51,13 @@ paths:
                     description: "Unique username."
                   global_name:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "Display name (may differ from username)."
                   avatar:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "Avatar hash."
                   discriminator:
                     type: string
@@ -70,13 +70,13 @@ paths:
                     description: "Private user flags bitfield."
                   banner:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "Profile banner hash."
                   accent_color:
                     type:
-                      - integer
-                      - "null"
+                    - integer
+                    - "null"
                     description: "Profile accent color as integer."
                   mfa_enabled:
                     type: boolean
@@ -118,10 +118,10 @@ paths:
                 items:
                   type: object
                   required:
-                    - id
-                    - name
-                    - owner
-                    - permissions
+                  - id
+                  - name
+                  - owner
+                  - permissions
                   properties:
                     id:
                       type: string
@@ -131,13 +131,13 @@ paths:
                       description: "Guild name."
                     icon:
                       type:
-                        - string
-                        - "null"
+                      - string
+                      - "null"
                       description: "Guild icon hash."
                     banner:
                       type:
-                        - string
-                        - "null"
+                      - string
+                      - "null"
                       description: "Guild banner hash."
                     owner:
                       type: boolean
@@ -172,9 +172,9 @@ paths:
                 items:
                   type: object
                   required:
-                    - id
-                    - type
-                    - flags
+                  - id
+                  - type
+                  - flags
                   properties:
                     id:
                       type: string
@@ -184,8 +184,8 @@ paths:
                       description: "Channel type (1=DM, 3=group DM)."
                     last_message_id:
                       type:
-                        - string
-                        - "null"
+                      - string
+                      - "null"
                       description: "Snowflake ID of the last message in this DM."
                     flags:
                       type: integer
@@ -195,8 +195,8 @@ paths:
                       items:
                         type: object
                         required:
-                          - id
-                          - username
+                        - id
+                        - username
                         properties:
                           id:
                             type: string
@@ -206,13 +206,13 @@ paths:
                             description: "Recipient username."
                           global_name:
                             type:
-                              - string
-                              - "null"
+                            - string
+                            - "null"
                             description: "Recipient display name."
                           avatar:
                             type:
-                              - string
-                              - "null"
+                            - string
+                            - "null"
                             description: "Recipient avatar hash."
                       description: "Users in this DM channel."
   /api/v9/guilds/{guildId}:
@@ -227,13 +227,13 @@ paths:
           verified: true
           signals: [page-verified]
       parameters:
-        - name: guildId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord guild (server) snowflake ID"
-          example: "1280234300012494859"
+      - name: guildId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord guild (server) snowflake ID"
+        example: "1280234300012494859"
       responses:
         "200":
           description: Success.
@@ -242,12 +242,12 @@ paths:
               schema:
                 type: object
                 required:
-                  - id
-                  - name
-                  - owner_id
-                  - verification_level
-                  - premium_tier
-                  - nsfw_level
+                - id
+                - name
+                - owner_id
+                - verification_level
+                - premium_tier
+                - nsfw_level
                 properties:
                   id:
                     type: string
@@ -257,13 +257,13 @@ paths:
                     description: "Guild name."
                   icon:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "Guild icon hash."
                   description:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "Guild description (Community servers only)."
                   owner_id:
                     type: string
@@ -305,10 +305,10 @@ paths:
                     items:
                       type: object
                       required:
-                        - id
-                        - name
-                        - permissions
-                        - position
+                      - id
+                      - name
+                      - permissions
+                      - position
                       properties:
                         id:
                           type: string
@@ -380,13 +380,13 @@ paths:
           verified: true
           signals: [page-verified]
       parameters:
-        - name: guildId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord guild (server) snowflake ID"
-          example: "1280234300012494859"
+      - name: guildId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord guild (server) snowflake ID"
+        example: "1280234300012494859"
       responses:
         "200":
           description: Success.
@@ -397,12 +397,12 @@ paths:
                 items:
                   type: object
                   required:
-                    - id
-                    - type
-                    - name
-                    - guild_id
-                    - position
-                    - flags
+                  - id
+                  - type
+                  - name
+                  - guild_id
+                  - position
+                  - flags
                   properties:
                     id:
                       type: string
@@ -421,13 +421,13 @@ paths:
                       description: "Sorting position."
                     parent_id:
                       type:
-                        - string
-                        - "null"
+                      - string
+                      - "null"
                       description: "Parent category channel ID."
                     topic:
                       type:
-                        - string
-                        - "null"
+                      - string
+                      - "null"
                       description: "Channel topic."
                     nsfw:
                       type: boolean
@@ -443,10 +443,10 @@ paths:
                       items:
                         type: object
                         required:
-                          - id
-                          - type
-                          - allow
-                          - deny
+                        - id
+                        - type
+                        - allow
+                        - deny
                         properties:
                           id:
                             type: string
@@ -463,8 +463,8 @@ paths:
                       description: "Permission overwrite entries."
                     last_message_id:
                       type:
-                        - string
-                        - "null"
+                      - string
+                      - "null"
                       description: "Snowflake ID of the last message."
     post:
       operationId: createChannel
@@ -476,13 +476,13 @@ paths:
           stable_id: discord_createChannel_v1
           tool_version: 2
       parameters:
-        - name: guildId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord guild (server) snowflake ID"
-          example: "1280234300012494859"
+      - name: guildId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord guild (server) snowflake ID"
+        example: "1280234300012494859"
       requestBody:
         required: true
         content:
@@ -490,7 +490,7 @@ paths:
             schema:
               type: object
               required:
-                - name
+              - name
               properties:
                 name:
                   type: string
@@ -517,12 +517,12 @@ paths:
               schema:
                 type: object
                 required:
-                  - id
-                  - type
-                  - name
-                  - guild_id
-                  - position
-                  - flags
+                - id
+                - type
+                - name
+                - guild_id
+                - position
+                - flags
                 properties:
                   id:
                     type: string
@@ -541,16 +541,16 @@ paths:
                     description: "Sorting position."
                   topic:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "Channel topic."
                   nsfw:
                     type: boolean
                     description: "Whether the channel is NSFW."
                   parent_id:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "Parent category channel ID."
                   rate_limit_per_user:
                     type: integer
@@ -588,13 +588,13 @@ paths:
           verified: true
           signals: [page-verified]
       parameters:
-        - name: guildId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord guild (server) snowflake ID"
-          example: "1280234300012494859"
+      - name: guildId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord guild (server) snowflake ID"
+        example: "1280234300012494859"
       responses:
         "200":
           description: Success.
@@ -605,15 +605,15 @@ paths:
                 items:
                   type: object
                   required:
-                    - id
-                    - name
-                    - permissions
-                    - position
-                    - color
-                    - hoist
-                    - managed
-                    - mentionable
-                    - flags
+                  - id
+                  - name
+                  - permissions
+                  - position
+                  - color
+                  - hoist
+                  - managed
+                  - mentionable
+                  - flags
                   properties:
                     id:
                       type: string
@@ -623,8 +623,8 @@ paths:
                       description: "Role name."
                     description:
                       type:
-                        - string
-                        - "null"
+                      - string
+                      - "null"
                       description: "Role description."
                     permissions:
                       type: string
@@ -659,20 +659,20 @@ paths:
           verified: true
           signals: [page-verified]
       parameters:
-        - name: guildId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord guild (server) snowflake ID"
-          example: "1280234300012494859"
-        - name: content
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Search query text"
-          example: "hello"
+      - name: guildId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord guild (server) snowflake ID"
+        example: "1280234300012494859"
+      - name: content
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Search query text"
+        example: "hello"
       responses:
         "200":
           description: Success.
@@ -681,8 +681,8 @@ paths:
               schema:
                 type: object
                 required:
-                  - total_results
-                  - messages
+                - total_results
+                - messages
                 properties:
                   total_results:
                     type: integer
@@ -694,11 +694,11 @@ paths:
                       items:
                         type: object
                         required:
-                          - id
-                          - content
-                          - author
-                          - channel_id
-                          - timestamp
+                        - id
+                        - content
+                        - author
+                        - channel_id
+                        - timestamp
                         properties:
                           id:
                             type: string
@@ -709,8 +709,8 @@ paths:
                           author:
                             type: object
                             required:
-                              - id
-                              - username
+                            - id
+                            - username
                             properties:
                               id:
                                 type: string
@@ -720,13 +720,13 @@ paths:
                                 description: "Author username."
                               global_name:
                                 type:
-                                  - string
-                                  - "null"
+                                - string
+                                - "null"
                                 description: "Author display name."
                               avatar:
                                 type:
-                                  - string
-                                  - "null"
+                                - string
+                                - "null"
                                 description: "Author avatar hash."
                             description: "Message author."
                           channel_id:
@@ -751,13 +751,13 @@ paths:
           verified: true
           signals: [page-verified]
       parameters:
-        - name: channelId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord channel snowflake ID"
-          example: "1280234300012494862"
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord channel snowflake ID"
+        example: "1280234300012494862"
       responses:
         "200":
           description: Success.
@@ -766,11 +766,11 @@ paths:
               schema:
                 type: object
                 required:
-                  - id
-                  - type
-                  - name
-                  - position
-                  - flags
+                - id
+                - type
+                - name
+                - position
+                - flags
                 properties:
                   id:
                     type: string
@@ -786,8 +786,8 @@ paths:
                     description: "Channel name."
                   topic:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "Channel topic."
                   position:
                     type: integer
@@ -800,8 +800,8 @@ paths:
                     description: "Channel flags bitfield."
                   parent_id:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "Parent category channel ID."
                   rate_limit_per_user:
                     type: integer
@@ -814,10 +814,10 @@ paths:
                     items:
                       type: object
                       required:
-                        - id
-                        - type
-                        - allow
-                        - deny
+                      - id
+                      - type
+                      - allow
+                      - deny
                       properties:
                         id:
                           type: string
@@ -844,13 +844,13 @@ paths:
           verified: true
           signals: [page-verified]
       parameters:
-        - name: channelId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord channel snowflake ID"
-          example: "1280234300012494862"
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord channel snowflake ID"
+        example: "1280234300012494862"
       requestBody:
         required: true
         content:
@@ -858,7 +858,7 @@ paths:
             schema:
               type: object
               required:
-                - content
+              - content
               properties:
                 content:
                   type: string
@@ -878,16 +878,16 @@ paths:
               schema:
                 type: object
                 required:
-                  - id
-                  - type
-                  - channel_id
-                  - content
-                  - author
-                  - timestamp
-                  - flags
-                  - pinned
-                  - mention_everyone
-                  - tts
+                - id
+                - type
+                - channel_id
+                - content
+                - author
+                - timestamp
+                - flags
+                - pinned
+                - mention_everyone
+                - tts
                 properties:
                   id:
                     type: string
@@ -904,8 +904,8 @@ paths:
                   author:
                     type: object
                     required:
-                      - id
-                      - username
+                    - id
+                    - username
                     properties:
                       id:
                         type: string
@@ -918,13 +918,13 @@ paths:
                         description: "Legacy 4-digit tag."
                       global_name:
                         type:
-                          - string
-                          - "null"
+                        - string
+                        - "null"
                         description: "Author display name."
                       avatar:
                         type:
-                          - string
-                          - "null"
+                        - string
+                        - "null"
                         description: "Author avatar hash."
                       public_flags:
                         type: integer
@@ -935,8 +935,8 @@ paths:
                     description: "ISO 8601 creation timestamp."
                   edited_timestamp:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "ISO 8601 last-edit timestamp."
                   flags:
                     type: integer
@@ -993,38 +993,38 @@ paths:
           verified: true
           signals: [page-verified]
       parameters:
-        - name: channelId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord channel snowflake ID"
-          example: "1280234300012494862"
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: "Number of messages to return (1-100, default 50)"
-          example: 50
-        - name: before
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Get messages before this message snowflake ID (for pagination)"
-        - name: after
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Get messages after this message snowflake ID"
-        - name: around
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Get messages around this message snowflake ID"
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord channel snowflake ID"
+        example: "1280234300012494862"
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: "Number of messages to return (1-100, default 50)"
+        example: 50
+      - name: before
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Get messages before this message snowflake ID (for pagination)"
+      - name: after
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Get messages after this message snowflake ID"
+      - name: around
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Get messages around this message snowflake ID"
       responses:
         "200":
           description: Success.
@@ -1035,16 +1035,16 @@ paths:
                 items:
                   type: object
                   required:
-                    - id
-                    - type
-                    - channel_id
-                    - content
-                    - author
-                    - timestamp
-                    - flags
-                    - pinned
-                    - mention_everyone
-                    - tts
+                  - id
+                  - type
+                  - channel_id
+                  - content
+                  - author
+                  - timestamp
+                  - flags
+                  - pinned
+                  - mention_everyone
+                  - tts
                   properties:
                     id:
                       type: string
@@ -1061,8 +1061,8 @@ paths:
                     author:
                       type: object
                       required:
-                        - id
-                        - username
+                      - id
+                      - username
                       properties:
                         id:
                           type: string
@@ -1075,13 +1075,13 @@ paths:
                           description: "Legacy 4-digit tag."
                         global_name:
                           type:
-                            - string
-                            - "null"
+                          - string
+                          - "null"
                           description: "Author display name."
                         avatar:
                           type:
-                            - string
-                            - "null"
+                          - string
+                          - "null"
                           description: "Author avatar hash."
                         public_flags:
                           type: integer
@@ -1092,8 +1092,8 @@ paths:
                       description: "ISO 8601 creation timestamp."
                     edited_timestamp:
                       type:
-                        - string
-                        - "null"
+                      - string
+                      - "null"
                       description: "ISO 8601 last-edit timestamp."
                     flags:
                       type: integer
@@ -1182,8 +1182,8 @@ paths:
                             properties:
                               id:
                                 type:
-                                  - string
-                                  - "null"
+                                - string
+                                - "null"
                                 description: "Custom emoji snowflake ID (null for Unicode)."
                               name:
                                 type: string
@@ -1208,13 +1208,13 @@ paths:
           verified: true
           signals: [page-verified]
       parameters:
-        - name: channelId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord channel snowflake ID"
-          example: "1280234300012494862"
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord channel snowflake ID"
+        example: "1280234300012494862"
       responses:
         "200":
           description: Success.
@@ -1251,13 +1251,13 @@ paths:
                           description: "Legacy 4-digit tag."
                         global_name:
                           type:
-                            - string
-                            - "null"
+                          - string
+                          - "null"
                           description: "Author display name."
                         avatar:
                           type:
-                            - string
-                            - "null"
+                          - string
+                          - "null"
                           description: "Author avatar hash."
                         public_flags:
                           type: integer
@@ -1268,8 +1268,8 @@ paths:
                       description: "ISO 8601 creation timestamp."
                     edited_timestamp:
                       type:
-                        - string
-                        - "null"
+                      - string
+                      - "null"
                       description: "ISO 8601 last-edit timestamp."
                     flags:
                       type: integer
@@ -1358,8 +1358,8 @@ paths:
                             properties:
                               id:
                                 type:
-                                  - string
-                                  - "null"
+                                - string
+                                - "null"
                                 description: "Custom emoji snowflake ID (null for Unicode)."
                               name:
                                 type: string
@@ -1372,6 +1372,9 @@ paths:
                             type: boolean
                             description: "Whether the current user reacted."
                       description: "Reactions on the message."
+                  required:
+                  - id
+                  - content
   /api/v9/channels/{channelId}/messages/{messageId}/reactions/{emoji}/@me:
     put:
       operationId: addReaction
@@ -1384,27 +1387,27 @@ paths:
           verified: true
           signals: [page-verified]
       parameters:
-        - name: channelId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord channel snowflake ID"
-          example: "1280234300012494862"
-        - name: messageId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord message snowflake ID"
-          example: "1280234300012494900"
-        - name: emoji
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "URL-encoded emoji — Unicode (e.g. %F0%9F%91%8D) or custom (name:id)"
-          example: "%F0%9F%91%8D"
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord channel snowflake ID"
+        example: "1280234300012494862"
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord message snowflake ID"
+        example: "1280234300012494900"
+      - name: emoji
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "URL-encoded emoji — Unicode (e.g. %F0%9F%91%8D) or custom (name:id)"
+        example: "%F0%9F%91%8D"
       responses:
         "204":
           description: Success (no content).
@@ -1418,27 +1421,27 @@ paths:
           stable_id: discord_removeReaction_v1
           tool_version: 2
       parameters:
-        - name: channelId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord channel snowflake ID"
-          example: "1280234300012494862"
-        - name: messageId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord message snowflake ID"
-          example: "1280234300012494900"
-        - name: emoji
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "URL-encoded emoji — Unicode (e.g. %F0%9F%91%8D) or custom (name:id)"
-          example: "%F0%9F%91%8D"
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord channel snowflake ID"
+        example: "1280234300012494862"
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord message snowflake ID"
+        example: "1280234300012494900"
+      - name: emoji
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "URL-encoded emoji — Unicode (e.g. %F0%9F%91%8D) or custom (name:id)"
+        example: "%F0%9F%91%8D"
       responses:
         "204":
           description: Success (no content).
@@ -1453,20 +1456,20 @@ paths:
           stable_id: discord_deleteMessage_v1
           tool_version: 2
       parameters:
-        - name: channelId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord channel snowflake ID"
-          example: "1280234300012494862"
-        - name: messageId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: "Discord message snowflake ID"
-          example: "1280234300012494900"
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord channel snowflake ID"
+        example: "1280234300012494862"
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: "Discord message snowflake ID"
+        example: "1280234300012494900"
       responses:
         "204":
           description: Success (no content).
@@ -1488,7 +1491,7 @@ paths:
             schema:
               type: object
               required:
-                - name
+              - name
               properties:
                 name:
                   type: string
@@ -1505,9 +1508,9 @@ paths:
               schema:
                 type: object
                 required:
-                  - id
-                  - name
-                  - owner_id
+                - id
+                - name
+                - owner_id
                 properties:
                   id:
                     type: string
@@ -1517,8 +1520,8 @@ paths:
                     description: "Guild name."
                   icon:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "Guild icon hash."
                   owner_id:
                     type: string
@@ -1555,6 +1558,6 @@ paths:
                     description: "Default channels created with the guild."
                   system_channel_id:
                     type:
-                      - string
-                      - "null"
+                    - string
+                    - "null"
                     description: "System channel snowflake ID."

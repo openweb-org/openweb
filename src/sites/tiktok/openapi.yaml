@@ -78,6 +78,9 @@ paths:
                     description: Search result items
                     items:
                       type: object
+                      required:
+                        - type
+                        - item
                       properties:
                         type:
                           type: integer
@@ -566,6 +569,10 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                        - id
+                        - text
+                        - author
                       properties:
                         id:
                           type: string
@@ -584,6 +591,10 @@ paths:
                           description: Number of replies
                         author:
                           type: object
+                          required:
+                            - id
+                            - uniqueId
+                            - nickname
                           properties:
                             id:
                               type: string
@@ -777,6 +788,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -816,6 +829,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -855,6 +870,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -894,6 +911,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -933,6 +952,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -969,6 +990,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -1009,6 +1032,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -1052,6 +1077,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -1099,6 +1126,9 @@ paths:
                           description: Unix timestamp of creation
                         video:
                           type: object
+                          required:
+                            - id
+                            - cover
                           properties:
                             id:
                               type: string
@@ -1130,6 +1160,9 @@ paths:
                               description: Whether the author is verified
                         stats:
                           type: object
+                          required:
+                            - diggCount
+                            - playCount
                           properties:
                             diggCount:
                               type: integer
@@ -1187,14 +1220,22 @@ paths:
             application/json; charset=utf-8:
               schema:
                 type: object
+                required:
+                  - user_list
                 properties:
                   user_list:
                     type: array
                     items:
                       type: object
+                      required:
+                        - user_info
                       properties:
                         user_info:
                           type: object
+                          required:
+                            - uid
+                            - unique_id
+                            - nickname
                           properties:
                             uid:
                               type: string
@@ -1277,6 +1318,9 @@ paths:
                           description: Unix timestamp of creation
                         stats:
                           type: object
+                          required:
+                            - diggCount
+                            - playCount
                           properties:
                             diggCount:
                               type: integer
@@ -1329,6 +1373,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -1372,6 +1418,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -1426,11 +1474,17 @@ paths:
             application/json; charset=utf-8:
               schema:
                 type: object
+                required:
+                  - comments
                 properties:
                   comments:
                     type: array
                     items:
                       type: object
+                      required:
+                        - cid
+                        - text
+                        - user
                       properties:
                         cid:
                           type: string
@@ -1446,6 +1500,10 @@ paths:
                           description: Number of likes on reply
                         user:
                           type: object
+                          required:
+                            - uid
+                            - unique_id
+                            - nickname
                           properties:
                             uid:
                               type: string
@@ -1485,12 +1543,20 @@ paths:
             application/json; charset=utf-8:
               schema:
                 type: object
+                required:
+                  - challengeInfo
                 properties:
                   challengeInfo:
                     type: object
+                    required:
+                      - challenge
+                      - stats
                     properties:
                       challenge:
                         type: object
+                        required:
+                          - id
+                          - title
                         properties:
                           id:
                             type: string
@@ -1505,6 +1571,9 @@ paths:
                             type: boolean
                       stats:
                         type: object
+                        required:
+                          - videoCount
+                          - viewCount
                         properties:
                           videoCount:
                             type: integer
@@ -1560,6 +1629,9 @@ paths:
                             - "null"
                         stats:
                           type: object
+                          required:
+                            - diggCount
+                            - playCount
                           properties:
                             diggCount:
                               type: integer
@@ -1659,6 +1731,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -1697,6 +1771,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean
@@ -1733,6 +1809,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
                 properties:
                   success:
                     type: boolean

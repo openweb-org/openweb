@@ -60,8 +60,13 @@ paths:
                         publishedAt:
                           type: string
                           nullable: true
+                      required:
+                        - title
                   totalResults:
                     type: integer
+                required:
+                  - query
+                  - articles
   /post/{postId}:
     get:
       operationId: getArticle
@@ -118,6 +123,9 @@ paths:
                         type: string
                       username:
                         type: string
+                    required:
+                      - id
+                      - name
                   collection:
                     type: object
                     nullable: true
@@ -131,6 +139,10 @@ paths:
                       domain:
                         type: string
                         nullable: true
+                    required:
+                      - id
+                      - name
+                      - slug
                   extendedPreviewContent:
                     type: object
                     properties:
@@ -138,11 +150,20 @@ paths:
                         type: string
                       isFullContent:
                         type: boolean
+                    required:
+                      - subtitle
+                      - isFullContent
                   postResponses:
                     type: object
                     properties:
                       count:
                         type: integer
+                    required:
+                      - count
+                required:
+                  - id
+                  - title
+                  - mediumUrl
   /tag/{tagSlug}/feed:
     get:
       operationId: getTagFeed
@@ -200,6 +221,10 @@ paths:
                           type: object
                         postResponses:
                           type: object
+                      required:
+                        - id
+                        - title
+                        - mediumUrl
                   pageInfo:
                     type: object
                     properties:
@@ -207,6 +232,11 @@ paths:
                         type: boolean
                       endCursor:
                         type: string
+                    required:
+                      - hasNextPage
+                required:
+                  - tagSlug
+                  - posts
   /tag/{tagSlug}/curated-lists:
     get:
       operationId: getTagCuratedLists
@@ -256,6 +286,9 @@ paths:
                               type: string
                             username:
                               type: string
+                          required:
+                            - id
+                            - name
                         itemsConnection:
                           type: object
                           properties:
@@ -267,6 +300,14 @@ paths:
                                   entity:
                                     type: object
                                     nullable: true
+                          required:
+                            - items
+                      required:
+                        - id
+                        - name
+                required:
+                  - tagSlug
+                  - lists
   /tag/{tagSlug}/writers:
     get:
       operationId: getTagWriters
@@ -332,6 +373,11 @@ paths:
                           properties:
                             followerCount:
                               type: integer
+                          required:
+                            - followerCount
+                      required:
+                        - id
+                        - name
                   pageInfo:
                     type: object
                     properties:
@@ -341,6 +387,11 @@ paths:
                         type: string
                       startCursor:
                         type: string
+                    required:
+                      - hasNextPage
+                required:
+                  - tagSlug
+                  - publishers
   /feed/recommended:
     get:
       operationId: getRecommendedFeed
@@ -397,6 +448,10 @@ paths:
                           type: string
                         reason:
                           type: integer
+                      required:
+                        - id
+                        - title
+                        - mediumUrl
                   pagingInfo:
                     type: object
                     properties:
@@ -408,6 +463,12 @@ paths:
                             type: integer
                           to:
                             type: string
+                        required:
+                          - to
+                    required:
+                      - next
+                required:
+                  - posts
   /tags/recommended:
     get:
       operationId: getRecommendedTags
@@ -442,6 +503,12 @@ paths:
                           type: string
                         slug:
                           type: string
+                      required:
+                        - id
+                        - displayTitle
+                        - slug
+                required:
+                  - tags
   /post/{postId}/claps:
     get:
       operationId: getPostClaps
@@ -475,6 +542,9 @@ paths:
                     type: string
                   clapCount:
                     type: integer
+                required:
+                  - postId
+                  - clapCount
   /writers/recommended:
     get:
       operationId: getRecommendedWriters
@@ -513,6 +583,11 @@ paths:
                         username:
                           type: string
                           nullable: true
+                      required:
+                        - id
+                        - name
+                required:
+                  - publishers
   /post/{postId}/clap:
     post:
       operationId: clapArticle
@@ -556,6 +631,9 @@ paths:
                     type: integer
                   viewerClapCount:
                     type: integer
+                required:
+                  - postId
+                  - clapCount
   /user/{userId}/follow:
     post:
       operationId: followWriter
@@ -595,6 +673,10 @@ paths:
                     type: string
                   isFollowing:
                     type: boolean
+                required:
+                  - userId
+                  - name
+                  - isFollowing
   /post/{postId}/save:
     post:
       operationId: saveArticle
@@ -633,6 +715,9 @@ paths:
                     nullable: true
                   saved:
                     type: boolean
+                required:
+                  - postId
+                  - saved
   /user/{userId}/unfollow:
     post:
       operationId: unfollowWriter
@@ -678,6 +763,10 @@ paths:
                     type: string
                   isFollowing:
                     type: boolean
+                required:
+                  - userId
+                  - name
+                  - isFollowing
   /post/{postId}/unsave:
     post:
       operationId: unsaveArticle
@@ -719,3 +808,6 @@ paths:
                     type: string
                   removed:
                     type: boolean
+                required:
+                  - postId
+                  - removed

@@ -5,11 +5,11 @@ info:
   x-openweb:
     spec_version: '2.0'
 servers:
-  - url: https://www.google.com
-    x-openweb:
-      transport: page
-      auth:
-        type: cookie_session
+- url: https://www.google.com
+  x-openweb:
+    transport: page
+    auth:
+      type: cookie_session
 paths:
   /internal/searchPlaces:
     get:
@@ -22,24 +22,24 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: searchPlaces
       parameters:
-        - name: query
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query (e.g. "coffee shops in San Francisco", "restaurants near Times Square").
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Maximum number of results to return.
+      - name: query
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query (e.g. "coffee shops in San Francisco", "restaurants near Times Square").
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Maximum number of results to return.
       responses:
         '200':
           description: Search results with place listings.
@@ -48,7 +48,7 @@ paths:
               schema:
                 type: object
                 required:
-                  - places
+                - places
                 properties:
                   query:
                     type: string
@@ -66,16 +66,16 @@ paths:
                           type: string
                         rating:
                           type:
-                            - number
-                            - 'null'
+                          - number
+                          - 'null'
                         reviewCount:
                           type:
-                            - integer
-                            - 'null'
+                          - integer
+                          - 'null'
                         priceLevel:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                           description: Price range (e.g. "$10–20").
                         types:
                           type: array
@@ -97,23 +97,23 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: getPlaceDetails
       parameters:
-        - name: placeId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Place ID from searchPlaces (hex format "0x...:0x...").
-        - name: query
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Place name (helps Maps resolve the place).
+      - name: placeId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Place ID from searchPlaces (hex format "0x...:0x...").
+      - name: query
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Place name (helps Maps resolve the place).
       responses:
         '200':
           description: Full place details.
@@ -134,36 +134,36 @@ paths:
                     type: number
                   rating:
                     type:
-                      - number
-                      - 'null'
+                    - number
+                    - 'null'
                   reviewCount:
                     type:
-                      - integer
-                      - 'null'
+                    - integer
+                    - 'null'
                   priceLevel:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   website:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   phone:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   placeType:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   description:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   hours:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Current open/close status text.
                   reviews:
                     type: array
@@ -175,24 +175,27 @@ paths:
                           description: Review text content.
                         authorName:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                           description: Reviewer display name.
                         authorUrl:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                           description: Link to reviewer's Google profile.
                         rating:
                           type:
-                            - number
-                            - 'null'
+                          - number
+                          - 'null'
                           description: Individual review star rating (1-5).
                         relativeTime:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                           description: When the review was posted (e.g. "2 months ago").
+                required:
+                - name
+                - reviews
   /internal/getDirections:
     get:
       operationId: getDirections
@@ -204,23 +207,23 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: getDirections
       parameters:
-        - name: origin
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Starting location (address or place name).
-        - name: destination
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Ending location (address or place name).
+      - name: origin
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Starting location (address or place name).
+      - name: destination
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Ending location (address or place name).
       responses:
         '200':
           description: Directions with route options.
@@ -229,7 +232,7 @@ paths:
               schema:
                 type: object
                 required:
-                  - routes
+                - routes
                 properties:
                   origin:
                     type: string
@@ -255,8 +258,8 @@ paths:
                           description: Human-readable duration (e.g. "5 hr 53 min").
                         summary:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                           description: Route summary text.
   /internal/getPlaceReviews:
     get:
@@ -269,23 +272,23 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: getPlaceReviews
       parameters:
-        - name: placeId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Place ID from searchPlaces (hex format "0x...:0x...").
-        - name: query
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Place name (helps Maps resolve the place).
+      - name: placeId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Place ID from searchPlaces (hex format "0x...:0x...").
+      - name: query
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Place name (helps Maps resolve the place).
       responses:
         '200':
           description: Place reviews with author details.
@@ -294,23 +297,23 @@ paths:
               schema:
                 type: object
                 required:
-                  - reviews
+                - reviews
                 properties:
                   placeName:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   placeId:
                     type: string
                   rating:
                     type:
-                      - number
-                      - 'null'
+                    - number
+                    - 'null'
                     description: Overall place rating.
                   reviewCount:
                     type:
-                      - integer
-                      - 'null'
+                    - integer
+                    - 'null'
                   reviews:
                     type: array
                     items:
@@ -320,21 +323,21 @@ paths:
                           type: string
                         authorName:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                         authorUrl:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                         rating:
                           type:
-                            - number
-                            - 'null'
+                          - number
+                          - 'null'
                           description: Individual review star rating (1-5).
                         relativeTime:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                           description: When the review was posted (e.g. "2 months ago").
   /internal/getPlacePhotos:
     get:
@@ -347,23 +350,23 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: getPlacePhotos
       parameters:
-        - name: placeId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Place ID from searchPlaces (hex format "0x...:0x...").
-        - name: query
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Place name (helps Maps resolve the place).
+      - name: placeId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Place ID from searchPlaces (hex format "0x...:0x...").
+      - name: query
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Place name (helps Maps resolve the place).
       responses:
         '200':
           description: Place photos with URLs.
@@ -372,12 +375,12 @@ paths:
               schema:
                 type: object
                 required:
-                  - photos
+                - photos
                 properties:
                   placeName:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   placeId:
                     type: string
                   photos:
@@ -390,16 +393,16 @@ paths:
                           description: Direct photo URL.
                         width:
                           type:
-                            - integer
-                            - 'null'
+                          - integer
+                          - 'null'
                         height:
                           type:
-                            - integer
-                            - 'null'
+                          - integer
+                          - 'null'
                         caption:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
   /internal/nearbySearch:
     get:
       operationId: nearbySearch
@@ -411,23 +414,23 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: nearbySearch
       parameters:
-        - name: category
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Place category (e.g. "restaurants", "hotels", "gas stations", "pharmacies").
-        - name: location
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Location to search near (e.g. "Times Square", "downtown Seattle").
+      - name: category
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Place category (e.g. "restaurants", "hotels", "gas stations", "pharmacies").
+      - name: location
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Location to search near (e.g. "Times Square", "downtown Seattle").
       responses:
         '200':
           description: Nearby places matching the category.
@@ -436,7 +439,7 @@ paths:
               schema:
                 type: object
                 required:
-                  - places
+                - places
                 properties:
                   category:
                     type: string
@@ -455,16 +458,16 @@ paths:
                           type: string
                         rating:
                           type:
-                            - number
-                            - 'null'
+                          - number
+                          - 'null'
                         reviewCount:
                           type:
-                            - integer
-                            - 'null'
+                          - integer
+                          - 'null'
                         priceLevel:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                         types:
                           type: array
                           items:
@@ -484,17 +487,17 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: getAutocompleteSuggestions
       parameters:
-        - name: input
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Partial search text (e.g. "Statue of Lib", "coffee near dow").
+      - name: input
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Partial search text (e.g. "Statue of Lib", "coffee near dow").
       responses:
         '200':
           description: Autocomplete suggestions.
@@ -503,7 +506,7 @@ paths:
               schema:
                 type: object
                 required:
-                  - suggestions
+                - suggestions
                 properties:
                   input:
                     type: string
@@ -517,13 +520,13 @@ paths:
                           description: Suggested completion text.
                         placeId:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                           description: Place ID if the suggestion is a specific place.
                         description:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
                           description: Additional context about the suggestion.
   /internal/getTransitDirections:
     get:
@@ -536,23 +539,23 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: getTransitDirections
       parameters:
-        - name: origin
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Starting location (address or place name).
-        - name: destination
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Ending location (address or place name).
+      - name: origin
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Starting location (address or place name).
+      - name: destination
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Ending location (address or place name).
       responses:
         '200':
           description: Transit directions with route options.
@@ -561,7 +564,7 @@ paths:
               schema:
                 type: object
                 required:
-                  - routes
+                - routes
                 properties:
                   origin:
                     type: string
@@ -582,8 +585,8 @@ paths:
                           description: Human-readable duration (e.g. "45 min").
                         summary:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
   /internal/getWalkingDirections:
     get:
       operationId: getWalkingDirections
@@ -595,23 +598,23 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: getWalkingDirections
       parameters:
-        - name: origin
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Starting location (address or place name).
-        - name: destination
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Ending location (address or place name).
+      - name: origin
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Starting location (address or place name).
+      - name: destination
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Ending location (address or place name).
       responses:
         '200':
           description: Walking directions with route options.
@@ -620,7 +623,7 @@ paths:
               schema:
                 type: object
                 required:
-                  - routes
+                - routes
                 properties:
                   origin:
                     type: string
@@ -641,8 +644,8 @@ paths:
                           description: Human-readable duration (e.g. "25 min").
                         summary:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
   /internal/getBicyclingDirections:
     get:
       operationId: getBicyclingDirections
@@ -654,23 +657,23 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: getBicyclingDirections
       parameters:
-        - name: origin
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Starting location (address or place name).
-        - name: destination
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Ending location (address or place name).
+      - name: origin
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Starting location (address or place name).
+      - name: destination
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Ending location (address or place name).
       responses:
         '200':
           description: Bicycling directions with route options.
@@ -679,7 +682,7 @@ paths:
               schema:
                 type: object
                 required:
-                  - routes
+                - routes
                 properties:
                   origin:
                     type: string
@@ -700,8 +703,8 @@ paths:
                           description: Human-readable duration.
                         summary:
                           type:
-                            - string
-                            - 'null'
+                          - string
+                          - 'null'
   /internal/getPlaceHours:
     get:
       operationId: getPlaceHours
@@ -713,23 +716,23 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: getPlaceHours
       parameters:
-        - name: placeId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Place ID from searchPlaces (hex format "0x...:0x...").
-        - name: query
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Place name (helps Maps resolve the place).
+      - name: placeId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Place ID from searchPlaces (hex format "0x...:0x...").
+      - name: query
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Place name (helps Maps resolve the place).
       responses:
         '200':
           description: Place operating hours with weekly schedule.
@@ -738,18 +741,18 @@ paths:
               schema:
                 type: object
                 required:
-                  - placeId
+                - placeId
                 properties:
                   placeName:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   placeId:
                     type: string
                   status:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Current open/closed status (e.g. "Open", "Closes at 10 PM").
                   schedule:
                     type: array
@@ -773,17 +776,17 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: geocode
       parameters:
-        - name: address
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Address or place name to geocode (e.g. "1600 Amphitheatre Parkway, Mountain View, CA").
+      - name: address
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Address or place name to geocode (e.g. "1600 Amphitheatre Parkway, Mountain View, CA").
       responses:
         '200':
           description: Geocoded location with coordinates.
@@ -797,27 +800,29 @@ paths:
                     description: Input address string.
                   lat:
                     type:
-                      - number
-                      - 'null'
+                    - number
+                    - 'null'
                   lng:
                     type:
-                      - number
-                      - 'null'
+                    - number
+                    - 'null'
                   placeId:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Google Maps place ID for the resolved location.
                   formattedAddress:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Formatted address returned by Maps.
                   name:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Place name if the address resolves to a named place.
+                required:
+                - name
   /internal/reverseGeocode:
     get:
       operationId: reverseGeocode
@@ -829,23 +834,23 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: reverseGeocode
       parameters:
-        - name: lat
-          in: query
-          required: true
-          schema:
-            type: number
-          description: Latitude coordinate.
-        - name: lng
-          in: query
-          required: true
-          schema:
-            type: number
-          description: Longitude coordinate.
+      - name: lat
+        in: query
+        required: true
+        schema:
+          type: number
+        description: Latitude coordinate.
+      - name: lng
+        in: query
+        required: true
+        schema:
+          type: number
+        description: Longitude coordinate.
       responses:
         '200':
           description: Reverse-geocoded location with address.
@@ -860,19 +865,21 @@ paths:
                     type: number
                   address:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Resolved street address.
                   name:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Place or area name at the coordinates.
                   placeId:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Google Maps place ID if resolved.
+                required:
+                - name
   /internal/getPlaceAbout:
     get:
       operationId: getPlaceAbout
@@ -884,23 +891,23 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-maps-api
           operation: getPlaceAbout
       parameters:
-        - name: placeId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Place ID from searchPlaces (hex format "0x...:0x...").
-        - name: query
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Place name (helps Maps resolve the place).
+      - name: placeId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Place ID from searchPlaces (hex format "0x...:0x...").
+      - name: query
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Place name (helps Maps resolve the place).
       responses:
         '200':
           description: Place about information.
@@ -909,45 +916,45 @@ paths:
               schema:
                 type: object
                 required:
-                  - placeId
+                - placeId
                 properties:
                   placeName:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   placeId:
                     type: string
                   description:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Place description or editorial summary.
                   category:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                     description: Primary place category (e.g. "Coffee shop", "Restaurant").
                   address:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   priceLevel:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   rating:
                     type:
-                      - number
-                      - 'null'
+                    - number
+                    - 'null'
                   reviewCount:
                     type:
-                      - integer
-                      - 'null'
+                    - integer
+                    - 'null'
                   website:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'
                   phone:
                     type:
-                      - string
-                      - 'null'
+                    - string
+                    - 'null'

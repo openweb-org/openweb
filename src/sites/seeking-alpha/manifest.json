@@ -1,0 +1,20 @@
+{
+  "name": "seeking-alpha",
+  "display_name": "Seeking Alpha",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://seekingalpha.com",
+  "description": "Seeking Alpha — page transport adapters for article search, stock analysis, and earnings data via internal API intercept",
+  "requires_auth": false,
+  "dependencies": {
+    "searchArticles → getArticle": "searchArticles returns article IDs for full content retrieval",
+    "getEarnings → getArticle": "getEarnings returns transcript article IDs"
+  },
+  "stats": {
+    "operation_count": 4,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 4,
+    "ws_count": 0
+  }
+}

@@ -6,11 +6,11 @@ info:
     spec_version: '2.0'
     requires_auth: false
 servers:
-  - url: https://www.google.com
-    x-openweb:
-      transport: page
-      auth:
-        type: cookie_session
+- url: https://www.google.com
+  x-openweb:
+    transport: page
+    auth:
+      type: cookie_session
 paths:
   /complete/search:
     get:
@@ -26,28 +26,28 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query prefix (e.g. "best lapt").
-        - name: client
-          in: query
-          required: true
-          schema:
-            type: string
-            const: chrome
-          description: Client identifier — must be "chrome" for JSON response.
-        - name: hl
-          in: query
-          required: false
-          schema:
-            type: string
-            default: en
-          description: Language code (e.g. "en", "fr", "de").
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query prefix (e.g. "best lapt").
+      - name: client
+        in: query
+        required: true
+        schema:
+          type: string
+          const: chrome
+        description: Client identifier — must be "chrome" for JSON response.
+      - name: hl
+        in: query
+        required: false
+        schema:
+          type: string
+          default: en
+        description: Language code (e.g. "en", "fr", "de").
       responses:
         '200':
           description: Autocomplete suggestions as JSON array.
@@ -56,12 +56,12 @@ paths:
               schema:
                 type: array
                 prefixItems:
-                  - type: string
-                    description: The query prefix that was sent.
-                  - type: array
-                    items:
-                      type: string
-                    description: List of suggested completions.
+                - type: string
+                  description: The query prefix that was sent.
+                - type: array
+                  items:
+                    type: string
+                  description: List of suggested completions.
   /search:
     get:
       operationId: searchWeb
@@ -75,17 +75,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-search
           operation: searchWeb
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query — must match the query on the open Google search page.
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query — must match the query on the open Google search page.
       responses:
         '200':
           description: Organic web search results extracted from the page.
@@ -94,8 +94,8 @@ paths:
               schema:
                 type: object
                 required:
-                  - query
-                  - results
+                - query
+                - results
                 properties:
                   query:
                     type: string
@@ -120,6 +120,7 @@ paths:
                         snippet:
                           type: string
                           description: Result description/snippet text.
+                      required: [title, link]
   /search/images:
     get:
       operationId: searchImages
@@ -133,17 +134,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-search
           operation: searchImages
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query — must match the query on the open Google Images page (navigate with udm=2).
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query — must match the query on the open Google Images page (navigate with udm=2).
       responses:
         '200':
           description: Image search results extracted from the page.
@@ -152,8 +153,8 @@ paths:
               schema:
                 type: object
                 required:
-                  - query
-                  - results
+                - query
+                - results
                 properties:
                   query:
                     type: string
@@ -178,6 +179,7 @@ paths:
                         height:
                           type: integer
                           description: Thumbnail natural height in pixels.
+                      required: [sourceUrl]
   /search/news:
     get:
       operationId: searchNews
@@ -191,17 +193,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-search
           operation: searchNews
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query — must match the query on the open Google News page (navigate with tbm=nws).
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query — must match the query on the open Google News page (navigate with tbm=nws).
       responses:
         '200':
           description: News search results extracted from the page.
@@ -210,8 +212,8 @@ paths:
               schema:
                 type: object
                 required:
-                  - query
-                  - results
+                - query
+                - results
                 properties:
                   query:
                     type: string
@@ -239,6 +241,7 @@ paths:
                         publishedAt:
                           type: string
                           description: ISO 8601 timestamp or relative time string.
+                      required: [title, link]
   /search/videos:
     get:
       operationId: searchVideos
@@ -252,17 +255,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-search
           operation: searchVideos
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query — must match the query on the open Google Videos page (navigate with tbm=vid).
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query — must match the query on the open Google Videos page (navigate with tbm=vid).
       responses:
         '200':
           description: Video search results extracted from the page.
@@ -271,8 +274,8 @@ paths:
               schema:
                 type: object
                 required:
-                  - query
-                  - results
+                - query
+                - results
                 properties:
                   query:
                     type: string
@@ -297,6 +300,7 @@ paths:
                         snippet:
                           type: string
                           description: Video description/snippet text.
+                      required: [title, link]
   /search/shopping:
     get:
       operationId: searchShopping
@@ -310,17 +314,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-search
           operation: searchShopping
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query — must match the query on the open Google Shopping page (navigate with udm=28 or tbm=shop).
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query — must match the query on the open Google Shopping page (navigate with udm=28 or tbm=shop).
       responses:
         '200':
           description: Shopping product results extracted from the page.
@@ -329,8 +333,8 @@ paths:
               schema:
                 type: object
                 required:
-                  - query
-                  - results
+                - query
+                - results
                 properties:
                   query:
                     type: string
@@ -358,6 +362,7 @@ paths:
                         reviewCount:
                           type: string
                           description: Number of reviews (e.g. "(9k+)").
+                      required: [title, price]
   /search/knowledge:
     get:
       operationId: getKnowledgePanel
@@ -371,17 +376,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-search
           operation: getKnowledgePanel
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query for an entity (person, place, organization) — must match the query on the open Google search page.
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query for an entity (person, place, organization) — must match the query on the open Google search page.
       responses:
         '200':
           description: Knowledge panel data extracted from the page.
@@ -413,6 +418,9 @@ paths:
                         value:
                           type: string
                           description: Fact value.
+                required:
+                - title
+                - description
   /search/people-also-ask:
     get:
       operationId: getPeopleAlsoAsk
@@ -426,17 +434,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-search
           operation: getPeopleAlsoAsk
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query — must match the query on the open Google search page.
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query — must match the query on the open Google search page.
       responses:
         '200':
           description: People Also Ask questions extracted from the search page.
@@ -456,6 +464,8 @@ paths:
                   count:
                     type: integer
                     description: Number of PAA questions extracted.
+                required:
+                - questions
   /search/related:
     get:
       operationId: getRelatedSearches
@@ -469,17 +479,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-search
           operation: getRelatedSearches
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query — must match the query on the open Google search page.
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query — must match the query on the open Google search page.
       responses:
         '200':
           description: Related search suggestions from the bottom of results.
@@ -496,6 +506,8 @@ paths:
                   count:
                     type: integer
                     description: Number of related searches extracted.
+                required:
+                - searches
   /search/local:
     get:
       operationId: searchLocal
@@ -509,17 +521,17 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: google-search
           operation: searchLocal
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Local search query (e.g. "pizza near me", "coffee shops in Brooklyn").
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Local search query (e.g. "pizza near me", "coffee shops in Brooklyn").
       responses:
         '200':
           description: Local business results from the map pack.
@@ -551,3 +563,5 @@ paths:
                   resultCount:
                     type: integer
                     description: Number of local results extracted.
+                required:
+                - results

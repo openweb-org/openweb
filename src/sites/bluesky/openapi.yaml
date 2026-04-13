@@ -7,9 +7,9 @@ info:
     compiled_at: "2026-04-01T22:50:00.000Z"
     requires_auth: false
 servers:
-  - url: https://public.api.bsky.app
-    x-openweb:
-      transport: node
+- url: https://public.api.bsky.app
+  x-openweb:
+    transport: node
 paths:
   /xrpc/app.bsky.actor.getProfile:
     get:
@@ -21,12 +21,12 @@ paths:
           stable_id: bsky_getProfile_v2
           tool_version: 2
       parameters:
-        - name: actor
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "User handle (e.g. 'bsky.app') or DID"
+      - name: actor
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "User handle (e.g. 'bsky.app') or DID"
       responses:
         "200":
           description: Success.
@@ -68,6 +68,9 @@ paths:
                   pinnedPost:
                     type: object
                     nullable: true
+                required:
+                - did
+                - handle
 
   /xrpc/app.bsky.feed.getPostThread:
     get:
@@ -79,26 +82,26 @@ paths:
           stable_id: bsky_getPostThread_v2
           tool_version: 2
       parameters:
-        - name: uri
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "AT URI of the post (e.g. 'at://did:plc:.../app.bsky.feed.post/...'). Get from getAuthorFeed or getFeed response."
-        - name: depth
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 6
-          description: "Reply thread depth (default 6, max 1000)"
-        - name: parentHeight
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 80
-          description: "Parent thread height"
+      - name: uri
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "AT URI of the post (e.g. 'at://did:plc:.../app.bsky.feed.post/...'). Get from getAuthorFeed or getFeed response."
+      - name: depth
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 6
+        description: "Reply thread depth (default 6, max 1000)"
+      - name: parentHeight
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 80
+        description: "Parent thread height"
       responses:
         "200":
           description: Success.
@@ -106,12 +109,21 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - thread
                 properties:
                   thread:
                     type: object
+                    required:
+                    - post
                     properties:
                       post:
                         type: object
+                        required:
+                        - uri
+                        - cid
+                        - author
+                        - record
                         properties:
                           uri:
                             type: string
@@ -159,25 +171,25 @@ paths:
           response_field: cursor
           request_param: cursor
       parameters:
-        - name: feed
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "AT URI of the feed generator (e.g. 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot')"
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 50
-          description: "Number of items (max 100)"
-        - name: cursor
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Pagination cursor from previous response"
+      - name: feed
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "AT URI of the feed generator (e.g. 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot')"
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+        description: "Number of items (max 100)"
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Pagination cursor from previous response"
       responses:
         "200":
           description: Success.
@@ -185,14 +197,23 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - feed
                 properties:
                   feed:
                     type: array
                     items:
                       type: object
+                      required:
+                      - post
                       properties:
                         post:
                           type: object
+                          required:
+                          - uri
+                          - cid
+                          - author
+                          - record
                           properties:
                             uri:
                               type: string
@@ -229,16 +250,16 @@ paths:
       operationId: searchPosts
       summary: "Search posts by keyword — returns matching posts with author, content, embeds, engagement counts. Requires auth."
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: read
         build:
@@ -252,44 +273,44 @@ paths:
           response_field: cursor
           request_param: cursor
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Search query string"
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 25
-          description: "Number of results (max 100)"
-        - name: cursor
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Pagination cursor"
-        - name: sort
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [top, latest]
-          description: "Sort order"
-        - name: author
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Filter by author handle or DID"
-        - name: lang
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Filter by language (BCP-47 code)"
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Search query string"
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 25
+        description: "Number of results (max 100)"
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Pagination cursor"
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [top, latest]
+        description: "Sort order"
+      - name: author
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Filter by author handle or DID"
+      - name: lang
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Filter by language (BCP-47 code)"
       responses:
         "200":
           description: Success.
@@ -297,11 +318,18 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - posts
                 properties:
                   posts:
                     type: array
                     items:
                       type: object
+                      required:
+                      - uri
+                      - cid
+                      - author
+                      - record
                       properties:
                         uri:
                           type: string
@@ -349,32 +377,32 @@ paths:
           response_field: cursor
           request_param: cursor
       parameters:
-        - name: actor
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "User handle or DID"
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 50
-          description: "Number of items (max 100)"
-        - name: cursor
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Pagination cursor"
-        - name: filter
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [posts_with_replies, posts_no_replies, posts_with_media, posts_and_author_threads]
-          description: "Filter feed content type"
+      - name: actor
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "User handle or DID"
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+        description: "Number of items (max 100)"
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Pagination cursor"
+      - name: filter
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [posts_with_replies, posts_no_replies, posts_with_media, posts_and_author_threads]
+        description: "Filter feed content type"
       responses:
         "200":
           description: Success.
@@ -382,14 +410,23 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - feed
                 properties:
                   feed:
                     type: array
                     items:
                       type: object
+                      required:
+                      - post
                       properties:
                         post:
                           type: object
+                          required:
+                          - uri
+                          - cid
+                          - author
+                          - record
                           properties:
                             uri:
                               type: string
@@ -435,25 +472,25 @@ paths:
           response_field: cursor
           request_param: cursor
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Search query"
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 25
-          description: "Number of results (max 100)"
-        - name: cursor
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Pagination cursor"
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Search query"
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 25
+        description: "Number of results (max 100)"
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Pagination cursor"
       responses:
         "200":
           description: Success.
@@ -461,11 +498,16 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - actors
                 properties:
                   actors:
                     type: array
                     items:
                       type: object
+                      required:
+                      - did
+                      - handle
                       properties:
                         did:
                           type: string
@@ -500,25 +542,25 @@ paths:
           response_field: cursor
           request_param: cursor
       parameters:
-        - name: actor
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "User handle or DID"
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 50
-          description: "Number of results (max 100)"
-        - name: cursor
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Pagination cursor"
+      - name: actor
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "User handle or DID"
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+        description: "Number of results (max 100)"
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Pagination cursor"
       responses:
         "200":
           description: Success.
@@ -526,9 +568,15 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - subject
+                - followers
                 properties:
                   subject:
                     type: object
+                    required:
+                    - did
+                    - handle
                     properties:
                       did:
                         type: string
@@ -544,6 +592,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                      - did
+                      - handle
                       properties:
                         did:
                           type: string
@@ -577,25 +628,25 @@ paths:
           response_field: cursor
           request_param: cursor
       parameters:
-        - name: actor
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "User handle or DID"
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 50
-          description: "Number of results (max 100)"
-        - name: cursor
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Pagination cursor"
+      - name: actor
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "User handle or DID"
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+        description: "Number of results (max 100)"
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Pagination cursor"
       responses:
         "200":
           description: Success.
@@ -603,9 +654,15 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - subject
+                - follows
                 properties:
                   subject:
                     type: object
+                    required:
+                    - did
+                    - handle
                     properties:
                       did:
                         type: string
@@ -621,6 +678,9 @@ paths:
                     type: array
                     items:
                       type: object
+                      required:
+                      - did
+                      - handle
                       properties:
                         did:
                           type: string
@@ -650,14 +710,14 @@ paths:
           stable_id: bsky_getPosts_v2
           tool_version: 2
       parameters:
-        - name: uris
-          in: query
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-          description: "AT URIs of posts to fetch (max 25). Get from getFeed or getAuthorFeed."
+      - name: uris
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+        description: "AT URIs of posts to fetch (max 25). Get from getFeed or getAuthorFeed."
       responses:
         "200":
           description: Success.
@@ -665,11 +725,18 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - posts
                 properties:
                   posts:
                     type: array
                     items:
                       type: object
+                      required:
+                      - uri
+                      - cid
+                      - author
+                      - record
                       properties:
                         uri:
                           type: string
@@ -704,16 +771,16 @@ paths:
       operationId: createPost
       summary: "Create a new post — returns AT URI and CID of the created record"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -730,7 +797,7 @@ paths:
             schema:
               type: object
               required:
-                - text
+              - text
               properties:
                 text:
                   type: string
@@ -764,6 +831,9 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - uri
+                - cid
                 properties:
                   uri:
                     type: string
@@ -777,16 +847,16 @@ paths:
       operationId: deletePost
       summary: "Delete a post — removes it permanently (reverse of createPost)"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -803,7 +873,7 @@ paths:
             schema:
               type: object
               required:
-                - uri
+              - uri
               properties:
                 uri:
                   type: string
@@ -815,6 +885,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - success
                 properties:
                   success:
                     type: boolean
@@ -824,16 +896,16 @@ paths:
       operationId: likePost
       summary: "Like a post — creates a like record, returns its AT URI"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -850,8 +922,8 @@ paths:
             schema:
               type: object
               required:
-                - uri
-                - cid
+              - uri
+              - cid
               properties:
                 uri:
                   type: string
@@ -866,6 +938,9 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - uri
+                - cid
                 properties:
                   uri:
                     type: string
@@ -878,16 +953,16 @@ paths:
       operationId: unlikePost
       summary: "Unlike a post — deletes the like record (reverse of likePost)"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -904,7 +979,7 @@ paths:
             schema:
               type: object
               required:
-                - uri
+              - uri
               properties:
                 uri:
                   type: string
@@ -916,6 +991,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                - success
                 properties:
                   success:
                     type: boolean
@@ -925,16 +1002,16 @@ paths:
       operationId: repost
       summary: "Repost a post — creates a repost record, returns its AT URI"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -951,8 +1028,8 @@ paths:
             schema:
               type: object
               required:
-                - uri
-                - cid
+              - uri
+              - cid
               properties:
                 uri:
                   type: string
@@ -979,16 +1056,16 @@ paths:
       operationId: unrepost
       summary: "Remove a repost — deletes the repost record (reverse of repost)"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -1005,7 +1082,7 @@ paths:
             schema:
               type: object
               required:
-                - uri
+              - uri
               properties:
                 uri:
                   type: string
@@ -1026,16 +1103,16 @@ paths:
       operationId: follow
       summary: "Follow a user — creates a follow record, returns its AT URI"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -1052,7 +1129,7 @@ paths:
             schema:
               type: object
               required:
-                - subject
+              - subject
               properties:
                 subject:
                   type: string
@@ -1076,16 +1153,16 @@ paths:
       operationId: unfollow
       summary: "Unfollow a user — deletes the follow record (reverse of follow)"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -1102,7 +1179,7 @@ paths:
             schema:
               type: object
               required:
-                - uri
+              - uri
               properties:
                 uri:
                   type: string
@@ -1123,16 +1200,16 @@ paths:
       operationId: blockUser
       summary: "Block a user — creates a block record, prevents interaction"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -1149,7 +1226,7 @@ paths:
             schema:
               type: object
               required:
-                - subject
+              - subject
               properties:
                 subject:
                   type: string
@@ -1173,16 +1250,16 @@ paths:
       operationId: unblockUser
       summary: "Unblock a user — deletes the block record (reverse of blockUser)"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -1199,7 +1276,7 @@ paths:
             schema:
               type: object
               required:
-                - uri
+              - uri
               properties:
                 uri:
                   type: string
@@ -1220,16 +1297,16 @@ paths:
       operationId: muteUser
       summary: "Mute a user — hides their posts from your feeds"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -1246,7 +1323,7 @@ paths:
             schema:
               type: object
               required:
-                - actor
+              - actor
               properties:
                 actor:
                   type: string
@@ -1267,16 +1344,16 @@ paths:
       operationId: unmuteUser
       summary: "Unmute a user — restores their posts in your feeds (reverse of muteUser)"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: write
         safety: caution
@@ -1293,7 +1370,7 @@ paths:
             schema:
               type: object
               required:
-                - actor
+              - actor
               properties:
                 actor:
                   type: string
@@ -1314,16 +1391,16 @@ paths:
       operationId: getNotifications
       summary: "Get notifications — likes, reposts, follows, mentions, replies, quotes"
       servers:
-        - url: https://bsky.app
-          x-openweb:
-            transport: page
-            auth:
-              type: localStorage_jwt
-              key: BSKY_STORAGE
-              path: session.currentAccount.accessJwt
-              inject:
-                header: Authorization
-                prefix: "Bearer "
+      - url: https://bsky.app
+        x-openweb:
+          transport: page
+          auth:
+            type: localStorage_jwt
+            key: BSKY_STORAGE
+            path: session.currentAccount.accessJwt
+            inject:
+              header: Authorization
+              prefix: "Bearer "
       x-openweb:
         permission: read
         adapter:
@@ -1337,19 +1414,19 @@ paths:
           response_field: cursor
           request_param: cursor
       parameters:
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 25
-          description: "Number of notifications (max 100)"
-        - name: cursor
-          in: query
-          required: false
-          schema:
-            type: string
-          description: "Pagination cursor from previous response"
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 25
+        description: "Number of notifications (max 100)"
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: "Pagination cursor from previous response"
       responses:
         "200":
           description: Success.
@@ -1382,3 +1459,5 @@ paths:
                     type: string
                   seenAt:
                     type: string
+                required:
+                - notifications

@@ -200,6 +200,7 @@ paths:
                       en:
                         type: string
                         description: "English description (may contain HTML)"
+                    required: [en]
                   links:
                     type: object
                     properties:
@@ -541,6 +542,7 @@ paths:
                               type: integer
                               description: "Trending rank score (0 = most trending)"
                           required: [id, name, symbol, score]
+                      required: [item]
                 required: [coins]
 
   /api/v3/simple/price:

@@ -1,0 +1,19 @@
+{
+  "name": "quora",
+  "display_name": "Quora",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.quora.com",
+  "description": "Quora — page transport adapters for question search, answers, and user profiles via DOM extraction",
+  "requires_auth": false,
+  "dependencies": {
+    "searchQuestions → getQuestion/getAnswers": "searchQuestions returns slug used by question detail and answer operations"
+  },
+  "stats": {
+    "operation_count": 4,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 4,
+    "ws_count": 0
+  }
+}

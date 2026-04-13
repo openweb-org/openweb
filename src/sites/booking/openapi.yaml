@@ -7,9 +7,9 @@ info:
     compiled_at: '2026-04-01T00:00:00Z'
     requires_auth: false
 servers:
-  - url: https://www.booking.com
-    x-openweb:
-      transport: page
+- url: https://www.booking.com
+  x-openweb:
+    transport: page
 paths:
   /searchresults.html:
     get:
@@ -23,43 +23,43 @@ paths:
           signature_id: bk0001s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: booking
           operation: searchHotels
       parameters:
-        - name: ss
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Destination search query (e.g. "New York", "Paris", "Tokyo").
-        - name: checkin
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Check-in date in YYYY-MM-DD format.
-        - name: checkout
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Check-out date in YYYY-MM-DD format.
-        - name: group_adults
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 2
-          description: Number of adult guests.
-        - name: no_rooms
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Number of rooms.
+      - name: ss
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Destination search query (e.g. "New York", "Paris", "Tokyo").
+      - name: checkin
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Check-in date in YYYY-MM-DD format.
+      - name: checkout
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Check-out date in YYYY-MM-DD format.
+      - name: group_adults
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 2
+        description: Number of adult guests.
+      - name: no_rooms
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Number of rooms.
       responses:
         '200':
           description: List of hotels matching the search.
@@ -107,35 +107,35 @@ paths:
           signature_id: bk0002s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: booking
           operation: getHotelDetail
       parameters:
-        - name: country
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Country code (e.g. "us", "gb", "fr").
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Hotel URL slug (e.g. "riverside-tower").
-        - name: checkin
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Check-in date in YYYY-MM-DD format.
-        - name: checkout
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Check-out date in YYYY-MM-DD format.
+      - name: country
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Country code (e.g. "us", "gb", "fr").
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Hotel URL slug (e.g. "riverside-tower").
+      - name: checkin
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Check-in date in YYYY-MM-DD format.
+      - name: checkout
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Check-out date in YYYY-MM-DD format.
       responses:
         '200':
           description: Hotel detail from LD+JSON Hotel schema.
@@ -173,6 +173,10 @@ paths:
                     description: Main hotel image URL.
                   url:
                     type: [string, 'null']
+                required:
+                - name
+                - url
+                - description
 
   /internal/getHotelReviews:
     get:
@@ -186,17 +190,17 @@ paths:
           signature_id: bk0003s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: booking
           operation: getHotelReviews
       parameters:
-        - name: slug
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Hotel URL slug — page must be on this hotel's page.
+      - name: slug
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Hotel URL slug — page must be on this hotel's page.
       responses:
         '200':
           description: Review summary extracted from the hotel page.
@@ -239,6 +243,8 @@ paths:
                           type: [string, 'null']
                         country:
                           type: [string, 'null']
+                required:
+                - featured
 
   /internal/getHotelPrices:
     get:
@@ -252,17 +258,17 @@ paths:
           signature_id: bk0004s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: booking
           operation: getHotelPrices
       parameters:
-        - name: slug
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Hotel URL slug — page must be on this hotel's page.
+      - name: slug
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Hotel URL slug — page must be on this hotel's page.
       responses:
         '200':
           description: Room types and pricing from the availability table.
@@ -308,72 +314,72 @@ paths:
           signature_id: bk0005s
           tool_version: 1
           signals:
-            - adapter-verified
+          - adapter-verified
         adapter:
           name: booking
           operation: searchFlights
       parameters:
-        - name: route
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Flight route as "FROM-TO" IATA city codes (e.g. "NYC-PAR", "LON-BER").
-        - name: type
-          in: query
-          required: false
-          schema:
-            type: string
-            default: ONEWAY
-            enum: [ONEWAY, ROUNDTRIP]
-          description: Trip type.
-        - name: depart
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Departure date in YYYY-MM-DD format.
-        - name: return
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Return date in YYYY-MM-DD format (for ROUNDTRIP).
-        - name: adults
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-          description: Number of adult passengers.
-        - name: cabinClass
-          in: query
-          required: false
-          schema:
-            type: string
-            default: ECONOMY
-            enum: [ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST]
-          description: Cabin class.
-        - name: from
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Origin as IATA.CITY code (e.g. "NYC.CITY").
-        - name: to
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Destination as IATA.CITY code (e.g. "PAR.CITY").
-        - name: sort
-          in: query
-          required: false
-          schema:
-            type: string
-            default: BEST
-            enum: [BEST, CHEAPEST, FASTEST]
-          description: Sort order.
+      - name: route
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Flight route as "FROM-TO" IATA city codes (e.g. "NYC-PAR", "LON-BER").
+      - name: type
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ONEWAY
+          enum: [ONEWAY, ROUNDTRIP]
+        description: Trip type.
+      - name: depart
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Departure date in YYYY-MM-DD format.
+      - name: return
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Return date in YYYY-MM-DD format (for ROUNDTRIP).
+      - name: adults
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+        description: Number of adult passengers.
+      - name: cabinClass
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ECONOMY
+          enum: [ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST]
+        description: Cabin class.
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Origin as IATA.CITY code (e.g. "NYC.CITY").
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Destination as IATA.CITY code (e.g. "PAR.CITY").
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          default: BEST
+          enum: [BEST, CHEAPEST, FASTEST]
+        description: Sort order.
       responses:
         '200':
           description: List of flights matching the search.

@@ -7,15 +7,15 @@ info:
     compiled_at: '2026-04-02T00:00:00Z'
     requires_auth: false
 servers:
-  - url: https://digital.fidelity.com
-    x-openweb:
-      transport: page
-      csrf:
-        type: api_response
-        endpoint: https://digital.fidelity.com/prgw/digital/research/api/tokens
-        extract: csrfToken
-        inject:
-          header: X-CSRF-TOKEN
+- url: https://digital.fidelity.com
+  x-openweb:
+    transport: page
+    csrf:
+      type: api_response
+      endpoint: https://digital.fidelity.com/prgw/digital/research/api/tokens
+      extract: csrfToken
+      inject:
+        header: X-CSRF-TOKEN
 paths:
   /prgw/digital/research/api/quote:
     post:
@@ -36,7 +36,7 @@ paths:
             schema:
               type: object
               required:
-                - symbol
+              - symbol
               properties:
                 symbol:
                   type: string
@@ -166,7 +166,7 @@ paths:
             schema:
               type: object
               required:
-                - symbols
+              - symbols
               properties:
                 symbols:
                   type: array
@@ -224,7 +224,7 @@ paths:
             schema:
               type: object
               required:
-                - symbol
+              - symbol
               properties:
                 symbol:
                   type: string
@@ -283,7 +283,7 @@ paths:
             schema:
               type: object
               required:
-                - symbol
+              - symbol
               properties:
                 symbol:
                   type: string
@@ -335,9 +335,9 @@ paths:
             schema:
               type: object
               required:
-                - method
-                - apiTokenName
-                - params
+              - method
+              - apiTokenName
+              - params
               properties:
                 method:
                   type: string
@@ -371,6 +371,9 @@ paths:
                   data:
                     type: object
 
+                required:
+                - id
+                - data
   /prgw/digital/research/api/company-logo:
     post:
       operationId: getCompanyLogo
@@ -390,7 +393,7 @@ paths:
             schema:
               type: object
               required:
-                - fvSymbols
+              - fvSymbols
               properties:
                 fvSymbols:
                   type: string
@@ -422,6 +425,8 @@ paths:
                               location:
                                 type: string
 
+                required:
+                - logos
   /fund-screener/api/search/v1/funds:
     post:
       operationId: searchFunds
@@ -438,8 +443,8 @@ paths:
             schema:
               type: object
               required:
-                - searchFilter
-                - businessChannel
+              - searchFilter
+              - businessChannel
               properties:
                 searchFilter:
                   type: object
@@ -520,10 +525,12 @@ paths:
                               type: string
                         mstarOverallRating:
                           type: string
+                required:
+                - funds
       servers:
-        - url: https://fundresearch.fidelity.com
-          x-openweb:
-            transport: node
+      - url: https://fundresearch.fidelity.com
+        x-openweb:
+          transport: node
 
   /fund-screener/api/classification/v1/assetclassesandcategories:
     get:
@@ -558,10 +565,12 @@ paths:
                             type: string
                           description:
                             type: string
+                  required:
+                  - description
       servers:
-        - url: https://fundresearch.fidelity.com
-          x-openweb:
-            transport: node
+      - url: https://fundresearch.fidelity.com
+        x-openweb:
+          transport: node
 
   /fund-screener/api/classification/v1/fundfamilies:
     get:
@@ -587,10 +596,12 @@ paths:
                       type: string
                     description:
                       type: string
+                  required:
+                  - description
       servers:
-        - url: https://fundresearch.fidelity.com
-          x-openweb:
-            transport: node
+      - url: https://fundresearch.fidelity.com
+        x-openweb:
+          transport: node
 
   /mutual-funds/api/v1/investments/fundpicks:
     get:
@@ -602,18 +613,18 @@ paths:
           stable_id: fid0010
           tool_version: 2
       parameters:
-        - name: mstarAssetClassCd
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Morningstar asset class code (e.g. "DSTK" for domestic stock, "INTL" for international).
-        - name: mstarCtgyCd
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Morningstar category code (e.g. "LB" for large blend, "LG" for large growth).
+      - name: mstarAssetClassCd
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Morningstar asset class code (e.g. "DSTK" for domestic stock, "INTL" for international).
+      - name: mstarCtgyCd
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Morningstar category code (e.g. "LB" for large blend, "LG" for large growth).
       responses:
         '200':
           description: Success.
@@ -647,9 +658,9 @@ paths:
                             mstarOverallRating:
                               type: string
       servers:
-        - url: https://fundresearch.fidelity.com
-          x-openweb:
-            transport: node
+      - url: https://fundresearch.fidelity.com
+        x-openweb:
+          transport: node
 
   /mutual-funds/api/v1/investments/{cusip}/header:
     get:
@@ -661,25 +672,25 @@ paths:
           stable_id: fid0008
           tool_version: 2
       parameters:
-        - name: cusip
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Fund CUSIP identifier (e.g. "315911750" for FXAIX, "316071109" for FBGRX).
-        - name: funduniverse
-          in: query
-          required: true
-          schema:
-            type: string
-            default: RETAIL
-          description: Fund universe (e.g. "RETAIL").
-        - name: documentId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Same as CUSIP (e.g. "315911750").
+      - name: cusip
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Fund CUSIP identifier (e.g. "315911750" for FXAIX, "316071109" for FBGRX).
+      - name: funduniverse
+        in: query
+        required: true
+        schema:
+          type: string
+          default: RETAIL
+        description: Fund universe (e.g. "RETAIL").
+      - name: documentId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Same as CUSIP (e.g. "315911750").
       responses:
         '200':
           description: Success.
@@ -707,10 +718,12 @@ paths:
                                 type: string
                               year10:
                                 type: string
+                required:
+                - performanceAverageAnnualReturns
       servers:
-        - url: https://fundresearch.fidelity.com
-          x-openweb:
-            transport: node
+      - url: https://fundresearch.fidelity.com
+        x-openweb:
+          transport: node
 
   /mutual-funds/api/v1/investments/{cusip}/summary:
     get:
@@ -722,32 +735,32 @@ paths:
           stable_id: fid0009
           tool_version: 2
       parameters:
-        - name: cusip
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Fund CUSIP identifier (e.g. "315911750" for FXAIX).
-        - name: funduniverse
-          in: query
-          required: true
-          schema:
-            type: string
-            default: RETAIL
-          description: Fund universe (e.g. "RETAIL").
-        - name: documentId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Same as CUSIP (e.g. "315911750").
-        - name: period
-          in: query
-          required: true
-          schema:
-            type: string
-            default: 10YR
-          description: Period for performance data (e.g. "10YR", "5YR").
+      - name: cusip
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Fund CUSIP identifier (e.g. "315911750" for FXAIX).
+      - name: funduniverse
+        in: query
+        required: true
+        schema:
+          type: string
+          default: RETAIL
+        description: Fund universe (e.g. "RETAIL").
+      - name: documentId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Same as CUSIP (e.g. "315911750").
+      - name: period
+        in: query
+        required: true
+        schema:
+          type: string
+          default: 10YR
+        description: Period for performance data (e.g. "10YR", "5YR").
       responses:
         '200':
           description: Success.
@@ -831,7 +844,9 @@ paths:
                     nullable: true
                   assetAllocation:
                     type: object
+                required:
+                - fundInformation
       servers:
-        - url: https://fundresearch.fidelity.com
-          x-openweb:
-            transport: node
+      - url: https://fundresearch.fidelity.com
+        x-openweb:
+          transport: node

@@ -4,12 +4,12 @@ info:
   version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-03-29T06:39:38.584Z
+    compiled_at: 2026-03-29T06:39:38.584000Z
     requires_auth: false
 servers:
-  - url: https://www.reddit.com
-    x-openweb:
-      transport: node
+- url: https://www.reddit.com
+  x-openweb:
+    transport: node
 paths:
   /r/{subreddit}.json:
     get:
@@ -23,48 +23,48 @@ paths:
           stable_id: 9534943fee0ebe7a
           tool_version: 2
       parameters:
-        - name: subreddit
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Subreddit name without r/ prefix (e.g. "programming", "technology")
-          example: programming
-        - name: sort
-          in: query
-          schema:
-            type: string
-            enum:
-              - hot
-              - new
-              - top
-              - rising
-          description: Sort order for posts
-          example: hot
-        - name: t
-          in: query
-          schema:
-            type: string
-            enum:
-              - hour
-              - day
-              - week
-              - month
-              - year
-              - all
-          description: Time filter (only used with sort=top)
-          example: day
-        - name: limit
-          in: query
-          schema:
-            type: integer
-          description: Number of posts to return (max 100)
-          example: 25
-        - name: after
-          in: query
-          schema:
-            type: string
-          description: Pagination cursor — fullname of the last item (e.g. "t3_1s5ja3a")
+      - name: subreddit
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Subreddit name without r/ prefix (e.g. "programming", "technology")
+        example: programming
+      - name: sort
+        in: query
+        schema:
+          type: string
+          enum:
+          - hot
+          - new
+          - top
+          - rising
+        description: Sort order for posts
+        example: hot
+      - name: t
+        in: query
+        schema:
+          type: string
+          enum:
+          - hour
+          - day
+          - week
+          - month
+          - year
+          - all
+        description: Time filter (only used with sort=top)
+        example: day
+      - name: limit
+        in: query
+        schema:
+          type: integer
+        description: Number of posts to return (max 100)
+        example: 25
+      - name: after
+        in: query
+        schema:
+          type: string
+        description: Pagination cursor — fullname of the last item (e.g. "t3_1s5ja3a")
       responses:
         "200":
           description: Success.
@@ -131,6 +131,8 @@ paths:
                                   type: string
                                   nullable: true
 
+                required:
+                - data
   /r/popular.json:
     get:
       operationId: getPopularPosts
@@ -143,17 +145,17 @@ paths:
           stable_id: a134943fee0ebe7b
           tool_version: 2
       parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-          description: Number of posts to return (max 100)
-          example: 25
-        - name: after
-          in: query
-          schema:
-            type: string
-          description: Pagination cursor — fullname of the last item
+      - name: limit
+        in: query
+        schema:
+          type: integer
+        description: Number of posts to return (max 100)
+        example: 25
+      - name: after
+        in: query
+        schema:
+          type: string
+        description: Pagination cursor — fullname of the last item
       responses:
         "200":
           description: Success.
@@ -220,6 +222,8 @@ paths:
                                   type: string
                                   nullable: true
 
+                required:
+                - data
   /search.json:
     get:
       operationId: searchPosts
@@ -232,58 +236,58 @@ paths:
           stable_id: 2c3d7a7c71f0c7ea
           tool_version: 2
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query
-          example: typescript
-        - name: sort
-          in: query
-          schema:
-            type: string
-            enum:
-              - relevance
-              - hot
-              - top
-              - new
-              - comments
-          description: Sort order for search results
-          example: relevance
-        - name: t
-          in: query
-          schema:
-            type: string
-            enum:
-              - hour
-              - day
-              - week
-              - month
-              - year
-              - all
-          description: Time filter
-          example: all
-        - name: limit
-          in: query
-          schema:
-            type: integer
-          description: Number of results to return (max 100)
-          example: 25
-        - name: after
-          in: query
-          schema:
-            type: string
-          description: Pagination cursor
-        - name: type
-          in: query
-          schema:
-            type: string
-            enum:
-              - link
-              - sr
-              - user
-          description: "Filter by type: link (posts), sr (subreddits), user (users)"
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query
+        example: typescript
+      - name: sort
+        in: query
+        schema:
+          type: string
+          enum:
+          - relevance
+          - hot
+          - top
+          - new
+          - comments
+        description: Sort order for search results
+        example: relevance
+      - name: t
+        in: query
+        schema:
+          type: string
+          enum:
+          - hour
+          - day
+          - week
+          - month
+          - year
+          - all
+        description: Time filter
+        example: all
+      - name: limit
+        in: query
+        schema:
+          type: integer
+        description: Number of results to return (max 100)
+        example: 25
+      - name: after
+        in: query
+        schema:
+          type: string
+        description: Pagination cursor
+      - name: type
+        in: query
+        schema:
+          type: string
+          enum:
+          - link
+          - sr
+          - user
+        description: "Filter by type: link (posts), sr (subreddits), user (users)"
       responses:
         "200":
           description: Success.
@@ -345,6 +349,8 @@ paths:
                                 domain:
                                   type: string
 
+                required:
+                - data
   /r/{subreddit}/comments/{post_id}.json:
     get:
       operationId: getPostComments
@@ -357,39 +363,39 @@ paths:
           stable_id: 361929b38dce67b4
           tool_version: 2
       parameters:
-        - name: subreddit
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Subreddit name without r/ prefix
-          example: programming
-        - name: post_id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Post ID (base-36 alphanumeric, e.g. "1s5ja3a")
-          example: 1s5ja3a
-        - name: sort
-          in: query
-          schema:
-            type: string
-            enum:
-              - confidence
-              - top
-              - new
-              - controversial
-              - old
-              - qa
-          description: Comment sort order
-          example: confidence
-        - name: limit
-          in: query
-          schema:
-            type: integer
-          description: Number of top-level comments to return
-          example: 50
+      - name: subreddit
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Subreddit name without r/ prefix
+        example: programming
+      - name: post_id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Post ID (base-36 alphanumeric, e.g. "1s5ja3a")
+        example: 1s5ja3a
+      - name: sort
+        in: query
+        schema:
+          type: string
+          enum:
+          - confidence
+          - top
+          - new
+          - controversial
+          - old
+          - qa
+        description: Comment sort order
+        example: confidence
+      - name: limit
+        in: query
+        schema:
+          type: integer
+        description: Number of top-level comments to return
+        example: 50
       responses:
         "200":
           description: Success. Returns array of two Listings — [0] is the post, [1] is the comment tree.
@@ -457,9 +463,11 @@ paths:
                                   replies:
                                     description: Nested comment listing (t1 only), empty string if no replies
                                     oneOf:
-                                      - type: object
-                                      - type: string
+                                    - type: object
+                                    - type: string
 
+                  required:
+                  - data
   /user/{username}/about.json:
     get:
       operationId: getUserProfile
@@ -472,13 +480,13 @@ paths:
           stable_id: b234567890abcdef
           tool_version: 2
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Reddit username (without u/ prefix)
-          example: spez
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Reddit username (without u/ prefix)
+        example: spez
       responses:
         "200":
           description: Success.
@@ -521,6 +529,8 @@ paths:
                       subreddit:
                         type: object
 
+                required:
+                - data
   /user/{username}.json:
     get:
       operationId: getUserPosts
@@ -533,34 +543,34 @@ paths:
           stable_id: c345678901abcdef
           tool_version: 2
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Reddit username (without u/ prefix)
-          example: spez
-        - name: sort
-          in: query
-          schema:
-            type: string
-            enum:
-              - new
-              - hot
-              - top
-          description: Sort order
-          example: new
-        - name: limit
-          in: query
-          schema:
-            type: integer
-          description: Number of items to return (max 100)
-          example: 25
-        - name: after
-          in: query
-          schema:
-            type: string
-          description: Pagination cursor
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Reddit username (without u/ prefix)
+        example: spez
+      - name: sort
+        in: query
+        schema:
+          type: string
+          enum:
+          - new
+          - hot
+          - top
+        description: Sort order
+        example: new
+      - name: limit
+        in: query
+        schema:
+          type: integer
+        description: Number of items to return (max 100)
+        example: 25
+      - name: after
+        in: query
+        schema:
+          type: string
+        description: Pagination cursor
       responses:
         "200":
           description: Success.
@@ -625,6 +635,8 @@ paths:
                                   type: string
                                   description: Parent fullname (t1 only)
 
+                required:
+                - data
   /r/{subreddit}/about.json:
     get:
       operationId: getSubredditAbout
@@ -637,13 +649,13 @@ paths:
           stable_id: rd0006
           tool_version: 1
       parameters:
-        - name: subreddit
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Subreddit name (without r/ prefix)
-          example: programming
+      - name: subreddit
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Subreddit name (without r/ prefix)
+        example: programming
       responses:
         "200":
           description: Subreddit metadata.
@@ -690,6 +702,8 @@ paths:
                       subreddit_type:
                         type: string
 
+                required:
+                - data
   /api/vote:
     post:
       operationId: vote
@@ -707,8 +721,8 @@ paths:
             schema:
               type: object
               required:
-                - id
-                - dir
+              - id
+              - dir
               properties:
                 id:
                   type: string
@@ -741,7 +755,7 @@ paths:
             schema:
               type: object
               required:
-                - id
+              - id
               properties:
                 id:
                   type: string
@@ -762,18 +776,18 @@ paths:
       operationId: getMe
       summary: Get authenticated user profile via OAuth
       servers:
-        - url: https://oauth.reddit.com
-          x-openweb:
-            transport: node
-            auth:
-              type: exchange_chain
-              steps:
-                - call: https://www.reddit.com
-                  extract: token_v2
-                  extract_from: cookie
-              inject:
-                header: Authorization
-                prefix: 'Bearer '
+      - url: https://oauth.reddit.com
+        x-openweb:
+          transport: node
+          auth:
+            type: exchange_chain
+            steps:
+            - call: https://www.reddit.com
+              extract: token_v2
+              extract_from: cookie
+            inject:
+              header: Authorization
+              prefix: 'Bearer '
       x-openweb:
         permission: read
         build:
@@ -817,23 +831,26 @@ paths:
                   features:
                     type: object
 
+                required:
+                - id
+                - name
   /api/submit:
     post:
       operationId: createPost
       summary: Create a new post (self or link) in a subreddit
       servers:
-        - url: https://oauth.reddit.com
-          x-openweb:
-            transport: node
-            auth:
-              type: exchange_chain
-              steps:
-                - call: https://www.reddit.com
-                  extract: token_v2
-                  extract_from: cookie
-              inject:
-                header: Authorization
-                prefix: 'Bearer '
+      - url: https://oauth.reddit.com
+        x-openweb:
+          transport: node
+          auth:
+            type: exchange_chain
+            steps:
+            - call: https://www.reddit.com
+              extract: token_v2
+              extract_from: cookie
+            inject:
+              header: Authorization
+              prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -848,9 +865,9 @@ paths:
             schema:
               type: object
               required:
-                - sr
-                - title
-                - kind
+              - sr
+              - title
+              - kind
               properties:
                 sr:
                   type: string
@@ -861,8 +878,8 @@ paths:
                 kind:
                   type: string
                   enum:
-                    - self
-                    - link
+                  - self
+                  - link
                   description: "Post type: self (text post) or link (URL post)"
                 text:
                   type: string
@@ -923,18 +940,18 @@ paths:
       operationId: createComment
       summary: Create a comment on a post or reply to a comment
       servers:
-        - url: https://oauth.reddit.com
-          x-openweb:
-            transport: node
-            auth:
-              type: exchange_chain
-              steps:
-                - call: https://www.reddit.com
-                  extract: token_v2
-                  extract_from: cookie
-              inject:
-                header: Authorization
-                prefix: 'Bearer '
+      - url: https://oauth.reddit.com
+        x-openweb:
+          transport: node
+          auth:
+            type: exchange_chain
+            steps:
+            - call: https://www.reddit.com
+              extract: token_v2
+              extract_from: cookie
+            inject:
+              header: Authorization
+              prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -949,8 +966,8 @@ paths:
             schema:
               type: object
               required:
-                - thing_id
-                - text
+              - thing_id
+              - text
               properties:
                 thing_id:
                   type: string
@@ -1006,18 +1023,18 @@ paths:
       operationId: deleteThing
       summary: Delete a post or comment by fullname
       servers:
-        - url: https://oauth.reddit.com
-          x-openweb:
-            transport: node
-            auth:
-              type: exchange_chain
-              steps:
-                - call: https://www.reddit.com
-                  extract: token_v2
-                  extract_from: cookie
-              inject:
-                header: Authorization
-                prefix: 'Bearer '
+      - url: https://oauth.reddit.com
+        x-openweb:
+          transport: node
+          auth:
+            type: exchange_chain
+            steps:
+            - call: https://www.reddit.com
+              extract: token_v2
+              extract_from: cookie
+            inject:
+              header: Authorization
+              prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -1032,7 +1049,7 @@ paths:
             schema:
               type: object
               required:
-                - id
+              - id
               properties:
                 id:
                   type: string
@@ -1050,18 +1067,18 @@ paths:
       operationId: subscribe
       summary: Subscribe or unsubscribe from a subreddit
       servers:
-        - url: https://oauth.reddit.com
-          x-openweb:
-            transport: node
-            auth:
-              type: exchange_chain
-              steps:
-                - call: https://www.reddit.com
-                  extract: token_v2
-                  extract_from: cookie
-              inject:
-                header: Authorization
-                prefix: 'Bearer '
+      - url: https://oauth.reddit.com
+        x-openweb:
+          transport: node
+          auth:
+            type: exchange_chain
+            steps:
+            - call: https://www.reddit.com
+              extract: token_v2
+              extract_from: cookie
+            inject:
+              header: Authorization
+              prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -1076,14 +1093,14 @@ paths:
             schema:
               type: object
               required:
-                - action
-                - sr_name
+              - action
+              - sr_name
               properties:
                 action:
                   type: string
                   enum:
-                    - sub
-                    - unsub
+                  - sub
+                  - unsub
                   description: "sub = subscribe, unsub = unsubscribe"
                 sr_name:
                   type: string
@@ -1101,18 +1118,18 @@ paths:
       operationId: unsavePost
       summary: Remove a post or comment from saved/bookmarked items
       servers:
-        - url: https://oauth.reddit.com
-          x-openweb:
-            transport: node
-            auth:
-              type: exchange_chain
-              steps:
-                - call: https://www.reddit.com
-                  extract: token_v2
-                  extract_from: cookie
-              inject:
-                header: Authorization
-                prefix: 'Bearer '
+      - url: https://oauth.reddit.com
+        x-openweb:
+          transport: node
+          auth:
+            type: exchange_chain
+            steps:
+            - call: https://www.reddit.com
+              extract: token_v2
+              extract_from: cookie
+            inject:
+              header: Authorization
+              prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -1127,7 +1144,7 @@ paths:
             schema:
               type: object
               required:
-                - id
+              - id
               properties:
                 id:
                   type: string
@@ -1145,18 +1162,18 @@ paths:
       operationId: blockUser
       summary: Block a user by account ID
       servers:
-        - url: https://oauth.reddit.com
-          x-openweb:
-            transport: node
-            auth:
-              type: exchange_chain
-              steps:
-                - call: https://www.reddit.com
-                  extract: token_v2
-                  extract_from: cookie
-              inject:
-                header: Authorization
-                prefix: 'Bearer '
+      - url: https://oauth.reddit.com
+        x-openweb:
+          transport: node
+          auth:
+            type: exchange_chain
+            steps:
+            - call: https://www.reddit.com
+              extract: token_v2
+              extract_from: cookie
+            inject:
+              header: Authorization
+              prefix: 'Bearer '
       x-openweb:
         permission: write
         safety: caution
@@ -1171,7 +1188,7 @@ paths:
             schema:
               type: object
               required:
-                - account_id
+              - account_id
               properties:
                 account_id:
                   type: string
@@ -1194,40 +1211,40 @@ paths:
         Get inbox notifications — comment replies, post replies, mentions,
         messages with author, body, subject, context link
       servers:
-        - url: https://oauth.reddit.com
-          x-openweb:
-            transport: node
-            auth:
-              type: exchange_chain
-              steps:
-                - call: https://www.reddit.com
-                  extract: token_v2
-                  extract_from: cookie
-              inject:
-                header: Authorization
-                prefix: 'Bearer '
+      - url: https://oauth.reddit.com
+        x-openweb:
+          transport: node
+          auth:
+            type: exchange_chain
+            steps:
+            - call: https://www.reddit.com
+              extract: token_v2
+              extract_from: cookie
+            inject:
+              header: Authorization
+              prefix: 'Bearer '
       x-openweb:
         permission: read
         build:
           stable_id: rd0017
           tool_version: 1
       parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-          description: Number of notifications to return (max 100)
-          example: 25
-        - name: after
-          in: query
-          schema:
-            type: string
-          description: Pagination cursor — fullname of the last item
-        - name: mark
-          in: query
-          schema:
-            type: boolean
-          description: Whether to mark fetched messages as read (default true)
+      - name: limit
+        in: query
+        schema:
+          type: integer
+        description: Number of notifications to return (max 100)
+        example: 25
+      - name: after
+        in: query
+        schema:
+          type: string
+        description: Pagination cursor — fullname of the last item
+      - name: mark
+        in: query
+        schema:
+          type: boolean
+        description: Whether to mark fetched messages as read (default true)
       responses:
         "200":
           description: Success.
@@ -1289,3 +1306,5 @@ paths:
                                 dest:
                                   type: string
                                   description: Recipient username
+                required:
+                - data

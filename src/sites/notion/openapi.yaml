@@ -208,6 +208,7 @@ paths:
                             text:
                               type: string
                               description: "Highlighted text snippet."
+                          required: [text]
                         highlightBlockId:
                           type: string
                           format: uuid
@@ -393,6 +394,8 @@ paths:
                       reducerResults:
                         type: object
                         description: "Reducer output keyed by reducer name."
+                        required:
+                          - collection_group_results
                         properties:
                           collection_group_results:
                             type: object
@@ -513,12 +516,15 @@ paths:
                   recordMap:
                     type: object
                     description: "Block tree, collection schemas, and space metadata."
+                    required:
+                      - block
                     properties:
                       block:
                         type: object
                         description: "Block records keyed by block ID."
                         additionalProperties:
                           type: object
+                          required: [value]
                           properties:
                             value:
                               type: object
@@ -536,6 +542,7 @@ paths:
                   cursor:
                     type: object
                     description: "Cursor for next chunk (empty stack means no more)."
+                    required: [stack]
                     properties:
                       stack:
                         type: array

@@ -7,11 +7,11 @@ info:
     compiled_at: "2026-04-09T00:00:00.000Z"
     requires_auth: true
 servers:
-  - url: https://app.todoist.com
-    x-openweb:
-      transport: page
-      auth:
-        type: cookie_session
+- url: https://app.todoist.com
+  x-openweb:
+    transport: page
+    auth:
+      type: cookie_session
 paths:
   /todoist/projects:
     get:
@@ -61,6 +61,9 @@ paths:
                     url:
                       type: string
 
+                  required:
+                  - id
+                  - name
   /todoist/tasks:
     get:
       operationId: getTasks
@@ -74,24 +77,24 @@ paths:
           name: todoist-api
           operation: getTasks
       parameters:
-        - name: project_id
-          in: query
-          required: false
-          description: "Project ID to filter tasks (from getProjects). Omit for all tasks."
-          schema:
-            type: string
-        - name: label
-          in: query
-          required: false
-          description: "Filter by label name"
-          schema:
-            type: string
-        - name: filter
-          in: query
-          required: false
-          description: "Todoist filter expression (e.g., 'today', 'overdue', 'priority 1')"
-          schema:
-            type: string
+      - name: project_id
+        in: query
+        required: false
+        description: "Project ID to filter tasks (from getProjects). Omit for all tasks."
+        schema:
+          type: string
+      - name: label
+        in: query
+        required: false
+        description: "Filter by label name"
+        schema:
+          type: string
+      - name: filter
+        in: query
+        required: false
+        description: "Todoist filter expression (e.g., 'today', 'overdue', 'priority 1')"
+        schema:
+          type: string
       responses:
         "200":
           description: List of tasks
@@ -153,6 +156,10 @@ paths:
                     url:
                       type: string
 
+                  required:
+                  - id
+                  - url
+                  - content
   /todoist/tasks/create:
     post:
       operationId: createTask
@@ -172,7 +179,7 @@ paths:
             schema:
               type: object
               required:
-                - content
+              - content
               properties:
                 content:
                   type: string
@@ -255,7 +262,7 @@ paths:
             schema:
               type: object
               required:
-                - task_id
+              - task_id
               properties:
                 task_id:
                   type: string
@@ -291,7 +298,7 @@ paths:
             schema:
               type: object
               required:
-                - task_id
+              - task_id
               properties:
                 task_id:
                   type: string
@@ -327,7 +334,7 @@ paths:
             schema:
               type: object
               required:
-                - task_id
+              - task_id
               properties:
                 task_id:
                   type: string

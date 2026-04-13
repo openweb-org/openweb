@@ -5,20 +5,20 @@ info:
   x-openweb:
     spec_version: '2.0'
 servers:
-  - url: https://api.github.com
-    x-openweb:
-      transport: node
-      auth:
-        type: cookie_session
-      csrf:
-        type: meta_tag
-        name: csrf-token
-        header: X-CSRF-Token
-        scope:
-          - PUT
-          - POST
-          - PATCH
-          - DELETE
+- url: https://api.github.com
+  x-openweb:
+    transport: node
+    auth:
+      type: cookie_session
+    csrf:
+      type: meta_tag
+      name: csrf-token
+      header: X-CSRF-Token
+      scope:
+      - PUT
+      - POST
+      - PATCH
+      - DELETE
 paths:
   /repos/{owner}/{repo}:
     get:
@@ -31,24 +31,24 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       responses:
         '200':
           description: Success.
@@ -82,6 +82,9 @@ paths:
                     properties:
                       login:
                         type: string
+                required:
+                - id
+                - description
   /repos/{owner}/{repo}/issues:
     get:
       operationId: listIssues
@@ -93,38 +96,38 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
         pagination:
           type: link_header
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 30
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 30
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       responses:
         '200':
           description: Success.
@@ -157,6 +160,9 @@ paths:
                             type: string
                     created_at:
                       type: string
+                  required:
+                  - id
+                  - title
     post:
       operationId: createIssue
       summary: Create an issue
@@ -167,24 +173,24 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       requestBody:
         required: true
         content:
@@ -192,7 +198,7 @@ paths:
             schema:
               type: object
               required:
-                - title
+              - title
               properties:
                 title:
                   type: string
@@ -230,29 +236,29 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: issue_number
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: issue_number
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       requestBody:
         required: true
         content:
@@ -260,7 +266,7 @@ paths:
             schema:
               type: object
               required:
-                - state
+              - state
               properties:
                 state:
                   type: string
@@ -301,29 +307,29 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: issue_number
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: issue_number
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       requestBody:
         required: true
         content:
@@ -331,7 +337,7 @@ paths:
             schema:
               type: object
               required:
-                - state
+              - state
               properties:
                 state:
                   type: string
@@ -367,29 +373,29 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: issue_number
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: issue_number
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       requestBody:
         required: true
         content:
@@ -397,7 +403,7 @@ paths:
             schema:
               type: object
               required:
-                - body
+              - body
               properties:
                 body:
                   type: string
@@ -434,29 +440,29 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: comment_id
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       responses:
         '204':
           description: Comment deleted (no content).
@@ -472,24 +478,24 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       requestBody:
         required: false
         content:
@@ -530,24 +536,24 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       responses:
         '204':
           description: Subscription deleted (no content).
@@ -562,48 +568,48 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
         pagination:
           type: link_header
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query (e.g. "react language:typescript")
-        - name: sort
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [stars, forks, help-wanted-issues, updated]
-          description: Sort field
-        - name: order
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: desc
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 30
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query (e.g. "react language:typescript")
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [stars, forks, help-wanted-issues, updated]
+        description: Sort field
+      - name: order
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [asc, desc]
+          default: desc
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 30
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       responses:
         '200':
           description: Success.
@@ -629,6 +635,8 @@ paths:
                           type: integer
                         language:
                           type: string
+                required:
+                - items
   /users/{username}:
     get:
       operationId: getUserProfile
@@ -640,19 +648,19 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       responses:
         '200':
           description: Success.
@@ -679,6 +687,10 @@ paths:
                     type: string
                   created_at:
                     type: string
+                required:
+                - login
+                - name
+                - followers
   /repos/{owner}/{repo}/readme:
     get:
       operationId: getRepoReadme
@@ -690,24 +702,24 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       responses:
         '200':
           description: Success.
@@ -725,6 +737,9 @@ paths:
                     description: Base64-encoded README content
                   encoding:
                     type: string
+                required:
+                - name
+                - content
   /repos/{owner}/{repo}/pulls:
     get:
       operationId: listPullRequests
@@ -736,45 +751,45 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
         pagination:
           type: link_header
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: state
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [open, closed, all]
-            default: open
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 30
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [open, closed, all]
+          default: open
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 30
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       responses:
         '200':
           description: Success.
@@ -814,6 +829,9 @@ paths:
                           type: string
                     created_at:
                       type: string
+                  required:
+                  - id
+                  - title
   /repos/{owner}/{repo}/contributors:
     get:
       operationId: listContributors
@@ -825,38 +843,38 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
         pagination:
           type: link_header
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: per_page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 30
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 30
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       responses:
         '200':
           description: Success.
@@ -873,6 +891,8 @@ paths:
                       type: integer
                     avatar_url:
                       type: string
+                  required:
+                  - login
   /repos/{owner}/{repo}/forks:
     post:
       operationId: forkRepo
@@ -884,24 +904,24 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       requestBody:
         required: false
         content:
@@ -938,24 +958,24 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       responses:
         '204':
           description: Success (no content).
@@ -970,24 +990,24 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: owner
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: repo
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       responses:
         '204':
           description: Success (no content).
@@ -1003,14 +1023,14 @@ paths:
           tool_version: 1
           verified: false
           signals:
-            - graphql
+          - graphql
       parameters:
-        - name: Accept
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/vnd.github+json
+      - name: Accept
+        in: header
+        required: true
+        schema:
+          type: string
+          default: application/vnd.github+json
       requestBody:
         required: true
         content:
@@ -1018,7 +1038,7 @@ paths:
             schema:
               type: object
               required:
-                - query
+              - query
               properties:
                 query:
                   type: string

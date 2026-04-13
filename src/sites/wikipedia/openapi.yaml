@@ -6,11 +6,11 @@ info:
     spec_version: '2.0'
     requires_auth: false
 servers:
-  - url: https://en.wikipedia.org
-    x-openweb:
-      transport: node
-      auth:
-        type: cookie_session
+- url: https://en.wikipedia.org
+  x-openweb:
+    transport: node
+    auth:
+      type: cookie_session
 paths:
   /w/api.php:
     get:
@@ -23,56 +23,56 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            const: query
-          description: API action.
-        - name: list
-          in: query
-          required: true
-          schema:
-            type: string
-            const: search
-          description: Query list type.
-        - name: srsearch
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query.
-        - name: srlimit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 10
-          description: Maximum number of results (max 500).
-        - name: sroffset
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-          description: Offset for pagination.
-        - name: format
-          in: query
-          required: true
-          schema:
-            type: string
-            const: json
-          description: Response format.
-        - name: formatversion
-          in: query
-          required: true
-          schema:
-            type: integer
-            const: 2
-          description: Response format version.
+      - name: action
+        in: query
+        required: true
+        schema:
+          type: string
+          const: query
+        description: API action.
+      - name: list
+        in: query
+        required: true
+        schema:
+          type: string
+          const: search
+        description: Query list type.
+      - name: srsearch
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Search query.
+      - name: srlimit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+        description: Maximum number of results (max 500).
+      - name: sroffset
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Offset for pagination.
+      - name: format
+        in: query
+        required: true
+        schema:
+          type: string
+          const: json
+        description: Response format.
+      - name: formatversion
+        in: query
+        required: true
+        schema:
+          type: integer
+          const: 2
+        description: Response format version.
       responses:
         '200':
           description: Success.
@@ -134,47 +134,47 @@ paths:
           verified: false
           signals: []
       parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            const: query
-          description: API action.
-        - name: titles
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Page title (underscores for spaces).
-        - name: prop
-          in: query
-          required: true
-          schema:
-            type: string
-            const: categories
-          description: Query property.
-        - name: cllimit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 10
-          description: Maximum number of categories (max 500).
-        - name: format
-          in: query
-          required: true
-          schema:
-            type: string
-            const: json
-          description: Response format.
-        - name: formatversion
-          in: query
-          required: true
-          schema:
-            type: integer
-            const: 2
-          description: Response format version.
+      - name: action
+        in: query
+        required: true
+        schema:
+          type: string
+          const: query
+        description: API action.
+      - name: titles
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Page title (underscores for spaces).
+      - name: prop
+        in: query
+        required: true
+        schema:
+          type: string
+          const: categories
+        description: Query property.
+      - name: cllimit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+        description: Maximum number of categories (max 500).
+      - name: format
+        in: query
+        required: true
+        schema:
+          type: string
+          const: json
+        description: Response format.
+      - name: formatversion
+        in: query
+        required: true
+        schema:
+          type: integer
+          const: 2
+        description: Response format version.
       responses:
         '200':
           description: Success.
@@ -231,47 +231,47 @@ paths:
           verified: false
           signals: []
       parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            const: query
-          description: API action.
-        - name: titles
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Page title (underscores for spaces).
-        - name: prop
-          in: query
-          required: true
-          schema:
-            type: string
-            const: links
-          description: Query property.
-        - name: pllimit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 10
-          description: Maximum number of links (max 500).
-        - name: format
-          in: query
-          required: true
-          schema:
-            type: string
-            const: json
-          description: Response format.
-        - name: formatversion
-          in: query
-          required: true
-          schema:
-            type: integer
-            const: 2
-          description: Response format version.
+      - name: action
+        in: query
+        required: true
+        schema:
+          type: string
+          const: query
+        description: API action.
+      - name: titles
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Page title (underscores for spaces).
+      - name: prop
+        in: query
+        required: true
+        schema:
+          type: string
+          const: links
+        description: Query property.
+      - name: pllimit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+        description: Maximum number of links (max 500).
+      - name: format
+        in: query
+        required: true
+        schema:
+          type: string
+          const: json
+        description: Response format.
+      - name: formatversion
+        in: query
+        required: true
+        schema:
+          type: integer
+          const: 2
+        description: Response format version.
       responses:
         '200':
           description: Success.
@@ -328,47 +328,47 @@ paths:
           verified: false
           signals: []
       parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            const: query
-          description: API action.
-        - name: list
-          in: query
-          required: true
-          schema:
-            type: string
-            const: backlinks
-          description: Query list type.
-        - name: bltitle
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Page title to find backlinks for (underscores for spaces).
-        - name: bllimit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 10
-          description: Maximum number of backlinks (max 500).
-        - name: format
-          in: query
-          required: true
-          schema:
-            type: string
-            const: json
-          description: Response format.
-        - name: formatversion
-          in: query
-          required: true
-          schema:
-            type: integer
-            const: 2
-          description: Response format version.
+      - name: action
+        in: query
+        required: true
+        schema:
+          type: string
+          const: query
+        description: API action.
+      - name: list
+        in: query
+        required: true
+        schema:
+          type: string
+          const: backlinks
+        description: Query list type.
+      - name: bltitle
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Page title to find backlinks for (underscores for spaces).
+      - name: bllimit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+        description: Maximum number of backlinks (max 500).
+      - name: format
+        in: query
+        required: true
+        schema:
+          type: string
+          const: json
+        description: Response format.
+      - name: formatversion
+        in: query
+        required: true
+        schema:
+          type: integer
+          const: 2
+        description: Response format version.
       responses:
         '200':
           description: Success.
@@ -416,47 +416,47 @@ paths:
           verified: false
           signals: []
       parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            const: query
-          description: API action.
-        - name: titles
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Page title (underscores for spaces).
-        - name: prop
-          in: query
-          required: true
-          schema:
-            type: string
-            const: langlinks
-          description: Query property.
-        - name: lllimit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 10
-          description: Maximum number of language links (max 500).
-        - name: format
-          in: query
-          required: true
-          schema:
-            type: string
-            const: json
-          description: Response format.
-        - name: formatversion
-          in: query
-          required: true
-          schema:
-            type: integer
-            const: 2
-          description: Response format version.
+      - name: action
+        in: query
+        required: true
+        schema:
+          type: string
+          const: query
+        description: API action.
+      - name: titles
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Page title (underscores for spaces).
+      - name: prop
+        in: query
+        required: true
+        schema:
+          type: string
+          const: langlinks
+        description: Query property.
+      - name: lllimit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+        description: Maximum number of language links (max 500).
+      - name: format
+        in: query
+        required: true
+        schema:
+          type: string
+          const: json
+        description: Response format.
+      - name: formatversion
+        in: query
+        required: true
+        schema:
+          type: integer
+          const: 2
+        description: Response format version.
       responses:
         '200':
           description: Success.
@@ -513,40 +513,40 @@ paths:
           verified: false
           signals: []
       parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            const: query
-          description: API action.
-        - name: titles
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Page title (underscores for spaces).
-        - name: prop
-          in: query
-          required: true
-          schema:
-            type: string
-            const: info
-          description: Query property.
-        - name: format
-          in: query
-          required: true
-          schema:
-            type: string
-            const: json
-          description: Response format.
-        - name: formatversion
-          in: query
-          required: true
-          schema:
-            type: integer
-            const: 2
-          description: Response format version.
+      - name: action
+        in: query
+        required: true
+        schema:
+          type: string
+          const: query
+        description: API action.
+      - name: titles
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Page title (underscores for spaces).
+      - name: prop
+        in: query
+        required: true
+        schema:
+          type: string
+          const: info
+        description: Query property.
+      - name: format
+        in: query
+        required: true
+        schema:
+          type: string
+          const: json
+        description: Response format.
+      - name: formatversion
+        in: query
+        required: true
+        schema:
+          type: integer
+          const: 2
+        description: Response format version.
       responses:
         '200':
           description: Success.
@@ -599,60 +599,60 @@ paths:
           verified: false
           signals: []
       parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            const: query
-          description: API action.
-        - name: titles
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Page title (underscores for spaces).
-        - name: prop
-          in: query
-          required: true
-          schema:
-            type: string
-            const: extracts
-          description: Query property.
-        - name: exintro
-          in: query
-          required: true
-          schema:
-            type: boolean
-            const: true
-          description: Return only the intro section.
-        - name: explaintext
-          in: query
-          required: true
-          schema:
-            type: boolean
-            const: true
-          description: Return plain text instead of HTML.
-        - name: exsentences
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: Limit extract to this many sentences.
-        - name: format
-          in: query
-          required: true
-          schema:
-            type: string
-            const: json
-          description: Response format.
-        - name: formatversion
-          in: query
-          required: true
-          schema:
-            type: integer
-            const: 2
-          description: Response format version.
+      - name: action
+        in: query
+        required: true
+        schema:
+          type: string
+          const: query
+        description: API action.
+      - name: titles
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Page title (underscores for spaces).
+      - name: prop
+        in: query
+        required: true
+        schema:
+          type: string
+          const: extracts
+        description: Query property.
+      - name: exintro
+        in: query
+        required: true
+        schema:
+          type: boolean
+          const: true
+        description: Return only the intro section.
+      - name: explaintext
+        in: query
+        required: true
+        schema:
+          type: boolean
+          const: true
+        description: Return plain text instead of HTML.
+      - name: exsentences
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Limit extract to this many sentences.
+      - name: format
+        in: query
+        required: true
+        schema:
+          type: string
+          const: json
+        description: Response format.
+      - name: formatversion
+        in: query
+        required: true
+        schema:
+          type: integer
+          const: 2
+        description: Response format version.
       responses:
         '200':
           description: Success.
@@ -693,14 +693,14 @@ paths:
           tool_version: 1
           verified: true
           signals:
-            - status-match
+          - status-match
       parameters:
-        - name: title
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Page title (underscores for spaces).
+      - name: title
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Page title (underscores for spaces).
       responses:
         '200':
           description: Success.
@@ -797,12 +797,12 @@ paths:
           verified: false
           signals: []
       parameters:
-        - name: title
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Page title (underscores for spaces).
+      - name: title
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Page title (underscores for spaces).
       responses:
         '200':
           description: Success.
@@ -849,12 +849,12 @@ paths:
           verified: false
           signals: []
       parameters:
-        - name: title
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Page title (underscores for spaces).
+      - name: title
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Page title (underscores for spaces).
       responses:
         '200':
           description: Success.
@@ -1008,25 +1008,25 @@ paths:
           verified: false
           signals: []
       parameters:
-        - name: title
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Page title (underscores for spaces).
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
-          description: Maximum number of revisions to return.
-        - name: older_than
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: Revision ID to paginate from (returns revisions older than this).
+      - name: title
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Page title (underscores for spaces).
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 20
+        description: Maximum number of revisions to return.
+      - name: older_than
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Revision ID to paginate from (returns revisions older than this).
       responses:
         '200':
           description: Success.
@@ -1077,25 +1077,25 @@ paths:
           verified: false
           signals: []
       parameters:
-        - name: type
-          in: path
-          required: true
-          schema:
-            type: string
-            enum: [all, selected, births, deaths, events, holidays]
-          description: Type of events (all, selected, births, deaths, events, holidays).
-        - name: MM
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Month as two digits (01-12).
-        - name: DD
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Day as two digits (01-31).
+      - name: type
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [all, selected, births, deaths, events, holidays]
+        description: Type of events (all, selected, births, deaths, events, holidays).
+      - name: MM
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Month as two digits (01-12).
+      - name: DD
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Day as two digits (01-31).
       responses:
         '200':
           description: Success.
@@ -1251,6 +1251,8 @@ paths:
                                     type: integer
                                   height:
                                     type: integer
+                required:
+                - events
   /api/rest_v1/feed/featured/{YYYY}/{MM}/{DD}:
     get:
       operationId: getFeaturedContent
@@ -1263,24 +1265,24 @@ paths:
           verified: false
           signals: []
       parameters:
-        - name: YYYY
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Year as four digits (e.g. 2026).
-        - name: MM
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Month as two digits (01-12).
-        - name: DD
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Day as two digits (01-31).
+      - name: YYYY
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Year as four digits (e.g. 2026).
+      - name: MM
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Month as two digits (01-12).
+      - name: DD
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Day as two digits (01-31).
       responses:
         '200':
           description: Success.
@@ -1406,3 +1408,5 @@ paths:
                                     type: integer
                                   height:
                                     type: integer
+                required:
+                - tfa

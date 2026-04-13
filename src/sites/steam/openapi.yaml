@@ -60,6 +60,7 @@ paths:
                       type: boolean
                     data:
                       type: object
+                      required: [name, steam_appid]
                       properties:
                         type:
                           type: string
@@ -83,6 +84,7 @@ paths:
                             type: string
                         price_overview:
                           type: object
+                          required: [currency, final]
                           properties:
                             currency:
                               type: string
@@ -96,6 +98,7 @@ paths:
                               type: string
                         platforms:
                           type: object
+                          required: [windows, mac, linux]
                           properties:
                             windows:
                               type: boolean
@@ -107,6 +110,7 @@ paths:
                           type: array
                           items:
                             type: object
+                            required: [id, description]
                             properties:
                               id:
                                 type: integer
@@ -116,6 +120,7 @@ paths:
                           type: array
                           items:
                             type: object
+                            required: [id, description]
                             properties:
                               id:
                                 type: string
@@ -123,6 +128,7 @@ paths:
                                 type: string
                         release_date:
                           type: object
+                          required: [coming_soon, date]
                           properties:
                             coming_soon:
                               type: boolean
@@ -130,6 +136,7 @@ paths:
                               type: string
                         metacritic:
                           type: object
+                          required: [score, url]
                           properties:
                             score:
                               type: integer
@@ -137,6 +144,7 @@ paths:
                               type: string
                         recommendations:
                           type: object
+                          required: [total]
                           properties:
                             total:
                               type: integer
@@ -189,6 +197,7 @@ paths:
                     type: array
                     items:
                       type: object
+                      required: [id, name]
                       properties:
                         type:
                           type: string
@@ -198,6 +207,7 @@ paths:
                           type: integer
                         price:
                           type: object
+                          required: [currency, final]
                           properties:
                             currency:
                               type: string
@@ -211,6 +221,7 @@ paths:
                           type: string
                         platforms:
                           type: object
+                          required: [windows, mac, linux]
                           properties:
                             windows:
                               type: boolean
@@ -293,6 +304,7 @@ paths:
                     type: integer
                   query_summary:
                     type: object
+                    required: [num_reviews, review_score, review_score_desc, total_positive, total_negative, total_reviews]
                     properties:
                       num_reviews:
                         type: integer
@@ -310,11 +322,13 @@ paths:
                     type: array
                     items:
                       type: object
+                      required: [recommendationid, review, voted_up]
                       properties:
                         recommendationid:
                           type: string
                         author:
                           type: object
+                          required: [steamid]
                           properties:
                             steamid:
                               type: string
@@ -373,11 +387,13 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [large_capsules, featured_win, featured_mac, featured_linux]
                 properties:
                   large_capsules:
                     type: array
                     items:
                       type: object
+                      required: [id, name]
                       properties:
                         id:
                           type: integer
@@ -419,6 +435,7 @@ paths:
                     type: array
                     items:
                       type: object
+                      required: [id, name]
                       properties:
                         id:
                           type: integer
@@ -452,6 +469,7 @@ paths:
                     type: array
                     items:
                       type: object
+                      required: [id, name]
                       properties:
                         id:
                           type: integer
@@ -485,6 +503,7 @@ paths:
                     type: array
                     items:
                       type: object
+                      required: [id, name]
                       properties:
                         id:
                           type: integer
@@ -553,9 +572,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [specials, coming_soon, top_sellers, new_releases]
                 properties:
                   specials:
                     type: object
+                    required: [id, name, items]
                     properties:
                       id:
                         type: string
@@ -565,6 +586,7 @@ paths:
                         type: array
                         items:
                           type: object
+                          required: [id, name]
                           properties:
                             id:
                               type: integer
@@ -598,6 +620,7 @@ paths:
                               type: string
                   coming_soon:
                     type: object
+                    required: [id, name, items]
                     properties:
                       id:
                         type: string
@@ -607,6 +630,7 @@ paths:
                         type: array
                         items:
                           type: object
+                          required: [id, name]
                           properties:
                             id:
                               type: integer
@@ -640,6 +664,7 @@ paths:
                               type: string
                   top_sellers:
                     type: object
+                    required: [id, name, items]
                     properties:
                       id:
                         type: string
@@ -649,6 +674,7 @@ paths:
                         type: array
                         items:
                           type: object
+                          required: [id, name]
                           properties:
                             id:
                               type: integer
@@ -682,6 +708,7 @@ paths:
                               type: string
                   new_releases:
                     type: object
+                    required: [id, name, items]
                     properties:
                       id:
                         type: string
@@ -691,6 +718,7 @@ paths:
                         type: array
                         items:
                           type: object
+                          required: [id, name]
                           properties:
                             id:
                               type: integer
@@ -724,6 +752,7 @@ paths:
                               type: string
                   genres:
                     type: object
+                    required: [id, name]
                     properties:
                       id:
                         type: string
@@ -731,6 +760,7 @@ paths:
                         type: string
                   trailerslideshow:
                     type: object
+                    required: [id, name]
                     properties:
                       id:
                         type: string
@@ -780,6 +810,7 @@ paths:
                       type: boolean
                     data:
                       type: object
+                      required: [name, apps]
                       properties:
                         name:
                           type: string
@@ -789,6 +820,7 @@ paths:
                           type: array
                           items:
                             type: object
+                            required: [id, name]
                             properties:
                               id:
                                 type: integer
@@ -796,6 +828,7 @@ paths:
                                 type: string
                         price:
                           type: object
+                          required: [currency, final]
                           properties:
                             currency:
                               type: string
@@ -807,6 +840,7 @@ paths:
                               type: integer
                         platforms:
                           type: object
+                          required: [windows, mac, linux]
                           properties:
                             windows:
                               type: boolean
@@ -875,6 +909,7 @@ paths:
                         type: array
                         items:
                           type: object
+                          required: [gid, title, url]
                           properties:
                             gid:
                               type: string
@@ -1019,6 +1054,7 @@ paths:
                     type: array
                     items:
                       type: object
+                      required: [id, name]
                       properties:
                         id:
                           type: integer
@@ -1028,6 +1064,7 @@ paths:
                           type: string
                         price_overview:
                           type: object
+                          required: [currency, final]
                           properties:
                             currency:
                               type: string
@@ -1039,6 +1076,7 @@ paths:
                               type: integer
                         platforms:
                           type: object
+                          required: [windows, mac, linux]
                           properties:
                             windows:
                               type: boolean
@@ -1048,6 +1086,7 @@ paths:
                               type: boolean
                         release_date:
                           type: object
+                          required: [steam]
                           properties:
                             steam:
                               oneOf:

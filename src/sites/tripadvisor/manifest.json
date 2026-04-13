@@ -1,0 +1,20 @@
+{
+  "name": "tripadvisor",
+  "display_name": "TripAdvisor",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.tripadvisor.com",
+  "description": "TripAdvisor — page transport adapters for hotel/restaurant/attraction search and detail via LD+JSON and DOM extraction",
+  "requires_auth": false,
+  "dependencies": {
+    "searchLocation → searchHotels/searchRestaurants": "searchLocation returns geoId and locationSlug for hotel and restaurant searches",
+    "searchLocation → getRestaurant/getAttractionReviews/getHotelDetail/getAttractionDetail": "searchLocation provides geoId; detail ops also need locationId and slug from listing pages"
+  },
+  "stats": {
+    "operation_count": 7,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 7,
+    "ws_count": 0
+  }
+}

@@ -791,6 +791,9 @@ paths:
                                     count:
                                       type: integer
                                       description: Number of videos in series.
+                                  required:
+                                    - name
+                                    - count
                           tlist:
                             type: "null"
                           vlist:
@@ -3519,6 +3522,10 @@ paths:
                                                   type: string
                                                   format: uri
                                                   description: Avatar URL.
+                                              required:
+                                                - mid
+                                                - uname
+                                                - avatar
                                           jump_url:
                                             type: object
                                             properties: {}
@@ -5545,6 +5552,10 @@ paths:
                                                     type: string
                                                     format: uri
                                                     description: Avatar URL.
+                                                required:
+                                                  - mid
+                                                  - uname
+                                                  - avatar
                                             jump_url:
                                               type: object
                                               properties: {}
@@ -7286,6 +7297,10 @@ paths:
                                                   type: string
                                                   format: uri
                                                   description: Avatar URL.
+                                              required:
+                                                - mid
+                                                - uname
+                                                - avatar
                                           jump_url:
                                             type: object
                                             properties: {}
@@ -8028,6 +8043,17 @@ paths:
                             ctime:
                               type: integer
                               description: Post timestamp (unix seconds).
+                          required:
+                            - content
+                            - progress_ms
+                            - mode
+                            - color
+                            - ctime
+                    required:
+                      - elems
+                required:
+                  - code
+                  - data
   /x/web-interface/popular:
     get:
       operationId: getPopularVideos
@@ -9770,6 +9796,12 @@ paths:
                                       description: Subtitle file URL.
                                     is_lock:
                                       type: boolean
+                                  required:
+                                    - id
+                                    - lan
+                                    - lan_doc
+                                    - subtitle_url
+                                    - is_lock
                             required:
                               - allow_submit
                               - list
@@ -10420,6 +10452,10 @@ paths:
                                                       type: integer
                                                     rotate:
                                                       type: integer
+                                                  required:
+                                                    - width
+                                                    - height
+                                                    - rotate
                                               required:
                                                 - cid
                                                 - page
@@ -11526,6 +11562,30 @@ paths:
                                     description: Publish timestamp (Unix seconds).
                                   description:
                                     type: string
+                                required:
+                                  - bvid
+                                  - title
+                                  - author
+                                  - mid
+                                  - pic
+                                  - play
+                                  - danmaku
+                                  - like
+                                  - favorites
+                                  - duration
+                                  - pubdate
+                                  - description
+                          required:
+                            - result_type
+                            - data
+                    required:
+                      - numResults
+                      - page
+                      - pagesize
+                      - result
+                required:
+                  - code
+                  - data
   /x/web-interface/archive/like:
     post:
       operationId: likeVideo
@@ -11572,6 +11632,9 @@ paths:
                     description: 0 = success, 65006 = already liked/unliked.
                   message:
                     type: string
+                required:
+                  - code
+                  - message
   /x/v3/fav/resource/deal:
     post:
       operationId: addToFavorites
@@ -11621,6 +11684,9 @@ paths:
                     description: 0 = success.
                   message:
                     type: string
+                required:
+                  - code
+                  - message
   /x/relation/modify:
     post:
       operationId: followUploader
@@ -11667,6 +11733,9 @@ paths:
                     description: 0 = success.
                   message:
                     type: string
+                required:
+                  - code
+                  - message
   /x/web-interface/archive/unlike:
     post:
       operationId: unlikeVideo
@@ -11709,6 +11778,9 @@ paths:
                     description: 0 = success, 65006 = already unliked.
                   message:
                     type: string
+                required:
+                  - code
+                  - message
   /x/v3/fav/resource/unfav:
     post:
       operationId: removeFromFavorites
@@ -11755,6 +11827,9 @@ paths:
                     description: 0 = success.
                   message:
                     type: string
+                required:
+                  - code
+                  - message
   /x/relation/unfollow:
     post:
       operationId: unfollowUploader

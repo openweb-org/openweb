@@ -4,19 +4,19 @@ info:
   version: 1.0.0
   x-openweb:
     spec_version: "2.0"
-    compiled_at: 2026-04-01T23:48:05.685Z
+    compiled_at: 2026-04-01T23:48:05.685000Z
     requires_auth: true
 servers:
-  - url: https://www.pinterest.com
-    x-openweb:
-      transport: page
-      auth:
-        type: cookie_session
-      csrf:
-        type: cookie_to_header
-        cookie: csrftoken
-        header: x-csrftoken
-        scope: [POST, PUT, DELETE]
+- url: https://www.pinterest.com
+  x-openweb:
+    transport: page
+    auth:
+      type: cookie_session
+    csrf:
+      type: cookie_to_header
+      cookie: csrftoken
+      header: x-csrftoken
+      scope: [POST, PUT, DELETE]
 paths:
   /resource/BaseSearchResource/get/:
     get:
@@ -28,52 +28,52 @@ paths:
           stable_id: pinterest_searchPins_v1
           tool_version: 2
       parameters:
-        - name: source_url
-          in: query
-          required: true
-          schema:
-            type: string
-            default: /search/pins/?q=cats
-          description: "Source URL path for the request context"
-        - name: data
-          in: query
-          required: true
-          schema:
-            type: string
-          description: 'JSON string with search options. Example: {"options":{"query":"cats","scope":"pins","page_size":25},"context":{}}'
-          example: '{"options":{"query":"cats","scope":"pins","page_size":25},"context":{}}'
-        - name: x-requested-with
-          in: header
-          required: true
-          schema:
-            type: string
-            const: XMLHttpRequest
-        - name: x-pinterest-appstate
-          in: header
-          required: true
-          schema:
-            type: string
-            const: active
-        - name: x-pinterest-pws-handler
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "www/search/[scope].js"
-          description: "Pinterest PWS handler path"
-        - name: x-pinterest-source-url
-          in: header
-          required: true
-          schema:
-            type: string
-            default: /search/pins/?q=cats
-          description: "Source URL for Pinterest tracking"
-        - name: accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: "application/json, text/javascript, */*, q=0.01"
+      - name: source_url
+        in: query
+        required: true
+        schema:
+          type: string
+          default: /search/pins/?q=cats
+        description: "Source URL path for the request context"
+      - name: data
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'JSON string with search options. Example: {"options":{"query":"cats","scope":"pins","page_size":25},"context":{}}'
+        example: '{"options":{"query":"cats","scope":"pins","page_size":25},"context":{}}'
+      - name: x-requested-with
+        in: header
+        required: true
+        schema:
+          type: string
+          const: XMLHttpRequest
+      - name: x-pinterest-appstate
+        in: header
+        required: true
+        schema:
+          type: string
+          const: active
+      - name: x-pinterest-pws-handler
+        in: header
+        required: true
+        schema:
+          type: string
+          default: "www/search/[scope].js"
+        description: "Pinterest PWS handler path"
+      - name: x-pinterest-source-url
+        in: header
+        required: true
+        schema:
+          type: string
+          default: /search/pins/?q=cats
+        description: "Source URL for Pinterest tracking"
+      - name: accept
+        in: header
+        required: true
+        schema:
+          type: string
+          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -122,6 +122,8 @@ paths:
                             type: string
                             nullable: true
 
+                required:
+                - resource_response
   /resource/PinResource/get/:
     get:
       operationId: getPin
@@ -132,52 +134,52 @@ paths:
           stable_id: pinterest_getPin_v1
           tool_version: 2
       parameters:
-        - name: source_url
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Source URL path, e.g. /pin/12345/"
-          example: /pin/12345/
-        - name: data
-          in: query
-          required: true
-          schema:
-            type: string
-          description: 'JSON string with pin options. Example: {"options":{"id":"12345","field_set_key":"detailed"},"context":{}}'
-          example: '{"options":{"id":"12345","field_set_key":"detailed"},"context":{}}'
-        - name: x-requested-with
-          in: header
-          required: true
-          schema:
-            type: string
-            const: XMLHttpRequest
-        - name: x-pinterest-appstate
-          in: header
-          required: true
-          schema:
-            type: string
-            const: active
-        - name: x-pinterest-pws-handler
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "www/[...path].js"
-          description: "Pinterest PWS handler path"
-        - name: x-pinterest-source-url
-          in: header
-          required: true
-          schema:
-            type: string
-            default: /pin/12345/
-          description: "Source URL for Pinterest tracking"
-        - name: accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: "application/json, text/javascript, */*, q=0.01"
+      - name: source_url
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Source URL path, e.g. /pin/12345/"
+        example: /pin/12345/
+      - name: data
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'JSON string with pin options. Example: {"options":{"id":"12345","field_set_key":"detailed"},"context":{}}'
+        example: '{"options":{"id":"12345","field_set_key":"detailed"},"context":{}}'
+      - name: x-requested-with
+        in: header
+        required: true
+        schema:
+          type: string
+          const: XMLHttpRequest
+      - name: x-pinterest-appstate
+        in: header
+        required: true
+        schema:
+          type: string
+          const: active
+      - name: x-pinterest-pws-handler
+        in: header
+        required: true
+        schema:
+          type: string
+          default: "www/[...path].js"
+        description: "Pinterest PWS handler path"
+      - name: x-pinterest-source-url
+        in: header
+        required: true
+        schema:
+          type: string
+          default: /pin/12345/
+        description: "Source URL for Pinterest tracking"
+      - name: accept
+        in: header
+        required: true
+        schema:
+          type: string
+          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -220,6 +222,8 @@ paths:
                           reaction_counts:
                             type: object
 
+                required:
+                - resource_response
   /resource/BoardResource/get/:
     get:
       operationId: getBoard
@@ -230,52 +234,52 @@ paths:
           stable_id: pinterest_getBoard_v1
           tool_version: 2
       parameters:
-        - name: source_url
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Source URL path, e.g. /username/board-name/"
-          example: /WhoWhatWear/travel/
-        - name: data
-          in: query
-          required: true
-          schema:
-            type: string
-          description: 'JSON string with board options. Requires username and slug as separate fields. Example: {"options":{"username":"WhoWhatWear","slug":"travel","field_set_key":"detailed"},"context":{}}'
-          example: '{"options":{"username":"WhoWhatWear","slug":"travel","field_set_key":"detailed"},"context":{}}'
-        - name: x-requested-with
-          in: header
-          required: true
-          schema:
-            type: string
-            const: XMLHttpRequest
-        - name: x-pinterest-appstate
-          in: header
-          required: true
-          schema:
-            type: string
-            const: active
-        - name: x-pinterest-pws-handler
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "www/[...path].js"
-          description: "Pinterest PWS handler path"
-        - name: x-pinterest-source-url
-          in: header
-          required: true
-          schema:
-            type: string
-            default: /
-          description: "Source URL for Pinterest tracking"
-        - name: accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: "application/json, text/javascript, */*, q=0.01"
+      - name: source_url
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Source URL path, e.g. /username/board-name/"
+        example: /WhoWhatWear/travel/
+      - name: data
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'JSON string with board options. Requires username and slug as separate fields. Example: {"options":{"username":"WhoWhatWear","slug":"travel","field_set_key":"detailed"},"context":{}}'
+        example: '{"options":{"username":"WhoWhatWear","slug":"travel","field_set_key":"detailed"},"context":{}}'
+      - name: x-requested-with
+        in: header
+        required: true
+        schema:
+          type: string
+          const: XMLHttpRequest
+      - name: x-pinterest-appstate
+        in: header
+        required: true
+        schema:
+          type: string
+          const: active
+      - name: x-pinterest-pws-handler
+        in: header
+        required: true
+        schema:
+          type: string
+          default: "www/[...path].js"
+        description: "Pinterest PWS handler path"
+      - name: x-pinterest-source-url
+        in: header
+        required: true
+        schema:
+          type: string
+          default: /
+        description: "Source URL for Pinterest tracking"
+      - name: accept
+        in: header
+        required: true
+        schema:
+          type: string
+          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -311,6 +315,8 @@ paths:
                           privacy:
                             type: string
 
+                required:
+                - resource_response
   /resource/UserResource/get/:
     get:
       operationId: getUserProfile
@@ -321,52 +327,52 @@ paths:
           stable_id: pinterest_getUserProfile_v1
           tool_version: 2
       parameters:
-        - name: source_url
-          in: query
-          required: true
-          schema:
-            type: string
-          description: "Source URL path, e.g. /username/"
-          example: /pinterest/
-        - name: data
-          in: query
-          required: true
-          schema:
-            type: string
-          description: 'JSON string with user options. Use username OR user_id. Example: {"options":{"username":"pinterest","field_set_key":"profile"},"context":{}}'
-          example: '{"options":{"username":"pinterest","field_set_key":"profile"},"context":{}}'
-        - name: x-requested-with
-          in: header
-          required: true
-          schema:
-            type: string
-            const: XMLHttpRequest
-        - name: x-pinterest-appstate
-          in: header
-          required: true
-          schema:
-            type: string
-            const: active
-        - name: x-pinterest-pws-handler
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "www/[...path].js"
-          description: "Pinterest PWS handler path"
-        - name: x-pinterest-source-url
-          in: header
-          required: true
-          schema:
-            type: string
-            default: /
-          description: "Source URL for Pinterest tracking"
-        - name: accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: "application/json, text/javascript, */*, q=0.01"
+      - name: source_url
+        in: query
+        required: true
+        schema:
+          type: string
+        description: "Source URL path, e.g. /username/"
+        example: /pinterest/
+      - name: data
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'JSON string with user options. Use username OR user_id. Example: {"options":{"username":"pinterest","field_set_key":"profile"},"context":{}}'
+        example: '{"options":{"username":"pinterest","field_set_key":"profile"},"context":{}}'
+      - name: x-requested-with
+        in: header
+        required: true
+        schema:
+          type: string
+          const: XMLHttpRequest
+      - name: x-pinterest-appstate
+        in: header
+        required: true
+        schema:
+          type: string
+          const: active
+      - name: x-pinterest-pws-handler
+        in: header
+        required: true
+        schema:
+          type: string
+          default: "www/[...path].js"
+        description: "Pinterest PWS handler path"
+      - name: x-pinterest-source-url
+        in: header
+        required: true
+        schema:
+          type: string
+          default: /
+        description: "Source URL for Pinterest tracking"
+      - name: accept
+        in: header
+        required: true
+        schema:
+          type: string
+          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -406,6 +412,8 @@ paths:
                           website_url:
                             type: string
 
+                required:
+                - resource_response
   /resource/AdvancedTypeaheadResource/get/:
     get:
       operationId: searchTypeahead
@@ -416,52 +424,52 @@ paths:
           stable_id: pinterest_searchTypeahead_v1
           tool_version: 2
       parameters:
-        - name: source_url
-          in: query
-          required: true
-          schema:
-            type: string
-            default: /
-          description: "Source URL path"
-        - name: data
-          in: query
-          required: true
-          schema:
-            type: string
-          description: 'JSON string with typeahead options. Example: {"options":{"term":"cats","count":5},"context":{}}'
-          example: '{"options":{"term":"cats","count":5},"context":{}}'
-        - name: x-requested-with
-          in: header
-          required: true
-          schema:
-            type: string
-            const: XMLHttpRequest
-        - name: x-pinterest-appstate
-          in: header
-          required: true
-          schema:
-            type: string
-            const: active
-        - name: x-pinterest-pws-handler
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "www/index.js"
-          description: "Pinterest PWS handler path"
-        - name: x-pinterest-source-url
-          in: header
-          required: true
-          schema:
-            type: string
-            default: /
-          description: "Source URL for Pinterest tracking"
-        - name: accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: "application/json, text/javascript, */*, q=0.01"
+      - name: source_url
+        in: query
+        required: true
+        schema:
+          type: string
+          default: /
+        description: "Source URL path"
+      - name: data
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'JSON string with typeahead options. Example: {"options":{"term":"cats","count":5},"context":{}}'
+        example: '{"options":{"term":"cats","count":5},"context":{}}'
+      - name: x-requested-with
+        in: header
+        required: true
+        schema:
+          type: string
+          const: XMLHttpRequest
+      - name: x-pinterest-appstate
+        in: header
+        required: true
+        schema:
+          type: string
+          const: active
+      - name: x-pinterest-pws-handler
+        in: header
+        required: true
+        schema:
+          type: string
+          default: "www/index.js"
+        description: "Pinterest PWS handler path"
+      - name: x-pinterest-source-url
+        in: header
+        required: true
+        schema:
+          type: string
+          default: /
+        description: "Source URL for Pinterest tracking"
+      - name: accept
+        in: header
+        required: true
+        schema:
+          type: string
+          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -492,6 +500,8 @@ paths:
                                 images:
                                   type: object
 
+                required:
+                - resource_response
   /resource/RepinResource/create/:
     post:
       operationId: savePin
@@ -503,31 +513,31 @@ paths:
           stable_id: pinterest_savePin_v1
           tool_version: 2
       parameters:
-        - name: x-requested-with
-          in: header
-          required: true
-          schema:
-            type: string
-            const: XMLHttpRequest
-        - name: x-pinterest-appstate
-          in: header
-          required: true
-          schema:
-            type: string
-            const: active
-        - name: x-pinterest-source-url
-          in: header
-          required: true
-          schema:
-            type: string
-            default: /
-          description: "Source URL for Pinterest tracking"
-        - name: accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: "application/json, text/javascript, */*, q=0.01"
+      - name: x-requested-with
+        in: header
+        required: true
+        schema:
+          type: string
+          const: XMLHttpRequest
+      - name: x-pinterest-appstate
+        in: header
+        required: true
+        schema:
+          type: string
+          const: active
+      - name: x-pinterest-source-url
+        in: header
+        required: true
+        schema:
+          type: string
+          default: /
+        description: "Source URL for Pinterest tracking"
+      - name: accept
+        in: header
+        required: true
+        schema:
+          type: string
+          const: "application/json, text/javascript, */*, q=0.01"
       requestBody:
         required: true
         content:
@@ -535,8 +545,8 @@ paths:
             schema:
               type: object
               required:
-                - pin_id
-                - board_id
+              - pin_id
+              - board_id
               properties:
                 pin_id:
                   type: string
@@ -581,31 +591,31 @@ paths:
           stable_id: pinterest_unsavePin_v1
           tool_version: 2
       parameters:
-        - name: x-requested-with
-          in: header
-          required: true
-          schema:
-            type: string
-            const: XMLHttpRequest
-        - name: x-pinterest-appstate
-          in: header
-          required: true
-          schema:
-            type: string
-            const: active
-        - name: x-pinterest-source-url
-          in: header
-          required: true
-          schema:
-            type: string
-            default: /
-          description: "Source URL for Pinterest tracking"
-        - name: accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: "application/json, text/javascript, */*, q=0.01"
+      - name: x-requested-with
+        in: header
+        required: true
+        schema:
+          type: string
+          const: XMLHttpRequest
+      - name: x-pinterest-appstate
+        in: header
+        required: true
+        schema:
+          type: string
+          const: active
+      - name: x-pinterest-source-url
+        in: header
+        required: true
+        schema:
+          type: string
+          default: /
+        description: "Source URL for Pinterest tracking"
+      - name: accept
+        in: header
+        required: true
+        schema:
+          type: string
+          const: "application/json, text/javascript, */*, q=0.01"
       requestBody:
         required: true
         content:
@@ -613,8 +623,8 @@ paths:
             schema:
               type: object
               required:
-                - pin_id
-                - board_id
+              - pin_id
+              - board_id
               properties:
                 pin_id:
                   type: string
@@ -647,31 +657,31 @@ paths:
           stable_id: pinterest_followBoard_v1
           tool_version: 2
       parameters:
-        - name: x-requested-with
-          in: header
-          required: true
-          schema:
-            type: string
-            const: XMLHttpRequest
-        - name: x-pinterest-appstate
-          in: header
-          required: true
-          schema:
-            type: string
-            const: active
-        - name: x-pinterest-source-url
-          in: header
-          required: true
-          schema:
-            type: string
-            default: /
-          description: "Source URL for Pinterest tracking"
-        - name: accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: "application/json, text/javascript, */*, q=0.01"
+      - name: x-requested-with
+        in: header
+        required: true
+        schema:
+          type: string
+          const: XMLHttpRequest
+      - name: x-pinterest-appstate
+        in: header
+        required: true
+        schema:
+          type: string
+          const: active
+      - name: x-pinterest-source-url
+        in: header
+        required: true
+        schema:
+          type: string
+          default: /
+        description: "Source URL for Pinterest tracking"
+      - name: accept
+        in: header
+        required: true
+        schema:
+          type: string
+          const: "application/json, text/javascript, */*, q=0.01"
       requestBody:
         required: true
         content:
@@ -679,7 +689,7 @@ paths:
             schema:
               type: object
               required:
-                - board_id
+              - board_id
               properties:
                 board_id:
                   type: string
@@ -718,31 +728,31 @@ paths:
           stable_id: pinterest_unfollowBoard_v1
           tool_version: 2
       parameters:
-        - name: x-requested-with
-          in: header
-          required: true
-          schema:
-            type: string
-            const: XMLHttpRequest
-        - name: x-pinterest-appstate
-          in: header
-          required: true
-          schema:
-            type: string
-            const: active
-        - name: x-pinterest-source-url
-          in: header
-          required: true
-          schema:
-            type: string
-            default: /
-          description: "Source URL for Pinterest tracking"
-        - name: accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: "application/json, text/javascript, */*, q=0.01"
+      - name: x-requested-with
+        in: header
+        required: true
+        schema:
+          type: string
+          const: XMLHttpRequest
+      - name: x-pinterest-appstate
+        in: header
+        required: true
+        schema:
+          type: string
+          const: active
+      - name: x-pinterest-source-url
+        in: header
+        required: true
+        schema:
+          type: string
+          default: /
+        description: "Source URL for Pinterest tracking"
+      - name: accept
+        in: header
+        required: true
+        schema:
+          type: string
+          const: "application/json, text/javascript, */*, q=0.01"
       requestBody:
         required: true
         content:
@@ -750,7 +760,7 @@ paths:
             schema:
               type: object
               required:
-                - board_id
+              - board_id
               properties:
                 board_id:
                   type: string
@@ -779,52 +789,52 @@ paths:
           stable_id: pinterest_getHomeFeed_v1
           tool_version: 2
       parameters:
-        - name: source_url
-          in: query
-          required: true
-          schema:
-            type: string
-            default: /
-          description: "Source URL path"
-        - name: data
-          in: query
-          required: true
-          schema:
-            type: string
-          description: 'JSON string with feed options. Example: {"options":{"field_set_key":"hifi","in_nux":false,"prependPartner":false,"page_size":25},"context":{}}'
-          example: '{"options":{"field_set_key":"hifi","in_nux":false,"prependPartner":false,"page_size":25},"context":{}}'
-        - name: x-requested-with
-          in: header
-          required: true
-          schema:
-            type: string
-            const: XMLHttpRequest
-        - name: x-pinterest-appstate
-          in: header
-          required: true
-          schema:
-            type: string
-            const: active
-        - name: x-pinterest-pws-handler
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "www/index.js"
-          description: "Pinterest PWS handler path"
-        - name: x-pinterest-source-url
-          in: header
-          required: true
-          schema:
-            type: string
-            default: /
-          description: "Source URL for Pinterest tracking"
-        - name: accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: "application/json, text/javascript, */*, q=0.01"
+      - name: source_url
+        in: query
+        required: true
+        schema:
+          type: string
+          default: /
+        description: "Source URL path"
+      - name: data
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'JSON string with feed options. Example: {"options":{"field_set_key":"hifi","in_nux":false,"prependPartner":false,"page_size":25},"context":{}}'
+        example: '{"options":{"field_set_key":"hifi","in_nux":false,"prependPartner":false,"page_size":25},"context":{}}'
+      - name: x-requested-with
+        in: header
+        required: true
+        schema:
+          type: string
+          const: XMLHttpRequest
+      - name: x-pinterest-appstate
+        in: header
+        required: true
+        schema:
+          type: string
+          const: active
+      - name: x-pinterest-pws-handler
+        in: header
+        required: true
+        schema:
+          type: string
+          default: "www/index.js"
+        description: "Pinterest PWS handler path"
+      - name: x-pinterest-source-url
+        in: header
+        required: true
+        schema:
+          type: string
+          default: /
+        description: "Source URL for Pinterest tracking"
+      - name: accept
+        in: header
+        required: true
+        schema:
+          type: string
+          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -864,6 +874,8 @@ paths:
                         type: string
                         nullable: true
 
+                required:
+                - resource_response
   /resource/NewsHubResource/get/:
     get:
       operationId: getNotifications
@@ -874,52 +886,52 @@ paths:
           stable_id: pinterest_getNotifications_v1
           tool_version: 2
       parameters:
-        - name: source_url
-          in: query
-          required: true
-          schema:
-            type: string
-            default: /notifications/
-          description: "Source URL path"
-        - name: data
-          in: query
-          required: true
-          schema:
-            type: string
-          description: 'JSON string with notification options. Example: {"options":{"field_set_key":"default","page_size":25},"context":{}}'
-          example: '{"options":{"field_set_key":"default","page_size":25},"context":{}}'
-        - name: x-requested-with
-          in: header
-          required: true
-          schema:
-            type: string
-            const: XMLHttpRequest
-        - name: x-pinterest-appstate
-          in: header
-          required: true
-          schema:
-            type: string
-            const: active
-        - name: x-pinterest-pws-handler
-          in: header
-          required: true
-          schema:
-            type: string
-            default: "www/notifications.js"
-          description: "Pinterest PWS handler path"
-        - name: x-pinterest-source-url
-          in: header
-          required: true
-          schema:
-            type: string
-            default: /notifications/
-          description: "Source URL for Pinterest tracking"
-        - name: accept
-          in: header
-          required: true
-          schema:
-            type: string
-            const: "application/json, text/javascript, */*, q=0.01"
+      - name: source_url
+        in: query
+        required: true
+        schema:
+          type: string
+          default: /notifications/
+        description: "Source URL path"
+      - name: data
+        in: query
+        required: true
+        schema:
+          type: string
+        description: 'JSON string with notification options. Example: {"options":{"field_set_key":"default","page_size":25},"context":{}}'
+        example: '{"options":{"field_set_key":"default","page_size":25},"context":{}}'
+      - name: x-requested-with
+        in: header
+        required: true
+        schema:
+          type: string
+          const: XMLHttpRequest
+      - name: x-pinterest-appstate
+        in: header
+        required: true
+        schema:
+          type: string
+          const: active
+      - name: x-pinterest-pws-handler
+        in: header
+        required: true
+        schema:
+          type: string
+          default: "www/notifications.js"
+        description: "Pinterest PWS handler path"
+      - name: x-pinterest-source-url
+        in: header
+        required: true
+        schema:
+          type: string
+          default: /notifications/
+        description: "Source URL for Pinterest tracking"
+      - name: accept
+        in: header
+        required: true
+        schema:
+          type: string
+          const: "application/json, text/javascript, */*, q=0.01"
       responses:
         "200":
           description: Success.
@@ -955,3 +967,5 @@ paths:
                       bookmark:
                         type: string
                         nullable: true
+                required:
+                - resource_response

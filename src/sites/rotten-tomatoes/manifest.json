@@ -1,0 +1,17 @@
+{
+  "name": "rotten-tomatoes",
+  "display_name": "Rotten Tomatoes",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.rottentomatoes.com",
+  "description": "Rotten Tomatoes — movie search, details, Tomatometer and audience scores via adapter",
+  "requires_auth": false,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 3,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 3,
+    "ws_count": 0
+  }
+}
