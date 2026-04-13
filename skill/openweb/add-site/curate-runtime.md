@@ -217,33 +217,22 @@ shared helpers via the 4th `execute()` parameter:
 ### Intercept Pattern
 
 When the site's own JS must trigger the API call (e.g., client-side signing
-like JD's `h5st`, Akamai sensor-blocked `page.evaluate(fetch)`), use passive
-response interception:
+like JD's `h5st`, Akamai sensor-blocked `page.evaluate(fetch)`), use the
+shared `interceptResponse()` helper from `src/lib/adapter-helpers.ts`:
 
 ```typescript
-async function interceptApi(
-  page: Page, urlMatch: string, navigateUrl: string, timeout = 20_000,
-): Promise<unknown> {
-  let captured: unknown = null
-  const handler = async (resp: PwResponse) => {
-    if (captured) return
-    if (resp.url().includes(urlMatch)) {
-      try { captured = await resp.json() } catch {}
-    }
-  }
-  page.on('response', handler)
-  try {
-    await page.goto(navigateUrl, { waitUntil: 'load', timeout: 30_000 })
-    const deadline = Date.now() + timeout
-    while (!captured && Date.now() < deadline) {
-      await new Promise(r => setTimeout(r, 500))
-    }
-  } finally {
-    page.off('response', handler)
-  }
-  return captured
-}
+import { interceptResponse } from '../../../lib/adapter-helpers.js'
+
+const data = await interceptResponse(page, {
+  urlMatch: '/api/v1/items/',
+  navigateUrl: `https://example.com/items/${slug}`,
+  waitUntil: 'domcontentloaded',
+  timeout: 20_000,
+})
 ```
+
+See `knowledge/adapter-recipes.md` §Response Interception for the full pattern
+and decision boundary vs `pageFetch`.
 
 Real examples:
 - `src/sites/homedepot/adapters/homedepot-web.ts` — generic `interceptGraphQL()` helper

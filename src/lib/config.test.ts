@@ -23,7 +23,7 @@ beforeEach(() => {
 
 afterEach(() => {
   if (originalHome === undefined) {
-    process.env.OPENWEB_HOME = undefined
+    Reflect.deleteProperty(process.env, 'OPENWEB_HOME')
   } else {
     process.env.OPENWEB_HOME = originalHome
   }

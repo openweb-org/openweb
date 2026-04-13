@@ -7,7 +7,7 @@
 
 L3 adapters are the escape hatch. When a site's internal API is too complex for L2 primitives — proprietary module systems, custom serialization, non-HTTP protocols — you write a CodeAdapter: arbitrary JS that runs in the browser via Patchright (Playwright fork with CDP detection bypass), or in Node.js for sites that don't need a browser.
 
-Adapters must be **self-contained** — they cannot import from `src/`. After packaging, adapters load from the compile cache (`$OPENWEB_HOME/sites/<site>/adapters/`), where relative imports break. Shared utilities (`pageFetch`, `graphqlFetch`, `interceptResponse`, error factories) are injected by the runtime via the `execute()` 4th parameter. For node-transport adapters, import `nodeFetch` directly from `src/lib/adapter-helpers.ts`.
+Adapters must be **self-contained** — they cannot import from `src/` (after packaging, adapters load from the compile cache where relative imports break). Runtime-injected helpers (`pageFetch`, `graphqlFetch`, error factories) arrive via the `execute()` 4th parameter. Two additional helpers (`interceptResponse`, `nodeFetch`) must be imported directly — the build step (`scripts/build-adapters.js`) bundles each adapter with esbuild, which resolves these imports at build time. This is the only exception to the "no imports" rule.
 
 -> See: `src/runtime/adapter-executor.ts`
 
