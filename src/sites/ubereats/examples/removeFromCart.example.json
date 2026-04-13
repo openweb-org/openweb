@@ -2,6 +2,7 @@
   "operation_id": "removeFromCart",
   "method": "post",
   "replay_safety": "unsafe_mutation",
+  "order": 2,
   "cases": [
     {
       "input": { "itemUuid": "66c6b385-0b1f-5a75-ada7-649e8b309fff" },

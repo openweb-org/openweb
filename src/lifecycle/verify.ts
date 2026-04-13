@@ -76,6 +76,7 @@ interface HttpTestFile {
   readonly protocol?: 'http'
   readonly method?: string
   readonly replay_safety?: 'safe_read' | 'unsafe_mutation'
+  readonly order?: number
   readonly cases: HttpTestCase[]
 }
 
@@ -83,6 +84,7 @@ interface WsTestFile {
   readonly operation_id: string
   readonly protocol: 'ws'
   readonly mode: 'stream' | 'unary'
+  readonly order?: number
   readonly cases: WsTestCase[]
 }
 
@@ -213,9 +215,24 @@ export async function verifySite(
     } catch { /* asyncapi load failure — WS ops will FAIL individually */ }
   }
 
+  // Pre-sort example files by optional `order` field (lower = earlier).
+  // Files without `order` sort after ordered files, alphabetically among themselves.
+  const parsed: { fileName: string; testFile: TestFile }[] = []
   for (const fileName of exampleFiles) {
     const raw = await readFile(path.join(examplesDir, fileName), 'utf8')
-    const testFile = JSON.parse(raw) as TestFile
+    try {
+      parsed.push({ fileName, testFile: JSON.parse(raw) as TestFile })
+    } catch {
+      operations.push({ operationId: fileName.replace('.example.json', ''), status: 'FAIL', driftType: 'error', detail: 'invalid JSON in example file' })
+    }
+  }
+  parsed.sort((a, b) => {
+    const oa = a.testFile.order ?? Number.MAX_SAFE_INTEGER
+    const ob = b.testFile.order ?? Number.MAX_SAFE_INTEGER
+    return oa !== ob ? oa - ob : a.fileName.localeCompare(b.fileName)
+  })
+
+  for (const { fileName, testFile } of parsed) {
 
     // Filter by --ops if specified
     if (options?.ops && !options.ops.includes(testFile.operation_id)) continue

@@ -1,6 +1,7 @@
 {
   "operation_id": "emptyCart",
   "replay_safety": "unsafe_mutation",
+  "order": 3,
   "cases": [
     {
       "input": {},

@@ -1,6 +1,7 @@
 {
   "operation_id": "addToCart",
   "replay_safety": "unsafe_write",
+  "order": 1,
   "cases": [
     {
       "input": { "storeUuid": "8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7", "itemUuid": "66c6b385-0b1f-5a75-ada7-649e8b309fff" },
