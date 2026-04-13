@@ -22,6 +22,12 @@
 
 **Verification:** 3/3 read ops pass (`pnpm --silent dev verify uber`). addToCart is write-op (skipped by default).
 
+## 2026-04-13 — Fix: addToCart optimization — remove redundant API call and waits
+
+**Context:** addToCart was timing out due to a redundant `getMenuItemV1` API validation call and overly conservative wait times. The item is already validated by catalog lookup in step 2.
+**Changes:** Removed `getMenuItemV1` call (catalog lookup already confirms item existence). Reduced `ensureUberEatsPage` timeout from 30s to 15s and wait from 3s to 1.5s. Removed post-navigation 4s wait (replaced by `waitFor` on add button). Reduced post-click wait from 3s to 1.5s.
+**Verification:** `pnpm build` passes. addToCart completes within timeout budget.
+
 ## 2026-03-23: Initial discovery — Eats search, ride history, Eats orders
 
 **What changed:**

@@ -55,11 +55,11 @@ openweb quora exec getProfile '{"username": "Adam-DAngelo"}'
 
 ### Transport
 - **page** transport with adapter — formkey is page-scoped, direct GraphQL replay returns null data
-- Search: intercept `SearchResultsListQuery` GQL response during page navigation
+- Search: DOM extraction on a fresh page (Quora SSR-renders search results; no separate GQL query). A new page is opened to avoid stale state from the warm-up page.
 - Question/answers/profile: DOM extraction from navigated pages
 
 ### Extraction
-- Search results: intercepted GraphQL response (structured JSON)
+- Search results: DOM extraction from SSR-rendered search page (question links, titles, answer counts)
 - Question detail: DOM extraction (title, stats, topic links, top answer previews)
 - Answers: DOM extraction via `.q-box.spacing_log_answer_content` selectors
 - Profile: DOM extraction (stats parsed from body text, bio from `.q-text.qu-wordBreak--break-word`)

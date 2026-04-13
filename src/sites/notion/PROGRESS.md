@@ -27,3 +27,9 @@
 - Added `verified: true` and `signals: [page-verified]` to all build sections
 - Standardized all 6 example files: added `method`, `replay_safety` (snake_case), removed camelCase `replaySafety`
 - Fixed DOC.md Site Internals heading levels (## → ###)
+
+## 2026-04-13 — Schema Fix
+
+**Context:** `recordMap.block` and `highlight.text` may be absent depending on page content and query context.
+**Changes:** openapi.yaml — removed `required` on `recordMap.block` and `highlight.text` properties.
+**Verification:** Verify pass — schema accepts responses with omitted block/highlight fields.

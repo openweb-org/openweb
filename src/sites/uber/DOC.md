@@ -80,6 +80,6 @@ openweb uber exec getEatsOrderHistory '{"lastWorkflowUUID":"<nextCursor>"}'
 - **Store must be open**: addToCart validates store availability via API and fails fast if closed. Previous approach navigated blindly.
 - **Ride history not available**: Only Eats operations are supported currently.
 - **DataDome observed**: DataDome bot detection scripts are present on ubereats.com. The `_p/api` endpoints work reliably from node transport with session cookies.
-- **addToCart reliability**: Uses stable `data-testid="add-to-cart-button"` selector. Item existence validated via `getMenuItemV1` API before navigation.
+- **addToCart reliability**: Uses stable `data-testid="add-to-cart-button"` selector. Item existence validated via catalog lookup during `getStoreV1` call (no separate `getMenuItemV1` call needed).
 - **removeFromCart reliability**: Depends on browser interaction with cart UI elements. Cart must have items from the current browser session.
 - **Store UUID format**: Search results return full UUID format (e.g. `8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7`). URL slugs use base64url encoding of UUID bytes.

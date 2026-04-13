@@ -1,5 +1,15 @@
 # Yahoo Finance Fixture — Progress
 
+## 2026-04-13: Verify fix — x-openweb.headers + inter-op delay
+
+**What changed:**
+- Added `x-openweb.headers` with browser User-Agent to server block and per-op overrides — prevents 429 rate limiting on node transport
+- Verify now passes 9/9 with 1.5s inter-op delay (infrastructure change in verify.ts)
+
+**Why:** All 9 ops returned 429 during batch verify. Yahoo Finance rate-limits requests without browser-like UA.
+
+---
+
 ## 2026-03-24: Initial discovery — 9 operations
 
 **What changed:**

@@ -61,6 +61,7 @@ openweb doordash exec removeFromCart '{"orderCartId": "cart-uuid", "orderItemId"
 ### Auth
 - **cookie_session** — user must be logged in via managed browser
 - Auth cookies: `dd_session_id`, `ddweb_token`
+- Auth cascade fix: login session discovery now correctly resolves cookie presence across session states
 - No CSRF header injection needed (reads and writes work with cookies only)
 
 ### Transport

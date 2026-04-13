@@ -31,3 +31,9 @@
 - REST v1 endpoints chosen over GraphQL for stability (doc_id hashes change)
 
 **Verification:** compile-time verify shows auth_drift (expected without live browser)
+
+## 2026-04-13 — Auth Fix for getNotifications, getReels, getStories
+
+**Context:** `getNotifications`, `getReels`, and `getStories` returned 401/403 errors because they were missing required Instagram headers (`x-ig-app-id`, `x-requested-with`).
+**Changes:** Fixed auth in `adapters/instagram-api.ts` — these operations now route through the adapter's `fetchJson`/`postJson` helpers which inject `IG_HEADERS` (`x-ig-app-id`, `x-requested-with`) and CSRF token. `getReels` uses the adapter's `postJson` for the POST to `/api/v1/clips/user/`.
+**Verification:** All three operations authenticate correctly with the shared header injection path.

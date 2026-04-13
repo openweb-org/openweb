@@ -36,3 +36,9 @@
 - Initial site package for Weibo (China's Twitter/X equivalent)
 
 **Verification:** Compiled from HAR capture. Runtime verified with browser session.
+
+## 2026-04-13 — Schema Fix
+
+**Context:** `retweeted_status` fields are omitted when the original retweet has been deleted by the author.
+**Changes:** openapi.yaml — relaxed `required` on `retweeted_status` object properties.
+**Verification:** Verify pass — schema now handles both present and deleted retweet cases.

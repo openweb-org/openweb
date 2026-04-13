@@ -12,3 +12,9 @@
 - Rediscovery validates current Indeed DOM structure and extraction patterns
 
 **Verification:** Runtime verify with --browser, manual exec of target intents
+
+## 2026-04-13 — Schema Fix
+
+**Context:** getCompanySalaries response objects omit fields when salary data is sparse or unavailable.
+**Changes:** openapi.yaml — removed required on getCompanySalaries response schema.
+**Verification:** Verify pass; schema accepts partial salary objects from the API.

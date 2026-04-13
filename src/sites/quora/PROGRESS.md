@@ -23,3 +23,9 @@
 - New site addition — Q&A platform with 4 core read operations
 
 **Verification:** Build passes, runtime verify pending
+
+## 2026-04-13 — Fix: search extraction + schema
+
+**Context:** Quora stopped firing `SearchResultsListQuery` GQL during search page navigation; SSR now renders results directly. The warm-up page could also carry stale state into search.
+**Changes:** Replaced GQL interception with DOM extraction on a fresh page (avoids warm-up stale state). Made `qid` nullable in openapi.yaml since DOM extraction cannot resolve numeric question IDs. Lint fix: `parseInt` to `Number.parseInt`.
+**Verification:** `pnpm build` passes. searchQuestions returns results via DOM extraction.

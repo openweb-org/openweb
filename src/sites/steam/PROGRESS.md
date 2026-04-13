@@ -21,3 +21,9 @@
 **Verification:** All 10 endpoints confirmed returning valid JSON via browser-based testing.
 
 **Knowledge updates:** None — Steam follows standard public REST API patterns with no novel auth or extraction.
+
+## 2026-04-13 — Schema Fix
+
+**Context:** getFeatured response `large_capsules` items may omit certain fields depending on sale state or content type.
+**Changes:** openapi.yaml — removed `required` constraint on `large_capsules` array items.
+**Verification:** Verify pass — schema now aligns with observed response variance.

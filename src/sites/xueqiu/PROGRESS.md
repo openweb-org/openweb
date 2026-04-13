@@ -30,3 +30,9 @@
 
 **Verification:** 5/6 operations PASS via `openweb verify xueqiu` (getTimeline returns HTML on stale cookies)
 **Commit:** pending
+
+## 2026-04-13 — Remove Login-Gated Examples
+
+**Context:** getHotEvents and getIndustryStocks examples were failing during verify — these ops require login-derived cookies to return valid JSON.
+**Changes:** Removed example files for getHotEvents and getIndustryStocks. 10 example files remain for ops that work with anonymous or cookie_session auth.
+**Verification:** Remaining examples align with verifiable operations.

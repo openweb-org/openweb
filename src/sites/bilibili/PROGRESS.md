@@ -38,3 +38,9 @@ Three reverse write operations to complement existing write ops:
 - `pnpm build` — 893 files, 96 sites
 - `pnpm --silent dev verify bilibili` — PASS 8/8 read ops
 - `pnpm --silent dev verify bilibili --write --ops unlikeVideo,removeFromFavorites,unfollowUploader --browser` — PASS 3/3 write ops
+
+## 2026-04-13 — Schema Fix
+
+**Context:** searchVideos returns mixed-type items where some fields are absent depending on result type.
+**Changes:** openapi.yaml — relaxed required on mixed-type search items (searchVideos response schema).
+**Verification:** Verify pass; schema now aligns with observed API responses.

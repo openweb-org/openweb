@@ -11,3 +11,9 @@
 - Focused on 4 core operations per user request
 
 **Verification:** All 4 operations returned 200 during capture. Pending `openweb verify`.
+
+## 2026-04-13 — Schema Fix
+
+**Context:** Stream and game objects are null when a channel is offline, causing required-field validation failures.
+**Changes:** openapi.yaml — removed `required` on stream and game object schemas.
+**Verification:** Verify pass — schema accepts both online (populated) and offline (null) states.

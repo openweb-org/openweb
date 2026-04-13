@@ -20,3 +20,9 @@
 - Search response has nested FacetV2 structure with `custom` field as JSON string containing `store_id`
 
 **Verification:** All 3 operations PASS — `openweb verify doordash` green. Content-level verified: search returns real restaurants with names/categories/images, menu returns full item lists with prices, order history returns real past orders with items and totals. `pnpm build` exits 0.
+
+## 2026-04-13 — Auth Fix
+
+**Context:** Login session discovery failed when the auth cascade couldn't find valid cookies on certain session states.
+**Changes:** Fixed auth cascade in `openapi.yaml` so cookie_session discovery correctly identifies logged-in sessions via `dd_session_id`/`ddweb_token`.
+**Verification:** Auth cascade now reliably detects login state; operations that require auth no longer fail on valid sessions.

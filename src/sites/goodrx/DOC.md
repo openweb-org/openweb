@@ -60,6 +60,6 @@ No auth required. All operations access public drug pricing data.
 
 ## Known Issues
 - **Empty results in headless mode**: All ops verify (schema-valid) but return empty arrays. PerimeterX likely blocks headless Playwright; DOM selectors may also be outdated.
-- **PerimeterX warm-up**: Adapter navigates to homepage first before drug pages. Direct navigation may trigger blocks.
+- **PerimeterX bot detection**: Blocks direct HTTP and poisons cookies during sequential operations. Mitigated via inter-op delay + browser context recovery: adapter clears cookies, resets to `about:blank`, and retries with progressive backoff (up to 4 attempts). Adapter `init` also detects and clears poisoned PX state from prior warm-up.
 - **Location-dependent pricing**: Pharmacy prices vary by detected geolocation.
 - **DOM structure changes**: Adapter parses DOM elements directly — GoodRx UI changes may break extraction.

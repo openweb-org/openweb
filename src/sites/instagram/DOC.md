@@ -183,6 +183,7 @@ openweb instagram exec searchUsers '{"query":"nasa"}'
 - `cookie_session` — session cookies from logged-in browser (`sessionid`, `ds_user_id`, `csrftoken`)
 - CSRF: `csrftoken` cookie → `x-csrftoken` header (POST/PUT/DELETE only)
 - Additional headers sent automatically: `x-ig-app-id`, `x-ig-www-claim`
+- `getNotifications`, `getReels`, `getStories` require adapter-injected `x-ig-app-id` and `x-requested-with` headers — direct fetch without these headers returns 401/403
 
 ### Transport
 - `page` — Meta bot detection blocks direct node HTTP requests

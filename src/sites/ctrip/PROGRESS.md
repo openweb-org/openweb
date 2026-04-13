@@ -47,3 +47,9 @@ searchFlights, getFlightCalendarPrices, getFlightComfort, getGeneralInfo, getHot
 **Verification:** Original 10 operations PASS via `pnpm dev verify ctrip` (no examples for 4 new ops)
 
 **Known issue:** Trip.com APIs return HTTP 200 with error content (SourceEnum/locale errors) when browser session context is stale. Verify passes on status code but response may not contain useful data without a fresh Trip.com page session.
+
+## 2026-04-13 — Schema Fix
+
+**Context:** Flight and train response objects omit certain fields depending on route availability and carrier.
+**Changes:** openapi.yaml — removed strict required on flight/train response schemas.
+**Verification:** Verify pass; schemas now tolerate optional fields in live responses.

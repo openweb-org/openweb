@@ -1,5 +1,16 @@
 # YouTube — Progress
 
+## 2026-04-13: Verify fix — auth + getTranscript
+
+**What changed:**
+- Fixed likeVideo/unlikeVideo auth: simplified example params (removed redundant key/context fields)
+- Switched getTranscript from innertube /get_transcript to timedtext API with browser auth context
+- Updated examples for likeVideo, unlikeVideo, getTranscript
+
+**Why:** likeVideo/unlikeVideo failed with 401 (stale example format). getTranscript returned 400 FAILED_PRECONDITION because /get_transcript needs authenticated session.
+
+---
+
 ## 2026-04-11 — Discovery & Implementation
 
 ## What was added

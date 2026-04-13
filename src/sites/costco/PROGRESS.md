@@ -38,3 +38,9 @@
 - PerimeterX blocks ALL network requests from page context (fetch, XHR) including to third-party domains like bazaarvoice.com
 
 **Verification:** API-level PASS (4 read ops: searchProducts, getProductDetail, getProductReviews, findWarehouses). addToCart unverified (write, requires auth). Build passes.
+
+## 2026-04-13 — Schema Fix
+
+**Context:** browseCategory filter objects sometimes omit fields depending on category type.
+**Changes:** openapi.yaml — removed required on browseCategory filters response schema.
+**Verification:** Verify pass; schema accepts the variable filter shapes returned by the API.
