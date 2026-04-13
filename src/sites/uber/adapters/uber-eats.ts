@@ -3,14 +3,13 @@ import type { Page } from 'patchright'
 /**
  * Uber Eats adapter — cart operations via API validation + minimal DOM clicks.
  *
- * Probe findings (2026-04-11):
- * - Cart state is managed client-side in React state (NOT localStorage, NOT server)
- * - No server-side cart mutation API exists (verified via network capture + 35+ endpoint probes)
- * - fetch is NOT patched (native), no webpack chunks, no SSR globals
- * - Stable selectors: data-testid="add-to-cart-button", data-testid="quick-add-button"
- * - Cart does NOT persist across page sessions — each exec gets a fresh page
- *
- * Architecture: API calls for validation, minimal DOM for unavoidable cart mutations.
+ * Probe findings (2026-04-13):
+ * - Cart UI is client-side React state, but server-side draft orders persist via getDraftOrdersByEaterUuidV1
+ * - No server-side cart MUTATION API exists (10 endpoints probed, all 404)
+ * - addToCart: quickView URL + click "Add to order" button (creates server-side draft order)
+ * - removeFromCart: getDraftOrdersByEaterUuidV1 → checkout editItem URL → click "Remove from cart"
+ * - Stable selectors: data-testid="add-to-cart-button" for add; text-match "Remove from cart" for remove
+ * - Items with hasCustomizations=true may fail addToCart if required options aren't filled
  */
 
 type Errors = {
@@ -159,77 +158,77 @@ async function removeFromCart(page: Page, params: Record<string, unknown>, helpe
 
   if (!itemUuid) throw errors.missingParam('itemUuid')
 
-  // Navigate to UberEats home
-  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
+  // Step 1: Navigate to checkout (gets us on ubereats.com for API cookies)
+  await page.goto(`${BASE}/checkout`, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => {})
   await page.waitForTimeout(3000)
 
-  // Check cart badge — if empty, nothing to remove
-  const beforeCount = await readCartBadge(page)
-  if (beforeCount === 0) {
-    throw errors.retriable('Cart is empty — UberEats cart is in-memory only and does not persist across browser sessions')
-  }
-
-  // Open the cart by clicking the parent button of the cart badge
-  const cartClicked = await page.evaluate(() => {
-    const badge = document.querySelector('[data-testid="view-carts-badge"]')
-    if (!badge) return false
-    let el: Element | null = badge
-    while (el) {
-      if (el.tagName === 'BUTTON' || el.tagName === 'A') {
-        (el as HTMLElement).click()
-        return true
+  // Step 2: Query server-side draft orders to find the item
+  const draftInfo = await page.evaluate(async (uuid: string) => {
+    const r = await fetch('https://www.ubereats.com/_p/api/getDraftOrdersByEaterUuidV1', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-csrf-token': 'x' },
+      body: JSON.stringify({}),
+    })
+    const d = await r.json()
+    for (const order of d.data?.draftOrders || []) {
+      for (const item of order.shoppingCart?.items || []) {
+        if (item.uuid === uuid) {
+          return { shoppingCartItemUuid: item.shoppingCartItemUuid, draftOrderUUID: order.uuid }
+        }
       }
-      el = el.parentElement
     }
-    (badge as HTMLElement).click()
-    return true
+    return null
+  }, itemUuid)
+
+  if (!draftInfo) {
+    throw errors.retriable('Item not in cart — no draft order contains this item UUID')
+  }
+
+  // Step 3: Navigate directly to the edit-item modal on checkout
+  const modctx = JSON.stringify({
+    itemUuid: draftInfo.shoppingCartItemUuid,
+    draftOrderUUID: draftInfo.draftOrderUUID,
   })
+  const editUrl = `${BASE}/checkout?mod=editItem&modctx=${encodeURIComponent(modctx)}&ps=1`
+  await page.goto(editUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => {})
 
-  if (!cartClicked) throw errors.retriable('Cart button not found')
-  await page.waitForTimeout(3000)
-
-  // Navigate to checkout if not already there
-  if (!page.url().includes('/checkout')) {
-    await page.goto(`${BASE}/checkout`, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => {})
-    await page.waitForTimeout(3000)
+  // Step 4: Wait for "Remove from cart" button with retry (modal may take time to render)
+  let removeClicked = false
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await page.waitForTimeout(2000)
+    removeClicked = await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'))
+      const btn = btns.find(b => b.textContent?.trim() === 'Remove from cart')
+      if (btn) { btn.click(); return true }
+      return false
+    })
+    if (removeClicked) break
   }
 
-  // Look for remove/delete/decrease buttons
-  const selectors = [
-    '[data-testid="cart-item-delete-button"]',
-    '[data-testid="delete-button"]',
-    '[data-testid="remove-button"]',
-    '[data-testid="quantity-selector-decrease"]',
-    '[data-testid*="delete"]',
-    '[data-testid*="remove"]',
-    'button[aria-label*="Remove"]',
-    'button[aria-label*="Delete"]',
-  ]
+  if (!removeClicked) {
+    throw errors.retriable('Remove from cart button not found — checkout UI may have changed')
+  }
+  await page.waitForTimeout(2000)
 
-  let clicked = false
-  for (const sel of selectors) {
-    const btn = page.locator(sel).first()
-    try {
-      await btn.waitFor({ state: 'visible', timeout: 2_000 })
-      await btn.click({ timeout: 5000 })
-      clicked = true
-      await page.waitForTimeout(2000)
-      break
-    } catch {
-      /* retry next selector */
+  // Step 5: Verify removal via draft orders API
+  const afterCount = await page.evaluate(async () => {
+    const r = await fetch('https://www.ubereats.com/_p/api/getDraftOrdersByEaterUuidV1', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-csrf-token': 'x' },
+      body: JSON.stringify({}),
+    })
+    const d = await r.json()
+    let total = 0
+    for (const order of d.data?.draftOrders || []) {
+      total += order.shoppingCart?.items?.length || 0
     }
-  }
-
-  if (!clicked) {
-    throw errors.retriable('Could not find remove button — cart UI may have changed')
-  }
-
-  const cartCount = await readCartBadge(page)
+    return total
+  })
 
   return {
     success: true,
     itemUuid,
-    cartCount,
+    cartCount: afterCount,
   }
 }
 

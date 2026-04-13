@@ -1,5 +1,20 @@
 # Uber Fixture — Progress
 
+## 2026-04-13: Fix removeFromCart — server-side draft orders + checkout edit modal
+
+**Context:** removeFromCart was failing with selector timeout. The previous implementation tried guessed selectors (`cart-item-delete-button`, `delete-button`, etc.) on the checkout page, none of which exist.
+
+**Key discovery:** UberEats cart IS server-side via draft orders. `getDraftOrdersByEaterUuidV1` returns cart items with `shoppingCartItemUuid` and `draftOrderUUID` after DOM add-to-cart. This corrects the earlier probe finding that "no server-side cart API exists" — the draft order read APIs were returning empty because no items had been added during probing.
+
+**Changes:**
+- Rewrote `removeFromCart` adapter: calls `getDraftOrdersByEaterUuidV1` to find item, navigates directly to `/checkout?mod=editItem&modctx=...` using draft order IDs, clicks "Remove from cart" button with retry loop
+- Switched test fixture to DASANI Bottled Water (`66c6b385-0b1f-5a75-ada7-649e8b309fff`) — simple item with no required customizations. The previous McNuggets item now requires sauce selection, causing addToCart to silently fail.
+- Updated DOC.md: corrected cart architecture (server-side via draft orders, not in-memory only)
+
+**Transport investigation:** All 10 probed cart mutation endpoints (addToCartV1, removeFromCartV1, etc.) return 404 "Missing RPC handler". No transport upgrade possible for cart mutations — DOM interaction remains the only path (Tier 1). However, removeFromCart now uses server-side draft order API for item discovery (Tier 5 hybrid).
+
+**Verification:** 5/5 ops pass (`pnpm dev verify uber --browser --write`). Stable across 2 consecutive runs.
+
 ## 2026-04-09: Added getRestaurantMenu + addToCart adapter
 
 **What changed:**

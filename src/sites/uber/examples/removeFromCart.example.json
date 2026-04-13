@@ -4,7 +4,7 @@
   "replay_safety": "unsafe_mutation",
   "cases": [
     {
-      "input": { "itemUuid": "6a7477ef-e958-5d7e-ad13-919222778971" },
+      "input": { "itemUuid": "66c6b385-0b1f-5a75-ada7-649e8b309fff" },
       "assertions": {
         "status": 200,
         "response_schema_valid": true

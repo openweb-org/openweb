@@ -40,11 +40,11 @@ openweb uber exec searchRestaurants '{"userQuery":"pizza"}'
 # Get restaurant menu (use storeUuid from search results)
 openweb uber exec getRestaurantMenu '{"storeUuid":"8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7"}'
 
-# Add item to cart (use itemUuid from menu's catalogItems)
-openweb uber exec addToCart '{"storeUuid":"8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7","itemUuid":"6a7477ef-e958-5d7e-ad13-919222778971"}'
+# Add item to cart (use itemUuid from menu's catalogItems — pick items without required customizations)
+openweb uber exec addToCart '{"storeUuid":"8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7","itemUuid":"66c6b385-0b1f-5a75-ada7-649e8b309fff"}'
 
 # Remove item from cart
-openweb uber exec removeFromCart '{"itemUuid":"6a7477ef-e958-5d7e-ad13-919222778971"}'
+openweb uber exec removeFromCart '{"itemUuid":"66c6b385-0b1f-5a75-ada7-649e8b309fff"}'
 
 # Get past Eats orders (first page)
 openweb uber exec getEatsOrderHistory '{}'
@@ -60,8 +60,8 @@ openweb uber exec getEatsOrderHistory '{"lastWorkflowUUID":"<nextCursor>"}'
 ### API Architecture
 - **Eats**: REST-style POST endpoints at `ubereats.com/_p/api/<operationName>`. Request body is JSON. Response wraps data in `{ status, data }`.
 - Both APIs accept `x-csrf-token: x` (static placeholder, not derived from cookies).
-- **Cart**: Managed in client-side React state (in-memory only). No server-side cart mutation API. `ubereats.v2.cart` in localStorage stores payment preferences, NOT items. `getCartsViewForEaterUuidV1` and `getDraftOrdersByEaterUuidV1` are server-side cart/order read APIs but return empty after client-side add-to-cart.
-- **Menu data**: `getStoreV1` returns the full menu via `catalogSectionsMap` → `standardItemsPayload` → `catalogItems`. Each item has `uuid`, `title`, `price` (cents), `imageUrl`, availability flags. `getMenuItemV1` validates individual items and returns customization details.
+- **Cart**: Client-side React state for UI, but server-side draft orders (`getDraftOrdersByEaterUuidV1`) are created on add-to-cart and persist across page sessions. `getCartsViewForEaterUuidV1` returns cart summaries. No direct server-side cart mutation API — mutations require DOM interaction (add-to-cart button, remove-from-cart button on checkout).
+- **Menu data**: `getStoreV1` returns the full menu via `catalogSectionsMap` → `standardItemsPayload` → `catalogItems`. Each item has `uuid`, `title`, `price` (cents), `imageUrl`, availability flags, `hasCustomizations`. `getMenuItemV1` validates individual items and returns customization details.
 
 ### Auth
 - **Type**: cookie_session
@@ -72,14 +72,14 @@ openweb uber exec getEatsOrderHistory '{"lastWorkflowUUID":"<nextCursor>"}'
 - `transport: node` — read operations use server-side HTTP with cookie_session auth
 - `transport: page` — write operations (addToCart, removeFromCart) use browser adapter with API validation + minimal DOM clicks
 - No browser required for read ops; cookies sourced from 4-tier cache cascade
-- No server-side cart mutation API exists — cart is client-side React state only
+- No server-side cart mutation API (add/remove) — but draft orders (`getDraftOrdersByEaterUuidV1`) persist server-side after DOM add-to-cart, enabling cross-page removal
 
 ### Known Issues
-- **Cart is in-memory only**: UberEats cart state lives in React state (not localStorage, not server-side). Cart items do NOT persist across browser sessions. removeFromCart only works within the same session as addToCart.
-- **Items with customizations**: Meals/combos requiring customization options (drink choice, sides) may not add successfully — the "Add to order" button requires filling options first. Simple items (individual items, condiments) work reliably.
-- **Store must be open**: addToCart validates store availability via API and fails fast if closed. Previous approach navigated blindly.
+- **Cart mutations are DOM-only**: While cart state persists server-side via draft orders, there are no server-side APIs to add or remove items. Both operations require browser DOM interaction.
+- **Items with customizations**: Meals/combos requiring customization options (drink choice, sides, sauces) may not add successfully — the "Add to order" button requires filling options first. Simple items (individual drinks, condiments) work reliably. Check `hasCustomizations` in catalog items.
+- **Store must be open**: addToCart validates store availability via API and fails fast if closed.
+- **removeFromCart uses checkout edit modal**: Navigates directly to `/checkout?mod=editItem&modctx=...` using draft order IDs from server API, then clicks "Remove from cart" button.
 - **Ride history not available**: Only Eats operations are supported currently.
 - **DataDome observed**: DataDome bot detection scripts are present on ubereats.com. The `_p/api` endpoints work reliably from node transport with session cookies.
-- **addToCart reliability**: Uses stable `data-testid="add-to-cart-button"` selector. Item existence validated via catalog lookup during `getStoreV1` call (no separate `getMenuItemV1` call needed).
-- **removeFromCart reliability**: Depends on browser interaction with cart UI elements. Cart must have items from the current browser session.
+- **addToCart reliability**: Uses stable `data-testid="add-to-cart-button"` selector via quickView URL. Item existence validated via catalog lookup during `getStoreV1` call.
 - **Store UUID format**: Search results return full UUID format (e.g. `8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7`). URL slugs use base64url encoding of UUID bytes.
