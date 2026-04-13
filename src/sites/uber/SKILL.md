@@ -1,54 +1,44 @@
 # Uber
 
 ## Overview
-Ride-hailing + food delivery platform. Uber Eats (ubereats.com) REST API for restaurant search, menu browsing, order history, and cart operations with cookie_session auth. Read ops use node transport; write ops use page transport via adapter.
+Ride-hailing platform. Location search, fare estimates, ride history via GraphQL on m.uber.com and riders.uber.com. Cookie_session auth shared across uber.com subdomains.
 
 ## Workflows
 
-### Browse restaurant menu
-1. `searchRestaurants(userQuery)` → restaurant list with `storeUuid`, name, rating, delivery time
-2. `getRestaurantMenu(storeUuid)` → full menu with categories, items, prices, images
+### Get fare estimate for a ride
+1. `searchLocations(query="Times Square", type=PICKUP)` → pickup `latitude`, `longitude`
+2. `searchLocations(query="Empire State Building", type=DROPOFF)` → destination `latitude`, `longitude`
+3. `getRideEstimate(pickup, destination)` → ride types with fares, ETAs, capacity
 
-### Add item to cart
-1. `searchRestaurants(userQuery)` → get `storeUuid`
-2. `getRestaurantMenu(storeUuid)` → get item `uuid` from `catalogSectionsMap` → `catalogItems`
-3. `addToCart(storeUuid, itemUuid)` → add item to cart (browser-based, page transport)
-
-### Remove item from cart
-1. `removeFromCart(itemUuid)` → remove item from cart (browser-based, page transport)
-
-### Review past orders
-1. `getEatsOrderHistory()` → orders with store, items, prices, timestamps
-2. `getEatsOrderHistory(lastWorkflowUUID=nextCursor)` → next page
+### View past rides
+1. `getRideHistory(limit)` → trips with uuid, title, fare, detailUrl
+2. `getRideHistory(nextPageToken)` → next page
 
 ## Operations
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchRestaurants | search Eats restaurants by keyword | userQuery | storeUuid, name, rating, deliveryTime, deliveryFee | entry point |
-| getRestaurantMenu | get full restaurant menu | storeUuid | title, sections, catalogSectionsMap with categories and catalogItems (uuid, title, price, imageUrl) | uses getStoreV1 API |
-| addToCart | add item to Eats cart | storeUuid, itemUuid, quantity | success, cartCount | adapter; page transport; cart is client-side |
-| removeFromCart | remove item from Eats cart | itemUuid | success, cartCount | reverse of addToCart; adapter; page transport |
-| getEatsOrderHistory | list past Eats orders | lastWorkflowUUID (pagination) | uuid, storeName, totalPrice, items, completedAt, hasMore, nextCursor | entry point; paginated |
+| searchLocations | find pickup/dropoff location | query (text), type (PICKUP/DROPOFF) | id, name, address, latitude, longitude | entry point for getRideEstimate |
+| getRideEstimate | get fare quotes for ride | pickup <- searchLocations, destination <- searchLocations | rides with displayName, fare, fareAmountCents, capacity, etaString | returns multiple vehicle types |
+| getRideHistory | past ride trips | limit, nextPageToken | uuid, title, subtitle, fare, detailUrl | paginated |
 
 ## Quick Start
 
 ```bash
-# Search Uber Eats restaurants
-openweb uber exec searchRestaurants '{"userQuery":"pizza"}'
+# Search for pickup location
+openweb uber exec searchLocations '{"query":"Times Square New York","type":"PICKUP"}'
 
-# Get restaurant menu (use storeUuid from search results)
-openweb uber exec getRestaurantMenu '{"storeUuid":"8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7"}'
+# Search for dropoff location
+openweb uber exec searchLocations '{"query":"Empire State Building","type":"DROPOFF"}'
 
-# Add item to cart (use itemUuid from menu's catalogItems)
-openweb uber exec addToCart '{"storeUuid":"8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7","itemUuid":"6a7477ef-e958-5d7e-ad13-919222778971"}'
+# Get fare estimates (use coordinates from searchLocations)
+openweb uber exec getRideEstimate '{"pickup":{"latitude":40.758,"longitude":-73.9855},"destination":{"latitude":40.7484,"longitude":-73.9857}}'
 
-# Remove item from cart
-openweb uber exec removeFromCart '{"itemUuid":"6a7477ef-e958-5d7e-ad13-919222778971"}'
-
-# Get past Eats orders (first page)
-openweb uber exec getEatsOrderHistory '{}'
-
-# Get next page of orders (use nextCursor from previous response)
-openweb uber exec getEatsOrderHistory '{"lastWorkflowUUID":"<nextCursor>"}'
+# View past rides
+openweb uber exec getRideHistory '{"limit":5}'
 ```
+
+## Known Limitations
+- **Read-only**: No ride request or cancellation operations (safety level: NEVER for real-money transactions).
+- **Browser session required**: All operations use page transport (GraphQL via browser context for cookie auth).
+- **Location search bias**: Pass current latitude/longitude for more relevant local results.

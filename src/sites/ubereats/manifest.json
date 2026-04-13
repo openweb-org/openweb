@@ -1,0 +1,19 @@
+{
+  "name": "ubereats",
+  "display_name": "Uber Eats",
+  "version": "1.0.0",
+  "spec_version": "2.0",
+  "site_url": "https://www.ubereats.com",
+  "description": "Uber Eats restaurant search, menu browsing, cart operations, order history — REST + adapter, cookie_session auth",
+  "requires_auth": true,
+  "dependencies": {},
+  "stats": {
+    "operation_count": 8,
+    "l1_count": 0,
+    "l2_count": 0,
+    "l3_count": 4,
+    "ws_count": 0,
+    "adapter_count": 1
+  },
+  "quarantined": false
+}

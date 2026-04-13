@@ -1,0 +1,839 @@
+openapi: '3.1.0'
+info:
+  title: Uber Eats API
+  version: '1.0'
+  x-openweb:
+    spec_version: '2.0'
+    requires_auth: true
+servers:
+  - url: https://www.ubereats.com
+    x-openweb:
+      transport: node
+      auth:
+        type: cookie_session
+paths:
+  /_p/api/getSearchFeedV1:
+    post:
+      operationId: searchRestaurants
+      summary: Search Uber Eats restaurants by keyword — names, ratings, images, delivery times
+      x-openweb:
+        permission: read
+        unwrap: data
+        build:
+          stable_id: ub0001
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+      parameters:
+        - name: x-csrf-token
+          in: header
+          required: true
+          schema:
+            type: string
+            const: 'x'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userQuery
+              properties:
+                userQuery:
+                  type: string
+                  description: Search keyword (e.g. "pizza", "sushi", "thai").
+                  example: pizza
+                date:
+                  type: string
+                  default: ''
+                startTime:
+                  type: integer
+                  default: 0
+                endTime:
+                  type: integer
+                  default: 0
+                sortAndFilters:
+                  type: array
+                  default: []
+                vertical:
+                  type: string
+                  default: ''
+                searchSource:
+                  type: string
+                  default: ''
+                displayType:
+                  type: string
+                  default: SEARCH_RESULTS
+                searchType:
+                  type: string
+                  default: ''
+                keyName:
+                  type: string
+                  default: ''
+                cacheKey:
+                  type: string
+                  default: ''
+                recaptchaToken:
+                  type: string
+                  default: ''
+      responses:
+        '200':
+          description: Search results feed (after data unwrap).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - feedItems
+                properties:
+                  feedItems:
+                    type: array
+                    description: Feed items — filter by type REGULAR_STORE for restaurants.
+                    items:
+                      type: object
+                      required:
+                        - type
+                        - store
+                      properties:
+                        type:
+                          type: string
+                          description: Item type (e.g. "REGULAR_STORE").
+                        store:
+                          type: object
+                          description: Restaurant details.
+                          required:
+                            - storeUuid
+                            - title
+                          properties:
+                            storeUuid:
+                              type: string
+                              description: Restaurant UUID — use for getRestaurantMenu.
+                            title:
+                              type: object
+                              description: Restaurant name wrapper.
+                              required:
+                                - text
+                              properties:
+                                text:
+                                  type: string
+                                  description: Restaurant name.
+                            rating:
+                              type:
+                                - object
+                                - 'null'
+                              description: Rating info (null if unrated).
+                              properties:
+                                text:
+                                  type: string
+                                  description: Rating value (e.g. "4.5").
+                                accessibilityText:
+                                  type: string
+                                  description: Human-readable rating string.
+                            image:
+                              type: object
+                              description: Restaurant image gallery.
+                              properties:
+                                items:
+                                  type: array
+                                  description: Image URLs for the restaurant.
+                                  items:
+                                    type: object
+                                    required:
+                                      - url
+                                    properties:
+                                      url:
+                                        type: string
+                                        description: Image URL.
+                            meta:
+                              type: array
+                              description: Metadata badges (delivery time, fees, etc).
+                              items:
+                                type: object
+                                properties:
+                                  text:
+                                    type: string
+                                    description: Badge display text.
+                                  badgeType:
+                                    type: string
+                                    description: Badge type (e.g. ETD for delivery time, MembershipBenefit for delivery fee).
+                            actionUrl:
+                              type:
+                                - string
+                                - 'null'
+                              description: Deep link URL to the restaurant page.
+                  subtitle:
+                    type:
+                      - string
+                      - 'null'
+                    description: Human-readable total results string.
+
+  /_p/api/getPastOrdersV1:
+    post:
+      operationId: getEatsOrderHistory
+      summary: Get Uber Eats past orders — stores, items, prices, timestamps
+      x-openweb:
+        permission: read
+        unwrap: data
+        build:
+          stable_id: ub0003
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+      parameters:
+        - name: x-csrf-token
+          in: header
+          required: true
+          schema:
+            type: string
+            const: 'x'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lastWorkflowUUID:
+                  type: string
+                  default: ''
+                  description: Pagination cursor from previous response (empty for first page).
+      responses:
+        '200':
+          description: Past Eats orders (after data unwrap).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - ordersMap
+                  - orderUuids
+                properties:
+                  ordersMap:
+                    type: object
+                    description: Map of order UUID to order details.
+                    additionalProperties:
+                      type: object
+                      required:
+                        - baseEaterOrder
+                        - storeInfo
+                      properties:
+                        baseEaterOrder:
+                          type: object
+                          description: Core order data.
+                          required:
+                            - uuid
+                          properties:
+                            uuid:
+                              type: string
+                              description: Order UUID.
+                            completedAt:
+                              type:
+                                - string
+                                - 'null'
+                              description: ISO timestamp when order was completed.
+                            isCancelled:
+                              type: boolean
+                              description: Whether the order was cancelled.
+                            isCompleted:
+                              type: boolean
+                              description: Whether the order is completed.
+                            shoppingCart:
+                              type: object
+                              description: Cart snapshot at time of order.
+                              properties:
+                                items:
+                                  type: array
+                                  description: Ordered items.
+                                  items:
+                                    type: object
+                                    required:
+                                      - title
+                                      - price
+                                      - quantity
+                                    properties:
+                                      title:
+                                        type: string
+                                        description: Item name.
+                                      price:
+                                        type: number
+                                        description: Price in cents.
+                                      quantity:
+                                        type: integer
+                                        description: Number of this item ordered.
+                        storeInfo:
+                          type: object
+                          description: Restaurant info for this order.
+                          required:
+                            - title
+                            - uuid
+                          properties:
+                            title:
+                              type: string
+                              description: Restaurant name.
+                            uuid:
+                              type: string
+                              description: Restaurant UUID.
+                        fareInfo:
+                          type: object
+                          description: Pricing breakdown.
+                          properties:
+                            totalPrice:
+                              type:
+                                - number
+                                - 'null'
+                              description: Total in cents.
+                  orderUuids:
+                    type: array
+                    items:
+                      type: string
+                    description: Ordered list of UUIDs — use to look up ordersMap.
+                  paginationData:
+                    type:
+                      - object
+                      - 'null'
+                    description: Pagination cursor data.
+                    properties:
+                      nextCursor:
+                        type: string
+                        description: Pass as lastWorkflowUUID for next page.
+                  meta:
+                    type:
+                      - object
+                      - 'null'
+                    description: Response metadata.
+                    properties:
+                      hasMore:
+                        type: boolean
+                        description: Whether more pages are available.
+
+  /_p/api/getStoreV1:
+    post:
+      operationId: getRestaurantMenu
+      summary: Get Uber Eats restaurant menu — categories, items, prices, images, availability
+      x-openweb:
+        permission: read
+        unwrap: data
+        build:
+          stable_id: ub0002
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+      parameters:
+        - name: x-csrf-token
+          in: header
+          required: true
+          schema:
+            type: string
+            const: 'x'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - storeUuid
+              properties:
+                storeUuid:
+                  type: string
+                  description: Full UUID of the restaurant (from searchRestaurants storeUuid field).
+                  example: 8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7
+      responses:
+        '200':
+          description: Restaurant info and full menu (after data unwrap).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - title
+                  - uuid
+                  - catalogSectionsMap
+                properties:
+                  title:
+                    type: string
+                    description: Restaurant name.
+                  uuid:
+                    type: string
+                    description: Restaurant UUID.
+                  slug:
+                    type: string
+                    description: URL-friendly restaurant slug.
+                  rating:
+                    type: object
+                    description: Rating and review summary.
+                    properties:
+                      ratingValue:
+                        type: number
+                        description: Average rating (e.g. 4.5).
+                      reviewCount:
+                        type: string
+                        description: Human-readable review count (e.g. "200+").
+                  currencyCode:
+                    type: string
+                    description: Currency code (e.g. "USD").
+                  isOpen:
+                    type: boolean
+                    description: Whether the restaurant is currently open.
+                  etaRange:
+                    type: object
+                    description: Delivery time estimate.
+                  location:
+                    type: object
+                    description: Restaurant location.
+                    properties:
+                      address:
+                        type: string
+                        description: Full street address.
+                      latitude:
+                        type: number
+                        description: Latitude coordinate.
+                      longitude:
+                        type: number
+                        description: Longitude coordinate.
+                  hours:
+                    type: array
+                    description: Operating hours by day.
+                  sections:
+                    type: array
+                    description: Menu time sections (e.g. Dinner, Lunch). Each has subsectionUuids.
+                    items:
+                      type: object
+                      required:
+                        - title
+                        - uuid
+                      properties:
+                        title:
+                          type: string
+                          description: Section name (e.g. "Dinner", "Lunch").
+                        uuid:
+                          type: string
+                          description: Section UUID — key into catalogSectionsMap.
+                        subsectionUuids:
+                          type: array
+                          description: UUIDs of subsections in this section.
+                          items:
+                            type: string
+                  catalogSectionsMap:
+                    type: object
+                    description: "Map of section UUID to menu categories array. Each category has standardItemsPayload.catalogItems."
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            description: "Layout type (HORIZONTAL_GRID, VERTICAL_GRID)."
+                          catalogSectionUUID:
+                            type: string
+                            description: Category section UUID.
+                          payload:
+                            type: object
+                            description: Category payload container.
+                            properties:
+                              standardItemsPayload:
+                                type: object
+                                description: Standard menu items payload.
+                                properties:
+                                  title:
+                                    type: object
+                                    description: Category title wrapper.
+                                    properties:
+                                      text:
+                                        type: string
+                                        description: Category name (e.g. "Featured items", "Burgers").
+                                  catalogItems:
+                                    type: array
+                                    description: Menu items in this category.
+                                    items:
+                                      type: object
+                                      required:
+                                        - uuid
+                                        - title
+                                        - price
+                                      properties:
+                                        uuid:
+                                          type: string
+                                          description: Item UUID — use for addToCart.
+                                        title:
+                                          type: string
+                                          description: Item name.
+                                        price:
+                                          type: integer
+                                          description: Price in cents.
+                                        imageUrl:
+                                          type:
+                                            - string
+                                            - 'null'
+                                          description: Item image URL (null if no image).
+                                        isSoldOut:
+                                          type: boolean
+                                          description: Whether the item is sold out.
+                                        hasCustomizations:
+                                          type: boolean
+                                          description: Whether item requires customization choices.
+                                        isAvailable:
+                                          type: boolean
+                                          description: Whether the item is currently available.
+                                        subsectionUuid:
+                                          type: string
+                                          description: Parent subsection UUID.
+                                        sectionUuid:
+                                          type: string
+                                          description: Parent section UUID.
+
+  /_p/api/getMenuItemV1:
+    post:
+      operationId: getItemDetails
+      summary: Get item details with customization options — use for items with hasCustomizations=true from getRestaurantMenu
+      x-openweb:
+        permission: read
+        unwrap: data
+        build:
+          stable_id: ub0006
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+      parameters:
+        - name: x-csrf-token
+          in: header
+          required: true
+          schema:
+            type: string
+            const: 'x'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - storeUuid
+                - sectionUuid
+                - subsectionUuid
+                - menuItemUuid
+              properties:
+                itemRequestType:
+                  type: string
+                  default: ITEM
+                storeUuid:
+                  type: string
+                  description: Restaurant UUID.
+                  example: 8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7
+                sectionUuid:
+                  type: string
+                  description: Section UUID from getRestaurantMenu catalogItems.
+                  example: 3b247595-f7a2-56c2-80c6-5e676020625a
+                subsectionUuid:
+                  type: string
+                  description: Subsection UUID from getRestaurantMenu catalogItems.
+                  example: 0379a62a-1156-4ddb-a09a-7e1dc45d5dfb
+                menuItemUuid:
+                  type: string
+                  description: Item UUID from getRestaurantMenu catalogItems.
+                  example: 6a7477ef-e958-5d7e-ad13-919222778971
+                diningMode:
+                  type: string
+                  default: DELIVERY
+                  description: Dining mode (DELIVERY or PICKUP).
+      responses:
+        '200':
+          description: Item details with customization options.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uuid:
+                    type: string
+                    description: Item UUID.
+                  title:
+                    type: string
+                    description: Item name.
+                  price:
+                    type: integer
+                    description: Price in cents.
+                  customizationsList:
+                    type: array
+                    description: Customization groups with options. Each group has a UUID, title, min/max permitted selections, and options array.
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                          description: Group UUID — use as key in addToCart customizations param.
+                        title:
+                          type: string
+                          description: Group name (e.g. "Select Sauce").
+                        minPermitted:
+                          type: integer
+                          description: Minimum selections required (0 = optional).
+                        maxPermitted:
+                          type: integer
+                          description: Maximum selections allowed.
+                        options:
+                          type: array
+                          description: Available choices for this group.
+                          items:
+                            type: object
+                            properties:
+                              uuid:
+                                type: string
+                                description: Option UUID — use in addToCart customizations array.
+                              title:
+                                type: string
+                                description: Option name (e.g. "Tangy BBQ Dipping Sauce").
+                              price:
+                                type: integer
+                                description: Additional price in cents (0 = free).
+                              maxPermitted:
+                                type: integer
+                                description: Max quantity of this specific option.
+
+  /internal/addToCart:
+    post:
+      operationId: addToCart
+      summary: Add an item to Uber Eats cart — requires store UUID and item UUID from getRestaurantMenu
+      x-openweb:
+        permission: write
+        adapter:
+          name: uber-eats
+          operation: addToCart
+        transport: page
+        build:
+          stable_id: ub0004
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - storeUuid
+                - itemUuid
+              properties:
+                storeUuid:
+                  type: string
+                  description: Full UUID of the restaurant.
+                  example: 8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7
+                itemUuid:
+                  type: string
+                  description: Item UUID from getRestaurantMenu catalogItems.
+                  example: 66c6b385-0b1f-5a75-ada7-649e8b309fff
+                quantity:
+                  type: integer
+                  default: 1
+                  description: Number of items to add.
+                customizations:
+                  type: object
+                  description: >-
+                    Customization selections for items with required options (sauces, sides, etc.).
+                    Format: { "<groupUuid>": [{"uuid": "<optionUuid>", "quantity": 1}] }.
+                    Get group/option UUIDs from getItemDetails customizationsList.
+                    Omit for items without required customizations.
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                        quantity:
+                          type: integer
+      responses:
+        '200':
+          description: Cart state after adding item.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the item was added successfully.
+                  storeUuid:
+                    type: string
+                    description: Restaurant UUID.
+                  itemUuid:
+                    type: string
+                    description: Item UUID that was added.
+                  quantity:
+                    type: integer
+                    description: Number of items added.
+
+  /internal/removeFromCart:
+    post:
+      operationId: removeFromCart
+      summary: Remove an item from Uber Eats cart — requires item UUID from getRestaurantMenu
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: uber-eats
+          operation: removeFromCart
+        transport: page
+        build:
+          stable_id: ub0005
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - itemUuid
+              properties:
+                itemUuid:
+                  type: string
+                  description: Item UUID to remove (from getRestaurantMenu catalogItems or addToCart response).
+                  example: 66c6b385-0b1f-5a75-ada7-649e8b309fff
+      responses:
+        '200':
+          description: Cart state after removing item.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the item was removed successfully.
+                  itemUuid:
+                    type: string
+                    description: Item UUID that was removed.
+                  cartCount:
+                    type: integer
+                    description: Remaining items in cart.
+
+  /internal/emptyCart:
+    post:
+      operationId: emptyCart
+      summary: Clear all items from Uber Eats cart — optionally scoped to a specific store
+      x-openweb:
+        permission: write
+        safety: caution
+        adapter:
+          name: uber-eats
+          operation: emptyCart
+        transport: page
+        build:
+          stable_id: ub0007
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                storeUuid:
+                  type: string
+                  description: Restaurant UUID to clear cart for. Omit to clear all carts.
+                  example: 8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7
+      responses:
+        '200':
+          description: Cart state after clearing.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                  discarded:
+                    type: integer
+                    description: Number of draft orders discarded.
+                  cartCount:
+                    type: integer
+                    description: Remaining items across all carts.
+
+  /internal/getCart:
+    post:
+      operationId: getCart
+      summary: View current Uber Eats cart contents — shows items, quantities, prices across all stores
+      x-openweb:
+        permission: read
+        adapter:
+          name: uber-eats
+          operation: getCart
+        transport: page
+        build:
+          stable_id: ub0008
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                storeUuid:
+                  type: string
+                  description: Optional — filter to a specific restaurant's cart. Omit for all carts.
+                  example: 8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7
+      responses:
+        '200':
+          description: Current cart contents.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  carts:
+                    type: array
+                    description: One cart per store with active items.
+                    items:
+                      type: object
+                      properties:
+                        storeUuid:
+                          type: string
+                        draftOrderUUID:
+                          type: string
+                          description: Draft order UUID — use for emptyCart.
+                        itemCount:
+                          type: integer
+                        items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              uuid:
+                                type: string
+                                description: Menu item UUID — use for removeFromCart.
+                              title:
+                                type: string
+                              price:
+                                type: integer
+                                description: Price in cents.
+                              quantity:
+                                type: integer
+                  totalItems:
+                    type: integer
+                    description: Total items across all carts.
+

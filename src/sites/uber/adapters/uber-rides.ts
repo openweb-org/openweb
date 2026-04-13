@@ -1,0 +1,213 @@
+import type { Page } from 'patchright'
+
+/**
+ * Uber Rides adapter — location search, fare estimates, ride history via GraphQL.
+ *
+ * Transport: Tier 5 (page.evaluate + fetch). Zero DOM selectors.
+ *
+ * Endpoints:
+ * - m.uber.com/go/graphql: PudoLocationSearch, Products
+ * - riders.uber.com/graphql: Activities
+ */
+
+type Errors = {
+  unknownOp(op: string): Error
+  missingParam(name: string): Error
+  fatal(msg: string): Error
+  retriable(msg: string): Error
+}
+
+type Helpers = {
+  pageFetch: (page: Page, opts: { url: string; method?: string; body?: string; headers?: Record<string, string>; timeout?: number }) => Promise<{ status: number; text: string }>
+  errors: Errors
+}
+
+const GQL_HEADERS = { 'content-type': 'application/json', 'x-csrf-token': 'x' }
+
+async function gqlCall(page: Page, helpers: Helpers, endpoint: string, body: unknown): Promise<any> {
+  const resp = await helpers.pageFetch(page, {
+    url: endpoint,
+    method: 'POST',
+    headers: GQL_HEADERS,
+    body: JSON.stringify(body),
+    timeout: 15_000,
+  })
+  if (resp.status !== 200) {
+    throw helpers.errors.fatal(`GraphQL returned ${resp.status}`)
+  }
+  const data = JSON.parse(resp.text)
+  if (data.errors?.length) {
+    const msg = data.errors.map((e: { message: string }) => e.message).join('; ')
+    throw helpers.errors.fatal(`GraphQL error: ${msg}`)
+  }
+  return data.data
+}
+
+async function ensurePage(page: Page, origin: string): Promise<void> {
+  if (!page.url().includes(new URL(origin).hostname)) {
+    await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 15_000 }).catch(() => {})
+    await page.waitForTimeout(2000)
+  }
+}
+
+// ── searchLocations ──────────────────────────────
+
+const PUDO_QUERY = `query PudoLocationSearch($latitude: Float!, $longitude: Float!, $query: String!, $type: EnumRVWebCommonPickupOrDropoff!) {
+  pudoLocationSearch(latitude: $latitude, longitude: $longitude, query: $query, type: $type) {
+    id addressLine1 addressLine2 type source provider
+    coordinate { latitude longitude }
+  }
+}`
+
+async function searchLocations(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
+  const query = String(params.query || '')
+  const latitude = Number(params.latitude) || 0
+  const longitude = Number(params.longitude) || 0
+  const type = String(params.type || 'PICKUP').toUpperCase()
+
+  if (!query) throw helpers.errors.missingParam('query')
+
+  await ensurePage(page, 'https://m.uber.com/go/home')
+
+  const data = await gqlCall(page, helpers, 'https://m.uber.com/go/graphql', {
+    operationName: 'PudoLocationSearch',
+    variables: { latitude, longitude, query, type },
+    query: PUDO_QUERY,
+  })
+
+  return {
+    locations: (data.pudoLocationSearch || []).map((loc: Record<string, unknown>) => ({
+      id: loc.id,
+      name: loc.addressLine1,
+      address: loc.addressLine2,
+      latitude: (loc.coordinate as Record<string, number>)?.latitude,
+      longitude: (loc.coordinate as Record<string, number>)?.longitude,
+      type: loc.type,
+      source: loc.source,
+    })),
+  }
+}
+
+// ── getRideEstimate ──────────────────────────────
+
+const PRODUCTS_QUERY = `query Products($destinations: [InputCoordinate!]!, $pickup: InputCoordinate!) {
+  products(destinations: $destinations, pickup: $pickup) {
+    tiers {
+      products {
+        displayName description estimatedTripTime etaStringShort cityID currencyCode
+        fares { capacity fare fareAmountE5 }
+      }
+    }
+    defaultVVID productsUnavailableMessage
+  }
+}`
+
+async function getRideEstimate(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
+  const pickup = params.pickup as { latitude: number; longitude: number } | undefined
+  const destination = params.destination as { latitude: number; longitude: number } | undefined
+
+  if (!pickup?.latitude || !pickup?.longitude) throw helpers.errors.missingParam('pickup (with latitude/longitude)')
+  if (!destination?.latitude || !destination?.longitude) throw helpers.errors.missingParam('destination (with latitude/longitude)')
+
+  await ensurePage(page, 'https://m.uber.com/go/home')
+
+  const data = await gqlCall(page, helpers, 'https://m.uber.com/go/graphql', {
+    operationName: 'Products',
+    variables: {
+      destinations: [{ latitude: destination.latitude, longitude: destination.longitude }],
+      pickup: { latitude: pickup.latitude, longitude: pickup.longitude },
+    },
+    query: PRODUCTS_QUERY,
+  })
+
+  const products = data.products
+  const rides = []
+  for (const tier of products?.tiers || []) {
+    for (const p of tier.products || []) {
+      const fare = p.fares?.[0]
+      rides.push({
+        displayName: p.displayName,
+        description: p.description,
+        fare: fare?.fare,
+        fareAmountCents: fare?.fareAmountE5 ? Math.round(fare.fareAmountE5 / 1000) : null,
+        capacity: fare?.capacity,
+        estimatedTripTimeSec: p.estimatedTripTime,
+        etaString: p.etaStringShort,
+        currencyCode: p.currencyCode,
+      })
+    }
+  }
+
+  return {
+    rides,
+    unavailableMessage: products?.productsUnavailableMessage || null,
+  }
+}
+
+// ── getRideHistory ──────────────────────────────
+
+const ACTIVITIES_QUERY = `query Activities($limit: Int = 10, $nextPageToken: String, $orderTypes: [RVWebCommonActivityOrderType!] = [RIDES, TRAVEL], $profileType: RVWebCommonActivityProfileType = PERSONAL) {
+  activities {
+    cityID
+    past(limit: $limit, nextPageToken: $nextPageToken, orderTypes: $orderTypes, profileType: $profileType) {
+      activities { uuid title subtitle description cardURL }
+      nextPageToken
+    }
+  }
+}`
+
+async function getRideHistory(page: Page, params: Record<string, unknown>, helpers: Helpers): Promise<unknown> {
+  const limit = Number(params.limit) || 10
+  const nextPageToken = params.nextPageToken ? String(params.nextPageToken) : undefined
+
+  await ensurePage(page, 'https://riders.uber.com/trips')
+
+  const data = await gqlCall(page, helpers, 'https://riders.uber.com/graphql', {
+    operationName: 'Activities',
+    variables: { limit, nextPageToken },
+    query: ACTIVITIES_QUERY,
+  })
+
+  const past = data.activities?.past
+  return {
+    rides: (past?.activities || []).map((a: Record<string, unknown>) => ({
+      uuid: a.uuid,
+      title: a.title,
+      subtitle: a.subtitle,
+      fare: a.description,
+      detailUrl: a.cardURL,
+    })),
+    nextPageToken: past?.nextPageToken || null,
+    hasMore: !!past?.nextPageToken,
+  }
+}
+
+// ── Adapter export ──────────────────────────────
+
+const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, helpers: Helpers) => Promise<unknown>> = {
+  searchLocations,
+  getRideEstimate,
+  getRideHistory,
+}
+
+const adapter = {
+  name: 'uber-rides',
+  description: 'Uber Rides — location search, fare estimates, ride history via GraphQL (Tier 5)',
+
+  async init(page: Page): Promise<boolean> {
+    return page.url().includes('uber.com')
+  },
+
+  async isAuthenticated(page: Page): Promise<boolean> {
+    const cookies = await page.context().cookies()
+    return cookies.some(c => c.name === 'sid' || c.name === 'csid' || c.name === 'jwt-session')
+  },
+
+  async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Helpers): Promise<unknown> {
+    const handler = OPERATIONS[operation]
+    if (!handler) throw helpers.errors.unknownOp(operation)
+    return handler(page, { ...params }, helpers)
+  },
+}
+
+export default adapter

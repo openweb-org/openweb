@@ -1,0 +1,9 @@
+{
+  "operation_id": "searchLocations",
+  "cases": [
+    {
+      "input": { "query": "Times Square New York", "type": "PICKUP" },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

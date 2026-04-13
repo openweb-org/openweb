@@ -3,22 +3,17 @@
   "display_name": "Uber",
   "version": "1.0.0",
   "spec_version": "2.0",
-  "site_url": "https://www.uber.com",
-  "description": "Uber Eats restaurant search, menu browsing, order history, add-to-cart — REST + adapter, cookie_session auth",
+  "site_url": "https://m.uber.com",
+  "description": "Uber ride services — location search, fare estimates, ride history. GraphQL + adapter, cookie_session auth.",
   "requires_auth": true,
   "dependencies": {},
   "stats": {
-    "operation_count": 5,
+    "operation_count": 3,
     "l1_count": 0,
     "l2_count": 0,
-    "l3_count": 3,
+    "l3_count": 0,
     "ws_count": 0,
     "adapter_count": 1
   },
-  "quarantined": false,
-  "last_verified": "2026-04-03T03:19:08.610Z",
-  "fingerprint": {
-    "response_shape_hash": "getEatsOrderHistory:72af7887d02de3a0,searchRestaurants:d518412d5bccbe8f",
-    "last_validated": "2026-04-03T03:19:08.612Z"
-  }
+  "quarantined": false
 }

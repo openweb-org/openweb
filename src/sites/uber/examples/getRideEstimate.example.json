@@ -1,0 +1,12 @@
+{
+  "operation_id": "getRideEstimate",
+  "cases": [
+    {
+      "input": {
+        "pickup": { "latitude": 40.758, "longitude": -73.9855 },
+        "destination": { "latitude": 40.7484, "longitude": -73.9857 }
+      },
+      "assertions": { "status": 200, "response_schema_valid": true }
+    }
+  ]
+}

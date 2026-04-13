@@ -1,37 +1,33 @@
 openapi: '3.1.0'
 info:
-  title: Uber API
+  title: Uber Rides API
   version: '1.0'
   x-openweb:
     spec_version: '2.0'
     requires_auth: true
 servers:
-  - url: https://www.ubereats.com
+  - url: https://m.uber.com
     x-openweb:
-      transport: node
+      transport: page
       auth:
         type: cookie_session
 paths:
-  /_p/api/getSearchFeedV1:
+  /internal/searchLocations:
     post:
-      operationId: searchRestaurants
-      summary: Search Uber Eats restaurants by keyword — names, ratings, images, delivery times
+      operationId: searchLocations
+      summary: Search for Uber pickup/dropoff locations by keyword — returns coordinates for getRideEstimate
       x-openweb:
         permission: read
-        unwrap: data
+        adapter:
+          name: uber-rides
+          operation: searchLocations
+        transport: page
         build:
-          stable_id: ub0001
+          stable_id: ur0001
           tool_version: 2
           verified: true
           signals:
             - adapter-verified
-      parameters:
-        - name: x-csrf-token
-          in: header
-          required: true
-          schema:
-            type: string
-            const: 'x'
       requestBody:
         required: true
         content:
@@ -39,156 +35,161 @@ paths:
             schema:
               type: object
               required:
-                - userQuery
+                - query
               properties:
-                userQuery:
+                query:
                   type: string
-                  description: Search keyword (e.g. "pizza", "sushi", "thai").
-                  example: pizza
-                date:
-                  type: string
-                  default: ''
-                startTime:
-                  type: integer
+                  description: Search text (place name, address, landmark).
+                  example: Times Square New York
+                latitude:
+                  type: number
                   default: 0
-                endTime:
-                  type: integer
+                  description: Reference latitude for search relevance (0 for no bias).
+                longitude:
+                  type: number
                   default: 0
-                sortAndFilters:
-                  type: array
-                  default: []
-                vertical:
+                  description: Reference longitude for search relevance (0 for no bias).
+                type:
                   type: string
-                  default: ''
-                searchSource:
-                  type: string
-                  default: ''
-                displayType:
-                  type: string
-                  default: SEARCH_RESULTS
-                searchType:
-                  type: string
-                  default: ''
-                keyName:
-                  type: string
-                  default: ''
-                cacheKey:
-                  type: string
-                  default: ''
-                recaptchaToken:
-                  type: string
-                  default: ''
+                  enum: [PICKUP, DROPOFF]
+                  default: PICKUP
+                  description: Whether searching for a pickup or dropoff location.
       responses:
         '200':
-          description: Search results feed (after data unwrap).
+          description: Matching locations with coordinates.
           content:
             application/json:
               schema:
                 type: object
-                required:
-                  - feedItems
                 properties:
-                  feedItems:
+                  locations:
                     type: array
-                    description: Feed items — filter by type REGULAR_STORE for restaurants.
                     items:
                       type: object
-                      required:
-                        - type
-                        - store
                       properties:
+                        id:
+                          type: string
+                          description: Location UUID.
+                        name:
+                          type: string
+                          description: Place name.
+                        address:
+                          type: string
+                          description: Formatted address.
+                        latitude:
+                          type: number
+                        longitude:
+                          type: number
                         type:
                           type: string
-                          description: Item type (e.g. "REGULAR_STORE").
-                        store:
-                          type: object
-                          description: Restaurant details.
-                          required:
-                            - storeUuid
-                            - title
-                          properties:
-                            storeUuid:
-                              type: string
-                              description: Restaurant UUID — use for getRestaurantMenu.
-                            title:
-                              type: object
-                              description: Restaurant name wrapper.
-                              required:
-                                - text
-                              properties:
-                                text:
-                                  type: string
-                                  description: Restaurant name.
-                            rating:
-                              type:
-                                - object
-                                - 'null'
-                              description: Rating info (null if unrated).
-                              properties:
-                                text:
-                                  type: string
-                                  description: Rating value (e.g. "4.5").
-                                accessibilityText:
-                                  type: string
-                                  description: Human-readable rating string.
-                            image:
-                              type: object
-                              description: Restaurant image gallery.
-                              properties:
-                                items:
-                                  type: array
-                                  description: Image URLs for the restaurant.
-                                  items:
-                                    type: object
-                                    required:
-                                      - url
-                                    properties:
-                                      url:
-                                        type: string
-                                        description: Image URL.
-                            meta:
-                              type: array
-                              description: Metadata badges (delivery time, fees, etc).
-                              items:
-                                type: object
-                                properties:
-                                  text:
-                                    type: string
-                                    description: Badge display text.
-                                  badgeType:
-                                    type: string
-                                    description: Badge type (e.g. ETD for delivery time, MembershipBenefit for delivery fee).
-                            actionUrl:
-                              type:
-                                - string
-                                - 'null'
-                              description: Deep link URL to the restaurant page.
-                  subtitle:
+                        source:
+                          type: string
+
+  /internal/getRideEstimate:
+    post:
+      operationId: getRideEstimate
+      summary: Get Uber ride fare estimates — different vehicle types with prices and ETAs
+      x-openweb:
+        permission: read
+        adapter:
+          name: uber-rides
+          operation: getRideEstimate
+        transport: page
+        build:
+          stable_id: ur0002
+          tool_version: 2
+          verified: true
+          signals:
+            - adapter-verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pickup
+                - destination
+              properties:
+                pickup:
+                  type: object
+                  required: [latitude, longitude]
+                  description: Pickup location coordinates (from searchLocations).
+                  properties:
+                    latitude:
+                      type: number
+                      example: 40.758
+                    longitude:
+                      type: number
+                      example: -73.9855
+                destination:
+                  type: object
+                  required: [latitude, longitude]
+                  description: Dropoff location coordinates (from searchLocations).
+                  properties:
+                    latitude:
+                      type: number
+                      example: 40.7484
+                    longitude:
+                      type: number
+                      example: -73.9857
+      responses:
+        '200':
+          description: Available ride types with fares and ETAs.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rides:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        displayName:
+                          type: string
+                          description: Ride type name (e.g. "UberX", "Black SUV", "Share").
+                        description:
+                          type: string
+                        fare:
+                          type: string
+                          description: Formatted fare (e.g. "US$16.07").
+                        fareAmountCents:
+                          type: integer
+                          description: Fare in cents.
+                        capacity:
+                          type: integer
+                          description: Max passengers.
+                        estimatedTripTimeSec:
+                          type: integer
+                          description: Estimated trip duration in seconds.
+                        etaString:
+                          type: string
+                          description: Driver arrival ETA (e.g. "2 mins").
+                        currencyCode:
+                          type: string
+                  unavailableMessage:
                     type:
                       - string
                       - 'null'
-                    description: Human-readable total results string.
+                    description: Message if rides unavailable in area.
 
-  /_p/api/getPastOrdersV1:
+  /internal/getRideHistory:
     post:
-      operationId: getEatsOrderHistory
-      summary: Get Uber Eats past orders — stores, items, prices, timestamps
+      operationId: getRideHistory
+      summary: Get past Uber ride history — trips with fares, dates, details
       x-openweb:
         permission: read
-        unwrap: data
+        adapter:
+          name: uber-rides
+          operation: getRideHistory
+        transport: page
         build:
-          stable_id: ub0003
+          stable_id: ur0003
           tool_version: 2
           verified: true
           signals:
             - adapter-verified
-      parameters:
-        - name: x-csrf-token
-          in: header
-          required: true
-          schema:
-            type: string
-            const: 'x'
       requestBody:
         required: true
         content:
@@ -196,404 +197,44 @@ paths:
             schema:
               type: object
               properties:
-                lastWorkflowUUID:
+                limit:
+                  type: integer
+                  default: 10
+                  description: Number of rides to return.
+                nextPageToken:
                   type: string
-                  default: ''
-                  description: Pagination cursor from previous response (empty for first page).
+                  description: Pagination token from previous response.
       responses:
         '200':
-          description: Past Eats orders (after data unwrap).
+          description: Past ride history.
           content:
             application/json:
               schema:
                 type: object
-                required:
-                  - ordersMap
-                  - orderUuids
                 properties:
-                  ordersMap:
-                    type: object
-                    description: Map of order UUID to order details.
-                    additionalProperties:
-                      type: object
-                      required:
-                        - baseEaterOrder
-                        - storeInfo
-                      properties:
-                        baseEaterOrder:
-                          type: object
-                          description: Core order data.
-                          required:
-                            - uuid
-                          properties:
-                            uuid:
-                              type: string
-                              description: Order UUID.
-                            completedAt:
-                              type:
-                                - string
-                                - 'null'
-                              description: ISO timestamp when order was completed.
-                            isCancelled:
-                              type: boolean
-                              description: Whether the order was cancelled.
-                            isCompleted:
-                              type: boolean
-                              description: Whether the order is completed.
-                            shoppingCart:
-                              type: object
-                              description: Cart snapshot at time of order.
-                              properties:
-                                items:
-                                  type: array
-                                  description: Ordered items.
-                                  items:
-                                    type: object
-                                    required:
-                                      - title
-                                      - price
-                                      - quantity
-                                    properties:
-                                      title:
-                                        type: string
-                                        description: Item name.
-                                      price:
-                                        type: number
-                                        description: Price in cents.
-                                      quantity:
-                                        type: integer
-                                        description: Number of this item ordered.
-                        storeInfo:
-                          type: object
-                          description: Restaurant info for this order.
-                          required:
-                            - title
-                            - uuid
-                          properties:
-                            title:
-                              type: string
-                              description: Restaurant name.
-                            uuid:
-                              type: string
-                              description: Restaurant UUID.
-                        fareInfo:
-                          type: object
-                          description: Pricing breakdown.
-                          properties:
-                            totalPrice:
-                              type:
-                                - number
-                                - 'null'
-                              description: Total in cents.
-                  orderUuids:
+                  rides:
                     type: array
                     items:
-                      type: string
-                    description: Ordered list of UUIDs — use to look up ordersMap.
-                  paginationData:
-                    type:
-                      - object
-                      - 'null'
-                    description: Pagination cursor data.
-                    properties:
-                      nextCursor:
-                        type: string
-                        description: Pass as lastWorkflowUUID for next page.
-                  meta:
-                    type:
-                      - object
-                      - 'null'
-                    description: Response metadata.
-                    properties:
-                      hasMore:
-                        type: boolean
-                        description: Whether more pages are available.
-
-  /_p/api/getStoreV1:
-    post:
-      operationId: getRestaurantMenu
-      summary: Get Uber Eats restaurant menu — categories, items, prices, images, availability
-      x-openweb:
-        permission: read
-        unwrap: data
-        build:
-          stable_id: ub0002
-          tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-      parameters:
-        - name: x-csrf-token
-          in: header
-          required: true
-          schema:
-            type: string
-            const: 'x'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - storeUuid
-              properties:
-                storeUuid:
-                  type: string
-                  description: Full UUID of the restaurant (from searchRestaurants storeUuid field).
-                  example: 8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7
-      responses:
-        '200':
-          description: Restaurant info and full menu (after data unwrap).
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - title
-                  - uuid
-                  - catalogSectionsMap
-                properties:
-                  title:
-                    type: string
-                    description: Restaurant name.
-                  uuid:
-                    type: string
-                    description: Restaurant UUID.
-                  slug:
-                    type: string
-                    description: URL-friendly restaurant slug.
-                  rating:
-                    type: object
-                    description: Rating and review summary.
-                    properties:
-                      ratingValue:
-                        type: number
-                        description: Average rating (e.g. 4.5).
-                      reviewCount:
-                        type: string
-                        description: Human-readable review count (e.g. "200+").
-                  currencyCode:
-                    type: string
-                    description: Currency code (e.g. "USD").
-                  isOpen:
-                    type: boolean
-                    description: Whether the restaurant is currently open.
-                  etaRange:
-                    type: object
-                    description: Delivery time estimate.
-                  location:
-                    type: object
-                    description: Restaurant location.
-                    properties:
-                      address:
-                        type: string
-                        description: Full street address.
-                      latitude:
-                        type: number
-                        description: Latitude coordinate.
-                      longitude:
-                        type: number
-                        description: Longitude coordinate.
-                  hours:
-                    type: array
-                    description: Operating hours by day.
-                  sections:
-                    type: array
-                    description: Menu time sections (e.g. Dinner, Lunch). Each has subsectionUuids.
-                    items:
                       type: object
-                      required:
-                        - title
-                        - uuid
                       properties:
-                        title:
-                          type: string
-                          description: Section name (e.g. "Dinner", "Lunch").
                         uuid:
                           type: string
-                          description: Section UUID — key into catalogSectionsMap.
-                        subsectionUuids:
-                          type: array
-                          description: UUIDs of subsections in this section.
-                          items:
-                            type: string
-                  catalogSectionsMap:
-                    type: object
-                    description: "Map of section UUID to menu categories array. Each category has standardItemsPayload.catalogItems."
-                    additionalProperties:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          type:
-                            type: string
-                            description: "Layout type (HORIZONTAL_GRID, VERTICAL_GRID)."
-                          catalogSectionUUID:
-                            type: string
-                            description: Category section UUID.
-                          payload:
-                            type: object
-                            description: Category payload container.
-                            properties:
-                              standardItemsPayload:
-                                type: object
-                                description: Standard menu items payload.
-                                properties:
-                                  title:
-                                    type: object
-                                    description: Category title wrapper.
-                                    properties:
-                                      text:
-                                        type: string
-                                        description: Category name (e.g. "Featured items", "Burgers").
-                                  catalogItems:
-                                    type: array
-                                    description: Menu items in this category.
-                                    items:
-                                      type: object
-                                      required:
-                                        - uuid
-                                        - title
-                                        - price
-                                      properties:
-                                        uuid:
-                                          type: string
-                                          description: Item UUID — use for addToCart.
-                                        title:
-                                          type: string
-                                          description: Item name.
-                                        price:
-                                          type: integer
-                                          description: Price in cents.
-                                        imageUrl:
-                                          type:
-                                            - string
-                                            - 'null'
-                                          description: Item image URL (null if no image).
-                                        isSoldOut:
-                                          type: boolean
-                                          description: Whether the item is sold out.
-                                        hasCustomizations:
-                                          type: boolean
-                                          description: Whether item requires customization choices.
-                                        isAvailable:
-                                          type: boolean
-                                          description: Whether the item is currently available.
-                                        subsectionUuid:
-                                          type: string
-                                          description: Parent subsection UUID.
-                                        sectionUuid:
-                                          type: string
-                                          description: Parent section UUID.
-
-  /internal/addToCart:
-    post:
-      operationId: addToCart
-      summary: Add an item to Uber Eats cart — requires store UUID and item UUID from getRestaurantMenu
-      x-openweb:
-        permission: write
-        adapter:
-          name: uber-eats
-          operation: addToCart
-        transport: page
-        build:
-          stable_id: ub0004
-          tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - storeUuid
-                - itemUuid
-              properties:
-                storeUuid:
-                  type: string
-                  description: Full UUID of the restaurant.
-                  example: 8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7
-                itemUuid:
-                  type: string
-                  description: Item UUID from getRestaurantMenu catalogItems.
-                  example: 66c6b385-0b1f-5a75-ada7-649e8b309fff
-                quantity:
-                  type: integer
-                  default: 1
-                  description: Number of items to add.
-      responses:
-        '200':
-          description: Cart state after adding item.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - success
-                properties:
-                  success:
+                          description: Trip UUID.
+                        title:
+                          type: string
+                          description: Ride type.
+                        subtitle:
+                          type: string
+                          description: Date and route summary.
+                        fare:
+                          type: string
+                          description: Trip cost.
+                        detailUrl:
+                          type: string
+                          description: Link to trip details.
+                  nextPageToken:
+                    type:
+                      - string
+                      - 'null'
+                  hasMore:
                     type: boolean
-                    description: Whether the item was added successfully.
-                  storeUuid:
-                    type: string
-                    description: Restaurant UUID.
-                  itemUuid:
-                    type: string
-                    description: Item UUID that was added.
-                  quantity:
-                    type: integer
-                    description: Number of items added.
-
-  /internal/removeFromCart:
-    post:
-      operationId: removeFromCart
-      summary: Remove an item from Uber Eats cart — requires item UUID from getRestaurantMenu
-      x-openweb:
-        permission: write
-        safety: caution
-        adapter:
-          name: uber-eats
-          operation: removeFromCart
-        transport: page
-        build:
-          stable_id: ub0005
-          tool_version: 2
-          verified: true
-          signals:
-            - adapter-verified
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - itemUuid
-              properties:
-                itemUuid:
-                  type: string
-                  description: Item UUID to remove (from getRestaurantMenu catalogItems or addToCart response).
-                  example: 66c6b385-0b1f-5a75-ada7-649e8b309fff
-      responses:
-        '200':
-          description: Cart state after removing item.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - success
-                properties:
-                  success:
-                    type: boolean
-                    description: Whether the item was removed successfully.
-                  itemUuid:
-                    type: string
-                    description: Item UUID that was removed.
-                  cartCount:
-                    type: integer
-                    description: Remaining items in cart.

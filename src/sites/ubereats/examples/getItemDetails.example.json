@@ -1,0 +1,17 @@
+{
+  "operation_id": "getItemDetails",
+  "cases": [
+    {
+      "input": {
+        "storeUuid": "8b2f2683-50d3-4e3f-8c2e-3d00686aa3e7",
+        "sectionUuid": "3b247595-f7a2-56c2-80c6-5e676020625a",
+        "subsectionUuid": "0379a62a-1156-4ddb-a09a-7e1dc45d5dfb",
+        "menuItemUuid": "6a7477ef-e958-5d7e-ad13-919222778971"
+      },
+      "assertions": {
+        "status": 200,
+        "response_schema_valid": true
+      }
+    }
+  ]
+}
