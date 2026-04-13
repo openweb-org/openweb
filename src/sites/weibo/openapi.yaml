@@ -1194,11 +1194,7 @@ paths:
                           description: Image type (pic/gif/livephoto).
                   retweeted_status:
                     type: object
-                    description: "Reposted/quoted post (cycle-broken: does not nest further)."
-                    required:
-                    - id
-                    - idstr
-                    - mid
+                    description: "Reposted/quoted post (cycle-broken: does not nest further). Fields may be absent when the original post was deleted."
                     properties:
                       id:
                         type: integer
@@ -1220,10 +1216,6 @@ paths:
                         type: string
                       user:
                         type: object
-                        required:
-                        - id
-                        - idstr
-                        - screen_name
                         properties:
                           id:
                             type: integer

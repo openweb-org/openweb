@@ -146,8 +146,28 @@ export async function executeOperation(
       if (!browser) throw new Error('No browser available — ensureBrowser returned an invalid handle')
       try {
         const adapter = await loadAdapter(siteRoot, adapterRef.name)
-        const context = browser.contexts()[0]
+        let context = browser.contexts()[0]
         if (!context) {
+          // Context was killed (e.g. by PerimeterX closing CDP tabs).
+          // Restart the managed browser and reconnect.
+          if (!deps.browser && !deps.cdpEndpoint) {
+            if (handle) await handle.release()
+            await refreshProfile()
+            const retryHandle = await ensureBrowser()
+            const retryBrowser = retryHandle.browser
+            try {
+              context = retryBrowser.contexts()[0]
+              if (!context) throw new Error('No browser context after restart')
+              const page = await context.newPage()
+              try {
+                return await executeAdapter(page, adapter, adapterRef.operation, adapterParams, { requiresAuth })
+              } finally {
+                await page.close().catch(() => {})
+              }
+            } finally {
+              await retryHandle.release()
+            }
+          }
           throw new OpenWebError({
             error: 'execution_failed',
             code: 'EXECUTION_FAILED',
@@ -181,36 +201,44 @@ export async function executeOperation(
     try {
       body = await adapterAttempt()
     } catch (err) {
-      if (!(err instanceof OpenWebError && err.payload.failureClass === 'needs_login')) throw err
-      if (deps.skipLoginCascade) throw err
-
-      if (deps.cdpEndpoint || deps.browser) {
-        // External browser — skip profile refresh, try login cascade directly
-        if (!deps.cdpEndpoint || isLocalhost(deps.cdpEndpoint)) {
-          const loginUrl = manifest?.site_url ?? spec.servers?.[0]?.url ?? ''
-          await handleLoginRequired(loginUrl, async () => {
-            try { body = await adapterAttempt(); return true } catch (e) {
-              if (e instanceof OpenWebError && e.payload.failureClass === 'needs_login') return false
-              throw e
-            }
-          })
-        } else {
-          throw err
-        }
+      // Browser context killed (e.g. PerimeterX closing CDP tabs) — retry once with fresh browser
+      const isContextClosed = err instanceof Error && /(?:context|browser|target).+closed/i.test(err.message)
+      if (isContextClosed && !deps.browser && !deps.cdpEndpoint) {
+        await refreshProfile()
+        body = await adapterAttempt()
+      } else if (!(err instanceof OpenWebError && err.payload.failureClass === 'needs_login')) {
+        throw err
       } else {
-        // Managed browser: tier 3 (profile refresh) → tier 4 (user login)
-        try {
-          await refreshProfile()
-          body = await adapterAttempt()
-        } catch (err2) {
-          if (!(err2 instanceof OpenWebError && err2.payload.failureClass === 'needs_login')) throw err2
-          const loginUrl = manifest?.site_url ?? spec.servers?.[0]?.url ?? ''
-          await handleLoginRequired(loginUrl, async () => {
-            try { body = await adapterAttempt(); return true } catch (e) {
-              if (e instanceof OpenWebError && e.payload.failureClass === 'needs_login') return false
-              throw e
-            }
-          })
+        if (deps.skipLoginCascade) throw err
+
+        if (deps.cdpEndpoint || deps.browser) {
+          // External browser — skip profile refresh, try login cascade directly
+          if (!deps.cdpEndpoint || isLocalhost(deps.cdpEndpoint)) {
+            const loginUrl = manifest?.site_url ?? spec.servers?.[0]?.url ?? ''
+            await handleLoginRequired(loginUrl, async () => {
+              try { body = await adapterAttempt(); return true } catch (e) {
+                if (e instanceof OpenWebError && e.payload.failureClass === 'needs_login') return false
+                throw e
+              }
+            })
+          } else {
+            throw err
+          }
+        } else {
+          // Managed browser: tier 3 (profile refresh) → tier 4 (user login)
+          try {
+            await refreshProfile()
+            body = await adapterAttempt()
+          } catch (err2) {
+            if (!(err2 instanceof OpenWebError && err2.payload.failureClass === 'needs_login')) throw err2
+            const loginUrl = manifest?.site_url ?? spec.servers?.[0]?.url ?? ''
+            await handleLoginRequired(loginUrl, async () => {
+              try { body = await adapterAttempt(); return true } catch (e) {
+                if (e instanceof OpenWebError && e.payload.failureClass === 'needs_login') return false
+                throw e
+              }
+            })
+          }
         }
       }
     }
@@ -407,7 +435,9 @@ export async function executeOperation(
           if (requestBody && !requestHeaders['Content-Type']) requestHeaders['Content-Type'] = 'application/json'
         }
       }
-      const response = await fetchWithRedirects(url, upperMethod, { 'Accept': 'application/json', 'User-Agent': DEFAULT_USER_AGENT, ...requestHeaders }, requestBody, {
+      // Merge server-level x-openweb.headers (e.g., per-site User-Agent overrides)
+      const serverConstHeaders = getServerXOpenWeb(spec, operationRef.operation)?.headers ?? {}
+      const response = await fetchWithRedirects(url, upperMethod, { 'Accept': 'application/json', 'User-Agent': DEFAULT_USER_AGENT, ...serverConstHeaders, ...requestHeaders }, requestBody, {
         fetchImpl: deps.fetchImpl ?? fetch,
         ssrfValidator: deps.ssrfValidator ?? validateSSRF,
       })

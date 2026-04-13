@@ -36,7 +36,7 @@ const OP_NAME: Record<string, string> = {
   reply: 'CreateTweet',
   getNotifications: 'notifications/all',  // REST v2
   getUserLikes: 'Likes',
-  getBookmarks: 'timeline/bookmark',  // REST v2
+  getBookmarks: 'Bookmarks',
   deleteDM: 'DMMessageDeleteMutation',
 }
 
@@ -51,7 +51,7 @@ const SIGNER_MODULE_ID = 938838
 
 // ── Helpers ───────────────────────────────────────
 
-/** Extract all queryId→operationName pairs from the main.js bundle. */
+/** Extract all queryId→operationName pairs from Twitter's JS bundles. */
 async function loadQueryIds(page: Page): Promise<Record<string, string>> {
   return page.evaluate(async () => {
     const scripts = Array.from(document.querySelectorAll('script[src]'))
@@ -596,31 +596,39 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   },
 
   getBookmarks: async (page, params, errors) => {
-    const variables: Record<string, unknown> = {
-      count: Number(params.count) || 20,
-      includePromotedContent: true,
-    }
-    const features = { ...DEFAULT_FEATURES, rweb_tipjar_consumption_enabled: false }
-
-    // Try known bookmark operation names first (avoids dynamic discovery overhead)
-    const knownNames = ['Bookmarks', 'BookmarkTimeline', 'BookmarkTimeline_Timeline']
-    for (const name of knownNames) {
+    // Bookmarks queryId is in a lazy-loaded webpack chunk not available in main.js.
+    // Extract it by navigating to the bookmarks page and capturing the API request URL.
+    if (!cachedQueryIds) cachedQueryIds = await loadQueryIds(page)
+    if (!cachedQueryIds.Bookmarks) {
+      const prevUrl = page.url()
+      const queryIdPromise = new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Bookmark queryId capture timeout')), 15000)
+        const handler = (req: { url(): string }) => {
+          const match = req.url().match(/\/i\/api\/graphql\/([^/]+)\/Bookmarks\b/)
+          if (match) {
+            clearTimeout(timeout)
+            page.removeListener('request', handler)
+            resolve(match[1])
+          }
+        }
+        page.on('request', handler)
+      })
+      await page.goto('https://x.com/i/bookmarks', { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
       try {
-        return await executeGraphqlGet(page, name, variables, features, undefined, errors)
+        const qid = await queryIdPromise
+        cachedQueryIds.Bookmarks = qid
       } catch {
-        continue
+        throw errors.fatal('Could not discover Bookmarks queryId from Twitter navigation')
+      }
+      // Navigate back
+      if (prevUrl && prevUrl !== page.url()) {
+        await page.goto(prevUrl, { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {})
       }
     }
-
-    // Fallback: dynamic discovery — operation name may vary across deploys
-    if (!cachedQueryIds) cachedQueryIds = await loadQueryIds(page)
-    const readOps = Object.keys(cachedQueryIds).filter(
-      k => /bookmark/i.test(k) && !/^(Create|Delete)/.test(k),
-    )
-    const opName = readOps.find(k => /timeline/i.test(k)) ?? readOps[0]
-    if (!opName) throw errors.fatal('No bookmark list operation found in Twitter bundle')
-    if (/folder/i.test(opName)) variables.bookmark_collection_id = ''
-    return executeGraphqlGet(page, opName, variables, features, undefined, errors)
+    return executeGraphqlGet(page, 'Bookmarks', {
+      count: Number(params.count) || 20,
+      includePromotedContent: true,
+    }, DEFAULT_FEATURES, undefined, errors)
   },
 }
 

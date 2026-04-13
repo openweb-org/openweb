@@ -160,5 +160,5 @@ openweb x exec getUserLikes '{"userId": "4398626122", "count": 20}'
 - `sendDM` only works for approved contacts (users who follow you or have open DMs)
 - `deleteDM` uses GraphQL `DMMessageDeleteMutation` — operation name may change
 - `getBookmarks` and `getNotifications` only return the authenticated user's data
-- `getBookmarks` uses dynamic GraphQL operation discovery (operation name varies across deploys); may return HTTP 422 if the account lacks X Premium or if Twitter changes the required variables
+- `getBookmarks` uses the `Bookmarks` GraphQL operation whose queryId lives in a lazy-loaded webpack chunk (not in main.js); the adapter discovers it by navigating to `/i/bookmarks` and capturing the API request URL on first call
 - `getTrending` → use `getExplorePage`; `getThread` → use `getTweetDetail`

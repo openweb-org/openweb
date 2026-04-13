@@ -417,82 +417,91 @@ async function getTranscript(
   params: Record<string, unknown>,
   helpers: { errors: Errors; pageFetch: PageFetchFn },
 ): Promise<unknown> {
-  const { errors, pageFetch } = helpers
+  const { errors } = helpers
   const videoId = String(params.videoId || '')
   if (!videoId) throw errors.missingParam('videoId')
 
-  const config = await getYtConfig(page)
-  const context = makeContext(config.clientVersion)
-
-  // Step 1: get transcript params token from /next engagement panels
-  const nextResp = await innertubePost(pageFetch, page, 'next', { context, videoId }, config, errors) as Record<string, unknown>
-
-  const panels = nextResp.engagementPanels as Array<Record<string, unknown>> | undefined
-  let transcriptParams: string | undefined
-  if (Array.isArray(panels)) {
-    for (const panel of panels) {
-      const renderer = panel.engagementPanelSectionListRenderer as Record<string, unknown> | undefined
-      if (!renderer || renderer.panelIdentifier !== 'engagement-panel-searchable-transcript') continue
-      const continuation = dig(
-        renderer,
-        'content', 'continuationItemRenderer', 'continuationEndpoint', 'getTranscriptEndpoint', 'params',
-      ) as string | undefined
-      if (continuation) { transcriptParams = continuation; break }
-    }
+  // Navigate to the video page to get player response with caption tracks
+  const videoUrl = `https://www.youtube.com/watch?v=${videoId}`
+  if (!page.url().includes(`watch?v=${videoId}`)) {
+    await page.goto(videoUrl, { waitUntil: 'load', timeout: 15000 })
+    await page.waitForTimeout(2000)
   }
 
-  if (!transcriptParams) {
+  // Extract caption track URLs from ytInitialPlayerResponse
+  const captionData = await page.evaluate(() => {
+    const w = window as unknown as Record<string, unknown>
+    const player = w.ytInitialPlayerResponse as Record<string, unknown> | undefined
+    if (!player) return null
+    const captions = player.captions as Record<string, unknown> | undefined
+    const renderer = captions?.playerCaptionsTracklistRenderer as Record<string, unknown> | undefined
+    if (!renderer) return null
+    const tracks = renderer.captionTracks as Array<Record<string, unknown>> | undefined
+    if (!Array.isArray(tracks) || tracks.length === 0) return null
+    return tracks.map(t => ({
+      baseUrl: String(t.baseUrl || ''),
+      languageCode: String(t.languageCode || ''),
+      kind: String(t.kind || ''),
+    }))
+  })
+
+  if (!captionData || captionData.length === 0) {
     return { videoId, segments: [], note: 'No transcript available for this video' }
   }
 
-  // Step 2: fetch transcript (needs authenticated session to avoid FAILED_PRECONDITION)
-  const auth = await getSapisidAuth(page)
-  const transcriptHeaders: Record<string, string> = { 'content-type': 'application/json' }
-  if (auth) {
-    transcriptHeaders.authorization = auth
-    transcriptHeaders['x-goog-authuser'] = '0'
-    transcriptHeaders['x-origin'] = 'https://www.youtube.com'
-  }
-  const transcriptUrl = `${API_BASE}/get_transcript?key=${config.key}&prettyPrint=false`
-  const transcriptResult = await pageFetch(page, {
-    url: transcriptUrl,
-    method: 'POST',
-    headers: transcriptHeaders,
-    body: JSON.stringify({ context, params: transcriptParams }),
-  })
-  if (transcriptResult.status >= 400) {
-    throw errors.retriable(`InnerTube get_transcript returned HTTP ${transcriptResult.status}`)
-  }
-  let transcriptResp: Record<string, unknown>
-  try {
-    transcriptResp = JSON.parse(transcriptResult.text) as Record<string, unknown>
-  } catch {
-    throw errors.fatal('InnerTube get_transcript returned invalid JSON')
+  // Select best track: prefer manual captions, then first available
+  const lang = String(params.lang || '')
+  let track = captionData[0]
+  if (lang) {
+    const exact = captionData.find(t => t.languageCode === lang)
+    if (exact) track = exact
+  } else {
+    const manual = captionData.find(t => t.kind !== 'asr')
+    if (manual) track = manual
   }
 
-  // Parse transcript segments from response
+  // Fetch the timedtext via browser navigation (not fetch API — avoids bot detection)
+  const separator = track.baseUrl.includes('?') ? '&' : '?'
+  const timedTextUrl = `${track.baseUrl}${separator}fmt=json3`
+  await page.goto(timedTextUrl, { waitUntil: 'load', timeout: 15000 })
+  const rawContent = await page.evaluate(() => document.body?.innerText || '')
+
+  if (!rawContent.trim()) {
+    return { videoId, segments: [], note: 'Timedtext endpoint returned empty response' }
+  }
+
+  let timedText: Record<string, unknown>
+  try {
+    timedText = JSON.parse(rawContent) as Record<string, unknown>
+  } catch {
+    throw errors.fatal('YouTube timedtext returned invalid JSON')
+  }
+
+  // Parse JSON3 events into segments
+  const events = timedText.events as Array<Record<string, unknown>> | undefined
   const segments: Array<Record<string, unknown>> = []
-  const actions = transcriptResp.actions as Array<Record<string, unknown>> | undefined
-  if (Array.isArray(actions)) {
-    for (const action of actions) {
-      const body = dig(action, 'updateEngagementPanelAction', 'content',
-        'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer',
-        'body', 'transcriptSegmentListRenderer', 'initialSegments',
-      ) as Array<Record<string, unknown>> | undefined
-      if (!Array.isArray(body)) continue
-      for (const seg of body) {
-        const renderer = seg.transcriptSegmentRenderer as Record<string, unknown> | undefined
-        if (!renderer) continue
-        segments.push({
-          startMs: renderer.startMs || '',
-          endMs: renderer.endMs || '',
-          text: textRuns(renderer.snippet),
-        })
-      }
+  if (Array.isArray(events)) {
+    for (const event of events) {
+      const segs = event.segs as Array<Record<string, unknown>> | undefined
+      if (!Array.isArray(segs)) continue
+      const text = segs.map(s => String(s.utf8 || '')).join('')
+      if (!text.trim()) continue
+      const startMs = Number(event.tStartMs || 0)
+      const durationMs = Number(event.dDurationMs || 0)
+      segments.push({
+        startMs: String(startMs),
+        endMs: String(startMs + durationMs),
+        text: text.trim(),
+      })
     }
   }
 
-  return { videoId, segments }
+  return {
+    videoId,
+    languageCode: track.languageCode,
+    isAutoGenerated: track.kind === 'asr',
+    segments,
+  }
 }
 
 // --- likeVideo / unlikeVideo ---

@@ -277,6 +277,11 @@ export async function verifySite(
       if (result.driftType === 'auth_drift') loginAttempted = true
       operations.push(result)
     }
+
+    // Rate-limit delay between operations to avoid 429s on sites like yahoo-finance
+    if (operations.length > 0) {
+      await new Promise((r) => setTimeout(r, 1_500))
+    }
   }
 
   // Close pages opened for this site's origin (warm-up + any leaked by timeouts)

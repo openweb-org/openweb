@@ -197,8 +197,15 @@ paths:
                         type: string
                       retMsg:
                         type: string
-                required:
-                - data
+                  ResponseStatus:
+                    type: object
+                    nullable: true
+                    properties:
+                      Ack:
+                        type: string
+                  basicInfo:
+                    type: object
+                    nullable: true
   /restapi/soa2/14427/BatchGetFlightComfort:
     post:
       operationId: getFlightComfort
@@ -549,8 +556,12 @@ paths:
                         type: string
                       msg:
                         type: string
-                required:
-                - data
+                  ResponseStatus:
+                    type: object
+                    nullable: true
+                    properties:
+                      Ack:
+                        type: string
   /restapi/soa2/36040/loadStationList:
     post:
       operationId: getTrainStations
@@ -612,8 +623,12 @@ paths:
                         type: string
                       msg:
                         type: string
-                required:
-                - data
+                  ResponseStatus:
+                    type: object
+                    nullable: true
+                    properties:
+                      Ack:
+                        type: string
   /restapi/soa2/14427/poiSearch:
     post:
       operationId: searchPOI
