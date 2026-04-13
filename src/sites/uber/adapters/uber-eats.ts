@@ -61,8 +61,8 @@ async function apiCall(page: Page, helpers: Helpers, endpoint: string, body: unk
 /** Ensure page is on ubereats.com (navigate if needed). */
 async function ensureUberEatsPage(page: Page): Promise<void> {
   if (!page.url().includes('ubereats.com')) {
-    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
-    await page.waitForTimeout(3000)
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 15_000 }).catch(() => {})
+    await page.waitForTimeout(1500)
   }
 }
 
@@ -114,28 +114,14 @@ async function addToCart(page: Page, params: Record<string, unknown>, helpers: H
   }
   if (!sectionUuid) throw errors.fatal(`Item ${itemUuid} not found in store menu`)
 
-  // Step 3: Validate item via getMenuItemV1 API
-  const menuItem = await apiCall(page, helpers, 'getMenuItemV1', {
-    itemRequestType: 'ITEM',
-    storeUuid,
-    sectionUuid,
-    subsectionUuid,
-    menuItemUuid: itemUuid,
-    cbType: 'EATER_ENDORSED',
-    includeCheaperAlternatives: false,
-    contextReferences: [{ type: 'GROUP_ITEMS', payload: { type: 'groupItemsContextReferencePayload', groupItemsContextReferencePayload: {} }, pageContext: 'UNKNOWN' }],
-  })
-  if (!menuItem) throw errors.fatal(`Menu item ${itemUuid} not found or unavailable`)
-
-  // Step 4: Navigate to quickView URL — opens item modal directly
+  // Step 3: Navigate to quickView URL — opens item modal directly
   const storeSlug = uuidToSlug(storeUuid)
   const modctx = JSON.stringify({ storeUuid, sectionUuid, subsectionUuid, itemUuid })
   const quickViewUrl = `${BASE}/store/${slug}/${storeSlug}?mod=quickView&modctx=${encodeURIComponent(modctx)}`
 
-  await page.goto(quickViewUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {})
-  await page.waitForTimeout(4000)
+  await page.goto(quickViewUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => {})
 
-  // Step 5: Click "Add to order" — stable data-testid selector
+  // Step 4: Click "Add to order" — stable data-testid selector
   const addBtn = page.locator('[data-testid="add-to-cart-button"]')
   try {
     await addBtn.waitFor({ state: 'visible', timeout: 10_000 })
@@ -153,9 +139,9 @@ async function addToCart(page: Page, params: Record<string, unknown>, helpers: H
   }
 
   await addBtn.click({ timeout: 5000 })
-  await page.waitForTimeout(3000)
+  await page.waitForTimeout(1500)
 
-  // Step 6: Verify via cart badge
+  // Step 5: Verify via cart badge
   const cartCount = await readCartBadge(page)
 
   return {
