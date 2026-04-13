@@ -22,6 +22,9 @@ export interface XOpenWebServer {
   readonly auth?: AuthPrimitive
   readonly csrf?: CsrfPrimitive & { readonly scope?: readonly string[] }
   readonly signing?: SigningPrimitive
+  /** Constant headers merged into every node-transport request to this server.
+   *  Useful for per-site User-Agent overrides, API keys, etc. */
+  readonly headers?: Readonly<Record<string, string>>
 }
 
 export interface XOpenWebBuildMeta {

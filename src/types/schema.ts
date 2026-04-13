@@ -43,6 +43,7 @@ export const xOpenWebServerSchema = {
     auth: authPrimitiveSchema,
     csrf: csrfWithScopeSchema,
     signing: signingPrimitiveSchema,
+    headers: { type: 'object', additionalProperties: { type: 'string' } },
   },
   additionalProperties: false,
 } as const
