@@ -59,24 +59,34 @@ openweb zillow exec getNeighborhood '{"zpid":"15076238","slug":"1000-Fell-St-San
 
 ### API Architecture
 - Next.js SSR app with GraphQL API at `/graphql` using Apollo persisted queries
-- Property detail query (hash `3b51e213...`) returns 85+ fields per property via GraphQL
-- `PUT /async-create-search-page-state` is the SPA search API
-- Cross-property GraphQL queries work from any zillow.com page — no per-property navigation needed
+- `gdpClientCache` in `__NEXT_DATA__` contains the same data as the GraphQL response (118+ fields)
+- Search results available in `searchPageState.cat1` within `__NEXT_DATA__`
 
 ### Auth
 - `cookie_session` — PerimeterX requires a valid browser session; all endpoints return 403 without one
-- Login via `openweb login zillow`, then `openweb browser restart`
-- CSRF: `x-caller-id: openweb` header required for GraphQL
+- No login required for public property data (`requires_auth: false`)
 
 ### Transport
-- `page` — PerimeterX bot detection blocks all node HTTP (403, `x-px-blocked: 1`)
-- Must use headed browser with real Chrome profile
-- Adapter ops (getPropertyDetail, getZestimate, getNeighborhood) use `page.evaluate(fetch('/graphql'))` — zero per-property navigation
-- searchProperties uses `page.evaluate(fetch('/async-create-search-page-state'))` or SSR parsing
+- `page` — all 4 ops use adapter (`adapters/zillow-detail.ts`) with `__NEXT_DATA__` extraction
+- **GraphQL API (`/graphql/`) is fully blocked by PerimeterX** — both `page.evaluate(fetch())` and `page.request.fetch()` return 403 with CAPTCHA HTML. Only page navigation works.
+- searchProperties also uses adapter (page navigation to search URL + `__NEXT_DATA__`)
+- Property data cached per-zpid within adapter — getPropertyDetail/getZestimate/getNeighborhood share one navigation
+
+### Extraction
+- All ops: navigate to target URL → extract `script#__NEXT_DATA__` → parse `gdpClientCache` (property ops) or `searchPageState` (search)
+- Property cache key pattern: `NotForSalePriorityQuery{...}` → `value.property` contains 118+ fields
+- Schools, nearbyHomes, taxHistory may be null in SSR data (lazy-loaded via secondary GraphQL queries)
+
+### PerimeterX Handling (adapter pattern)
+- Initial page load after browser start triggers CAPTCHA — verify warm-up poisons the PX session
+- **Reset pattern**: navigate to `about:blank` → `context.clearCookies()` → wait 1s → retry navigation
+- Up to 4 retry attempts per navigation; first 1-2 attempts typically CAPTCHA, subsequent succeed
+- `adapter.init()` clears cookies if current page is CAPTCHA (handles warm-up poisoning)
+- `propertyCache` avoids re-navigation when multiple ops target the same zpid
 
 ### Known Issues
-- **PerimeterX**: Aggressive CAPTCHA on all requests. Sessions degrade after ~10 minutes of inactivity. Use headed browser, solve CAPTCHA manually, then retry.
-- Response is ~200KB+ per search — auto-spills to temp file
-- `regionId` is required but not easily discoverable — use known IDs or the autocomplete API
-- GraphQL `pageViewCount`, `favoriteCount`, `walkScore/transitScore/bikeScore` return null (not in persisted query response)
-- `slug` parameter is optional for detail ops — use `"_"` if unknown, Zillow redirects to correct URL
+- **PerimeterX**: Aggressive CAPTCHA on all requests including GraphQL API. The adapter handles retries automatically via the about:blank cookie reset pattern. Sessions degrade after ~10 minutes of inactivity.
+- `walkScore`, `transitScore`, `bikeScore` return null — not in SSR initial data (lazy-loaded)
+- `schools`, `nearbyHomes`, `taxHistory`, `description` may be null for some properties (not in initial SSR query)
+- `regionId` is required for search but not easily discoverable — use known IDs
+- `slug` parameter is cosmetic — use `"_"` if unknown, Zillow redirects to correct URL

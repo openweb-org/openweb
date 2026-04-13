@@ -1,3 +1,26 @@
+## 2026-04-13 — Transport downgrade: GraphQL API → __NEXT_DATA__ SSR extraction
+
+**Context:** All 4 ops failing verify — PerimeterX now blocks all programmatic fetch calls to `/graphql/` (both `page.evaluate(fetch())` and `page.request.fetch()` return 403 with CAPTCHA HTML). Previous adapter used GraphQL persisted query via in-page fetch.
+
+**Changes:**
+- Rewrote `adapters/zillow-detail.ts` from GraphQL API calls to page navigation + `__NEXT_DATA__` extraction
+- Added `navigateWithPxRetry()` — about:blank → clearCookies → retry pattern (up to 4 attempts)
+- Added `propertyCache` — same zpid reuses extracted data across getPropertyDetail/getZestimate/getNeighborhood
+- Moved searchProperties from transport:page (executeBrowserFetch) to adapter — navigates to search page URL + extracts `searchPageState` from `__NEXT_DATA__`
+- Updated `openapi.yaml` — added adapter reference to searchProperties
+- `adapter.init()` clears cookies if current page shows CAPTCHA (handles verify warm-up poisoning)
+- Fixed `zestimateLowPercent`/`zestimateHighPercent` type coercion (string from SSR → number for schema)
+
+**Verification:** `pnpm dev verify zillow --browser` → 4/4 PASS
+
+**Key discovery:** PerimeterX on Zillow blocks ALL programmatic API calls — `page.evaluate(fetch())`, `page.request.fetch()`, and direct HTTP. Only full page navigation works. The verify warm-up (autoNavigate to site URL) poisons PX session — adapter must detect CAPTCHA page and reset via about:blank + clearCookies. First 1-2 navigation attempts after browser start typically CAPTCHA; retries succeed after cookie reset.
+
+**Pitfalls encountered:**
+- `page.request.fetch()` (Costco pattern) doesn't bypass Zillow's PX — their PX validates at network/cookie level, not just JS interception
+- `clearCookies({ domain: '.zillow.com' })` insufficient — must use `clearCookies()` (all cookies) for reliable reset
+- Must navigate to `about:blank` before clearing cookies — clearing while on CAPTCHA page doesn't reset PX state
+- Verify warm-up navigates to site before adapter runs, creating stale CAPTCHA page; adapter init must handle this
+
 ## 2026-04-09: Polish zillow site package
 
 **What changed:**

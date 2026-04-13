@@ -22,10 +22,10 @@ Real estate marketplace. Search properties, get full property details, Zestimate
 
 | Operation | Intent | Key Input | Key Output | Notes |
 |-----------|--------|-----------|------------|-------|
-| searchProperties | find properties for sale | mapBounds, regionSelection, filterState | listings: address, price, beds, baths, sqft, zestimate, photos, lat/lng | entry point, returns ~41 results |
-| getPropertyDetail | get full property details | zpid, slug | address, price, beds, baths, sqft, photos, description, Zestimate, year built | adapter: __NEXT_DATA__ extraction |
-| getZestimate | get home value estimate | zpid, slug | zestimate, rentZestimate, confidence range, tax assessment, history | adapter: __NEXT_DATA__ extraction |
-| getNeighborhood | get neighborhood data | zpid, slug | schools, walkScore, transitScore, bikeScore, nearby homes | adapter: __NEXT_DATA__ extraction |
+| searchProperties | find properties for sale | mapBounds, regionSelection, filterState | listings: address, price, beds, baths, sqft, zestimate, photos, lat/lng | entry point; adapter: search page __NEXT_DATA__ |
+| getPropertyDetail | get full property details | zpid, slug | address, price, beds, baths, sqft, photos, description, Zestimate, year built | adapter: property page __NEXT_DATA__ |
+| getZestimate | get home value estimate | zpid, slug | zestimate, rentZestimate, confidence range, tax assessment | adapter: property page __NEXT_DATA__ |
+| getNeighborhood | get neighborhood data | zpid, slug | schools, walkScore, transitScore, bikeScore, nearby homes | adapter: property page __NEXT_DATA__; scores may be null |
 
 ## Quick Start
 
