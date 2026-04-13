@@ -29,6 +29,7 @@ interface XOpenWebServer {
   auth?: AuthPrimitive
   csrf?: CsrfPrimitive & { scope?: string[] }
   signing?: SigningPrimitive
+  headers?: Record<string, string>  // constant headers merged into every node request
 }
 ```
 

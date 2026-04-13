@@ -245,6 +245,16 @@ Worker-like pages (`*.js`, empty content) are ignored. There is no fallback to a
 
 -> See: `src/runtime/session-executor.ts`, `src/runtime/redirect.ts`, `src/runtime/request-builder.ts`, `src/runtime/operation-context.ts`
 
+### Constant Headers
+
+Server-level `x-openweb.headers` allows per-site constant headers (e.g., User-Agent overrides for node-transport requests). These are merged into every request to that server, before auth/CSRF headers. Useful when a site requires a specific UA string to avoid 429s.
+
+### Browser Context Recovery
+
+When an anti-bot system (PerimeterX, DataDome) kills the CDP browser context mid-operation, the http-executor restarts the browser and retries the operation instead of failing fatally. This covers adapter ops that use `page.evaluate()` for in-page fetches.
+
+-> See: `src/runtime/http-executor.ts`
+
 ---
 
 ## Page Transport

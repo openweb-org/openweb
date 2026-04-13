@@ -98,6 +98,7 @@ If any fail → diagnose below.
 | 400 | Bad param examples or missing required params | Update `exampleValue` fields |
 | 200 empty/wrong data | Wrong query variables or response schema | Compare captured request params vs what you're sending |
 | Timeout / hang | Stale token cache, browser not running | `openweb browser restart`, clear token cache |
+| 429 | Rate limited by site | Verify uses 1.5s inter-op delay; if still hitting limits, add `headers` with custom UA or reduce batch size |
 | Redirect loop | Auth-gated endpoint, not logged in | Log in, or remove endpoint |
 
 After fixing the spec, return to batch verify.

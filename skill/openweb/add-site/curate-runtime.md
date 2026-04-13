@@ -16,6 +16,7 @@ extraction, or adapter-based operations.
 | `auth` | AuthPrimitive | If site has auth |
 | `csrf` | CsrfPrimitive + `scope` | If site has CSRF |
 | `signing` | SigningPrimitive | If site has signing |
+| `headers` | `Record<string, string>` | If site needs constant headers (e.g., User-Agent override) |
 
 **Operation-level** (per-operation `x-openweb`) — overrides server config:
 

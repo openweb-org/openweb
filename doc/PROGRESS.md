@@ -1,3 +1,45 @@
+## 2026-04-13: Release Quality Sprint — Verify Fixes + x-openweb.headers
+
+**What changed:**
+- **Verify fixes (3 rounds):** Fixed 20+ sites across auth, schema drift, bot detection, adapter init
+  - Auth cascade fixes: doordash, instagram, x (lazy webpack interception), youtube (timedtext API)
+  - Schema drift: costco, notion, steam, twitch, ctrip, bilibili, indeed, weibo (relaxed required fields)
+  - Bot detection: quora (warm-up), goodrx (context recovery), zillow (PerimeterX cookie wait)
+  - Adapter fixes: reuters (init navigation), uber (addToCart timeout), kayak (examples)
+- **Verify infrastructure:** 1.5s inter-op delay prevents rate limiting; browser context recovery on anti-bot kills
+- **x-openweb.headers:** New server-level field for per-site constant headers (User-Agent overrides). Used by yahoo-finance.
+- **Type system:** `XOpenWebServer.headers` added to extensions.ts + schema.ts
+
+**Why:**
+- Release quality gate: every site in catalog must verify pass with meaningful data
+- yahoo-finance needed custom UA to avoid 429; headers field generalizes this for any site
+
+**Key files:** `src/types/extensions.ts`, `src/types/schema.ts`, `src/lifecycle/verify.ts`, `src/runtime/http-executor.ts`, 20+ site-specific openapi.yaml/adapter changes
+**Verification:** 92 sites verified, 69 full PASS, 23 partial (auth/transient), 0 broken
+**Commit:** `019cd0f`..`a31648b` (6 commits)
+**Next:** WP5 dist audit + npm publish; expedia getHotelReviews fix after Akamai cooldown
+**Blockers:** Expedia IP blocked by Akamai (temporary)
+
+---
+
+## 2026-04-13: Release Quality Sprint — Main
+
+**What changed:**
+- **WP1 Manifest Backfill:** All 92 sites have manifest.json with stats (operation_count, l1/l2/l3/ws_count)
+- **WP2 Three-File Docs:** All 92 sites migrated to SKILL.md + DOC.md + PROGRESS.md; 41 summary.md merged and deleted
+- **WP3 Required Fields:** All read op response schemas have 1-3 required fields; verify.md + curate-runtime.md updated with standard
+- **WP4 Broken Sites:** Removed netflix, facebook, wayfair, skyscanner (bot detection / no account); fixed kayak (2/3 ops)
+- **Site count:** 96 → 92 (4 removed)
+
+**Why:**
+- Ship quality baseline: every site verifiable with meaningful data, complete docs, no dead code
+
+**Key files:** 222 files changed across all src/sites/, skill/openweb/add-site/
+**Verification:** Build clean, lint clean, 92 sites packaged
+**Commit:** `019cd0f`
+
+---
+
 ## 2026-04-12: Infrastructure Improvements — Skill Docs + Adapter Helpers
 
 **What changed:**
