@@ -280,7 +280,7 @@ paths:
                   result:
                     type: object
                     description: Article detail container.
-                    required: [id, title, body]
+                    required: [title, body]
                     properties:
                       id:
                         type: string

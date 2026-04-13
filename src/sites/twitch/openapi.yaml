@@ -379,10 +379,6 @@ paths:
                       stream:
                         type: [object, 'null']
                         description: Current live stream (null if offline).
-                        required:
-                          - id
-                          - type
-                          - createdAt
                         properties:
                           id:
                             type: string
@@ -396,9 +392,6 @@ paths:
                           game:
                             type: [object, 'null']
                             description: Game/category being streamed (null if uncategorized).
-                            required:
-                              - id
-                              - name
                             properties:
                               id:
                                 type: string

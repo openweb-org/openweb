@@ -1,12 +1,11 @@
-import type { Page, Response as PwResponse } from 'patchright'
+import type { Page } from 'patchright'
 
 /**
- * Quora adapter — GraphQL interception + DOM extraction.
+ * Quora adapter — DOM extraction for all operations.
  *
- * Quora uses persisted GraphQL queries with page-scoped formkeys.
- * Direct replay fails (returns null data), so we navigate to the
- * correct pages and either intercept the GQL responses or extract
- * structured data from the DOM.
+ * Quora now SSR-renders search results (no separate GraphQL query for search).
+ * All operations navigate to the correct page and extract structured data
+ * from the DOM.
  */
 
 type Errors = {
@@ -34,40 +33,6 @@ function parseTitle(raw: string): string {
   }
 }
 
-/** Intercept a GraphQL response matching the given operation name during navigation. */
-async function interceptGql(
-  page: Page,
-  opName: string,
-  navigateUrl: string,
-  timeout = 15_000,
-): Promise<unknown> {
-  let captured: unknown = null
-  const handler = async (resp: PwResponse) => {
-    if (captured) return
-    const url = resp.url()
-    if (url.includes('graphql/gql') && url.includes(opName) && resp.status() < 400) {
-      try {
-        captured = await resp.json()
-      } catch {
-        /* ignore parse errors */
-      }
-    }
-  }
-  page.on('response', handler)
-
-  try {
-    await page.goto(navigateUrl, { waitUntil: 'load', timeout: 30_000 })
-    const deadline = Date.now() + timeout
-    while (!captured && Date.now() < deadline) {
-      await wait(500)
-    }
-  } finally {
-    page.off('response', handler)
-  }
-
-  return captured
-}
-
 async function searchQuestions(
   page: Page,
   params: Record<string, unknown>,
@@ -78,31 +43,78 @@ async function searchQuestions(
   const limit = Math.min(Number(params.limit ?? 10), 25)
 
   const searchUrl = `${BASE}/search?q=${encodeURIComponent(query)}&type=question`
-  const result = (await interceptGql(page, 'SearchResultsListQuery', searchUrl)) as {
-    data?: { searchConnection?: { edges?: unknown[]; pageInfo?: { hasNextPage: boolean } } }
-  } | null
+  // Create a fresh page for search — the warm-up page may have stale state
+  const context = page.context()
+  const searchPage = await context.newPage()
+  try {
+    await searchPage.goto(searchUrl, { waitUntil: 'load', timeout: 30_000 }).catch(() => {})
+    await wait(5_000)
 
-  const edges = result?.data?.searchConnection?.edges
-  if (!edges || edges.length === 0) {
-    throw errors.fatal('No search results — page may have failed to load')
-  }
+    // Extract search results from DOM — Quora now SSR-renders search results
+    const data = await searchPage.evaluate((max: number) => {
+      const results: {
+        qid: string | null
+        slug: string
+        title: string
+        answerCount: number
+        followerCount: number
+      }[] = []
 
-  const questions = (edges as { node: { question: Record<string, unknown> } }[])
-    .slice(0, limit)
-    .map((e) => {
-      const q = e.node.question
-      return {
-        qid: q.qid,
-        slug: (q.url as string)?.replace(/^\//, '') || '',
-        title: parseTitle(String(q.title || '')),
-        answerCount: q.decanonicalizedAnswerCount ?? 0,
-        followerCount: q.followerCount ?? 0,
+      // Find question links — they end with "?" and link to quora.com question pages
+      const links = document.querySelectorAll('a[href]')
+      const seen = new Set<string>()
+
+      for (const link of links) {
+        const href = link.getAttribute('href') || ''
+        // Question URLs: https://www.quora.com/Question-Slug-Here or /Question-Slug-Here
+        const match = href.match(/(?:https?:\/\/www\.quora\.com)?\/([A-Z][A-Za-z0-9-]+(?:-\d+)?)\/?$/)
+        if (!match) continue
+
+        const slug = match[1]
+        if (seen.has(slug)) continue
+        // Skip non-question paths
+        if (['search', 'profile', 'topic', 'about', 'contact', 'careers',
+             'press', 'privacy', 'tos', 'settings'].includes(slug.toLowerCase())) continue
+
+        // Get the text — question titles end with "?"
+        const text = (link.textContent || '').trim()
+        if (!text.endsWith('?') || text.length < 10) continue
+
+        seen.add(slug)
+
+        // Try to find answer count near the link
+        let answerCount = 0
+        const container = link.closest('[class*="qu-"]') || link.parentElement?.parentElement
+        if (container) {
+          const containerText = container.textContent || ''
+          const answerMatch = containerText.match(/(\d+)\s*answers?/i)
+          if (answerMatch) answerCount = parseInt(answerMatch[1], 10)
+        }
+
+        results.push({
+          qid: null,
+          slug,
+          title: text,
+          answerCount,
+          followerCount: 0,
+        })
+
+        if (results.length >= max) break
       }
-    })
 
-  return {
-    questions,
-    hasMore: result?.data?.searchConnection?.pageInfo?.hasNextPage ?? false,
+      return results
+    }, limit)
+
+    if (data.length === 0) {
+      throw errors.fatal('No search results — page may have failed to load')
+    }
+
+    return {
+      questions: data,
+      hasMore: data.length >= limit,
+    }
+  } finally {
+    await searchPage.close().catch(() => {})
   }
 }
 

@@ -508,61 +508,18 @@ paths:
           tool_version: 2
           verified: true
           signals:
-            - status-match
+            - adapter-verified
+        adapter:
+          name: youtube-innertube
+          operation: likeVideo
       parameters:
-        - name: key
+        - name: videoId
           in: query
           required: true
-          description: "InnerTube API key."
           schema:
             type: string
-          example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
-        - name: prettyPrint
-          in: query
-          required: false
-          description: "Disable pretty-printing for smaller payloads."
-          schema:
-            type: string
-          example: "false"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - context
-                - target
-              properties:
-                context:
-                  type: object
-                  description: "InnerTube client context — required on every request."
-                  properties:
-                    client:
-                      type: object
-                      description: "Client identification block."
-                      required:
-                        - clientName
-                        - clientVersion
-                      properties:
-                        clientName:
-                          type: string
-                          description: "Client name identifier."
-                          example: WEB
-                        clientVersion:
-                          type: string
-                          description: "Client version string (changes with YouTube deploys)."
-                          example: "2.20260325.08.00"
-                target:
-                  type: object
-                  description: "Like target."
-                  required:
-                    - videoId
-                  properties:
-                    videoId:
-                      type: string
-                      description: "YouTube video ID to like."
-                      example: "dQw4w9WgXcQ"
+          description: "YouTube video ID to like."
+          example: "dQw4w9WgXcQ"
       responses:
         "200":
           description: Like confirmation.
@@ -583,61 +540,18 @@ paths:
           tool_version: 2
           verified: true
           signals:
-            - status-match
+            - adapter-verified
+        adapter:
+          name: youtube-innertube
+          operation: unlikeVideo
       parameters:
-        - name: key
+        - name: videoId
           in: query
           required: true
-          description: "InnerTube API key."
           schema:
             type: string
-          example: AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8
-        - name: prettyPrint
-          in: query
-          required: false
-          description: "Disable pretty-printing for smaller payloads."
-          schema:
-            type: string
-          example: "false"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - context
-                - target
-              properties:
-                context:
-                  type: object
-                  description: "InnerTube client context — required on every request."
-                  properties:
-                    client:
-                      type: object
-                      description: "Client identification block."
-                      required:
-                        - clientName
-                        - clientVersion
-                      properties:
-                        clientName:
-                          type: string
-                          description: "Client name identifier."
-                          example: WEB
-                        clientVersion:
-                          type: string
-                          description: "Client version string (changes with YouTube deploys)."
-                          example: "2.20260325.08.00"
-                target:
-                  type: object
-                  description: "Unlike target."
-                  required:
-                    - videoId
-                  properties:
-                    videoId:
-                      type: string
-                      description: "YouTube video ID to unlike."
-                      example: "dQw4w9WgXcQ"
+          description: "YouTube video ID to unlike."
+          example: "dQw4w9WgXcQ"
       responses:
         "200":
           description: Unlike confirmation.
@@ -1057,3 +971,58 @@ paths:
                         index:
                           type: string
                           description: "Position in the playlist (1-based)."
+
+  /youtubei/v1/get_transcript:
+    post:
+      operationId: getTranscript
+      summary: "Get video transcript — timestamped lines. Adapter extracts params token from getVideoDetail automatically"
+      x-openweb:
+        permission: read
+        build:
+          stable_id: yt0016
+          tool_version: 1
+          verified: false
+          signals:
+            - adapter-verified
+        adapter:
+          name: youtube-innertube
+          operation: getTranscript
+      parameters:
+        - name: videoId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "YouTube video ID to get transcript for."
+          example: "dQw4w9WgXcQ"
+      responses:
+        "200":
+          description: Timestamped transcript lines.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - videoId
+                properties:
+                  videoId:
+                    type: string
+                    description: "The video ID."
+                  segments:
+                    type: array
+                    description: "Transcript segments with timestamps."
+                    items:
+                      type: object
+                      properties:
+                        startMs:
+                          type: string
+                          description: "Segment start time in milliseconds."
+                        endMs:
+                          type: string
+                          description: "Segment end time in milliseconds."
+                        text:
+                          type: string
+                          description: "Transcript text for this segment."
+                  note:
+                    type: string
+                    description: "Present when transcript is unavailable."

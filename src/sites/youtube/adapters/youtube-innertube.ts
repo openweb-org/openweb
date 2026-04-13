@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import type { Page } from 'patchright'
 import type { PageFetchOptions, PageFetchResult } from '../../../lib/adapter-helpers.js'
 
@@ -6,7 +7,8 @@ import type { PageFetchOptions, PageFetchResult } from '../../../lib/adapter-hel
  *
  * getComments: two-step — fetch video next page for comment continuation token,
  * then fetch comments via continuation. getPlaylist: wraps /browse with VL-prefixed
- * browseId for a cleaner playlistId-based interface.
+ * browseId for a cleaner playlistId-based interface. likeVideo/unlikeVideo: authenticated
+ * InnerTube calls with sapisidhash signing.
  */
 
 type Errors = {
@@ -49,6 +51,25 @@ function makeContext(clientVersion: string) {
   return { client: { clientName: 'WEB', clientVersion } }
 }
 
+/** Compute SAPISIDHASH for YouTube authenticated requests. */
+function computeSapisidhash(sapisid: string, origin: string): string {
+  const timestamp = Math.floor(Date.now() / 1000)
+  const hash = createHash('sha1').update(`${timestamp} ${sapisid} ${origin}`).digest('hex')
+  return `SAPISIDHASH ${timestamp}_${hash}`
+}
+
+/** Get SAPISID cookie from browser context for authenticated requests. */
+async function getSapisidAuth(page: Page): Promise<string | undefined> {
+  try {
+    const cookies = await page.context().cookies('https://www.youtube.com')
+    const sapisid = cookies.find(c => c.name === 'SAPISID')
+    if (!sapisid) return undefined
+    return computeSapisidhash(sapisid.value, 'https://www.youtube.com')
+  } catch {
+    return undefined
+  }
+}
+
 async function innertubePost(
   pageFetch: PageFetchFn,
   page: Page,
@@ -64,6 +85,44 @@ async function innertubePost(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   })
+  if (result.status >= 400) {
+    throw errors.retriable(`InnerTube ${endpoint} returned HTTP ${result.status}`)
+  }
+  try {
+    return JSON.parse(result.text)
+  } catch {
+    throw errors.fatal(`InnerTube ${endpoint} returned invalid JSON`)
+  }
+}
+
+/** Authenticated InnerTube POST — includes sapisidhash Authorization header. */
+async function innertubeAuthPost(
+  pageFetch: PageFetchFn,
+  page: Page,
+  endpoint: string,
+  body: Record<string, unknown>,
+  config: YtConfig,
+  errors: Errors,
+): Promise<unknown> {
+  const auth = await getSapisidAuth(page)
+  if (!auth) {
+    throw errors.fatal('Not logged in to YouTube — SAPISID cookie not found')
+  }
+  const url = `${API_BASE}/${endpoint}?key=${config.key}&prettyPrint=false`
+  const result = await pageFetch(page, {
+    url,
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'authorization': auth,
+      'x-goog-authuser': '0',
+      'x-origin': 'https://www.youtube.com',
+    },
+    body: JSON.stringify(body),
+  })
+  if (result.status === 401 || result.status === 403) {
+    throw errors.fatal(`YouTube auth failed (HTTP ${result.status}) — login required`)
+  }
   if (result.status >= 400) {
     throw errors.retriable(`InnerTube ${endpoint} returned HTTP ${result.status}`)
   }
@@ -352,6 +411,119 @@ async function deleteComment(
   return { videoId, commentId, deleted: true }
 }
 
+// --- getTranscript ---
+async function getTranscript(
+  page: Page,
+  params: Record<string, unknown>,
+  helpers: { errors: Errors; pageFetch: PageFetchFn },
+): Promise<unknown> {
+  const { errors, pageFetch } = helpers
+  const videoId = String(params.videoId || '')
+  if (!videoId) throw errors.missingParam('videoId')
+
+  const config = await getYtConfig(page)
+  const context = makeContext(config.clientVersion)
+
+  // Step 1: get transcript params token from /next engagement panels
+  const nextResp = await innertubePost(pageFetch, page, 'next', { context, videoId }, config, errors) as Record<string, unknown>
+
+  const panels = nextResp.engagementPanels as Array<Record<string, unknown>> | undefined
+  let transcriptParams: string | undefined
+  if (Array.isArray(panels)) {
+    for (const panel of panels) {
+      const renderer = panel.engagementPanelSectionListRenderer as Record<string, unknown> | undefined
+      if (!renderer || renderer.panelIdentifier !== 'engagement-panel-searchable-transcript') continue
+      const continuation = dig(
+        renderer,
+        'content', 'continuationItemRenderer', 'continuationEndpoint', 'getTranscriptEndpoint', 'params',
+      ) as string | undefined
+      if (continuation) { transcriptParams = continuation; break }
+    }
+  }
+
+  if (!transcriptParams) {
+    return { videoId, segments: [], note: 'No transcript available for this video' }
+  }
+
+  // Step 2: fetch transcript (needs authenticated session to avoid FAILED_PRECONDITION)
+  const auth = await getSapisidAuth(page)
+  const transcriptHeaders: Record<string, string> = { 'content-type': 'application/json' }
+  if (auth) {
+    transcriptHeaders.authorization = auth
+    transcriptHeaders['x-goog-authuser'] = '0'
+    transcriptHeaders['x-origin'] = 'https://www.youtube.com'
+  }
+  const transcriptUrl = `${API_BASE}/get_transcript?key=${config.key}&prettyPrint=false`
+  const transcriptResult = await pageFetch(page, {
+    url: transcriptUrl,
+    method: 'POST',
+    headers: transcriptHeaders,
+    body: JSON.stringify({ context, params: transcriptParams }),
+  })
+  if (transcriptResult.status >= 400) {
+    throw errors.retriable(`InnerTube get_transcript returned HTTP ${transcriptResult.status}`)
+  }
+  let transcriptResp: Record<string, unknown>
+  try {
+    transcriptResp = JSON.parse(transcriptResult.text) as Record<string, unknown>
+  } catch {
+    throw errors.fatal('InnerTube get_transcript returned invalid JSON')
+  }
+
+  // Parse transcript segments from response
+  const segments: Array<Record<string, unknown>> = []
+  const actions = transcriptResp.actions as Array<Record<string, unknown>> | undefined
+  if (Array.isArray(actions)) {
+    for (const action of actions) {
+      const body = dig(action, 'updateEngagementPanelAction', 'content',
+        'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer',
+        'body', 'transcriptSegmentListRenderer', 'initialSegments',
+      ) as Array<Record<string, unknown>> | undefined
+      if (!Array.isArray(body)) continue
+      for (const seg of body) {
+        const renderer = seg.transcriptSegmentRenderer as Record<string, unknown> | undefined
+        if (!renderer) continue
+        segments.push({
+          startMs: renderer.startMs || '',
+          endMs: renderer.endMs || '',
+          text: textRuns(renderer.snippet),
+        })
+      }
+    }
+  }
+
+  return { videoId, segments }
+}
+
+// --- likeVideo / unlikeVideo ---
+async function likeVideo(
+  page: Page,
+  params: Record<string, unknown>,
+  helpers: { errors: Errors; pageFetch: PageFetchFn },
+): Promise<unknown> {
+  const { errors, pageFetch } = helpers
+  const videoId = String(params.videoId || '')
+  if (!videoId) throw errors.missingParam('videoId')
+
+  const config = await getYtConfig(page)
+  const context = makeContext(config.clientVersion)
+  return innertubeAuthPost(pageFetch, page, 'like/like', { context, target: { videoId } }, config, errors)
+}
+
+async function unlikeVideo(
+  page: Page,
+  params: Record<string, unknown>,
+  helpers: { errors: Errors; pageFetch: PageFetchFn },
+): Promise<unknown> {
+  const { errors, pageFetch } = helpers
+  const videoId = String(params.videoId || '')
+  if (!videoId) throw errors.missingParam('videoId')
+
+  const config = await getYtConfig(page)
+  const context = makeContext(config.clientVersion)
+  return innertubeAuthPost(pageFetch, page, 'like/removelike', { context, target: { videoId } }, config, errors)
+}
+
 const OPERATIONS: Record<
   string,
   (page: Page, params: Record<string, unknown>, helpers: { errors: Errors; pageFetch: PageFetchFn }) => Promise<unknown>
@@ -360,6 +532,9 @@ const OPERATIONS: Record<
   getPlaylist,
   addComment,
   deleteComment,
+  getTranscript,
+  likeVideo,
+  unlikeVideo,
 }
 
 const adapter = {

@@ -197,7 +197,17 @@ const adapter = {
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()
-    return url.includes('reuters.com')
+    if (url.includes('reuters.com')) return true
+    // DataDome captcha redirect means we're in the reuters flow
+    if (url.includes('captcha-delivery.com') || url.includes('datadome')) return true
+    // Navigate to reuters.com if on a blank or unrelated page
+    try {
+      await page.goto('https://www.reuters.com', { waitUntil: 'domcontentloaded', timeout: 20_000 })
+      const newUrl = page.url()
+      return newUrl.includes('reuters.com') || newUrl.includes('captcha-delivery.com')
+    } catch {
+      return false
+    }
   },
 
   async isAuthenticated(): Promise<boolean> {

@@ -596,22 +596,31 @@ const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>, e
   },
 
   getBookmarks: async (page, params, errors) => {
-    // Operation name varies across Twitter deploys — discover dynamically
+    const variables: Record<string, unknown> = {
+      count: Number(params.count) || 20,
+      includePromotedContent: true,
+    }
+    const features = { ...DEFAULT_FEATURES, rweb_tipjar_consumption_enabled: false }
+
+    // Try known bookmark operation names first (avoids dynamic discovery overhead)
+    const knownNames = ['Bookmarks', 'BookmarkTimeline', 'BookmarkTimeline_Timeline']
+    for (const name of knownNames) {
+      try {
+        return await executeGraphqlGet(page, name, variables, features, undefined, errors)
+      } catch {
+        continue
+      }
+    }
+
+    // Fallback: dynamic discovery — operation name may vary across deploys
     if (!cachedQueryIds) cachedQueryIds = await loadQueryIds(page)
     const readOps = Object.keys(cachedQueryIds).filter(
       k => /bookmark/i.test(k) && !/^(Create|Delete)/.test(k),
     )
     const opName = readOps.find(k => /timeline/i.test(k)) ?? readOps[0]
     if (!opName) throw errors.fatal('No bookmark list operation found in Twitter bundle')
-    const variables: Record<string, unknown> = {
-      count: Number(params.count) || 20,
-      includePromotedContent: true,
-    }
     if (/folder/i.test(opName)) variables.bookmark_collection_id = ''
-    return executeGraphqlGet(page, opName, variables, {
-      ...DEFAULT_FEATURES,
-      rweb_tipjar_consumption_enabled: false,
-    }, undefined, errors)
+    return executeGraphqlGet(page, opName, variables, features, undefined, errors)
   },
 }
 

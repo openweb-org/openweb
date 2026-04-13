@@ -47,6 +47,17 @@ async function getCsrfToken(page: Page): Promise<string> {
   return cookies.find((c) => c.name === 'csrftoken')?.value || ''
 }
 
+async function getWwwClaim(page: Page): Promise<string> {
+  try {
+    return await page.evaluate(() => {
+      // Instagram stores the www-claim in sessionStorage
+      return sessionStorage.getItem('www-claim-v2') || '0'
+    })
+  } catch {
+    return '0'
+  }
+}
+
 async function postJson(
   pageFetch: PageFetchFn,
   page: Page,
@@ -55,9 +66,11 @@ async function postJson(
   errors: Errors,
 ): Promise<unknown> {
   const csrf = await getCsrfToken(page)
+  const wwwClaim = await getWwwClaim(page)
   const headers: Record<string, string> = {
     ...IG_HEADERS,
     'content-type': 'application/x-www-form-urlencoded',
+    'x-ig-www-claim': wwwClaim,
   }
   if (csrf) headers['x-csrftoken'] = csrf
 

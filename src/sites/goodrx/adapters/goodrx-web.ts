@@ -2,19 +2,45 @@ import type { Page } from 'patchright'
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-async function searchDrugs(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
+type AdapterErrors = {
+  unknownOp(op: string): Error
+  missingParam(name: string): Error
+  botBlocked(msg: string): Error
+}
+
+/** Check if the page is showing a PerimeterX CAPTCHA / block page. */
+async function isPxBlocked(page: Page): Promise<boolean> {
+  const title = await page.title().catch(() => '')
+  if (title.toLowerCase().includes('access denied')) return true
+  const hasCaptcha = await page.evaluate('!!document.querySelector("#px-captcha")').catch(() => false)
+  return !!hasCaptcha
+}
+
+/** Navigate to a URL, retrying with cookie clears if PerimeterX blocks. */
+async function navigateWithPxRetry(page: Page, url: string, maxRetries = 4): Promise<boolean> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    // Always reset before navigating — clears any poisoned PX state from
+    // verify warm-up or previous adapter runs
+    await page.goto('about:blank').catch(() => {})
+    await page.context().clearCookies()
+    await wait(1000 + attempt * 1000)
+    await page.goto(url, { waitUntil: 'load', timeout: 20_000 }).catch(() => {})
+    await wait(3000)
+    if (!(await isPxBlocked(page))) return true
+  }
+  return false
+}
+
+async function searchDrugs(page: Page, params: Record<string, unknown>, errors: AdapterErrors) {
   const query = String(params.query || '')
   if (!query) throw errors.missingParam('query')
 
-  // Navigate to GoodRx and use internal search API via page context
-  await page.goto('https://www.goodrx.com', { waitUntil: 'load', timeout: 30_000 })
-  await wait(3000)
+  const ok = await navigateWithPxRetry(page, 'https://www.goodrx.com')
+  if (!ok) throw errors.botBlocked('PerimeterX blocked GoodRx homepage (CAPTCHA)')
 
-  // Use GoodRx's internal autocomplete/search API from page context
   return page.evaluate(`
     (async () => {
       const q = ${JSON.stringify(query)};
-      // Try the internal autocomplete endpoint
       try {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 10000);
@@ -65,15 +91,12 @@ async function searchDrugs(page: Page, params: Record<string, unknown>, errors: 
   `)
 }
 
-async function getDrugPrices(page: Page, params: Record<string, unknown>, errors: { missingParam(name: string): Error }) {
+async function getDrugPrices(page: Page, params: Record<string, unknown>, errors: AdapterErrors) {
   const slug = String(params.slug || '')
   if (!slug) throw errors.missingParam('slug')
 
-  // Homepage warm-up for PerimeterX, then navigate to drug page
-  await page.goto('https://www.goodrx.com', { waitUntil: 'load', timeout: 30_000 })
-  await wait(2000)
-  await page.goto(`https://www.goodrx.com/${slug}`, { waitUntil: 'load', timeout: 30_000 })
-  await wait(4000)
+  const ok = await navigateWithPxRetry(page, `https://www.goodrx.com/${slug}`)
+  if (!ok) throw errors.botBlocked('PerimeterX blocked GoodRx drug page (CAPTCHA)')
 
   return page.evaluate(`
     (() => {
@@ -108,17 +131,15 @@ async function getDrugPrices(page: Page, params: Record<string, unknown>, errors
   `)
 }
 
-async function getPharmacies(page: Page, params: Record<string, unknown>) {
+async function getPharmacies(page: Page, params: Record<string, unknown>, errors: AdapterErrors) {
   const zipCode = params.zipCode ? String(params.zipCode) : ''
 
   const url = zipCode
     ? `https://www.goodrx.com/pharmacy-near-me?zipCode=${encodeURIComponent(zipCode)}`
     : 'https://www.goodrx.com/pharmacy-near-me'
 
-  await page.goto('https://www.goodrx.com', { waitUntil: 'load', timeout: 30_000 })
-  await wait(2000)
-  await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
-  await wait(4000)
+  const ok = await navigateWithPxRetry(page, url)
+  if (!ok) throw errors.botBlocked('PerimeterX blocked GoodRx pharmacy page (CAPTCHA)')
 
   return page.evaluate(`
     (() => {
@@ -149,18 +170,16 @@ async function getPharmacies(page: Page, params: Record<string, unknown>) {
   `)
 }
 
-const OPERATIONS: Record<string, (page: Page, params: Record<string, unknown>) => Promise<unknown>> = {
-  searchDrugs,
-  getDrugPrices,
-  getPharmacies,
-}
-
 const adapter = {
   name: 'goodrx-web',
-  description: 'GoodRx drug pricing — DOM extraction via browser',
+  description: 'GoodRx drug pricing — DOM extraction via browser with PerimeterX retry',
 
   async init(page: Page): Promise<boolean> {
-    return page.url().includes('goodrx.com')
+    // If page is on PerimeterX CAPTCHA (from verify warm-up), clear cookies
+    if (await isPxBlocked(page)) {
+      await page.context().clearCookies()
+    }
+    return true
   },
 
   async isAuthenticated(_page: Page): Promise<boolean> {
@@ -168,11 +187,11 @@ const adapter = {
   },
 
   async execute(page: Page, operation: string, params: Readonly<Record<string, unknown>>, helpers: Record<string, unknown>): Promise<unknown> {
-    const { errors } = helpers as { errors: { unknownOp(op: string): Error; missingParam(name: string): Error } }
+    const { errors } = helpers as { errors: AdapterErrors }
     switch (operation) {
       case 'searchDrugs': return searchDrugs(page, { ...params }, errors)
       case 'getDrugPrices': return getDrugPrices(page, { ...params }, errors)
-      case 'getPharmacies': return getPharmacies(page, { ...params })
+      case 'getPharmacies': return getPharmacies(page, { ...params }, errors)
       default: throw errors.unknownOp(operation)
     }
   },

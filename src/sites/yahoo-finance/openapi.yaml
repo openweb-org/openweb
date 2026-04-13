@@ -8,6 +8,10 @@ info:
     requires_auth: false
 servers:
 - url: https://query1.finance.yahoo.com
+  x-openweb:
+    transport: node
+    headers:
+      User-Agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
 paths:
   /v1/finance/search:
     get:
@@ -840,6 +844,10 @@ paths:
                         type: ['null', string]
       servers:
       - url: https://query2.finance.yahoo.com
+        x-openweb:
+          transport: node
+          headers:
+            User-Agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
   /ws/fundamentals-timeseries/v1/finance/timeseries/{symbol}:
     get:
       operationId: getTimeSeries
@@ -958,6 +966,10 @@ paths:
                         type: ['null', string]
       servers:
       - url: https://query2.finance.yahoo.com
+        x-openweb:
+          transport: node
+          headers:
+            User-Agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
   /ws/screeners/v1/finance/calendar-events:
     get:
       operationId: getCalendarEvents
@@ -1082,6 +1094,10 @@ paths:
                 - finance
       servers:
       - url: https://query2.finance.yahoo.com
+        x-openweb:
+          transport: node
+          headers:
+            User-Agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
   /v1/finance/quoteType/:
     get:
       operationId: getQuoteType
@@ -1152,3 +1168,7 @@ paths:
                         type: ['null', string]
       servers:
       - url: https://query2.finance.yahoo.com
+        x-openweb:
+          transport: node
+          headers:
+            User-Agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'

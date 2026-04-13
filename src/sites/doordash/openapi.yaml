@@ -8,7 +8,7 @@ info:
 servers:
   - url: https://www.doordash.com
     x-openweb:
-      transport: node
+      transport: page
       auth:
         type: cookie_session
 paths:

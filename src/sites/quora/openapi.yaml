@@ -56,13 +56,12 @@ paths:
                     items:
                       type: object
                       required:
-                        - qid
                         - slug
                         - title
                       properties:
                         qid:
-                          type: integer
-                          description: "Unique question ID."
+                          type: ['integer', 'null']
+                          description: "Unique question ID (null when extracted from DOM)."
                         slug:
                           type: string
                           description: "URL slug (use as input to getQuestion/getAnswers)."

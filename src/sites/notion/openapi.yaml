@@ -208,7 +208,6 @@ paths:
                             text:
                               type: string
                               description: "Highlighted text snippet."
-                          required: [text]
                         highlightBlockId:
                           type: string
                           format: uuid
@@ -234,8 +233,6 @@ paths:
                   recordMap:
                     type: object
                     description: "Associated records (blocks, collections, spaces)."
-                    required:
-                      - block
                     properties:
                       block:
                         type: object
@@ -516,8 +513,6 @@ paths:
                   recordMap:
                     type: object
                     description: "Block tree, collection schemas, and space metadata."
-                    required:
-                      - block
                     properties:
                       block:
                         type: object

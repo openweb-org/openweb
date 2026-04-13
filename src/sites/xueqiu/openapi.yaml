@@ -348,9 +348,9 @@ paths:
         build:
           stable_id: d3683c54af1381a1
           tool_version: 2
-          verified: true
+          verified: false
           signals:
-            - node-verified
+            - requires-login
       parameters:
         - name: count
           in: query
@@ -1118,9 +1118,9 @@ paths:
         build:
           stable_id: 532260faa3e5268e
           tool_version: 2
-          verified: true
+          verified: false
           signals:
-            - node-verified
+            - requires-login
       parameters:
         - name: code
           in: query
