@@ -16,8 +16,9 @@
 - Knowledge docs contained stale site-specific claims that misled agents
 
 **Key files:** `src/lib/adapter-helpers.ts`, `src/runtime/adapter-executor.ts`, `src/runtime/http-executor.ts`, `src/types/validator.ts`, `skill/openweb/knowledge/{transport-upgrade,adapter-recipes,archetypes}.md`
-**Verification:** `pnpm build` passes. 0 new lint errors. 22/22 validator tests pass. IMDb 3 ops + RT 3 ops have `transport:node`.
+**Verification:** `pnpm build` passes. `pnpm lint` 0 errors. 22/22 validator tests pass. IMDb 3 ops + RT 3 ops have `transport:node`. Two Codex review rounds — all findings resolved.
 **Design:** `doc/todo/infra-improvements/final/design_aligned.md`
+**Commit:** ff1a454..dbfd667 (5 commits)
 **Next:** npm publish (release gate), per-site three-file doc migration on next touch
 **Blockers:** None
 
