@@ -88,7 +88,7 @@ async function searchQuestions(
         if (container) {
           const containerText = container.textContent || ''
           const answerMatch = containerText.match(/(\d+)\s*answers?/i)
-          if (answerMatch) answerCount = parseInt(answerMatch[1], 10)
+          if (answerMatch) answerCount = Number.parseInt(answerMatch[1], 10)
         }
 
         results.push({
