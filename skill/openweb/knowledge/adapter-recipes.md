@@ -26,7 +26,7 @@ async execute(page: Page, operation: string, params: Record<string, unknown>, he
   const { errors } = helpers
 
   // Import interceptResponse directly — it's exported from adapter-helpers but not on the helpers object
-  const { interceptResponse } = await import('../../lib/adapter-helpers.js')
+  const { interceptResponse } = await import('../../../lib/adapter-helpers.js')
 
   const slug = params.slug as string
   if (!slug) throw errors.missingParam('slug')
@@ -69,7 +69,7 @@ Fetch HTML server-side and extract embedded data via regex or string parsing. No
 ### Template
 
 ```typescript
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+import { nodeFetch } from '../../../lib/adapter-helpers.js'
 
 async execute(page: Page | null, operation: string, params: Record<string, unknown>, helpers: AdapterHelpers) {
   const { errors } = helpers
@@ -77,10 +77,10 @@ async execute(page: Page | null, operation: string, params: Record<string, unkno
   if (!id) throw errors.missingParam('id')
 
   const url = `https://example.com/items/${encodeURIComponent(id)}`
-  const res = await fetch(url, { headers: { 'User-Agent': UA } })
-  if (!res.ok) throw errors.httpError(res.status)
+  const res = await nodeFetch({ url })
+  if (res.status >= 400) throw errors.httpError(res.status)
 
-  const html = await res.text()
+  const html = res.text
 
   // Pattern A: __NEXT_DATA__
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)

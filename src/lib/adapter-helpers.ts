@@ -3,6 +3,7 @@ import type { Page, Response as PwResponse } from 'patchright'
 import { DEFAULT_USER_AGENT } from './config.js'
 import { OpenWebError, getHttpFailure } from './errors.js'
 import { validateSSRF } from './ssrf.js'
+import { fetchWithRedirects } from '../runtime/redirect.js'
 
 export interface InterceptOptions {
   readonly urlMatch: string | RegExp
@@ -107,19 +108,20 @@ export async function pageFetch(page: Page, options: PageFetchOptions): Promise<
  * Throws OpenWebError on network failure or blocked URL.
  */
 export async function nodeFetch(options: NodeFetchOptions): Promise<PageFetchResult> {
-  await validateSSRF(options.url)
-
   const timeout = options.timeout ?? DEFAULT_TIMEOUT
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeout)
 
+  const headers: Record<string, string> = { 'User-Agent': DEFAULT_USER_AGENT, ...options.headers }
+
   try {
-    const resp = await fetch(options.url, {
-      method: options.method ?? 'GET',
-      headers: { 'User-Agent': DEFAULT_USER_AGENT, ...options.headers },
-      body: options.body,
-      signal: controller.signal,
-    })
+    const resp = await fetchWithRedirects(
+      options.url,
+      options.method ?? 'GET',
+      headers,
+      options.body,
+      { fetchImpl: (u, init) => fetch(u, { ...init, signal: controller.signal }), ssrfValidator: validateSSRF },
+    )
     const text = await resp.text()
     return { status: resp.status, text }
   } catch (err) {
@@ -214,11 +216,12 @@ export async function interceptResponse(page: Page, options: InterceptOptions): 
   const timeout = options.timeout ?? DEFAULT_TIMEOUT
   const waitUntil = options.waitUntil ?? 'load'
 
-  let captured: unknown = null
+  const _UNSET = Symbol('unset')
+  let captured: unknown = _UNSET
   const match = options.urlMatch
 
   const handler = async (resp: PwResponse) => {
-    if (captured) return
+    if (captured !== _UNSET) return
     const url = resp.url()
     const matched = typeof match === 'string' ? url.includes(match) : match.test(url)
     if (matched) {
@@ -239,14 +242,14 @@ export async function interceptResponse(page: Page, options: InterceptOptions): 
     }
 
     const deadline = Date.now() + timeout
-    while (!captured && Date.now() < deadline) {
+    while (captured === _UNSET && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 500))
     }
   } finally {
     page.off('response', handler)
   }
 
-  if (!captured) {
+  if (captured === _UNSET) {
     throw new OpenWebError({
       error: 'execution_failed',
       code: 'EXECUTION_FAILED',

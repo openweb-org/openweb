@@ -71,7 +71,7 @@ Detection of client-side request signing via monkey-patched browser APIs.
 DOC.md claims about bot detection may be outdated. Always probe before deciding transport.
 
 - **Principle:** Treat DOC.md and historical claims as hypotheses, not facts. Bot detection configurations change without notice -- a site that needed page transport last month may have relaxed its detection, or vice versa.
-- **Action:** Before accepting any transport decision based on documentation, run the [Node Feasibility Quick-Check](#node-feasibility-quick-check) in this document and cross-reference the [Disproved Assumptions](transport-upgrade.md#disproved-assumptions-pattern) table in transport-upgrade.md.
+- **Action:** Before accepting any transport decision based on documentation, run the [Node Feasibility Quick-Check](transport-upgrade.md#node-feasibility-quick-check) in transport-upgrade.md and cross-reference the [Disproved Assumptions](transport-upgrade.md#disproved-assumptions-pattern) table.
 - **Common outdated claims:** "Site uses Akamai" (may have switched vendors), "API requires browser" (may have been opened), "Bot detection blocks everything" (may only block specific endpoints).
 - **Evidence-based decisions:** Document actual probe results (HTTP status, response headers, cookie presence) in the site's DOC.md. Never propagate a transport claim without fresh evidence.
 

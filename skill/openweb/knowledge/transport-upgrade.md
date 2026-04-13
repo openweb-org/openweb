@@ -55,9 +55,11 @@ Can Node fetch the endpoint with Chrome UA?
   +- 2xx with valid data -> Tier 7 (node direct)
   +- 403/challenge page -> Is the API callable via page.evaluate(fetch)?
        +- Yes -> Tier 5 (page.evaluate)
-       +- No -> Is data in SSR globals (__NEXT_DATA__, Apollo cache)?
-            +- Yes -> Tier 3 (node fetch HTML + parse)
-            +- No -> Tier 2 (DOM extraction) or Tier 1 (DOM action)
+       +- No -> Can you intercept API response during navigation?
+            +- Yes -> Tier 4 (API intercept via interceptResponse)
+            +- No -> Is data in SSR globals (__NEXT_DATA__, Apollo cache)?
+                 +- Yes -> Tier 3 (node fetch HTML + parse)
+                 +- No -> Tier 2 (DOM extraction) or Tier 1 (DOM action)
 ```
 
 ## Node Feasibility Quick-Check
@@ -107,7 +109,7 @@ curl -s -o /dev/null -w '%{http_code}' \
 ```
 
 - **Same 2xx:** Endpoint doesn't check UA — node is safe
-- **Different status:** UA-sensitive — set `User-Agent` in the spec's `x-openweb.headers`
+- **Different status:** UA-sensitive — set `User-Agent` via adapter headers or `nodeFetch` default (which uses Chrome UA automatically)
 - **403 on both:** Not a UA issue — likely IP reputation or cookie-based detection
 
 **Quick-check summary:** If Step 1 returns 2xx and Step 3 shows no UA sensitivity, the endpoint is node-ready. Write the operation with `x-openweb.transport: node`.

@@ -132,8 +132,11 @@ export async function executeOperation(
 
     /** Single adapter attempt: acquire browser → find/create page → execute */
     const adapterAttempt = async (): Promise<unknown> => {
-      // transport:node — skip browser entirely, pass null page to adapter
-      if (transport === 'node') {
+      // Only skip browser when the OPERATION itself explicitly declares transport:node.
+      // Server-level transport:node inherited by resolveTransport() is not sufficient —
+      // existing adapters (e.g. bilibili, zhihu) may still dereference page.
+      const opTransport = (opExt as Record<string, unknown> | undefined)?.transport
+      if (opTransport === 'node') {
         const adapter = await loadAdapter(siteRoot, adapterRef.name)
         return await executeAdapter(null, adapter, adapterRef.operation, adapterParams, { requiresAuth })
       }
