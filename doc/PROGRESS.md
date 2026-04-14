@@ -1,3 +1,26 @@
+## 2026-04-14: Workflow Polish + Transport Stability Sprint (release-quality-0413)
+
+**What changed:**
+- **WP1 — Workflow completeness:** All 92 sites audited. 80+ SKILL.md files updated with read→write workflow chains, explicit → fieldName arrows, and ← source annotations for every write op. Codified workflow standard in document.md + guide.md with Uber Eats addToCart as canonical example.
+- **WP2 — Transport upgrades (6 upgraded, 3 blocked by bot detection):**
+  - hackernews: 4 adapter read ops page→node (14/14 now node)
+  - indeed + imdb: DOM→SSR extraction (_initialData, LD+JSON, __NEXT_DATA__)
+  - redfin: all 3 ops pageFetch→nodeFetch (Tier 5→7, no bot detection)
+  - glassdoor: getReviews + getInterviews DOM→GraphQL (Tier 2→5)
+  - quora: getQuestion + getAnswers DOM→GQL intercept (Tier 2→4+5)
+  - google-flights: searchFlights + getPriceInsights DOM→SSR AF_initDataCallback (Tier 2→3)
+  - goodrx + medium: probed, no SSR globals viable (App Router RSC / Apollo)
+  - ebay: Radware StormCaster blocks node after 3-4 requests
+  - yelp: DataDome blocks all search endpoints
+
+**Key files:** 80+ src/sites/*/SKILL.md, skill/openweb/add-site/document.md, skill/openweb/add-site/guide.md, 8 site adapter/openapi upgrades
+**Verification:** All upgraded sites verify PASS
+**Commits:** 35a98d6..7abc048
+**Next:** npm publish (npm-publish-final task)
+**Blockers:** None
+
+---
+
 ## 2026-04-14: Transport upgrade probe — ebay (no upgrade, bot detection blocks)
 
 **What changed:**
