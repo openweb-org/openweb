@@ -39,19 +39,29 @@ openweb glassdoor exec getInterviews '{"employerId":9079}'
 ## Site Internals
 
 ### API Architecture
-- **Company explorer** (searchCompanies): Next.js SSR with `__NEXT_DATA__` Apollo cache containing `Employer:*` entities with ratings
-- **Reviews/Salaries/Interviews**: Server-rendered React pages — DOM extraction via article elements, salary links, and text parsing
-- **GraphQL `/graph` endpoint** exists for individual review queries but is not used (DOM extraction covers the list view)
+- **Company explorer** (searchCompanies): Next.js SSR with `__NEXT_DATA__` Apollo cache containing `Employer:*` entities with ratings (Tier 3)
+- **Reviews** (getReviews): Page navigate → extract review IDs from `data-brandviews` attribute on `article[data-test="review-detail"]` → `page.evaluate(fetch)` to `/graph` GraphQL endpoint per review ID → structured data (Tier 5 hybrid)
+- **Salaries** (getSalaries): Server-rendered React — DOM extraction via salary links and text parsing (Tier 2)
+- **Interviews** (getInterviews): Response interception of `EmployerInterviewInfoIG` GraphQL calls during page navigation → structured description and jobTitle (Tier 4+5 hybrid)
+- **GraphQL `/graph` endpoint**: POST with `gd-csrf-token: 1` header, `credentials: include`. Introspection disabled. Only pre-defined operation shapes succeed — custom queries return "Server error".
+
+### GraphQL Operations Discovered
+- `EmployerReview` via `employerReviewRG`: fetches review by `reviewId` — returns `reviewId`, `reviewDateTime`, `ratingOverall`, `summary`, `pros`, `cons`, `jobTitle.text`, `employer.id/shortName`
+- `EmployerInterviewInfoIG`: fetches interview by `{id}` — returns `processDescription`, `jobTitle.text`, `employer.id/shortName`
+- `RecordPageView` (mutation, analytics only — not used)
 
 ### Auth
 - No auth required for public company data
 - `requires_auth: false`
-- GraphQL uses `gd-csrf-token: 1` header (not needed for page navigation)
+- GraphQL uses `gd-csrf-token: 1` header (static value, not a real CSRF token)
 
 ### Transport
-- **All operations: page** — Cloudflare Turnstile challenge blocks direct HTTP
+- **searchCompanies: page** (Tier 3 — SSR/NEXT_DATA extraction)
+- **getReviews: page** (Tier 5 — page navigate + GraphQL `page.evaluate(fetch)`)
+- **getSalaries: page** (Tier 2 — DOM extraction)
+- **getInterviews: page** (Tier 4+5 — response interception of GraphQL during navigation)
+- Cloudflare Turnstile challenge blocks direct HTTP — all operations require browser context
 - Challenge typically resolves in 2-4 seconds via managed browser
-- Multiple rapid tab opens may trigger stricter blocking — adapter navigates sequentially
 
 ### Bot Detection
 - **Cloudflare Turnstile** — "Just a moment..." challenge page
@@ -60,5 +70,7 @@ openweb glassdoor exec getInterviews '{"employerId":9079}'
 
 ### Known Issues
 - Cloudflare Turnstile may require manual CAPTCHA solve under aggressive blocking — restart browser with `--no-headless` if stuck
-- DOM extraction for reviews/salaries/interviews depends on Glassdoor's markup — layout changes may break parsing
+- GraphQL introspection disabled — only pre-defined query shapes work; custom field additions fail with "Server error"
+- Interview DOM metadata (date, location, difficulty, experience, offerStatus) extraction is unreliable due to page structure changes — GraphQL provides clean description and jobTitle
 - Salary `payRange` format varies (hourly vs annual) and may return null if the page layout changes
+- No GraphQL endpoint discovered for salary data — salaries remain on DOM extraction

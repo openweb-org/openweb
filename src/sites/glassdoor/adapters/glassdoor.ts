@@ -9,6 +9,7 @@ interface CodeAdapter {
 }
 
 const GD_ORIGIN = 'https://www.glassdoor.com'
+const GRAPHQL_URL = `${GD_ORIGIN}/graph`
 const CF_POLL_MS = 2_000
 const CF_MAX_WAIT_MS = 30_000
 
@@ -39,7 +40,51 @@ async function navigateTo(page: Page, url: string): Promise<void> {
   await page.waitForTimeout(2_000)
 }
 
-/* ---------- searchCompanies ---------- */
+/* ---------- GraphQL helper ---------- */
+
+const REVIEW_QUERY = `
+  query EmployerReview($reviewId: Int!, $language: String) {
+    employerReview: employerReviewRG(
+      employerReviewInput: { reviewIdent: { id: $reviewId }, language: $language }
+    ) {
+      reviews {
+        reviewId
+        reviewDateTime
+        ratingOverall
+        summary
+        pros
+        cons
+        jobTitle { text }
+        employer { id shortName }
+      }
+    }
+  }
+`
+
+async function graphqlFetch(
+  page: Page,
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<{ data?: unknown; errors?: Array<{ message: string }> }> {
+  const result = await page.evaluate(
+    async (args: { url: string; body: string }) => {
+      const resp = await fetch(args.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'gd-csrf-token': '1' },
+        body: args.body,
+        credentials: 'include',
+      })
+      return { status: resp.status, text: await resp.text() }
+    },
+    { url: GRAPHQL_URL, body: JSON.stringify({ query, variables }) },
+  )
+  if (result.status >= 400) {
+    throw new Error(`GraphQL request failed with status ${result.status}`)
+  }
+  return JSON.parse(result.text)
+}
+
+/* ---------- searchCompanies (Tier 3 — SSR/NEXT_DATA) ---------- */
 
 async function searchCompanies(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const query = String(params.query ?? '')
@@ -80,89 +125,102 @@ async function searchCompanies(page: Page, params: Readonly<Record<string, unkno
   })
 }
 
-/* ---------- getReviews ---------- */
+/* ---------- getReviews (Tier 5 — page navigate + GraphQL fetch) ---------- */
 
 async function getReviews(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const employerId = params.employerId
   if (!employerId) throw new Error('employerId is required')
 
   await navigateTo(page, `${GD_ORIGIN}/Reviews/Company-Reviews-E${employerId}.htm`)
-  await page.waitForSelector('article, [data-test*="review"]', { timeout: 10_000 }).catch(() => {})
+  await page.waitForSelector('article[data-test="review-detail"]', { timeout: 10_000 }).catch(() => {})
 
-  return page.evaluate(() => {
-    const companyEl = document.querySelector('h1')
-    const companyName = companyEl?.textContent?.trim()?.replace(/\s*reviews$/i, '') ?? null
-
-    const ratingEl = document.querySelector('[class*="ratingNum"], [data-test="rating-info"]')
-    const overallRating = ratingEl?.textContent?.trim() ?? null
-
-    const articles = document.querySelectorAll('article')
-    const reviews: Array<Record<string, string | null>> = []
-
+  // Extract review IDs from data-brandviews attributes
+  const reviewIds: number[] = await page.evaluate(() => {
+    const articles = document.querySelectorAll('article[data-test="review-detail"]')
+    const ids: number[] = []
     for (const article of articles) {
-      const text = article.innerText ?? ''
-      if (!text.includes('Pros') && !text.includes('Cons')) continue
-
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
-
-      let rating: string | null = null
-      let date: string | null = null
-      let title: string | null = null
-      let jobTitle: string | null = null
-      let employeeStatus: string | null = null
-      let pros: string | null = null
-      let cons: string | null = null
-
-      // Rating is usually first line like "4.0"
-      for (const line of lines) {
-        if (/^\d\.\d$/.test(line)) { rating = line; break }
-      }
-
-      // Date pattern
-      for (const line of lines) {
-        if (/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}$/i.test(line)) {
-          date = line; break
-        }
-      }
-
-      // Title is usually after the date
-      const dateIdx = date ? lines.indexOf(date) : -1
-      if (dateIdx >= 0 && dateIdx + 1 < lines.length) {
-        title = lines[dateIdx + 1]
-      }
-
-      // Job title and employee status
-      for (const line of lines) {
-        if (line.includes('employee') || line.includes('Employee')) {
-          const parts = line.split(',').map(p => p.trim())
-          if (parts.length >= 1) {
-            const jobPart = parts.find(p => !p.toLowerCase().includes('employee') && !p.toLowerCase().includes('year'))
-            if (jobPart) jobTitle = jobPart
-            const statusPart = parts.find(p => p.toLowerCase().includes('employee'))
-            if (statusPart) employeeStatus = statusPart
-          }
-        }
-      }
-
-      // Pros and Cons
-      const prosIdx = lines.indexOf('Pros')
-      const consIdx = lines.indexOf('Cons')
-      if (prosIdx >= 0 && prosIdx + 1 < lines.length) {
-        pros = lines[prosIdx + 1]
-      }
-      if (consIdx >= 0 && consIdx + 1 < lines.length) {
-        cons = lines[consIdx + 1]
-      }
-
-      if (title || pros || cons) {
-        reviews.push({ rating, date, title, jobTitle, employeeStatus, pros, cons })
-      }
+      const bv = article.getAttribute('data-brandviews') ?? ''
+      const match = bv.match(/review_id=(\d+)/)
+      if (match) ids.push(Number.parseInt(match[1]))
     }
-    return { companyName, overallRating, reviews }
+    return ids
   })
+
+  // Extract company name and overall rating from JSON-LD (most reliable) or page header
+  const pageInfo = await page.evaluate(() => {
+    let companyName: string | null = null
+    let overallRating: string | null = null
+
+    // Try JSON-LD first — has structured rating data
+    const jsonLd = document.querySelectorAll('script[type="application/ld+json"]')
+    for (const el of jsonLd) {
+      try {
+        const data = JSON.parse(el.textContent ?? '')
+        if (data['@type'] === 'EmployerAggregateRating') {
+          companyName = data.itemReviewed?.name ?? null
+          overallRating = data.ratingValue ?? null
+          break
+        }
+      } catch { /* skip */ }
+    }
+
+    // Fall back to H1 for company name
+    if (!companyName) {
+      const h1 = document.querySelector('h1')
+      companyName = h1?.textContent?.trim()?.replace(/\s*reviews$/i, '') ?? null
+    }
+
+    return { companyName, overallRating }
+  })
+
+  if (reviewIds.length === 0) {
+    return { ...pageInfo, reviews: [] }
+  }
+
+  // Fetch each review via GraphQL — deduplicate results
+  const seen = new Set<number>()
+  const reviews: Array<Record<string, unknown>> = []
+
+  for (const reviewId of reviewIds) {
+    try {
+      const resp = await graphqlFetch(page, REVIEW_QUERY, { reviewId })
+      const data = resp.data as { employerReview?: { reviews?: Array<Record<string, unknown>> } } | undefined
+      const items = data?.employerReview?.reviews ?? []
+
+      for (const item of items) {
+        const rid = item.reviewId as number
+        if (seen.has(rid)) continue
+        seen.add(rid)
+
+        const dateStr = item.reviewDateTime as string | null
+        let formattedDate: string | null = null
+        if (dateStr) {
+          try {
+            formattedDate = new Date(dateStr).toLocaleDateString('en-US', {
+              month: 'short', day: 'numeric', year: 'numeric',
+            })
+          } catch { formattedDate = dateStr }
+        }
+
+        reviews.push({
+          rating: item.ratingOverall != null ? String(item.ratingOverall) : null,
+          date: formattedDate,
+          title: (item.summary as string) ?? null,
+          jobTitle: ((item.jobTitle as Record<string, unknown>)?.text as string) ?? null,
+          employeeStatus: null,
+          pros: (item.pros as string) ?? null,
+          cons: (item.cons as string) ?? null,
+        })
+      }
+    } catch {
+      // Skip failed individual review fetches
+    }
+  }
+
+  return { ...pageInfo, reviews }
 }
 
-/* ---------- getSalaries ---------- */
+/* ---------- getSalaries (Tier 2 — DOM extraction, no GraphQL available) ---------- */
 
 async function getSalaries(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const employerId = params.employerId
@@ -202,80 +260,115 @@ async function getSalaries(page: Page, params: Readonly<Record<string, unknown>>
   })
 }
 
-/* ---------- getInterviews ---------- */
+/* ---------- getInterviews (Tier 4+5 — intercept GraphQL + DOM metadata) ---------- */
 
 async function getInterviews(page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const employerId = params.employerId
   if (!employerId) throw new Error('employerId is required')
 
-  await navigateTo(page, `${GD_ORIGIN}/Interview/Company-Interview-Questions-E${employerId}.htm`)
-  await page.waitForSelector('[class*="Interview"], article', { timeout: 10_000 }).catch(() => {})
+  // Intercept GraphQL responses during page navigation
+  const graphqlInterviews: Array<{ id: number; description: string | null; role: string | null }> = []
 
-  return page.evaluate(() => {
+  const responseHandler = async (resp: { url(): string; request(): { postData(): string | null }; text(): Promise<string> }) => {
+    if (!resp.url().includes('/graph')) return
+    try {
+      const postData = resp.request().postData() ?? ''
+      if (!postData.includes('EmployerInterviewInfoIG')) return
+      const body = JSON.parse(await resp.text())
+      const info = body?.data?.employerInterviewInfoIG
+      if (info) {
+        graphqlInterviews.push({
+          id: info.id,
+          description: info.processDescription ?? null,
+          role: info.jobTitle?.text ?? null,
+        })
+      }
+    } catch { /* skip unparseable */ }
+  }
+
+  page.on('response', responseHandler)
+  await page.goto(`${GD_ORIGIN}/Interview/Company-Interview-Questions-E${employerId}.htm`, {
+    waitUntil: 'domcontentloaded', timeout: 30_000,
+  })
+  await waitForCloudflare(page)
+  await page.waitForTimeout(5_000) // Allow GraphQL requests to complete
+  page.removeListener('response', responseHandler)
+
+  // Extract page-level metadata and per-card DOM data
+  const pageData = await page.evaluate(() => {
     const h1 = document.querySelector('h1')
     const companyName = h1?.textContent?.trim()?.replace(/\s*interview questions$/i, '') ?? null
 
-    const diffEl = document.querySelector('[class*="DifficultyScore"], [class*="difficulty"]')
+    const diffEl = document.querySelector('[data-test="interview-difficulty-score"]')
     const difficulty = diffEl?.textContent?.replace(/^Difficulty\s*/i, '')?.trim()?.split('\n')[0] ?? null
 
     const countMatch = document.body.innerText.match(/([\d,]+)\s+interviews?/i)
     const interviewCount = countMatch ? countMatch[1] : null
 
-    const body = document.body.innerText
-    const interviewBlocks = body.split(/(?=\w[\w\s]* Interview\n)/g)
+    const cards = document.querySelectorAll('div[id^="interviews-"]')
+    const cardMeta: Array<Record<string, string | null>> = []
 
-    const interviews: Array<Record<string, string | null>> = []
+    for (const card of cards) {
+      const text = card.innerText ?? ''
+      const lines = text.split('\n').map((l: string) => l.trim()).filter(Boolean)
 
-    for (const block of interviewBlocks) {
-      const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
-      if (lines.length < 3) continue
-
-      const roleMatch = lines[0].match(/^(.+?)\s*Interview$/)
-      if (!roleMatch) continue
-
-      const role = roleMatch[1]
       let date: string | null = null
       let location: string | null = null
       let offerStatus: string | null = null
       let experience: string | null = null
-      let interviewDifficulty: string | null = null
-      let description: string | null = null
+      let cardDifficulty: string | null = null
+      let role: string | null = null
 
       for (const line of lines) {
-        if (/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}$/i.test(line)) {
-          date = line
-        }
-        if (line.includes('Declined offer') || line.includes('Accepted offer') || line.includes('No offer')) {
-          offerStatus = line
-        }
-        if (line.includes('Positive experience') || line.includes('Negative experience') || line.includes('Neutral experience')) {
+        if (/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}$/i.test(line)) date = line
+        if (/Declined offer|Accepted offer|No offer/.test(line)) offerStatus = line
+        if (/Positive|Negative|Neutral/.test(line) && line.includes('xperience')) {
           experience = line.replace(/experience/i, '').trim()
         }
-        if (line.includes('interview') && (line.includes('Easy') || line.includes('Average') || line.includes('Difficult'))) {
-          interviewDifficulty = line.replace(/interview/i, '').trim()
+        if ((line.includes('Easy') || line.includes('Average') || line.includes('Difficult')) && line.includes('nterview')) {
+          cardDifficulty = line.replace(/interview/i, '').trim()
         }
-      }
-
-      // Location is often on a line by itself (city, state format)
-      for (const line of lines) {
         if (/^[A-Z][\w\s]+,\s*[A-Z]{2}$/.test(line) || /^[A-Z][\w\s]+,\s*[A-Z][\w\s]+$/.test(line)) {
-          location = line; break
+          location = line
         }
       }
 
-      // Description - look for "Interview" section content
-      const appIdx = lines.findIndex(l => l.startsWith('I interviewed') || l.startsWith('I applied'))
-      const interviewIdx = lines.indexOf('Interview')
-      if (interviewIdx >= 0 && interviewIdx + 1 < lines.length) {
-        description = lines[interviewIdx + 1]
-      } else if (appIdx >= 0) {
-        description = lines[appIdx]
-      }
+      const roleMatch = lines[0]?.match(/^(.+?)\s*Interview$/)
+      if (roleMatch) role = roleMatch[1]
 
-      interviews.push({ role, date, location, offerStatus, experience, difficulty: interviewDifficulty, description })
+      cardMeta.push({ role, date, location, offerStatus, experience, difficulty: cardDifficulty })
     }
-    return { companyName, difficulty, interviewCount, interviews }
+
+    return { companyName, difficulty, interviewCount, cardMeta }
   })
+
+  // Merge: GraphQL data (description + role) with DOM card metadata (date, difficulty, etc.)
+  // Both are rendered in the same order on the page
+  const interviews: Array<Record<string, string | null>> = []
+  const cardCount = Math.max(graphqlInterviews.length, pageData.cardMeta.length)
+
+  for (let i = 0; i < cardCount; i++) {
+    const gql = graphqlInterviews[i]
+    const dom = pageData.cardMeta[i]
+    if (!gql && !dom) continue
+
+    interviews.push({
+      role: gql?.role ?? dom?.role ?? null,
+      date: dom?.date ?? null,
+      location: dom?.location ?? null,
+      offerStatus: dom?.offerStatus ?? null,
+      experience: dom?.experience ?? null,
+      difficulty: dom?.difficulty ?? null,
+      description: gql?.description ?? null,
+    })
+  }
+
+  return {
+    companyName: pageData.companyName,
+    difficulty: pageData.difficulty,
+    interviewCount: pageData.interviewCount,
+    interviews,
+  }
 }
 
 /* ---------- adapter export ---------- */
@@ -289,7 +382,7 @@ const OPERATIONS: Record<string, (page: Page, params: Readonly<Record<string, un
 
 const adapter: CodeAdapter = {
   name: 'glassdoor',
-  description: 'Glassdoor — company reviews, salaries, interview experiences via DOM + SSR extraction',
+  description: 'Glassdoor — company reviews, salaries, interviews via GraphQL + SSR + DOM extraction',
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()
