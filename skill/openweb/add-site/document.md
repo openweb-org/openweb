@@ -80,6 +80,44 @@ openweb <site> exec <op> '<full JSON params>'
 - [User-facing limitations: rate limits, missing operations, auth requirements]
 ```
 
+### Workflow Completeness Standard
+
+**Every write/mutation operation must have a documented read→write chain** showing
+which read operation provides the required IDs and params, with explicit
+`→ fieldName` arrows tracing each value to its source.
+
+A workflow is **incomplete** if a write op appears without a preceding read op
+that supplies its required parameters.
+
+**Canonical example — Uber Eats `addToCart`:**
+
+```markdown
+### Add item with customizations
+1. `getRestaurantMenu(storeUuid)` → find item → `itemUuid`, `sectionUuid`, `subsectionUuid`
+2. `getItemDetails(storeUuid, sectionUuid, subsectionUuid, menuItemUuid)` → `customizationsList` with groups
+3. `addToCart(storeUuid, itemUuid, customizations)` → `customizations = {groupUuid: [{uuid: optionUuid, quantity: 1}]}`
+```
+
+Key properties of a complete write workflow:
+- Every param in the write op traces back to a specific read op's output field
+- Field names are explicit (`→ itemUuid`, not just "get the item")
+- Multi-hop chains show each intermediate step (read → read → write)
+- Constraints are noted inline (`minPermitted`, `maxPermitted`)
+
+**Anti-pattern** — vague workflow missing data flow:
+```markdown
+### Add comment
+1. Get the item ID
+2. `addComment(parent, text)`
+```
+
+**Correct** — explicit field tracing:
+```markdown
+### Add comment
+1. `getStoryDetail(id)` → `item.id`
+2. `addComment(parent=item.id, text)`
+```
+
 ### Column guide for Operations table
 
 - **Operation**: operationId from openapi.yaml
@@ -306,6 +344,7 @@ Before marking the Document step complete:
 - [ ] SKILL.md written with all required sections (Overview, Workflows, Operations, Quick Start)
 - [ ] Operations table has `<- source` annotations for cross-op data flow
 - [ ] Workflows section covers common multi-step intents
+- [ ] Every write/mutation op has a read→write chain with explicit `→ fieldName` arrows (see Workflow Completeness Standard)
 - [ ] Quick Start has copy-paste commands
 - [ ] DOC.md written with all required sections (Auth, Transport, Known Issues)
 - [ ] PROGRESS.md has at least one entry using the entry template

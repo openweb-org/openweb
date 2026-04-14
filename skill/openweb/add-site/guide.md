@@ -366,6 +366,30 @@ Adapter `.ts` files are authored directly in `src/sites/<site>/adapters/`
 **Auth preservation:** Auth is site-level. Even if read ops pass without it,
 removing auth/csrf from `servers[0].x-openweb` breaks all write ops.
 
+### Param Traceability
+
+Every operation parameter must trace to a concrete source. Before finalizing
+the package, walk each write/mutation op and verify:
+
+1. **For each required param** — which read op's response field provides it?
+2. **Document the chain** in SKILL.md with `→ fieldName` arrows
+3. **Multi-hop chains** (read → read → write) must show every intermediate step
+
+If a write op param cannot be traced to any read op's output, either:
+- A read op is missing from the spec (add it), or
+- The param source is unclear (document it explicitly — user-provided, constant, etc.)
+
+**Canonical example** — Uber Eats `addToCart` param traceability:
+
+| Param | Source |
+|-------|--------|
+| `storeUuid` | `searchRestaurants` → `storeUuid` |
+| `itemUuid` | `getRestaurantMenu(storeUuid)` → `catalogItems[].uuid` |
+| `customizations` | `getItemDetails(storeUuid, sectionUuid, subsectionUuid, menuItemUuid)` → `customizationsList[].options[].uuid` |
+
+Every `←` in the Operations table and every `→` in a Workflow must have a
+matching field name — no anonymous arrows.
+
 **Exit criteria:** `openapi.yaml` and/or `asyncapi.yaml` represent all target
 families. Extraction and adapter configuration exist where needed. Examples
 exist for runtime verify. DOC.md and PROGRESS.md updated enough for

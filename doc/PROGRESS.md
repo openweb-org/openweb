@@ -1,3 +1,22 @@
+## 2026-04-14: Transport upgrade — indeed (reviews/salaries) + imdb (ratings)
+
+**What changed:**
+- **Indeed getCompanyReviews:** Tier 2 DOM selectors → Tier 3 `_initialData.reviewsList.items` + LD+JSON `EmployerAggregateRating`. Old selectors (`[data-testid="reviewCard"]`, `[itemprop="review"]`) had drifted and returned empty data. Now returns 20 rich reviews per page with title, rating, jobTitle, location, date, full text, and 5 subcategory ratings (compensation, culture, work-life, management, job security).
+- **Indeed getCompanySalaries:** Tier 2 DOM selectors → Tier 3 `_initialData.categorySalarySection.categories` + `salaryPopularJobsSection.popularJobTitles`. Old table/card selectors returned only companyName. Now returns salary data by category (6 groups), 100 popular jobs with median salaries, and satisfaction metrics.
+- **IMDB getRatings:** Eliminated separate `/ratings/` page navigation. Histogram now extracted from title page `__NEXT_DATA__` at `mainColumnData.aggregateRatingsBreakdown.histogram.histogramValues`. Also extracts LD+JSON `aggregateRating` from title page as primary source (schema.org standard, more stable than framework SSR). One page load instead of two.
+
+**Why:**
+- Indeed reviews/salaries had broken DOM selectors returning empty data — known issues in DOC.md. `_initialData` is the canonical data source (what the frontend renders from), making it much more stable than fragile CSS selectors.
+- IMDB ratings page navigation was unnecessary — title page already contains full histogram in `__NEXT_DATA__` (discovered during probe). LD+JSON provides schema.org-standard aggregate rating.
+
+**Key files:** `src/sites/indeed/adapters/indeed-web.ts`, `src/sites/indeed/openapi.yaml`, `src/sites/imdb/adapters/imdb.ts`, `src/sites/imdb/openapi.yaml`
+**Verification:** `pnpm dev verify indeed --browser` (8/8 PASS), `pnpm dev verify imdb --browser` (4/4 PASS)
+**Commit:** `df5a484`
+**Next:** None
+**Blockers:** None
+
+---
+
 ## 2026-04-14: Transport upgrade probe — goodrx + medium (no __NEXT_DATA__)
 
 **What changed:**
