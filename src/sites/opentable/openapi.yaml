@@ -41,7 +41,7 @@ paths:
           schema:
             type: string
           description: 'Reservation date in YYYY-MM-DD format. Omit for general search without availability.'
-          example: '2026-04-12'
+          example: '2027-01-15'
         - name: time
           in: query
           required: false
@@ -328,7 +328,7 @@ paths:
           schema:
             type: string
           description: 'Date in YYYY-MM-DD format.'
-          example: '2026-04-12'
+          example: '2027-01-15'
         - name: time
           in: query
           required: false

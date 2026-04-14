@@ -37,7 +37,7 @@ openweb opentable exec searchRestaurants '{"term": "italian", "location": "San F
 openweb opentable exec getRestaurant '{"slug": "ceron-kitchen-alameda"}'
 
 # Check availability for 2 people
-openweb opentable exec getAvailability '{"restaurantId": 1204381, "date": "2026-04-12", "time": "19:00", "partySize": 2}'
+openweb opentable exec getAvailability '{"restaurantId": 1204381, "date": "2027-01-15", "time": "19:00", "partySize": 2}'
 
 # Read reviews (page 1, newest first)
 openweb opentable exec getReviews '{"restaurantId": 1204381, "page": 1}'

@@ -40,4 +40,12 @@
 - User requested hotel and flight search capabilities
 - Standard compile couldn't sub-cluster GraphQL — manual adapter required
 
+## 2026-04-14 — Schema Drift Fix
+
+**Context:** Verify failing on getHotelReviews due to schema drift
+**Changes:**
+- Made `summary.overallScoreWithDescriptionA11y` optional (removed from required array)
+- Changed `reviews[].brandType` type from `string` to `['string', 'null']`
+**Verification:** 6/6 PASS
+
 **Verification:** adapter builds, operations exec via page transport

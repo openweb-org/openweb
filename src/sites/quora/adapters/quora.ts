@@ -503,40 +503,47 @@ async function getProfile(
   const username = String(params.username || '')
   if (!username) throw errors.missingParam('username')
 
-  await page.goto(`${BASE}/profile/${username}`, { waitUntil: 'load', timeout: 30_000 })
-  await page.waitForTimeout(3_000)
+  // Open a fresh page to avoid ERR_BLOCKED_BY_RESPONSE on profile navigation
+  const context = page.context()
+  const profilePage = await context.newPage()
+  try {
+    await profilePage.goto(`${BASE}/profile/${username}`, { waitUntil: 'load', timeout: 30_000 })
+    await profilePage.waitForTimeout(3_000)
 
-  const data = await page.evaluate(() => {
-    const body = document.body.textContent || ''
-    const title = document.title?.replace(/ - Quora$/, '').trim() || ''
-    const followers = body.match(/([\d,.]+[KMB]?)\s*Followers?/i)
-    const answers = body.match(/([\d,.]+[KMB]?)\s*Answers?/i)
-    const questions = body.match(/([\d,.]+[KMB]?)\s*Questions?/i)
-    const posts = body.match(/([\d,.]+[KMB]?)\s*Posts?/i)
-    const bioEl = document.querySelector('.q-text.qu-wordBreak--break-word')
-    const bio = bioEl?.textContent?.trim() || ''
-    const profileImg = document.querySelector('img[src*="main-thumb"]') as HTMLImageElement | null
-    const profileImageUrl = profileImg?.src || ''
-    const topicLinks = document.querySelectorAll('a[href*="/topic/"]')
-    const topics: string[] = []
-    for (const el of topicLinks) {
-      const text = el.textContent?.trim()
-      if (text && !topics.includes(text) && text.length < 80) topics.push(text)
-    }
-    return {
-      name: title,
-      bio,
-      profileImageUrl,
-      followers: followers?.[1] || '0',
-      answers: answers?.[1] || '0',
-      questions: questions?.[1] || '0',
-      posts: posts?.[1] || '0',
-      knownFor: topics.slice(0, 10),
-    }
-  })
+    const data = await profilePage.evaluate(() => {
+      const body = document.body.textContent || ''
+      const title = document.title?.replace(/ - Quora$/, '').trim() || ''
+      const followers = body.match(/([\d,.]+[KMB]?)\s*Followers?/i)
+      const answers = body.match(/([\d,.]+[KMB]?)\s*Answers?/i)
+      const questions = body.match(/([\d,.]+[KMB]?)\s*Questions?/i)
+      const posts = body.match(/([\d,.]+[KMB]?)\s*Posts?/i)
+      const bioEl = document.querySelector('.q-text.qu-wordBreak--break-word')
+      const bio = bioEl?.textContent?.trim() || ''
+      const profileImg = document.querySelector('img[src*="main-thumb"]') as HTMLImageElement | null
+      const profileImageUrl = profileImg?.src || ''
+      const topicLinks = document.querySelectorAll('a[href*="/topic/"]')
+      const topics: string[] = []
+      for (const el of topicLinks) {
+        const text = el.textContent?.trim()
+        if (text && !topics.includes(text) && text.length < 80) topics.push(text)
+      }
+      return {
+        name: title,
+        bio,
+        profileImageUrl,
+        followers: followers?.[1] || '0',
+        answers: answers?.[1] || '0',
+        questions: questions?.[1] || '0',
+        posts: posts?.[1] || '0',
+        knownFor: topics.slice(0, 10),
+      }
+    })
 
-  if (!data.name) throw errors.fatal(`Profile not found: ${username}`)
-  return data
+    if (!data.name) throw errors.fatal(`Profile not found: ${username}`)
+    return data
+  } finally {
+    await profilePage.close().catch(() => {})
+  }
 }
 
 /* ---------- adapter ---------- */

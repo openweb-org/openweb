@@ -37,7 +37,7 @@ openweb opentable exec searchRestaurants '{"term": "italian", "location": "San F
 openweb opentable exec getRestaurant '{"slug": "ceron-kitchen-alameda"}'
 
 # Check availability for 2 people
-openweb opentable exec getAvailability '{"restaurantId": 1204381, "date": "2026-04-12", "time": "19:00", "partySize": 2}'
+openweb opentable exec getAvailability '{"restaurantId": 1204381, "date": "2027-01-15", "time": "19:00", "partySize": 2}'
 
 # Read reviews (page 1, newest first)
 openweb opentable exec getReviews '{"restaurantId": 1204381, "page": 1}'
@@ -52,6 +52,7 @@ openweb opentable exec getReviews '{"restaurantId": 1204381, "page": 1}'
 - Search results delivered via SSR in `__INITIAL_STATE__.multiSearch.restaurants`
 - Restaurant details via SSR in `__INITIAL_STATE__.restaurantProfile.restaurant`
 - Availability and reviews fetched via GraphQL persisted queries (`RestaurantsAvailability`, `ReviewSearchResults`)
+- Availability GQL requires `ot-page-group` / `ot-page-type` headers
 
 ### Auth
 No auth required. All operations are public read. CSRF token (`window.__CSRF_TOKEN__`) required for GraphQL calls — extracted automatically by adapter.
@@ -68,6 +69,6 @@ No auth required. All operations are public read. CSRF token (`window.__CSRF_TOK
 
 ### Known Issues
 - Akamai bot detection requires page transport — node transport will fail
-- GraphQL persisted query hashes may change across deployments — if "PersistedQueryNotFound" errors appear, hashes need re-capture
+- GraphQL persisted query hashes rotate across deployments — stale hashes return HTTP 409 "Conflict" (not standard APQ PersistedQueryNotFound). Re-capture from live site network traffic
 - Search returns up to 50 restaurants per page; no direct pagination API — page 2 requires URL navigation
 - `getAvailability` slot times are offsets from the requested time (e.g. -30 = 30 min earlier)

@@ -38,4 +38,10 @@ Total zhihu ops: 14 -> 17.
 - **Mixed transport model**: A site can use `node` transport for most ops while individual ops use adapters (`page` transport) for specific needs. The runtime resolves transport per-operation.
 - **Two-layer safety model**: Operation-level `x-openweb.safety` (spec metadata) and example-level `replay_safety` (verify runtime behavior) are separate concerns.
 - **204 vs 200 for destructive ops**: Some reverse/delete operations return 204 No Content instead of 200 with body. Always verify actual response codes during live testing.
+
+## 2026-04-14 — Schema Drift Fix
+
+**Context:** Verify failing on getFeedRecommend — `reaction_instruction.REACTION_COMMENT_NEWEST_LIST` not always present
+**Changes:** Removed `REACTION_COMMENT_NEWEST_LIST` from required array in `reaction_instruction` object
+**Verification:** 10/10 PASS
 - **Stable ID convention**: Sequential `zhihu00XX` numbering — new ops got zhihu0014, zhihu0015, zhihu0016.

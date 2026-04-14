@@ -250,7 +250,7 @@ paths:
                     type: string
                     enum: [CNY]
                   inStock:
-                    type: boolean
+                    type: ['boolean', 'null']
                   promotions:
                     type: ['array', 'null']
                     items:

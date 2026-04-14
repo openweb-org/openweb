@@ -1,5 +1,12 @@
 # Quora — Progress
 
+## 2026-04-14 — Fix: getProfile ERR_BLOCKED_BY_RESPONSE
+
+**Context:** `pnpm dev verify quora` failed on getProfile with `net::ERR_BLOCKED_BY_RESPONSE` — profile pages now return CORP/COEP headers that block navigation from the existing warm-up page.
+**Changes:** getProfile now opens a fresh page via `context.newPage()` (same pattern as searchQuestions) and closes it in a `finally` block. Updated DOC.md Known Issues and Transport sections.
+**Verification:** `pnpm dev verify quora` — 4/4 PASS (getAnswers, getProfile, getQuestion, searchQuestions).
+**Key discovery:** Quora profile pages enforce Cross-Origin-Resource-Policy headers that block in-page navigation from warm-up pages. Fresh pages bypass this.
+
 ## 2026-04-14 — Transport upgrade: GraphQL intercept for answers
 
 **Context:** getQuestion and getAnswers used Tier 2 DOM extraction — fragile CSS selectors, no upvote/view counts, no timestamps, author names from regex.

@@ -1,3 +1,16 @@
+## 2026-04-14: Fix getAvailability HTTP 409
+
+**Context:** `pnpm dev verify opentable` failed on getAvailability with HTTP 409 "Conflict"
+**Changes:**
+- Updated `RestaurantsAvailability` persisted query hash (rotated on OpenTable's servers)
+- Added `ot-page-group` / `ot-page-type` headers to GQL fetch (now required for availability)
+- Updated GQL variables: `requireTypes`, `forwardMinutes`/`backwardMinutes`, `useCBR`, `loyaltyRedemptionTiers`
+- Removed stale hardcoded `restaurantAvailabilityTokens`
+- Updated example dates from 2026-04-12 (past) to 2027-01-15
+
+**Verification:** 4/4 PASS
+**Key discovery:** OpenTable returns HTTP 409 "Conflict" (text/plain) for stale persisted query hashes — not the standard APQ PersistedQueryNotFound JSON error. Diagnosis requires intercepting the response body, not just the status code.
+
 ## 2026-04-09: Polish — docs, schema, examples
 
 **What changed:**

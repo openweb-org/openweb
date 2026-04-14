@@ -13,4 +13,10 @@
 - CSS module selectors from prior version broke on deployment
 
 **Verification:** adapter-verified via openweb verify jd
+
+## 2026-04-14 — Schema Drift Fix
+
+**Context:** Verify failing on getProductPrice — `inStock` typed as `boolean` but adapter returns `null` when no data
+**Changes:** Changed `inStock` type from `boolean` to `['boolean', 'null']` in getProductPrice response schema
+**Verification:** 4/4 PASS
 **Commit:** pending

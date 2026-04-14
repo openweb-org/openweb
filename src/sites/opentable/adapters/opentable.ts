@@ -7,7 +7,7 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 /* --- persisted query hashes --- */
 const HASHES = {
   RestaurantsAvailability:
-    'b2d05a06151b3cb21d9dfce4f021303eeba288fac347068b29c1cb66badc46af',
+    'cbcf4838a9b399f742e3741785df64560a826d8d3cc2828aa01ab09a8455e29e',
   ReviewSearchResults:
     'a544a8bb7070a1aa6c5e50b3f9bb239ba44f442eb9ac628f30b57bd3ae098b27',
 }
@@ -23,6 +23,7 @@ async function gqlFetch(
   opname: string,
   variables: Record<string, unknown>,
   hash: string,
+  extraHeaders?: Record<string, string>,
 ): Promise<unknown> {
   const csrf = await getCsrfToken(page)
   const url = `${GQL_URL}?optype=query&opname=${opname}`
@@ -31,14 +32,16 @@ async function gqlFetch(
     variables,
     extensions: { persistedQuery: { version: 1, sha256Hash: hash } },
   })
+  const hdrs = JSON.stringify({
+    'content-type': 'application/json',
+    'x-csrf-token': csrf,
+    ...extraHeaders,
+  })
   return page.evaluate(
-    async ([fetchUrl, fetchBody, csrfToken]) => {
+    async ([fetchUrl, fetchBody, headersJson]) => {
       const r = await fetch(fetchUrl, {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-csrf-token': csrfToken,
-        },
+        headers: JSON.parse(headersJson),
         credentials: 'include',
         body: fetchBody,
       })
@@ -46,7 +49,7 @@ async function gqlFetch(
       const json = await r.json()
       return json.data ?? json
     },
-    [url, body, csrf] as const,
+    [url, body, hdrs] as const,
   )
 }
 
@@ -202,11 +205,18 @@ async function getAvailability(
     databaseRegion: 'NA',
     onlyPop: false,
     forwardDays: 0,
+    forwardMinutes: 210,
+    backwardMinutes: 210,
     requireTimes: false,
-    requireTypes: [],
+    requireTypes: ['Standard', 'Experience', 'PrivateDining'],
+    useCBR: false,
     privilegedAccess: [],
-    restaurantAvailabilityTokens: ['eyJ2IjoyLCJtIjoxLCJwIjowLCJzIjowLCJuIjowfQ'],
-  }, HASHES.RestaurantsAvailability)) as any
+    restaurantAvailabilityTokens: [],
+    loyaltyRedemptionTiers: [],
+  }, HASHES.RestaurantsAvailability, {
+    'ot-page-group': 'rest-profile',
+    'ot-page-type': 'restprofilepage',
+  })) as any
 
   const avail = data?.availability
   if (!avail) return { restaurantId, date, time, partySize, slots: [] }

@@ -460,8 +460,6 @@ paths:
                               properties:
                                 REACTION_COMMENT_NEWEST_LIST:
                                   type: string
-                              required:
-                                - REACTION_COMMENT_NEWEST_LIST
                             segment_infos:
                               type: array
                               items:

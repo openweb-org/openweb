@@ -383,7 +383,7 @@ paths:
                   summary:
                     type: object
                     description: Aggregate rating breakdown.
-                    required: [overallScoreWithDescriptionA11y, totalCount]
+                    required: [totalCount]
                     properties:
                       overallScoreWithDescriptionA11y:
                         type: object
@@ -427,7 +427,7 @@ paths:
                           type: string
                           description: Review title.
                         brandType:
-                          type: string
+                          type: ['string', 'null']
                           description: Brand type of the review source.
                         reviewScoreWithDescription:
                           type: object

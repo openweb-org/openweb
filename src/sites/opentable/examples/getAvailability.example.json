@@ -3,7 +3,7 @@
   "replay_safety": "safe_read",
   "cases": [
     {
-      "input": { "restaurantId": 1204381, "date": "2026-04-12", "time": "19:00", "partySize": 2 },
+      "input": { "restaurantId": 1204381, "date": "2027-01-15", "time": "19:00", "partySize": 2 },
       "assertions": {
         "status": 200,
         "response_schema_valid": true
