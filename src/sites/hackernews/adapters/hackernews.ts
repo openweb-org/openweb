@@ -3,9 +3,9 @@ import type { Page } from 'patchright'
 const ALGOLIA_BASE = 'https://hn.algolia.com/api/v1'
 const HN_ORIGIN = 'https://news.ycombinator.com'
 
-// ── Adapter read ops: Node.js fetch to Algolia (zero DOM) ───────────
+// ── Adapter read ops: Node.js fetch to Algolia (zero DOM, transport:node) ──
 
-async function getStoryComments(_page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getStoryComments(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const id = params.id
   if (!id) throw new Error('id parameter is required')
   const limit = Number(params.limit ?? 50)
@@ -17,7 +17,7 @@ async function getStoryComments(_page: Page, params: Readonly<Record<string, unk
   return { storyId: Number(id), commentCount: data.nbHits, comments: data.hits }
 }
 
-async function getStoriesByDomain(_page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getStoriesByDomain(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const site = params.site
   if (!site) throw new Error('site parameter is required')
 
@@ -28,7 +28,7 @@ async function getStoriesByDomain(_page: Page, params: Readonly<Record<string, u
   return data.hits
 }
 
-async function getUserSubmissions(_page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getUserSubmissions(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const id = params.id
   if (!id) throw new Error('id parameter is required')
 
@@ -39,7 +39,7 @@ async function getUserSubmissions(_page: Page, params: Readonly<Record<string, u
   return data.hits
 }
 
-async function getUserComments(_page: Page, params: Readonly<Record<string, unknown>>): Promise<unknown> {
+async function getUserComments(_page: Page | null, params: Readonly<Record<string, unknown>>): Promise<unknown> {
   const id = params.id
   if (!id) throw new Error('id parameter is required')
 
@@ -110,7 +110,7 @@ async function addComment(page: Page, params: Readonly<Record<string, unknown>>)
 
 const OPERATIONS: Record<
   string,
-  (page: Page, params: Readonly<Record<string, unknown>>) => Promise<unknown>
+  (page: Page | null, params: Readonly<Record<string, unknown>>) => Promise<unknown>
 > = {
   getStoryComments,
   getStoriesByDomain,
@@ -122,7 +122,7 @@ const OPERATIONS: Record<
 
 const adapter = {
   name: 'hackernews',
-  description: 'Hacker News — Algolia API for parameterized reads, page context for writes',
+  description: 'Hacker News — Algolia API for parameterized reads (node), page context for writes',
 
   async init(page: Page): Promise<boolean> {
     const url = page.url()
@@ -134,7 +134,7 @@ const adapter = {
   },
 
   async execute(
-    page: Page,
+    page: Page | null,
     operation: string,
     params: Readonly<Record<string, unknown>>,
     helpers: { errors: { unknownOp(op: string): Error } },

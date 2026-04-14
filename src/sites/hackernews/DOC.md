@@ -42,10 +42,10 @@ Tech news aggregator by Y Combinator. Reads via Algolia Search API and Firebase 
 | getStoryDetail | story + comment tree | id (item ID) | id, title, url, points, children[] | L1 node (Algolia) |
 | getUserProfile | user profile | id (username) | id, karma, created, about | L1 node (Firebase) |
 | getNewComments | newest comments | — | objectID, author, comment_text, story_title | L1 node (Algolia) |
-| getStoryComments | comment thread | id, limit? | storyId, commentCount, comments[] | adapter (Algolia) |
-| getStoriesByDomain | domain stories | site | objectID, title, url, author, points | adapter (Algolia) |
-| getUserSubmissions | user's stories | id (username) | objectID, title, url, author, points | adapter (Algolia) |
-| getUserComments | user's comments | id (username) | objectID, author, comment_text | adapter (Algolia) |
+| getStoryComments | comment thread | id, limit? | storyId, commentCount, comments[] | adapter node (Algolia) |
+| getStoriesByDomain | domain stories | site | objectID, title, url, author, points | adapter node (Algolia) |
+| getUserSubmissions | user's stories | id (username) | objectID, title, url, author, points | adapter node (Algolia) |
+| getUserComments | user's comments | id (username) | objectID, author, comment_text | adapter node (Algolia) |
 | upvoteStory | upvote item | id | ok, id | adapter (page) |
 | addComment | post comment | parent, text | ok, parent | adapter (page) |
 
@@ -94,8 +94,9 @@ openweb hackernews exec addComment '{"parent": 42407357, "text": "Great article!
 No auth for reads. Write operations (`upvoteStory`, `addComment`) require a logged-in cookie session in the browser. Vote link href contains auth token; comment form contains HMAC token.
 
 ## Transport
-- **10 L1 node ops**: Direct HTTP to Algolia/Firebase — no browser, no DOM
-- **4 adapter read ops**: Node.js `fetch` to Algolia from adapter (needs browser for adapter pipeline, but zero DOM)
+- **14 node ops total**: All read ops use node transport — no browser needed
+  - 10 L1 declarative node ops: Direct HTTP to Algolia/Firebase
+  - 4 adapter node ops: Node.js `fetch` to Algolia via adapter (parameterized queries that need value composition)
 - **2 adapter write ops**: `page.evaluate(fetch(...))` with DOM extraction for auth tokens
 
 ## Known Issues

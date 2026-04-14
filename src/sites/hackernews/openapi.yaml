@@ -629,7 +629,7 @@ paths:
                       - string
                       - 'null'
 
-  # ═══ Adapter ops — parameterized Algolia reads (page transport) ═══
+  # ═══ Adapter ops — parameterized Algolia reads (node transport) ═══
 
                   required:
                   - objectID
@@ -637,17 +637,12 @@ paths:
     get:
       operationId: getStoryComments
       summary: 'Comment thread for a story via Algolia search'
-      servers:
-      - url: https://news.ycombinator.com
-        x-openweb:
-          transport: page
-          auth:
-            type: cookie_session
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: hn0010
-          tool_version: 2
+          tool_version: 3
           verified: true
         adapter:
           name: hackernews
@@ -712,17 +707,12 @@ paths:
     get:
       operationId: getStoriesByDomain
       summary: 'Stories submitted from a specific domain'
-      servers:
-      - url: https://news.ycombinator.com
-        x-openweb:
-          transport: page
-          auth:
-            type: cookie_session
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: hn0012
-          tool_version: 2
+          tool_version: 3
           verified: true
         adapter:
           name: hackernews
@@ -776,17 +766,12 @@ paths:
     get:
       operationId: getUserSubmissions
       summary: "User's submitted stories"
-      servers:
-      - url: https://news.ycombinator.com
-        x-openweb:
-          transport: page
-          auth:
-            type: cookie_session
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: hn0013
-          tool_version: 2
+          tool_version: 3
           verified: true
         adapter:
           name: hackernews
@@ -840,17 +825,12 @@ paths:
     get:
       operationId: getUserComments
       summary: "User's comment history"
-      servers:
-      - url: https://news.ycombinator.com
-        x-openweb:
-          transport: page
-          auth:
-            type: cookie_session
       x-openweb:
         permission: read
+        transport: node
         build:
           stable_id: hn0014
-          tool_version: 2
+          tool_version: 3
           verified: true
         adapter:
           name: hackernews

@@ -1,3 +1,20 @@
+## 2026-04-14: Transport upgrade — adapter read ops from page to node
+
+**What changed:**
+- Upgraded 4 adapter read ops (getStoryComments, getStoriesByDomain, getUserSubmissions, getUserComments) from `transport: page` to `transport: node`
+- Removed per-operation `servers:` blocks with `transport: page` + `auth: cookie_session` — these ops hit public Algolia API, no auth needed
+- Added `transport: node` to each operation's `x-openweb` block — executor passes `page: null` to adapter, skips browser entirely
+- Updated adapter function signatures from `Page` to `Page | null`
+- Bumped `tool_version` to 3 for all 4 ops
+- All 14 read ops now run on node transport; only 2 write ops remain on page transport
+
+**Why:**
+- Adapter read ops were already using Node `fetch()` to Algolia (no DOM), but `transport: page` forced unnecessary browser startup (~5s overhead per call)
+
+**Verification:** `pnpm dev verify hackernews` — 14/14 PASS, all ops on node transport
+
+---
+
 ## 2026-04-10: Add upvoteStory and addComment write ops
 
 **What changed:**
